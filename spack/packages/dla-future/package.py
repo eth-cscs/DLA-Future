@@ -38,7 +38,7 @@ class DlaFuture(CMakePackage, CudaPackage):
     conflicts("umpire@6:")
 
     depends_on("pika cxxstd=17 +mpi")
-    depends_on("pika@0.3.0")
+    depends_on("pika@0.4.0")
     depends_on("pika +cuda", when="+cuda")
 
     depends_on("pika build_type=Debug", when="build_type=Debug")
@@ -70,6 +70,7 @@ class DlaFuture(CMakePackage, CudaPackage):
         if '+ci-test' in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
+            args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
             args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))

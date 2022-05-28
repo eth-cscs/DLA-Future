@@ -91,7 +91,8 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
       EXPECT_EQ(exp_indices, ref_indices);
 
       for (const auto& idx : exp_indices) {
-        const auto& exp_tile = panel.read(idx).get();
+        auto exp_tile_f = panel.read(idx);
+        const auto& exp_tile = exp_tile_f.get();
         auto get_element_ptr = [&exp_tile](const TileElementIndex& index) {
           return exp_tile.ptr(index);
         };
@@ -152,7 +153,7 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord), 26), panel.read(idx).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 26), panel.read(idx).get());
 
   // Repeat the same test with sender adaptors
 
@@ -169,8 +170,8 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_MATRIX_EQ(TypeUtil::element(idx.get(coord), 42),
-                    pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 42),
+                  pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {
@@ -378,17 +379,37 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
       const LocalTileIndex idx(coord, k);
       dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(), setTile,
                                           panel.readwrite_sender(idx), counter++);
-      const auto& tile = panel.read(idx).get();
+
+      // Getting the future from the panel and getting a reference to the tile
+      // are separated because combining them into one operation would lead to
+      // the tile being a dangling reference since the shared_future from
+      // panel.read(idx) is released at the end of the expression.
+      //
+      // Also note that shared_future::get is not called inside EXPECT_EQ
+      // because it may yield and change worker thread. SCOPED_TRACE uses thread
+      // locals and does not support being created on one thread and destroyed
+      // on another and will segfault if that happens.
+      auto panel_tile_f = panel.read(idx);
+      const auto& panel_tile = panel_tile_f.get();
+      auto matrix_tile_f = matrix.read(idx);
+      const auto& matrix_tile = matrix_tile_f.get();
+
       SCOPED_TRACE(message);
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+      EXPECT_EQ(panel_tile.size(), matrix_tile.size());
     }
 
     counter = 0;
     for (const auto& idx : panel.iteratorLocal()) {
+      // See comment in previous for loop. This section has the same concerns
+      // regarding dangling references and yielding with SCOPED_TRACE.
+      auto panel_tile_f = panel.read(idx);
+      const auto& panel_tile = panel_tile_f.get();
+      auto matrix_tile_f = matrix.read(idx);
+      const auto& matrix_tile = matrix_tile_f.get();
+
       SCOPED_TRACE(message);
-      CHECK_TILE_EQ(fixedValueTile(counter++), panel.read(idx).get());
-      const auto& tile = panel.read(idx).get();
-      EXPECT_EQ(tile.size(), matrix.read(idx).get().size());
+      CHECK_TILE_EQ(fixedValueTile(counter++), panel_tile);
+      EXPECT_EQ(panel_tile.size(), matrix_tile.size());
     }
   };
 

@@ -10,7 +10,7 @@
 
 spack:
   specs:
-    - dla-future@develop +miniapps +ci-test ^intel-mkl ^mpich@3.4.2
+    - dla-future@develop +miniapps +ci-test ^intel-mkl ^mpich
   view: false
   concretization: together
 
@@ -24,6 +24,15 @@ spack:
       variants:
         - '~cuda'
         - '~openmp'
+    pika:
+      variants:
+        - 'malloc=mimalloc'
     mpich:
+      version:
+        - 3.4.2
       variants:
         - '~fortran'
+    git:
+      # Force git as non-buildable to allow deprecated versions in environments
+      # https://github.com/spack/spack/pull/30040
+      buildable: false

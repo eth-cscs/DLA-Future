@@ -146,6 +146,7 @@ add_library(dlaf.core
     matrix_mirror.cpp
     memory/memory_view.cpp
     memory/memory_chunk.cpp
+    lapack/laed4.cpp
     $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
     $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
@@ -194,6 +195,8 @@ DLAF_addPrecompiledHeaders(dlaf.factorization)
 
 # Define DLAF's multiplication library
 add_library(dlaf.multiplication OBJECT
+  multiplication/general/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/general/gpu.cpp>
   multiplication/triangular/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)

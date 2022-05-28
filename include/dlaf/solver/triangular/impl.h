@@ -568,7 +568,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     if (kk.row() == mat_a.nrTiles().rows() - 1) {
       a_panel.setWidth(mat_a.tileSize(kk).cols());
-      b_panel.setHeight(mat_a.tileSize(kk).rows());
+      b_panel.setHeight(mat_a.tileSize(kk).cols());
     }
 
     const auto rank_kk = distr_a.rankGlobalTile(kk);
@@ -913,7 +913,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
     auto& b_panel = b_panels.nextResource();
 
     if (kk.row() == mat_a.nrTiles().rows() - 1) {
-      a_panel.setHeight(mat_a.tileSize(kk).cols());
+      a_panel.setHeight(mat_a.tileSize(kk).rows());
       b_panel.setWidth(mat_a.tileSize(kk).rows());
     }
 
@@ -1089,7 +1089,7 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
 
     a_panel.setRangeStart(kk);
     if (kk.row() == mat_a.nrTiles().rows() - 1) {
-      a_panel.setHeight(mat_a.tileSize(kk).cols());
+      a_panel.setHeight(mat_a.tileSize(kk).rows());
       b_panel.setWidth(mat_a.tileSize(kk).rows());
     }
 

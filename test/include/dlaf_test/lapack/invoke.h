@@ -15,8 +15,8 @@
 #ifdef DLAF_WITH_GPU
 #include "dlaf/gpu/api.h"
 #include "dlaf/gpu/error.h"
-#include "dlaf/gpu/solver/api.h"
-#include "dlaf/gpu/solver/error.h"
+#include "dlaf/gpu/lapack/api.h"
+#include "dlaf/gpu/lapack/error.h"
 #endif
 
 namespace dlaf::test {
@@ -44,23 +44,23 @@ struct InvokeLapack<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     cusolverDnHandle_t handle;
-    DLAF_CUSOLVER_CHECK_ERROR(cusolverDnCreate(&handle));
+    DLAF_GPULAPACK_CHECK_ERROR(cusolverDnCreate(&handle));
     f(handle, std::forward<Args>(args)...);
-    DLAF_CUDA_CHECK_ERROR(cudaDeviceSynchronize());
-    DLAF_CUSOLVER_CHECK_ERROR(cusolverDnDestroy(handle));
+    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
+    DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroy(handle));
   }
 
   template <class F, class... Args>
   static int callInfo(F&& f, Args&&... args) {
     cusolverDnHandle_t handle;
-    DLAF_CUSOLVER_CHECK_ERROR(cusolverDnCreate(&handle));
+    DLAF_GPULAPACK_CHECK_ERROR(cusolverDnCreate(&handle));
     auto result = f(handle, std::forward<Args>(args)...);
     int info_host;
     // The copy will happen on the same (default) stream as the potrf, and since
     // this is a blocking call, we can access info_host without further
     // synchronization.
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy(&info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
-    DLAF_CUSOLVER_CHECK_ERROR(cusolverDnDestroy(handle));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy(&info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
+    DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroy(handle));
 
     return info_host;
   }

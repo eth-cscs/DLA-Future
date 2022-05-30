@@ -252,7 +252,7 @@ private:
   bool isAccessibleFromGPU() const {
 #ifdef DLAF_WITH_CUDA
     cudaPointerAttributes attrs;
-    DLAF_CUDA_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
+    DLAF_GPU_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
 #elif defined DLAF_WITH_HIP
     // HIP 5 defines the following:

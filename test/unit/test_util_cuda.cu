@@ -201,13 +201,13 @@ TEST(CudaUtilTestDevice, CudaOperatorsUnsigned) {
   constexpr unsigned res_size = 7;
 
   T* res_d;
-  DLAF_CUDA_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(T)));
 
   testOperatorsUnsigned<<<1, 1>>>(res_d);
 
   T* res_h;
-  DLAF_CUDA_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(T)));
-  DLAF_CUDA_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(T), cudaMemcpyDefault));
+  DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(T), cudaMemcpyDefault));
 
   EXPECT_EQ(0u, res_h[0]);
   EXPECT_EQ(0u, res_h[1]);
@@ -238,13 +238,13 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsReal) {
   constexpr unsigned res_size = 4;
 
   T* res_d;
-  DLAF_CUDA_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(T)));
 
   testOperatorsReal<<<1, 1>>>(a, b, c, res_d);
 
   T* res_h;
-  DLAF_CUDA_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(T)));
-  DLAF_CUDA_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(T), cudaMemcpyDefault));
+  DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(T), cudaMemcpyDefault));
 
   EXPECT_EQ(a, res_h[0]);
   EXPECT_EQ(b, res_h[1]);
@@ -252,8 +252,8 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsReal) {
 
   EXPECT_NEAR(a * b + c, res_h[3], 5 * TypeUtilities<T>::error);
 
-  DLAF_CUDA_CHECK_ERROR(cudaFreeHost(res_h));
-  DLAF_CUDA_CHECK_ERROR(cudaFree(res_d));
+  DLAF_GPU_CHECK_ERROR(cudaFreeHost(res_h));
+  DLAF_GPU_CHECK_ERROR(cudaFree(res_d));
 }
 
 template <class T>
@@ -314,24 +314,24 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsComplex) {
   constexpr unsigned res_real_size = 2;
 
   bool* res_bool_d;
-  DLAF_CUDA_CHECK_ERROR(cudaMalloc(&res_bool_d, res_bool_size * sizeof(bool)));
+  DLAF_GPU_CHECK_ERROR(cudaMalloc(&res_bool_d, res_bool_size * sizeof(bool)));
   ComplexT* res_d;
-  DLAF_CUDA_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(ComplexT)));
+  DLAF_GPU_CHECK_ERROR(cudaMalloc(&res_d, res_size * sizeof(ComplexT)));
   T* res_real_d;
-  DLAF_CUDA_CHECK_ERROR(cudaMalloc(&res_real_d, res_real_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(cudaMalloc(&res_real_d, res_real_size * sizeof(T)));
 
   testOperatorsComplex<<<1, 1>>>(a, b, c, d, res_bool_d, res_d, res_real_d);
 
   bool* res_bool_h;
-  DLAF_CUDA_CHECK_ERROR(cudaMallocHost(&res_bool_h, res_bool_size * sizeof(bool)));
-  DLAF_CUDA_CHECK_ERROR(
+  DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_bool_h, res_bool_size * sizeof(bool)));
+  DLAF_GPU_CHECK_ERROR(
       cudaMemcpy(res_bool_h, res_bool_d, res_bool_size * sizeof(bool), cudaMemcpyDefault));
   ComplexT* res_h;
-  DLAF_CUDA_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(ComplexT)));
-  DLAF_CUDA_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(ComplexT), cudaMemcpyDefault));
+  DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_h, res_size * sizeof(ComplexT)));
+  DLAF_GPU_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(ComplexT), cudaMemcpyDefault));
   T* res_real_h;
-  DLAF_CUDA_CHECK_ERROR(cudaMallocHost(&res_real_h, res_real_size * sizeof(T)));
-  DLAF_CUDA_CHECK_ERROR(
+  DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_real_h, res_real_size * sizeof(T)));
+  DLAF_GPU_CHECK_ERROR(
       cudaMemcpy(res_real_h, res_real_d, res_real_size * sizeof(T), cudaMemcpyDefault));
 
   EXPECT_TRUE(res_bool_h[0]);
@@ -365,8 +365,8 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsComplex) {
   EXPECT_NEAR_COMPLEX(b.x * d, b.y * d, res_h[8], 5 * TypeUtilities<T>::error);
   EXPECT_NEAR_COMPLEX(c.x / d, c.y / d, res_h[9], 5 * TypeUtilities<T>::error);
 
-  DLAF_CUDA_CHECK_ERROR(cudaFreeHost(res_real_h));
-  DLAF_CUDA_CHECK_ERROR(cudaFreeHost(res_h));
-  DLAF_CUDA_CHECK_ERROR(cudaFree(res_real_d));
-  DLAF_CUDA_CHECK_ERROR(cudaFree(res_d));
+  DLAF_GPU_CHECK_ERROR(cudaFreeHost(res_real_h));
+  DLAF_GPU_CHECK_ERROR(cudaFreeHost(res_h));
+  DLAF_GPU_CHECK_ERROR(cudaFree(res_real_d));
+  DLAF_GPU_CHECK_ERROR(cudaFree(res_d));
 }

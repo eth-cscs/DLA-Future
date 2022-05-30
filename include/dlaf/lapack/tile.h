@@ -21,7 +21,6 @@
 
 #ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
-#include "dlaf/gpu/solver/api.h"
 #endif
 
 #include "dlaf/common/assert.h"
@@ -37,14 +36,15 @@
 #include "dlaf/util_tile.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/solver/assert_info.h"
-#include "dlaf/gpu/solver/error.h"
+#include "dlaf/gpu/lapack/api.h"
+#include "dlaf/gpu/lapack/assert_info.h"
+#include "dlaf/gpu/lapack/error.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/util_cublas.h"
 #endif
 // hegst functions get exposed in rocSOLVER
 #ifdef DLAF_WITH_CUDA
-#include "dlaf/gpu/solver/hegst.h"
+#include "dlaf/gpu/cusolver/hegst.h"
 #elif defined(DLAF_WITH_HIP)
 #include "dlaf/util_rocblas.h"
 #endif
@@ -403,11 +403,11 @@ DLAF_DECLARE_CUSOLVER_OP(Potrf);
   struct Cusolver##Name<Type> {                                                           \
     template <typename... Args>                                                           \
     static void call(Args&&... args) {                                                    \
-      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
+      DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
     }                                                                                     \
     template <typename... Args>                                                           \
     static void callBufferSize(Args&&... args) {                                          \
-      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
+      DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
     }                                                                                     \
   }
 
@@ -428,7 +428,7 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
   struct Cusolver##Name<Type> {                                              \
     template <typename... Args>                                              \
     static void call(Args&&... args) {                                       \
-      DLAF_CUSOLVER_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
+      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
     }                                                                        \
   }
 
@@ -466,10 +466,10 @@ public:
 template <class F, class T>
 void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
   cudaStream_t stream;
-  DLAF_CUSOLVER_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
+  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_CUDA_CHECK_ERROR(status); };
+  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 }
@@ -499,7 +499,7 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
 
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_CUDA_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+  DLAF_GPU_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
                                           sizeof(T) * to_sizet(tile.size().rows()),
                                           to_sizet(tile.size().cols()), stream));
 }

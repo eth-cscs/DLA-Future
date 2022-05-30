@@ -9,7 +9,7 @@
 //
 
 #include <stdio.h>
-#include "dlaf/gpu/solver/assert_info.h"
+#include "dlaf/gpu/lapack/assert_info.h"
 
 #ifdef DLAF_ASSERT_ENABLE
 

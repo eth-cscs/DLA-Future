@@ -32,7 +32,7 @@
   struct Name<Type> {                                                   \
     template <typename... Args>                                         \
     static void call(Args&&... args) {                                  \
-      DLAF_CUBLAS_CHECK_ERROR(hipblas##f(std::forward<Args>(args)...)); \
+      DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(std::forward<Args>(args)...)); \
     }                                                                   \
   }
 
@@ -43,7 +43,7 @@
   struct Name<Type> {                                                       \
     template <typename... Args>                                             \
     static void call(Args&&... args) {                                      \
-      DLAF_CUBLAS_CHECK_ERROR(cublas##f##_v2(std::forward<Args>(args)...)); \
+      DLAF_GPUBLAS_CHECK_ERROR(cublas##f##_v2(std::forward<Args>(args)...)); \
     }                                                                       \
   }
 
@@ -417,7 +417,7 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
 
 #ifdef DLAF_WITH_HIP
   cudaStream_t stream;
-  DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
   matrix::internal::copy(b, c, stream);
 #endif
   gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),

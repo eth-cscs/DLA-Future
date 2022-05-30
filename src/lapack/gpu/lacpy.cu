@@ -119,7 +119,7 @@ void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a
 
   if (uplo == blas::Uplo::General) {
     const cudaMemcpyKind kind = cudaMemcpyDefault;
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
                                             to_sizet(m) * sizeof(T), to_sizet(n), kind, stream));
   }
   else {

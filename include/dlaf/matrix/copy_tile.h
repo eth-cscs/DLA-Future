@@ -76,7 +76,7 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                        ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
   }
 
@@ -87,7 +87,7 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                             ld_source * sizeof(T), m * sizeof(T), n,
                                             cudaMemcpyHostToDevice, stream));
   }
@@ -102,7 +102,7 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                        ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
   }
 
@@ -113,7 +113,7 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                             ld_source * sizeof(T), m * sizeof(T), n,
                                             cudaMemcpyDeviceToHost, stream));
   }
@@ -128,7 +128,7 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                        ld_source * sizeof(T), m * sizeof(T), n,
                                        cudaMemcpyDeviceToDevice));
   }
@@ -140,7 +140,7 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
                                             ld_source * sizeof(T), m * sizeof(T), n,
                                             cudaMemcpyDeviceToDevice, stream));
   }

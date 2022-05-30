@@ -18,9 +18,9 @@
 #include "dlaf/common/source_location.h"
 #include "dlaf/gpu/api.h"
 
-namespace dlaf::gpu {
-
 #ifdef DLAF_WITH_GPU
+
+namespace dlaf::gpu {
 
 inline void checkError(gpuError_t err, const dlaf::common::internal::source_location& info) noexcept {
 #ifdef DLAF_WITH_CUDA
@@ -36,8 +36,7 @@ inline void checkError(gpuError_t err, const dlaf::common::internal::source_loca
 #endif
 }
 
-#define DLAF_CUDA_CHECK_ERROR(cuda_err) dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
+#define DLAF_GPU_CHECK_ERROR(cuda_err) dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
+}
 
 #endif
-}
-}

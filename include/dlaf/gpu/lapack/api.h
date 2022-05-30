@@ -43,8 +43,8 @@ constexpr gpulapackStatus_t GPULAPACK_STATUS_SUCCESS = rocblas_status_success;
 namespace dlaf {
 
 // Error handling
-using gpulapackStatus_t = cusolverStatus_t constexpr gpulapackStatus_t GPULAPACK_STATUS_SUCCESS =
-    CUSOLVER_STATUS_SUCCESS;
+using gpulapackStatus_t = cusolverStatus_t;
+constexpr gpulapackStatus_t GPULAPACK_STATUS_SUCCESS = CUSOLVER_STATUS_SUCCESS;
 
 }
 

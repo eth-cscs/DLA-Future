@@ -16,13 +16,14 @@
 #include <iostream>
 
 #include "dlaf/common/source_location.h"
+#include "dlaf/gpu/lapack/api.h"
+
 #include "dlaf/gpu/cusolver/error.h"
 #include "dlaf/gpu/rocsolver/error.h"
-#include "dlaf/gpu/solver/api.h"
-
-namespace dlaf::gpulapack {
 
 #ifdef DLAF_WITH_GPU
+
+namespace dlaf::gpulapack {
 
 inline void checkError(gpulapackStatus_t st,
                        const dlaf::common::internal::source_location& info) noexcept {
@@ -42,7 +43,6 @@ inline void checkError(gpulapackStatus_t st,
 #define DLAF_GPULAPACK_CHECK_ERROR(cusolver_err) \
   dlaf::gpulapack::checkError((cusolver_err), SOURCE_LOCATION())
 
-#endif
+}
 
-}
-}
+#endif

@@ -18,19 +18,25 @@
 #include "dlaf/common/source_location.h"
 #include "dlaf/gpu/api.h"
 
-namespace dlaf {
-namespace internal {
+namespace dlaf::gpu {
 
 #ifdef DLAF_WITH_GPU
 
-inline void cudaCall(cudaError_t err, const dlaf::common::internal::source_location& info) noexcept {
+inline void checkError(gpuError_t err, const dlaf::common::internal::source_location& info) noexcept {
+#ifdef DLAF_WITH_CUDA
   if (err != cudaSuccess) {
     std::cout << "[CUDA ERROR] " << info << std::endl << cudaGetErrorString(err) << std::endl;
     std::terminate();
   }
+#elif defined(DLAF_WITH_HIP)
+  if (err != hipSuccess) {
+    std::cout << "[HIP ERROR] " << info << std::endl << hipGetErrorString(err) << std::endl;
+    std::terminate();
+  }
+#endif
 }
 
-#define DLAF_CUDA_CHECK_ERROR(cuda_err) dlaf::internal::cudaCall((cuda_err), SOURCE_LOCATION())
+#define DLAF_CUDA_CHECK_ERROR(cuda_err) dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
 
 #endif
 }

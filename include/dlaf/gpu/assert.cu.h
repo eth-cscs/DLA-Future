@@ -16,9 +16,10 @@
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
 
-#define DLAF_GPU_ASSERT_HEAVY(expr) \
-  dlaf::cuda::gpuAssert(expr,       \
-                        [] __device__() { printf("GPU assertion failed: %s:%d\n", __FILE__, __LINE__); })
+#define DLAF_GPU_ASSERT_HEAVY(expr)                              \
+  dlaf::cuda::gpuAssert(expr, [] __device__() {                  \
+    printf("GPU assertion failed: %s:%d\n", __FILE__, __LINE__); \
+  })
 
 #else
 #define DLAF_GPU_ASSERT_HEAVY(expr)

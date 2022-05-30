@@ -12,15 +12,12 @@
 
 /// @file
 
-#if defined(DLAF_WITH_HIP)
+#ifdef DLAF_WITH_HIP
 
 #include <hip/hip_runtime.h>
 
-#define cublasGetStream                  hipblasGetStream
 #define cudaDeviceGetStreamPriorityRange hipDeviceGetStreamPriorityRange
 #define cudaDeviceSynchronize            hipDeviceSynchronize
-#define cudaError_t                      hipError_t
-#define cudaGetErrorString               hipGetErrorString
 #define cudaMemcpyKind                   hipMemcpyKind
 #define cudaMemcpy2D                     hipMemcpy2D
 #define cudaMemcpy2DAsync                hipMemcpy2DAsync
@@ -37,10 +34,25 @@
 #define cudaStreamDestroy                hipStreamDestroy
 #define cudaStreamNonBlocking            hipStreamNonBlocking
 #define cudaStream_t                     hipStream_t
-#define cudaSuccess                      hipSuccess
+
+namespace dlaf {
+
+// Error handling
+using gpuError_t = hipError_t;
+constexpr gpuError_t gpuSuccess = hipSuccess;
+
+}
 
 #elif defined(DLAF_WITH_CUDA)
 
 #include <cuda_runtime.h>
+
+namespace dlaf {
+
+// Error handling
+using gpuError_t = cudaError_t;
+constexpr gpuError_t gpuSuccess = cudaSuccess;
+
+}
 
 #endif

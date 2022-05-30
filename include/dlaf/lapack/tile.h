@@ -398,17 +398,17 @@ DLAF_DECLARE_CUSOLVER_OP(Potrf);
 
 #ifdef DLAF_WITH_CUDA
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                     \
-  template <>                                                                             \
-  struct Cusolver##Name<Type> {                                                           \
-    template <typename... Args>                                                           \
-    static void call(Args&&... args) {                                                    \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                      \
+  template <>                                                                              \
+  struct Cusolver##Name<Type> {                                                            \
+    template <typename... Args>                                                            \
+    static void call(Args&&... args) {                                                     \
       DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
-    }                                                                                     \
-    template <typename... Args>                                                           \
-    static void callBufferSize(Args&&... args) {                                          \
+    }                                                                                      \
+    template <typename... Args>                                                            \
+    static void callBufferSize(Args&&... args) {                                           \
       DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
-    }                                                                                     \
+    }                                                                                      \
   }
 
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, Ssygst);
@@ -423,13 +423,13 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                        \
-  template <>                                                                \
-  struct Cusolver##Name<Type> {                                              \
-    template <typename... Args>                                              \
-    static void call(Args&&... args) {                                       \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                         \
+  template <>                                                                 \
+  struct Cusolver##Name<Type> {                                               \
+    template <typename... Args>                                               \
+    static void call(Args&&... args) {                                        \
       DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
-    }                                                                        \
+    }                                                                         \
   }
 
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);
@@ -500,8 +500,8 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
   DLAF_GPU_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
-                                          sizeof(T) * to_sizet(tile.size().rows()),
-                                          to_sizet(tile.size().cols()), stream));
+                                         sizeof(T) * to_sizet(tile.size().rows()),
+                                         to_sizet(tile.size().cols()), stream));
 }
 
 template <class T>

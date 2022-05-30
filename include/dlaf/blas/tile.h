@@ -27,24 +27,24 @@
 
 #ifdef DLAF_WITH_HIP
 
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                           \
-  template <>                                                           \
-  struct Name<Type> {                                                   \
-    template <typename... Args>                                         \
-    static void call(Args&&... args) {                                  \
+#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                            \
+  template <>                                                            \
+  struct Name<Type> {                                                    \
+    template <typename... Args>                                          \
+    static void call(Args&&... args) {                                   \
       DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(std::forward<Args>(args)...)); \
-    }                                                                   \
+    }                                                                    \
   }
 
 #elif defined(DLAF_WITH_CUDA)
 
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                               \
-  template <>                                                               \
-  struct Name<Type> {                                                       \
-    template <typename... Args>                                             \
-    static void call(Args&&... args) {                                      \
+#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                                \
+  template <>                                                                \
+  struct Name<Type> {                                                        \
+    template <typename... Args>                                              \
+    static void call(Args&&... args) {                                       \
       DLAF_GPUBLAS_CHECK_ERROR(cublas##f##_v2(std::forward<Args>(args)...)); \
-    }                                                                       \
+    }                                                                        \
   }
 
 #endif

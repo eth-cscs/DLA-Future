@@ -284,7 +284,8 @@ private:
     //
     // TODO: What's the right thing to do here?
     // Not useful documentation:
-    // - https://github.com/RadeonOpenCompute/ROCm_Documentation/blob/master/Programming_Guides/HIP-porting-guide.rst#cu-pointer-attribute-memory-type
+    // -
+    // https://github.com/RadeonOpenCompute/ROCm_Documentation/blob/master/Programming_Guides/HIP-porting-guide.rst#cu-pointer-attribute-memory-type
     // - https://docs.amd.com/bundle/HIP_API_Guide/page/hip__runtime__api_8h.html#aea86e91d3cd65992d787b39b218435a3
     return true;
 #endif

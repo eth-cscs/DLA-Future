@@ -331,8 +331,7 @@ TYPED_TEST(CudaUtilTestDevice, CudaOperatorsComplex) {
   DLAF_GPU_CHECK_ERROR(cudaMemcpy(res_h, res_d, res_size * sizeof(ComplexT), cudaMemcpyDefault));
   T* res_real_h;
   DLAF_GPU_CHECK_ERROR(cudaMallocHost(&res_real_h, res_real_size * sizeof(T)));
-  DLAF_GPU_CHECK_ERROR(
-      cudaMemcpy(res_real_h, res_real_d, res_real_size * sizeof(T), cudaMemcpyDefault));
+  DLAF_GPU_CHECK_ERROR(cudaMemcpy(res_real_h, res_real_d, res_real_size * sizeof(T), cudaMemcpyDefault));
 
   EXPECT_TRUE(res_bool_h[0]);
   EXPECT_FALSE(res_bool_h[1]);

@@ -39,8 +39,7 @@ inline void checkError(gpublasStatus_t st,
 #endif
 }
 
-#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) \
-  dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
+#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
 
 #endif
 

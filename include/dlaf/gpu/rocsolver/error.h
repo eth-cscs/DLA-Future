@@ -20,7 +20,7 @@
 
 namespace dlaf::gpulapack::rocsolver {
 
-inline std::string getErrorString(rocblasStatus_t st) {
+inline std::string getErrorString(rocblas_status st) {
   // clang-format off
   switch (st) {
     case rocblas_status_success:             return "rocblas_status_success";

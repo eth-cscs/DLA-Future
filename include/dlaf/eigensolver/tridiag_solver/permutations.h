@@ -101,16 +101,12 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                        distr.distanceToAdjacentTile<ocrd>(in_offset),
                        distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
 
-  // for (SizeType split : splits) {
-  //   std::cout << split << std::endl;
-  // }
-
   for (SizeType i_perm = 0; i_perm < sz.get<coord>(); ++i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
       SizeType split = splits[i_split];
 
       GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<ocrd>(), out_begin.get<coord>());
+      GlobalElementIndex i_split_gl_out(split + out_begin.get<ocrd>(), out_begin.get<coord>() + i_perm);
       TileElementSize region(splits[i_split + 1] - split, 1);
       if constexpr (coord == Coord::Row) {
         region.transpose();
@@ -123,45 +119,9 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
       TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
       auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
-      // std::cout << i_subtile_in << " " << i_subtile_out << " " << region << " " << std::endl;
-      std::cout << i_split_gl_in << " " << i_split_gl_out << " " << region << " " << std::endl;
       matrix::internal::copy(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
     }
   }
-
-  //  // Iterate over rows if `coord == Coord::Row` otherwise iterate over columns
-  //  SizeType dim1 = sz.cols();
-  //  SizeType dim2 = sz.rows();
-  //  if constexpr (coord == Coord::Row)
-  //    std::swap(dim1, dim2);
-  //
-  //  std::vector<SizeType> loop_arr(to_sizet(dim1));
-  //  std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
-  //  pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](SizeType i1) {
-  //    for (SizeType i2 = 0; i2 < dim2; ++i2) {
-  //      SizeType i = i2;  // row
-  //      SizeType j = i1;  // column
-  //      if constexpr (coord == Coord::Row)
-  //        std::swap(i, j);
-  //
-  //      // Get the global index of the `out` element
-  //      GlobalElementIndex idx_el_gl_out(out_begin.row() + i, out_begin.col() + j);
-  //      // Get the global index of the `in` element. If `coord == Coord::Row` use the permutation index on
-  //      // the rows, otherwise use it on the columns.
-  //      GlobalElementIndex idx_el_gl_in(in_offset + i, perm_arr[j]);
-  //      if constexpr (coord == Coord::Row)
-  //        idx_el_gl_in = GlobalElementIndex(perm_arr[i], in_offset + j);
-  //
-  //      // Get the index of the element local to the tile that contains it as well as the index of that
-  //      // tile in the tiles arrays.
-  //      TileElementIndex idx_el_out = distr.tileElementIndex(idx_el_gl_out);
-  //      std::size_t idx_arr_out = to_sizet(distr.globalTileLinearIndex(idx_el_gl_out));
-  //      TileElementIndex idx_el_in = distr.tileElementIndex(idx_el_gl_in);
-  //      std::size_t idx_arr_in = to_sizet(distr.globalTileLinearIndex(idx_el_gl_in));
-  //      //  copy from `in` to `out`
-  //      out_tiles[idx_arr_out](idx_el_out) = in_tiles[idx_arr_in](idx_el_in);
-  //    }
-  //  });
 }
 
 }

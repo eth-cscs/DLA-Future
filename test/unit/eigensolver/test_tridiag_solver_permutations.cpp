@@ -79,18 +79,18 @@ setupMatricesForPermutations(SizeType n, SizeType nb) {
 //  └─────────────────┘   └─────────────────┘
 //
 TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
-  using T = TypeParam;
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
 
   SizeType n = 10;
   SizeType nb = 3;
-  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
+  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<TypeParam>(n, nb);
 
   GlobalElementIndex begin(4, 4);
   GlobalElementSize sz(3, 4);
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{3, 6, 4, 9};
+
   dlaf::eigensolver::internal::applyPermutations<TypeParam, Coord::Col>(begin, sz, in_offset, distr,
                                                                         perm_arr.data(), in_tiles,
                                                                         out_tiles);
@@ -99,26 +99,26 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
   //
   // (tile index in `out_tiles`, index of element in tile, value of element)
   // clang-format off
-  std::vector<std::tuple<std::size_t, TileElementIndex, T>> expected_entries {
+  std::vector<std::tuple<std::size_t, TileElementIndex, TypeParam>> expected_entries {
     // column 4
     {5, TileElementIndex(1, 1), 5},
-//    {5, TileElementIndex(2, 1), 6},
-//    {6, TileElementIndex(0, 1), 7},
-//
-//    // column 5
-//    {5, TileElementIndex(1, 2), 8},
-//    {5, TileElementIndex(2, 2), 9},
-//    {6, TileElementIndex(0, 2), 10},
-//
-//    // column 6
-//    {9,  TileElementIndex(1, 0), 6},
-//    {9,  TileElementIndex(2, 0), 7},
-//    {10, TileElementIndex(0, 0), 8},
-//
-//    // column 7
-//    {9,  TileElementIndex(1, 1), 11},
-//    {9,  TileElementIndex(2, 1), 12},
-//    {10, TileElementIndex(0, 1), 13},
+    {5, TileElementIndex(2, 1), 6},
+    {6, TileElementIndex(0, 1), 7},
+
+    // column 5
+    {5, TileElementIndex(1, 2), 8},
+    {5, TileElementIndex(2, 2), 9},
+    {6, TileElementIndex(0, 2), 10},
+
+    // column 6
+    {9,  TileElementIndex(1, 0), 6},
+    {9,  TileElementIndex(2, 0), 7},
+    {10, TileElementIndex(0, 0), 8},
+
+    // column 7
+    {9,  TileElementIndex(1, 1), 11},
+    {9,  TileElementIndex(2, 1), 12},
+    {10, TileElementIndex(0, 1), 13},
   };
   // clang-format on
 
@@ -143,56 +143,56 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
 // └──────────────────────┘    └──────────────────────┘
 // where the (i, j) element of `in` is `i + j`
 //
-//TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
-//  using T = TypeParam;
-//  using dlaf::matrix::test::createTile;
-//  using dlaf::matrix::test::set;
-//
-//  SizeType n = 10;
-//  SizeType nb = 3;
-//  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
-//
-//  GlobalElementIndex begin(7, 3);
-//  GlobalElementSize sz(3, 6);
-//  SizeType in_offset = 2;
-//  std::vector<SizeType> perm_arr{8, 4, 1};
-//  dlaf::eigensolver::internal::applyPermutations<TypeParam, Coord::Row>(begin, sz, in_offset, distr,
-//                                                                        perm_arr.data(), in_tiles,
-//                                                                        out_tiles);
-//
-//  // Expected entries in `out_tiles`
-//  //
-//  // (tile index in `out_tiles`, index of element in tile, value of element)
-//  // clang-format off
-//  std::vector<std::tuple<std::size_t, TileElementIndex, T>> expected_entries {
-//    // row index 7
-//    {6,  TileElementIndex(1, 0), 10},
-//    {6,  TileElementIndex(1, 1), 11},
-//    {6,  TileElementIndex(1, 2), 12},
-//    {10, TileElementIndex(1, 0), 13},
-//    {10, TileElementIndex(1, 1), 14},
-//    {10, TileElementIndex(1, 2), 15},
-//
-//    // row index 8
-//    {6,  TileElementIndex(2, 0), 6 },
-//    {6,  TileElementIndex(2, 1), 7 },
-//    {6,  TileElementIndex(2, 2), 8 },
-//    {10, TileElementIndex(2, 0), 9 },
-//    {10, TileElementIndex(2, 1), 10},
-//    {10, TileElementIndex(2, 2), 11},
-//
-//    // row index 9
-//    {7,  TileElementIndex(0, 0), 3},
-//    {7,  TileElementIndex(0, 1), 4},
-//    {7,  TileElementIndex(0, 2), 5},
-//    {11, TileElementIndex(0, 0), 6},
-//    {11, TileElementIndex(0, 1), 7},
-//    {11, TileElementIndex(0, 2), 8},
-//
-//  };
-//  // clang-format on
-//
-//  for (auto [i_tile, i_el, val] : expected_entries) {
-//    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
-//  }
-//}
+TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
+  using T = TypeParam;
+  using dlaf::matrix::test::createTile;
+  using dlaf::matrix::test::set;
+
+  SizeType n = 10;
+  SizeType nb = 3;
+  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
+
+  GlobalElementIndex begin(7, 3);
+  GlobalElementSize sz(3, 6);
+  SizeType in_offset = 2;
+  std::vector<SizeType> perm_arr{8, 4, 1};
+  dlaf::eigensolver::internal::applyPermutations<TypeParam, Coord::Row>(begin, sz, in_offset, distr,
+                                                                        perm_arr.data(), in_tiles,
+                                                                        out_tiles);
+
+  // Expected entries in `out_tiles`
+  //
+  // (tile index in `out_tiles`, index of element in tile, value of element)
+  // clang-format off
+  std::vector<std::tuple<std::size_t, TileElementIndex, T>> expected_entries {
+    // row index 7
+    {6,  TileElementIndex(1, 0), 10},
+    {6,  TileElementIndex(1, 1), 11},
+    {6,  TileElementIndex(1, 2), 12},
+    {10, TileElementIndex(1, 0), 13},
+    {10, TileElementIndex(1, 1), 14},
+    {10, TileElementIndex(1, 2), 15},
+
+    // row index 8
+    {6,  TileElementIndex(2, 0), 6 },
+    {6,  TileElementIndex(2, 1), 7 },
+    {6,  TileElementIndex(2, 2), 8 },
+    {10, TileElementIndex(2, 0), 9 },
+    {10, TileElementIndex(2, 1), 10},
+    {10, TileElementIndex(2, 2), 11},
+
+    // row index 9
+    {7,  TileElementIndex(0, 0), 3},
+    {7,  TileElementIndex(0, 1), 4},
+    {7,  TileElementIndex(0, 2), 5},
+    {11, TileElementIndex(0, 0), 6},
+    {11, TileElementIndex(0, 1), 7},
+    {11, TileElementIndex(0, 2), 8},
+
+  };
+  // clang-format on
+
+  for (auto [i_tile, i_el, val] : expected_entries) {
+    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
+  }
+}

@@ -20,33 +20,6 @@
 
 namespace dlaf::eigensolver::internal {
 
-inline std::vector<SizeType> interleaveSplits(SizeType l, SizeType b, SizeType o1, SizeType o2) {
-  DLAF_ASSERT(l > 0, l);
-  DLAF_ASSERT(b > 0, b);
-  DLAF_ASSERT(o1 >= 0, o1);
-  DLAF_ASSERT(o2 >= 0, o2);
-
-  // Set small and big from offsets o1 and o2 s.t small <= big
-  SizeType small = o1;
-  SizeType big = o2;
-  if (small > big)
-    std::swap(small, big);
-
-  // Reserve enough memory for array of splits
-  std::vector<SizeType> splits;
-  splits.reserve(2 * to_sizet(l / b) + 2);
-
-  splits.push_back(0);
-  for (SizeType i = small, j = big; i < l || j < l; i += b, j += b) {
-    if (splits.back() != i && i < l)
-      splits.push_back(i);
-    if (splits.back() != j && j < l)
-      splits.push_back(j);
-  }
-  splits.push_back(l);
-  return splits;
-}
-
 // Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
 // input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
 //
@@ -97,9 +70,9 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                        std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
   constexpr Coord ocrd = orthogonal(coord);
   std::vector<SizeType> splits =
-      interleaveSplits(sz.get<ocrd>(), distr.blockSize().get<ocrd>(),
-                       distr.distanceToAdjacentTile<ocrd>(in_offset),
-                       distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
+      util::interleaveSplits(sz.get<ocrd>(), distr.blockSize().get<ocrd>(),
+                             distr.distanceToAdjacentTile<ocrd>(in_offset),
+                             distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
 
   for (SizeType i_perm = 0; i_perm < sz.get<coord>(); ++i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {

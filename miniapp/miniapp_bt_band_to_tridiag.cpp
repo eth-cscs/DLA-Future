@@ -134,9 +134,9 @@ struct BacktransformBandToTridiagMiniapp {
 
       double gigaflops;
       {
-        double n = mat_e_host.size().rows();
-        double b = opts.b;
-        auto add_mul = 3 * n * n * b;
+        const double m = mat_e_host.size().rows();
+        const double n = mat_e_host.size().cols();
+        auto add_mul = m * m * n;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
 

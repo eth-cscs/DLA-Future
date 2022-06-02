@@ -7,18 +7,22 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #pragma once
 
-#include <vector>
+#include "dlaf/permutations/general/api.h"
+
+#include "dlaf/blas/tile.h"
+#include "dlaf/common/index2d.h"
+#include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/matrix.h"
+#include "dlaf/sender/transform.h"
+#include "dlaf/sender/when_all_lift.h"
+#include "dlaf/types.h"
 
 #include "pika/parallel/algorithms/for_each.hpp"
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-
-namespace dlaf::eigensolver::internal {
+namespace dlaf::permutations::internal {
 
 // Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
 // input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
@@ -74,7 +78,10 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                              distr.distanceToAdjacentTile<ocrd>(in_offset),
                              distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
 
-  for (SizeType i_perm = 0; i_perm < sz.get<coord>(); ++i_perm) {
+  // Parallelized over the number of permutated columns or rows
+  std::vector<SizeType> loop_arr(to_sizet(sz.get<coord>()));
+  std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
+  pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](SizeType i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
       SizeType split = splits[i_split];
 
@@ -94,7 +101,45 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
 
       matrix::internal::copy(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
     }
-  }
+  });
 }
 
+template <Backend B, Device D, class T, Coord C>
+void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+  const matrix::Distribution& distr = mat_in.distribution();
+  SizeType n = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end + 1);
+  SizeType m = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end + 1);
+  matrix::Distribution subm_distr(LocalElementSize(n, m), distr.blockSize());
+
+  auto permute_fn = [subm_distr](auto index_tiles, auto mat_in_tiles_fut, auto mat_out_tiles_fut) {
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_tiles[0].get().ptr(zero);
+    auto mat_in_tiles = pika::unwrap(mat_in_tiles_fut);
+    auto mat_out_tiles = pika::unwrap(mat_out_tiles_fut);
+
+    applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
+                            mat_in_tiles, mat_out_tiles);
+  };
+
+  // TODO: refactor this with a more general `collectTiles` function
+  std::size_t ntiles = to_sizet(i_end - i_begin + 1);
+  std::vector<pika::shared_future<matrix::Tile<const SizeType, D>>> perms_tiles_arr;
+  std::vector<pika::future<matrix::Tile<T, D>>> in_tiles_arr;
+  std::vector<pika::future<matrix::Tile<T, D>>> out_tiles_arr;
+  perms_tiles_arr.reserve(ntiles);
+  in_tiles_arr.reserve(ntiles * ntiles);
+  out_tiles_arr.reserve(ntiles * ntiles);
+
+  // Tiles are in column major order
+  for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+    perms_tiles_arr.push_back(perms.read(GlobalTileIndex(j_tile, 0)));
+    for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+      in_tiles_arr.push_back(mat_in(GlobalTileIndex(i_tile, j_tile)));
+      out_tiles_arr.push_back(mat_out(GlobalTileIndex(i_tile, j_tile)));
+    }
+  }
+  pika::dataflow(std::move(permute_fn), std::move(perms_tiles_arr), std::move(in_tiles_arr),
+                 std::move(out_tiles_arr));
+}
 }

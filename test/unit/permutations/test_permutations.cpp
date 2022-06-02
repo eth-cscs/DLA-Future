@@ -8,7 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/permutations.h"
+#include "dlaf/permutations/general.h"
+#include "dlaf/permutations/general/impl.h"
 
 #include "gtest/gtest.h"
 #include "dlaf_test/matrix/util_tile.h"
@@ -16,7 +17,6 @@
 
 using namespace dlaf;
 using namespace dlaf::test;
-using namespace dlaf::eigensolver::internal;
 
 template <typename Type>
 class TridiagEigensolverPermutationsTest : public ::testing::Test {};
@@ -91,7 +91,7 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{3, 6, 4, 9};
 
-  dlaf::eigensolver::internal::applyPermutations<TypeParam, Coord::Col>(begin, sz, in_offset, distr,
+  dlaf::permutations::internal::applyPermutations<TypeParam, Coord::Col>(begin, sz, in_offset, distr,
                                                                         perm_arr.data(), in_tiles,
                                                                         out_tiles);
 
@@ -156,7 +156,7 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
   GlobalElementSize sz(3, 6);
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{8, 4, 1};
-  dlaf::eigensolver::internal::applyPermutations<TypeParam, Coord::Row>(begin, sz, in_offset, distr,
+  dlaf::permutations::internal::applyPermutations<TypeParam, Coord::Row>(begin, sz, in_offset, distr,
                                                                         perm_arr.data(), in_tiles,
                                                                         out_tiles);
 

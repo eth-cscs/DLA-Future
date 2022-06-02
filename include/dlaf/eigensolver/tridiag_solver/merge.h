@@ -15,12 +15,13 @@
 #include <pika/unwrap.hpp>
 
 #include "dlaf/eigensolver/tridiag_solver/index.h"
-#include "dlaf/eigensolver/tridiag_solver/permutations.h"
 #include "dlaf/lapack/laed4.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/multiplication/general.h"
+#include "dlaf/permutations/general.h"
+#include "dlaf/permutations/general/impl.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
@@ -875,6 +876,8 @@ void permutateQ(SizeType i_begin, SizeType i_split, SizeType i_end,
 
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+    using dlaf::permutations::internal::applyPermutations;
+
     // Q1'
     applyPermutations<T, Coord::Col>(GlobalElementIndex(0, 0),
                                      GlobalElementSize(n1, ct_lens.num_uphalf + ct_lens.num_dense), 0,
@@ -912,32 +915,13 @@ void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> 
 
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+    using dlaf::permutations::internal::applyPermutations;
     applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(k, k), 0, distr, i_ptr,
                                      mat_in_tiles, mat_out_tiles);
   };
   TileCollector tc{i_begin, i_end};
   pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.read(index), tc.readwrite(mat_in),
                  tc.readwrite(mat_out));
-}
-
-template <class T, Coord coord>
-void permutateQU(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
-                 Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
-  SizeType n = problemSize(i_begin, i_end, mat_in.distribution());
-  SizeType nb = mat_in.distribution().blockSize().rows();
-  auto permute_fn = [n, nb](auto index_tiles, auto mat_in_tiles_fut, auto mat_out_tiles_fut) {
-    TileElementIndex zero(0, 0);
-    const SizeType* i_ptr = index_tiles[0].get().ptr(zero);
-    auto mat_in_tiles = pika::unwrap(mat_in_tiles_fut);
-    auto mat_out_tiles = pika::unwrap(mat_out_tiles_fut);
-
-    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-    applyPermutations<T, coord>(GlobalElementIndex(0, 0), GlobalElementSize(n, n), 0, distr, i_ptr,
-                                mat_in_tiles, mat_out_tiles);
-  };
-  TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permute_fn), tc.read(index), tc.readwrite(mat_in), tc.readwrite(mat_out));
 }
 
 template <class T, Device Source, Device Destination>
@@ -1061,7 +1045,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  permutateQU<T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);  // permutate U to match Q
+  dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
+                                                                         ws.mat2);
   dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
                                                                       blas::Op::NoTrans, T(1), mat_ev,
                                                                       ws.mat2, T(0), ws.mat1);
@@ -1077,7 +1062,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
-  permutateQU<T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, mat_ev);
+  dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
+                                                                         mat_ev);
 
   // ----------- ! Optimized approach
 

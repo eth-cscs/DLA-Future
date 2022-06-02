@@ -136,7 +136,7 @@ struct single_tile_f<Backend::MC, T> {
     using tile::internal::gemm;
     // W2 = V* . E
     gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
-    // E -= W . V2
+    // E -= W . W2
     gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
   }
 };
@@ -151,7 +151,7 @@ struct single_tile_f<Backend::GPU, T> {
     using tile::internal::gemm;
     // W2 = V* . E
     gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
-    // E -= W . V2
+    // E -= W . W2
     gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
   }
 };
@@ -173,7 +173,7 @@ struct double_tile_f<Backend::MC, T> {
     // W2 = V* . E
     gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
     gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
-    // E -= W . V2
+    // E -= W . W2
     gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
     gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
   }
@@ -193,7 +193,7 @@ struct double_tile_f<Backend::GPU, T> {
     // W2 = V* . E
     gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
     gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
-    // E -= W . V2
+    // E -= W . W2
     gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
     gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
   }

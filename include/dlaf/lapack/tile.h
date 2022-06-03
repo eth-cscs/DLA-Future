@@ -423,13 +423,26 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 #elif defined(DLAF_WITH_HIP)
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                         \
-  template <>                                                                 \
-  struct Cusolver##Name<Type> {                                               \
-    template <typename... Args>                                               \
-    static void call(Args&&... args) {                                        \
-      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(std::forward<Args>(args)...)); \
-    }                                                                         \
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                            \
+  template <>                                                                                    \
+  struct Cusolver##Name<Type> {                                                                  \
+    template <typename... Args>                                                                  \
+    static void call(cusolverDnHandle_t handle, Args&&... args) {                                \
+      std::size_t workspace_size;                                                                \
+      rocblas_start_device_memory_size_query(handle);                                            \
+      rocsolver_##f(handle, std::forward<Args>(args)...);                                        \
+      rocblas_stop_device_memory_size_query(handle, &workspace_size);                            \
+      memory::MemoryView<char, Device::GPU> workspace(to_int(workspace_size));                   \
+      DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, workspace(), workspace_size));    \
+      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...));            \
+      DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, nullptr, 0));                     \
+      auto extend_workspace = [workspace = std::move(workspace)](cudaError_t status) {           \
+        DLAF_GPU_CHECK_ERROR(status);                                                            \
+      };                                                                                         \
+      cudaStream_t stream;                                                                       \
+      DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));                          \
+      pika::cuda::experimental::detail::add_event_callback(std::move(extend_workspace), stream); \
+    }                                                                                            \
   }
 
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);

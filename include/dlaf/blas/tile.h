@@ -27,13 +27,27 @@
 
 #ifdef DLAF_WITH_HIP
 
-#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                            \
-  template <>                                                            \
-  struct Name<Type> {                                                    \
-    template <typename... Args>                                          \
-    static void call(Args&&... args) {                                   \
-      DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(std::forward<Args>(args)...)); \
-    }                                                                    \
+#define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                                                           \
+  template <>                                                                                           \
+  struct Name<Type> {                                                                                   \
+    template <typename... Args>                                                                         \
+    static void call(cublasHandle_t handle, Args&&... args) {                                           \
+      std::size_t workspace_size;                                                                       \
+      rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle));                      \
+      hipblas##f(handle, std::forward<Args>(args)...);                                                  \
+      rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size);      \
+      memory::MemoryView<char, Device::GPU> workspace(to_int(workspace_size));                          \
+      DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
+          rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(), workspace_size));     \
+      DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+      DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), nullptr, 0)); \
+      auto extend_workspace = [workspace = std::move(workspace)](cudaError_t status) {                  \
+        DLAF_GPU_CHECK_ERROR(status);                                                                   \
+      };                                                                                                \
+      cudaStream_t stream;                                                                              \
+      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));                                       \
+      pika::cuda::experimental::detail::add_event_callback(std::move(extend_workspace), stream);        \
+    }                                                                                                   \
   }
 
 #elif defined(DLAF_WITH_CUDA)

@@ -39,6 +39,37 @@ inline void checkError(gpublasStatus_t st,
 #endif
 }
 
+#ifdef DLAF_WITH_HIP
+// Lifted from hipBLAS/library/src/hcc_detail/hipblas.cpp
+// This is not permanent
+inline hipblasStatus_t rocBLASStatusToHIPStatus(rocblas_status_ error) {
+  switch (error) {
+    case rocblas_status_size_unchanged:
+    case rocblas_status_size_increased:
+    case rocblas_status_success:
+      return HIPBLAS_STATUS_SUCCESS;
+    case rocblas_status_invalid_handle:
+      return HIPBLAS_STATUS_NOT_INITIALIZED;
+    case rocblas_status_not_implemented:
+      return HIPBLAS_STATUS_NOT_SUPPORTED;
+    case rocblas_status_invalid_pointer:
+    case rocblas_status_invalid_size:
+    case rocblas_status_invalid_value:
+      return HIPBLAS_STATUS_INVALID_VALUE;
+    case rocblas_status_memory_error:
+      return HIPBLAS_STATUS_ALLOC_FAILED;
+    case rocblas_status_internal_error:
+      return HIPBLAS_STATUS_INTERNAL_ERROR;
+    default:
+      return HIPBLAS_STATUS_UNKNOWN;
+  }
+}
+
+inline void checkError(rocblas_status st, const dlaf::common::internal::source_location& info) noexcept {
+  checkError(rocBLASStatusToHIPStatus(st), info);
+}
+#endif
+
 #define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
 
 #endif

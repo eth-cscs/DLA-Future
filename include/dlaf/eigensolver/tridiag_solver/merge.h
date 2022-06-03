@@ -284,19 +284,6 @@ struct TileCollector {
   }
 };
 
-template <class U>
-std::vector<matrix::Tile<const U, Device::CPU>> unwrapConstTile(
-    const std::vector<pika::shared_future<matrix::Tile<const U, Device::CPU>>>& tiles_fut) {
-  std::vector<matrix::Tile<const U, Device::CPU>> tiles;
-  tiles.reserve(tiles_fut.size());
-  for (const auto& tile_fut : tiles_fut) {
-    const auto& tile = tile_fut.get();
-    SizeType len = tile.size().isEmpty() ? 0 : tile.ld() * (tile.size().cols() - 1) + tile.size().rows();
-    tiles.emplace_back(tile.size(), MemoryView(tile.ptr(), len), tile.ld());
-  }
-  return tiles;
-}
-
 // Note: not using matrix::copy for Tile<> here because this has to work for U = SizeType too.
 template <class U>
 void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& in,
@@ -1065,32 +1052,5 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
                                                                          mat_ev);
 
-  // ----------- ! Optimized approach
-
-  //  // Step #4
-  //  //
-  //  //    i1 (in)  : initial  <--- post_sorted
-  //  //       (out) : initial  <--- matmul
-  //  //    i2 (in)  : deflated <--- post_sorted
-  //  //       (out) : deflated <--- matmul
-  //  //
-  //  auto ctlens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, ws.ctmp, ws.i2);
-  //  partitionIndexForMatrixMultiplication(i_begin, i_end, ws.c, ws.i1);
-  //
-  //  // Permutate columns of the `Q` matrix to arrange in multiplication form
-  //  resetSubMatrix(i_begin, i_end, ws.mat2);
-  //  permutateQ(i_begin, i_split, i_end, std::move(ctlens_fut), ws.i1, mat_ev, ws.mat2);
-  //
-  //  // Permutate rows of the `U` matrix to arrange in multiplication form
-  //  resetSubMatrix(i_begin, i_end, mat_ev);
-  //  permutateU(i_begin, i_end, k_fut, ws.i2, ws.mat1, mat_ev);
-
-  //  // Matrix multiply Q' * U' to get the eigenvectors of the merged system
-  //  gemmQU(i_begin, i_end, ws.mat2, mat_ev, ws.mat1);
-  //
-  //  // Copy back into `mat_ev`
-  //  copySubMatrix(i_begin, i_end, ws.mat1, mat_ev);
-  //
-  //  matrix::print(format::csv{}, "fin evecs", mat_ev);
 }
 }

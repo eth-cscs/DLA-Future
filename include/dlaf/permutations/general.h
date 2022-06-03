@@ -41,26 +41,6 @@ void permutate(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perm
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in, mat_out);
   DLAF_ASSERT(distr_in.blockSize().get<coord>() == distr_perms.blockSize().rows(), mat_in, perms);
 
-  //  // Check that `perms` is a column vector of permutations
-  //  DLAF_ASSERT(i_perms >= 0, i_perms);
-  //  DLAF_ASSERT(perms.size().cols() == 1, perms);
-  //  DLAF_ASSERT(i_perms + sz.get<coord>() <= perms.nrTiles().rows(), coord, sz, i_perms, perms,
-  //              "The selected tile region goes out of bounds along `coord`.");
-  //
-  //  DLAF_ASSERT(idx_in.isValid(), idx_in);
-  //  DLAF_ASSERT(idx_in.row() + sz.rows() <= mat_in.nrTiles().rows(), sz, idx_in, mat_in,
-  //              "The selected tile region goes out of bounds along rows.");
-  //  DLAF_ASSERT(idx_in.col() + sz.cols() <= mat_in.nrTiles().cols(), sz, idx_in, mat_in,
-  //              "The selected tile region goes out of bounds along columns.");
-  //
-  //  DLAF_ASSERT(idx_out.isValid(), idx_out);
-  //  DLAF_ASSERT(idx_out.row() + sz.rows() <= mat_out.nrTiles().rows(), sz, idx_out, mat_out,
-  //              "The selected tile region goes out of bounds along rows.");
-  //  DLAF_ASSERT(idx_out.col() + sz.cols() <= mat_out.nrTiles().cols(), sz, idx_out, mat_out,
-  //              "The selected tile region goes out of bounds along columns.");
-  //
-  //  DLAF_ASSERT();
-
   internal::Permutations<B, D, T, coord>::call(i_begin, i_end, perms, mat_in, mat_out);
 }
 

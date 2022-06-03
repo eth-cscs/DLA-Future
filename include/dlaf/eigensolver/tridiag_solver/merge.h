@@ -238,49 +238,31 @@ pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, 
   return pika::dataflow(pika::unwrapping(std::move(tol_fn)), std::move(dmax_fut), std::move(zmax_fut));
 }
 
-// Note the range is inclusive: [begin, end]
-//
-// The tiles are returned in column major order
-template <class FutureTile, class T>
-std::vector<FutureTile> collectTiles(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& mat) {
-  bool is_col_matrix = mat.distribution().size().cols() == 1;
-  SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
-  SizeType col_end = (is_col_matrix) ? 0 : i_end;
-
-  std::vector<FutureTile> tiles;
-  tiles.reserve(to_sizet(i_end - i_begin + 1) * to_sizet(col_end - col_begin + 1));
-
-  for (SizeType j = col_begin; j <= col_end; ++j) {
-    for (SizeType i = i_begin; i <= i_end; ++i) {
-      GlobalTileIndex idx(i, j);
-      if constexpr (std::is_const<T>::value) {
-        tiles.push_back(mat.read(idx));
-      }
-      else {
-        tiles.push_back(mat(idx));
-      }
-    }
-  }
-  return tiles;
-}
-
 struct TileCollector {
   SizeType i_begin;
   SizeType i_end;
 
-  template <class T>
-  using ReadFutureTile = pika::shared_future<matrix::Tile<const T, Device::CPU>>;
-  template <class T>
-  using ReadWriteFutureTile = pika::future<matrix::Tile<T, Device::CPU>>;
+private:
+  template<class T>
+  std::pair<GlobalTileIndex, GlobalTileSize> getRange(Matrix<const T, Device::CPU>& mat) {
+    SizeType ntiles = i_end  - i_begin + 1;
+    bool is_col_matrix = mat.distribution().size().cols() == 1;
+    SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
+    SizeType col_sz = (is_col_matrix) ? 1 : ntiles;
+    return std::make_pair(GlobalTileIndex(i_begin, col_begin), GlobalTileSize(ntiles, col_sz));
+  }
 
+public:
   template <class T>
-  std::vector<ReadFutureTile<T>> read(Matrix<const T, Device::CPU>& mat) {
-    return collectTiles<ReadFutureTile<T>, const T>(i_begin, i_end, mat);
+  auto read(Matrix<const T, Device::CPU>& mat) {
+    auto [begin, end] = getRange(mat);
+    return matrix::util::collectReadTiles(begin, end, mat);
   }
 
   template <class T>
-  std::vector<ReadWriteFutureTile<T>> readwrite(Matrix<T, Device::CPU>& mat) {
-    return collectTiles<ReadWriteFutureTile<T>, T>(i_begin, i_end, mat);
+  auto readwrite(Matrix<T, Device::CPU>& mat) {
+    auto [begin, end] = getRange(mat);
+    return matrix::util::collectReadWriteTiles(begin, end, mat);
   }
 };
 

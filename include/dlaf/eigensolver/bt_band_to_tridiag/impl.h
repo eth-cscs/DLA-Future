@@ -131,7 +131,7 @@ template <class T>
 struct single_tile_f<Backend::MC, T> {
   void operator()(const matrix::Tile<const T, Device::CPU>& tile_v,
                   const matrix::Tile<const T, Device::CPU>& tile_w, matrix::Tile<T, Device::CPU> tile_w2,
-                  matrix::Tile<T, Device::CPU> tile_e) {
+                  const matrix::Tile<T, Device::CPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
     // W2 = V* . E
@@ -146,7 +146,8 @@ template <class T>
 struct single_tile_f<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
-                  matrix::Tile<T, Device::GPU>& tile_w2, matrix::Tile<T, Device::GPU>& tile_e) {
+                  const matrix::Tile<T, Device::GPU>& tile_w2,
+                  const matrix::Tile<T, Device::GPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
     // W2 = V* . E
@@ -166,8 +167,9 @@ struct double_tile_f<Backend::MC, T> {
                   const matrix::Tile<const T, Device::CPU>& tile_v1,
                   const matrix::Tile<const T, Device::CPU>& tile_w0,
                   const matrix::Tile<const T, Device::CPU>& tile_w1,
-                  matrix::Tile<T, Device::CPU> tile_w2, matrix::Tile<T, Device::CPU> tile_e_top,
-                  matrix::Tile<T, Device::CPU> tile_e_bottom) {
+                  const matrix::Tile<T, Device::CPU>& tile_w2,
+                  const matrix::Tile<T, Device::CPU>& tile_e_top,
+                  const matrix::Tile<T, Device::CPU>& tile_e_bottom) {
     using namespace blas;
     using tile::internal::gemm;
     // W2 = V* . E
@@ -186,8 +188,9 @@ struct double_tile_f<Backend::GPU, T> {
                   const matrix::Tile<const T, Device::GPU>& tile_v1,
                   const matrix::Tile<const T, Device::GPU>& tile_w0,
                   const matrix::Tile<const T, Device::GPU>& tile_w1,
-                  matrix::Tile<T, Device::GPU>& tile_w2, matrix::Tile<T, Device::GPU>& tile_e_top,
-                  matrix::Tile<T, Device::GPU>& tile_e_bottom) {
+                  const matrix::Tile<T, Device::GPU>& tile_w2,
+                  const matrix::Tile<T, Device::GPU>& tile_e_top,
+                  const matrix::Tile<T, Device::GPU>& tile_e_bottom) {
     using namespace blas;
     using tile::internal::gemm;
     // W2 = V* . E

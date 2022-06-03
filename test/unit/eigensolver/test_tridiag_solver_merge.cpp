@@ -285,8 +285,9 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
   Matrix<T, Device::CPU> ws(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-  dlaf::eigensolver::internal::solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d_defl, z_defl, ws,
+  dlaf::eigensolver::internal::solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d_defl, z_defl,
                                                  evals, evecs);
+  dlaf::eigensolver::internal::formEvecs(i_begin, i_end, k_fut, d_defl, z_defl, ws, evecs);
 
   std::vector<T> expected_evals{1.44288664, 1.70781225, 1.93425131, 2.03886453, 2.11974489,
                                 2.24176809, 2.32330826, 2.44580313, 2.56317737, 3.70804892};

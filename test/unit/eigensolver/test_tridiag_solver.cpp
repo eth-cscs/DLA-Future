@@ -146,6 +146,6 @@ TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb4) {
 }
 
 // This occasionally segfaults. It may also deadlock?
-// TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb3) {
-//  solveLaplace1D<TypeParam>(16, 3);
+// TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb5) {
+//  solveLaplace1D<TypeParam>(16, 5);
 //}

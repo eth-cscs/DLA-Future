@@ -228,6 +228,7 @@ add_library(DLAF
   $<TARGET_OBJECTS:dlaf.eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
   $<TARGET_OBJECTS:dlaf.multiplication>
+  $<TARGET_OBJECTS:dlaf.permutations>
   $<TARGET_OBJECTS:dlaf.solver>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)

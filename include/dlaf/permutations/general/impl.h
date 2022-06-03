@@ -14,6 +14,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/sender/transform.h"
@@ -100,7 +101,7 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
       TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
       auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
-      matrix::internal::copy(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
+      dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
     }
   });
 }

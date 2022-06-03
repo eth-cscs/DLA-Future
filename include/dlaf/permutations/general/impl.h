@@ -17,6 +17,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/schedulers.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
@@ -109,10 +110,12 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                                     Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+  namespace ut = matrix::util;
   const matrix::Distribution& distr = mat_in.distribution();
   SizeType n = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end + 1);
   SizeType m = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end + 1);
   matrix::Distribution subm_distr(LocalElementSize(n, m), distr.blockSize());
+  SizeType ntiles = i_end - i_begin + 1;
 
   auto permute_fn = [subm_distr](auto index_tiles, auto mat_in_tiles_fut, auto mat_out_tiles_fut) {
     TileElementIndex zero(0, 0);
@@ -124,13 +127,34 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                             mat_in_tiles, mat_out_tiles);
   };
 
-  SizeType ntiles = i_end - i_begin + 1;
   pika::dataflow(std::move(permute_fn),
-                 matrix::util::collectReadTiles(GlobalTileIndex(i_begin, 0), GlobalTileSize(ntiles, 1),
-                                                perms),
-                 matrix::util::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                     GlobalTileSize(ntiles, ntiles), mat_in),
-                 matrix::util::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                     GlobalTileSize(ntiles, ntiles), mat_out));
+                 ut::collectReadTiles(GlobalTileIndex(i_begin, 0), GlobalTileSize(ntiles, 1), perms),
+                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                           GlobalTileSize(ntiles, ntiles), mat_in),
+                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                           GlobalTileSize(ntiles, ntiles), mat_out));
+
+  // Note: `dlaf::internal::transform()` causes a compile-time error due to internal use of
+  // `unwrapping()` for `std::vector<pika:shared_future<matrix::Tile<const T, D>>>`and is not used here
+  // on purpose. ??
+  //
+  // namespace ex = pika::execution::experimental;
+
+  // auto permute_fn = [subm_distr](auto index_tiles, auto mat_in_tiles, auto mat_out_tiles) {
+  //   TileElementIndex zero(0, 0);
+  //   const SizeType* i_ptr = index_tiles[0].ptr(zero);
+
+  //  applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
+  //                          mat_in_tiles, mat_out_tiles);
+  //};
+
+  // auto scheduler = dlaf::internal::getBackendScheduler<B>(pika::threads::thread_priority::normal);
+  // ex::when_all(ex::when_all_vector(
+  //                  ut::collectReadTiles(GlobalTileIndex(i_begin, 0), GlobalTileSize(ntiles, 1), perms)),
+  //              ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+  //                                                            GlobalTileSize(ntiles, ntiles), mat_in)),
+  //              ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+  //                                                            GlobalTileSize(ntiles, ntiles), mat_out))) |
+  //     ex::transfer(std::move(scheduler)) | ex::then(std::move(permute_fn)) | ex::start_detached();
 }
 }

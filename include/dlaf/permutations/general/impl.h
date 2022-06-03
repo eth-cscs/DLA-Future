@@ -19,6 +19,7 @@
 #include "dlaf/sender/transform.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 #include "pika/parallel/algorithms/for_each.hpp"
 
@@ -122,24 +123,13 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                             mat_in_tiles, mat_out_tiles);
   };
 
-  // TODO: refactor this with a more general `collectTiles` function
-  std::size_t ntiles = to_sizet(i_end - i_begin + 1);
-  std::vector<pika::shared_future<matrix::Tile<const SizeType, D>>> perms_tiles_arr;
-  std::vector<pika::future<matrix::Tile<T, D>>> in_tiles_arr;
-  std::vector<pika::future<matrix::Tile<T, D>>> out_tiles_arr;
-  perms_tiles_arr.reserve(ntiles);
-  in_tiles_arr.reserve(ntiles * ntiles);
-  out_tiles_arr.reserve(ntiles * ntiles);
-
-  // Tiles are in column major order
-  for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
-    perms_tiles_arr.push_back(perms.read(GlobalTileIndex(j_tile, 0)));
-    for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-      in_tiles_arr.push_back(mat_in(GlobalTileIndex(i_tile, j_tile)));
-      out_tiles_arr.push_back(mat_out(GlobalTileIndex(i_tile, j_tile)));
-    }
-  }
-  pika::dataflow(std::move(permute_fn), std::move(perms_tiles_arr), std::move(in_tiles_arr),
-                 std::move(out_tiles_arr));
+  SizeType ntiles = i_end - i_begin + 1;
+  pika::dataflow(std::move(permute_fn),
+                 matrix::util::collectReadTiles(GlobalTileIndex(i_begin, 0), GlobalTileSize(ntiles, 1),
+                                                perms),
+                 matrix::util::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                     GlobalTileSize(ntiles, ntiles), mat_in),
+                 matrix::util::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                     GlobalTileSize(ntiles, ntiles), mat_out));
 }
 }

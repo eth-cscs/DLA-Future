@@ -77,7 +77,8 @@ inline void checkError(rocblas_status st, const dlaf::common::internal::source_l
 }
 #endif
 
-#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) ::dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
+#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) \
+  ::dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
 
 #endif
 

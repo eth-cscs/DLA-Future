@@ -15,6 +15,7 @@
 #ifdef DLAF_WITH_HIP
 
 #include <hipblas.h>
+#include <rocblas.h>
 
 #define cublasCall           hipblasCall
 #define cublasCherk          hipblasCherk

@@ -826,73 +826,6 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
   }
 }
 
-template <class T>
-void permutateQ(SizeType i_begin, SizeType i_split, SizeType i_end,
-                pika::future<ColTypeLens> ct_lens_fut, Matrix<const SizeType, Device::CPU>& index,
-                Matrix<T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& mat_q) {
-  SizeType n = problemSize(i_begin, i_end, mat_ev.distribution());
-  SizeType n1 = problemSize(i_begin, i_split, mat_ev.distribution());
-  SizeType nb = mat_ev.distribution().blockSize().rows();
-
-  auto permutate_fn = [n, n1, nb](auto ct_lens_fut, auto index_fut_tiles, auto mat_ev_fut_tiles,
-                                  auto mat_q_fut_tiles) {
-    ColTypeLens ct_lens = ct_lens_fut.get();
-    TileElementIndex zero(0, 0);
-    const SizeType* i_ptr = index_fut_tiles[0].get().ptr(zero);
-
-    auto mat_ev_tiles = pika::unwrap(mat_ev_fut_tiles);
-    auto mat_q_tiles = pika::unwrap(mat_q_fut_tiles);
-
-    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-    using dlaf::permutations::internal::applyPermutations;
-
-    // Q1'
-    applyPermutations<T, Coord::Col>(GlobalElementIndex(0, 0),
-                                     GlobalElementSize(n1, ct_lens.num_uphalf + ct_lens.num_dense), 0,
-                                     distr, i_ptr, mat_ev_tiles, mat_q_tiles);
-
-    // Q2'
-    applyPermutations<T, Coord::Col>(GlobalElementIndex(n1, 0),
-                                     GlobalElementSize(n - n1, ct_lens.num_dense + ct_lens.num_lowhalf),
-                                     n1, distr, i_ptr + ct_lens.num_uphalf, mat_ev_tiles, mat_q_tiles);
-
-    // Deflated
-    applyPermutations<T, Coord::Col>(GlobalElementIndex(0, n - ct_lens.num_deflated),
-                                     GlobalElementSize(n, ct_lens.num_deflated), 0, distr,
-                                     i_ptr + n - ct_lens.num_deflated, mat_ev_tiles, mat_q_tiles);
-  };
-
-  TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permutate_fn), std::move(ct_lens_fut), tc.read(index), tc.readwrite(mat_ev),
-                 tc.readwrite(mat_q));
-}
-
-template <class T>
-void permutateU(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-                Matrix<const SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& mat_in,
-                Matrix<T, Device::CPU>& mat_out) {
-  SizeType n = problemSize(i_begin, i_end, mat_in.distribution());
-  SizeType nb = mat_in.distribution().blockSize().rows();
-  auto permute_fn = [n, nb](auto k_fut, auto index_tiles, auto mat_in_tiles_fut,
-                            auto mat_out_tiles_fut) {
-    SizeType k = k_fut.get();
-    TileElementIndex zero(0, 0);
-    const SizeType* i_ptr = index_tiles[0].get().ptr(zero);
-    auto mat_in_tiles = pika::unwrap(mat_in_tiles_fut);
-    auto mat_out_tiles = pika::unwrap(mat_out_tiles_fut);
-
-    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-    using dlaf::permutations::internal::applyPermutations;
-    applyPermutations<T, Coord::Row>(GlobalElementIndex(0, 0), GlobalElementSize(k, k), 0, distr, i_ptr,
-                                     mat_in_tiles, mat_out_tiles);
-  };
-  TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(permute_fn), std::move(k_fut), tc.read(index), tc.readwrite(mat_in),
-                 tc.readwrite(mat_out));
-}
-
 template <class T, Device Source, Device Destination>
 void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
                    Matrix<T, Destination>& dest) {
@@ -1014,10 +947,10 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  //matrix::print(format::csv{}, "pre row perms", ws.i2);
+  // matrix::print(format::csv{}, "pre row perms", ws.i2);
   dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
                                                                          ws.mat2);
-  //matrix::print(format::csv{}, "post row perms", ws.i2);
+  // matrix::print(format::csv{}, "post row perms", ws.i2);
 
   dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
                                                                       blas::Op::NoTrans, T(1), mat_ev,

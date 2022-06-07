@@ -392,12 +392,12 @@ void scaleCol(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
 
 #ifdef DLAF_WITH_GPU
 namespace internal {
-#define DLAF_DECLARE_CUSOLVER_OP(Name) \
-  template <typename T>                \
+#define DLAF_DECLARE_GPULAPACK_OP(Name) \
+  template <typename T>                 \
   struct Cusolver##Name
 
-DLAF_DECLARE_CUSOLVER_OP(Hegst);
-DLAF_DECLARE_CUSOLVER_OP(Potrf);
+DLAF_DECLARE_GPULAPACK_OP(Hegst);
+DLAF_DECLARE_GPULAPACK_OP(Potrf);
 
 #ifdef DLAF_WITH_CUDA
 

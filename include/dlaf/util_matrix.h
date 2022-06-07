@@ -387,6 +387,45 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 2 * matrix.size().rows());
 }
 
+/// The tiles are returned in column major order
+template <class T, Device D>
+std::vector<pika::future<matrix::Tile<T, D>>> collectReadWriteTiles(GlobalTileIndex begin,
+                                                                    GlobalTileSize sz,
+                                                                    Matrix<T, D>& mat) {
+  std::vector<pika::future<matrix::Tile<T, D>>> tiles;
+  tiles.reserve(to_sizet(sz.linear_size()));
+  for (auto idx : iterate_range2d(begin, sz)) {
+    tiles.push_back(mat(idx));
+  }
+  return tiles;
+}
+
+/// The tiles are returned in column major order
+template <class T, Device D>
+std::vector<pika::shared_future<matrix::Tile<const T, D>>> collectReadTiles(GlobalTileIndex begin,
+                                                                            GlobalTileSize sz,
+                                                                            Matrix<const T, D>& mat) {
+  std::vector<pika::shared_future<matrix::Tile<const T, D>>> tiles;
+  tiles.reserve(to_sizet(sz.linear_size()));
+  for (auto idx : iterate_range2d(begin, sz)) {
+    tiles.push_back(mat.read(idx));
+  }
+  return tiles;
+}
+
+/// The tiles are returned in column major order
+template <class T, Device D>
+auto collectReadTileSenders(GlobalTileIndex begin, GlobalTileSize sz, Matrix<const T, D>& mat) {
+  using pika::execution::experimental::keep_future;
+
+  std::vector<decltype(keep_future(pika::shared_future<matrix::Tile<const T, D>>()))> tiles;
+  tiles.reserve(to_sizet(sz.linear_size()));
+  for (auto idx : iterate_range2d(begin, sz)) {
+    tiles.push_back(mat.read_sender(idx));
+  }
+  return tiles;
+}
+
 }
 }
 }

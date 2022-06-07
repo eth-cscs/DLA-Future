@@ -517,7 +517,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+  assertExtendInfo(dlaf::cusolver::assertInfoPotrf, handle, std::move(info));
 }
 
 template <class T>

@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <cstddef>
+
 #include <blas.hh>
 
 #include "dlaf/common/callable_object.h"
@@ -36,7 +38,7 @@
       rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle));                      \
       hipblas##f(handle, std::forward<Args>(args)...);                                                  \
       rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size);      \
-      memory::MemoryView<char, Device::GPU> workspace(to_int(workspace_size));                          \
+      memory::MemoryView<std::byte, Device::GPU> workspace(to_int(workspace_size));                     \
       DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
           rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(), workspace_size));     \
       DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \

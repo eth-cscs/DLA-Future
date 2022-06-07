@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <cstddef>
+
 #include <lapack.hh>
 // LAPACKPP includes complex.h which defines the macro I.
 // This breaks pika.
@@ -432,7 +434,7 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
       rocblas_start_device_memory_size_query(handle);                                            \
       rocsolver_##f(handle, std::forward<Args>(args)...);                                        \
       rocblas_stop_device_memory_size_query(handle, &workspace_size);                            \
-      memory::MemoryView<char, Device::GPU> workspace(to_int(workspace_size));                   \
+      memory::MemoryView<std::byte, Device::GPU> workspace(to_int(workspace_size));              \
       DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, workspace(), workspace_size));    \
       DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...));            \
       DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, nullptr, 0));                     \

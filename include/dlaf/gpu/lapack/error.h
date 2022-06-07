@@ -33,7 +33,8 @@ inline void checkError(gpulapackStatus_t st,
     std::terminate();
   }
 #elif defined(DLAF_WITH_HIP)
-  if (st != CUSOLVER_STATUS_SUCCESS) {
+  if (st != rocblas_status_success && st != rocblas_status_size_unchanged &&
+      st != rocblas_status_size_increased && st != rocblas_status_continue) {
     std::cout << "[ROCSOLVER ERROR] " << info << std::endl << rocsolver::getErrorString(st) << std::endl;
     std::terminate();
   }

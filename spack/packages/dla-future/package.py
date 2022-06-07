@@ -51,6 +51,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("hipblas", when="+rocm")
     depends_on("rocsolver", when="+rocm")
 
+    conflicts("+cuda", when="+rocm")
+
     def cmake_args(self):
         spec = self.spec
 

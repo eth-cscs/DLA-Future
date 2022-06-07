@@ -52,7 +52,7 @@ TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 // Tuple elements:  n, extra_lda, extra_ldb
 std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
     {0, 0, 0},  {3, 0, 0},  {5, 3, 5},  {9, 0, 7},  {9, 1, 0},
-    {17, 0, 3}, {17, 7, 0}, {32, 0, 0}, {32, 4, 5}, {128, 0, 0},
+    {17, 0, 3}, {17, 7, 0}, {32, 0, 0}, {32, 4, 5}, {64, 0, 0},
 };
 
 TYPED_TEST(TileOperationsTestMC, Hegst) {

@@ -413,13 +413,11 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
 
   gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                          blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
-                         to_int(b.ld())
+                         blasToCublasCast(a.ptr()), to_int(a.ld()),
 #ifdef DLAF_WITH_CUDA
-                             ,
-                         blasToCublasCast(b.ptr()), to_int(b.ld())
+                         blasToCublasCast(b.ptr()), to_int(b.ld()),
 #endif
-  );
+                         blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 
 template <class T>

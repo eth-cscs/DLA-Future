@@ -413,6 +413,19 @@ std::vector<pika::shared_future<matrix::Tile<const T, D>>> collectReadTiles(Glob
   return tiles;
 }
 
+/// The tiles are returned in column major order
+template <class T, Device D>
+auto collectReadTileSenders(GlobalTileIndex begin, GlobalTileSize sz, Matrix<const T, D>& mat) {
+  using pika::execution::experimental::keep_future;
+
+  std::vector<decltype(keep_future(pika::shared_future<matrix::Tile<const T, D>>()))> tiles;
+  tiles.reserve(to_sizet(sz.linear_size()));
+  for (auto idx : iterate_range2d(begin, sz)) {
+    tiles.push_back(mat.read_sender(idx));
+  }
+  return tiles;
+}
+
 }
 }
 }

@@ -134,7 +134,9 @@ void solveLaplace1D(SizeType n, SizeType nb) {
       tile::internal::scaleCol(T(-1), j_tile_el, tile);
     }
   }
-  CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
+
+  constexpr T error = TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, error * n, error * n);
 }
 
 TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb8) {

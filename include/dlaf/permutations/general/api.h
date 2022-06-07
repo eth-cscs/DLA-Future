@@ -33,10 +33,10 @@ DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
-//#ifdef DLAF_WITH_CUDA
-// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)
-// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
-// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-//#endif
+#ifdef DLAF_WITH_CUDA
+DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
 }

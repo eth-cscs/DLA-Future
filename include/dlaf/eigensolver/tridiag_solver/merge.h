@@ -243,9 +243,9 @@ struct TileCollector {
   SizeType i_end;
 
 private:
-  template<class T>
+  template <class T>
   std::pair<GlobalTileIndex, GlobalTileSize> getRange(Matrix<const T, Device::CPU>& mat) {
-    SizeType ntiles = i_end  - i_begin + 1;
+    SizeType ntiles = i_end - i_begin + 1;
     bool is_col_matrix = mat.distribution().size().cols() == 1;
     SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
     SizeType col_sz = (is_col_matrix) ? 1 : ntiles;
@@ -1014,8 +1014,11 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  //matrix::print(format::csv{}, "pre row perms", ws.i2);
   dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
                                                                          ws.mat2);
+  //matrix::print(format::csv{}, "post row perms", ws.i2);
+
   dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
                                                                       blas::Op::NoTrans, T(1), mat_ev,
                                                                       ws.mat2, T(0), ws.mat1);
@@ -1033,6 +1036,5 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
   dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
                                                                          mat_ev);
-
 }
 }

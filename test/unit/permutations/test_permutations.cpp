@@ -8,10 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "gtest/gtest.h"
+
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/permutations/general.h"
 #include "dlaf/permutations/general/impl.h"
+#include "dlaf/util_matrix.h"
 
-#include "gtest/gtest.h"
+#include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
@@ -21,6 +25,13 @@ using namespace dlaf::test;
 template <typename Type>
 class TridiagEigensolverPermutationsTest : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+
+template <typename Type>
+class PermutationsTestGPU : public ::testing::Test {};
+TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
+#endif
 
 // Initializes square input and output matices of size (n x n) and block size (nb x nb). The matrices are
 // described by a distribution and an array of input and output tiles respectively. Note that in contrast
@@ -78,28 +89,26 @@ setupMatricesForPermutations(SizeType n, SizeType nb) {
 //  │                 │   │                 │
 //  └─────────────────┘   └─────────────────┘
 //
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
+template <Device D, class T>
+void testApplyColumnPermutations(SizeType n, SizeType nb) {
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
 
-  SizeType n = 10;
-  SizeType nb = 3;
-  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<TypeParam>(n, nb);
+  auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
 
   GlobalElementIndex begin(4, 4);
   GlobalElementSize sz(3, 4);
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{3, 6, 4, 9};
 
-  dlaf::permutations::internal::applyPermutations<TypeParam, Coord::Col>(begin, sz, in_offset, distr,
-                                                                        perm_arr.data(), in_tiles,
-                                                                        out_tiles);
+  dlaf::permutations::internal::applyPermutations<T, Coord::Col>(begin, sz, in_offset, distr,
+                                                                 perm_arr.data(), in_tiles, out_tiles);
 
   // Expected entries in `out_tiles`
   //
   // (tile index in `out_tiles`, index of element in tile, value of element)
   // clang-format off
-  std::vector<std::tuple<std::size_t, TileElementIndex, TypeParam>> expected_entries {
+  std::vector<std::tuple<std::size_t, TileElementIndex, T>> expected_entries {
     // column 4
     {5, TileElementIndex(1, 1), 5},
     {5, TileElementIndex(2, 1), 6},
@@ -143,22 +152,19 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
 // └──────────────────────┘    └──────────────────────┘
 // where the (i, j) element of `in` is `i + j`
 //
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
-  using T = TypeParam;
+template <Device D, class T>
+void testApplyRowPermutations(SizeType n, SizeType nb) {
   using dlaf::matrix::test::createTile;
   using dlaf::matrix::test::set;
 
-  SizeType n = 10;
-  SizeType nb = 3;
   auto [distr, in_tiles, out_tiles] = setupMatricesForPermutations<T>(n, nb);
 
   GlobalElementIndex begin(7, 3);
   GlobalElementSize sz(3, 6);
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{8, 4, 1};
-  dlaf::permutations::internal::applyPermutations<TypeParam, Coord::Row>(begin, sz, in_offset, distr,
-                                                                        perm_arr.data(), in_tiles,
-                                                                        out_tiles);
+  dlaf::permutations::internal::applyPermutations<T, Coord::Row>(begin, sz, in_offset, distr,
+                                                                 perm_arr.data(), in_tiles, out_tiles);
 
   // Expected entries in `out_tiles`
   //
@@ -196,3 +202,68 @@ TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
     EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
   }
 }
+
+// Permutate columns or rows in reverse order.
+// Each column or row of the input matrix is has it's index as a value.
+template <Backend B, Device D, class T, Coord C>
+void testPermutations(SizeType n, SizeType nb) {
+  Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Matrix<T, Device::CPU> mat_in_h(LocalElementSize(n, n), TileElementSize(nb, nb));
+  Matrix<T, Device::CPU> mat_out_h(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  dlaf::matrix::util::set(perms_h, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
+  dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) { return T(i.get<C>()); });
+
+  {
+    matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
+    matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);
+    matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
+
+    SizeType i_begin = 0;
+    SizeType i_end = perms_h.distribution().nrTiles().rows() - 1;
+    permutations::permutate<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
+  }
+
+  auto expected_out = [n](const GlobalElementIndex i) { return T(n - 1 - i.get<C>()); };
+  CHECK_MATRIX_EQ(expected_out, mat_out_h);
+}
+
+TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
+  SizeType n = 10;
+  SizeType nb = 3;
+
+  testApplyColumnPermutations<Device::CPU, TypeParam>(n, nb);
+}
+
+TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
+  SizeType n = 10;
+  SizeType nb = 3;
+
+  testApplyRowPermutations<Device::CPU, TypeParam>(n, nb);
+}
+
+TYPED_TEST(TridiagEigensolverPermutationsTest, Columns) {
+  SizeType n = 10;
+  SizeType nb = 3;
+  testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Col>(n, nb);
+}
+
+TYPED_TEST(TridiagEigensolverPermutationsTest, Rows) {
+  SizeType n = 10;
+  SizeType nb = 3;
+  testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Row>(n, nb);
+}
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(PermutationsTestGPU, Columns) {
+  SizeType n = 10;
+  SizeType nb = 3;
+  testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Col>(n, nb);
+}
+
+TYPED_TEST(PermutationsTestGPU, Rows) {
+  SizeType n = 10;
+  SizeType nb = 3;
+  testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Row>(n, nb);
+}
+#endif

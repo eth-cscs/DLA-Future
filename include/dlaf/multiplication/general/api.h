@@ -18,7 +18,7 @@
 namespace dlaf::multiplication {
 namespace internal {
 
-template <Device D, class T>
+template <Backend B, Device D, class T>
 struct GeneralSub {
   static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
                      const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
@@ -26,13 +26,19 @@ struct GeneralSub {
 };
 
 /// ---- ETI
-#define DLAF_MULTIPLICATION_GENERAL_ETI(KWORD, DEVICE, DATATYPE) \
-  KWORD template struct GeneralSub<DEVICE, DATATYPE>;
+#define DLAF_MULTIPLICATION_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct GeneralSub<BACKEND, DEVICE, DATATYPE>;
 
-DLAF_MULTIPLICATION_GENERAL_ETI(extern, Device::CPU, float)
-DLAF_MULTIPLICATION_GENERAL_ETI(extern, Device::CPU, double)
-DLAF_MULTIPLICATION_GENERAL_ETI(extern, Device::CPU, std::complex<float>)
-DLAF_MULTIPLICATION_GENERAL_ETI(extern, Device::CPU, std::complex<double>)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
+#ifdef DLAF_WITH_CUDA
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
 }
 }

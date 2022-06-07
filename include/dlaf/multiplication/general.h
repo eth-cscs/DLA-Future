@@ -38,7 +38,7 @@ namespace dlaf::multiplication {
 /// @pre mat_a, mat_b and mat_c have the same square size,
 /// @pre mat_a, mat_b and mat_c are not distributed,
 /// @pre a <= b < mat_a.nrTiles().rows()
-template <Device D, class T>
+template <Backend B, Device D, class T>
 void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB,
                       const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c) {
@@ -62,9 +62,8 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   using namespace blas;
 
   if (opA == Op::NoTrans && opB == Op::NoTrans)
-    internal::GeneralSub<D, T>::callNN(a, b, opA, opB, alpha, mat_a, mat_b, beta, mat_c);
+    internal::GeneralSub<B, D, T>::callNN(a, b, opA, opB, alpha, mat_a, mat_b, beta, mat_c);
   else
     DLAF_UNIMPLEMENTED(opA, opB);
 }
-
 }

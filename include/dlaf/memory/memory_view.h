@@ -32,7 +32,7 @@ public:
   friend MemoryView<const ElementType, device>;
 
   /// Creates a MemoryView of size 0.
-  MemoryView() : memory_(std::make_shared<MemoryChunk<ElementType, device>>()), offset_(0), size_(0) {}
+  MemoryView() : memory_(), offset_(0), size_(0) {}
 
   /// Creates a MemoryView object allocating the required memory.
   ///
@@ -41,7 +41,8 @@ public:
   /// Memory of @p size elements of type @c T is allocated on the given device.
   template <class U = T, class = typename std::enable_if_t<!std::is_const_v<U> && std::is_same_v<T, U>>>
   explicit MemoryView(SizeType size)
-      : memory_(std::make_shared<MemoryChunk<ElementType, device>>(size)), offset_(0), size_(size) {
+      : memory_(size > 0 ? std::make_shared<MemoryChunk<ElementType, device>>(size) : nullptr),
+        offset_(0), size_(size) {
     DLAF_ASSERT(size >= 0, size);
   }
 
@@ -53,6 +54,7 @@ public:
   MemoryView(T* ptr, SizeType size)
       : memory_(std::make_shared<MemoryChunk<ElementType, device>>(const_cast<ElementType*>(ptr), size)),
         offset_(0), size_(size) {
+    // TODO: ptr == nullptr? deleter?
     DLAF_ASSERT(size >= 0, size);
   }
 
@@ -61,16 +63,15 @@ public:
   MemoryView(const MemoryView<ElementType, device>& rhs)
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {}
 
-  MemoryView(MemoryView&& rhs) : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {
-    rhs.memory_ = std::make_shared<MemoryChunk<ElementType, device>>();
+  MemoryView(MemoryView&& rhs)
+      : memory_(std::move(rhs.memory_)), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.size_ = 0;
     rhs.offset_ = 0;
   }
 
   template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(MemoryView<ElementType, device>&& rhs)
-      : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {
-    rhs.memory_ = std::make_shared<MemoryChunk<ElementType, device>>();
+      : memory_(std::move(rhs.memory_)), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.size_ = 0;
     rhs.offset_ = 0;
   }
@@ -82,13 +83,13 @@ public:
   /// @param size        The size (in number of elements of type @c T) of the subview,
   /// @pre subview should not exceeds the limits of @p memory_view.
   MemoryView(const MemoryView& memory_view, SizeType offset, SizeType size)
-      : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
+      : memory_(size > 0 ? memory_view.memory_ : nullptr),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
   }
   template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(const MemoryView<ElementType, device>& memory_view, SizeType offset, SizeType size)
-      : memory_(size > 0 ? memory_view.memory_ : std::make_shared<MemoryChunk<ElementType, device>>()),
+      : memory_(size > 0 ? memory_view.memory_ : nullptr),
         offset_(size > 0 ? offset + memory_view.offset_ : 0), size_(size) {
     DLAF_ASSERT(offset + size <= memory_view.size_, offset + size, memory_view.size_);
   }
@@ -108,7 +109,6 @@ public:
     offset_ = rhs.offset_;
     size_ = rhs.size_;
 
-    rhs.memory_ = std::make_shared<MemoryChunk<ElementType, device>>();
     rhs.size_ = 0;
     rhs.offset_ = 0;
 
@@ -120,7 +120,6 @@ public:
     offset_ = rhs.offset_;
     size_ = rhs.size_;
 
-    rhs.memory_ = std::make_shared<MemoryChunk<ElementType, device>>();
     rhs.size_ = 0;
     rhs.offset_ = 0;
 

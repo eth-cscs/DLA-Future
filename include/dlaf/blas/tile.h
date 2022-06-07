@@ -114,7 +114,14 @@ DLAF_MAKE_GPUBLAS_SYHE_OP(Her2k, r2k);
 
 DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
 
+#ifdef DLAF_WITH_HIP
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
+#ifdef DLAF_WITH_HIP
+#pragma clang diagnostic pop
+#endif
 
 DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
 

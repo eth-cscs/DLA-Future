@@ -108,7 +108,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika REQUIRED)
+find_package(pika 0.5.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

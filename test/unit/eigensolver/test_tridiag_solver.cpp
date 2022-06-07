@@ -74,7 +74,6 @@ TYPED_TEST(TridiagEigensolverTest, CuppensDecomposition) {
 // trd = diags([e,d,e], [-1, 0, 1]).toarray()
 // evals, evecs = eigh(trd)
 //
-
 template <class T>
 void solveLaplace1D(SizeType n, SizeType nb) {
   constexpr double pi = 3.14159265358979323846;
@@ -147,7 +146,6 @@ TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb4) {
   solveLaplace1D<TypeParam>(16, 4);
 }
 
-// This occasionally segfaults. It may also deadlock?
-// TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb5) {
-//  solveLaplace1D<TypeParam>(16, 5);
-//}
+TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb5) {
+  solveLaplace1D<TypeParam>(16, 5);
+}

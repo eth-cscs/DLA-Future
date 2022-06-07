@@ -164,7 +164,7 @@ void copyTileRowAndNormalize(bool top_tile, T rho, const matrix::Tile<const T, D
   // lapack 3.10.0, dlaed2.f, line 280 and 281
   int sign = (top_tile && rho < 0) ? -1 : 1;
 
-  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+  for (SizeType i = 0; i < tile.size().cols(); ++i) {
     col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / std::sqrt(2);
   }
 }
@@ -947,11 +947,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  // matrix::print(format::csv{}, "pre row perms", ws.i2);
   dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
                                                                          ws.mat2);
-  // matrix::print(format::csv{}, "post row perms", ws.i2);
-
   dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
                                                                       blas::Op::NoTrans, T(1), mat_ev,
                                                                       ws.mat2, T(0), ws.mat1);

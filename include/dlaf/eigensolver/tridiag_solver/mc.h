@@ -225,13 +225,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    std::cout << i_begin << " : " << i_split << " : " << i_end << std::endl;
     mergeSubproblems(i_begin, i_split, i_end, ws, offdiag_vals[to_sizet(i_split)], d, mat_ev);
-    d.waitLocalTiles();
-    mat_ev.waitLocalTiles();
-    //std::cout << i_begin << " : " << i_split << " : " << i_end << std::endl;
-    //matrix::print(format::csv{}, "interim evals", d);
-    //matrix::print(format::csv{}, "interim evecs", mat_ev);
   }
 }
 

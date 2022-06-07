@@ -255,38 +255,9 @@ private:
     DLAF_GPU_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
 #elif defined DLAF_WITH_HIP
-    // HIP 5 defines the following:
-    //
-    // /**
-    //  * Memory type (for pointer attributes)
-    //  */
-    // typedef enum hipMemoryType {
-    //     hipMemoryTypeHost,    ///< Memory is physically located on host
-    //     hipMemoryTypeDevice,  ///< Memory is physically located on device. (see deviceId for specific
-    //                           ///< device)
-    //     hipMemoryTypeArray,  ///< Array memory, physically located on device. (see deviceId for specific
-    //                          ///< device)
-    //     hipMemoryTypeUnified  ///< Not used currently
-    // } hipMemoryType;
-    //
-    // /**
-    //  * Pointer attributes
-    //  */
-    // typedef struct hipPointerAttribute_t {
-    //     enum hipMemoryType memoryType;
-    //     int device;
-    //     void* devicePointer;
-    //     void* hostPointer;
-    //     int isManaged;
-    //     unsigned allocationFlags; /* flags specified when memory was allocated*/
-    //     /* peers? */
-    // } hipPointerAttribute_t;
-    //
-    // TODO: What's the right thing to do here?
-    // Not useful documentation:
-    // -
-    // https://github.com/RadeonOpenCompute/ROCm_Documentation/blob/master/Programming_Guides/HIP-porting-guide.rst#cu-pointer-attribute-memory-type
-    // - https://docs.amd.com/bundle/HIP_API_Guide/page/hip__runtime__api_8h.html#aea86e91d3cd65992d787b39b218435a3
+    // We don't have a similar way to check for accessibility from a device in
+    // HIP so we assume that it's always possible. Invalid accesses will result
+    // in segmentation faults instead.
     return true;
 #endif
   }

@@ -29,26 +29,38 @@
 
 #ifdef DLAF_WITH_HIP
 
+#define DLAF_GET_ROCBLAS_WORKSPACE(f)                                                                 \
+  [&]() {                                                                                             \
+    std::size_t workspace_size;                                                                       \
+    DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
+        rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
+    DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+    DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
+        rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
+    return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \
+  }();
+
+namespace dlaf::tile::internal {
+inline void extendROCBlasWorkspace(cublasHandle_t handle,
+                                   ::dlaf::memory::MemoryView<std::byte, Device::GPU>&& workspace) {
+  cudaStream_t stream;
+  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+  auto f = [workspace = std::move(workspace)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  pika::cuda::experimental::detail::add_event_callback(std::move(f), stream);
+}
+}
+
 #define DLAF_DEFINE_GPUBLAS_OP(Name, Type, f)                                                           \
   template <>                                                                                           \
   struct Name<Type> {                                                                                   \
     template <typename... Args>                                                                         \
     static void call(cublasHandle_t handle, Args&&... args) {                                           \
-      std::size_t workspace_size;                                                                       \
-      rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle));                      \
-      hipblas##f(handle, std::forward<Args>(args)...);                                                  \
-      rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size);      \
-      memory::MemoryView<std::byte, Device::GPU> workspace(to_int(workspace_size));                     \
-      DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
-          rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(), workspace_size));     \
+      auto workspace = DLAF_GET_ROCBLAS_WORKSPACE(f);                                                   \
+      DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(),  \
+                                                     to_sizet(workspace.size())));                      \
       DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
       DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), nullptr, 0)); \
-      auto extend_workspace = [workspace = std::move(workspace)](cudaError_t status) {                  \
-        DLAF_GPU_CHECK_ERROR(status);                                                                   \
-      };                                                                                                \
-      cudaStream_t stream;                                                                              \
-      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));                                       \
-      pika::cuda::experimental::detail::add_event_callback(std::move(extend_workspace), stream);        \
+      ::dlaf::tile::internal::extendROCBlasWorkspace(handle, std::move(workspace));                     \
     }                                                                                                   \
   }
 

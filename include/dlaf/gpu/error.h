@@ -36,7 +36,7 @@ inline void checkError(gpuError_t err, const dlaf::common::internal::source_loca
 #endif
 }
 
-#define DLAF_GPU_CHECK_ERROR(cuda_err) dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
+#define DLAF_GPU_CHECK_ERROR(cuda_err) ::dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
 }
 
 #endif

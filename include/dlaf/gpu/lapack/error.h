@@ -41,7 +41,7 @@ inline void checkError(gpulapackStatus_t st,
 }
 
 #define DLAF_GPULAPACK_CHECK_ERROR(cusolver_err) \
-  dlaf::gpulapack::checkError((cusolver_err), SOURCE_LOCATION())
+  ::dlaf::gpulapack::checkError((cusolver_err), SOURCE_LOCATION())
 
 }
 

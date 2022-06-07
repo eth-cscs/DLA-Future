@@ -40,10 +40,13 @@ inline void checkError(gpublasStatus_t st,
 }
 
 #ifdef DLAF_WITH_HIP
-// Lifted from hipBLAS/library/src/hcc_detail/hipblas.cpp
-// This is not permanent
-inline hipblasStatus_t rocBLASStatusToHIPStatus(rocblas_status_ error) {
+namespace internal {
+// Lifted from hipBLAS/library/src/hcc_detail/hipblas.cpp, with missing
+// enumeration values added. This should be removed when hipBLAS is no longer
+// used.
+inline hipblasStatus_t rocBLASStatusToHIPStatus(rocblas_status error) {
   switch (error) {
+    case rocblas_status_continue:
     case rocblas_status_size_unchanged:
     case rocblas_status_size_increased:
     case rocblas_status_success:
@@ -60,17 +63,21 @@ inline hipblasStatus_t rocBLASStatusToHIPStatus(rocblas_status_ error) {
       return HIPBLAS_STATUS_ALLOC_FAILED;
     case rocblas_status_internal_error:
       return HIPBLAS_STATUS_INTERNAL_ERROR;
+    case rocblas_status_perf_degraded:
+    case rocblas_status_size_query_mismatch:
+    case rocblas_status_check_numerics_fail:
     default:
       return HIPBLAS_STATUS_UNKNOWN;
   }
 }
+}
 
 inline void checkError(rocblas_status st, const dlaf::common::internal::source_location& info) noexcept {
-  checkError(rocBLASStatusToHIPStatus(st), info);
+  checkError(internal::rocBLASStatusToHIPStatus(st), info);
 }
 #endif
 
-#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
+#define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) ::dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
 
 #endif
 

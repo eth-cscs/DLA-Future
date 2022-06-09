@@ -8,10 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 
 #include <pika/init.hpp>
+#include <pika/init_runtime/scoped_finalize.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
@@ -168,14 +170,13 @@ struct reductionToBandMiniapp {
 };
 
 int pika_main(pika::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-    const Options opts(vm);
+  pika::scoped_finalize pika_finalizer;
+  dlaf::ScopedInitializer init(vm);
 
-    dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
-  }
+  const Options opts(vm);
+  dlaf::miniapp::dispatchMiniapp<reductionToBandMiniapp>(opts);
 
-  return pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {

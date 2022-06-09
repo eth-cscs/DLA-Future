@@ -195,7 +195,8 @@ int main(int argc, char** argv) {
   options_description desc_commandline(
       "Benchmark computation of solution for A . X = 2 . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
-      "options");
+      "options\n"
+      "Usage: miniapp_triangular_solver [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

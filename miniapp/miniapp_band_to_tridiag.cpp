@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_bandToTridiag [options]");
+  options_description desc_commandline("Usage: miniapp_band_to_tridiag [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

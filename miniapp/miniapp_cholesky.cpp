@@ -15,7 +15,6 @@
 #include <mpi.h>
 #include <pika/future.hpp>
 #include <pika/init.hpp>
-#include <pika/init_runtime/scoped_finalize.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 #include <pika/unwrap.hpp>

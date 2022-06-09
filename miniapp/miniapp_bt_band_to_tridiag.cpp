@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
-#include <pika/init_runtime/scoped_finalize.hpp>
 #include <string>
 
 #include <pika/init.hpp>

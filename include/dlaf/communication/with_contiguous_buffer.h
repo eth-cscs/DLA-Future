@@ -24,7 +24,7 @@ namespace dlaf::comm::internal {
 // recv: comm                  --> copy into buffer
 //       create similar buffer -/  // this comes first because we need the size of the input
 //
-// reduceRevInPlace: same as recv, require contiguous
+// reduceRecvInPlace: same as recv, require contiguous
 //
 
 // This one is currently used for recvBcast. It creates a duplicated tile on the CPU.
@@ -76,5 +76,34 @@ auto with_comm_tile(InSender&& in_sender, F&& f) {
                         [&in, f = std::forward<F>(f)](auto& comm) mutable { return f(in, comm); });
            }
          }));
+}
+
+// This one is currently used for reduceSend. It copies the tile to the
+// communication device first and then it performs the communication. It ensures
+// that the communication tile is contiguous.
+template <typename InSender, typename F>
+auto with_contiguous_comm_tile(InSender&& in_sender, F&& f) {
+  namespace ex = pika::execution::experimental;
+  return std::forward<InSender>(in_sender) |
+         ex::let_value(
+             pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable -> ex::unique_any_sender<> {
+               constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
+               constexpr Device comm_device_type = CommunicationDevice<in_device_type>::value;
+               constexpr Backend copy_backend =
+                   dlaf::matrix::internal::CopyBackend_v<in_device_type, comm_device_type>;
+
+               if (in_device_type == comm_device_type && in.is_contiguous()) {
+                 // TODO: Do we need to restrict the return type to void or could
+                 // anything be fine?
+                 return {f(in, in)};
+               }
+               else {
+                 const dlaf::internal::Policy<copy_backend> policy{/* TODO: priority */};
+                 return {ex::just(std::cref(in)) |
+                         dlaf::internal::transform(policy, dlaf::matrix::Duplicate<comm_device_type>{}) |
+                         ex::let_value(
+                             [&in, f = std::forward<F>(f)](auto& comm) mutable { return f(in, comm); })};
+               }
+             }));
 }
 }

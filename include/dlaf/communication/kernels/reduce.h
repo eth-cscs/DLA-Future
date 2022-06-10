@@ -27,6 +27,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
+#include "dlaf/communication/with_contiguous_buffer.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/schedulers.h"
 #include "dlaf/sender/traits.h"
@@ -47,16 +48,18 @@ void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
                                    comm.rank(), comm, req));
 }
 
-template <class T>
+template <class T, Device D>
 void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
-                MPI_Op reduce_op, const common::internal::ContiguousBufferHolder<const T>& cont_buf,
-                MPI_Request* req) {
-  auto msg = comm::make_message(cont_buf.descriptor);
-  auto& comm = pcomm.ref();
+                MPI_Op reduce_op, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
+  DLAF_ASSERT(tile.is_contiguous(), "");
 
+  auto& comm = pcomm.ref();
+  auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
 }
+
+DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
 template <class CommSender, class Sender>
 auto senderReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile) {
@@ -94,34 +97,6 @@ auto senderReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile
                            });
                   });
          });
-}
-
-template <class CommSender, class Sender>
-auto senderReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op, Sender&& tile) {
-  // Note:
-  //
-  // CPU  ---> makeItContiguous ---> cCPU -> MPI
-  // cCPU -------------------------> cCPU -> MPI
-  //
-  // where: cCPU = contiguous CPU
-
-  namespace ex = pika::execution::experimental;
-
-  using dlaf::internal::getBackendScheduler;
-  using dlaf::internal::whenAllLift;
-
-  using T = dlaf::internal::SenderElementType<Sender>;
-
-  return std::forward<Sender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
-         ex::let_value(pika::unwrapping([rank_root, reduce_op, pcomm = std::forward<CommSender>(pcomm)](
-                                            const matrix::Tile<const T, Device::CPU>& tile) mutable {
-           using common::internal::makeItContiguous;
-           return whenAllLift(std::move(pcomm), makeItContiguous(tile)) |
-                  ex::let_value([rank_root, reduce_op](auto& pcomm, const auto& cont_buf) {
-                    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(cont_buf)) |
-                           transformMPI(internal::reduceSend<T>);
-                  });
-         }));
 }
 }
 
@@ -184,24 +159,6 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
-/// Given a CPU tile, being it contiguous or not, perform MPI_Reduce in-place
-template <class CommSender, class T>
-void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
-                        pika::shared_future<matrix::Tile<const T, Device::CPU>> tile) {
-  // Note:
-  //
-  // (CPU/cCPU) --> MPI --> (CPU/cCPU)
-  //
-  // where: cCPU = contiguous CPU
-
-  namespace ex = pika::execution::experimental;
-
-  internal::senderReduceSend(rank_root, std::forward<CommSender>(pcomm), reduce_op,
-                             ex::keep_future(std::move(tile))) |
-      ex::start_detached();
-}
-
-// TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a GPU tile perform MPI_Reduce in-place
 template <class T, Device D, class CommSender>
 void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
@@ -214,17 +171,20 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
 
   namespace ex = pika::execution::experimental;
 
-  using dlaf::internal::Policy;
-  using dlaf::matrix::internal::CopyBackend;
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::comm::internal::with_contiguous_comm_tile;
+  using dlaf::internal::getBackendScheduler;
+  using dlaf::internal::whenAllLift;
 
-  auto tile_cpu = ex::keep_future(std::move(tile)) |
-                  dlaf::internal::transform(Policy<CopyBackend<D, Device::CPU>::value>(
-                                                pika::threads::thread_priority::high),
-                                            dlaf::matrix::Duplicate<Device::CPU>{});
-
-  internal::senderReduceSend(rank_root, std::forward<CommSender>(pcomm), reduce_op,
-                             std::move(tile_cpu)) |
-      ex::start_detached();
+  ex::start_detached(
+      with_contiguous_comm_tile(ex::keep_future(std::move(tile)),
+                                [rank_root, reduce_op,
+                                 pcomm = std::forward<CommSender>(
+                                     pcomm)](auto const&, auto const& tile_contig_comm) mutable {
+                                  return whenAllLift(rank_root, std::move(pcomm), reduce_op,
+                                                     std::cref(tile_contig_comm)) |
+                                         transformMPI(internal::reduceSend_o);
+                                }));
 }
 }
 }

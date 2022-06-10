@@ -125,10 +125,10 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
 }
 
 template <Backend B, class T>
-struct single_tile_f;
+struct ApplyHHToSingleTileRow;
 
 template <class T>
-struct single_tile_f<Backend::MC, T> {
+struct ApplyHHToSingleTileRow<Backend::MC, T> {
   void operator()(const matrix::Tile<const T, Device::CPU>& tile_v,
                   const matrix::Tile<const T, Device::CPU>& tile_w, matrix::Tile<T, Device::CPU> tile_w2,
                   const matrix::Tile<T, Device::CPU>& tile_e) {
@@ -143,7 +143,7 @@ struct single_tile_f<Backend::MC, T> {
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
-struct single_tile_f<Backend::GPU, T> {
+struct ApplyHHToSingleTileRow<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
@@ -159,10 +159,10 @@ struct single_tile_f<Backend::GPU, T> {
 #endif
 
 template <Backend B, class T>
-struct double_tile_f;
+struct ApplyHHToDoubleTileRow;
 
 template <class T>
-struct double_tile_f<Backend::MC, T> {
+struct ApplyHHToDoubleTileRow<Backend::MC, T> {
   void operator()(const matrix::Tile<const T, Device::CPU>& tile_v0,
                   const matrix::Tile<const T, Device::CPU>& tile_v1,
                   const matrix::Tile<const T, Device::CPU>& tile_w0,
@@ -183,7 +183,7 @@ struct double_tile_f<Backend::MC, T> {
 
 #ifdef DLAF_WITH_CUDA
 template <class T>
-struct double_tile_f<Backend::GPU, T> {
+struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v0,
                   const matrix::Tile<const T, Device::GPU>& tile_v1,
                   const matrix::Tile<const T, Device::GPU>& tile_w0,
@@ -531,7 +531,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
                        splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
-                                        single_tile_f<B, T>{}) |
+                                        ApplyHHToSingleTileRow<B, T>{}) |
               ex::start_detached();
         }
         else {
@@ -544,7 +544,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
                                  helper.bottomPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
-                                        double_tile_f<B, T>{}) |
+                                        ApplyHHToDoubleTileRow<B, T>{}) |
               ex::start_detached();
         }
       }

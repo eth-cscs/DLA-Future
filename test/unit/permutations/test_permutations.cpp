@@ -23,11 +23,10 @@ using namespace dlaf;
 using namespace dlaf::test;
 
 template <typename Type>
-class TridiagEigensolverPermutationsTest : public ::testing::Test {};
-TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
+class PermutationsTestCPU : public ::testing::Test {};
+TYPED_TEST_SUITE(PermutationsTestCPU, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-
 template <typename Type>
 class PermutationsTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
@@ -132,7 +131,7 @@ void testApplyColumnPermutations(SizeType n, SizeType nb) {
   // clang-format on
 
   for (auto [i_tile, i_el, val] : expected_entries) {
-    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
+    EXPECT_EQ(out_tiles[i_tile](i_el), val);
   }
 }
 
@@ -199,7 +198,7 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
   // clang-format on
 
   for (auto [i_tile, i_el, val] : expected_entries) {
-    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
+    EXPECT_EQ(out_tiles[i_tile](i_el), val);
   }
 }
 
@@ -227,27 +226,27 @@ void testPermutations(SizeType n, SizeType nb) {
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
+TYPED_TEST(PermutationsTestCPU, ApplyColumnPermutations) {
   SizeType n = 10;
   SizeType nb = 3;
 
   testApplyColumnPermutations<Device::CPU, TypeParam>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
+TYPED_TEST(PermutationsTestCPU, ApplyRowPermutations) {
   SizeType n = 10;
   SizeType nb = 3;
 
   testApplyRowPermutations<Device::CPU, TypeParam>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, Columns) {
+TYPED_TEST(PermutationsTestCPU, Columns) {
   SizeType n = 10;
   SizeType nb = 3;
   testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Col>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, Rows) {
+TYPED_TEST(PermutationsTestCPU, Rows) {
   SizeType n = 10;
   SizeType nb = 3;
   testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Row>(n, nb);

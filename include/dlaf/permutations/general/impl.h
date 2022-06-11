@@ -149,8 +149,9 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
 #endif
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
+                                    Matrix<const SizeType, Device::CPU>& perms, Matrix<T, D>& mat_in,
+                                    Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 

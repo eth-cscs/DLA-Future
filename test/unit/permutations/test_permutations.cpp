@@ -207,21 +207,20 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
 // Each column or row of the input matrix is has it's index as a value.
 template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb) {
-  Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Matrix<SizeType, Device::CPU> perms(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Matrix<T, Device::CPU> mat_in_h(LocalElementSize(n, n), TileElementSize(nb, nb));
   Matrix<T, Device::CPU> mat_out_h(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-  dlaf::matrix::util::set(perms_h, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
+  dlaf::matrix::util::set(perms, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
   dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) { return T(i.get<C>()); });
 
   {
-    matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
     SizeType i_begin = 0;
-    SizeType i_end = perms_h.distribution().nrTiles().rows() - 1;
-    permutations::permutate<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
+    SizeType i_end = perms.distribution().nrTiles().rows() - 1;
+    permutations::permutate<B, D, T, C>(i_begin, i_end, perms, mat_in.get(), mat_out.get());
   }
 
   auto expected_out = [n](const GlobalElementIndex i) { return T(n - 1 - i.get<C>()); };

@@ -24,7 +24,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#include "pika/parallel/algorithms/for_each.hpp"
+#include "pika/algorithm.hpp"
 
 namespace dlaf::permutations::internal {
 
@@ -78,21 +78,20 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                        const matrix::Distribution& distr, const SizeType* perm_arr,
                        const std::vector<matrix::Tile<T, Device::CPU>>& in_tiles,
                        const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
-  constexpr Coord ocrd = orthogonal(coord);
+  constexpr Coord orth_coord = orthogonal(coord);
   std::vector<SizeType> splits =
-      util::interleaveSplits(sz.get<ocrd>(), distr.blockSize().get<ocrd>(),
-                             distr.distanceToAdjacentTile<ocrd>(in_offset),
-                             distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
+      util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
+                             distr.distanceToAdjacentTile<orth_coord>(in_offset),
+                             distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
   // Parallelized over the number of permutated columns or rows
-  std::vector<SizeType> loop_arr(to_sizet(sz.get<coord>()));
-  std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
-  pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](SizeType i_perm) {
+  pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
       SizeType split = splits[i_split];
 
       GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<ocrd>(), out_begin.get<coord>() + i_perm);
+      GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
+                                        out_begin.get<coord>() + i_perm);
       TileElementSize region(splits[i_split + 1] - split, 1);
       if constexpr (coord == Coord::Row) {
         region.transpose();
@@ -116,18 +115,19 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                        const matrix::Distribution& distr, const SizeType* perm_arr,
                        const std::vector<matrix::Tile<T, Device::GPU>>& in_tiles,
                        const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, cudaStream_t stream) {
-  constexpr Coord ocrd = orthogonal(coord);
+  constexpr Coord orth_coord = orthogonal(coord);
   std::vector<SizeType> splits =
-      util::interleaveSplits(sz.get<ocrd>(), distr.blockSize().get<ocrd>(),
-                             distr.distanceToAdjacentTile<ocrd>(in_offset),
-                             distr.distanceToAdjacentTile<ocrd>(out_begin.get<ocrd>()));
+      util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
+                             distr.distanceToAdjacentTile<orth_coord>(in_offset),
+                             distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
   for (SizeType i_perm = 0; i_perm < sz.get<coord>(); ++i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
       SizeType split = splits[i_split];
 
       GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<ocrd>(), out_begin.get<coord>() + i_perm);
+      GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
+                                        out_begin.get<coord>() + i_perm);
       TileElementSize region(splits[i_split + 1] - split, 1);
       if constexpr (coord == Coord::Row) {
         region.transpose();
@@ -165,8 +165,8 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
   // Note: there is an issue compiling with dlaf::internal::transform()
   auto scheduler = dlaf::internal::getBackendScheduler<B>(pika::threads::thread_priority::normal);
   auto transfer_sender =
-      ex::when_all(ex::when_all_vector(ut::collectReadTileSenders(GlobalTileIndex(i_begin, 0),
-                                                                  GlobalTileSize(ntiles, 1), perms)),
+      ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
+                                                            GlobalTileSize(ntiles, 1), perms)),
                    ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
                                                                  GlobalTileSize(ntiles, ntiles),
                                                                  mat_in)),

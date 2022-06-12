@@ -65,7 +65,7 @@ struct TransformCallHelper {
 };
 
 template <typename F>
-TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
+TransformCallHelper(F&&) -> TransformCallHelper<std::decay_t<F>>;
 
 /// Lazy transform. This does not submit the work and returns a sender.
 template <Backend B, typename F, typename Sender,

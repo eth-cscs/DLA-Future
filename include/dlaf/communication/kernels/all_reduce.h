@@ -34,18 +34,19 @@ namespace comm {
 
 namespace internal {
 
-template <class T>
+template <class T, Device D>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-               common::internal::ContiguousBufferHolder<const T>& cont_buf_in,
-               common::internal::ContiguousBufferHolder<T>& cont_buf_out, MPI_Request* req) {
-  auto& comm = pcomm.ref();
-  auto msg_in = comm::make_message(cont_buf_in.descriptor);
-  auto msg_out = comm::make_message(cont_buf_out.descriptor);
+               const matrix::Tile<const T, D>& tile_in, const matrix::Tile<T, D>& tile_out,
+               MPI_Request* req) {
+  // TODO: Assert CPU tile?
+  DLAF_ASSERT(tile_in.is_contiguous(), "");
+  DLAF_ASSERT(tile_out.is_contiguous(), "");
 
+  auto& comm = pcomm.ref();
+  auto msg_in = comm::make_message(common::make_data(tile_in));
+  auto msg_out = comm::make_message(common::make_data(tile_out));
   DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
                                       reduce_op, comm, req));
-
-  return std::move(cont_buf_out);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
@@ -53,6 +54,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 template <class T, Device D>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                       const matrix::Tile<T, D>& tile, MPI_Request* req) {
+  // TODO: Assert CPU tile?
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto& comm = pcomm.ref();
@@ -74,7 +76,6 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
   using pika::threads::thread_priority;
 
   using common::internal::ContiguousBufferHolder;
-  using common::internal::copyBack_o;
   using common::internal::makeItContiguous;
   using dlaf::internal::getBackendScheduler;
   using dlaf::internal::Policy;
@@ -90,25 +91,47 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
-  auto f = unwrapping([pcomm = std::forward<CommSender>(pcomm),
-                       reduce_op](const matrix::Tile<const T, Device::CPU>& tile_in,
-                                  matrix::Tile<T, Device::CPU>& tile_out) mutable {
-    auto tile_reduced =
-        whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile_in), makeItContiguous(tile_out)) |
-        transformMPI(internal::allReduce_o);
-    return whenAllLift(std::move(tile_reduced), std::cref(tile_out)) |
-           transform(Policy<Backend::MC>(thread_priority::high), copyBack_o);
-  });
-  ex::when_all(ex::keep_future(std::move(tile_in)), std::move(tile_out)) |
-      ex::transfer(getBackendScheduler<Backend::MC>()) | ex::let_value(std::move(f)) |
-      ex::start_detached();
+
+  return std::move(tile_out) |
+         with_contiguous_comm_tile(
+             [pcomm = std::forward<CommSender>(pcomm), reduce_op,
+              tile_in =
+                  std::move(tile_in)](const auto& tile_out,
+                                      const auto& tile_out_contig_comm) -> ex::unique_any_sender<> {
+               auto s = std::move(tile_in) |
+                        with_contiguous_comm_tile([&, pcomm = std::forward<CommSender(pcomm)>,
+                                                   reduce_op](const auto& tile_in,
+                                                              const auto& tile_in_contig_comm) {
+                          auto all_reduce_sender =
+                              whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_contig_comm),
+                                          std::cref(tile_out_contig_comm)) |
+                              transformMPI(internal::allReduce_o);
+                        });
+
+               // This is "copy back if needed".  Separate helper? copyIfNeeded?
+               // operator== for Tile (the below is not 100% accurate if we have
+               // views)? This should possibly be an option in
+               // with_contiguous_comm_tile?
+               if (tile_out.ptr() == tile_out_contig_comm.ptr()) {
+                 return make_unique_any_sender(std::move(s));
+               }
+               else {
+                 constexpr Device out_device_type = std::decay_t<decltype(tile_out)>::D;
+                 constexpr Device comm_device_type = std::decay_t<decltype(tile_out_contig_comm)>::D;
+                 constexpr Backend copy_backend =
+                     dlaf::matrix::internal::CopyBackend_v<out_device_type, comm_device_type>;
+                 // Copy the received data from the comm tile to the output tile.
+                 return make_unique_any_sender(
+                     std::move(s) | whenAllLift(std::cref(tile_out_contig_comm), std::cref(tile_out)) |
+                     copy(Policy<copy_backend>(thread_priority::high)));
+               }
+             });
 }
 
 template <class CommSender, class TSender>
 [[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
   namespace ex = pika::execution::experimental;
 
-  using common::internal::copyBack_o;
   using common::internal::makeItContiguous;
   using dlaf::comm::internal::make_unique_any_sender;
   using dlaf::comm::internal::with_contiguous_comm_tile;

@@ -77,7 +77,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 
   using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::with_similar_contiguous_comm_tile;
+  using dlaf::comm::internal::withSimilarContiguousCommTile;
   using dlaf::internal::whenAllLift;
 
   auto reduce_recv_in_place_copy_back =
@@ -88,7 +88,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
         return copyBack(std::move(recv_sender), tile_in, tile_contig_comm);
       };
   ex::start_detached(
-      with_similar_contiguous_comm_tile(std::move(tile), std::move(reduce_recv_in_place_copy_back)));
+      withSimilarContiguousCommTile(std::move(tile), std::move(reduce_recv_in_place_copy_back)));
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
@@ -105,7 +105,7 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::with_contiguous_comm_tile;
+  using dlaf::comm::internal::withContiguousCommTile;
   using dlaf::internal::whenAllLift;
 
   auto reduce_send = [rank_root, reduce_op,
@@ -114,8 +114,7 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
     return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
            transformMPI(internal::reduceSend_o);
   };
-  ex::start_detached(
-      with_contiguous_comm_tile(ex::keep_future(std::move(tile)), std::move(reduce_send)));
+  ex::start_detached(withContiguousCommTile(ex::keep_future(std::move(tile)), std::move(reduce_send)));
 }
 }
 }

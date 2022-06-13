@@ -14,19 +14,9 @@
 #include <dlaf/sender/policy.h>
 #include <dlaf/types.h>
 
-namespace dlaf::comm::internal {
-// Needed helpers:
-//
-// send: copy into buffer -> comm -> discard
-//
-// reduceSend: copy into contiguous buffer -> comm -> discard
-//
-// recv: comm                  --> copy into buffer
-//       create similar buffer -/  // this comes first because we need the size of the input
-//
-// reduceRecvInPlace: same as recv, require contiguous
-//
+// TODO: Name of this file? with_contiguous_tile.h?
 
+namespace dlaf::comm::internal {
 // This one is currently used for recvBcast. It creates a duplicated tile on the CPU.
 //
 // It creates a "similar" tile on the communication device, if needed. It does
@@ -34,7 +24,7 @@ namespace dlaf::comm::internal {
 //
 // TODO: Name.
 template <typename InSender, typename F>
-auto with_similar_comm_tile(InSender&& in_sender, F&& f) {
+auto withSimilarCommTile(InSender&& in_sender, F&& f) {
   namespace ex = pika::execution::experimental;
   return std::forward<InSender>(in_sender) | ex::let_value([f = std::forward<F>(f)](auto& in) mutable {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
@@ -56,7 +46,7 @@ auto with_similar_comm_tile(InSender&& in_sender, F&& f) {
 // This one is currently used for sendBcast. It copies the tile to the communication device first and
 // then it performs the communication.
 template <typename InSender, typename F>
-auto with_comm_tile(InSender&& in_sender, F&& f) {
+auto withCommTile(InSender&& in_sender, F&& f) {
   namespace ex = pika::execution::experimental;
   return std::forward<InSender>(in_sender) |
          ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
@@ -96,7 +86,7 @@ auto make_unique_any_sender(Sender&& sender) {
 // "similar" tile on the communication device if needed. It ensures that the
 // communication tile is contiguous.
 template <typename InSender, typename F>
-auto with_similar_contiguous_comm_tile(InSender&& in_sender, F&& f) {
+auto withSimilarContiguousCommTile(InSender&& in_sender, F&& f) {
   namespace ex = pika::execution::experimental;
   return std::forward<InSender>(in_sender) |
          ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
@@ -123,7 +113,7 @@ auto with_similar_contiguous_comm_tile(InSender&& in_sender, F&& f) {
 // communication device first and then it performs the communication. It ensures
 // that the communication tile is contiguous.
 template <typename InSender, typename F>
-auto with_contiguous_comm_tile(InSender&& in_sender, F&& f) {
+auto withContiguousCommTile(InSender&& in_sender, F&& f) {
   namespace ex = pika::execution::experimental;
   return std::forward<InSender>(in_sender) |
          ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {

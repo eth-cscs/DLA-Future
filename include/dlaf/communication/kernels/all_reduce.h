@@ -73,7 +73,7 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::copyBack;
-  using dlaf::comm::internal::with_contiguous_comm_tile;
+  using dlaf::comm::internal::withContiguousCommTile;
   using dlaf::internal::whenAllLift;
   using pika::unwrapping;
 
@@ -96,10 +96,10 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
              transformMPI(internal::allReduce_o);
     });
     auto all_reduce_sender =
-        with_contiguous_comm_tile(ex::keep_future(std::move(tile_in)), std::move(all_reduce));
+        withContiguousCommTile(ex::keep_future(std::move(tile_in)), std::move(all_reduce));
     return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
   };
-  ex::start_detached(with_contiguous_comm_tile(std::move(tile_out), std::move(all_reduce_copy_back)));
+  ex::start_detached(withContiguousCommTile(std::move(tile_out), std::move(all_reduce_copy_back)));
 }
 
 template <class CommSender, class TSender>
@@ -107,7 +107,7 @@ template <class CommSender, class TSender>
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::copyBack;
-  using dlaf::comm::internal::with_contiguous_comm_tile;
+  using dlaf::comm::internal::withContiguousCommTile;
   using dlaf::internal::whenAllLift;
 
   // Note:
@@ -126,8 +126,7 @@ template <class CommSender, class TSender>
         return copyBack(std::move(all_reduce_sender), tile_in, tile_contig_comm) |
                ex::then([&tile_in]() { return std::move(tile_in); });
       };
-  return with_contiguous_comm_tile(std::forward<TSender>(tile),
-                                   std::move(all_reduce_in_place_copy_back));
+  return withContiguousCommTile(std::forward<TSender>(tile), std::move(all_reduce_in_place_copy_back));
 }
 }
 }

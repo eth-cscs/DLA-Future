@@ -15,7 +15,6 @@
 #include <mpi.h>
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
@@ -24,7 +23,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
-#include "dlaf/communication/with_contiguous_buffer.h"
+#include "dlaf/communication/with_communication_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/transform_mpi.h"
 
@@ -91,8 +90,7 @@ template <class CommSender, class TileInSender, class TileOutSender>
                              std::cref(tile_out_contig_comm)) |
                  transformMPI(internal::allReduce_o);
         });
-        auto all_reduce_sender =
-            withContiguousCommTile(std::move(tile_in), std::move(all_reduce));
+        auto all_reduce_sender = withContiguousCommTile(std::move(tile_in), std::move(all_reduce));
         return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
       };
   return withContiguousCommTile(std::forward<TileOutSender>(tile_out), std::move(all_reduce_copy_back));

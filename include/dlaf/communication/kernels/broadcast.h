@@ -14,20 +14,15 @@
 
 #include <mpi.h>
 
-#include <pika/execution.hpp>
-#include <pika/future.hpp>
-
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
-#include "dlaf/communication/with_contiguous_buffer.h"
+#include "dlaf/communication/with_communication_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/transform_mpi.h"
-
 
 namespace dlaf::comm {
 namespace internal {

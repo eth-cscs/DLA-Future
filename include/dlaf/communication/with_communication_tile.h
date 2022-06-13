@@ -14,8 +14,6 @@
 #include <dlaf/sender/policy.h>
 #include <dlaf/types.h>
 
-// TODO: Name of this file? with_contiguous_tile.h?
-
 namespace dlaf::comm::internal {
 // This one is currently used for recvBcast. It creates a duplicated tile on the CPU.
 //

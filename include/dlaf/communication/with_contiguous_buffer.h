@@ -145,4 +145,27 @@ auto with_contiguous_comm_tile(InSender&& in_sender, F&& f) {
            }
          }));
 }
+
+template <typename Sender, typename TileIn, typename TileContigComm>
+auto copyBack(Sender&& sender, const TileIn& tile_in, const TileContigComm& tile_contig_comm) {
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+  using dlaf::matrix::copy;
+  using pika::threads::thread_priority;
+
+  // operator== for Tile (the below is not 100% accurate if we have views)?
+  if (tile_in.ptr() == tile_contig_comm.ptr()) {
+    return make_unique_any_sender(std::forward<Sender>(sender));
+  }
+  else {
+    constexpr Device in_device_type = std::decay_t<decltype(tile_in)>::D;
+    constexpr Device comm_device_type = std::decay_t<decltype(tile_contig_comm)>::D;
+    constexpr Backend copy_backend =
+        dlaf::matrix::internal::CopyBackend_v<in_device_type, comm_device_type>;
+
+    return make_unique_any_sender(
+        whenAllLift(std::forward<Sender>(sender), std::cref(tile_contig_comm), std::cref(tile_in)) |
+        copy(Policy<copy_backend>(thread_priority::high)));
+  }
+}
 }

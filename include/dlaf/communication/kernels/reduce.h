@@ -75,49 +75,20 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 
   namespace ex = pika::execution::experimental;
 
+  using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::with_similar_contiguous_comm_tile;
-  using dlaf::internal::getBackendScheduler;
-  using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
-  using dlaf::matrix::copy;
-  using pika::threads::thread_priority;
 
+  auto reduce_recv_in_place_copy_back =
+      [reduce_op, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_in,
+                                                           auto const& tile_contig_comm) mutable {
+        auto recv_sender = whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
+                           transformMPI(internal::reduceRecvInPlace_o);
+        return copyBack(std::move(recv_sender), tile_in, tile_contig_comm);
+      };
   ex::start_detached(
-      with_similar_contiguous_comm_tile(std::move(tile),
-                                        [reduce_op, pcomm = std::forward<CommSender>(
-                                                        pcomm)](auto const& tile_in,
-                                                                auto const& tile_contig_comm) mutable
-                                        -> ex::unique_any_sender<> {
-                                          auto recv_sender = whenAllLift(std::move(pcomm), reduce_op,
-                                                                         std::cref(tile_contig_comm)) |
-                                                             transformMPI(internal::reduceRecvInPlace_o);
-
-                                          // This is "copy back if needed".
-                                          // Separate helper? copyIfNeeded?
-                                          // operator== for Tile (the below is
-                                          // not 100% accurate if we have
-                                          // views)?
-                                          if (tile_in.ptr() == tile_contig_comm.ptr()) {
-                                            return {std::move(recv_sender)};
-                                          }
-                                          else {
-                                            constexpr Device in_device_type =
-                                                std::decay_t<decltype(tile_in)>::D;
-                                            constexpr Device comm_device_type =
-                                                std::decay_t<decltype(tile_contig_comm)>::D;
-                                            constexpr Backend copy_backend =
-                                                dlaf::matrix::internal::CopyBackend_v<in_device_type,
-                                                                                      comm_device_type>;
-
-                                            // Copy the received data from the
-                                            // comm tile to the input tile.
-                                            return whenAllLift(std::move(recv_sender),
-                                                               std::cref(tile_contig_comm),
-                                                               std::cref(tile_in)) |
-                                                   copy(Policy<copy_backend>(thread_priority::high));
-                                          }
-                                        }));
+      with_similar_contiguous_comm_tile(std::move(tile), std::move(reduce_recv_in_place_copy_back)));
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
@@ -135,18 +106,16 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
 
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::with_contiguous_comm_tile;
-  using dlaf::internal::getBackendScheduler;
   using dlaf::internal::whenAllLift;
 
+  auto reduce_send = [rank_root, reduce_op,
+                      pcomm = std::forward<CommSender>(pcomm)](auto const&,
+                                                               auto const& tile_contig_comm) mutable {
+    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
+           transformMPI(internal::reduceSend_o);
+  };
   ex::start_detached(
-      with_contiguous_comm_tile(ex::keep_future(std::move(tile)),
-                                [rank_root, reduce_op,
-                                 pcomm = std::forward<CommSender>(
-                                     pcomm)](auto const&, auto const& tile_contig_comm) mutable {
-                                  return whenAllLift(rank_root, std::move(pcomm), reduce_op,
-                                                     std::cref(tile_contig_comm)) |
-                                         transformMPI(internal::reduceSend_o);
-                                }));
+      with_contiguous_comm_tile(ex::keep_future(std::move(tile)), std::move(reduce_send)));
 }
 }
 }

@@ -61,14 +61,16 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class T, Device D, template <class> class Future, class CommSender>
 void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile, CommSender&& pcomm) {
+  namespace ex = pika::execution::experimental;
+
+  using dlaf::comm::internal::with_comm_tile;
   using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::whenAllLift;
-  using pika::execution::experimental::start_detached;
 
-  auto f = [pcomm = std::forward<CommSender>(pcomm)](auto const&, auto const& tile_comm) mutable {
+  auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const&, auto const& tile_comm) mutable {
     return whenAllLift(std::cref(tile_comm), std::move(pcomm)) | internal::transformMPI(sendBcast_o);
   };
-  start_detached(internal::with_comm_tile(keepIfSharedFuture(std::move(tile)), std::move(f)));
+  ex::start_detached(with_comm_tile(keepIfSharedFuture(std::move(tile)), std::move(send)));
 }
 
 template <class T, Device D, class CommSender>
@@ -76,36 +78,18 @@ void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI r
                        CommSender&& pcomm) {
   namespace ex = pika::execution::experimental;
 
+  using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::with_similar_comm_tile;
-  using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
-  using dlaf::matrix::copy;
-  using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
-  auto recv_copy_back = [=, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_in,
-                                                                     auto const& tile_comm) mutable {
-    constexpr Device in_device_type = std::decay_t<decltype(tile_in)>::D;
-    constexpr Device comm_device_type = std::decay_t<decltype(tile_comm)>::D;
-    constexpr Backend copy_backend =
-        dlaf::matrix::internal::CopyBackend_v<in_device_type, comm_device_type>;
-
-    // Perform the receive into a CPU tile
+  auto recv_copy_back = [root_rank, pcomm = std::forward<CommSender>(
+                                        pcomm)](auto const& tile_in, auto const& tile_comm) mutable {
     auto recv_sender =
         whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
-
-    // This is "copy back if needed". Separate helper? copyIfNeeded?
-    if constexpr (in_device_type == comm_device_type) {
-      return recv_sender;
-    }
-    else {
-      // Copy the received data from the communication tile to the input tile.
-      return whenAllLift(std::move(recv_sender), std::cref(tile_comm), std::cref(tile_in)) |
-             copy(Policy<copy_backend>(thread_priority::high));
-    }
+    return copyBack(std::move(recv_sender), tile_in, tile_comm);
   };
-  start_detached(with_similar_comm_tile(std::move(tile), std::move(recv_copy_back)));
+  ex::start_detached(with_similar_comm_tile(std::move(tile), std::move(recv_copy_back)));
 }
 
 }

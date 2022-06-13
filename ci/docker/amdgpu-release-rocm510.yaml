@@ -12,7 +12,8 @@ spack:
   specs:
   - dla-future@develop +rocm +miniapps +ci-test amdgpu_target=gfx906:xnack- ^openblas ^mpich
   view: false
-  concretization: together
+  concretizer:
+    unify: true
 
   packages:
     all:

@@ -52,8 +52,7 @@ ENV SPACK_SHA=$SPACK_SHA
 # Install the specific ref of Spack provided by the user and find compilers
 RUN mkdir -p /opt/spack && \
     curl -Ls "https://api.github.com/repos/spack/spack/tarball/$SPACK_SHA" | tar --strip-components=1 -xz -C /opt/spack
-# Fix pika spack package for HIP
-RUN gawk -i inplace '$0 ~ "hipblas" {print "    depends_on(\x27rocblas\x27, when=\x27+rocm\x27)"; print "    depends_on(\x27rocsolver\x27, when=\x27+rocm\x27)"} {print $0}' /opt/spack/var/spack/repos/builtin/packages/pika/package.py
+# Fix amd architecture for spack packages
 RUN sed -i 's/gfx906/gfx906:xnack-/' /opt/spack/lib/spack/spack/build_systems/rocm.py
 RUN sed -i 's/gfx908/gfx908:xnack-/' /opt/spack/lib/spack/spack/build_systems/rocm.py
 
@@ -100,4 +99,4 @@ ARG SPACK_ENVIRONMENT
 # 2. Install only the dependencies of this (top level is our package)
 COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
 RUN spack env create --without-view ci /spack_environment/spack.yaml
-RUN spack -e ci install --fail-fast --only=dependencies --require-full-hash-match
+RUN spack -e ci install --fail-fast --only=dependencies

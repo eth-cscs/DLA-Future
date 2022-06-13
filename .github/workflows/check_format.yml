@@ -25,7 +25,7 @@ jobs:
         run: |
           sudo apt-get install --no-install-recommends clang-format-10 python3
           pip3 install black==21.8b0
-      - name: Checkout master
+      - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 
          # Fails if there are tabs in source files.

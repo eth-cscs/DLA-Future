@@ -84,7 +84,7 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                              distr.distanceToAdjacentTile<orth_coord>(in_offset),
                              distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
-  // Parallelized over the number of permutated columns or rows
+  // Parallelized over the number of permuted columns or rows
   pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
       SizeType split = splits[i_split];

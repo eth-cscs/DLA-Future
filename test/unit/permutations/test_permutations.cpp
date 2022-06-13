@@ -202,7 +202,7 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
   }
 }
 
-// Permutate columns or rows in reverse order.
+// Permute columns or rows in reverse order.
 // Each column or row of the input matrix is has it's index as a value.
 template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb) {
@@ -219,7 +219,7 @@ void testPermutations(SizeType n, SizeType nb) {
 
     SizeType i_begin = 0;
     SizeType i_end = perms.distribution().nrTiles().rows() - 1;
-    permutations::permutate<B, D, T, C>(i_begin, i_end, perms, mat_in.get(), mat_out.get());
+    permutations::permute<B, D, T, C>(i_begin, i_end, perms, mat_in.get(), mat_out.get());
   }
 
   auto expected_out = [n](const GlobalElementIndex i) { return T(n - 1 - i.get<C>()); };

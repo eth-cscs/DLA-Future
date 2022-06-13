@@ -114,16 +114,13 @@ struct BacktransformBandToTridiagMiniapp {
       double elapsed_time;
       {
         MatrixMirrorType mat_e(mat_e_host);
-        MatrixMirrorType mat_hh(mat_hh_host);
 
         // Wait for matrices to be copied to GPU (if necessary)
         mat_e.get().waitLocalTiles();
-        mat_hh.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::backTransformationBandToTridiag<Backend::MC>(opts.b, mat_e.get(),
-                                                                        mat_hh.get());
+        dlaf::eigensolver::backTransformationBandToTridiag<backend>(opts.b, mat_e.get(), mat_hh_host);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

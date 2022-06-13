@@ -94,12 +94,12 @@ struct BacktransformBandToTridiagMiniapp {
     TileElementSize block_size(opts.mb, opts.nb);
 
     ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
-      using dlaf::matrix::util::set_random_hermitian;
+      using dlaf::matrix::util::set_random;
 
-      HostMatrixType hermitian(matrix_size, block_size, comm_grid);
-      set_random_hermitian(hermitian);
+      HostMatrixType random(matrix_size, block_size, comm_grid);
+      set_random(random);
 
-      return hermitian;
+      return random;
     }();
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
@@ -109,21 +109,19 @@ struct BacktransformBandToTridiagMiniapp {
       HostMatrixType mat_e_host(matrix_size, block_size, comm_grid);
       copy(matrix_ref, mat_e_host);
 
-      HostMatrixType mat_hh_host({opts.m, opts.m}, {opts.mb, opts.mb}, comm_grid);
+      HostMatrixType mat_hh({opts.m, opts.m}, {opts.mb, opts.mb}, comm_grid);
 
       double elapsed_time;
       {
         MatrixMirrorType mat_e(mat_e_host);
-        MatrixMirrorType mat_hh(mat_hh_host);
 
         // Wait for matrices to be copied to GPU (if necessary)
         mat_e.get().waitLocalTiles();
-        mat_hh.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::backTransformationBandToTridiag<Backend::MC>(opts.b, mat_e.get(),
-                                                                        mat_hh.get());
+        dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
+                                                           T>(opts.b, mat_e.get(), mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

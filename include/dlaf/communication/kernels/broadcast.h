@@ -100,7 +100,7 @@ void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI r
       return recv_sender;
     }
     else {
-      // Copy the received data from the CPU tile to the GPU tile.
+      // Copy the received data from the communication tile to the input tile.
       return whenAllLift(std::move(recv_sender), std::cref(tile_comm), std::cref(tile_in)) |
              copy(Policy<copy_backend>(thread_priority::high));
     }

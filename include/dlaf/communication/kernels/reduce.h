@@ -89,14 +89,6 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
                                                         pcomm)](auto const& tile_in,
                                                                 auto const& tile_contig_comm) mutable
                                         -> ex::unique_any_sender<> {
-                                          constexpr Device in_device_type =
-                                              std::decay_t<decltype(tile_in)>::D;
-                                          constexpr Device comm_device_type =
-                                              std::decay_t<decltype(tile_contig_comm)>::D;
-                                          constexpr Backend copy_backend =
-                                              dlaf::matrix::internal::CopyBackend_v<in_device_type,
-                                                                                    comm_device_type>;
-
                                           auto recv_sender = whenAllLift(std::move(pcomm), reduce_op,
                                                                          std::cref(tile_contig_comm)) |
                                                              transformMPI(internal::reduceRecvInPlace_o);
@@ -110,6 +102,14 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
                                             return {std::move(recv_sender)};
                                           }
                                           else {
+                                            constexpr Device in_device_type =
+                                                std::decay_t<decltype(tile_in)>::D;
+                                            constexpr Device comm_device_type =
+                                                std::decay_t<decltype(tile_contig_comm)>::D;
+                                            constexpr Backend copy_backend =
+                                                dlaf::matrix::internal::CopyBackend_v<in_device_type,
+                                                                                      comm_device_type>;
+
                                             // Copy the received data from the
                                             // comm tile to the input tile.
                                             return whenAllLift(std::move(recv_sender),

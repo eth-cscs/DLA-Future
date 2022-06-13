@@ -24,7 +24,9 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/communication/with_contiguous_buffer.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf {
@@ -48,16 +50,15 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
-template <class T>
+template <class T, Device D>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                      common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
-  auto& comm = pcomm.ref();
-  auto msg = comm::make_message(cont_buf.descriptor);
+                      const matrix::Tile<T, D>& tile, MPI_Request* req) {
+  DLAF_ASSERT(tile.is_contiguous(), "");
 
+  auto& comm = pcomm.ref();
+  auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
-
-  return std::move(cont_buf);
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
@@ -109,13 +110,15 @@ template <class CommSender, class TSender>
 
   using common::internal::copyBack_o;
   using common::internal::makeItContiguous;
+  using dlaf::comm::internal::make_unique_any_sender;
+  using dlaf::comm::internal::with_contiguous_comm_tile;
   using dlaf::internal::getBackendScheduler;
+  using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
+  using dlaf::matrix::copy;
   using pika::threads::thread_priority;
-
-  using T = dlaf::internal::SenderElementType<TSender>;
 
   // Note:
   //
@@ -126,15 +129,41 @@ template <class CommSender, class TSender>
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-  return std::forward<TSender>(tile) | ex::transfer(getBackendScheduler<Backend::MC>()) |
-         ex::let_value([pcomm = std::forward<CommSender>(pcomm),
-                        reduce_op](matrix::Tile<T, Device::CPU>& tile) mutable {
-           auto tile_reduced = whenAllLift(std::move(pcomm), reduce_op, makeItContiguous(tile)) |
-                               transformMPI(internal::allReduceInPlace_o);
-           return whenAllLift(std::move(tile_reduced), std::cref(tile)) |
-                  transform(Policy<Backend::MC>(thread_priority::high), copyBack_o) |
-                  ex::then([&tile]() { return std::move(tile); });
-         });
+  return with_contiguous_comm_tile(std::forward<TSender>(tile),
+                                   [reduce_op, pcomm = std::forward<CommSender>(
+                                                   pcomm)](auto& tile_in,
+                                                           auto const& tile_contig_comm) mutable {
+                                     auto all_reduce_sender = whenAllLift(std::move(pcomm), reduce_op,
+                                                                          std::cref(tile_contig_comm)) |
+                                                              transformMPI(internal::allReduceInPlace_o);
+
+                                     // This is "copy back if needed".  Separate
+                                     // helper? copyIfNeeded?  operator== for
+                                     // Tile (the below is not 100% accurate if
+                                     // we have views)? This should possibly be
+                                     // an option in with_contiguous_comm_tile?
+                                     if (tile_in.ptr() == tile_contig_comm.ptr()) {
+                                       return make_unique_any_sender(
+                                           std::move(all_reduce_sender) |
+                                           ex::then([&tile_in]() { return std::move(tile_in); }));
+                                     }
+                                     else {
+                                       constexpr Device in_device_type =
+                                           std::decay_t<decltype(tile_in)>::D;
+                                       constexpr Device comm_device_type =
+                                           std::decay_t<decltype(tile_contig_comm)>::D;
+                                       constexpr Backend copy_backend =
+                                           dlaf::matrix::internal::CopyBackend_v<in_device_type,
+                                                                                 comm_device_type>;
+                                       // Copy the received data from the
+                                       // comm tile to the input tile.
+                                       return make_unique_any_sender(
+                                           whenAllLift(std::move(all_reduce_sender),
+                                                       std::cref(tile_contig_comm), std::cref(tile_in)) |
+                                           copy(Policy<copy_backend>(thread_priority::high)) |
+                                           ex::then([&tile_in]() { return std::move(tile_in); }));
+                                     }
+                                   });
 }
 }
 }

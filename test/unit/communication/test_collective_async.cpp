@@ -32,7 +32,7 @@ class CollectiveTest : public ::testing::Test {
   static_assert(NUM_MPI_RANKS >= 2, "at least 2 ranks are required");
 
 protected:
-  using T = int;
+  using T = float;
   static constexpr auto device = Device::CPU;
 
   comm::Communicator world = MPI_COMM_WORLD;

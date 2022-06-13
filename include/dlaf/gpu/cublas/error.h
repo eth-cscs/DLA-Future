@@ -16,7 +16,7 @@
 
 #ifdef DLAF_WITH_CUDA
 
-namespace dlaf::gpublas::cublas {
+namespace dlaf::gpublas::cublas::internal {
 
 /// CUBLAS equivalent to `cudaGetErrorString()`
 /// Reference: https://docs.nvidia.com/cuda/cublas/index.html#cublasstatus_t

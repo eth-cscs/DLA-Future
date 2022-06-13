@@ -185,10 +185,12 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         TileElementIndex vb_start{first_element_in_col, j};
         TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
-        gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
-                               &mtau, util::blasToCublasCast(tile_v.ptr(va_start)), to_int(tile_v.ld()),
-                               util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
-                               util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+        gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()),
+                                         to_int(va_size.cols()), &mtau,
+                                         util::blasToCublasCast(tile_v.ptr(va_start)),
+                                         to_int(tile_v.ld()),
+                                         util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
+                                         util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };
@@ -212,9 +214,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};
 
-        gpublas::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
-                               to_int(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),
-                               to_int(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+        gpublas::internal::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
+                                         CUBLAS_DIAG_NON_UNIT, to_int(t_size.rows()),
+                                         util::blasToCublasCast(tile_t.ptr()), to_int(tile_t.ld()),
+                                         util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };

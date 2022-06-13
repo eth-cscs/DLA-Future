@@ -13,9 +13,10 @@
 
 #ifdef DLAF_ASSERT_ENABLE
 
-#define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func)                                                 \
-  void assertInfo##func(cudaStream_t stream, int* info) {                                      \
-    dlaf::cusolver::assert_info<<<1, 1, 0, stream>>>(info, [] __device__() { return #func; }); \
+#define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func)                                                      \
+  void assertInfo##func(cudaStream_t stream, int* info) {                                           \
+    dlaf::gpulapack::internal::assert_info<<<1, 1, 0, stream>>>(info,                               \
+                                                                [] __device__() { return #func; }); \
   }
 
 #else
@@ -25,8 +26,7 @@
 
 #endif
 
-namespace dlaf {
-namespace cusolver {
+namespace dlaf::gpulapack::internal {
 
 template <class F>
 __global__ void assert_info(int* info, F func) {
@@ -43,5 +43,4 @@ __global__ void assert_info(int* info, F func) {
 DLAF_DEFINE_CUSOLVER_ASSERT_INFO(Potrf)
 DLAF_DEFINE_CUSOLVER_ASSERT_INFO(Hegst)
 
-}
 }

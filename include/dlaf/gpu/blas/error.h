@@ -20,7 +20,7 @@
 #include "dlaf/gpu/cublas/error.h"
 #include "dlaf/gpu/hipblas/error.h"
 
-namespace dlaf::gpublas {
+namespace dlaf::gpublas::internal {
 
 #ifdef DLAF_WITH_GPU
 
@@ -28,12 +28,14 @@ inline void checkError(gpublasStatus_t st,
                        const dlaf::common::internal::source_location& info) noexcept {
 #ifdef DLAF_WITH_CUDA
   if (st != CUBLAS_STATUS_SUCCESS) {
-    std::cout << "[CUBLAS ERROR] " << info << std::endl << cublas::getErrorString(st) << std::endl;
+    std::cout << "[CUBLAS ERROR] " << info << std::endl
+              << cublas::internal::getErrorString(st) << std::endl;
     std::terminate();
   }
 #elif defined(DLAF_WITH_HIP)
   if (st != HIPBLAS_STATUS_SUCCESS) {
-    std::cout << "[HIPBLAS ERROR] " << info << std::endl << hipblas::getErrorString(st) << std::endl;
+    std::cout << "[HIPBLAS ERROR] " << info << std::endl
+              << hipblas::internal::getErrorString(st) << std::endl;
     std::terminate();
   }
 #endif
@@ -78,7 +80,7 @@ inline void checkError(rocblas_status st, const dlaf::common::internal::source_l
 #endif
 
 #define DLAF_GPUBLAS_CHECK_ERROR(gpublas_err) \
-  ::dlaf::gpublas::checkError((gpublas_err), SOURCE_LOCATION())
+  ::dlaf::gpublas::internal::checkError((gpublas_err), SOURCE_LOCATION())
 
 #endif
 

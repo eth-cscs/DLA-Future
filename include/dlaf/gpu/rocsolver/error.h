@@ -18,7 +18,7 @@
 
 #ifdef DLAF_WITH_HIP
 
-namespace dlaf::gpulapack::rocsolver {
+namespace dlaf::gpulapack::rocsolver::internal {
 
 inline std::string getErrorString(rocblas_status st) {
   // clang-format off

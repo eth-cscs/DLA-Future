@@ -16,11 +16,9 @@
 
 #define DLAF_DECLARE_CUSOLVER_ASSERT_INFO(func) void assertInfo##func(cudaStream_t stream, int* info)
 
-namespace dlaf {
-namespace cusolver {
+namespace dlaf::gpulapack::internal {
 
 DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Potrf);
 DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Hegst);
 
-}
 }

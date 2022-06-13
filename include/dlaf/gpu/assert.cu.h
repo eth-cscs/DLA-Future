@@ -17,7 +17,7 @@
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
 
 #define DLAF_GPU_ASSERT_HEAVY(expr)                              \
-  dlaf::cuda::gpuAssert(expr, [] __device__() {                  \
+  ::dlaf::gpu::internal::gpuAssert(expr, [] __device__() {       \
     printf("GPU assertion failed: %s:%d\n", __FILE__, __LINE__); \
   })
 
@@ -25,8 +25,7 @@
 #define DLAF_GPU_ASSERT_HEAVY(expr)
 #endif
 
-namespace dlaf {
-namespace cuda {
+namespace dlaf::gpu::internal {
 
 template <class PrintFunc>
 __device__ void gpuAssert(bool expr, PrintFunc&& print_func) {
@@ -40,5 +39,4 @@ __device__ void gpuAssert(bool expr, PrintFunc&& print_func) {
   }
 }
 
-}
 }

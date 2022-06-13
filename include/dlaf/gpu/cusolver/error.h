@@ -18,7 +18,7 @@
 
 #ifdef DLAF_WITH_CUDA
 
-namespace dlaf::gpulapack::cusolver {
+namespace dlaf::gpulapack::cusolver::internal {
 
 /// CUSOLVER equivalent to `cudaGetErrorString()`
 /// Reference: https://docs.nvidia.com/cuda/cusolver/index.html#cuSolverSPstatus

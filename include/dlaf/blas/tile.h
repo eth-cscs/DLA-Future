@@ -95,7 +95,7 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, Che##f); \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Zhe##f)
 
-namespace dlaf::gpublas {
+namespace dlaf::gpublas::internal {
 
 // Level 1
 DLAF_MAKE_GPUBLAS_OP(Axpy, axpy);
@@ -369,10 +369,11 @@ void gemm(cublasHandle_t handle, const blas::Op op_a, const blas::Op op_b, const
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = getGemmSizes(op_a, op_b, a, b, c);
-  gpublas::Gemm<T>::call(handle, blasToCublas(op_a), blasToCublas(op_b), to_int(s.m), to_int(s.n),
-                         to_int(s.k), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()),
-                         to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()),
-                         blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
+  gpublas::internal::Gemm<T>::call(handle, blasToCublas(op_a), blasToCublas(op_b), to_int(s.m),
+                                   to_int(s.n), to_int(s.k), blasToCublasCast(&alpha),
+                                   blasToCublasCast(a.ptr()), to_int(a.ld()), blasToCublasCast(b.ptr()),
+                                   to_int(b.ld()), blasToCublasCast(&beta), blasToCublasCast(c.ptr()),
+                                   to_int(c.ld()));
 }
 
 template <class T>
@@ -382,10 +383,10 @@ void hemm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = getHemmSizes(side, a, b, c);
-  gpublas::Hemm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), to_int(s.m), to_int(s.n),
-                         blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
-                         blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
-                         blasToCublasCast(c.ptr()), to_int(c.ld()));
+  gpublas::internal::Hemm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), to_int(s.m),
+                                   to_int(s.n), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()),
+                                   to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                   blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -404,10 +405,10 @@ void her2k(cublasHandle_t handle, const blas::Uplo uplo, blas::Op op, const T al
   if (!isComplex_v<T> && op == blas::Op::ConjTrans)
     op = blas::Op::Trans;
 #endif
-  gpublas::Her2k<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
-                          blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
-                          blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(&beta),
-                          blasToCublasCast(c.ptr()), to_int(c.ld()));
+  gpublas::internal::Her2k<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n),
+                                    to_int(s.k), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()),
+                                    to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                    blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -417,9 +418,10 @@ void herk(cublasHandle_t handle, const blas::Uplo uplo, const blas::Op op, const
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = getHerkSizes(op, a, c);
-  gpublas::Herk<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n), to_int(s.k),
-                         blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
-                         blasToCublasCast(&beta), blasToCublasCast(c.ptr()), to_int(c.ld()));
+  gpublas::internal::Herk<T>::call(handle, blasToCublas(uplo), blasToCublas(op), to_int(s.n),
+                                   to_int(s.k), blasToCublasCast(&alpha), blasToCublasCast(a.ptr()),
+                                   to_int(a.ld()), blasToCublasCast(&beta), blasToCublasCast(c.ptr()),
+                                   to_int(c.ld()));
 }
 
 template <class T>
@@ -430,13 +432,13 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   using util::blasToCublasCast;
   auto s = tile::internal::getTrmmSizes(side, a, b);
 
-  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()),
+  gpublas::internal::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                                   blasToCublas(diag), to_int(s.m), to_int(s.n),
+                                   blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
 #ifdef DLAF_WITH_CUDA
-                         blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()),
 #endif
-                         blasToCublasCast(b.ptr()), to_int(b.ld()));
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 
 template <class T>
@@ -453,13 +455,13 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
   matrix::internal::copy(b, c, stream);
 #endif
-  gpublas::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha),
-                         blasToCublasCast(a.ptr()), to_int(a.ld()),
+  gpublas::internal::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                                   blasToCublas(diag), to_int(s.m), to_int(s.n),
+                                   blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
 #ifdef DLAF_WITH_CUDA
-                         blasToCublasCast(b.ptr()), to_int(b.ld()),
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()),
 #endif
-                         blasToCublasCast(c.ptr()), to_int(c.ld()));
+                                   blasToCublasCast(c.ptr()), to_int(c.ld()));
 }
 
 template <class T>
@@ -476,9 +478,10 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
       // The hipblas API requires a non-const argument
       blasToCublasCast(const_cast<T*>(a.ptr()));
 #endif
-  gpublas::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
-                         blasToCublas(diag), to_int(s.m), to_int(s.n), blasToCublasCast(&alpha), a_ptr,
-                         to_int(a.ld()), blasToCublasCast(b.ptr()), to_int(b.ld()));
+  gpublas::internal::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
+                                   blasToCublas(diag), to_int(s.m), to_int(s.n),
+                                   blasToCublasCast(&alpha), a_ptr, to_int(a.ld()),
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()));
 }
 #endif  // defined(DLAF_WITH_GPU)
 

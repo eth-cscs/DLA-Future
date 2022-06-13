@@ -52,8 +52,7 @@
 #include "dlaf/util_rocblas.h"
 #endif
 
-namespace dlaf {
-namespace tile {
+namespace dlaf::tile {
 using matrix::Tile;
 
 // See LAPACK documentation for more details.
@@ -551,7 +550,7 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
                                    util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
-  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assertInfoHegst, handle, std::move(info));
 #elif defined(DLAF_WITH_HIP)
   internal::CusolverHegst<T>::call(handle, util::blasToRocblas(itype), util::blasToRocblas(uplo),
                                    to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
@@ -587,7 +586,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-  assertExtendInfo(dlaf::cusolver::assertInfoPotrf, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));
 }
 
 template <class T>
@@ -627,5 +626,4 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::La
                                      internal::scaleCol_o)
 
 #endif
-}
 }

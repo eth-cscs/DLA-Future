@@ -15,7 +15,7 @@
 
 #ifdef DLAF_WITH_HIP
 
-namespace dlaf::gpublas::hipblas {
+namespace dlaf::gpublas::hipblas::internal {
 
 inline std::string getErrorString(hipblasStatus_t st) {
   // clang-format off

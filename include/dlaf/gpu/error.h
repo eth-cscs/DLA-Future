@@ -20,7 +20,7 @@
 
 #ifdef DLAF_WITH_GPU
 
-namespace dlaf::gpu {
+namespace dlaf::gpu::internal {
 
 inline void checkError(gpuError_t err, const dlaf::common::internal::source_location& info) noexcept {
 #ifdef DLAF_WITH_CUDA
@@ -36,7 +36,7 @@ inline void checkError(gpuError_t err, const dlaf::common::internal::source_loca
 #endif
 }
 
-#define DLAF_GPU_CHECK_ERROR(cuda_err) ::dlaf::gpu::checkError((cuda_err), SOURCE_LOCATION())
+#define DLAF_GPU_CHECK_ERROR(cuda_err) ::dlaf::gpu::internal::checkError((cuda_err), SOURCE_LOCATION())
 }
 
 #endif

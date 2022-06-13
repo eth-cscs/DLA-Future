@@ -36,8 +36,8 @@ namespace dlaf::util {
 inline std::vector<SizeType> interleaveSplits(SizeType l, SizeType b, SizeType o1, SizeType o2) {
   DLAF_ASSERT(l > 0, l);
   DLAF_ASSERT(b > 0, b);
-  DLAF_ASSERT(o1 >= 0, o1);
-  DLAF_ASSERT(o2 >= 0, o2);
+  DLAF_ASSERT(o1 >= 0 && o1 <= b, o1, b);
+  DLAF_ASSERT(o2 >= 0 && o2 <= b, o2, b);
 
   // Set small and big from offsets o1 and o2 s.t small <= big
   SizeType small = o1;

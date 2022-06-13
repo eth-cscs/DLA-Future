@@ -256,13 +256,13 @@ public:
   template <class T>
   auto read(Matrix<const T, Device::CPU>& mat) {
     auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadTiles(begin, end, mat);
+    return matrix::util::collectReadTileFutures(begin, end, mat);
   }
 
   template <class T>
   auto readwrite(Matrix<T, Device::CPU>& mat) {
     auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadWriteTiles(begin, end, mat);
+    return matrix::util::collectReadWriteTileFutures(begin, end, mat);
   }
 };
 
@@ -947,8 +947,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
-                                                                         ws.mat2);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
+                                                                       ws.mat2);
   dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
                                                                       blas::Op::NoTrans, T(1), mat_ev,
                                                                       ws.mat2, T(0), ws.mat1);
@@ -964,7 +964,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
-  dlaf::permutations::permutate<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
-                                                                         mat_ev);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
+                                                                       mat_ev);
 }
 }

@@ -23,11 +23,10 @@ using namespace dlaf;
 using namespace dlaf::test;
 
 template <typename Type>
-class TridiagEigensolverPermutationsTest : public ::testing::Test {};
-TYPED_TEST_SUITE(TridiagEigensolverPermutationsTest, RealMatrixElementTypes);
+class PermutationsTestCPU : public ::testing::Test {};
+TYPED_TEST_SUITE(PermutationsTestCPU, MatrixElementTypes);
 
 #ifdef DLAF_WITH_CUDA
-
 template <typename Type>
 class PermutationsTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
@@ -132,7 +131,7 @@ void testApplyColumnPermutations(SizeType n, SizeType nb) {
   // clang-format on
 
   for (auto [i_tile, i_el, val] : expected_entries) {
-    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
+    EXPECT_EQ(out_tiles[i_tile](i_el), val);
   }
 }
 
@@ -199,56 +198,55 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
   // clang-format on
 
   for (auto [i_tile, i_el, val] : expected_entries) {
-    EXPECT_NEAR(out_tiles[i_tile](i_el), val, 1e-7);
+    EXPECT_EQ(out_tiles[i_tile](i_el), val);
   }
 }
 
-// Permutate columns or rows in reverse order.
+// Permute columns or rows in reverse order.
 // Each column or row of the input matrix is has it's index as a value.
 template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb) {
-  Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Matrix<SizeType, Device::CPU> perms(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Matrix<T, Device::CPU> mat_in_h(LocalElementSize(n, n), TileElementSize(nb, nb));
   Matrix<T, Device::CPU> mat_out_h(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-  dlaf::matrix::util::set(perms_h, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
+  dlaf::matrix::util::set(perms, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
   dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) { return T(i.get<C>()); });
 
   {
-    matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
     SizeType i_begin = 0;
-    SizeType i_end = perms_h.distribution().nrTiles().rows() - 1;
-    permutations::permutate<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
+    SizeType i_end = perms.distribution().nrTiles().rows() - 1;
+    permutations::permute<B, D, T, C>(i_begin, i_end, perms, mat_in.get(), mat_out.get());
   }
 
   auto expected_out = [n](const GlobalElementIndex i) { return T(n - 1 - i.get<C>()); };
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyColumnPermutations) {
+TYPED_TEST(PermutationsTestCPU, ApplyColumnPermutations) {
   SizeType n = 10;
   SizeType nb = 3;
 
   testApplyColumnPermutations<Device::CPU, TypeParam>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, ApplyRowPermutations) {
+TYPED_TEST(PermutationsTestCPU, ApplyRowPermutations) {
   SizeType n = 10;
   SizeType nb = 3;
 
   testApplyRowPermutations<Device::CPU, TypeParam>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, Columns) {
+TYPED_TEST(PermutationsTestCPU, Columns) {
   SizeType n = 10;
   SizeType nb = 3;
   testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Col>(n, nb);
 }
 
-TYPED_TEST(TridiagEigensolverPermutationsTest, Rows) {
+TYPED_TEST(PermutationsTestCPU, Rows) {
   SizeType n = 10;
   SizeType nb = 3;
   testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Row>(n, nb);

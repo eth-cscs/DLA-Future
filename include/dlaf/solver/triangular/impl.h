@@ -591,10 +591,11 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())
-        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx)));
+        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                           b_panel.readwrite_sender(idx)));
       else
-        ex::start_detached(
-            comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx)));
+        ex::start_detached(comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM,
+                                                    b_panel.read_sender(idx)));
     }
 
     if (this_rank.row() == rank_kk.row()) {

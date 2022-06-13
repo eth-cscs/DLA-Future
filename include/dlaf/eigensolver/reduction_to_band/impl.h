@@ -739,11 +739,12 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x({i, 0})));
+      ex::start_detached(
+          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite_sender({i, 0})));
     }
     else {
       ex::start_detached(
-          comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt)));
+          comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read_sender(index_xt)));
     }
   }
 
@@ -753,10 +754,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x(index_x)));
+      ex::start_detached(
+          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender(index_x)));
     else
       ex::start_detached(
-          comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x)));
+          comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read_sender(index_x)));
   }
 }
 
@@ -1093,8 +1095,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       MatrixT<T> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(
-          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2(LocalTileIndex(0, 0))));
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+                                                        w2.readwrite_sender(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

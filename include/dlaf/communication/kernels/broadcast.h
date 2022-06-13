@@ -28,9 +28,9 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/transform_mpi.h"
 
-namespace dlaf {
-namespace comm {
 
+namespace dlaf::comm {
+namespace internal {
 template <class T, Device D>
 void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator> pcomm,
                MPI_Request* req) {
@@ -58,22 +58,22 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
+}
 
-template <class T, Device D, template <class> class Future, class CommSender>
-auto scheduleSendBcast(Future<matrix::Tile<const T, D>> tile, CommSender&& pcomm) {
+template <class TileSender, class CommSender>
+auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
   using dlaf::comm::internal::withCommTile;
-  using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::whenAllLift;
 
   auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const&, auto const& tile_comm) mutable {
-    return whenAllLift(std::cref(tile_comm), std::move(pcomm)) | internal::transformMPI(sendBcast_o);
+    return whenAllLift(std::cref(tile_comm), std::move(pcomm)) |
+           internal::transformMPI(internal::sendBcast_o);
   };
-  return withCommTile(keepIfSharedFuture(std::move(tile)), std::move(send));
+  return withCommTile(std::forward<TileSender>(tile), std::move(send));
 }
 
-template <class T, Device D, class CommSender>
-auto scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
-                       CommSender&& pcomm) {
+template <class TileSender, class CommSender>
+auto scheduleRecvBcast(TileSender&& tile, comm::IndexT_MPI root_rank, CommSender&& pcomm) {
   using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::withSimilarCommTile;
@@ -81,12 +81,10 @@ auto scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI r
 
   auto recv_copy_back = [root_rank, pcomm = std::forward<CommSender>(
                                         pcomm)](auto const& tile_in, auto const& tile_comm) mutable {
-    auto recv_sender =
-        whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
+    auto recv_sender = whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) |
+                       transformMPI(internal::recvBcast_o);
     return copyBack(std::move(recv_sender), tile_in, tile_comm);
   };
-  return withSimilarCommTile(std::move(tile), std::move(recv_copy_back));
-}
-
+  return withSimilarCommTile(std::forward<TileSender>(tile), std::move(recv_copy_back));
 }
 }

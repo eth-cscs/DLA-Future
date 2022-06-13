@@ -26,7 +26,6 @@
 #include "dlaf/communication/rdma.h"
 #include "dlaf/communication/with_contiguous_buffer.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/transform_mpi.h"
 
 namespace dlaf::comm {
@@ -63,10 +62,9 @@ auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op red
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
-template <class CommSender, class T>
-[[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
-                                     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
-                                     pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
+template <class CommSender, class TileInSender, class TileOutSender>
+[[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op, TileInSender&& tile_in,
+                                     TileOutSender&& tile_out) {
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::copyBack;
@@ -83,24 +81,25 @@ template <class CommSender, class T>
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
-  auto all_reduce_copy_back = [pcomm = std::forward<CommSender>(pcomm), reduce_op,
-                               tile_in = std::move(tile_in)](const auto& tile_out,
-                                                             const auto& tile_out_contig_comm) mutable {
-    auto all_reduce = unwrapping([&tile_out_contig_comm, pcomm = std::move(pcomm),
-                                  reduce_op](const auto&, const auto& tile_in_contig_comm) mutable {
-      return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_contig_comm),
-                         std::cref(tile_out_contig_comm)) |
-             transformMPI(internal::allReduce_o);
-    });
-    auto all_reduce_sender =
-        withContiguousCommTile(ex::keep_future(std::move(tile_in)), std::move(all_reduce));
-    return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
-  };
-  return withContiguousCommTile(std::move(tile_out), std::move(all_reduce_copy_back));
+  auto all_reduce_copy_back =
+      [pcomm = std::forward<CommSender>(pcomm), reduce_op,
+       tile_in = std::forward<TileInSender>(tile_in)](const auto& tile_out,
+                                                      const auto& tile_out_contig_comm) mutable {
+        auto all_reduce = unwrapping([&tile_out_contig_comm, pcomm = std::move(pcomm),
+                                      reduce_op](const auto&, const auto& tile_in_contig_comm) mutable {
+          return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_contig_comm),
+                             std::cref(tile_out_contig_comm)) |
+                 transformMPI(internal::allReduce_o);
+        });
+        auto all_reduce_sender =
+            withContiguousCommTile(std::move(tile_in), std::move(all_reduce));
+        return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
+      };
+  return withContiguousCommTile(std::forward<TileOutSender>(tile_out), std::move(all_reduce_copy_back));
 }
 
-template <class CommSender, class TSender>
-[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TSender&& tile) {
+template <class CommSender, class TileSender>
+[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::copyBack;
@@ -123,6 +122,7 @@ template <class CommSender, class TSender>
         return copyBack(std::move(all_reduce_sender), tile_in, tile_contig_comm) |
                ex::then([&tile_in]() { return std::move(tile_in); });
       };
-  return withContiguousCommTile(std::forward<TSender>(tile), std::move(all_reduce_in_place_copy_back));
+  return withContiguousCommTile(std::forward<TileSender>(tile),
+                                std::move(all_reduce_in_place_copy_back));
 }
 }

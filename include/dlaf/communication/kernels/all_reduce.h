@@ -29,11 +29,8 @@
 #include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/transform_mpi.h"
 
-namespace dlaf {
-namespace comm {
-
+namespace dlaf::comm {
 namespace internal {
-
 template <class T, Device D>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                const matrix::Tile<const T, D>& tile_in, const matrix::Tile<T, D>& tile_out,
@@ -67,9 +64,9 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 template <class CommSender, class T>
-void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
-                       pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
-                       pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
+[[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
+                                     pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_in,
+                                     pika::future<matrix::Tile<T, Device::CPU>> tile_out) {
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::copyBack;
@@ -99,7 +96,7 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
         withContiguousCommTile(ex::keep_future(std::move(tile_in)), std::move(all_reduce));
     return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
   };
-  ex::start_detached(withContiguousCommTile(std::move(tile_out), std::move(all_reduce_copy_back)));
+  return withContiguousCommTile(std::move(tile_out), std::move(all_reduce_copy_back));
 }
 
 template <class CommSender, class TSender>
@@ -127,6 +124,5 @@ template <class CommSender, class TSender>
                ex::then([&tile_in]() { return std::move(tile_in); });
       };
   return withContiguousCommTile(std::forward<TSender>(tile), std::move(all_reduce_in_place_copy_back));
-}
 }
 }

@@ -60,9 +60,7 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class T, Device D, template <class> class Future, class CommSender>
-void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile, CommSender&& pcomm) {
-  namespace ex = pika::execution::experimental;
-
+auto scheduleSendBcast(Future<matrix::Tile<const T, D>> tile, CommSender&& pcomm) {
   using dlaf::comm::internal::withCommTile;
   using dlaf::internal::keepIfSharedFuture;
   using dlaf::internal::whenAllLift;
@@ -70,14 +68,12 @@ void scheduleSendBcast(Future<matrix::Tile<const T, D>> tile, CommSender&& pcomm
   auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const&, auto const& tile_comm) mutable {
     return whenAllLift(std::cref(tile_comm), std::move(pcomm)) | internal::transformMPI(sendBcast_o);
   };
-  ex::start_detached(withCommTile(keepIfSharedFuture(std::move(tile)), std::move(send)));
+  return withCommTile(keepIfSharedFuture(std::move(tile)), std::move(send));
 }
 
 template <class T, Device D, class CommSender>
-void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
+auto scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI root_rank,
                        CommSender&& pcomm) {
-  namespace ex = pika::execution::experimental;
-
   using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::withSimilarCommTile;
@@ -89,7 +85,7 @@ void scheduleRecvBcast(pika::future<matrix::Tile<T, D>> tile, comm::IndexT_MPI r
         whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
     return copyBack(std::move(recv_sender), tile_in, tile_comm);
   };
-  ex::start_detached(withSimilarCommTile(std::move(tile), std::move(recv_copy_back)));
+  return withSimilarCommTile(std::move(tile), std::move(recv_copy_back));
 }
 
 }

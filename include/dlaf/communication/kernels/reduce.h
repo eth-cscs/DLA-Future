@@ -65,16 +65,13 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 
 /// Given a GPU tile, perform MPI_Reduce in-place
 template <class CommSender, class T, Device D>
-void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
-                               pika::future<matrix::Tile<T, D>> tile) {
+[[nodiscard]] auto scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
+                                             pika::future<matrix::Tile<T, D>> tile) {
   // Note:
   //
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU) --> copy --> GPU
   //
   // where: cCPU = contiguous CPU
-
-  namespace ex = pika::execution::experimental;
-
   using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
   using dlaf::comm::internal::withSimilarContiguousCommTile;
@@ -87,21 +84,19 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
                            transformMPI(internal::reduceRecvInPlace_o);
         return copyBack(std::move(recv_sender), tile_in, tile_contig_comm);
       };
-  ex::start_detached(
-      withSimilarContiguousCommTile(std::move(tile), std::move(reduce_recv_in_place_copy_back)));
+  return withSimilarContiguousCommTile(std::move(tile), std::move(reduce_recv_in_place_copy_back));
 }
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a GPU tile perform MPI_Reduce in-place
 template <class T, Device D, class CommSender>
-void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
-                        pika::shared_future<matrix::Tile<const T, D>> tile) {
+[[nodiscard]] auto scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
+                                      pika::shared_future<matrix::Tile<const T, D>> tile) {
   // Note:
   //
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU)
   //
   // where: cCPU = contiguous CPU
-
   namespace ex = pika::execution::experimental;
 
   using dlaf::comm::internal::transformMPI;
@@ -114,7 +109,7 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
     return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
            transformMPI(internal::reduceSend_o);
   };
-  ex::start_detached(withContiguousCommTile(ex::keep_future(std::move(tile)), std::move(reduce_send)));
+  return withContiguousCommTile(ex::keep_future(std::move(tile)), std::move(reduce_send));
 }
 }
 }

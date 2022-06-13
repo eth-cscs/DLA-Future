@@ -657,6 +657,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
+  namespace ex = pika::execution::experimental;
   using pika::threads::thread_priority;
 
   constexpr auto B = Backend::MC;
@@ -738,10 +739,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x({i, 0}));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x({i, 0})));
     }
     else {
-      comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt));
+      ex::start_detached(
+          comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read(index_xt)));
     }
   }
 
@@ -751,9 +753,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x(index_x));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x(index_x)));
     else
-      comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x));
+      ex::start_detached(
+          comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read(index_x)));
   }
 }
 

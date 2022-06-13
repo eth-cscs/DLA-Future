@@ -537,6 +537,7 @@ template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
+  namespace ex = pika::execution::experimental;
   using pika::threads::thread_priority;
 
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -590,9 +591,10 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     for (const auto& idx : b_panel.iteratorLocal()) {
       if (this_rank.row() == rank_kk.row())
-        comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx));
+        ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx)));
       else
-        comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx));
+        ex::start_detached(
+            comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx)));
     }
 
     if (this_rank.row() == rank_kk.row()) {

@@ -9,6 +9,7 @@
 //
 
 #include <blas/util.hh>
+#include <cstdlib>
 #include <iostream>
 
 #include <mpi.h>
@@ -167,14 +168,13 @@ struct GenToStdMiniapp {
 };
 
 int pika_main(pika::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-    const Options opts(vm);
+  pika::scoped_finalize pika_finalizer;
+  dlaf::ScopedInitializer init(vm);
 
-    dlaf::miniapp::dispatchMiniapp<GenToStdMiniapp>(opts);
-  }
+  const Options opts(vm);
+  dlaf::miniapp::dispatchMiniapp<GenToStdMiniapp>(opts);
 
-  return pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {

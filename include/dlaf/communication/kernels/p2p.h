@@ -30,42 +30,42 @@ namespace internal {
 
 // Non-blocking point to point send
 template <class T, Device D>
-void send(const matrix::Tile<const T, D>& tile, IndexT_MPI receiver, IndexT_MPI tag,
+void send(const matrix::Tile<const T, D>& tile, IndexT_MPI dest, IndexT_MPI tag,
           common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Isend(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), receiver, tag,
-                                 pcomm.ref(), req));
+  DLAF_MPI_CHECK_ERROR(
+      MPI_Isend(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), dest, tag, pcomm.ref(), req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(send);
 
 // Non-blocking point to point receive
 template <class T, Device D>
-auto recv(const matrix::Tile<T, D>& tile, IndexT_MPI sender, IndexT_MPI tag,
+auto recv(const matrix::Tile<T, D>& tile, IndexT_MPI source, IndexT_MPI tag,
           common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
-      MPI_Irecv(msg.data(), msg.count(), msg.mpi_type(), sender, tag, pcomm.ref(), req));
+      MPI_Irecv(msg.data(), msg.count(), msg.mpi_type(), source, tag, pcomm.ref(), req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recv);
 }
 
 template <class CommSender, class Sender>
-void scheduleSend(IndexT_MPI receiver, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
+void scheduleSend(IndexT_MPI dest, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
   using dlaf::internal::whenAllLift;
   using pika::execution::experimental::start_detached;
 
-  whenAllLift(std::move(tile), receiver, tag, std::forward<CommSender>(pcomm)) |
+  whenAllLift(std::move(tile), dest, tag, std::forward<CommSender>(pcomm)) |
       internal::transformMPI(internal::send_o) | pika::execution::experimental::start_detached();
 }
 
 template <class CommSender, class Sender>
-auto scheduleRecv(IndexT_MPI sender, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
+auto scheduleRecv(IndexT_MPI source, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
   using dlaf::internal::whenAllLift;
   using pika::execution::experimental::start_detached;
 
-  whenAllLift(std::move(tile), sender, tag, std::forward<CommSender>(pcomm)) |
+  whenAllLift(std::move(tile), source, tag, std::forward<CommSender>(pcomm)) |
       internal::transformMPI(internal::recv_o) | pika::execution::experimental::start_detached();
 }
 }

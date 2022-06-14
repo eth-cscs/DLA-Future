@@ -66,18 +66,18 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix, st
 
   const LocalTileIndex idx(0, 0);
 
-  const comm::IndexT_MPI sender_rank = world.size() - 1;
-  const comm::IndexT_MPI receiver_rank = (world.size() - 1) / 2;
+  const comm::IndexT_MPI rank_src = world.size() - 1;
+  const comm::IndexT_MPI rank_dst = (world.size() - 1) / 2;
 
   auto input_tile = fixedValueTile(26);
 
-  if (sender_rank == world.rank()) {
+  if (rank_src == world.rank()) {
     matrix::test::set(matrix(idx).get(), input_tile);
-    comm::scheduleSend(receiver_rank, chain(), tag, matrix.read_sender(idx));
+    comm::scheduleSend(rank_dst, chain(), tag, matrix.read_sender(idx));
   }
-  else if (receiver_rank == world.rank()) {
+  else if (rank_dst == world.rank()) {
     matrix::test::set(matrix(idx).get(), fixedValueTile(13));
-    comm::scheduleRecv(sender_rank, chain(), tag, matrix.readwrite_sender(idx));
+    comm::scheduleRecv(rank_src, chain(), tag, matrix.readwrite_sender(idx));
   }
 
   const auto& tile = matrix.read(idx).get();

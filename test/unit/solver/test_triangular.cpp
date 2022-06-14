@@ -159,9 +159,6 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {
           for (const auto diag : blas_diags) {
-            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
-              continue;
-
             for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
@@ -199,9 +196,6 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {
           for (const auto diag : blas_diags) {
-            if (!(op == blas::Op::NoTrans || (side == blas::Side::Left && uplo == blas::Uplo::Lower)))
-              continue;
-
             for (const auto& [m, n, mb, nb] : sizes) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
 

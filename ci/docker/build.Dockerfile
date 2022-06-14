@@ -96,4 +96,4 @@ ARG SPACK_ENVIRONMENT
 # 2. Install only the dependencies of this (top level is our package)
 COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
 RUN spack env create --without-view ci /spack_environment/spack.yaml
-RUN spack -e ci install --fail-fast --only=dependencies --require-full-hash-match
+RUN spack -e ci install --fail-fast --only=dependencies

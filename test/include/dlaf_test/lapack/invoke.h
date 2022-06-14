@@ -56,8 +56,8 @@ struct InvokeLapack<Device::GPU> {
     DLAF_CUSOLVER_CHECK_ERROR(cusolverDnCreate(&handle));
     auto result = f(handle, std::forward<Args>(args)...);
     int info_host;
-    // The copy will happen on the same (default) stream as the potrf, and since
-    // this is a blocking call, we can access info_host without further
+    // The copy will happen on the same (default) stream as the call to f, and
+    // since this is a blocking call, we can access info_host without further
     // synchronization.
     DLAF_CUDA_CHECK_ERROR(cudaMemcpy(&info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
     DLAF_CUSOLVER_CHECK_ERROR(cusolverDnDestroy(handle));

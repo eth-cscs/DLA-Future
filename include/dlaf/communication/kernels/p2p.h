@@ -52,20 +52,20 @@ DLAF_MAKE_CALLABLE_OBJECT(recv);
 }
 
 template <class CommSender, class Sender>
-void scheduleSend(IndexT_MPI dest, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
+void scheduleSend(IndexT_MPI dest, CommSender&& pcomm, IndexT_MPI tag, Sender&& tile) {
   using dlaf::internal::whenAllLift;
   using pika::execution::experimental::start_detached;
 
-  whenAllLift(std::move(tile), dest, tag, std::forward<CommSender>(pcomm)) |
+  whenAllLift(std::forward<Sender>(tile), dest, tag, std::forward<CommSender>(pcomm)) |
       internal::transformMPI(internal::send_o) | pika::execution::experimental::start_detached();
 }
 
 template <class CommSender, class Sender>
-auto scheduleRecv(IndexT_MPI source, CommSender&& pcomm, IndexT_MPI tag, Sender tile) {
+auto scheduleRecv(IndexT_MPI source, CommSender&& pcomm, IndexT_MPI tag, Sender&& tile) {
   using dlaf::internal::whenAllLift;
   using pika::execution::experimental::start_detached;
 
-  whenAllLift(std::move(tile), source, tag, std::forward<CommSender>(pcomm)) |
+  whenAllLift(std::forward<Sender>(tile), source, tag, std::forward<CommSender>(pcomm)) |
       internal::transformMPI(internal::recv_o) | pika::execution::experimental::start_detached();
 }
 }

@@ -83,6 +83,7 @@ auto make_unique_any_sender(Sender&& sender) {
 // This one is currently used for reduceRecvInPlace. It first creates a
 // "similar" tile on the communication device if needed. It ensures that the
 // communication tile is contiguous.
+// TODO: Unused. Remove?
 template <typename InSender, typename F>
 auto withSimilarContiguousCommTile(InSender&& in_sender, F&& f) {
   namespace ex = pika::execution::experimental;

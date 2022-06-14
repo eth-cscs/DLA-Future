@@ -69,7 +69,7 @@ template <class CommSender, class TileSender>
   // where: cCPU = contiguous CPU
   using dlaf::comm::internal::copyBack;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withSimilarContiguousCommTile;
+  using dlaf::comm::internal::withContiguousCommTile;
   using dlaf::internal::whenAllLift;
 
   auto reduce_recv_in_place_copy_back =
@@ -79,7 +79,7 @@ template <class CommSender, class TileSender>
                            transformMPI(internal::reduceRecvInPlace_o);
         return copyBack(std::move(recv_sender), tile_in, tile_contig_comm);
       };
-  return withSimilarContiguousCommTile(std::forward<TileSender>(tile),
+  return withContiguousCommTile(std::forward<TileSender>(tile),
                                        std::move(reduce_recv_in_place_copy_back));
 }
 

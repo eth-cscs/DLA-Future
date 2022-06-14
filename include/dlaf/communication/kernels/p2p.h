@@ -23,8 +23,7 @@
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/when_all_lift.h"
 
-namespace dlaf {
-namespace comm {
+namespace dlaf::comm {
 
 namespace internal {
 
@@ -67,6 +66,5 @@ auto scheduleRecv(IndexT_MPI source, CommSender&& pcomm, IndexT_MPI tag, Sender&
 
   whenAllLift(std::forward<Sender>(tile), source, tag, std::forward<CommSender>(pcomm)) |
       internal::transformMPI(internal::recv_o) | pika::execution::experimental::start_detached();
-}
 }
 }

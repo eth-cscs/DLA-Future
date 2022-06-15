@@ -67,21 +67,28 @@ template <class CommSender, class TileSender>
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU) --> copy --> GPU
   //
   // where: cCPU = contiguous CPU
-  using dlaf::comm::internal::copyBack;
+  using dlaf::comm::internal::CopyFromDestination;
+  using dlaf::comm::internal::CopyToDestination;
+  using dlaf::comm::internal::reduceRecvInPlace_o;
+  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withContiguousCommTile;
+  using dlaf::comm::internal::withTemporaryTile;
   using dlaf::internal::whenAllLift;
 
-  auto reduce_recv_in_place_copy_back =
-      [reduce_op, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_in,
-                                                           auto const& tile_contig_comm) mutable {
-        auto recv_sender = whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
-                           transformMPI(internal::reduceRecvInPlace_o);
-        return copyBack(std::move(recv_sender), tile_in, tile_contig_comm);
-      };
-  return withContiguousCommTile(std::forward<TileSender>(tile),
-                                       std::move(reduce_recv_in_place_copy_back));
+  auto reduce_recv_in_place = [reduce_op,
+                               pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
+           transformMPI(reduceRecvInPlace_o);
+  };
+
+  // TODO: Can reductions happen on CPU only?
+  return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
+                           RequireContiguous::Yes>(std::forward<TileSender>(tile),
+                                                   std::move(reduce_recv_in_place));
 }
+
+// TODO: Order of parameters in comm kernels.
+// TODO: rank_root vs root_rank.
 
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a GPU tile perform MPI_Reduce in-place
@@ -93,18 +100,23 @@ template <class CommSender, class TileSender>
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU)
   //
   // where: cCPU = contiguous CPU
-  namespace ex = pika::execution::experimental;
-
+  using dlaf::comm::internal::CopyFromDestination;
+  using dlaf::comm::internal::CopyToDestination;
+  using dlaf::comm::internal::reduceSend_o;
+  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withContiguousCommTile;
+  using dlaf::comm::internal::withTemporaryTile;
   using dlaf::internal::whenAllLift;
 
   auto reduce_send = [rank_root, reduce_op,
-                      pcomm = std::forward<CommSender>(pcomm)](auto const&,
-                                                               auto const& tile_contig_comm) mutable {
-    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
-           transformMPI(internal::reduceSend_o);
+                      pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_comm)) |
+           transformMPI(reduceSend_o);
   };
-  return withContiguousCommTile(std::forward<TileSender>(tile), std::move(reduce_send));
+
+  // TODO: Can reductions happen on CPU only?
+  return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::No,
+                           RequireContiguous::Yes>(std::forward<TileSender>(tile),
+                                                   std::move(reduce_send));
 }
 }

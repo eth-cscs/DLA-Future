@@ -64,13 +64,6 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 template <class CommSender, class TileInSender, class TileOutSender>
 [[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op, TileInSender&& tile_in,
                                      TileOutSender&& tile_out) {
-  namespace ex = pika::execution::experimental;
-
-  using dlaf::comm::internal::copyBack;
-  using dlaf::comm::internal::withContiguousCommTile;
-  using dlaf::internal::whenAllLift;
-  using pika::unwrapping;
-
   // Note:
   //
   //         +--------------------------------------+
@@ -80,30 +73,35 @@ template <class CommSender, class TileInSender, class TileOutSender>
   // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
-  auto all_reduce_copy_back =
-      [pcomm = std::forward<CommSender>(pcomm), reduce_op,
-       tile_in = std::forward<TileInSender>(tile_in)](const auto& tile_out,
-                                                      const auto& tile_out_contig_comm) mutable {
-        auto all_reduce = unwrapping([&tile_out_contig_comm, pcomm = std::move(pcomm),
-                                      reduce_op](const auto&, const auto& tile_in_contig_comm) mutable {
-          return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_contig_comm),
-                             std::cref(tile_out_contig_comm)) |
-                 transformMPI(internal::allReduce_o);
-        });
-        auto all_reduce_sender = withContiguousCommTile(std::move(tile_in), std::move(all_reduce));
-        return copyBack(std::move(all_reduce_sender), tile_out, tile_out_contig_comm);
-      };
-  return withContiguousCommTile(std::forward<TileOutSender>(tile_out), std::move(all_reduce_copy_back));
+  using dlaf::comm::internal::allReduce_o;
+  using dlaf::comm::internal::CopyFromDestination;
+  using dlaf::comm::internal::CopyToDestination;
+  using dlaf::comm::internal::RequireContiguous;
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::whenAllLift;
+
+  auto all_reduce_final = [reduce_op, pcomm = std::forward<CommSender>(pcomm),
+                           tile_in =
+                               std::forward<TileInSender>(tile_in)](auto const& tile_out_comm) mutable {
+    auto all_reduce = [reduce_op, pcomm = std::move(pcomm),
+                       &tile_out_comm](auto const& tile_in_comm) mutable {
+      return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
+                         std::cref(tile_out_comm)) |
+             transformMPI(allReduce_o);
+    };
+    return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::No,
+                             RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
+  };
+
+  // TODO: Can reductions happen on CPU only?
+  return withTemporaryTile<Device::CPU, CopyToDestination::No, CopyFromDestination::Yes,
+                           RequireContiguous::Yes>(std::forward<TileOutSender>(tile_out),
+                                                   std::move(all_reduce_final));
 }
 
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
-  namespace ex = pika::execution::experimental;
-
-  using dlaf::comm::internal::copyBack;
-  using dlaf::comm::internal::withContiguousCommTile;
-  using dlaf::internal::whenAllLift;
-
   // Note:
   //
   // TILE ---> makeContiguous --+--> CONT_BUF ----> mpi_call ---> CONT_BUF --+
@@ -112,15 +110,23 @@ template <class CommSender, class TileSender>
   //
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
-  auto all_reduce_in_place_copy_back =
-      [reduce_op, pcomm = std::forward<CommSender>(pcomm)](auto& tile_in,
-                                                           auto const& tile_contig_comm) mutable {
-        auto all_reduce_sender = whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_contig_comm)) |
-                                 transformMPI(internal::allReduceInPlace_o);
-        return copyBack(std::move(all_reduce_sender), tile_in, tile_contig_comm) |
-               ex::then([&tile_in]() { return std::move(tile_in); });
-      };
-  return withContiguousCommTile(std::forward<TileSender>(tile),
-                                std::move(all_reduce_in_place_copy_back));
+  using dlaf::comm::internal::allReduceInPlace_o;
+  using dlaf::comm::internal::CopyFromDestination;
+  using dlaf::comm::internal::CopyToDestination;
+  using dlaf::comm::internal::RequireContiguous;
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::whenAllLift;
+
+  auto all_reduce_in_place = [reduce_op,
+                              pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
+           transformMPI(allReduceInPlace_o);
+  };
+
+  // TODO: Can reductions happen on CPU only?
+  return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
+                           RequireContiguous::Yes>(std::forward<TileSender>(tile),
+                                                   std::move(all_reduce_in_place));
 }
 }

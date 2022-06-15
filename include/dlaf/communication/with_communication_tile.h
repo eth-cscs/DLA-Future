@@ -157,4 +157,184 @@ auto copyBack(Sender&& sender, const TileIn& tile_in, const TileContigComm& tile
         copy(Policy<copy_backend>(thread_priority::high)));
   }
 }
+
+enum class CopyToDestination { Yes, No };
+enum class CopyFromDestination { Yes, No };
+enum class RequireContiguous { Yes, No };
+
+/// This is a sender adaptor that takes a sender sending a tile, and gives
+/// access by reference to a temporary tile allocated and copied depending on
+/// compile-time options.
+///
+/// TODO: Expand detailed documentation.
+/// TODO: Reduce duplication.
+template <Device destination_device, CopyToDestination copy_to_destination,
+          CopyFromDestination copy_from_destination, RequireContiguous require_contiguous,
+          typename InSender, typename F>
+auto withTemporaryTile(InSender&& in_sender, F&& f) {
+  namespace ex = pika::execution::experimental;
+
+  using dlaf::internal::Policy;
+  using dlaf::internal::transform;
+  using dlaf::internal::whenAllLift;
+  using dlaf::matrix::copy;
+  using dlaf::matrix::Duplicate;
+  using dlaf::matrix::DuplicateNoCopy;
+  using dlaf::matrix::internal::CopyBackend_v;
+  using pika::threads::thread_priority;
+
+  return std::forward<InSender>(in_sender) |
+         ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
+           constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
+           constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
+
+           const Policy<copy_backend> copy_policy(thread_priority::high);
+           const Policy<Backend::MC> mc_policy(thread_priority::high);
+
+           if constexpr (in_device_type == destination_device) {
+             // No need to copy to or from device, the temporary tile is the
+             // input tile
+             if constexpr (require_contiguous == RequireContiguous::Yes) {
+               if (in.is_contiguous()) {
+                 return make_unique_any_sender(
+                     f(in) | ex::then([&](auto&&...) mutable {
+                       if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+                         return std::move(in);
+                       }
+                     }));
+               }
+               else {
+                 // TODO: This is identical to below.
+                 if constexpr (copy_to_destination == CopyToDestination::Yes) {
+                   return make_unique_any_sender(
+                       ex::just(std::cref(in)) |
+                       transform(copy_policy, Duplicate<destination_device>{}) |
+                       ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                         auto f_sender = f(comm)
+                                         // TODO: Refactor into "drop_values" adaptor?
+                                         | ex::then([](auto&&...) { /* ignore values sent by f */ });
+
+                         // TODO: This is identical below. Refactor into helper.
+                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
+                           static_assert(
+                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
+                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                                  copy(copy_policy)
+                                  // TODO: Add helper for this.
+                                  | ex::then([&]() mutable {
+                                      if constexpr (!std::is_const_v<
+                                                        std::remove_reference_t<decltype(in)>>) {
+                                        return std::move(in);
+                                      }
+                                    });
+                         }
+                         else {
+                           return std::move(f_sender) | ex::then([&]() mutable {
+                                    if constexpr (!std::is_const_v<
+                                                      std::remove_reference_t<decltype(in)>>) {
+                                      return std::move(in);
+                                    }
+                                  });
+                         }
+                       }));
+                 }
+                 else {
+                   return make_unique_any_sender(
+                       ex::just(std::cref(in)) |
+                       // TODO: Parameterize Duplicate with CopyToDestination.
+                       transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
+                       ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                         auto f_sender =
+                             f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
+                           static_assert(
+                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
+                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                                  copy(copy_policy) | ex::then([&]() mutable {
+                                    if constexpr (!std::is_const_v<
+                                                      std::remove_reference_t<decltype(in)>>) {
+                                      return std::move(in);
+                                    }
+                                  });
+                         }
+                         else {
+                           return std::move(f_sender) | ex::then([&]() mutable {
+                                    if constexpr (!std::is_const_v<
+                                                      std::remove_reference_t<decltype(in)>>) {
+                                      return std::move(in);
+                                    }
+                                  });
+                         }
+                       }));
+                 }
+               }
+             }
+             else {
+               return f(in) | ex::then([](auto&&...) {});
+             }
+           }
+           else {
+             // In this branch a new temporary tile is always allocated. It will
+             // always be contiguous so we don't need to check for contiguity.
+             // TODO: Refactor into helper function.
+             if constexpr (copy_to_destination == CopyToDestination::Yes) {
+               return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
+                      ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                        auto f_sender = f(comm)
+                                        // TODO: Refactor into "drop_values" adaptor?
+                                        | ex::then([](auto&&...) { /* ignore values sent by f */ });
+
+                        // TODO: This is identical below. Refactor into helper.
+                        if constexpr (copy_from_destination == CopyFromDestination::Yes) {
+                          static_assert(
+                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
+                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                          return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                                 copy(copy_policy) | ex::then([&]() mutable {
+                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+                                     return std::move(in);
+                                   }
+                                 });
+                        }
+                        else {
+                          return std::move(f_sender) | ex::then([&]() mutable {
+                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+                                     return std::move(in);
+                                   }
+                                 });
+                        }
+                      });
+             }
+             else {
+               return ex::just(std::cref(in)) |
+                      // TODO: Parameterize Duplicate with CopyToDestination.
+                      transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
+                      ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                        auto f_sender =
+                            f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                        if constexpr (copy_from_destination == CopyFromDestination::Yes) {
+                          static_assert(
+                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
+                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                          return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                                 copy(copy_policy) | ex::then([&]() mutable {
+                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+                                     return std::move(in);
+                                   }
+                                 });
+                        }
+                        else {
+                          return std::move(f_sender) | ex::then([&]() mutable {
+                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+                                     return std::move(in);
+                                   }
+                                 });
+                        }
+                      });
+             }
+           }
+         }));
+}
 }

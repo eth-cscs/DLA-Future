@@ -162,41 +162,23 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
-  // Note: there is an issue compiling with dlaf::internal::transform()
-  auto scheduler = dlaf::internal::getBackendScheduler<B>(pika::threads::thread_priority::normal);
-  auto transfer_sender =
-      ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
-                                                            GlobalTileSize(ntiles, 1), perms)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                                 GlobalTileSize(ntiles, ntiles),
-                                                                 mat_in)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                                 GlobalTileSize(ntiles, ntiles),
-                                                                 mat_out))) |
-      ex::transfer(std::move(scheduler));
+  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
+                                                                      GlobalTileSize(ntiles, 1), perms)),
+                             ex::when_all_vector(
+                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                           GlobalTileSize(ntiles, ntiles), mat_in)),
+                             ex::when_all_vector(
+                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                           GlobalTileSize(ntiles, ntiles), mat_out)));
 
-  if constexpr (B == Backend::MC) {
-    auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                   const auto& mat_out_tiles) {
-      TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
-                              mat_in_tiles, mat_out_tiles);
-    };
-    ex::then(std::move(transfer_sender), std::move(permute_fn)) | ex::start_detached();
-  }
-  else if constexpr (B == Backend::GPU) {
-#if defined(DLAF_WITH_CUDA)
-    auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                   const auto& mat_out_tiles, cudaStream_t stream) {
-      TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
-                              mat_in_tiles, mat_out_tiles, stream);
-    };
-    pika::cuda::experimental::then_with_stream(std::move(transfer_sender), std::move(permute_fn)) |
-        ex::start_detached();
-#endif
-  }
+  auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
+                                 const auto& mat_out_tiles, auto&&... ts) {
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
+    applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
+                            mat_in_tiles, mat_out_tiles, std::forward<decltype(ts)>(ts)...);
+  };
+  ex::start_detached(dlaf::internal::transform<false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
+                                                      std::move(sender)));
 }
 }

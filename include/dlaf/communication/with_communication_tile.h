@@ -209,7 +209,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                    return make_unique_any_sender(
                        ex::just(std::cref(in)) |
                        transform(copy_policy, Duplicate<destination_device>{}) |
-                       ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                          auto f_sender = f(comm)
                                          // TODO: Refactor into "drop_values" adaptor?
                                          | ex::then([](auto&&...) { /* ignore values sent by f */ });
@@ -230,6 +230,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                     });
                          }
                          else {
+                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
                            return std::move(f_sender) | ex::then([&]() mutable {
                                     if constexpr (!std::is_const_v<
                                                       std::remove_reference_t<decltype(in)>>) {
@@ -244,7 +245,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                        ex::just(std::cref(in)) |
                        // TODO: Parameterize Duplicate with CopyToDestination.
                        transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                       ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                          auto f_sender =
                              f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
@@ -260,6 +261,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                   });
                          }
                          else {
+                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
                            return std::move(f_sender) | ex::then([&]() mutable {
                                     if constexpr (!std::is_const_v<
                                                       std::remove_reference_t<decltype(in)>>) {
@@ -281,7 +283,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
              // TODO: Refactor into helper function.
              if constexpr (copy_to_destination == CopyToDestination::Yes) {
                return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
-                      ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                         auto f_sender = f(comm)
                                         // TODO: Refactor into "drop_values" adaptor?
                                         | ex::then([](auto&&...) { /* ignore values sent by f */ });
@@ -299,6 +301,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                  });
                         }
                         else {
+                          dlaf::internal::silenceUnusedWarningFor(copy_policy);
                           return std::move(f_sender) | ex::then([&]() mutable {
                                    if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
                                      return std::move(in);
@@ -311,7 +314,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                return ex::just(std::cref(in)) |
                       // TODO: Parameterize Duplicate with CopyToDestination.
                       transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                      ex::let_value([&in, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
+                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                         auto f_sender =
                             f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
@@ -326,6 +329,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                  });
                         }
                         else {
+                          dlaf::internal::silenceUnusedWarningFor(copy_policy);
                           return std::move(f_sender) | ex::then([&]() mutable {
                                    if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
                                      return std::move(in);

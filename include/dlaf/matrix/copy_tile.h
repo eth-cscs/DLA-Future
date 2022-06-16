@@ -56,6 +56,16 @@ struct CopyBackend<Device::GPU, Device::GPU> {
 template <Device Source, Device Destination>
 inline constexpr auto CopyBackend_v = CopyBackend<Source, Destination>::value;
 
+// TODO: Move to some common util header?
+template <typename T>
+struct IsFloatingPointOrComplex : std::is_floating_point<T> {};
+
+template <typename T>
+struct IsFloatingPointOrComplex<std::complex<T>> : IsFloatingPointOrComplex<T> {};
+
+template <typename T>
+inline constexpr bool IsFloatingPointOrComplex_v = IsFloatingPointOrComplex<T>::value;
+
 template <typename T, Device Source, Device Destination>
 struct CopyTile;
 
@@ -63,7 +73,14 @@ template <typename T>
 struct CopyTile<T, Device::CPU, Device::CPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,
                    const matrix::Tile<T, Device::CPU>& destination) {
-    dlaf::tile::lacpy<T>(source, destination);
+    if constexpr (IsFloatingPointOrComplex_v<T>) {
+      dlaf::tile::lacpy<T>(source, destination);
+    }
+    else {
+      // Fall back to a generic copy for non-floating point and non-complex
+      // types (which lapack::lacpy doesn't support)
+      common::copy(common::make_data(source), common::make_data(destination));
+    }
   }
 };
 

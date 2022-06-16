@@ -203,7 +203,7 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
 }
 
 // Permute columns or rows in reverse order.
-// Each column or row of the input matrix is has it's index as a value.
+// Each column or row of the input matrix has its index as a value.
 template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb) {
   Matrix<SizeType, Device::CPU> perms(LocalElementSize(n, 1), TileElementSize(nb, 1));

@@ -28,7 +28,7 @@
 
 namespace dlaf::permutations::internal {
 
-// Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
+// Applies the permutation index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
 // input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
 //
 // Example column permutations with `perm_arr = [8, 2, 5]`:

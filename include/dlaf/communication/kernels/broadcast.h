@@ -84,7 +84,6 @@ auto scheduleRecvBcast(TileSender&& tile, comm::IndexT_MPI root_rank, CommSender
   using dlaf::comm::internal::recvBcast_o;
   using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withSimilarCommTile;
   using dlaf::comm::internal::withTemporaryTile;
   using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;

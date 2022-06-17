@@ -175,6 +175,9 @@ struct moveNonConstTile {
 template <typename T>
 moveNonConstTile(T&) -> moveNonConstTile<T>;
 
+// TODO: Replace with drop_value from pika.
+inline constexpr auto drop_value = [](auto&&...) {};
+
 /// This is a sender adaptor that takes a sender sending a tile, and gives
 /// access by reference to a temporary tile allocated and copied depending on
 /// compile-time options.
@@ -218,9 +221,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                        ex::just(std::cref(in)) |
                        transform(copy_policy, Duplicate<destination_device>{}) |
                        ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                         auto f_sender = f(comm)
-                                         // TODO: Refactor into "drop_values" adaptor?
-                                         | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                         auto f_sender = f(comm) | ex::then(drop_value);
 
                          // TODO: This is identical below. Refactor into helper.
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
@@ -228,9 +229,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
                                "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
                            return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
-                                  copy(copy_policy)
-                                  // TODO: Add helper for this.
-                                  | ex::then(moveNonConstTile{in});
+                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
                          else {
                            dlaf::internal::silenceUnusedWarningFor(copy_policy);
@@ -244,8 +243,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                        // TODO: Parameterize Duplicate with CopyToDestination.
                        transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
                        ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                         auto f_sender =
-                             f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                         auto f_sender = f(comm) | ex::then(drop_value);
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                            static_assert(
                                !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
@@ -262,7 +260,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                }
              }
              else {
-               return f(in) | ex::then([](auto&&...) {});
+               return f(in) | ex::then(drop_value);
              }
            }
            else {
@@ -272,9 +270,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
              if constexpr (copy_to_destination == CopyToDestination::Yes) {
                return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                        auto f_sender = f(comm)
-                                        // TODO: Refactor into "drop_values" adaptor?
-                                        | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                        auto f_sender = f(comm) | ex::then(drop_value);
 
                         // TODO: This is identical below. Refactor into helper.
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
@@ -295,8 +291,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       // TODO: Parameterize Duplicate with CopyToDestination.
                       transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                        auto f_sender =
-                            f(comm) | ex::then([](auto&&...) { /* ignore values sent by f */ });
+                        auto f_sender = f(comm) | ex::then(drop_value);
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                           static_assert(
                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,

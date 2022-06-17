@@ -226,13 +226,13 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                    return make_unique_any_sender(
                        ex::just(std::cref(in)) |
                        transform(copy_policy, Duplicate<destination_device>{}) |
-                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                         auto f_sender = f(comm) | ex::then(drop_value);
+                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
+                         auto f_sender = f(temp) | ex::then(drop_value);
 
                          // TODO: This is identical below. Refactor into helper.
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                            DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                           return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
                                   copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
                          else {
@@ -246,11 +246,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                        ex::just(std::cref(in)) |
                        // TODO: Parameterize Duplicate with CopyToDestination.
                        transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                         auto f_sender = f(comm) | ex::then(drop_value);
+                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
+                         auto f_sender = f(temp) | ex::then(drop_value);
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                            DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                           return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
                                   copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
                          else {
@@ -271,13 +271,13 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
              // TODO: Refactor into helper function.
              if constexpr (copy_to_destination == CopyToDestination::Yes) {
                return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
-                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                        auto f_sender = f(comm) | ex::then(drop_value);
+                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
+                        auto f_sender = f(temp) | ex::then(drop_value);
 
                         // TODO: This is identical below. Refactor into helper.
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                          return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }
                         else {
@@ -290,11 +290,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                return ex::just(std::cref(in)) |
                       // TODO: Parameterize Duplicate with CopyToDestination.
                       transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
-                        auto f_sender = f(comm) | ex::then(drop_value);
+                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
+                        auto f_sender = f(temp) | ex::then(drop_value);
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                          return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
+                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }
                         else {

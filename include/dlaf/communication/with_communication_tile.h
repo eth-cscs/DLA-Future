@@ -178,6 +178,11 @@ moveNonConstTile(T&) -> moveNonConstTile<T>;
 // TODO: Replace with drop_value from pika.
 inline constexpr auto drop_value = [](auto&&...) {};
 
+#define DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(tile)                  \
+  static_assert(                                                            \
+      !std::is_const_v<typename std::decay_t<decltype(tile)>::ElementType>, \
+      "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+
 /// This is a sender adaptor that takes a sender sending a tile, and gives
 /// access by reference to a temporary tile allocated and copied depending on
 /// compile-time options.
@@ -225,9 +230,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
 
                          // TODO: This is identical below. Refactor into helper.
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                           static_assert(
-                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
-                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
                            return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
                                   copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
@@ -245,9 +248,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                        ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                          auto f_sender = f(comm) | ex::then(drop_value);
                          if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                           static_assert(
-                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
-                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
                            return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
                                   copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
@@ -263,9 +264,9 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                return f(in) | ex::then(drop_value);
              }
            }
+           // In this branch a new temporary tile is always allocated. It will
+           // always be contiguous so we don't need to check for contiguity.
            else {
-             // In this branch a new temporary tile is always allocated. It will
-             // always be contiguous so we don't need to check for contiguity.
              // TODO: Refactor into helper function.
              if constexpr (copy_to_destination == CopyToDestination::Yes) {
                return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
@@ -274,9 +275,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
 
                         // TODO: This is identical below. Refactor into helper.
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                          static_assert(
-                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
-                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                          DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }
@@ -293,9 +292,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& comm) mutable {
                         auto f_sender = f(comm) | ex::then(drop_value);
                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                          static_assert(
-                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
-                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                          DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }

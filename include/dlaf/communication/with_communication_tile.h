@@ -162,6 +162,19 @@ enum class CopyToDestination { Yes, No };
 enum class CopyFromDestination { Yes, No };
 enum class RequireContiguous { Yes, No };
 
+template <typename T>
+struct moveNonConstTile {
+  T& tile;
+  auto operator()() {
+    if constexpr (!std::is_const_v<std::remove_reference_t<T>>) {
+      return std::move(tile);
+    }
+  }
+};
+
+template <typename T>
+moveNonConstTile(T&) -> moveNonConstTile<T>;
+
 /// This is a sender adaptor that takes a sender sending a tile, and gives
 /// access by reference to a temporary tile allocated and copied depending on
 /// compile-time options.
@@ -196,12 +209,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
              // input tile
              if constexpr (require_contiguous == RequireContiguous::Yes) {
                if (in.is_contiguous()) {
-                 return make_unique_any_sender(
-                     f(in) | ex::then([&](auto&&...) mutable {
-                       if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-                         return std::move(in);
-                       }
-                     }));
+                 return make_unique_any_sender(f(in) | ex::then(moveNonConstTile{in}));
                }
                else {
                  // TODO: This is identical to below.
@@ -222,21 +230,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                            return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
                                   copy(copy_policy)
                                   // TODO: Add helper for this.
-                                  | ex::then([&]() mutable {
-                                      if constexpr (!std::is_const_v<
-                                                        std::remove_reference_t<decltype(in)>>) {
-                                        return std::move(in);
-                                      }
-                                    });
+                                  | ex::then(moveNonConstTile{in});
                          }
                          else {
                            dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                           return std::move(f_sender) | ex::then([&]() mutable {
-                                    if constexpr (!std::is_const_v<
-                                                      std::remove_reference_t<decltype(in)>>) {
-                                      return std::move(in);
-                                    }
-                                  });
+                           return std::move(f_sender) | ex::then(moveNonConstTile{in});
                          }
                        }));
                  }
@@ -253,21 +251,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                                !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
                                "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
                            return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
-                                  copy(copy_policy) | ex::then([&]() mutable {
-                                    if constexpr (!std::is_const_v<
-                                                      std::remove_reference_t<decltype(in)>>) {
-                                      return std::move(in);
-                                    }
-                                  });
+                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
                          }
                          else {
                            dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                           return std::move(f_sender) | ex::then([&]() mutable {
-                                    if constexpr (!std::is_const_v<
-                                                      std::remove_reference_t<decltype(in)>>) {
-                                      return std::move(in);
-                                    }
-                                  });
+                           return std::move(f_sender) | ex::then(moveNonConstTile{in});
                          }
                        }));
                  }
@@ -294,19 +282,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
-                                 copy(copy_policy) | ex::then([&]() mutable {
-                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-                                     return std::move(in);
-                                   }
-                                 });
+                                 copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }
                         else {
                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                          return std::move(f_sender) | ex::then([&]() mutable {
-                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-                                     return std::move(in);
-                                   }
-                                 });
+                          return std::move(f_sender) | ex::then(moveNonConstTile{in});
                         }
                       });
              }
@@ -322,19 +302,11 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                               !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
                               "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
                           return whenAllLift(std::move(f_sender), std::cref(comm), std::cref(in)) |
-                                 copy(copy_policy) | ex::then([&]() mutable {
-                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-                                     return std::move(in);
-                                   }
-                                 });
+                                 copy(copy_policy) | ex::then(moveNonConstTile{in});
                         }
                         else {
                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                          return std::move(f_sender) | ex::then([&]() mutable {
-                                   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-                                     return std::move(in);
-                                   }
-                                 });
+                          return std::move(f_sender) | ex::then(moveNonConstTile{in});
                         }
                       });
              }

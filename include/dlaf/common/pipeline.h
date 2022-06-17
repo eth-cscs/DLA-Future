@@ -13,8 +13,7 @@
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
-namespace dlaf {
-namespace common {
+namespace dlaf::common {
 
 /// A `promise` like type which is set upon destruction. The type separates the placement of data
 /// (T) into the promise from notifying the corresponding `pika::future`.
@@ -94,5 +93,4 @@ private:
   pika::execution::experimental::unique_any_sender<T>
       sender_;  ///< This contains always the "tail" of the queue of senders.
 };
-}
 }

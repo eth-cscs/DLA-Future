@@ -10,6 +10,7 @@
 #pragma once
 
 #include <pika/unwrap.hpp>
+#include <type_traits>
 
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
@@ -17,6 +18,9 @@
 #include "dlaf/sender/when_all_lift.h"
 
 namespace dlaf::comm::internal {
+
+template <class T>
+struct IsPromiseGuardCommunicator : std::is_same<T, dlaf::common::PromiseGuard<Communicator>> {};
 
 /// Helper for moving a PromiseGuard<Communicator> into the MPI function being
 /// called by transformMPI. Callables passed to transformMPI have their
@@ -27,11 +31,23 @@ namespace dlaf::comm::internal {
 /// that the guard is released on return from the callable.
 template <typename T>
 decltype(auto) movePromiseGuard(T& t) {
-  if constexpr (std::is_same_v<std::decay_t<T>, dlaf::common::PromiseGuard<Communicator>>) {
+  if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
     return std::move(t);
   }
   else {
     return static_cast<T&>(t);
+  }
+}
+
+/// Helper for unwrapping a PromiseGuard and get a reference to its content, while
+/// letting through anything else.
+template <typename T>
+decltype(auto) getPromiseGuardRef(T&& t) {
+  if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
+    return t.ref();
+  }
+  else {
+    return std::forward<T>(t);
   }
 }
 
@@ -50,7 +66,8 @@ struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
-      movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., std::declval<MPI_Request*>())) {
+      getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))...,
+      std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;
@@ -58,15 +75,16 @@ struct MPICallHelper {
       return flag == 0;
     };
 
-    using result_type = decltype(pika::unwrapping(
-        std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req));
+    using result_type = decltype(pika::unwrapping(std::move(
+        f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req));
     if constexpr (std::is_void_v<result_type>) {
-      pika::unwrapping(std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
+      pika::unwrapping(std::move(
+          f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req);
       pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = pika::unwrapping(
-          std::move(f))(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
+      auto r = pika::unwrapping(std::move(
+          f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req);
       pika::util::yield_while(is_request_completed);
       return r;
     }

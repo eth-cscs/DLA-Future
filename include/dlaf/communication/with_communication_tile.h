@@ -158,37 +158,44 @@ auto copyBack(Sender&& sender, const TileIn& tile_in, const TileContigComm& tile
   }
 }
 
-enum class CopyToDestination { Yes, No };
-enum class CopyFromDestination { Yes, No };
-enum class RequireContiguous { Yes, No };
+/// This represents whether or not withTemporaryTile should copy the input tile
+/// to the destination before the user-supplied operation runs.
+enum class CopyToDestination : bool { Yes = true, No = false };
 
-template <typename T>
-struct moveNonConstTile {
-  T& tile;
-  auto operator()() {
-    if constexpr (!std::is_const_v<std::remove_reference_t<T>>) {
-      return std::move(tile);
-    }
-  }
-};
+/// This represents whether or not withTemporaryTile should copy the temporary
+/// tile to the input after the user-supplied operation has run.
+enum class CopyFromDestination { Yes = true, No = false };
 
-template <typename T>
-moveNonConstTile(T&) -> moveNonConstTile<T>;
-
-// TODO: Replace with drop_value from pika.
-inline constexpr auto drop_value = [](auto&&...) {};
-
-#define DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(tile)                  \
-  static_assert(                                                            \
-      !std::is_const_v<typename std::decay_t<decltype(tile)>::ElementType>, \
-      "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+/// This represents whether withTemporaryTile requires that the temporary tile
+/// uses contiguous memory.
+enum class RequireContiguous { Yes = true, No = false };
 
 /// This is a sender adaptor that takes a sender sending a tile, and gives
-/// access by reference to a temporary tile allocated and copied depending on
+/// access by reference to a temporary or the input tile depending on
 /// compile-time options.
 ///
-/// TODO: Expand detailed documentation.
-/// TODO: Reduce duplication.
+/// This sender adaptor provides access to a temporary tile, if certain
+/// conditions are met. Fundamentally it tries to avoid allocating a new tile if
+/// it is not required.
+///
+/// If the requested destination_device for the temporary tile is different from
+/// the device of the input tile a new tile will be allocated.  If the user
+/// additionally requests the the temporary tile must use contiguous memory a
+/// runtime check will be performed on the input tile, and if it is not
+/// contiguous a new tile will also be allocated.
+///
+/// In addition to requesting a destination device and contigous memory, the
+/// user may request additional operations that will be performed only when a
+/// new tile is allocated. If the input tile is used directly none of the
+/// following operations will be performed as they are unnecessary. If
+/// copy_to_destination is CopyToDestination::Yes the input tile will first be
+/// copied to the temporary tile before calling the user provided callable f. If
+/// copy_from_destination is CopyFromDestination::Yes the temporary tile will be
+/// copied back to the input tile after the sender returned from the
+/// user-provided callable f completes.
+///
+/// The adaptor returns a sender that sends nothing if the input tile contains
+/// const elements, and the input tile if it contains non-const elements.
 template <Device destination_device, CopyToDestination copy_to_destination,
           CopyFromDestination copy_from_destination, RequireContiguous require_contiguous,
           typename InSender, typename F>
@@ -205,104 +212,113 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
   using pika::threads::thread_priority;
 
   return std::forward<InSender>(in_sender) |
+         // Start a new asynchronous scope for keeping the input tile alive
+         // until all asynchronous operations are done.
          ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
-           const Policy<copy_backend> copy_policy(thread_priority::high);
-           const Policy<Backend::MC> mc_policy(thread_priority::high);
+           constexpr auto drop_value = [](auto&&...) {};
+           auto move_non_const_tile = [&]() mutable {
+             if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+               return std::move(in);
+             }
+           };
 
+           // In some cases we can directly use the input as a temporary tile.
+           // In that case we simply call the user-provided callable f, ignore
+           // the values sent by the sender returned from f, and finally send
+           // the input tile to continuations if the tile is non-const.
+           auto helper_nocopy = [&]() {
+             return f(in) | ex::then(drop_value) | ex::then(move_non_const_tile);
+           };
+
+           // In cases that we cannot use the input tile as the temporary tile we need to:
+           // 1. allocate a new tile
+           // 2. optionally copy the input to the temporary tile
+           // 3. call the user-provided callable f and ignore values sent by it
+           // 4. optionally copy the temporary tile back to the input tile
+           // 5. send the input tile to continuations
+           auto helper_copy = [&]() mutable {
+             // If the user requested copying the input tile to the temporary
+             // tile we use Duplicate and copy_backend. If the user did not
+             // request copying to the temporary tile we still need to allocate
+             // a new temporary tile with the correct dimensions. In that case
+             // we always use DuplicateNoCopy on the MC backend since allocation
+             // does not require invoking a kernel on a GPU.
+             using duplicate_type =
+                 std::conditional_t<bool(copy_to_destination), Duplicate<destination_device>,
+                                    DuplicateNoCopy<destination_device>>;
+             constexpr auto duplicate_backend = bool(copy_to_destination) ? copy_backend : Backend::MC;
+
+             return ex::just(std::cref(in)) |
+                    // Allocate a new tile and optionally copy the input tile to
+                    // the temporary tile.
+                    transform(Policy<duplicate_backend>(thread_priority::high), duplicate_type{}) |
+                    // Start a new asynchronous scope for keeping the temporary
+                    // tile alive until all asynchronous operations are done.
+                    ex::let_value([&, f = std::forward<F>(f)](auto& temp) mutable {
+                      // Call the user provided callable f and ignore the values
+                      // sent by the sender.
+                      auto f_sender = f(temp) | ex::then(drop_value);
+                      // If the user requested copying the temporary tile back
+                      // to the input tile after the user-provided operation is
+                      // done we do so. Otherwise we use the sender f_sender
+                      // directly.
+                      auto copy_sender = [&]() {
+                        if constexpr (bool(copy_from_destination)) {
+                          static_assert(
+                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
+                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
+                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
+                                 copy(Policy<copy_backend>(thread_priority::high));
+                        }
+                        else {
+                          return std::move(f_sender);
+                        }
+                      }();
+                      // Send the input tile to continuations if the tile is
+                      // non-const.
+                      return std::move(copy_sender) | ex::then(move_non_const_tile);
+                    });
+           };
+
+           // One of the helpers may be unused depending on which branch is taken
+           dlaf::internal::silenceUnusedWarningFor(helper_nocopy);
+           dlaf::internal::silenceUnusedWarningFor(helper_copy);
+
+           // If the destination device is the same as the input device we may
+           // be able to avoid allocating a new tile.
            if constexpr (in_device_type == destination_device) {
-             // No need to copy to or from device, the temporary tile is the
-             // input tile
+             // The destination device is the same as the input device, but if
+             // we require that the temporary tile is contiguous we may have to
+             // allocate a new tile in any case. We have to do a runtime check
+             // to find out. Since this is a runtime check, we wrap the senders
+             // from the different branches in type-erased unique_any_senders.
              if constexpr (require_contiguous == RequireContiguous::Yes) {
+               // If the input tile is contiguous we can use the input tile as a
+               // temporary tile directly.
                if (in.is_contiguous()) {
-                 return make_unique_any_sender(f(in) | ex::then(drop_value) |
-                                               ex::then(moveNonConstTile{in}));
+                 return make_unique_any_sender(helper_nocopy());
                }
+               // If the input is not contiguous we have to at least allocate a
+               // new temporary tile.
                else {
-                 // TODO: This is identical to below.
-                 if constexpr (copy_to_destination == CopyToDestination::Yes) {
-                   return make_unique_any_sender(
-                       ex::just(std::cref(in)) |
-                       transform(copy_policy, Duplicate<destination_device>{}) |
-                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
-                         auto f_sender = f(temp) | ex::then(drop_value);
-
-                         // TODO: This is identical below. Refactor into helper.
-                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                           return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
-                         }
-                         else {
-                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                           return std::move(f_sender) | ex::then(moveNonConstTile{in});
-                         }
-                       }));
-                 }
-                 else {
-                   return make_unique_any_sender(
-                       ex::just(std::cref(in)) |
-                       // TODO: Parameterize Duplicate with CopyToDestination.
-                       transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                       ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
-                         auto f_sender = f(temp) | ex::then(drop_value);
-                         if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                           DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                           return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                  copy(copy_policy) | ex::then(moveNonConstTile{in});
-                         }
-                         else {
-                           dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                           return std::move(f_sender) | ex::then(moveNonConstTile{in});
-                         }
-                       }));
-                 }
+                 return make_unique_any_sender(helper_copy());
                }
              }
+             // The destination device is the same as the input device, and we
+             // don't require contiguous memory (though we allow it). We can use
+             // the input tile as a temporary tile directly.
              else {
-               return f(in) | ex::then(drop_value) | ex::then(moveNonConstTile{in});
+               return helper_nocopy();
              }
            }
-           // In this branch a new temporary tile is always allocated. It will
-           // always be contiguous so we don't need to check for contiguity.
+           // If the destination device is different from the input device we
+           // have to at least allocate a new temporary tile on the destination
+           // device.
            else {
-             // TODO: Refactor into helper function.
-             if constexpr (copy_to_destination == CopyToDestination::Yes) {
-               return ex::just(std::cref(in)) | transform(copy_policy, Duplicate<destination_device>{}) |
-                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
-                        auto f_sender = f(temp) | ex::then(drop_value);
-
-                        // TODO: This is identical below. Refactor into helper.
-                        if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                          DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                 copy(copy_policy) | ex::then(moveNonConstTile{in});
-                        }
-                        else {
-                          dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                          return std::move(f_sender) | ex::then(moveNonConstTile{in});
-                        }
-                      });
-             }
-             else {
-               return ex::just(std::cref(in)) |
-                      // TODO: Parameterize Duplicate with CopyToDestination.
-                      transform(mc_policy, DuplicateNoCopy<destination_device>{}) |
-                      ex::let_value([&, f = std::forward<F>(f), copy_policy](auto& temp) mutable {
-                        auto f_sender = f(temp) | ex::then(drop_value);
-                        if constexpr (copy_from_destination == CopyFromDestination::Yes) {
-                          DLAF_INTERNAL_ASSERT_NON_CONST_TILE_FOR_COPY(in);
-                          return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
-                                 copy(copy_policy) | ex::then(moveNonConstTile{in});
-                        }
-                        else {
-                          dlaf::internal::silenceUnusedWarningFor(copy_policy);
-                          return std::move(f_sender) | ex::then(moveNonConstTile{in});
-                        }
-                      });
-             }
+             return helper_copy();
            }
          }));
 }

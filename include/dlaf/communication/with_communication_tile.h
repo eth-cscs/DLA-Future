@@ -217,7 +217,8 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
              // input tile
              if constexpr (require_contiguous == RequireContiguous::Yes) {
                if (in.is_contiguous()) {
-                 return make_unique_any_sender(f(in) | ex::then(moveNonConstTile{in}));
+                 return make_unique_any_sender(f(in) | ex::then(drop_value) |
+                                               ex::then(moveNonConstTile{in}));
                }
                else {
                  // TODO: This is identical to below.
@@ -261,7 +262,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                }
              }
              else {
-               return f(in) | ex::then(drop_value);
+               return f(in) | ex::then(drop_value) | ex::then(moveNonConstTile{in});
              }
            }
            // In this branch a new temporary tile is always allocated. It will

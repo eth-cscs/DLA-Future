@@ -36,8 +36,8 @@ option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 
-option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
-if (${FORCE_COLORED_OUTPUT})
+# Add color to ninja output
+if(CMAKE_GENERATOR MATCHES "Ninja")
   if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     add_compile_options (-fdiagnostics-color=always)
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

@@ -41,6 +41,19 @@ enum class CopyFromDestination { Yes = true, No = false };
 /// uses contiguous memory.
 enum class RequireContiguous { Yes = true, No = false };
 
+template <typename T>
+struct moveNonConstTile {
+  T& tile;
+  auto operator()() {
+    if constexpr (!std::is_const_v<std::remove_reference_t<T>>) {
+      return std::move(tile);
+    }
+  }
+};
+
+template <typename T>
+moveNonConstTile(T&) -> moveNonConstTile<T>;
+
 /// This is a sender adaptor that takes a sender sending a tile, and gives
 /// access by reference to a temporary or the input tile depending on
 /// compile-time options.
@@ -89,19 +102,23 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
+           // TODO: Replace with drop_value from pika.
            constexpr auto drop_value = [](auto&&...) {};
-           auto move_non_const_tile = [&]() mutable {
-             if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-               return std::move(in);
-             }
-           };
+
+           // TODO: How is this different from the moveNonConstTile struct?
+           // Using this leads to segfaults.
+           // auto move_non_const_tile = [&]() mutable {
+           //   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
+           //     return std::move(in);
+           //   }
+           // };
 
            // In some cases we can directly use the input as a temporary tile.
            // In that case we simply call the user-provided callable f, ignore
            // the values sent by the sender returned from f, and finally send
            // the input tile to continuations if the tile is non-const.
            auto helper_nocopy = [&]() {
-             return f(in) | ex::then(drop_value) | ex::then(move_non_const_tile);
+             return f(in) | ex::then(drop_value) | ex::then(moveNonConstTile{in});
            };
 
            // In cases that we cannot use the input tile as the temporary tile we need to:
@@ -150,7 +167,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       }();
                       // Send the input tile to continuations if the tile is
                       // non-const.
-                      return std::move(copy_sender) | ex::then(move_non_const_tile);
+                      return std::move(copy_sender) | ex::then(moveNonConstTile{in});
                     });
            };
 

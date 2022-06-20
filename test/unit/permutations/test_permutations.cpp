@@ -100,8 +100,9 @@ void testApplyColumnPermutations(SizeType n, SizeType nb) {
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{3, 6, 4, 9};
 
-  dlaf::permutations::internal::applyPermutations<T, Coord::Col>(begin, sz, in_offset, distr,
-                                                                 perm_arr.data(), in_tiles, out_tiles);
+  dlaf::permutations::internal::applyPermutations<T, Device::CPU, Coord::Col>(begin, sz, in_offset,
+                                                                              distr, perm_arr.data(),
+                                                                              in_tiles, out_tiles);
 
   // Expected entries in `out_tiles`
   //
@@ -162,8 +163,9 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
   GlobalElementSize sz(3, 6);
   SizeType in_offset = 2;
   std::vector<SizeType> perm_arr{8, 4, 1};
-  dlaf::permutations::internal::applyPermutations<T, Coord::Row>(begin, sz, in_offset, distr,
-                                                                 perm_arr.data(), in_tiles, out_tiles);
+  dlaf::permutations::internal::applyPermutations<T, Device::CPU, Coord::Row>(begin, sz, in_offset,
+                                                                              distr, perm_arr.data(),
+                                                                              in_tiles, out_tiles);
 
   // Expected entries in `out_tiles`
   //

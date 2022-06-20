@@ -67,13 +67,13 @@ template <class CommSender, class TileSender>
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU) --> copy --> GPU
   //
   // where: cCPU = contiguous CPU
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
   using dlaf::comm::internal::reduceRecvInPlace_o;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto reduce_recv_in_place = [reduce_op,
                                pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
@@ -100,13 +100,13 @@ template <class CommSender, class TileSender>
   // GPU --> Duplicate --> (cCPU --> MPI --> cCPU)
   //
   // where: cCPU = contiguous CPU
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
   using dlaf::comm::internal::reduceSend_o;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto reduce_send = [rank_root, reduce_op,
                       pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {

@@ -14,7 +14,7 @@
 #include <dlaf/sender/policy.h>
 #include <dlaf/types.h>
 
-namespace dlaf::comm::internal {
+namespace dlaf::internal {
 // TODO: Move to pika (also add make_any_sender).
 template <typename Sender>
 auto make_unique_any_sender(Sender&& sender) {

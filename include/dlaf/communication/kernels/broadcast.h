@@ -57,14 +57,14 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 
 template <class TileSender, class CommSender>
 auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::sendBcast_o;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::cref(tile_comm), std::move(pcomm)) | transformMPI(sendBcast_o);
@@ -79,14 +79,14 @@ auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
 
 template <class TileSender, class CommSender>
 auto scheduleRecvBcast(TileSender&& tile, comm::IndexT_MPI root_rank, CommSender&& pcomm) {
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
   using dlaf::comm::internal::recvBcast_o;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto recv = [root_rank, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);

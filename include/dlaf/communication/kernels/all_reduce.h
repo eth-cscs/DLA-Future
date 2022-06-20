@@ -74,12 +74,12 @@ template <class CommSender, class TileInSender, class TileOutSender>
   //                              |                                                |
   //                              +----------------------> TILE_O -----------------+-> copyBack
   using dlaf::comm::internal::allReduce_o;
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto all_reduce_final = [reduce_op, pcomm = std::forward<CommSender>(pcomm),
                            tile_in =
@@ -111,12 +111,12 @@ template <class CommSender, class TileSender>
   // The last TILE after the copyBack is returned so that other task can be attached to it,
   // AFTER the asynchronous MPI_AllReduce has completed
   using dlaf::comm::internal::allReduceInPlace_o;
-  using dlaf::comm::internal::CopyFromDestination;
-  using dlaf::comm::internal::CopyToDestination;
-  using dlaf::comm::internal::RequireContiguous;
   using dlaf::comm::internal::transformMPI;
-  using dlaf::comm::internal::withTemporaryTile;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
   auto all_reduce_in_place = [reduce_op,
                               pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {

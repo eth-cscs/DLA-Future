@@ -35,11 +35,11 @@ enum class CopyToDestination : bool { Yes = true, No = false };
 
 /// This represents whether or not withTemporaryTile should copy the temporary
 /// tile to the input after the user-supplied operation has run.
-enum class CopyFromDestination { Yes = true, No = false };
+enum class CopyFromDestination : bool { Yes = true, No = false };
 
 /// This represents whether withTemporaryTile requires that the temporary tile
 /// uses contiguous memory.
-enum class RequireContiguous { Yes = true, No = false };
+enum class RequireContiguous : bool { Yes = true, No = false };
 
 template <typename T>
 struct moveNonConstTile {
@@ -155,9 +155,6 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                       // directly.
                       auto copy_sender = [&]() {
                         if constexpr (bool(copy_from_destination)) {
-                          static_assert(
-                              !std::is_const_v<typename std::decay_t<decltype(in)>::ElementType>,
-                              "CopyFromDestination is Yes but input tile has const element type, can't copy back to the input");
                           return whenAllLift(std::move(f_sender), std::cref(temp), std::cref(in)) |
                                  copy(Policy<copy_backend>(thread_priority::high));
                         }

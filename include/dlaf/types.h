@@ -88,6 +88,23 @@ struct DefaultDevice<Backend::GPU> {
 template <Backend backend>
 inline constexpr Device DefaultDevice_v = DefaultDevice<backend>::value;
 
+/// Default backend given a device.
+template <Device device>
+struct DefaultBackend;
+
+template <>
+struct DefaultBackend<Device::CPU> {
+  static constexpr Backend value = Backend::MC;
+};
+
+template <>
+struct DefaultBackend<Device::GPU> {
+  static constexpr Backend value = Backend::GPU;
+};
+
+template <Device device>
+inline constexpr Backend DefaultBackend_v = DefaultBackend<device>::value;
+
 template <class T>
 struct TypeInfo;
 

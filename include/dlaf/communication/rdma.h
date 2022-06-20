@@ -19,8 +19,7 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace comm {
+namespace dlaf::comm {
 /// Helper struct for determining the device to use for communication.
 ///
 /// Contains a static value member, which will always be D if CUDA RDMA is
@@ -39,16 +38,4 @@ struct CommunicationDevice<Device::GPU> {
 
 template <Device D>
 inline constexpr auto CommunicationDevice_v = CommunicationDevice<D>::value;
-
-namespace internal {
-/// Helper function for preparing a tile for sending.
-///
-/// Duplicates the tile to CPU memory if CUDA RDMA is not enabled for MPI.
-/// Returns the tile unmodified otherwise.
-template <Device D, typename T>
-auto prepareSendTile(pika::shared_future<matrix::Tile<const T, D>> tile) {
-  return matrix::duplicateIfNeeded<CommunicationDevice_v<D>>(std::move(tile));
-}
-}
-}
 }

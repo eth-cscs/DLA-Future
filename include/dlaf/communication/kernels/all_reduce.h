@@ -18,7 +18,6 @@
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
-#include "dlaf/common/contiguous_buffer_holder.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"

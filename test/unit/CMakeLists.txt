@@ -44,9 +44,10 @@ DLAF_addTest(test_lapack_tile
 add_subdirectory(common)
 add_subdirectory(communication)
 add_subdirectory(init)
+add_subdirectory(lapack)
 add_subdirectory(matrix)
 add_subdirectory(memory)
-add_subdirectory(lapack)
+add_subdirectory(sender)
 
 # Operations
 add_subdirectory(auxiliary)

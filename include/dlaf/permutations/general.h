@@ -24,8 +24,8 @@ namespace dlaf::permutations {
 /// perms[i_begin:i_end].
 ///
 /// @param perms is the index map of permutations represented as a tiled column vector. Indices are in
-///        the range [0, n) where `n` is the size of the subproblem (i.e. the indices are local to the
-///        subproblem, they are not global). Only tiles whose row tile coords are in the closed range
+///        the range [0, n) where `n` is the size of the submatrix (i.e. the indices are local to the
+///        submatrix, they are not global). Only tiles whose row tile coords are in the closed range
 ///        [i_begin,i_end] are accessed in read-only mode.
 /// @param mat_in is the input matrix. Only tiles whose both row and col tile coords are in
 ///        the closed range [i_begin,i_end] are accessed in read-only mode.

@@ -22,32 +22,24 @@ namespace dlaf::comm::internal {
 template <class T>
 struct IsPromiseGuardCommunicator : std::is_same<T, dlaf::common::PromiseGuard<Communicator>> {};
 
-/// Helper for moving a PromiseGuard<Communicator> into the MPI function being
-/// called by transformMPI. Callables passed to transformMPI have their
-/// arguments passed by reference, but doing so with PromiseGuard would keep the
-/// guard alive until the completion of the MPI operation, whereas we are only
-/// looking to guard the submission of the MPI operation. We therefore use this
-/// wrapper to move PromiseGuard<Communicator> into a transformMPI callables so
-/// that the guard is released on return from the callable.
+/// This helper unwraps a PromiseGuard<Communicator> and returns the reference to the Communicator
+/// inside. Lifetime of the PromiseGuard has to be ensured by the caller.
 template <typename T>
-decltype(auto) movePromiseGuard(T& t) {
+decltype(auto) unwrapPromiseGuard(T& t) {
   if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
-    return std::move(t);
+    return t.ref();
   }
   else {
     return static_cast<T&>(t);
   }
 }
 
-/// Helper for unwrapping a PromiseGuard and get a reference to its content, while
-/// letting through anything else.
+/// This helper "consumes" a PromiseGuard<Communicator> ensuring that after this call the one
+/// passed as argument gets destroyed.
 template <typename T>
-decltype(auto) getPromiseGuardRef(T&& t) {
+void consumePromiseGuard(T& t) {
   if constexpr (IsPromiseGuardCommunicator<std::decay_t<T>>::value) {
-    return t.ref();
-  }
-  else {
-    return std::forward<T>(t);
+    [[maybe_unused]] auto t_local = std::move(t);
   }
 }
 
@@ -66,8 +58,7 @@ struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
-      getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))...,
-      std::declval<MPI_Request*>())) {
+      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., std::declval<MPI_Request*>())) {
     MPI_Request req;
     auto is_request_completed = [&req] {
       int flag;
@@ -75,16 +66,27 @@ struct MPICallHelper {
       return flag == 0;
     };
 
-    using result_type = decltype(pika::unwrapping(std::move(
-        f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req));
+    // Note:
+    // Callables passed to transformMPI have their arguments passed by reference, but doing so
+    // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
+    // whereas we are only looking to guard the submission of the MPI operation.
+    // Moreover, the callable requires a Communicator to make its job, and it should be agnostic of
+    // it being wrapped in a PromiseGuard or not.
+    // We therefore use unwrapPromiseGuard to pass the Communicator& into a transformMPI callables,
+    // then after returning from the callable, the PromiseGuard<Communicator> gets explicitly released
+    // using the helper consumePromiseGuard.
+    using result_type = decltype(pika::unwrapping(
+        std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req));
     if constexpr (std::is_void_v<result_type>) {
-      pika::unwrapping(std::move(
-          f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req);
+      pika::unwrapping(std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...,
+                                     &req);
+      (internal::consumePromiseGuard(dlaf::internal::getReferenceWrapper(ts)), ...);
       pika::util::yield_while(is_request_completed);
     }
     else {
-      auto r = pika::unwrapping(std::move(
-          f))(getPromiseGuardRef(movePromiseGuard(dlaf::internal::getReferenceWrapper(ts)))..., &req);
+      auto r = pika::unwrapping(
+          std::move(f))(unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))..., &req);
+      (internal::consumePromiseGuard(dlaf::internal::getReferenceWrapper(ts)), ...);
       pika::util::yield_while(is_request_completed);
       return r;
     }

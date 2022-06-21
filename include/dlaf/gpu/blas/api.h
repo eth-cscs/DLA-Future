@@ -59,7 +59,7 @@
 #define CUBLAS_SIDE_LEFT         HIPBLAS_SIDE_LEFT
 #define CUBLAS_SIDE_RIGHT        HIPBLAS_SIDE_RIGHT
 
-namespace dlaf {
+namespace dlaf::gpublas::internal {
 
 // Error handling
 using gpublasStatus_t = hipblasStatus_t;

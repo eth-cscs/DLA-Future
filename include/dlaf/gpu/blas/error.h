@@ -42,7 +42,6 @@ inline void checkError(gpublasStatus_t st,
 }
 
 #ifdef DLAF_WITH_HIP
-namespace internal {
 // Lifted from hipBLAS/library/src/hcc_detail/hipblas.cpp, with missing
 // enumeration values added. This should be removed when hipBLAS is no longer
 // used.
@@ -72,10 +71,9 @@ inline hipblasStatus_t rocBLASStatusToHIPStatus(rocblas_status error) {
       return HIPBLAS_STATUS_UNKNOWN;
   }
 }
-}
 
 inline void checkError(rocblas_status st, const dlaf::common::internal::source_location& info) noexcept {
-  checkError(internal::rocBLASStatusToHIPStatus(st), info);
+  checkError(rocBLASStatusToHIPStatus(st), info);
 }
 #endif
 

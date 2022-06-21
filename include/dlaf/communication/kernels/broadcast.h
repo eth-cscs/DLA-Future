@@ -27,7 +27,7 @@
 namespace dlaf::comm {
 namespace internal {
 template <class T, Device D>
-void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Communicator> pcomm,
+void sendBcast(common::PromiseGuard<Communicator> pcomm, const matrix::Tile<const T, D>& tile,
                MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
@@ -42,8 +42,8 @@ void sendBcast(const matrix::Tile<const T, D>& tile, common::PromiseGuard<Commun
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
-void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
-               common::PromiseGuard<Communicator> pcomm, MPI_Request* req) {
+void recvBcast(common::PromiseGuard<Communicator> pcomm, comm::IndexT_MPI root_rank,
+               const matrix::Tile<T, D>& tile, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
@@ -55,8 +55,8 @@ void recvBcast(const matrix::Tile<T, D>& tile, comm::IndexT_MPI root_rank,
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 }
 
-template <class TileSender, class CommSender>
-auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
+template <class CommSender, class TileSender>
+auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
   using dlaf::comm::internal::sendBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -67,7 +67,7 @@ auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
   using dlaf::internal::withTemporaryTile;
 
   auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::cref(tile_comm), std::move(pcomm)) | transformMPI(sendBcast_o);
+    return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::D;
@@ -77,8 +77,8 @@ auto scheduleSendBcast(TileSender&& tile, CommSender&& pcomm) {
                            RequireContiguous::No>(std::forward<TileSender>(tile), std::move(send));
 }
 
-template <class TileSender, class CommSender>
-auto scheduleRecvBcast(TileSender&& tile, comm::IndexT_MPI root_rank, CommSender&& pcomm) {
+template <class CommSender, class TileSender>
+auto scheduleRecvBcast(CommSender&& pcomm, comm::IndexT_MPI root_rank, TileSender&& tile) {
   using dlaf::comm::internal::recvBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -89,7 +89,7 @@ auto scheduleRecvBcast(TileSender&& tile, comm::IndexT_MPI root_rank, CommSender
   using dlaf::internal::withTemporaryTile;
 
   auto recv = [root_rank, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::cref(tile_comm), root_rank, std::move(pcomm)) | transformMPI(recvBcast_o);
+    return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
   };
 
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::D;

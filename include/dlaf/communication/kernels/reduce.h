@@ -46,7 +46,7 @@ void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T, Device D>
-void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
+void reduceSend(common::PromiseGuard<comm::Communicator> pcomm, comm::IndexT_MPI rank_root,
                 MPI_Op reduce_op, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
   DLAF_ASSERT(tile.is_contiguous(), "");
 
@@ -87,13 +87,10 @@ template <class CommSender, class TileSender>
                                                    std::move(reduce_recv_in_place));
 }
 
-// TODO: Order of parameters in comm kernels.
-// TODO: rank_root vs root_rank.
-
 // TODO scheduleReduceSend with future will require to move the actual value, not the cref
 /// Given a GPU tile perform MPI_Reduce in-place
 template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op reduce_op,
+[[nodiscard]] auto scheduleReduceSend(CommSender&& pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
                                       TileSender&& tile) {
   // Note:
   //
@@ -110,7 +107,7 @@ template <class CommSender, class TileSender>
 
   auto reduce_send = [rank_root, reduce_op,
                       pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(rank_root, std::move(pcomm), reduce_op, std::cref(tile_comm)) |
+    return whenAllLift(std::move(pcomm), rank_root, reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceSend_o);
   };
 

@@ -84,7 +84,7 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   else {
     // use -> read -> set -> read
     ex::start_detached(
-        dlaf::comm::scheduleReduceSend(root_rank, chain(), MPI_SUM, matrix.read_sender(idx)));
+        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM, matrix.read_sender(idx)));
 
     CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
 

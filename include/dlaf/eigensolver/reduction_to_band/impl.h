@@ -744,7 +744,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
     }
     else {
       ex::start_detached(
-          comm::scheduleReduceSend(rank_owner_row, mpi_col_chain(), MPI_SUM, xt.read_sender(index_xt)));
+          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read_sender(index_xt)));
     }
   }
 
@@ -758,7 +758,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
           comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender(index_x)));
     else
       ex::start_detached(
-          comm::scheduleReduceSend(reducer_col, mpi_row_chain(), MPI_SUM, x.read_sender(index_x)));
+          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read_sender(index_x)));
   }
 }
 

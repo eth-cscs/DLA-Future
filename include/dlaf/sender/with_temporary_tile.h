@@ -207,6 +207,4 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            }
          }));
 }
-
-// TODO: Tests!
 }

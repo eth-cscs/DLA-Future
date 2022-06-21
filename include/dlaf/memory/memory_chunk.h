@@ -68,7 +68,7 @@ public:
     }
     else {
       std::cout
-          << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` or `DLAF_WITH_HIP` flags were not passed!";
+          << "[ERROR] GPU memory was requested but the `DLAF_WITH_CUDA` or `DLAF_WITH_HIP` flags were not passed!";
       std::terminate();
     }
 #endif

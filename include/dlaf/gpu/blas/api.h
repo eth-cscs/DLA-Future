@@ -63,7 +63,7 @@ namespace dlaf::gpublas::internal {
 
 // Error handling
 using gpublasStatus_t = hipblasStatus_t;
-constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = HIPBLAS_STATUS_SUCCESS;
+inline constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = HIPBLAS_STATUS_SUCCESS;
 
 }
 
@@ -76,7 +76,7 @@ namespace dlaf {
 
 // Error handling
 using gpublasStatus_t = cublasStatus_t;
-constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = CUBLAS_STATUS_SUCCESS;
+inline constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = CUBLAS_STATUS_SUCCESS;
 
 }
 

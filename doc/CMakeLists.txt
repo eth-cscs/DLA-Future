@@ -12,7 +12,8 @@ find_package(Doxygen REQUIRED)
 
 configure_file(Doxyfile.in Doxyfile)
 
-add_custom_target(doc ALL
+add_custom_target(
+  doc ALL
   COMMENT "Building Doxygen documentation"
   COMMAND Doxygen::doxygen
 )
@@ -20,6 +21,4 @@ add_custom_target(doc ALL
 # INSTALL
 include(GNUInstallDirs)
 
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/
-  DESTINATION ${CMAKE_INSTALL_DOCDIR}
-)
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html/ DESTINATION ${CMAKE_INSTALL_DOCDIR})

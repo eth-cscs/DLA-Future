@@ -8,80 +8,92 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_tile
+DLAF_addTest(
+  test_tile
   SOURCES test_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN PIKA
 )
 
-DLAF_addTest(test_layout_info
+DLAF_addTest(
+  test_layout_info
   SOURCES test_layout_info.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )
 
-DLAF_addTest(test_distribution
+DLAF_addTest(
+  test_distribution
   SOURCES test_distribution.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )
 
-DLAF_addTest(test_util_distribution
+DLAF_addTest(
+  test_util_distribution
   SOURCES test_util_distribution.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )
 
-DLAF_addTest(test_matrix
+DLAF_addTest(
+  test_matrix
   SOURCES test_matrix.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_matrix_local
+DLAF_addTest(
+  test_matrix_local
   SOURCES test_matrix_local.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_matrix_mirror
+DLAF_addTest(
+  test_matrix_mirror
   SOURCES test_matrix_mirror.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_matrix_view
+DLAF_addTest(
+  test_matrix_view
   SOURCES test_matrix_view.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_util_matrix
+DLAF_addTest(
+  test_util_matrix
   SOURCES test_util_matrix.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_matrix_output
+DLAF_addTest(
+  test_matrix_output
   SOURCES test_matrix_output.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_panel
+DLAF_addTest(
+  test_panel
   SOURCES test_panel.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
 
-DLAF_addTest(test_views
+DLAF_addTest(
+  test_views
   SOURCES test_views.cpp
   LIBRARIES dlaf.core
   USE_MAIN MPIPIKA

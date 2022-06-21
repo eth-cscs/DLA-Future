@@ -49,27 +49,27 @@ function(DLAF_addTest test_target_name)
   cmake_parse_arguments(DLAF_AT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   ### Checks
-  if (DLAF_AT_UNPARSED_ARGUMENTS)
+  if(DLAF_AT_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR "Unknown arguments ${DLAF_AT_UNPARSED_ARGUMENTS}")
   endif()
 
-  if (NOT DLAF_AT_SOURCES)
+  if(NOT DLAF_AT_SOURCES)
     message(FATAL_ERROR "No sources specified for this test")
   endif()
 
   set(IS_AN_MPI_TEST FALSE)
   set(IS_AN_PIKA_TEST FALSE)
-  if (NOT DLAF_AT_USE_MAIN)
+  if(NOT DLAF_AT_USE_MAIN)
     set(_gtest_tgt gtest)
-  elseif (DLAF_AT_USE_MAIN STREQUAL PLAIN)
+  elseif(DLAF_AT_USE_MAIN STREQUAL PLAIN)
     set(_gtest_tgt gtest_main)
-  elseif (DLAF_AT_USE_MAIN STREQUAL PIKA)
+  elseif(DLAF_AT_USE_MAIN STREQUAL PIKA)
     set(_gtest_tgt DLAF_gtest_pika_main)
     set(IS_AN_PIKA_TEST TRUE)
-  elseif (DLAF_AT_USE_MAIN STREQUAL MPI)
+  elseif(DLAF_AT_USE_MAIN STREQUAL MPI)
     set(_gtest_tgt DLAF_gtest_mpi_main)
     set(IS_AN_MPI_TEST TRUE)
-  elseif (DLAF_AT_USE_MAIN STREQUAL MPIPIKA)
+  elseif(DLAF_AT_USE_MAIN STREQUAL MPIPIKA)
     set(_gtest_tgt DLAF_gtest_mpipika_main)
     set(IS_AN_MPI_TEST TRUE)
     set(IS_AN_PIKA_TEST TRUE)
@@ -77,21 +77,24 @@ function(DLAF_addTest test_target_name)
     message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
   endif()
 
-  if (IS_AN_MPI_TEST)
-    if (NOT DLAF_AT_MPIRANKS)
+  if(IS_AN_MPI_TEST)
+    if(NOT DLAF_AT_MPIRANKS)
       message(FATAL_ERROR "You are asking for an MPI external main without specifying MPIRANKS")
     endif()
-    if (NOT DLAF_AT_MPIRANKS GREATER 0)
+    if(NOT DLAF_AT_MPIRANKS GREATER 0)
       message(FATAL_ERROR "Wrong MPIRANKS number ${DLAF_AT_MPIRANKS}")
     endif()
-    if (DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
-      message(WARNING "\
+    if(DLAF_AT_MPIRANKS GREATER MPIEXEC_MAX_NUMPROCS)
+      message(
+        WARNING
+          "\
       YOU ARE ASKING FOR ${DLAF_AT_MPIRANKS} RANKS, BUT THERE ARE JUST ${MPIEXEC_MAX_NUMPROCS} CORES.
       You can adjust MPIEXEC_MAX_NUMPROCS value to suppress this warning.
-      Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1.")
+      Using OpenMPI may require to set the environment variable OMPI_MCA_rmaps_base_oversubscribe=1."
+      )
     endif()
   else()
-    if (DLAF_AT_MPIRANKS)
+    if(DLAF_AT_MPIRANKS)
       message(FATAL_ERROR "You specified MPIRANKS and asked for an external main without MPI")
     else()
       set(DLAF_AT_MPIRANKS 1)
@@ -99,13 +102,16 @@ function(DLAF_addTest test_target_name)
   endif()
 
   ### Test target
-  set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
+  set(DLAF_TEST_RUNALL_WITH_MPIEXEC
+      OFF
+      CACHE BOOL "Run all tests using the workload manager."
+  )
 
   set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
 
   if(DLAF_TEST_RUNALL_WITH_MPIEXEC OR IS_AN_MPI_TEST)
-    if (MPIEXEC_NUMCORE_FLAG)
-      if (MPIEXEC_NUMCORES)
+    if(MPIEXEC_NUMCORE_FLAG)
+      if(MPIEXEC_NUMCORES)
         set(_CORES_PER_RANK ${MPIEXEC_NUMCORES})
       else()
         set(_CORES_PER_RANK 1)
@@ -113,7 +119,7 @@ function(DLAF_addTest test_target_name)
 
       math(EXPR DLAF_CORE_PER_RANK "${_CORES_PER_RANK}/${DLAF_AT_MPIRANKS}")
 
-      if (NOT DLAF_CORE_PER_RANK)
+      if(NOT DLAF_CORE_PER_RANK)
         set(DLAF_CORE_PER_RANK 1)
       endif()
 
@@ -125,22 +131,24 @@ function(DLAF_addTest test_target_name)
     if(DLAF_CI_RUNNER_USES_MPIRUN)
       set(_TEST_COMMAND $<TARGET_FILE:${test_target_name}>)
     else()
-      set(_TEST_COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
-          ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS})
+      set(_TEST_COMMAND
+          ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
+          ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS}
+      )
     endif()
     set(_TEST_LABEL "RANK_${DLAF_AT_MPIRANKS}")
 
-  # ----- Classic test
   else()
+    # ----- Classic test
     set(_TEST_COMMAND ${test_target_name})
     set(_TEST_LABEL "RANK_1")
   endif()
 
-  if (IS_AN_PIKA_TEST)
+  if(IS_AN_PIKA_TEST)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
     # APPLE platform does not support thread binding
-    if (NOT APPLE)
+    if(NOT APPLE)
       list(APPEND _TEST_ARGUMENTS "--pika:use-process-mask")
     endif()
 
@@ -153,35 +161,28 @@ function(DLAF_addTest test_target_name)
 
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})
-  target_link_libraries(${test_target_name}
-    PRIVATE
-      ${_gtest_tgt}
-      DLAF_test
-      ${DLAF_AT_LIBRARIES}
-  )
-  target_compile_definitions(${test_target_name}
-    PRIVATE
-      ${DLAF_AT_COMPILE_DEFINITIONS}
-      $<$<BOOL:${IS_AN_MPI_TEST}>: NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
+  target_link_libraries(${test_target_name} PRIVATE ${_gtest_tgt} DLAF_test ${DLAF_AT_LIBRARIES})
+  target_compile_definitions(
+    ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
+                                NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
   )
   target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS})
   target_add_warnings(${test_target_name})
   DLAF_addPrecompiledHeaders(${test_target_name})
-  add_test(
-    NAME ${test_target_name}
-    COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS}
-  )
+  add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})
   set_tests_properties(${test_target_name} PROPERTIES LABELS "${_TEST_LABEL}")
 
   ### DEPLOY
   include(GNUInstallDirs)
 
-  set(DLAF_INSTALL_TESTS OFF CACHE BOOL "If tests are built, it controls if they will be installed")
-  if (DLAF_INSTALL_TESTS)
-    install(TARGETS
-      ${test_target_name}
-      # EXPORT DLAF-tests
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  set(DLAF_INSTALL_TESTS
+      OFF
+      CACHE BOOL "If tests are built, it controls if they will be installed"
+  )
+  if(DLAF_INSTALL_TESTS)
+    install(TARGETS ${test_target_name}
+                    # EXPORT DLAF-tests
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
 endfunction()

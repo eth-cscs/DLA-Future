@@ -14,31 +14,25 @@ target_compile_features(gtest_mpi_listener PUBLIC cxx_std_17)
 target_link_libraries(gtest_mpi_listener PUBLIC gtest MPI::MPI_CXX)
 
 add_library(DLAF_gtest_pika_main STATIC gtest_pika_main.cpp)
-target_link_libraries(DLAF_gtest_pika_main
-  PUBLIC
-    gtest
-  PRIVATE
-    dlaf.core
-    pika::pika
+target_link_libraries(
+  DLAF_gtest_pika_main
+  PUBLIC gtest
+  PRIVATE dlaf.core pika::pika
 )
 target_add_warnings(DLAF_gtest_pika_main)
 
 add_library(DLAF_gtest_mpi_main STATIC gtest_mpi_main.cpp)
-target_link_libraries(DLAF_gtest_mpi_main
-  PUBLIC
-    gtest
-  PRIVATE
-    gtest_mpi_listener
+target_link_libraries(
+  DLAF_gtest_mpi_main
+  PUBLIC gtest
+  PRIVATE gtest_mpi_listener
 )
 target_add_warnings(DLAF_gtest_mpi_main)
 
 add_library(DLAF_gtest_mpipika_main STATIC gtest_mpipika_main.cpp)
-target_link_libraries(DLAF_gtest_mpipika_main
-  PUBLIC
-    gtest
-  PRIVATE
-    dlaf.core
-    gtest_mpi_listener
-    pika::pika
+target_link_libraries(
+  DLAF_gtest_mpipika_main
+  PUBLIC gtest
+  PRIVATE dlaf.core gtest_mpi_listener pika::pika
 )
 target_add_warnings(DLAF_gtest_mpipika_main)

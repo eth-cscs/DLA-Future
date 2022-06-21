@@ -474,16 +474,24 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
 namespace internal {
 template <class T>
 class CusolverInfo {
+#ifdef DLAF_WITH_CUDA
   memory::MemoryView<T, Device::GPU> workspace_;
+#endif
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
+  CusolverInfo(int workspace_size) :
+#ifdef DLAF_WITH_CUDA
+	  workspace_(workspace_size), 
+#endif
+	  info_(1) {}
   CusolverInfo() : info_(1) {}
 
+#ifdef DLAF_WITH_CUDA
   T* workspace() {
     return workspace_();
   }
+#endif
   int* info() {
     return info_();
   }

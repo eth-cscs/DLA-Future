@@ -144,8 +144,27 @@ function(DLAF_addTest test_target_name)
   if(IS_AN_PIKA_TEST)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
+    # APPLE platform does not support thread binding
+    if(NOT APPLE)
+      # TODO pika:bind=none?
+      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:use-process-mask")
+      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:use-process-mask")
+    endif()
+
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
-      list(APPEND _TEST_ARGUMENTS "--pika:bind=none")
+      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:bind")
+      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:bind=none")
+    endif()
+
+    if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
+      if(DLAF_CORE_PER_RANK GREATER_EQUAL 2)
+        set(_DLAF_PIKA_THREADS ${DLAF_CORE_PER_RANK})
+      else()
+        set(_DLAF_PIKA_THREADS 2)
+      endif()
+
+      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:threads")
+      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:threads=${_DLAF_PIKA_THREADS}")
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})

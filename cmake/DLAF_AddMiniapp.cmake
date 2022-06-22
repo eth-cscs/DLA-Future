@@ -37,11 +37,11 @@ function(DLAF_addMiniapp miniapp_target_name)
   cmake_parse_arguments(DLAF_AM "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   ### Checks
-  if (DLAF_AM_UNPARSED_ARGUMENTS)
+  if(DLAF_AM_UNPARSED_ARGUMENTS)
     message(FATAL_ERROR "Unknown arguments ${DLAF_AM_UNPARSED_ARGUMENTS}")
   endif()
 
-  if (NOT DLAF_AM_SOURCES)
+  if(NOT DLAF_AM_SOURCES)
     message(FATAL_ERROR "No sources specified for this miniapp")
   endif()
 
@@ -57,11 +57,10 @@ function(DLAF_addMiniapp miniapp_target_name)
   include(GNUInstallDirs)
 
   set(DLAF_INSTALL_MINIAPPS ON CACHE BOOL "If miniapps are built, it controls if they will be installed")
-  if (DLAF_INSTALL_MINIAPPS)
-    install(TARGETS
-      ${miniapp_target_name}
-      # EXPORT DLAF-miniapps
-      RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  if(DLAF_INSTALL_MINIAPPS)
+    install(TARGETS ${miniapp_target_name}
+                    # EXPORT DLAF-miniapps
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
   endif()
 endfunction()

@@ -32,7 +32,6 @@ template <class T, Device D>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                const matrix::Tile<const T, D>& tile_in, const matrix::Tile<T, D>& tile_out,
                MPI_Request* req) {
-  // TODO: Assert CPU tile?
   DLAF_ASSERT(tile_in.is_contiguous(), "");
   DLAF_ASSERT(tile_out.is_contiguous(), "");
 
@@ -48,7 +47,6 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 template <class T, Device D>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                       const matrix::Tile<T, D>& tile, MPI_Request* req) {
-  // TODO: Assert CPU tile?
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto& comm = pcomm.ref();
@@ -60,18 +58,15 @@ auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op red
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
+/// Schedule an all reduce.
+///
+/// An input and output tile is required for the reduction. The returned sender
+/// signals completion when the reduction is done. The output sender tile must
+/// be writable so that the received and reduced data can be written to it. The
+/// output tile is sent by the returned sender.
 template <class CommSender, class TileInSender, class TileOutSender>
 [[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op, TileInSender&& tile_in,
                                      TileOutSender&& tile_out) {
-  // Note:
-  //
-  //         +--------------------------------------+
-  //         |                                      |
-  // TILE_I -+-> makeContiguous -----> CONT_BUF_I --+--> mpi_call --> CONT_BUF_O --+
-  //                                                |                              |
-  // TILE_O ---> makeContiguous --+--> CONT_BUF_O --+                              |
-  //                              |                                                |
-  //                              +----------------------> TILE_O -----------------+-> copyBack
   using dlaf::comm::internal::allReduce_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -80,6 +75,9 @@ template <class CommSender, class TileInSender, class TileOutSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
+  // We create two nested scopes for the input and output tiles with
+  // withTemporaryTile. The output tile is in the outer scope as the output tile
+  // will be returned by the returned sender.
   auto all_reduce_final = [reduce_op, pcomm = std::forward<CommSender>(pcomm),
                            tile_in =
                                std::forward<TileInSender>(tile_in)](auto const& tile_out_comm) mutable {
@@ -89,26 +87,33 @@ template <class CommSender, class TileInSender, class TileOutSender>
                          std::cref(tile_out_comm)) |
              transformMPI(allReduce_o);
     };
+    // The input tile must be copied to the temporary tile used for the
+    // reduction, but the temporary tile does not need to be copied back to the
+    // input since the data is not changed by the reduction (the result is
+    // written into the output tile instead).  The reduction is explicitly done
+    // on CPU memory so that we can manage potential asynchronous copies between
+    // CPU and GPU. A reduction requires contiguous memory.
     return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::No,
                              RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
   };
 
-  // TODO: Can reductions happen on CPU only?
+  // The output tile does not need to be copied to the temporary tile since it
+  // is only written to. The written data is copied back from the temporary tile
+  // to the output tile. The reduction is explicitly done on CPU memory so that
+  // we can manage potential asynchronous copies between CPU and GPU. A
+  // reduction requires contiguous memory.
   return withTemporaryTile<Device::CPU, CopyToDestination::No, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileOutSender>(tile_out),
                                                    std::move(all_reduce_final));
 }
 
+/// Schedule an in-place all reduce.
+///
+/// The returned sender signals completion when the reduction is done.  The
+/// sender tile must be writable so that the received and reduced data can be
+/// written to it. The tile is sent by the returned sender.
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
-  // Note:
-  //
-  // TILE ---> makeContiguous --+--> CONT_BUF ----> mpi_call ---> CONT_BUF --+
-  //                            |                                            |
-  //                            +------------------> TILE -------------------+-> copyBack ---> TILE
-  //
-  // The last TILE after the copyBack is returned so that other task can be attached to it,
-  // AFTER the asynchronous MPI_AllReduce has completed
   using dlaf::comm::internal::allReduceInPlace_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -123,7 +128,10 @@ template <class CommSender, class TileSender>
            transformMPI(allReduceInPlace_o);
   };
 
-  // TODO: Can reductions happen on CPU only?
+  // The tile has to be copied both to and from the temporary tile since the
+  // reduction is done in-place. The reduction is explicitly done on CPU memory
+  // so that we can manage potential asynchronous copies between CPU and GPU. A
+  // reduction requires contiguous memory.
   return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileSender>(tile),
                                                    std::move(all_reduce_in_place));

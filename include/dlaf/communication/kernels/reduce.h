@@ -59,14 +59,13 @@ void reduceSend(common::PromiseGuard<comm::Communicator> pcomm, comm::IndexT_MPI
 DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 }
 
-/// Given a GPU tile, perform MPI_Reduce in-place
+/// Schedule an in-place reduction receive.
+///
+/// The returned sender signals completion when the receive is done. The input
+/// sender tile must be writable so that the received data can be written to it.
+/// The input tile is sent by the returned sender.
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
-  // Note:
-  //
-  // GPU --> Duplicate --> (cCPU --> MPI --> cCPU) --> copy --> GPU
-  //
-  // where: cCPU = contiguous CPU
   using dlaf::comm::internal::reduceRecvInPlace_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -81,22 +80,24 @@ template <class CommSender, class TileSender>
            transformMPI(reduceRecvInPlace_o);
   };
 
-  // TODO: Can reductions happen on CPU only?
+  // The input tile must be copied to the temporary tile to participate in the
+  // reduction. The temporary tile is also copied back so that the reduced
+  // result can be used. The reduction is explicitly done on CPU memory so that
+  // we can manage potential asynchronous copies between CPU and GPU. A
+  // reduction requires contiguous memory.
   return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileSender>(tile),
                                                    std::move(reduce_recv_in_place));
 }
 
-// TODO scheduleReduceSend with future will require to move the actual value, not the cref
-/// Given a GPU tile perform MPI_Reduce in-place
+/// Schedule a reduction send.
+///
+/// The returned sender signals completion when the send is done. If the input
+/// tile is movable it will be sent by the returned sender. Otherwise a void
+/// sender is returned.
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleReduceSend(CommSender&& pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
                                       TileSender&& tile) {
-  // Note:
-  //
-  // GPU --> Duplicate --> (cCPU --> MPI --> cCPU)
-  //
-  // where: cCPU = contiguous CPU
   using dlaf::comm::internal::reduceSend_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -111,7 +112,11 @@ template <class CommSender, class TileSender>
            transformMPI(reduceSend_o);
   };
 
-  // TODO: Can reductions happen on CPU only?
+  // The input tile must be copied to the temporary tile used for the send, but
+  // the temporary tile does not need to be copied back to the input since the
+  // data is not changed by the send. The reduction is explicitly done on CPU
+  // memory so that we can manage potential asynchronous copies between CPU and
+  // GPU. A reduction requires contiguous memory.
   return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::No,
                            RequireContiguous::Yes>(std::forward<TileSender>(tile),
                                                    std::move(reduce_send));

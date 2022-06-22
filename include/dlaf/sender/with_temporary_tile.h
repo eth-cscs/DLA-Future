@@ -80,6 +80,18 @@ moveNonConstTile(T&) -> moveNonConstTile<T>;
 ///
 /// The adaptor returns a sender that sends nothing if the input tile contains
 /// const elements, and the input tile if it contains non-const elements.
+///
+/// The operation roughly looks like the following diagrammatically. If a
+/// temporary tile isn't required the flow is simple:
+///
+///   in_sender ---> f ---> returned sender
+///
+/// If a temporary tile is created:
+///
+///   in_sender ---> duplicate -----------------------------------------------------/---> returned sender
+///                      |                                                          |
+///                      \---> copy to temporary ---> f ---> copy from temporary ---/
+///                                (optional)                      (optional)
 template <Device destination_device, CopyToDestination copy_to_destination,
           CopyFromDestination copy_from_destination, RequireContiguous require_contiguous,
           typename InSender, typename F>

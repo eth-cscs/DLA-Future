@@ -91,3 +91,10 @@ DLAF_addTest(test_collective_async
   MPIRANKS 2
   USE_MAIN MPIPIKA
 )
+
+DLAF_addTest(test_transform_mpi
+  SOURCES test_transform_mpi.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 2
+  USE_MAIN MPIPIKA
+)

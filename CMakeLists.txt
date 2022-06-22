@@ -21,10 +21,7 @@ include(CTest)
 include(DLAF)
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE
-      "RelWithDebInfo"
-      CACHE STRING "Build Type" FORCE
-  )
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
 include(CMakeDependentOption)
@@ -51,10 +48,7 @@ enable_language(CXX)
 # ---- CUDA
 if(DLAF_WITH_CUDA)
   if(NOT CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES
-        "60;70;80"
-        CACHE STRING "Cuda architectures" FORCE
-    )
+    set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
   find_package(CUDALIBS REQUIRED)
@@ -82,8 +76,7 @@ find_package(MPI REQUIRED)
 if(DLAF_WITH_MKL)
   find_package(MKL REQUIRED)
 
-  set(MKL_LAPACK_TARGET
-      "mkl::mkl_intel_32bit_seq_dyn"
+  set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
       CACHE STRING "MKL LAPACK target (see FindMKL for details)"
   )
 

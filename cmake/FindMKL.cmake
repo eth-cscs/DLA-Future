@@ -101,10 +101,7 @@ Not supported
 cmake_minimum_required(VERSION 3.12)
 
 # check if compatible compiler is found
-if(CMAKE_C_COMPILER_LOADED
-   OR CMAKE_CXX_COMPILER_LOADED
-   OR CMAKE_Fortran_COMPILER_LOADED
-)
+if(CMAKE_C_COMPILER_LOADED OR CMAKE_CXX_COMPILER_LOADED OR CMAKE_Fortran_COMPILER_LOADED)
   set(_mkl_compiler_found TRUE)
 else()
   set(_mkl_compiler_found FALSE)
@@ -186,10 +183,7 @@ __mkl_find_library(MKL_CORE_LIB mkl_core)
 #
 __mkl_find_library(MKL_INTERFACE_INTEL_32BIT_LIB mkl_intel_lp64)
 __mkl_find_library(MKL_INTERFACE_INTEL_64BIT_LIB mkl_intel_ilp64)
-if(NOT APPLE
-   AND CMAKE_Fortran_COMPILER_LOADED
-   AND CMAKE_Fortran_COMPILER_ID STREQUAL "GNU"
-)
+if(NOT APPLE AND CMAKE_Fortran_COMPILER_LOADED AND CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
   __mkl_find_library(MKL_INTERFACE_GF_32BIT_LIB mkl_gf_lp64)
   __mkl_find_library(MKL_INTERFACE_GF_64BIT_LIB mkl_gf_ilp64)
 endif()
@@ -197,10 +191,8 @@ endif()
 # Threading
 #
 __mkl_find_library(MKL_SEQ_LIB mkl_sequential)
-if(NOT APPLE
-   AND (CMAKE_C_COMPILER_ID STREQUAL "GNU"
-        OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
-        OR CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+if(NOT APPLE AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+                  OR CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
 )
   __mkl_find_library(MKL_OMP_LIB mkl_gnu_thread)
 else()
@@ -307,10 +299,7 @@ foreach(_libtype "ST" "DYN")
             )
           endif()
 
-          if(_mkl_scalapack_lib
-             AND TARGET ${_blacs_tgt}
-             AND NOT TARGET ${_scalapack_tgt}
-          )
+          if(_mkl_scalapack_lib AND TARGET ${_blacs_tgt} AND NOT TARGET ${_scalapack_tgt})
             set(_scalapack_libs "${_mkl_scalapack_lib}" "${_blacs_tgt}")
             add_library(${_scalapack_tgt} INTERFACE IMPORTED)
             set_target_properties(

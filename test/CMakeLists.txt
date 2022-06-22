@@ -9,10 +9,7 @@
 #
 
 set(DLAF_PRESET_OPTIONS "plain-mpi" "slurm" "custom")
-set(DLAF_MPI_PRESET
-    "plain-mpi"
-    CACHE STRING "Select a preset to use"
-)
+set(DLAF_MPI_PRESET "plain-mpi" CACHE STRING "Select a preset to use")
 set_property(CACHE DLAF_MPI_PRESET PROPERTY STRINGS ${DLAF_PRESET_OPTIONS})
 option(
   DLAF_CI_RUNNER_USES_MPIRUN
@@ -37,21 +34,11 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
           "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
           FORCE
     )
-    set(MPIEXEC_NUMCORES
-        ""
-        CACHE STRING "Number of cores available for each MPI rank." FORCE
-    )
+    set(MPIEXEC_NUMCORES "" CACHE STRING "Number of cores available for each MPI rank." FORCE)
 
   elseif(DLAF_MPI_PRESET STREQUAL "slurm")
-    execute_process(
-      COMMAND which srun
-      OUTPUT_VARIABLE SLURM_EXECUTABLE
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    set(MPIEXEC_EXECUTABLE
-        ${SLURM_EXECUTABLE}
-        CACHE STRING "Executable for running MPI programs" FORCE
-    )
+    execute_process(COMMAND which srun OUTPUT_VARIABLE SLURM_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING "Executable for running MPI programs" FORCE)
     set(MPIEXEC_NUMPROC_FLAG
         "-n"
         CACHE
@@ -66,16 +53,10 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
           "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
           FORCE
     )
-    set(MPIEXEC_NUMCORES
-        "1"
-        CACHE STRING "Number of cores available for each MPI rank."
-    )
+    set(MPIEXEC_NUMCORES "1" CACHE STRING "Number of cores available for each MPI rank.")
 
   elseif(DLAF_MPI_PRESET STREQUAL "custom")
-    set(MPIEXEC_EXECUTABLE
-        ""
-        CACHE STRING "Executable for running MPI programs"
-    )
+    set(MPIEXEC_EXECUTABLE "" CACHE STRING "Executable for running MPI programs")
     set(MPIEXEC_NUMPROC_FLAG
         ""
         CACHE
@@ -88,10 +69,7 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
           STRING
           "Flag used by MPI to specify the number of cores per rank for mpiexec. If not empty, you have to specify also the number of cores available per node in MPIEXEC_NUMCORES."
     )
-    set(MPIEXEC_NUMCORES
-        ""
-        CACHE STRING "Number of cores available for each MPI rank."
-    )
+    set(MPIEXEC_NUMCORES "" CACHE STRING "Number of cores available for each MPI rank.")
 
   else()
     message(FATAL_ERROR "Preset ${DLAF_MPI_PRESET} is not supported")
@@ -100,10 +78,7 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
   message(STATUS "MPI preset: ${DLAF_MPI_PRESET}")
 
   # make mpi preset selection persistent (with the aim to not overwrite each time, user may have changed some values (see custom)
-  set(_DLAF_MPI_PRESET
-      ${DLAF_MPI_PRESET}
-      CACHE INTERNAL "Store what preset is being used"
-  )
+  set(_DLAF_MPI_PRESET ${DLAF_MPI_PRESET} CACHE INTERNAL "Store what preset is being used")
 
   mark_as_advanced(MPIEXEC_EXECUTABLE MPIEXEC_NUMPROC_FLAG MPIEXEC_NUMCORE_FLAG MPIEXEC_NUMCORES)
 endif()
@@ -122,10 +97,7 @@ if((MPIEXEC_NUMCORE_FLAG OR MPIEXEC_NUMCORES) AND NOT (MPIEXEC_NUMCORE_FLAG AND 
 endif()
 
 # ----- pika
-set(DLAF_PIKATEST_EXTRA_ARGS
-    ""
-    CACHE STRING "Extra arguments for tests with pika"
-)
+set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
 add_library(DLAF_test INTERFACE)
 

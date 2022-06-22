@@ -102,10 +102,7 @@ function(DLAF_addTest test_target_name)
   endif()
 
   ### Test target
-  set(DLAF_TEST_RUNALL_WITH_MPIEXEC
-      OFF
-      CACHE BOOL "Run all tests using the workload manager."
-  )
+  set(DLAF_TEST_RUNALL_WITH_MPIEXEC OFF CACHE BOOL "Run all tests using the workload manager.")
 
   set(_TEST_ARGUMENTS ${DLAF_AT_ARGUMENTS})
 
@@ -175,10 +172,7 @@ function(DLAF_addTest test_target_name)
   ### DEPLOY
   include(GNUInstallDirs)
 
-  set(DLAF_INSTALL_TESTS
-      OFF
-      CACHE BOOL "If tests are built, it controls if they will be installed"
-  )
+  set(DLAF_INSTALL_TESTS OFF CACHE BOOL "If tests are built, it controls if they will be installed")
   if(DLAF_INSTALL_TESTS)
     install(TARGETS ${test_target_name}
                     # EXPORT DLAF-tests

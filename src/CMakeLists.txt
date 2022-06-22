@@ -249,10 +249,8 @@ install(FILES "${PROJECT_BINARY_DIR}/include/dlaf/version.h" DESTINATION "${CMAK
 include(CMakePackageConfigHelpers)
 
 # install targets configuration
-install(
-  EXPORT DLAF-Targets
-  NAMESPACE DLAF::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
+install(EXPORT DLAF-Targets NAMESPACE DLAF::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 # Config-file preparation and install

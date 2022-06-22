@@ -56,10 +56,7 @@ function(DLAF_addMiniapp miniapp_target_name)
   ### DEPLOY
   include(GNUInstallDirs)
 
-  set(DLAF_INSTALL_MINIAPPS
-      ON
-      CACHE BOOL "If miniapps are built, it controls if they will be installed"
-  )
+  set(DLAF_INSTALL_MINIAPPS ON CACHE BOOL "If miniapps are built, it controls if they will be installed")
   if(DLAF_INSTALL_MINIAPPS)
     install(TARGETS ${miniapp_target_name}
                     # EXPORT DLAF-miniapps

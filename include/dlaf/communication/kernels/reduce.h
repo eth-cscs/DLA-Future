@@ -35,6 +35,7 @@ namespace internal {
 template <class T, Device D>
 void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                        const matrix::Tile<T, D>& tile, MPI_Request* req) {
+  static_assert(D == Device::CPU, "reduceRecvInPlace requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto& comm = pcomm.ref();
@@ -48,6 +49,7 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 template <class T, Device D>
 void reduceSend(common::PromiseGuard<comm::Communicator> pcomm, comm::IndexT_MPI rank_root,
                 MPI_Op reduce_op, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
+  static_assert(D == Device::CPU, "reduceSend requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto& comm = pcomm.ref();

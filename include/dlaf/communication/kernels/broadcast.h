@@ -55,8 +55,13 @@ void recvBcast(common::PromiseGuard<Communicator> pcomm, comm::IndexT_MPI root_r
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 }
 
+/// Schedule a broadcast send.
+///
+/// The returned sender signals completion when the send is done. If the input
+/// tile is movable it will be sent by the returned sender. Otherwise a void
+/// sender is returned.
 template <class CommSender, class TileSender>
-auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
+[[nodiscard]] auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
   using dlaf::comm::internal::sendBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -73,12 +78,20 @@ auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::D;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
+  // The input tile must be copied to the temporary tile used for the send, but
+  // the temporary tile does not need to be copied back to the input since the
+  // data is not changed by the send. A send does not require contiguous memory.
   return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
                            RequireContiguous::No>(std::forward<TileSender>(tile), std::move(send));
 }
 
+/// Schedule a broadcast receive.
+///
+/// The returned sender signals completion when the receive is done. The input
+/// sender tile must be writable so that the received data can be written to it.
+/// The input tile is sent by the returned sender.
 template <class CommSender, class TileSender>
-auto scheduleRecvBcast(CommSender&& pcomm, comm::IndexT_MPI root_rank, TileSender&& tile) {
+[[nodiscard]] auto scheduleRecvBcast(CommSender&& pcomm, comm::IndexT_MPI root_rank, TileSender&& tile) {
   using dlaf::comm::internal::recvBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -95,6 +108,10 @@ auto scheduleRecvBcast(CommSender&& pcomm, comm::IndexT_MPI root_rank, TileSende
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::D;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
+  // Since this is a receive we don't need to copy the input to the temporary
+  // tile (the input tile may be uninitialized). The received data is copied
+  // back from the temporary tile to the input. A receive does not require
+  // contiguous memory.
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
                            RequireContiguous::No>(std::forward<TileSender>(tile), std::move(recv));
 }

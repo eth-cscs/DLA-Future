@@ -32,6 +32,7 @@ template <class T, Device D>
 auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                const matrix::Tile<const T, D>& tile_in, const matrix::Tile<T, D>& tile_out,
                MPI_Request* req) {
+  static_assert(D == Device::CPU, "allReduce requires CPU memory");
   DLAF_ASSERT(tile_in.is_contiguous(), "");
   DLAF_ASSERT(tile_out.is_contiguous(), "");
 
@@ -47,6 +48,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 template <class T, Device D>
 auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
                       const matrix::Tile<T, D>& tile, MPI_Request* req) {
+  static_assert(D == Device::CPU, "allReduceInPlace requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto& comm = pcomm.ref();

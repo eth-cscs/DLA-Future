@@ -32,59 +32,49 @@ macro(_lapack_check_is_working)
 
   set(CMAKE_REQUIRED_QUIET TRUE)
 
-  if (NOT LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
+  if(NOT LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${LAPACK_LIBRARY})
   endif()
 
   unset(_LAPACK_CHECK_BLAS CACHE)
   check_function_exists(dgemm_ _LAPACK_CHECK_BLAS)
-  if (NOT _LAPACK_CHECK_BLAS)
+  if(NOT _LAPACK_CHECK_BLAS)
     message(FATAL_ERROR "BLAS symbol not found with this configuration")
   endif()
 
   unset(_LAPACK_CHECK CACHE)
   check_function_exists(dpotrf_ _LAPACK_CHECK)
-  if (NOT _LAPACK_CHECK)
+  if(NOT _LAPACK_CHECK)
     message(FATAL_ERROR "LAPACK symbol not found with this configuration")
   endif()
 
   cmake_pop_check_state()
 endmacro()
 
-
 # Dependencies
 set(_DEPS "")
 
-if (LAPACK_LIBRARY STREQUAL "" OR NOT LAPACK_LIBRARY)
+if(LAPACK_LIBRARY STREQUAL "" OR NOT LAPACK_LIBRARY)
   set(LAPACK_LIBRARY "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
 endif()
 
-mark_as_advanced(
-  LAPACK_LIBRARY
-)
+mark_as_advanced(LAPACK_LIBRARY)
 
 _lapack_check_is_working()
 
 ### Package
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(LAPACK DEFAULT_MSG
-  LAPACK_LIBRARY
-  _LAPACK_CHECK
-  _LAPACK_CHECK_BLAS
-)
+find_package_handle_standard_args(LAPACK DEFAULT_MSG LAPACK_LIBRARY _LAPACK_CHECK _LAPACK_CHECK_BLAS)
 
 # Remove the placeholder
-if (LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
+if(LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
   set(LAPACK_LIBRARY "")
 endif()
 
-if (LAPACK_FOUND)
-  if (NOT TARGET LAPACK::LAPACK)
+if(LAPACK_FOUND)
+  if(NOT TARGET LAPACK::LAPACK)
     add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
   endif()
 
-  target_link_libraries(LAPACK::LAPACK INTERFACE
-    "${LAPACK_LIBRARY}"
-    "${_DEPS}"
-  )
+  target_link_libraries(LAPACK::LAPACK INTERFACE "${LAPACK_LIBRARY}" "${_DEPS}")
 endif()

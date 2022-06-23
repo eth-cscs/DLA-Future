@@ -8,7 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_init
+DLAF_addTest(
+  test_init
   SOURCES test_init.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN

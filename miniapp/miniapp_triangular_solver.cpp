@@ -8,16 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <type_traits>
 
 #include <mpi.h>
+#include <blas/util.hh>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
-
-#include <blas/util.hh>
 
 #include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
@@ -177,14 +177,13 @@ struct triangularSolverMiniapp {
 };
 
 int pika_main(pika::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-    const Options opts(vm);
+  pika::scoped_finalize pika_finalizer;
+  dlaf::ScopedInitializer init(vm);
 
-    dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
-  }
+  const Options opts(vm);
+  dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
 
-  return pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -195,7 +194,8 @@ int main(int argc, char** argv) {
   options_description desc_commandline(
       "Benchmark computation of solution for A . X = 2 . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
-      "options");
+      "options\n"
+      "Usage: miniapp_triangular_solver [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

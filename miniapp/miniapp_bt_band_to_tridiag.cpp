@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <string>
@@ -157,14 +158,13 @@ struct BacktransformBandToTridiagMiniapp {
 };
 
 int pika_main(pika::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-    const Options opts(vm);
+  pika::scoped_finalize pika_finalizer;
+  dlaf::ScopedInitializer init(vm);
+  const Options opts(vm);
 
-    dlaf::miniapp::dispatchMiniapp<BacktransformBandToTridiagMiniapp>(opts);
-  }
+  dlaf::miniapp::dispatchMiniapp<BacktransformBandToTridiagMiniapp>(opts);
 
-  return pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {
@@ -173,8 +173,7 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  using namespace std::literals;
-  options_description desc_commandline("Usage: "s + argv[0] + " [options]"s);
+  options_description desc_commandline("Usage: miniapp_bt_band_to_tridiag [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

@@ -36,7 +36,7 @@ namespace internal {
 
 namespace gentostd_l {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(pika::execution::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
@@ -44,7 +44,7 @@ void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LK
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(pika::execution::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
@@ -55,7 +55,7 @@ void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AI
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+void hemmPanelTile(pika::execution::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
                    AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
@@ -67,7 +67,7 @@ void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LI
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
-void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
+void her2kTrailingDiagTile(pika::execution::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
                            AKKSender&& a_kk) {
   using ElementType = dlaf::internal::SenderElementType<AJKSender>;
 
@@ -79,7 +79,7 @@ void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& 
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender&& mat_ik,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, MatIKSender&& mat_ik,
                             MatJKSender&& mat_jk, AIJSender a_ij) {
   using ElementType = dlaf::internal::SenderElementType<MatIKSender>;
 
@@ -91,7 +91,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(pika::execution::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans,
@@ -102,7 +102,7 @@ void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+void gemmPanelUpdateTile(pika::execution::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
                          AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
@@ -116,7 +116,7 @@ void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_
 
 namespace gentostd_u {
 template <Backend backend, class AKKSender, class LKKSender>
-void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
+void hegstDiagTile(pika::execution::thread_priority priority, AKKSender&& a_kk, LKKSender&& l_kk) {
   dlaf::internal::whenAllLift(1, blas::Uplo::Upper, std::forward<AKKSender>(a_kk),
                               std::forward<LKKSender>(l_kk)) |
       dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)) |
@@ -124,7 +124,7 @@ void hegstDiagTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LK
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
-void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
+void trsmPanelTile(pika::execution::thread_priority priority, LKKSender&& l_kk, AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LKKSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
@@ -135,7 +135,7 @@ void trsmPanelTile(pika::threads::thread_priority priority, LKKSender&& l_kk, AI
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
-void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
+void hemmPanelTile(pika::execution::thread_priority priority, AKKSender&& a_kk, LIKSender&& l_ik,
                    AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<AKKSender>;
 
@@ -147,7 +147,7 @@ void hemmPanelTile(pika::threads::thread_priority priority, AKKSender&& a_kk, LI
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
-void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
+void her2kTrailingDiagTile(pika::execution::thread_priority priority, AJKSender&& a_jk, LJKSender&& l_jk,
                            AKKSender&& a_kk) {
   using ElementType = dlaf::internal::SenderElementType<AJKSender>;
 
@@ -159,7 +159,7 @@ void her2kTrailingDiagTile(pika::threads::thread_priority priority, AJKSender&& 
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender&& mat_ik,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, MatIKSender&& mat_ik,
                             MatJKSender&& mat_jk, AIJSender a_ij) {
   using ElementType = dlaf::internal::SenderElementType<MatIKSender>;
 
@@ -171,7 +171,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, MatIKSender
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
-void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
+void trsmPanelUpdateTile(pika::execution::thread_priority priority, LJJSender&& l_jj, AJKSender a_jk) {
   using ElementType = dlaf::internal::SenderElementType<LJJSender>;
 
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
@@ -182,7 +182,7 @@ void trsmPanelUpdateTile(pika::threads::thread_priority priority, LJJSender&& l_
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
-void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
+void gemmPanelUpdateTile(pika::execution::thread_priority priority, LIJSender&& l_ij, AJKSender&& a_jk,
                          AIKSender&& a_ik) {
   using ElementType = dlaf::internal::SenderElementType<LIJSender>;
 
@@ -199,7 +199,7 @@ void gemmPanelUpdateTile(pika::threads::thread_priority priority, LIJSender&& l_
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -268,7 +268,7 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -468,7 +468,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -537,7 +537,7 @@ template <Backend backend, Device device, class T>
 void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());

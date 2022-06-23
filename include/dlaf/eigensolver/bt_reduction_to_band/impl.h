@@ -72,7 +72,7 @@ void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
   namespace ex = pika::execution::experimental;
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
-  dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::threads::thread_priority::high),
+  dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
                             Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
                             dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src),
                                                         std::forward<DstSender>(dst))) |
@@ -80,7 +80,7 @@ void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
 }
 
 template <Backend backend, class TSender, class SourcePanelSender, class PanelTileSender>
-void trmmPanel(pika::threads::thread_priority priority, TSender&& t, SourcePanelSender&& v,
+void trmmPanel(pika::execution::thread_priority priority, TSender&& t, SourcePanelSender&& v,
                PanelTileSender&& w) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -92,7 +92,7 @@ void trmmPanel(pika::threads::thread_priority priority, TSender&& t, SourcePanel
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender, class ColPanelSender>
-void gemmUpdateW2(pika::threads::thread_priority priority, PanelTileSender&& w, MatrixTileSender&& c,
+void gemmUpdateW2(pika::execution::thread_priority priority, PanelTileSender&& w, MatrixTileSender&& c,
                   ColPanelSender&& w2) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -104,7 +104,7 @@ void gemmUpdateW2(pika::threads::thread_priority priority, PanelTileSender&& w, 
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
-void gemmTrailingMatrix(pika::threads::thread_priority priority, PanelTileSender&& v,
+void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSender&& v,
                         ColPanelSender&& w2, MatrixTileSender&& c) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -125,8 +125,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   using namespace bt_red_band;
   using pika::execution::experimental::keep_future;
-  auto hp = pika::threads::thread_priority::high;
-  auto np = pika::threads::thread_priority::normal;
+  auto hp = pika::execution::thread_priority::high;
+  auto np = pika::execution::thread_priority::normal;
 
   const SizeType m = mat_c.nrTiles().rows();
   const SizeType n = mat_c.nrTiles().cols();
@@ -234,8 +234,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
   using pika::execution::experimental::keep_future;
-  auto hp = pika::threads::thread_priority::high;
-  auto np = pika::threads::thread_priority::normal;
+  auto hp = pika::execution::thread_priority::high;
+  auto np = pika::execution::thread_priority::normal;
 
   if constexpr (backend != Backend::MC) {
     DLAF_STATIC_UNIMPLEMENTED(T);

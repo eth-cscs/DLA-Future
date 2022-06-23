@@ -31,6 +31,7 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 
+using pika::execution::thread_priority;
 using pika::execution::experimental::keep_future;
 using pika::execution::experimental::start_detached;
 using pika::this_thread::experimental::sync_wait;
@@ -73,7 +74,7 @@ TYPED_TEST(MatrixUtilsTest, Set0) {
 
       auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
 
-      matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, matrix);
+      matrix::util::set0<Backend::MC>(thread_priority::normal, matrix);
 
       CHECK_MATRIX_EQ(null_matrix, matrix);
     }
@@ -121,8 +122,6 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 
 template <class T>
 void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
-  namespace ex = pika::execution::experimental;
-
   using dlaf::util::size_t::mul;
   const auto& distribution = matrix.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -231,8 +230,6 @@ std::vector<config_t> test_params{
 
 template <class TypeParam, Coord panel_axis>
 void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
-  namespace ex = pika::execution::experimental;
-
   constexpr Coord coord1D = orthogonal(panel_axis);
 
   Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -249,7 +246,7 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
                                   panel.readwrite_sender(idx)) |
           tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
 
-    matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, panel);
+    matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
       CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender(idx)).get());

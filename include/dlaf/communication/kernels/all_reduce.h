@@ -68,7 +68,7 @@ void scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op,
   namespace ex = pika::execution::experimental;
 
   using pika::unwrapping;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   using common::internal::ContiguousBufferHolder;
   using common::internal::copyBack_o;
@@ -111,7 +111,7 @@ template <class CommSender, class TSender>
   using dlaf::internal::Policy;
   using dlaf::internal::transform;
   using dlaf::internal::whenAllLift;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   using T = dlaf::internal::SenderElementType<TSender>;
 

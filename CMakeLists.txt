@@ -20,7 +20,7 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(CTest)
 include(DLAF)
 
-if (NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
@@ -36,6 +36,15 @@ option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 
+# Add color to ninja output
+if(CMAKE_GENERATOR MATCHES "Ninja")
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always)
+  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fcolor-diagnostics)
+  endif()
+endif()
+
 # ---------------------------------------------------------------------------
 # Languages
 # ---------------------------------------------------------------------------
@@ -46,8 +55,8 @@ enable_language(C)
 enable_language(CXX)
 
 # ---- CUDA
-if (DLAF_WITH_CUDA)
-  if (NOT CMAKE_CUDA_ARCHITECTURES)
+if(DLAF_WITH_CUDA)
+  if(NOT CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
@@ -57,8 +66,8 @@ endif()
 # ---------------------------------------------------------------------------
 # Coverage
 # ---------------------------------------------------------------------------
-if (DLAF_WITH_COVERAGE)
-  if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(DLAF_WITH_COVERAGE)
+  if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-O0 -fprofile-arcs -ftest-coverage)
     add_link_options(-fprofile-arcs -ftest-coverage)
   else()
@@ -73,16 +82,17 @@ endif()
 find_package(MPI REQUIRED)
 
 # ----- LAPACK/SCALAPACK
-if (DLAF_WITH_MKL)
+if(DLAF_WITH_MKL)
   find_package(MKL REQUIRED)
 
   set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
-    CACHE STRING "MKL LAPACK target (see FindMKL for details)")
+      CACHE STRING "MKL LAPACK target (see FindMKL for details)"
+  )
 
   # Note:
   # If specified targets are found, "standardize" them
 
-  if (TARGET ${MKL_LAPACK_TARGET})
+  if(TARGET ${MKL_LAPACK_TARGET})
     set(LAPACK_FOUND TRUE)
     add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
     target_link_libraries(LAPACK::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
@@ -114,20 +124,20 @@ add_subdirectory(src)
 # ---------------------------------------------------------------------------
 # mini Apps
 # ---------------------------------------------------------------------------
-if (DLAF_BUILD_MINIAPPS)
+if(DLAF_BUILD_MINIAPPS)
   add_subdirectory(miniapp)
 endif()
 
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
-if (DLAF_BUILD_TESTING)
+if(DLAF_BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
 # ---------------------------------------------------------------------------
 # Docs
 # ---------------------------------------------------------------------------
-if (DLAF_BUILD_DOC)
+if(DLAF_BUILD_DOC)
   add_subdirectory(doc)
 endif()

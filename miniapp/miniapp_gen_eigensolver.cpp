@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 
@@ -155,14 +156,13 @@ struct GenEigensolverMiniapp {
 };
 
 int pika_main(pika::program_options::variables_map& vm) {
-  {
-    dlaf::ScopedInitializer init(vm);
-    const Options opts(vm);
+  pika::scoped_finalize pika_finalizer;
+  dlaf::ScopedInitializer init(vm);
 
-    dlaf::miniapp::dispatchMiniapp<GenEigensolverMiniapp>(opts);
-  }
+  const Options opts(vm);
+  dlaf::miniapp::dispatchMiniapp<GenEigensolverMiniapp>(opts);
 
-  return pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 int main(int argc, char** argv) {

@@ -8,12 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-if (DLAF_BUILD_TESTING)
+if(DLAF_BUILD_TESTING)
   # TODO they depends on DLAF_TEST exclusively for the createTile method.
-  add_executable(miniapp_laset miniapp_laset.cpp)
-  target_link_libraries(miniapp_laset PRIVATE dlaf.core)
-  target_link_libraries(miniapp_laset PRIVATE DLAF_test)
-  target_link_libraries(miniapp_laset PRIVATE DLAF_miniapp)
-  target_add_warnings(miniapp_laset)
-  install(TARGETS miniapp_laset RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+  DLAF_addMiniapp(miniapp_laset SOURCES miniapp_laset.cpp LIBRARIES dlaf.core DLAF_test)
 endif()

@@ -25,6 +25,8 @@ jobs:
         run: |
           sudo apt-get install --no-install-recommends clang-format-10 python3
           pip3 install black==21.8b0
+          pip3 install cmakelang==0.6.13
+
       - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 

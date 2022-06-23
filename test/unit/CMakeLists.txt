@@ -8,33 +8,38 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_types
+DLAF_addTest(
+  test_types
   SOURCES test_types.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )
 
-if (DLAF_WITH_CUDA)
-  DLAF_addTest(test_util_cuda
+if(DLAF_WITH_CUDA)
+  DLAF_addTest(
+    test_util_cuda
     SOURCES test_util_cuda.cu
     LIBRARIES dlaf.core
     USE_MAIN PLAIN
   )
 endif()
 
-DLAF_addTest(test_util_math
+DLAF_addTest(
+  test_util_math
   SOURCES test_util_math.cpp
   LIBRARIES dlaf.core
   USE_MAIN PLAIN
 )
 
-DLAF_addTest(test_blas_tile
+DLAF_addTest(
+  test_blas_tile
   SOURCES test_blas_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN PIKA
 )
 
-DLAF_addTest(test_lapack_tile
+DLAF_addTest(
+  test_lapack_tile
   SOURCES test_lapack_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN PIKA

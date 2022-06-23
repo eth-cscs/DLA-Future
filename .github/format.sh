@@ -28,6 +28,11 @@ do
       # Check if tab are present.
       egrep -Hn $'\t' $FILE && TAB_FOUND=1 || true
       ;;
+    *.cmake|CMakeList.txt|*.cmake.in)
+      cmake-format -i $FILE
+      # Check if tab are present.
+      egrep -Hn $'\t' $FILE && TAB_FOUND=1 || true
+      ;;
     *.pdf|*.hdf5|*.jpg|*.png|*.ppt|*.pptx|*.ipe)
       # Exclude some binary files types,
       # others can be excluded as needed.

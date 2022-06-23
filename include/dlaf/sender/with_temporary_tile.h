@@ -102,14 +102,6 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
-           // TODO: How is this different from the moveNonConstTile struct?
-           // Using this leads to segfaults.
-           // auto move_non_const_tile = [&]() mutable {
-           //   if constexpr (!std::is_const_v<std::remove_reference_t<decltype(in)>>) {
-           //     return std::move(in);
-           //   }
-           // };
-
            // In some cases we can directly use the input as a temporary tile.
            // In that case we simply call the user-provided callable f, ignore
            // the values sent by the sender returned from f, and finally send

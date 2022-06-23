@@ -10,25 +10,13 @@
 
 #pragma once
 
+#include <pika/execution.hpp>
+
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/types.h>
 
 namespace dlaf::internal {
-// TODO: Move to pika (also add make_any_sender).
-template <typename Sender>
-auto make_unique_any_sender(Sender&& sender) {
-  using value_types_pack = typename pika::execution::experimental::sender_traits<
-      std::decay_t<Sender>>::template value_types<pika::util::pack, pika::util::pack>;
-  using single_value_type_variant =
-      pika::execution::experimental::detail::single_variant_t<value_types_pack>;
-  using unique_any_sender_type =
-      pika::util::detail::change_pack_t<pika::execution::experimental::unique_any_sender,
-                                        single_value_type_variant>;
-
-  return unique_any_sender_type(std::forward<Sender>(sender));
-}
-
 /// This represents whether or not withTemporaryTile should copy the input tile
 /// to the destination before the user-supplied operation runs.
 enum class CopyToDestination : bool { Yes = true, No = false };
@@ -196,12 +184,12 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                // If the input tile is contiguous we can use the input tile as a
                // temporary tile directly.
                if (in.is_contiguous()) {
-                 return make_unique_any_sender(helper_nocopy());
+                 return ex::make_unique_any_sender(helper_nocopy());
                }
                // If the input is not contiguous we have to at least allocate a
                // new temporary tile.
                else {
-                 return make_unique_any_sender(helper_copy());
+                 return ex::make_unique_any_sender(helper_copy());
                }
              }
              // The destination device is the same as the input device, and we

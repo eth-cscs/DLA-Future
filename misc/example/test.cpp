@@ -37,7 +37,7 @@ void work2(const Tile<int>&& i, const Tile<const int>& j, int index) {
 
 void foo() {
   pika::threads::scheduled_executor HP =
-      pika::threads::executors::pool_executor("default", pika::threads::thread_priority_high);
+      pika::threads::executors::pool_executor("default", pika::execution::thread_priority_high);
 
   // setup matrices
   using Type = Tile<int>;

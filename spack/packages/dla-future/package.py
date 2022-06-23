@@ -39,7 +39,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("umpire@6:")
 
     depends_on("pika cxxstd=17 +mpi")
-    depends_on("pika@0.5:")
+    depends_on("pika@main")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
 

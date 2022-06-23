@@ -436,7 +436,7 @@ protected:
 template <Backend B, Device D, class T>
 void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>& mat_e,
                                           Matrix<const T, Device::CPU>& mat_hh) {
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
 
   using common::iterate_range2d;

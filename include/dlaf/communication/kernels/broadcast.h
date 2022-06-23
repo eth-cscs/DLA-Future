@@ -103,7 +103,7 @@ struct ScheduleRecvBcast {
     using dlaf::matrix::copy;
     using dlaf::matrix::Duplicate;
     using dlaf::matrix::Tile;
-    using pika::threads::thread_priority;
+    using pika::execution::thread_priority;
 
     return std::move(tile_gpu) |
            // Start an asynchronous scope for keeping the GPU tile alive until

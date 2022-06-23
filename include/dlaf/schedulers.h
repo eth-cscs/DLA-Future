@@ -35,7 +35,7 @@ auto getBackendScheduler() {
 }
 
 template <Backend backend>
-auto getBackendScheduler(const pika::threads::thread_priority priority) {
+auto getBackendScheduler(const pika::execution::thread_priority priority) {
   return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
 }
 

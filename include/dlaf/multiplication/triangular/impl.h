@@ -36,7 +36,7 @@ namespace internal {
 
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -45,7 +45,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T 
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -56,7 +56,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, AS
 
 namespace triangular_llt {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -65,7 +65,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -76,7 +76,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_lun {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -85,7 +85,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T 
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -96,7 +96,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, AS
 
 namespace triangular_lut {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -105,7 +105,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -116,7 +116,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_rln {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -125,7 +125,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T 
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -136,7 +136,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, AS
 
 namespace triangular_rlt {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -145,7 +145,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -156,7 +156,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op
 
 namespace triangular_run {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -165,7 +165,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Diag diag, T 
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, ASender&& a_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -176,7 +176,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, T alpha, AS
 
 namespace triangular_rut {
 template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
+void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
   dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
                               std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
@@ -185,7 +185,7 @@ void trmmBPanelTile(pika::threads::thread_priority priority, blas::Op op, blas::
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, blas::Op op, T alpha,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
   dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
                               std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
@@ -198,7 +198,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -223,7 +223,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_llt;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -248,7 +248,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -273,7 +273,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lut;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -298,7 +298,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -323,7 +323,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rlt;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -348,7 +348,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                                               Matrix<T, device>& mat_b) {
   using namespace triangular_run;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -373,7 +373,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rut;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   SizeType m = mat_b.nrTiles().rows();
   SizeType n = mat_b.nrTiles().cols();
@@ -398,7 +398,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -480,7 +480,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -561,7 +561,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -643,7 +643,7 @@ template <Backend backend, Device device, class T>
 void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());

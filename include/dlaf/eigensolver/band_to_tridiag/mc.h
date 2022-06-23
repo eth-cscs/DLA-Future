@@ -109,7 +109,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -141,7 +141,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -185,7 +185,7 @@ struct BandBlock {
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -215,7 +215,7 @@ struct BandBlock {
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(pika::threads::thread_priority::high),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -455,7 +455,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     }
   };
 
-  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high);
+  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
   auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
     auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
       auto inc = a_ws->ld() + 1;

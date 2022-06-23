@@ -37,14 +37,14 @@ namespace internal {
 
 namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(pika::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
       tile::potrf(dlaf::internal::Policy<backend>(priority)) |
       pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_tile,
+void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_tile,
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
@@ -56,7 +56,7 @@ void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_ti
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
-void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSender&& panel_tile,
                           MatrixTileSender&& matrix_tile) {
   using BaseElementType = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
@@ -68,7 +68,7 @@ void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSend
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTileSender&& panel_tile,
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -83,14 +83,14 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSe
 
 namespace cholesky_u {
 template <Backend backend, class MatrixTileSender>
-void potrfDiagTile(pika::threads::thread_priority priority, MatrixTileSender&& matrix_tile) {
+void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
   dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
       tile::potrf(dlaf::internal::Policy<backend>(priority)) |
       pika::execution::experimental::start_detached();
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
-void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_tile,
+void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_tile,
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
@@ -102,7 +102,7 @@ void trsmPanelTile(pika::threads::thread_priority priority, KKTileSender&& kk_ti
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
-void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSender&& panel_tile,
                           MatrixTileSender&& matrix_tile) {
   using base_element_type = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
@@ -114,7 +114,7 @@ void herkTrailingDiagTile(pika::threads::thread_priority priority, PanelTileSend
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
-void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSender&& panel_tile,
+void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTileSender&& panel_tile,
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
@@ -131,7 +131,7 @@ void gemmTrailingMatrixTile(pika::threads::thread_priority priority, PanelTileSe
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -171,7 +171,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -277,7 +277,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Number of tile (rows = cols)
   SizeType nrtile = mat_a.nrTiles().cols();
@@ -311,7 +311,7 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 template <Backend backend, Device device, class T>
 void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());

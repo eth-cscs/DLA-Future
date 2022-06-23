@@ -102,9 +102,6 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
-           // TODO: Replace with drop_value from pika.
-           constexpr auto drop_value = [](auto&&...) {};
-
            // TODO: How is this different from the moveNonConstTile struct?
            // Using this leads to segfaults.
            // auto move_non_const_tile = [&]() mutable {
@@ -118,7 +115,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            // the values sent by the sender returned from f, and finally send
            // the input tile to continuations if the tile is non-const.
            auto helper_nocopy = [&]() {
-             return f(in) | ex::then(drop_value) | ex::then(moveNonConstTile{in});
+             return f(in) | ex::drop_value() | ex::then(moveNonConstTile{in});
            };
 
            // In cases that we cannot use the input tile as the temporary tile we need to:
@@ -148,7 +145,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                     ex::let_value([&, f = std::forward<F>(f)](auto& temp) mutable {
                       // Call the user provided callable f and ignore the values
                       // sent by the sender.
-                      auto f_sender = f(temp) | ex::then(drop_value);
+                      auto f_sender = f(temp) | ex::drop_value();
                       // If the user requested copying the temporary tile back
                       // to the input tile after the user-provided operation is
                       // done we do so. Otherwise we use the sender f_sender

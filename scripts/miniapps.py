@@ -169,7 +169,7 @@ def chol(
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_cholesky"
-        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --pika:use-process-mask {extra_flags}"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
@@ -222,7 +222,7 @@ def trsm(
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_triangular_solver"
-        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} --pika:use-process-mask {extra_flags}"
+        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
@@ -268,7 +268,7 @@ def gen2std(
     if lib.startswith("dlaf"):
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_gen_to_std"
-        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} --pika:use-process-mask {extra_flags}"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"

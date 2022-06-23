@@ -114,7 +114,7 @@ pika::shared_future<matrix::Tile<const T, Device::CPU>> computeTFactor(
 }
 
 template <Backend backend, class TSender, class VSender>
-auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender&& tile_v) {
+auto computeW(pika::execution::thread_priority priority, TSender&& tile_t, VSender&& tile_v) {
   using namespace blas;
   using T = dlaf::internal::SenderElementType<VSender>;
   dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
@@ -124,7 +124,7 @@ auto computeW(pika::threads::thread_priority priority, TSender&& tile_t, VSender
 }
 
 template <Backend backend, class VSender, class ESender, class T, class W2Sender>
-auto computeW2(pika::threads::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
+auto computeW2(pika::execution::thread_priority priority, VSender&& tile_v, ESender&& tile_e, T beta,
                W2Sender&& tile_w2) {
   using blas::Op;
   dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), std::forward<VSender>(tile_v),
@@ -134,7 +134,7 @@ auto computeW2(pika::threads::thread_priority priority, VSender&& tile_v, ESende
 }
 
 template <Backend backend, class WSender, class W2Sender, class ESender>
-auto updateE(pika::threads::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
+auto updateE(pika::execution::thread_priority priority, WSender&& tile_w, W2Sender&& tile_w2,
              ESender&& tile_e) {
   using blas::Op;
   using T = dlaf::internal::SenderElementType<ESender>;
@@ -481,12 +481,12 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
         const auto& tile_w2 = mat_w2.read_sender(idx_e);
 
-        updateE<B>(pika::threads::thread_priority::normal,
+        updateE<B>(pika::execution::thread_priority::normal,
                    ex::keep_future(splitTile(tile_w, helper.topPart().specHH())), tile_w2,
                    splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())));
 
         if (helper.affectsMultipleTiles()) {
-          updateE<B>(pika::threads::thread_priority::normal,
+          updateE<B>(pika::execution::thread_priority::normal,
                      ex::keep_future(splitTile(tile_w, helper.bottomPart().specHH())), tile_w2,
                      splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
                                helper.bottomPart().specEV(sz_e.cols())));

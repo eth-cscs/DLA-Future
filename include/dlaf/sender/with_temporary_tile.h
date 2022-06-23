@@ -105,7 +105,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
   using dlaf::matrix::Duplicate;
   using dlaf::matrix::DuplicateNoCopy;
   using dlaf::matrix::internal::CopyBackend_v;
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   return std::forward<InSender>(in_sender) |
          // Start a new asynchronous scope for keeping the input tile alive

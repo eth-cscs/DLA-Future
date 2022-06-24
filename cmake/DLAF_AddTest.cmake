@@ -146,9 +146,8 @@ function(DLAF_addTest test_target_name)
 
     # APPLE platform does not support thread binding
     if(NOT APPLE)
-      # TODO pika:bind=none?
-      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:use-process-mask")
       list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:use-process-mask")
+      list(REMOVE_DUPLICATES _PIKA_EXTRA_ARGS_LIST)
     endif()
 
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)

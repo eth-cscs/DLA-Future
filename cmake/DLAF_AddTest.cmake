@@ -159,9 +159,9 @@ function(DLAF_addTest test_target_name)
     endif()
 
     if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
-      if(DLAF_CORE_PER_RANK GREATER_EQUAL 2)
-        set(_DLAF_PIKA_THREADS ${DLAF_CORE_PER_RANK})
-      else()
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+
+      if(_DLAF_PIKA_THREADS LESS 2)
         set(_DLAF_PIKA_THREADS 2)
       endif()
 

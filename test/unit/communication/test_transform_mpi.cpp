@@ -25,7 +25,7 @@ using namespace dlaf::comm;
 
 using TransformMPITest = ::testing::Test;
 
-// wait for guard to become true with a timeout of 200ms
+// wait for guard to become true with a timeout of 2000ms
 auto try_waiting_guard = [](std::atomic_bool& guard) {
   using namespace std::chrono_literals;
   const auto wait_guard = 20ms;

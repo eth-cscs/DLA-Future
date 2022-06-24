@@ -46,7 +46,7 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
       message(WARNING
         "When using DLAF_MPI_PRESET=slurm this option should be enabled. "
-        "You may incur in performance drop. Do it are your own risk")
+        "You may incur in performance drop. Do it at your own risk.")
     endif()
 
     execute_process(COMMAND which srun OUTPUT_VARIABLE SLURM_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE)

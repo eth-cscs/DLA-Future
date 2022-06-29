@@ -236,17 +236,23 @@ pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
 //
 template <class T>
 pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   std::vector<pika::future<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    tiles_max.push_back(pika::dataflow(pika::unwrapping(tile::internal::lange_o), lapack::Norm::Max,
-                                       vec.read(LocalTileIndex(i, 0))));
+    tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read_sender(LocalTileIndex(i, 0))) |
+                        tile::lange(di::Policy<Backend::MC>(pika::threads::thread_priority::normal)) |
+                        ex::make_future());
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
     return *std::max_element(maxvals.begin(), maxvals.end());
   };
-  return pika::dataflow(pika::unwrapping(std::move(tol_calc_fn)), std::move(tiles_max));
+
+  return ex::when_all_vector(std::move(tiles_max)) |
+         di::transform(di::Policy<Backend::MC>(), std::move(tol_calc_fn)) | ex::make_future();
 }
 
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].

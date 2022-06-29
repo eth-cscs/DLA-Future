@@ -14,7 +14,6 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/eigensolver/tridiag_solver/index.h"
 #include "dlaf/lapack/laed4.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -25,6 +24,7 @@
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
+#include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -149,6 +149,32 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
   SizeType nb = distr.blockSize().rows();
   SizeType nbr = distr.tileSize(GlobalTileIndex(i_end, 0)).rows();
   return (i_end - i_begin) * nb + nbr;
+}
+
+inline void initIndexTile(SizeType tile_row, const matrix::Tile<SizeType, Device::CPU>& index) {
+  for (SizeType i = 0; i < index.size().rows(); ++i) {
+    index(TileElementIndex(i, 0)) = tile_row + i;
+  }
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(initIndexTile, initIndexTile_o)
+
+// The index starts at `0` for tiles in the range [i_begin, i_end].
+inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
+  using dlaf::internal::Policy;
+  using dlaf::internal::whenAllLift;
+  using pika::execution::experimental::start_detached;
+  using pika::threads::thread_priority;
+
+  SizeType nb = index.distribution().blockSize().rows();
+
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    GlobalTileIndex tile_idx(i, 0);
+    SizeType tile_row = (i - i_begin) * nb;
+    whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
+        initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+  }
 }
 
 // Copies and normalizes a row of the `tile` into the column vector tile `col`

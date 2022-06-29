@@ -8,8 +8,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-if (DLAF_WITH_CUDA)
-  DLAF_addTest(test_lacpy
+if(DLAF_WITH_CUDA)
+  DLAF_addTest(
+    test_lacpy
     SOURCES test_lacpy.cpp
     LIBRARIES dlaf.core
     USE_MAIN PLAIN

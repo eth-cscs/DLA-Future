@@ -10,7 +10,7 @@
 
 @PACKAGE_INIT@
 
-if (NOT TARGET DLAF)
+if(NOT TARGET DLAF)
   include(${CMAKE_CURRENT_LIST_DIR}/DLAF-Targets.cmake)
 endif()
 
@@ -28,7 +28,7 @@ include(CMakeFindDependencyMacro)
 find_dependency(MPI)
 
 # ----- LAPACK
-if (DLAF_WITH_MKL)
+if(DLAF_WITH_MKL)
   set(MKL_ROOT "@MKL_ROOT@")
   set(MKL_CUSTOM_THREADING "@MKL_THREADING@")
 

@@ -45,9 +45,6 @@ auto newBlockMatrixStrided() {
   return matrix;
 }
 
-template <typename...>
-struct check_type;
-
 enum class ContiguousInput : bool { Yes = true, No = false };
 
 template <ContiguousInput contiguous_input, class T, Device input_device, Device destination_device,

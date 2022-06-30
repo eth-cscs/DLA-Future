@@ -229,7 +229,13 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
 //
 template <class T>
 pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
-  return pika::dataflow(pika::unwrapping([](T rho) { return 2 * std::abs(rho); }), std::move(rho_fut));
+  // Note: `keep_future()` is needed here even though `T` is a scalar type (not a `Tile<>`) otherwise there
+  // is a compile-time error. However, an upcoming fix in pika may allow us to drop `keep_future()` here.
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+  return ex::keep_future(std::move(rho_fut)) |
+         di::transform(di::Policy<Backend::MC>(), [](T rho) { return 2 * std::abs(rho); }) |
+         ex::make_future();
 }
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end` including.

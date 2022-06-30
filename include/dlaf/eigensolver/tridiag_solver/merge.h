@@ -230,7 +230,7 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
 template <class T>
 pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
   // Note: `keep_future()` is needed here even though `T` is a scalar type (not a `Tile<>`) otherwise there
-  // is a compile-time error. However, an upcoming fix in pika may allow us to drop `keep_future()` here.
+  // is a compile-time error. A fix will be available in pika@0.6.0 : https://github.com/pika-org/pika/pull/282
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   return ex::keep_future(std::move(rho_fut)) |

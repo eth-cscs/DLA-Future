@@ -116,16 +116,23 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
 
     const auto owner = dist_source.rankGlobalTile(ij_tile);
 
+    namespace ex = pika::execution::experimental;
+    namespace tt = pika::this_thread::experimental;
+
     auto& dest_tile = dest.tile(ij_tile);
 
     if (owner == rank) {
       const auto& source_tile = source.read(ij_tile).get();
-      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
+      tt::sync_wait(ex::schedule(ex::std_thread_scheduler{}) | ex::then([&]() {
+                      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
+                    }));
       matrix::internal::copy(source_tile, dest_tile);
     }
     else {
-      comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),
-                                          comm_grid.fullCommunicator(), dest_tile);
+      tt::sync_wait(ex::schedule(ex::std_thread_scheduler{}) | ex::then([&]() {
+                      comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),
+                                                          comm_grid.fullCommunicator(), dest_tile);
+                    }));
     }
   }
 

@@ -13,7 +13,6 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <pika/runtime.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
@@ -163,7 +162,6 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
               TypeParam alpha = TypeUtilities<TypeParam>::element(-1.2, .7);
               testTriangularSolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, op, diag,
                                                                         alpha, m, n, mb, nb);
-              pika::threads::get_thread_manager().wait();
             }
           }
         }
@@ -201,7 +199,6 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
 
               testTriangularSolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, op, diag,
                                                                          alpha, m, n, mb, nb);
-              pika::threads::get_thread_manager().wait();
             }
           }
         }

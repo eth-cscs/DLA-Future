@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
 #include <pika/future.hpp>
-#include <pika/runtime.hpp>
+#include <pika/unwrap.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -218,19 +218,29 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size,
 
     const auto this_chunk_size = std::min(k - index_chunk * chunk_size, chunk_size);
 
+    namespace ex = pika::execution::experimental;
+    namespace tt = pika::this_thread::experimental;
+
     std::vector<T> chunk_data;
     if (is_owner) {
       const auto index_chunk_local = to_sizet(index_chunk / comm_grid.size().cols());
       chunk_data = local_taus.at(index_chunk_local);
-      sync::broadcast::send(comm_grid.rowCommunicator(),
-                            common::make_data(chunk_data.data(),
-                                              static_cast<SizeType>(chunk_data.size())));
+
+      tt::sync_wait(ex::schedule(ex::std_thread_scheduler{}) | ex::then([&]() {
+                      sync::broadcast::send(comm_grid.rowCommunicator(),
+                                            common::make_data(chunk_data.data(),
+                                                              static_cast<SizeType>(chunk_data.size())));
+                    }));
     }
     else {
       chunk_data.resize(to_sizet(this_chunk_size));
-      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
-                                    common::make_data(chunk_data.data(),
-                                                      static_cast<SizeType>(chunk_data.size())));
+
+      tt::sync_wait(
+          ex::schedule(ex::std_thread_scheduler{}) | ex::then([&]() {
+            sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
+                                          common::make_data(chunk_data.data(),
+                                                            static_cast<SizeType>(chunk_data.size())));
+          }));
     }
 
     // copy each chunk contiguously
@@ -396,7 +406,6 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
       copy(reference, matrix_a);
 
       auto local_taus = eigensolver::reductionToBand<Backend::MC>(comm_grid, matrix_a);
-      pika::threads::get_thread_manager().wait();
 
       checkUpperPartUnchanged(reference, matrix_a);
 

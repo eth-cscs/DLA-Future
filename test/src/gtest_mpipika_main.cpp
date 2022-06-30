@@ -43,6 +43,7 @@
 
 #include <gtest/gtest.h>
 
+#include <pika/execution.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
@@ -89,8 +90,15 @@ GTEST_API_ int main(int argc, char** argv) {
 
   protected:
     virtual void OnTestEnd(const ::testing::TestInfo& test_info) override {
-      pika::threads::get_thread_manager().wait();
-      MPIListener::OnTestEnd(test_info);
+      namespace ex = pika::execution::experimental;
+      namespace tt = pika::this_thread::experimental;
+
+      // The MPIListener does blocking MPI communication which risks blocking
+      // progress when run on a pika thread. We instead call OnTestEnd on a
+      // separate std::thread and sync_wait for the result. sync_wait yields the
+      // pika thread if needed until OnTestEnd is done.
+      tt::sync_wait(ex::schedule(ex::std_thread_scheduler{}) |
+                    ex::then([&]() { MPIListener::OnTestEnd(test_info); }));
     }
   };
 

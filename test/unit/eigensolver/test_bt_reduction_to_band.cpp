@@ -14,7 +14,7 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <pika/runtime.hpp>
+#include <pika/future.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -235,7 +235,6 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
       (void) mb;
 
       testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, b, nb);
-      pika::threads::get_thread_manager().wait();
     }
   }
 }

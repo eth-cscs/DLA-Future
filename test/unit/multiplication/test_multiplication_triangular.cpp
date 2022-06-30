@@ -13,7 +13,6 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <pika/runtime.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -170,7 +169,6 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
               testTriangularMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo,
                                                                                 op, diag, alpha, m, n,
                                                                                 mb, nb);
-              pika::threads::get_thread_manager().wait();
             }
           }
         }
@@ -211,7 +209,6 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
               testTriangularMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo,
                                                                                  op, diag, alpha, m, n,
                                                                                  mb, nb);
-              pika::threads::get_thread_manager().wait();
             }
           }
         }

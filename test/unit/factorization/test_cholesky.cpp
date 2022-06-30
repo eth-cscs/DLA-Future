@@ -13,7 +13,6 @@
 #include <tuple>
 
 #include <gtest/gtest.h>
-#include <pika/runtime.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
@@ -109,7 +108,6 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
-        pika::threads::get_thread_manager().wait();
       }
     }
   }
@@ -129,7 +127,6 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
-        pika::threads::get_thread_manager().wait();
       }
     }
   }

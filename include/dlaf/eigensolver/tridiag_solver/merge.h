@@ -668,25 +668,39 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
 //       parallelized trivially. Current implementation is serial.
 //
 template <class T>
-void applyGivensRotationsToMatrixColumns(SizeType n, SizeType nb, std::vector<GivensRotation<T>> rots,
-                                         std::vector<matrix::Tile<T, Device::CPU>> tiles) {
-  // Distribution of the merged subproblems
-  matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
+                                         pika::future<std::vector<GivensRotation<T>>> rots_fut,
+                                         Matrix<T, Device::CPU>& mat) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
-  for (const GivensRotation<T>& rot : rots) {
-    // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
-    SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
-    SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
-    T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
+  SizeType n = problemSize(i_begin, i_end, mat.distribution());
+  SizeType nb = mat.distribution().blockSize().rows();
 
-    // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
-    SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
-    SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
-    T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
+  auto givens_rots_fn = [n, nb](auto rots, auto tiles) {
+    // Distribution of the merged subproblems
+    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-    // Apply Givens rotations
-    blas::rot(n, x, 1, y, 1, rot.c, rot.s);
-  }
+    for (const GivensRotation<T>& rot : rots) {
+      // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
+      SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
+      SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
+      T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
+
+      // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
+      SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
+      SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
+      T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
+
+      // Apply Givens rotations
+      blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+    }
+  };
+
+  TileCollector tc{i_begin, i_end};
+
+  ex::when_all(std::move(rots_fut), ex::when_all_vector(tc.readwrite(mat))) |
+      di::transform(di::Policy<Backend::MC>(), std::move(givens_rots_fn)) | ex::ensure_started();
 }
 
 template <class T>
@@ -987,11 +1001,8 @@ template <class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
                       pika::shared_future<T> rho_fut, Matrix<T, Device::CPU>& d,
                       Matrix<T, Device::CPU>& mat_ev) {
-  // Calculate the merged size of the subproblem
+  // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, mat_ev.distribution());
-  SizeType n2 = problemSize(i_split + 1, i_end, mat_ev.distribution());
-  SizeType n = n1 + n2;
-  SizeType nb = mat_ev.distribution().blockSize().rows();
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, ws.z);
@@ -1017,10 +1028,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.i1, ws.i2);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
-
-  TileCollector tc{i_begin, i_end};
-  pika::dataflow(pika::unwrapping(applyGivensRotationsToMatrixColumns<T>), n, nb, std::move(rots_fut),
-                 tc.readwrite(mat_ev));
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), mat_ev);
 
   // Step #2
   //

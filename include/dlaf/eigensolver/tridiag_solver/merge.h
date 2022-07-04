@@ -241,16 +241,15 @@ pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end` including.
 //
 template <class T>
-pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
+auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  std::vector<pika::future<T>> tiles_max;
+  std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
     tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read_sender(LocalTileIndex(i, 0))) |
-                        tile::lange(di::Policy<Backend::MC>(pika::threads::thread_priority::normal)) |
-                        ex::make_future());
+                        tile::lange(di::Policy<Backend::MC>(pika::threads::thread_priority::normal)));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -258,7 +257,7 @@ pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const 
   };
 
   return ex::when_all_vector(std::move(tiles_max)) |
-         di::transform(di::Policy<Backend::MC>(), std::move(tol_calc_fn)) | ex::make_future();
+         di::transform(di::Policy<Backend::MC>(), std::move(tol_calc_fn));
 }
 
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
@@ -267,13 +266,18 @@ pika::future<T> maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const 
 template <class T>
 pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& d,
                               Matrix<const T, Device::CPU>& z) {
-  pika::future<T> dmax_fut = maxVectorElement(i_begin, i_end, d);
-  pika::future<T> zmax_fut = maxVectorElement(i_begin, i_end, z);
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  auto dmax_fut = maxVectorElement(i_begin, i_end, d);
+  auto zmax_fut = maxVectorElement(i_begin, i_end, z);
 
   auto tol_fn = [](T dmax, T zmax) {
     return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
   };
-  return pika::dataflow(pika::unwrapping(std::move(tol_fn)), std::move(dmax_fut), std::move(zmax_fut));
+
+  return ex::when_all(std::move(dmax_fut), std::move(zmax_fut)) |
+         di::transform(di::Policy<Backend::MC>(), std::move(tol_fn)) | ex::make_future();
 }
 
 struct TileCollector {

@@ -298,13 +298,13 @@ public:
   template <class T>
   auto read(Matrix<const T, Device::CPU>& mat) {
     auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadTileFutures(begin, end, mat);
+    return matrix::util::collectReadTiles(begin, end, mat);
   }
 
   template <class T>
   auto readwrite(Matrix<T, Device::CPU>& mat) {
     auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadWriteTileFutures(begin, end, mat);
+    return matrix::util::collectReadWriteTiles(begin, end, mat);
   }
 };
 
@@ -338,17 +338,18 @@ template <class T>
 void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                Matrix<const T, Device::CPU>& vec, Matrix<const SizeType, Device::CPU>& in_index,
                Matrix<SizeType, Device::CPU>& out_index) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, vec.distribution());
-  auto sort_fn = [n](auto k_fut, auto vec, auto in_index, auto out_index) {
+  auto sort_fn = [n](auto k_fut, auto vec_futs, auto in_index_futs, auto out_index) {
     SizeType k = k_fut.get();
     DLAF_ASSERT(k <= n, k, n);
 
     TileElementIndex zero_idx(0, 0);
-    const T* v_ptr = vec[0].get().ptr(zero_idx);
-    const SizeType* in_index_ptr = in_index[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto out_index_tile = out_index[0].get();
-    SizeType* out_index_ptr = out_index_tile.ptr(zero_idx);
+    const T* v_ptr = vec_futs[0].get().ptr(zero_idx);
+    const SizeType* in_index_ptr = in_index_futs[0].get().ptr(zero_idx);
+    SizeType* out_index_ptr = out_index[0].ptr(zero_idx);
 
     auto begin_it = in_index_ptr;
     auto split_it = in_index_ptr + k;
@@ -358,8 +359,12 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(sort_fn), std::move(k_fut), tc.read(vec), tc.read(in_index),
-                 tc.readwrite(out_index));
+
+  auto sender =
+      ex::when_all(ex::keep_future(k_fut), ex::when_all_vector(tc.read(vec)),
+                   ex::when_all_vector(tc.read(in_index)), ex::when_all_vector(tc.readwrite(out_index)));
+  ex::start_detached(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(sort_fn), std::move(sender)));
 }
 
 // Applies `index` to `in` to get `out`
@@ -370,14 +375,15 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 template <class T>
 void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
                 Matrix<const T, Device::CPU>& in, Matrix<T, Device::CPU>& out) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, index.distribution());
-  auto applyIndex_fn = [n](auto index, auto in, auto out) {
+  auto applyIndex_fn = [n](auto index_futs, auto in_futs, auto out) {
     TileElementIndex zero_idx(0, 0);
-    const SizeType* i_ptr = index[0].get().ptr(zero_idx);
-    const T* in_ptr = in[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto out_tile = out[0].get();
-    T* out_ptr = out_tile.ptr(zero_idx);
+    const SizeType* i_ptr = index_futs[0].get().ptr(zero_idx);
+    const T* in_ptr = in_futs[0].get().ptr(zero_idx);
+    T* out_ptr = out[0].ptr(zero_idx);
 
     for (SizeType i = 0; i < n; ++i) {
       out_ptr[i] = in_ptr[i_ptr[i]];
@@ -385,20 +391,25 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device:
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(applyIndex_fn), tc.read(index), tc.read(in), tc.readwrite(out));
+
+  auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
+                             ex::when_all_vector(tc.readwrite(out)));
+  ex::start_detached(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(applyIndex_fn), std::move(sender)));
 }
 
 inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& outer,
                            Matrix<const SizeType, Device::CPU>& inner,
                            Matrix<SizeType, Device::CPU>& result) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, outer.distribution());
-  auto compose_fn = [n](auto outer_tiles, auto inner_tiles, auto result_tiles) {
+  auto compose_fn = [n](auto outer_tiles_futs, auto inner_tiles_futs, auto result_tiles) {
     TileElementIndex zero_idx(0, 0);
-    const SizeType* inner_ptr = outer_tiles[0].get().ptr(zero_idx);
-    const SizeType* outer_ptr = inner_tiles[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto result_tile = result_tiles[0].get();
-    SizeType* result_ptr = result_tile.ptr(zero_idx);
+    const SizeType* inner_ptr = outer_tiles_futs[0].get().ptr(zero_idx);
+    const SizeType* outer_ptr = inner_tiles_futs[0].get().ptr(zero_idx);
+    SizeType* result_ptr = result_tiles[0].ptr(zero_idx);
 
     for (SizeType i = 0; i < n; ++i) {
       result_ptr[i] = outer_ptr[inner_ptr[i]];
@@ -406,18 +417,24 @@ inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeTy
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(compose_fn, tc.read(outer), tc.read(inner), tc.readwrite(result));
+
+  auto sender = ex::when_all(ex::when_all_vector(tc.read(outer)), ex::when_all_vector(tc.read(inner)),
+                             ex::when_all_vector(tc.readwrite(result)));
+
+  ex::start_detached(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(compose_fn), std::move(sender)));
 }
 
 inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
                         Matrix<SizeType, Device::CPU>& out) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto inv_fn = [n](auto in_tiles, auto out_tiles) {
+  auto inv_fn = [n](auto in_tiles_futs, auto out_tiles) {
     TileElementIndex zero(0, 0);
-    const SizeType* in_ptr = in_tiles[0].get().ptr(zero);
-    // save in variable avoid releasing the tile too soon
-    auto out_tile = out_tiles[0].get();
-    SizeType* out_ptr = out_tile.ptr(zero);
+    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
+    SizeType* out_ptr = out_tiles[0].ptr(zero);
 
     for (SizeType i = 0; i < n; ++i) {
       out_ptr[in_ptr[i]] = i;
@@ -425,7 +442,10 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(inv_fn), tc.read(in), tc.readwrite(out));
+  auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
+
+  ex::start_detached(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
@@ -455,19 +475,24 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
                                                                Matrix<const ColType, Device::CPU>& c,
                                                                Matrix<const SizeType, Device::CPU>& in,
                                                                Matrix<SizeType, Device::CPU>& out) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto part_fn = [n](auto c_tiles, auto in_tiles, auto out_tiles) {
+  auto part_fn = [n](auto c_tiles_futs, auto in_tiles_futs, auto out_tiles) {
     TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
-    const SizeType* in_ptr = in_tiles[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto out_tile = out_tiles[0].get();
-    SizeType* out_ptr = out_tile.ptr(zero_idx);
+    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+    SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
     return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(part_fn, tc.read(c), tc.read(in), tc.readwrite(out));
+  auto sender = ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
+                             ex::when_all_vector(tc.readwrite(out)));
+
+  return ex::make_future(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(part_fn), std::move(sender)));
 }
 
 // Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
@@ -483,13 +508,14 @@ inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_p
 inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
     SizeType i_begin, SizeType i_end, Matrix<const ColType, Device::CPU>& c,
     Matrix<SizeType, Device::CPU>& index) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, c.distribution());
-  auto part_fn = [n](auto c_tiles, auto index_tiles) {
+  auto part_fn = [n](auto c_tiles_futs, auto index_tiles) {
     TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto index_tile = index_tiles[0].get();
-    SizeType* i_ptr = index_tile.ptr(zero_idx);
+    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+    SizeType* i_ptr = index_tiles[0].ptr(zero_idx);
 
     ColTypeLens ql;
     ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
@@ -500,7 +526,9 @@ inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(part_fn), tc.read(c), tc.readwrite(index));
+  auto sender = ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.readwrite(index)));
+  return ex::make_future(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(part_fn), std::move(sender)));
 };
 
 inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
@@ -606,26 +634,29 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
     SizeType i_begin, SizeType i_end, pika::shared_future<T> rho_fut, pika::shared_future<T> tol_fut,
     Matrix<const SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
     Matrix<ColType, Device::CPU>& c) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, index.distribution());
 
-  auto deflate_fn = [n](auto rho_fut, auto tol_fut, auto index_tiles, auto d_tiles, auto z_tiles,
+  auto deflate_fn = [n](auto rho_fut, auto tol_fut, auto index_tiles_futs, auto d_tiles, auto z_tiles,
                         auto c_tiles) {
     TileElementIndex zero_idx(0, 0);
-    const SizeType* i_ptr = index_tiles[0].get().ptr(zero_idx);
-    // save in variable avoid releasing the tile too soon
-    auto d_tile = d_tiles[0].get();
-    auto z_tile = z_tiles[0].get();
-    auto c_tile = c_tiles[0].get();
-    T* d_ptr = d_tile.ptr(zero_idx);
-    T* z_ptr = z_tile.ptr(zero_idx);
-    ColType* c_ptr = c_tile.ptr(zero_idx);
-
+    const SizeType* i_ptr = index_tiles_futs[0].get().ptr(zero_idx);
+    T* d_ptr = d_tiles[0].ptr(zero_idx);
+    T* z_ptr = z_tiles[0].ptr(zero_idx);
+    ColType* c_ptr = c_tiles[0].ptr(zero_idx);
     return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
   };
 
   TileCollector tc{i_begin, i_end};
-  return pika::dataflow(std::move(deflate_fn), std::move(rho_fut), std::move(tol_fut), tc.read(index),
-                        tc.readwrite(d), tc.readwrite(z), tc.readwrite(c));
+
+  auto sender = ex::when_all(ex::keep_future(rho_fut), ex::keep_future(tol_fut),
+                             ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
+                             ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
+
+  return ex::make_future(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender)));
 }
 
 // Assumption: the memory layout of the matrix from which the tiles are coming is column major.
@@ -663,23 +694,22 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
                        pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
                        Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
                        Matrix<T, Device::CPU>& evecs) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
 
-  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles, auto z_tiles, auto eval_tiles,
-                          auto evec_tiles_fut) {
+  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles_futs, auto z_tiles_futs,
+                          auto eval_tiles, auto evec_tiles) {
     SizeType k = k_fut.get();
     T rho = rho_fut.get();
 
     TileElementIndex zero(0, 0);
-    const T* d_ptr = d_tiles[0].get().ptr(zero);
-    const T* z_ptr = z_tiles[0].get().ptr(zero);
+    const T* d_ptr = d_tiles_futs[0].get().ptr(zero);
+    const T* z_ptr = z_tiles_futs[0].get().ptr(zero);
+    T* eval_ptr = eval_tiles[0].ptr(zero);
 
-    // save in variable avoid releasing the tile too soon
-    auto eval_tile = eval_tiles[0].get();
-    T* eval_ptr = eval_tile.ptr(zero);
-
-    auto evec_tiles = pika::unwrap(std::move(evec_tiles_fut));
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
     std::vector<SizeType> loop_arr(to_sizet(k));
@@ -697,8 +727,14 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
   };
 
   TileCollector tc{i_begin, i_end};
-  pika::dataflow(std::move(rank1_fn), std::move(k_fut), std::move(rho_fut), tc.read(d), tc.read(z),
-                 tc.readwrite(evals), tc.readwrite(evecs));
+
+  auto sender =
+      ex::when_all(ex::keep_future(k_fut), ex::keep_future(rho_fut), ex::when_all_vector(tc.read(d)),
+                   ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
+                   ex::when_all_vector(tc.readwrite(evecs)));
+
+  ex::ensure_started(
+      di::transform<false>(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
 }
 
 // References:
@@ -709,6 +745,9 @@ template <class T>
 void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                Matrix<const T, Device::CPU>& diag, Matrix<const T, Device::CPU>& z,
                Matrix<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evecs) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   using ConstTileType = matrix::Tile<const T, Device::CPU>;
   using TileType = matrix::Tile<T, Device::CPU>;
 
@@ -740,9 +779,11 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
           }
         }
       };
-      pika::dataflow(pika::unwrapping(std::move(mul_rows)), k_fut, diag.read(GlobalTileIndex(i_tile, 0)),
-                     diag.read(GlobalTileIndex(j_tile, 0)), evecs.read(GlobalTileIndex(i_tile, j_tile)),
-                     ws(GlobalTileIndex(i_tile, j_tile)));
+      ex::when_all(ex::keep_future(k_fut), diag.read_sender(GlobalTileIndex(i_tile, 0)),
+                   diag.read_sender(GlobalTileIndex(j_tile, 0)),
+                   evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                   ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
+          di::transform(di::Policy<Backend::MC>(), std::move(mul_rows)) | ex::ensure_started();
     }
   }
 
@@ -763,8 +804,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
           ws_tile_col(idx) = ws_tile_col(idx) * ws_tile(idx);
         }
       };
-      pika::dataflow(pika::unwrapping(std::move(acc_col_ws_fn)), k_fut,
-                     ws.read(GlobalTileIndex(i_tile, j_tile)), ws(GlobalTileIndex(i_tile, i_begin)));
+
+      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                   ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin))) |
+          di::transform(di::Policy<Backend::MC>(), std::move(acc_col_ws_fn)) | ex::ensure_started();
     }
   }
 
@@ -791,8 +834,11 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
           }
         }
       };
-      pika::dataflow(pika::unwrapping(std::move(weights_vec)), k_fut, z.read(GlobalTileIndex(i_tile, 0)),
-                     ws.read(GlobalTileIndex(i_tile, i_begin)), evecs(GlobalTileIndex(i_tile, j_tile)));
+
+      ex::when_all(ex::keep_future(k_fut), z.read_sender(GlobalTileIndex(i_tile, 0)),
+                   ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
+                   evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
+          di::transform(di::Policy<Backend::MC>(), std::move(weights_vec)) | ex::ensure_started();
     }
   }
 
@@ -820,7 +866,9 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       };
 
       GlobalTileIndex mat_idx(i_tile, j_tile);
-      pika::dataflow(pika::unwrapping(std::move(locnorm_fn)), k_fut, evecs.read(mat_idx), ws(mat_idx));
+
+      ex::when_all(ex::keep_future(k_fut), evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx)) |
+          di::transform(di::Policy<Backend::MC>(), std::move(locnorm_fn)) | ex::ensure_started();
     }
   }
 
@@ -840,8 +888,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      pika::dataflow(pika::unwrapping(std::move(sum_first_tile_cols_fn)), k_fut,
-                     ws.read(GlobalTileIndex(i_tile, j_tile)), ws(GlobalTileIndex(i_begin, j_tile)));
+      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                   ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile))) |
+          di::transform(di::Policy<Backend::MC>(), std::move(sum_first_tile_cols_fn)) |
+          ex::ensure_started();
     }
   }
 
@@ -866,8 +916,9 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      pika::dataflow(pika::unwrapping(std::move(scale_fn)), k_fut,
-                     ws.read(GlobalTileIndex(i_begin, j_tile)), evecs(GlobalTileIndex(i_tile, j_tile)));
+      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
+                   evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
+          di::transform(di::Policy<Backend::MC>(), std::move(scale_fn)) | ex::ensure_started();
     }
   }
 }
@@ -890,6 +941,9 @@ void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& so
 template <class T>
 void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                  Matrix<T, Device::CPU>& mat) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   auto diag_f = [](SizeType k, SizeType tile_begin, matrix::Tile<T, Device::CPU> tile) {
     // If all elements of the tile are after the `k` index reset the offset
     SizeType tile_offset = k - tile_begin;
@@ -907,7 +961,10 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType tile_begin = distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_tile, 0) -
                           distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0);
-    pika::dataflow(pika::unwrapping(diag_f), k_fut, tile_begin, mat(GlobalTileIndex(i_tile, i_tile)));
+
+    di::whenAllLift(ex::keep_future(k_fut), tile_begin,
+                    mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile))) |
+        di::transform(di::Policy<Backend::MC>(), std::move(diag_f)) | ex::ensure_started();
   }
 }
 

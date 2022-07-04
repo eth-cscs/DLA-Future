@@ -409,29 +409,6 @@ auto collectReadTiles(GlobalTileIndex begin, GlobalTileSize sz, Matrix<const T, 
   return tiles;
 }
 
-template <class T, Device D>
-std::vector<pika::shared_future<matrix::Tile<const T, D>>> collectReadTileFutures(
-    GlobalTileIndex begin, GlobalTileSize sz, Matrix<const T, D>& mat) {
-  std::vector<pika::shared_future<matrix::Tile<const T, D>>> tiles;
-  tiles.reserve(to_sizet(sz.linear_size()));
-  for (auto idx : iterate_range2d(begin, sz)) {
-    tiles.push_back(mat.read(idx));
-  }
-  return tiles;
-}
-
-template <class T, Device D>
-std::vector<pika::future<matrix::Tile<T, D>>> collectReadWriteTileFutures(GlobalTileIndex begin,
-                                                                          GlobalTileSize sz,
-                                                                          Matrix<T, D>& mat) {
-  std::vector<pika::future<matrix::Tile<T, D>>> tiles;
-  tiles.reserve(to_sizet(sz.linear_size()));
-  for (auto idx : iterate_range2d(begin, sz)) {
-    tiles.push_back(mat(idx));
-  }
-  return tiles;
-}
-
 }
 }
 }

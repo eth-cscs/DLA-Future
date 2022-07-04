@@ -19,6 +19,8 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
+#include "dlaf/matrix/print_csv.h"
+
 using namespace dlaf;
 using namespace dlaf::test;
 
@@ -204,66 +206,94 @@ void testApplyRowPermutations(SizeType n, SizeType nb) {
   }
 }
 
-// Permute columns or rows in reverse order.
-// Each column or row of the input matrix has its index as a value.
+// Each column/row of the input matrix has its index as a value.
+//
+// The portion of the input matrices rows/columns specified by `i_begin` and `i_end` are placed in
+// reverse order into the output matrix.
 template <Backend B, Device D, class T, Coord C>
-void testPermutations(SizeType n, SizeType nb) {
+void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end) {
   Matrix<SizeType, Device::CPU> perms(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Matrix<T, Device::CPU> mat_in_h(LocalElementSize(n, n), TileElementSize(nb, nb));
   Matrix<T, Device::CPU> mat_out_h(LocalElementSize(n, n), TileElementSize(nb, nb));
 
-  dlaf::matrix::util::set(perms, [n](GlobalElementIndex i) { return n - 1 - i.row(); });
+  const matrix::Distribution& distr = mat_out_h.distribution();
+
+  SizeType index_start = distr.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
+  SizeType index_finish = distr.globalElementFromGlobalTileAndTileElement<C>(i_end, 0) +
+                          distr.tileSize(GlobalTileIndex(i_end, i_end)).get<C>();
+  dlaf::matrix::util::set(perms, [index_start, index_finish](GlobalElementIndex i) {
+    if (index_start > i.row() || i.row() >= index_finish)
+      return SizeType(0);
+
+    return index_finish - 1 - i.row();
+  });
   dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) { return T(i.get<C>()); });
+  dlaf::matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, mat_out_h);
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
-    SizeType i_begin = 0;
-    SizeType i_end = perms.distribution().nrTiles().rows() - 1;
     permutations::permute<B, D, T, C>(i_begin, i_end, perms, mat_in.get(), mat_out.get());
   }
 
-  auto expected_out = [n](const GlobalElementIndex i) { return T(n - 1 - i.get<C>()); };
+  auto expected_out = [i_begin, i_end, index_start, index_finish, &distr](const GlobalElementIndex i) {
+    GlobalTileIndex i_tile = distr.globalTileIndex(i);
+    if (i_begin <= i_tile.row() && i_tile.row() <= i_end && i_begin <= i_tile.col() &&
+        i_tile.col() <= i_end) {
+      return T(index_finish + index_start - 1 - i.get<C>());
+    }
+    else {
+      return T(0);
+    }
+  };
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 
-TYPED_TEST(PermutationsTestCPU, ApplyColumnPermutations) {
-  SizeType n = 10;
-  SizeType nb = 3;
+// TYPED_TEST(PermutationsTestCPU, ApplyColumnPermutations) {
+//   SizeType n = 10;
+//   SizeType nb = 3;
+//
+//   testApplyColumnPermutations<Device::CPU, TypeParam>(n, nb);
+// }
+//
+// TYPED_TEST(PermutationsTestCPU, ApplyRowPermutations) {
+//   SizeType n = 10;
+//   SizeType nb = 3;
+//
+//   testApplyRowPermutations<Device::CPU, TypeParam>(n, nb);
+// }
 
-  testApplyColumnPermutations<Device::CPU, TypeParam>(n, nb);
-}
-
-TYPED_TEST(PermutationsTestCPU, ApplyRowPermutations) {
-  SizeType n = 10;
-  SizeType nb = 3;
-
-  testApplyRowPermutations<Device::CPU, TypeParam>(n, nb);
-}
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+    // n, nb, i_begin, i_end
+    {10, 3, 0, 3},
+    {10, 3, 1, 2},
+    {10, 3, 1, 1},
+    {10, 10, 0, 0},
+    {10, 5, 1, 1}};
 
 TYPED_TEST(PermutationsTestCPU, Columns) {
-  SizeType n = 10;
-  SizeType nb = 3;
-  testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Col>(n, nb);
+  for (auto [n, nb, i_begin, i_end] : sizes) {
+    testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Col>(n, nb, i_begin, i_end);
+  }
 }
 
 TYPED_TEST(PermutationsTestCPU, Rows) {
-  SizeType n = 10;
-  SizeType nb = 3;
-  testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Row>(n, nb);
+  for (auto [n, nb, i_begin, i_end] : sizes) {
+    testPermutations<Backend::MC, Device::CPU, TypeParam, Coord::Row>(n, nb, i_begin, i_end);
+  }
 }
 
 #ifdef DLAF_WITH_CUDA
 TYPED_TEST(PermutationsTestGPU, Columns) {
-  SizeType n = 10;
-  SizeType nb = 3;
-  testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Col>(n, nb);
+  for (auto [n, nb, i_begin, i_end] : sizes) {
+    testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Col>(n, nb, i_begin, i_end);
+  }
 }
 
 TYPED_TEST(PermutationsTestGPU, Rows) {
-  SizeType n = 10;
-  SizeType nb = 3;
-  testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Row>(n, nb);
+  for (auto [n, nb, i_begin, i_end] : sizes) {
+    testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Row>(n, nb, i_begin, i_end);
+  }
 }
 #endif

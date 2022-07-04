@@ -312,6 +312,9 @@ public:
 template <class U>
 void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& in,
                 Matrix<U, Device::CPU>& out) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   auto copy_fn = [](const matrix::Tile<const U, Device::CPU>& in,
                     const matrix::Tile<U, Device::CPU>& out) {
     SizeType rows = in.size().rows();
@@ -322,7 +325,8 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& 
   };
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex idx(i, 0);
-    pika::dataflow(pika::unwrapping(copy_fn), in.read(idx), out(idx));
+    ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
+        di::transform(di::Policy<Backend::MC>(), copy_fn) | ex::start_detached();
   }
 }
 

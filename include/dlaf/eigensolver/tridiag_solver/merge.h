@@ -468,42 +468,6 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
       di::transform<false>(di::Policy<Backend::MC>(), std::move(part_fn), std::move(sender)));
 }
 
-// Partitions `p_ptr` based on a `ctype` in `c_ptr` array.
-//
-// Returns the number of elements in the second partition.
-inline SizeType partitionColType(SizeType len, ColType ctype, const ColType* c_ptr, SizeType* i_ptr) {
-  auto it = pika::partition(pika::execution::par, i_ptr, i_ptr + len,
-                            [ctype, c_ptr](SizeType i) { return ctype != c_ptr[i]; });
-  return len - std::distance(i_ptr, it);
-}
-
-// Partition `coltypes` to get the indices of the matrix-multiplication form
-inline pika::future<ColTypeLens> partitionIndexForMatrixMultiplication(
-    SizeType i_begin, SizeType i_end, Matrix<const ColType, Device::CPU>& c,
-    Matrix<SizeType, Device::CPU>& index) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  SizeType n = problemSize(i_begin, i_end, c.distribution());
-  auto part_fn = [n](auto c_tiles_futs, auto index_tiles) {
-    TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-    SizeType* i_ptr = index_tiles[0].ptr(zero_idx);
-
-    ColTypeLens ql;
-    ql.num_deflated = partitionColType(n, ColType::Deflated, c_ptr, i_ptr);
-    ql.num_lowhalf = partitionColType(n - ql.num_deflated, ColType::LowerHalf, c_ptr, i_ptr);
-    ql.num_dense = partitionColType(n - ql.num_deflated - ql.num_lowhalf, ColType::Dense, c_ptr, i_ptr);
-    ql.num_uphalf = n - ql.num_deflated - ql.num_lowhalf - ql.num_dense;
-    return ql;
-  };
-
-  TileCollector tc{i_begin, i_end};
-  auto sender = ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.readwrite(index)));
-  return ex::make_future(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(part_fn), std::move(sender)));
-};
-
 inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
   SizeType len = tile.size().rows();
   for (SizeType i = 0; i < len; ++i) {

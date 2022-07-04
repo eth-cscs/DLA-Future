@@ -133,53 +133,6 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   CHECK_MATRIX_EQ(expected_out, out);
 }
 
-TEST(PartitionIndexBasedOnColTypes, FullRange) {
-  SizeType n = 10;
-  SizeType nb = 3;
-
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
-
-  Matrix<ColType, Device::CPU> c(sz, bk);
-  Matrix<SizeType, Device::CPU> index(sz, bk);
-
-  std::vector<ColType> c_arr{ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
-                             ColType::Deflated,  ColType::UpperHalf, ColType::UpperHalf,
-                             ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
-                             ColType::LowerHalf};
-  DLAF_ASSERT(c_arr.size() == to_sizet(n), n);
-  dlaf::matrix::util::set(c, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
-
-  std::vector<SizeType> index_arr{1, 4, 0, 5, 6, 7, 9, 2, 3, 8};
-  dlaf::matrix::util::set(index,
-                          [&index_arr](GlobalElementIndex i) { return index_arr[to_sizet(i.row())]; });
-
-  SizeType i_begin = 0;
-  SizeType i_end = 3;
-  auto clens_fut = partitionIndexForMatrixMultiplication(i_begin, i_end, c, index);
-
-  //  non-stable partitioning may change the order of elements, that is why the output index is applied
-  //  to the vector and then checked for correctness
-  Matrix<ColType, Device::CPU> c_out(sz, bk);
-  applyIndex(i_begin, i_end, index, c, c_out);
-
-  std::vector<ColType> expected_out_arr{ColType::UpperHalf, ColType::UpperHalf, ColType::Dense,
-                                        ColType::Dense,     ColType::LowerHalf, ColType::LowerHalf,
-                                        ColType::LowerHalf, ColType::Deflated,  ColType::Deflated,
-                                        ColType::Deflated};
-
-  auto expected_out_fn = [&expected_out_arr](GlobalElementIndex i) {
-    return expected_out_arr[to_sizet(i.row())];
-  };
-  CHECK_MATRIX_EQ(expected_out_fn, c_out);
-
-  ColTypeLens clens = clens_fut.get();
-  ASSERT_TRUE(clens.num_deflated == 3);
-  ASSERT_TRUE(clens.num_dense == 2);
-  ASSERT_TRUE(clens.num_lowhalf == 3);
-  ASSERT_TRUE(clens.num_uphalf == 2);
-}
-
 TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   SizeType n = 10;
   SizeType nb = 3;

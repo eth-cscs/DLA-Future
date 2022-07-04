@@ -398,33 +398,6 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device:
       di::transform<false>(di::Policy<Backend::MC>(), std::move(applyIndex_fn), std::move(sender)));
 }
 
-inline void composeIndices(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& outer,
-                           Matrix<const SizeType, Device::CPU>& inner,
-                           Matrix<SizeType, Device::CPU>& result) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  SizeType n = problemSize(i_begin, i_end, outer.distribution());
-  auto compose_fn = [n](auto outer_tiles_futs, auto inner_tiles_futs, auto result_tiles) {
-    TileElementIndex zero_idx(0, 0);
-    const SizeType* inner_ptr = outer_tiles_futs[0].get().ptr(zero_idx);
-    const SizeType* outer_ptr = inner_tiles_futs[0].get().ptr(zero_idx);
-    SizeType* result_ptr = result_tiles[0].ptr(zero_idx);
-
-    for (SizeType i = 0; i < n; ++i) {
-      result_ptr[i] = outer_ptr[inner_ptr[i]];
-    }
-  };
-
-  TileCollector tc{i_begin, i_end};
-
-  auto sender = ex::when_all(ex::when_all_vector(tc.read(outer)), ex::when_all_vector(tc.read(inner)),
-                             ex::when_all_vector(tc.readwrite(result)));
-
-  ex::start_detached(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(compose_fn), std::move(sender)));
-}
-
 inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
                         Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;

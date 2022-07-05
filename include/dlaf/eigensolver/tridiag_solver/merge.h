@@ -880,10 +880,10 @@ void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& so
 
   for (SizeType j = i_begin; j <= i_end; ++j) {
     for (SizeType i = i_begin; i <= i_end; ++i) {
-      ex::when_all(source.read_sender(LocalTileIndex(i, j)),
-                   dest.readwrite_sender(LocalTileIndex(i, j))) |
-          matrix::copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}) |
-          ex::start_detached();
+      ex::start_detached(
+          ex::when_all(source.read_sender(LocalTileIndex(i, j)),
+                       dest.readwrite_sender(LocalTileIndex(i, j))) |
+          matrix::copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
     }
   }
 }

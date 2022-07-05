@@ -52,7 +52,7 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
     return index_finish - 1 - i.row();
   });
   dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
-    return T(i.get<C>() - i.get<orthogonal(C)>()) / T(8);
+    return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
   });
   dlaf::matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, mat_out_h);
 
@@ -70,7 +70,7 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
       GlobalElementIndex i_in(i.get<orthogonal(C)>(), index_finish + index_start - 1 - i.get<C>());
       if constexpr (C == Coord::Row)
         i_in.transpose();
-      return T(i_in.get<C>() - i_in.get<orthogonal(C)>()) / T(8);
+      return T(i_in.get<C>()) - T(i_in.get<orthogonal(C)>()) / T(8);
     }
     return T(0);
   };

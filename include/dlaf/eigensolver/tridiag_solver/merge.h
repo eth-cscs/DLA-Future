@@ -637,7 +637,7 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
   TileCollector tc{i_begin, i_end};
 
   ex::when_all(std::move(rots_fut), ex::when_all_vector(tc.readwrite(mat))) |
-      di::transform(di::Policy<Backend::MC>(), std::move(givens_rots_fn)) | ex::ensure_started();
+      di::transformDetach(di::Policy<Backend::MC>(), std::move(givens_rots_fn));
 }
 
 template <class T>
@@ -734,7 +734,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
                    diag.read_sender(GlobalTileIndex(j_tile, 0)),
                    evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
                    ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transform(di::Policy<Backend::MC>(), std::move(mul_rows)) | ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(mul_rows));
     }
   }
 
@@ -758,7 +758,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 
       ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
                    ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin))) |
-          di::transform(di::Policy<Backend::MC>(), std::move(acc_col_ws_fn)) | ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(acc_col_ws_fn));
     }
   }
 
@@ -789,7 +789,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       ex::when_all(ex::keep_future(k_fut), z.read_sender(GlobalTileIndex(i_tile, 0)),
                    ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
                    evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transform(di::Policy<Backend::MC>(), std::move(weights_vec)) | ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(weights_vec));
     }
   }
 
@@ -819,7 +819,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       GlobalTileIndex mat_idx(i_tile, j_tile);
 
       ex::when_all(ex::keep_future(k_fut), evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx)) |
-          di::transform(di::Policy<Backend::MC>(), std::move(locnorm_fn)) | ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(locnorm_fn));
     }
   }
 
@@ -841,8 +841,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 
       ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
                    ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile))) |
-          di::transform(di::Policy<Backend::MC>(), std::move(sum_first_tile_cols_fn)) |
-          ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(sum_first_tile_cols_fn));
     }
   }
 
@@ -869,7 +868,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 
       ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
                    evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transform(di::Policy<Backend::MC>(), std::move(scale_fn)) | ex::ensure_started();
+          di::transformDetach(di::Policy<Backend::MC>(), std::move(scale_fn));
     }
   }
 }
@@ -915,7 +914,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
 
     di::whenAllLift(ex::keep_future(k_fut), tile_begin,
                     mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile))) |
-        di::transform(di::Policy<Backend::MC>(), std::move(diag_f)) | ex::ensure_started();
+        di::transformDetach(di::Policy<Backend::MC>(), std::move(diag_f));
   }
 }
 

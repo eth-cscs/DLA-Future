@@ -75,9 +75,6 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 template <class T>
 T cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
                            const matrix::Tile<T, Device::CPU>& bottom) {
-  (void) top;
-  (void) bottom;
-
   T offdiag_val = top(TileElementIndex{top.size().rows() - 1, 1});
   T& top_diag_val = top(TileElementIndex{top.size().rows() - 1, 0});
   T& bottom_diag_val = bottom(TileElementIndex{0, 0});

@@ -19,8 +19,6 @@
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-#include "dlaf/matrix/print_csv.h"
-
 using namespace dlaf;
 using namespace dlaf::test;
 
@@ -34,8 +32,6 @@ class PermutationsTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
 #endif
 
-// Each column/row of the input matrix has its index as a value.
-//
 // The portion of the input matrices rows/columns specified by `i_begin` and `i_end` are placed in
 // reverse order into the output matrix.
 template <Backend B, Device D, class T, Coord C>
@@ -55,7 +51,9 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
 
     return index_finish - 1 - i.row();
   });
-  dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) { return T(i.get<C>()); });
+  dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
+    return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
+  });
   dlaf::matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, mat_out_h);
 
   {
@@ -69,12 +67,14 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
     GlobalTileIndex i_tile = distr.globalTileIndex(i);
     if (i_begin <= i_tile.row() && i_tile.row() <= i_end && i_begin <= i_tile.col() &&
         i_tile.col() <= i_end) {
-      return T(index_finish + index_start - 1 - i.get<C>());
+      GlobalElementIndex i_in(i.get<orthogonal(C)>(), index_finish + index_start - 1 - i.get<C>());
+      if constexpr (C == Coord::Row)
+        i_in.transpose();
+      return T(i_in.get<C>()) - T(i_in.get<orthogonal(C)>()) / T(8);
     }
-    else {
-      return T(0);
-    }
+    return T(0);
   };
+
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 

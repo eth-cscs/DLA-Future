@@ -93,15 +93,18 @@ DLAF_MAKE_CALLABLE_OBJECT(cuppensTileDecomposition);
 
 template <class T>
 std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
   SizeType i_end = mat_trd.distribution().nrTiles().rows() - 1;
   std::vector<pika::shared_future<T>> offdiag_vals;
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
     // Cuppen's tridiagonal decomposition
-    offdiag_vals.push_back(pika::dataflow(pika::unwrapping(cuppensTileDecomposition_o),
-                                          mat_trd(LocalTileIndex(i_split, 0)),
-                                          mat_trd(LocalTileIndex(i_split + 1, 0))));
+    offdiag_vals.push_back(
+        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0))) |
+        di::transform(di::Policy<Backend::MC>(), cuppensTileDecomposition_o) | ex::make_future());
   }
   return offdiag_vals;
 }

@@ -19,6 +19,19 @@
 
 namespace dlaf::permutations {
 
+/// Permutes the columns or rows of an input sub-matrix mat_in[i_begin:i_end][i_begin:i_end] into an
+/// output sub-matrix mat_out[i_begin:i_end][i_begin:i_end] using the index map of permutations
+/// perms[i_begin:i_end].
+///
+/// @param perms is the index map of permutations represented as a tiled column vector. Indices are in
+///        the range [0, n) where `n` is the size of the submatrix (i.e. the indices are local to the
+///        submatrix, they are not global). Only tiles whose row tile coords are in the closed range
+///        [i_begin,i_end] are accessed in read-only mode.
+/// @param mat_in is the input matrix. Only tiles whose both row and col tile coords are in
+///        the closed range [i_begin,i_end] are accessed in read-only mode.
+/// @param mat_out is the output matrix. Only tiles whose both row and col tile coords are in
+///        the closed range [i_begin,i_end] are accessed in write-only mode.
+///
 template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& perms,
              Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {

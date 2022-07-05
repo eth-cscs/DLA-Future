@@ -28,7 +28,7 @@
 
 namespace dlaf::permutations::internal {
 
-// Applies the permutaton index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
+// Applies the permutation index `perm_arr` to a portion of the columns/rows(depends on coord) [1] of an
 // input submatrix [2] and saves the result into a subregion [3] of an output submatrix [4].
 //
 // Example column permutations with `perm_arr = [8, 2, 5]`:
@@ -73,11 +73,12 @@ namespace dlaf::permutations::internal {
 //
 // Note: `in_tiles` should be `const T` but to avoid extra allocations necessary for unwrapping
 //       `std::vector<shared_future<matrix::Tile<const T, D>>>` it is left as non-const
-template <class T, Coord coord>
+template <class T, Device D, Coord coord, class... Args>
 void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
                        const matrix::Distribution& distr, const SizeType* perm_arr,
-                       const std::vector<matrix::Tile<T, Device::CPU>>& in_tiles,
-                       const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
+                       const std::vector<matrix::Tile<T, D>>& in_tiles,
+                       const std::vector<matrix::Tile<T, D>>& out_tiles,
+                       [[maybe_unused]] Args&&... args) {
   constexpr Coord orth_coord = orthogonal(coord);
   std::vector<SizeType> splits =
       util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
@@ -104,49 +105,19 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
       TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
       auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
-      dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
+      if constexpr (D == Device::CPU) {
+        dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
+      }
+      else if constexpr (D == Device::GPU) {
+#if defined(DLAF_WITH_CUDA)
+        dlaf::gpulapack::lacpy<T>(blas::Uplo::General, region.rows(), region.cols(),
+                                  tile_in.ptr(i_subtile_in), tile_in.ld(), tile_out.ptr(i_subtile_out),
+                                  tile_out.ld(), args...);
+#endif
+      }
     }
   });
 }
-
-#if defined(DLAF_WITH_CUDA)
-template <class T, Coord coord>
-void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
-                       const matrix::Distribution& distr, const SizeType* perm_arr,
-                       const std::vector<matrix::Tile<T, Device::GPU>>& in_tiles,
-                       const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, cudaStream_t stream) {
-  constexpr Coord orth_coord = orthogonal(coord);
-  std::vector<SizeType> splits =
-      util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
-                             distr.distanceToAdjacentTile<orth_coord>(in_offset),
-                             distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
-
-  for (SizeType i_perm = 0; i_perm < sz.get<coord>(); ++i_perm) {
-    for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-      SizeType split = splits[i_split];
-
-      GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
-                                        out_begin.get<coord>() + i_perm);
-      TileElementSize region(splits[i_split + 1] - split, 1);
-      if constexpr (coord == Coord::Row) {
-        region.transpose();
-        i_split_gl_in.transpose();
-        i_split_gl_out.transpose();
-      }
-
-      TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
-      auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))];
-      TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
-      auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
-
-      dlaf::gpulapack::lacpy<T>(blas::Uplo::General, region.rows(), region.cols(),
-                                tile_in.ptr(i_subtile_in), tile_in.ld(), tile_out.ptr(i_subtile_out),
-                                tile_out.ld(), stream);
-    }
-  };
-}
-#endif
 
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
@@ -162,41 +133,23 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
-  // Note: there is an issue compiling with dlaf::internal::transform()
-  auto scheduler = dlaf::internal::getBackendScheduler<B>(pika::threads::thread_priority::normal);
-  auto transfer_sender =
-      ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
-                                                            GlobalTileSize(ntiles, 1), perms)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                                 GlobalTileSize(ntiles, ntiles),
-                                                                 mat_in)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                                 GlobalTileSize(ntiles, ntiles),
-                                                                 mat_out))) |
-      ex::transfer(std::move(scheduler));
+  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
+                                                                      GlobalTileSize(ntiles, 1), perms)),
+                             ex::when_all_vector(
+                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                           GlobalTileSize(ntiles, ntiles), mat_in)),
+                             ex::when_all_vector(
+                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
+                                                           GlobalTileSize(ntiles, ntiles), mat_out)));
 
-  if constexpr (B == Backend::MC) {
-    auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                   const auto& mat_out_tiles) {
-      TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
-                              mat_in_tiles, mat_out_tiles);
-    };
-    ex::then(std::move(transfer_sender), std::move(permute_fn)) | ex::start_detached();
-  }
-  else if constexpr (B == Backend::GPU) {
-#if defined(DLAF_WITH_CUDA)
-    auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                   const auto& mat_out_tiles, cudaStream_t stream) {
-      TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutations<T, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
-                              mat_in_tiles, mat_out_tiles, stream);
-    };
-    pika::cuda::experimental::then_with_stream(std::move(transfer_sender), std::move(permute_fn)) |
-        ex::start_detached();
-#endif
-  }
+  auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
+                                 const auto& mat_out_tiles, auto&&... ts) {
+    TileElementIndex zero(0, 0);
+    const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
+    applyPermutations<T, D, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
+                               mat_in_tiles, mat_out_tiles, std::forward<decltype(ts)>(ts)...);
+  };
+  ex::start_detached(dlaf::internal::transform<false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
+                                                      std::move(sender)));
 }
 }

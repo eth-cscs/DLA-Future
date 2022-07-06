@@ -18,6 +18,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     version("develop", branch="master")
 
+    cxxstds = ('17', '20')
+    variant('cxxstd',
+            default='17',
+            values=cxxstds,
+            description='Use the specified C++ standard when building')
+    conflicts('cxxstd=20', when='+cuda')
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -38,10 +45,15 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     # https://github.com/eth-cscs/DLA-Future/issues/420
     conflicts("umpire@6:")
 
-    depends_on("pika cxxstd=17 +mpi")
+    depends_on("pika +mpi")
     depends_on("pika@0.6:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
+    for cxxstd in cxxstds:
+        depends_on(
+            "pika cxxstd={0}".format(cxxstd),
+            when="cxxstd={0}".format(cxxstd)
+        )
 
     depends_on("pika build_type=Debug", when="build_type=Debug")
     depends_on("pika build_type=Release", when="build_type=Release")

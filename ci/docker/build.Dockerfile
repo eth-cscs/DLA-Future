@@ -93,7 +93,10 @@ RUN spack repo add --scope site /user_repo
 ARG SPACK_ENVIRONMENT
 # Build dependencies
 # 1. Create a spack environment named `ci` from the input spack.yaml file
-# 2. Install only the dependencies of this (top level is our package)
 COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
 RUN spack env create --without-view ci /spack_environment/spack.yaml
+# 2. Set the C++ standard
+ARG CXXSTD=17
+RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
+# 3. Install only the dependencies of this (top level is our package)
 RUN spack -e ci install --fail-fast --only=dependencies

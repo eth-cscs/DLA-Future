@@ -46,7 +46,7 @@ int pika_main(int argc, char* argv[]) {
     pika::future<const double*> alpha_f = pika::make_ready_future(&alpha);
 
     auto s1 = dlaf::internal::transformLift(dlaf::internal::Policy<dlaf::Backend::GPU>(
-                                                pika::threads::thread_priority::high),
+                                                pika::execution::thread_priority::high),
                                             cublasDaxpy, n, std::move(alpha_f), x.data().get(), incx,
                                             y.data().get(), incy);
 

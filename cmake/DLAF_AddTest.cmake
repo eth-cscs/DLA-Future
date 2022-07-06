@@ -144,11 +144,6 @@ function(DLAF_addTest test_target_name)
   if(IS_AN_PIKA_TEST)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
-    # APPLE platform does not support thread binding
-    if(NOT APPLE)
-      list(APPEND _TEST_ARGUMENTS "--pika:use-process-mask")
-    endif()
-
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
       list(APPEND _TEST_ARGUMENTS "--pika:bind=none")
     endif()

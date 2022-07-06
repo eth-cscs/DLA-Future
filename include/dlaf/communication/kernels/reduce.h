@@ -33,12 +33,11 @@
 namespace dlaf::comm {
 namespace internal {
 template <class T, Device D>
-void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                       const matrix::Tile<T, D>& tile, MPI_Request* req) {
+void reduceRecvInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
+                       MPI_Request* req) {
   static_assert(D == Device::CPU, "reduceRecvInPlace requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
-  auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                                    comm.rank(), comm, req));
@@ -47,12 +46,11 @@ void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op re
 DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T, Device D>
-void reduceSend(common::PromiseGuard<comm::Communicator> pcomm, comm::IndexT_MPI rank_root,
-                MPI_Op reduce_op, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
+void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
+                const matrix::Tile<const T, D>& tile, MPI_Request* req) {
   static_assert(D == Device::CPU, "reduceSend requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
-  auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));

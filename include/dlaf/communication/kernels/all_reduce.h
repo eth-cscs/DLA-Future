@@ -29,14 +29,12 @@
 namespace dlaf::comm {
 namespace internal {
 template <class T, Device D>
-auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-               const matrix::Tile<const T, D>& tile_in, const matrix::Tile<T, D>& tile_out,
-               MPI_Request* req) {
+auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, D>& tile_in,
+               const matrix::Tile<T, D>& tile_out, MPI_Request* req) {
   static_assert(D == Device::CPU, "allReduce requires CPU memory");
   DLAF_ASSERT(tile_in.is_contiguous(), "");
   DLAF_ASSERT(tile_out.is_contiguous(), "");
 
-  auto& comm = pcomm.ref();
   auto msg_in = comm::make_message(common::make_data(tile_in));
   auto msg_out = comm::make_message(common::make_data(tile_out));
   DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
@@ -46,12 +44,11 @@ auto allReduce(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class T, Device D>
-auto allReduceInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
-                      const matrix::Tile<T, D>& tile, MPI_Request* req) {
+auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
+                      MPI_Request* req) {
   static_assert(D == Device::CPU, "allReduceInPlace requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
-  auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));

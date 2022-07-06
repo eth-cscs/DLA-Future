@@ -27,13 +27,11 @@
 namespace dlaf::comm {
 namespace internal {
 template <class T, Device D>
-void sendBcast(common::PromiseGuard<Communicator> pcomm, const matrix::Tile<const T, D>& tile,
-               MPI_Request* req) {
+void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
-  const auto& comm = pcomm.ref();
   auto msg = comm::make_message(common::make_data(tile));
   DLAF_MPI_CHECK_ERROR(
       MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
@@ -42,14 +40,14 @@ void sendBcast(common::PromiseGuard<Communicator> pcomm, const matrix::Tile<cons
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
 
 template <class T, Device D>
-void recvBcast(common::PromiseGuard<Communicator> pcomm, comm::IndexT_MPI root_rank,
-               const matrix::Tile<T, D>& tile, MPI_Request* req) {
+void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matrix::Tile<T, D>& tile,
+               MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, pcomm.ref(), req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvBcast);

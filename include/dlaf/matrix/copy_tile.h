@@ -24,6 +24,7 @@
 #include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
+#include "dlaf/types.h"
 
 namespace dlaf::matrix {
 
@@ -55,16 +56,6 @@ struct CopyBackend<Device::GPU, Device::GPU> {
 
 template <Device Source, Device Destination>
 inline constexpr auto CopyBackend_v = CopyBackend<Source, Destination>::value;
-
-// TODO: Move to some common util header?
-template <typename T>
-struct IsFloatingPointOrComplex : std::is_floating_point<T> {};
-
-template <typename T>
-struct IsFloatingPointOrComplex<std::complex<T>> : IsFloatingPointOrComplex<T> {};
-
-template <typename T>
-inline constexpr bool IsFloatingPointOrComplex_v = IsFloatingPointOrComplex<T>::value;
 
 template <typename T, Device Source, Device Destination>
 struct CopyTile;

@@ -106,7 +106,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            // In that case we simply call the user-provided callable f, ignore
            // the values sent by the sender returned from f, and finally send
            // the input tile to continuations if the tile is non-const.
-           auto helper_nocopy = [&]() {
+           auto helper_notemp = [&]() {
              return f(in) | ex::drop_value() | ex::then(moveNonConstTile{in});
            };
 
@@ -116,7 +116,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            // 3. call the user-provided callable f and ignore values sent by it
            // 4. optionally copy the temporary tile back to the input tile
            // 5. send the input tile to continuations
-           auto helper_copy = [&]() mutable {
+           auto helper_withtemp = [&]() mutable {
              // If the user requested copying the input tile to the temporary
              // tile we use Duplicate and copy_backend. If the user did not
              // request copying to the temporary tile we still need to allocate
@@ -158,8 +158,8 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            };
 
            // One of the helpers may be unused depending on which branch is taken
-           dlaf::internal::silenceUnusedWarningFor(helper_nocopy);
-           dlaf::internal::silenceUnusedWarningFor(helper_copy);
+           dlaf::internal::silenceUnusedWarningFor(helper_notemp);
+           dlaf::internal::silenceUnusedWarningFor(helper_withtemp);
 
            // If the destination device is the same as the input device we may
            // be able to avoid allocating a new tile.
@@ -173,26 +173,26 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
                // If the input tile is contiguous we can use the input tile as a
                // temporary tile directly.
                if (in.is_contiguous()) {
-                 return ex::make_unique_any_sender(helper_nocopy());
+                 return ex::make_unique_any_sender(helper_notemp());
                }
                // If the input is not contiguous we have to at least allocate a
                // new temporary tile.
                else {
-                 return ex::make_unique_any_sender(helper_copy());
+                 return ex::make_unique_any_sender(helper_withtemp());
                }
              }
              // The destination device is the same as the input device, and we
              // don't require contiguous memory (though we allow it). We can use
              // the input tile as a temporary tile directly.
              else {
-               return helper_nocopy();
+               return helper_notemp();
              }
            }
            // If the destination device is different from the input device we
            // have to at least allocate a new temporary tile on the destination
            // device.
            else {
-             return helper_copy();
+             return helper_withtemp();
            }
          }));
 }

@@ -229,7 +229,7 @@ public:
 
   /// Prints information about the tile.
   friend std::ostream& operator<<(std::ostream& out, const Tile& tile) {
-    return out << "size=" << tile.size() << ", ld=" << tile.size().rows();
+    return out << "size=" << tile.size() << ", ld=" << tile.ld();
   }
 
 private:

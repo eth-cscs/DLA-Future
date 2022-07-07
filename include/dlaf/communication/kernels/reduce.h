@@ -38,21 +38,18 @@ namespace comm {
 namespace internal {
 
 template <class T>
-void reduceRecvInPlace(common::PromiseGuard<comm::Communicator> pcomm, MPI_Op reduce_op,
+void reduceRecvInPlace(const comm::Communicator& comm, MPI_Op reduce_op,
                        const common::internal::ContiguousBufferHolder<T>& cont_buf, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
-  auto& comm = pcomm.ref();
 
   DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                                    comm.rank(), comm, req));
 }
 
 template <class T>
-void reduceSend(comm::IndexT_MPI rank_root, common::PromiseGuard<comm::Communicator> pcomm,
-                MPI_Op reduce_op, const common::internal::ContiguousBufferHolder<const T>& cont_buf,
-                MPI_Request* req) {
+void reduceSend(comm::IndexT_MPI rank_root, const comm::Communicator& comm, MPI_Op reduce_op,
+                const common::internal::ContiguousBufferHolder<const T>& cont_buf, MPI_Request* req) {
   auto msg = comm::make_message(cont_buf.descriptor);
-  auto& comm = pcomm.ref();
 
   DLAF_MPI_CHECK_ERROR(
       MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));

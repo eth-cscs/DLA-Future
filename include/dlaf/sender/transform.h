@@ -75,8 +75,8 @@ template <typename F>
 TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
 
 /// Lazy transform. This does not submit the work and returns a sender.
-template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
-          typename F = void, typename Sender = void,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, bool Unwrap = true,
+          Backend B = Backend::MC, typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
   using pika::unwrapping;
@@ -85,7 +85,14 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
-  auto f_unwrapping = pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
+  auto f_unwrapping = [&]() {
+    if constexpr (Unwrap) {
+      return pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
+    }
+    else {
+      return TransformCallHelper{std::forward<F>(f)};
+    }
+  }();
 
   if constexpr (B == Backend::MC) {
     return then(std::move(transfer_sender), std::move(f_unwrapping));
@@ -169,7 +176,7 @@ public:
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransform pa) {
-    return transform<Tag>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
+    return transform<Tag, true, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
 
@@ -195,7 +202,7 @@ public:
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {
     return pika::execution::experimental::start_detached(
-        transform<Tag>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
+        transform<Tag, true, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
   }
 };
 

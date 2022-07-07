@@ -18,8 +18,47 @@
 
 /// @file
 
-namespace dlaf {
-namespace util {
+namespace dlaf::util {
+
+// Interleaves two intervals of length `l` split in blocks of size `b` starting at offsets `o1` and
+// `o2` respectively and returns an array of indices where the splits have occured.
+//
+// o1
+//  │
+//  └► │   │   │   │   │
+//    ─┴───┴───┴───┴───┴───  ◄─┐
+//               ▲             │
+// o2      b ─┬──┘              l
+// │          │                │
+// └─►  │   │ ▼ │   │   │      │
+//    ──┴───┴───┴───┴───┴──  ◄─┘
+//
+inline std::vector<SizeType> interleaveSplits(SizeType l, SizeType b, SizeType o1, SizeType o2) {
+  DLAF_ASSERT(l > 0, l);
+  DLAF_ASSERT(b > 0, b);
+  DLAF_ASSERT(o1 >= 0 && o1 <= b, o1, b);
+  DLAF_ASSERT(o2 >= 0 && o2 <= b, o2, b);
+
+  // Set small and big from offsets o1 and o2 s.t small <= big
+  SizeType small = o1;
+  SizeType big = o2;
+  if (small > big)
+    std::swap(small, big);
+
+  // Reserve enough memory for array of splits
+  std::vector<SizeType> splits;
+  splits.reserve(2 * to_sizet(l / b) + 2);
+
+  splits.push_back(0);
+  for (SizeType i = small, j = big; i < l || j < l; i += b, j += b) {
+    if (splits.back() != i && i < l)
+      splits.push_back(i);
+    if (splits.back() != j && j < l)
+      splits.push_back(j);
+  }
+  splits.push_back(l);
+  return splits;
+}
 
 /// Returns ceiling(num/den) for integer types.
 ///
@@ -123,6 +162,5 @@ SizeType mul(const TA a, const TB b) {
   return dlaf::util::internal::generic_integer_op<SizeType>(a, b, std::multiplies<SizeType>());
 }
 
-}
 }
 }

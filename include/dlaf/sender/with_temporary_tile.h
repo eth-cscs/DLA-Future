@@ -52,7 +52,7 @@ moveNonConstTile(T&) -> moveNonConstTile<T>;
 ///
 /// If the requested destination_device for the temporary tile is different from
 /// the device of the input tile a new tile will be allocated.  If the user
-/// additionally requests the the temporary tile must use contiguous memory a
+/// additionally requests the temporary tile must use contiguous memory a
 /// runtime check will be performed on the input tile, and if it is not
 /// contiguous a new tile will also be allocated.
 ///

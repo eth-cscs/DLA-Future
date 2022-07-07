@@ -72,11 +72,11 @@ void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
   namespace ex = pika::execution::experimental;
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
-  dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
-                            Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
-                            dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src),
-                                                        std::forward<DstSender>(dst))) |
-      ex::start_detached();
+  ex::start_detached(
+      dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
+                                Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
+                                dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src),
+                                                            std::forward<DstSender>(dst))));
 }
 
 template <Backend backend, class TSender, class SourcePanelSender, class PanelTileSender>
@@ -84,11 +84,11 @@ void trmmPanel(pika::execution::thread_priority priority, TSender&& t, SourcePan
                PanelTileSender&& w) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
-                              blas::Diag::NonUnit, ElementType(1.0), std::forward<TSender>(t),
-                              std::forward<SourcePanelSender>(v), std::forward<PanelTileSender>(w)) |
-      tile::trmm3(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
+                                  blas::Diag::NonUnit, ElementType(1.0), std::forward<TSender>(t),
+                                  std::forward<SourcePanelSender>(v), std::forward<PanelTileSender>(w)) |
+      tile::trmm3(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender, class ColPanelSender>
@@ -96,11 +96,11 @@ void gemmUpdateW2(pika::execution::thread_priority priority, PanelTileSender&& w
                   ColPanelSender&& w2) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(1.0),
-                              std::forward<PanelTileSender>(w), std::forward<MatrixTileSender>(c),
-                              ElementType(1.0), std::forward<ColPanelSender>(w2)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(1.0),
+                                  std::forward<PanelTileSender>(w), std::forward<MatrixTileSender>(c),
+                                  ElementType(1.0), std::forward<ColPanelSender>(w2)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -108,11 +108,11 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
                         ColPanelSender&& w2, MatrixTileSender&& c) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
-                              std::forward<PanelTileSender>(v), std::forward<ColPanelSender>(w2),
-                              ElementType(1.0), std::forward<MatrixTileSender>(c)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
+                                  std::forward<PanelTileSender>(v), std::forward<ColPanelSender>(w2),
+                                  ElementType(1.0), std::forward<MatrixTileSender>(c)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 

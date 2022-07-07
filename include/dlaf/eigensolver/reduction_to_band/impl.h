@@ -212,9 +212,11 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmDiag(pika::execution::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
               XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1), std::forward<ASender>(tile_a),
-                              std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
-      tile::hemm(dlaf::internal::Policy<B>(priority)) | pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1),
+                                  std::forward<ASender>(tile_a), std::forward<WSender>(tile_w), T(1),
+                                  std::forward<XSender>(tile_x)) |
+      tile::hemm(dlaf::internal::Policy<B>(priority)));
 }
 
 // X += op(A) * W
@@ -222,19 +224,21 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmOffDiag(pika::execution::thread_priority priority, blas::Op op, ASender&& tile_a,
                  WSender&& tile_w, XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
-  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
-                              std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority)) | pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
+                                  std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
+      tile::gemm(dlaf::internal::Policy<B>(priority)));
 }
 
 template <Backend B, typename VSender, typename XSender, typename ASender>
 void her2kDiag(pika::execution::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
                ASender&& tile_a) {
   using T = dlaf::internal::SenderElementType<VSender>;
-  dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1), std::forward<VSender>(tile_v),
-                              std::forward<XSender>(tile_x), BaseType<T>(1),
-                              std::forward<ASender>(tile_a)) |
-      tile::her2k(dlaf::internal::Policy<B>(priority)) | pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
+                                  std::forward<VSender>(tile_v), std::forward<XSender>(tile_x),
+                                  BaseType<T>(1), std::forward<ASender>(tile_a)) |
+      tile::her2k(dlaf::internal::Policy<B>(priority)));
 }
 
 // C -= A . B*
@@ -242,10 +246,11 @@ template <Backend B, typename ASender, typename BSender, typename CSender>
 void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
                   CSender&& tile_c) {
   using T = dlaf::internal::SenderElementType<ASender>;
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
-                              std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
-                              std::forward<CSender>(tile_c)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority)) | pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
+                                  std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
+                                  std::forward<CSender>(tile_c)) |
+      tile::gemm(dlaf::internal::Policy<B>(priority)));
 }
 
 namespace local {
@@ -334,10 +339,12 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
     // single task doing both.
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
-    dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
-        matrix::copy(p) | ex::start_detached();
-    dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) | tile::laset(p) |
-        ex::start_detached();
+    ex::start_detached(dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)),
+                                                   v.readwrite_sender(i)) |
+                       matrix::copy(p));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) |
+        tile::laset(p));
 
     ++it_begin;
   }
@@ -355,8 +362,9 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
     //        tile, memory provided internally by the panel is used as support. In this way, the two
     //        subtiles used in the operation belong to different tiles.
     if constexpr (force_copy)
-      ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
-          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
+      ex::start_detached(ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)),
+                                      v.readwrite_sender(idx)) |
+                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -371,10 +379,10 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
   using namespace blas;
 
   for (const auto& index_i : w.iteratorLocal())
-    dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
-                                ex::keep_future(tile_t), v.read_sender(index_i),
-                                w.readwrite_sender(index_i)) |
-        tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
+    ex::start_detached(dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
+                                                   T(1), ex::keep_future(tile_t), v.read_sender(index_i),
+                                                   w.readwrite_sender(index_i)) |
+                       tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)));
 }
 
 template <Backend B, Device D, class T>
@@ -387,10 +395,11 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
-    dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read_sender(index_i),
-                                w2.read_sender(LocalTileIndex(0, 0)), T(1),
-                                x.readwrite_sender(index_i)) |
-        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
+    ex::start_detached(dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5),
+                                                   v.read_sender(index_i),
+                                                   w2.read_sender(LocalTileIndex(0, 0)), T(1),
+                                                   x.readwrite_sender(index_i)) |
+                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
 }
 
 template <Backend B, Device D, class T>
@@ -459,16 +468,16 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  w2.readwrite_sender(LocalTileIndex(0, 0)) |
-      tile::set0(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
+  ex::start_detached(w2.readwrite_sender(LocalTileIndex(0, 0)) |
+                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high)));
 
   using namespace blas;
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())
-    dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read_sender(index_tile),
-                                x.read_sender(index_tile), T(1),
-                                w2.readwrite_sender(LocalTileIndex(0, 0))) |
-        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)) | ex::start_detached();
+    ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1),
+                                                   w.read_sender(index_tile), x.read_sender(index_tile),
+                                                   T(1), w2.readwrite_sender(LocalTileIndex(0, 0))) |
+                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
 }
 
 template <Backend B, Device D, class T>
@@ -551,11 +560,11 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite_sender(i);
-      ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+      ex::start_detached(
+          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
           matrix::copy(
               dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
-                  thread_priority::high)) |
-          ex::start_detached();
+                  thread_priority::high)));
     }
 
     auto taus = computePanelReflectors(v, panel_view, nrefls_block);
@@ -563,11 +572,11 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite_sender(i);
-      ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
+      ex::start_detached(
+          ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
           matrix::copy(
               dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                  thread_priority::high)) |
-          ex::start_detached();
+                  thread_priority::high)));
     }
 
     return taus;

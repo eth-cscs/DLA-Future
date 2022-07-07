@@ -144,7 +144,7 @@ void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
   using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
-    matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)) | start_detached();
+    start_detached(matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
@@ -154,7 +154,7 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D>& panel) {
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)) | start_detached();
+    start_detached(panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// Set the elements of the matrix.

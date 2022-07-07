@@ -111,3 +111,11 @@ DLAF_addTest(
   MPIRANKS 2
   USE_MAIN MPIPIKA
 )
+
+DLAF_addTest(
+  test_comm_p2p
+  SOURCES test_comm_p2p.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 2
+  USE_MAIN MPIPIKA
+)

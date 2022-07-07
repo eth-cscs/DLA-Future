@@ -176,7 +176,7 @@ gpu codecov build gcc9:
 amdgpu release build clang10+rocm-5.1.0:
   extends: .build_spack_common
   variables:
-    BUILD_DOCKER_FILE: ci/docker/build-amdgpu.Dockerfile
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
     BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1
     DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1

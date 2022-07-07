@@ -60,6 +60,8 @@ auto newBlockMatrixStrided() {
 
 template <class T, Device device>
 void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix, std::string test_name) {
+  namespace ex = pika::execution::experimental;
+
   constexpr comm::IndexT_MPI tag = 13;
 
   const LocalTileIndex idx(0, 0);
@@ -71,11 +73,11 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix, st
 
   if (rank_src == world.rank()) {
     matrix::test::set(matrix(idx).get(), input_tile);
-    comm::scheduleSend(rank_dst, world, tag, matrix.read_sender(idx));
+    ex::start_detached(comm::scheduleSend(rank_dst, world, tag, matrix.read_sender(idx)));
   }
   else if (rank_dst == world.rank()) {
     matrix::test::set(matrix(idx).get(), fixedValueTile(13));
-    comm::scheduleRecv(rank_src, world, tag, matrix.readwrite_sender(idx));
+    ex::start_detached(comm::scheduleRecv(rank_src, world, tag, matrix.readwrite_sender(idx)));
   }
 
   const auto& tile = matrix.read(idx).get();

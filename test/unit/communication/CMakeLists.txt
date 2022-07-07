@@ -104,7 +104,8 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
 )
 
-DLAF_addTest(test_transform_mpi
+DLAF_addTest(
+  test_transform_mpi
   SOURCES test_transform_mpi.cpp
   LIBRARIES dlaf.core
   MPIRANKS 2

@@ -48,5 +48,5 @@
   void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                    \
     pika::this_thread::experimental::sync_wait(                                                    \
         (fname)(p, pika::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
-                                                     std::forward<Ts>(ts)...)));                   \
+                                                       std::forward<Ts>(ts)...)));                 \
   }

@@ -209,7 +209,7 @@ void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel
 }
 
 template <Backend B, typename ASender, typename WSender, typename XSender>
-void hemmDiag(pika::threads::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
+void hemmDiag(pika::execution::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
               XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
   dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1), std::forward<ASender>(tile_a),
@@ -219,7 +219,7 @@ void hemmDiag(pika::threads::thread_priority priority, ASender&& tile_a, WSender
 
 // X += op(A) * W
 template <Backend B, typename ASender, typename WSender, typename XSender>
-void hemmOffDiag(pika::threads::thread_priority priority, blas::Op op, ASender&& tile_a,
+void hemmOffDiag(pika::execution::thread_priority priority, blas::Op op, ASender&& tile_a,
                  WSender&& tile_w, XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
   dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
@@ -228,7 +228,7 @@ void hemmOffDiag(pika::threads::thread_priority priority, blas::Op op, ASender&&
 }
 
 template <Backend B, typename VSender, typename XSender, typename ASender>
-void her2kDiag(pika::threads::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
+void her2kDiag(pika::execution::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
                ASender&& tile_a) {
   using T = dlaf::internal::SenderElementType<VSender>;
   dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1), std::forward<VSender>(tile_v),
@@ -239,7 +239,7 @@ void her2kDiag(pika::threads::thread_priority priority, VSender&& tile_v, XSende
 
 // C -= A . B*
 template <Backend B, typename ASender, typename BSender, typename CSender>
-void her2kOffDiag(pika::threads::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
+void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
                   CSender&& tile_c) {
   using T = dlaf::internal::SenderElementType<ASender>;
   dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
@@ -299,7 +299,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
 
   return ex::when_all_vector(std::move(panel_tiles)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                       pika::threads::thread_priority::high),
+                                       pika::execution::thread_priority::high),
                                    std::move(panel_task)) |
          ex::make_future();
 }
@@ -309,7 +309,7 @@ void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const S
                           matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
 
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   // Note:
   // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
@@ -367,7 +367,7 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
                   pika::shared_future<matrix::Tile<const T, D>> tile_t) {
   namespace ex = pika::execution::experimental;
 
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
   using namespace blas;
 
   for (const auto& index_i : w.iteratorLocal())
@@ -382,7 +382,7 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
                  matrix::Panel<Coord::Col, const T, D>& v) {
   namespace ex = pika::execution::experimental;
 
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
   using namespace blas;
 
   // GEMM X = X - 0.5 . V . W2
@@ -396,7 +396,7 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 template <Backend B, Device D, class T>
 void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
 
   const auto dist = a.distribution();
@@ -451,7 +451,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
 template <Backend B, Device D, class T>
 void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, D>& w,
                    matrix::Panel<Coord::Col, const T, D>& x) {
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   namespace ex = pika::execution::experimental;
 
@@ -477,7 +477,7 @@ void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& 
                                matrix::Panel<Coord::Col, const T, D>& v) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
 
@@ -538,7 +538,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
             const SizeType nrefls_block) {
     using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    using pika::threads::thread_priority;
+    using pika::execution::thread_priority;
 
     namespace ex = pika::execution::experimental;
 
@@ -647,7 +647,7 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
   return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
                       std::forward<CommSender>(mpi_col_chain_panel), std::move(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                       pika::threads::thread_priority::high),
+                                       pika::execution::thread_priority::high),
                                    std::move(panel_task)) |
          ex::make_future();
 }
@@ -657,7 +657,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
                   const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
                   ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   constexpr auto B = Backend::MC;
 
@@ -763,7 +763,7 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
                                ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
-  using pika::threads::thread_priority;
+  using pika::execution::thread_priority;
 
   constexpr auto B = Backend::MC;
 

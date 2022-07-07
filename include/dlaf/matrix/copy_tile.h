@@ -197,7 +197,7 @@ auto duplicateIfNeeded(pika::future<Tile<T, Source>> tile) {
   else {
     return std::move(tile) |
            dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                         pika::threads::thread_priority::normal),
+                                         pika::execution::thread_priority::normal),
                                      dlaf::matrix::Duplicate<Destination>{});
   }
 }
@@ -212,7 +212,7 @@ auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
   else {
     return ex::keep_future(std::move(tile)) |
            dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                         pika::threads::thread_priority::normal),
+                                         pika::execution::thread_priority::normal),
                                      dlaf::matrix::Duplicate<Destination>{});
   }
 }
@@ -231,7 +231,7 @@ void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destinatio
     ex::when_all(std::move(wait_for_me), dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
                  dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
         dlaf::matrix::copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-            pika::threads::thread_priority::normal)) |
+            pika::execution::thread_priority::normal)) |
         ex::start_detached();
 }
 }

@@ -54,7 +54,7 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
   dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
     return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
   });
-  dlaf::matrix::util::set0<Backend::MC>(pika::threads::thread_priority::normal, mat_out_h);
+  dlaf::matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, mat_out_h);
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);

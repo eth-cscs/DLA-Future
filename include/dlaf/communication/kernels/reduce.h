@@ -162,7 +162,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
 
         // GPU -> cCPU
         auto tile_cpu = transform(
-            Policy<CopyBackend<D, Device::CPU>::value>(pika::threads::thread_priority::high),
+            Policy<CopyBackend<D, Device::CPU>::value>(pika::execution::thread_priority::high),
             [](const matrix::Tile<const T, Device::GPU>& tile_gpu, auto... args) mutable {
               return dlaf::matrix::Duplicate<Device::CPU>{}(tile_gpu, args...);
             },
@@ -175,7 +175,7 @@ void scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op,
         // cCPU -> GPU
         namespace arg = std::placeholders;
         return whenAllLift(std::move(tile_reduced), std::cref(tile_gpu)) |
-               copy(Policy<CopyBackend<Device::CPU, D>::value>(pika::threads::thread_priority::high));
+               copy(Policy<CopyBackend<Device::CPU, D>::value>(pika::execution::thread_priority::high));
       })) |
       ex::start_detached();
 }
@@ -216,7 +216,7 @@ void scheduleReduceSend(comm::IndexT_MPI rank_root, CommSender&& pcomm, MPI_Op r
 
   auto tile_cpu = ex::keep_future(std::move(tile)) |
                   dlaf::internal::transform(Policy<CopyBackend<D, Device::CPU>::value>(
-                                                pika::threads::thread_priority::high),
+                                                pika::execution::thread_priority::high),
                                             dlaf::matrix::Duplicate<Device::CPU>{});
 
   internal::senderReduceSend(rank_root, std::forward<CommSender>(pcomm), reduce_op,

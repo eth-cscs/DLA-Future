@@ -146,9 +146,7 @@ int precedence_main(int, char*[]) {
 TEST_P(InitTest, Precedence) {
   current_initializer_type = GetParam();
 
-  // The const_cast is currently necessary for pika::init. pika should be updated
-  // to take const argc/argv.
-  pika::init(precedence_main, argc_without_option, const_cast<char**>(argv_without_option));
+  pika::init(precedence_main, argc_without_option, argv_without_option);
 }
 
 int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
@@ -216,10 +214,7 @@ int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
 TEST_P(InitTest, VariablesMapNoCommandLineOption) {
   current_initializer_type = GetParam();
 
-  // The const_cast is currently necessary for pika::init. pika should be updated
-  // to take const argc/argv.
-  pika::init(vm_no_command_line_option_main, argc_without_option,
-             const_cast<char**>(argv_without_option));
+  pika::init(vm_no_command_line_option_main, argc_without_option, argv_without_option);
 }
 
 int vm_command_line_option_main(pika::program_options::variables_map& vm) {
@@ -263,10 +258,7 @@ TEST_P(InitTest, VariablesMapCommandLineOption) {
   std::string command_line_option_str =
       command_line_option_name + std::string("=") + command_line_option_val_str;
   int argc_with_option = 2;
-  // The const_cast is currently necessary for pika::init. pika should be updated
-  // to take const argc/argv.
-  char* argv_with_option[] = {const_cast<char*>(binary_name),
-                              const_cast<char*>(command_line_option_str.c_str())};
+  const char* argv_with_option[] = {binary_name, command_line_option_str.c_str()};
 
   pika::init(vm_command_line_option_main, argc_with_option, argv_with_option, p);
 }

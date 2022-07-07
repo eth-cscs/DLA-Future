@@ -47,7 +47,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::transform(
-        dlaf::internal::Policy<Backend::MC>(pika::threads::thread_priority::high),
+        dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
         [](matrix::Tile<T, Device::CPU>&& tile) {
           tile::internal::set0<T>(tile);
           return std::move(tile);
@@ -96,7 +96,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       return std::move(tile_t);
     };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                         pika::threads::thread_priority::high),
+                                         pika::execution::thread_priority::high),
                                      std::move(gemv_func),
                                      ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
                                                   std::forward<TSender>(tile_t)));
@@ -120,7 +120,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       return std::move(tile_t);
     };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                         pika::threads::thread_priority::high),
+                                         pika::execution::thread_priority::high),
                                      std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };
@@ -133,7 +133,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::transform(
-        dlaf::internal::Policy<Backend::GPU>(pika::threads::thread_priority::high),
+        dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
         [](matrix::Tile<T, Device::GPU>& tile, cudaStream_t stream) {
           tile::internal::set0<T>(tile, stream);
           return std::move(tile);
@@ -191,7 +191,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       return std::move(tile_t);
     };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
-                                         pika::threads::thread_priority::high),
+                                         pika::execution::thread_priority::high),
                                      std::move(gemv_func),
                                      ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
                                                   std::forward<TSender>(tile_t)));
@@ -216,7 +216,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     };
 
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
-                                         pika::threads::thread_priority::high),
+                                         pika::execution::thread_priority::high),
                                      std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };

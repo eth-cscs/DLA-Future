@@ -139,7 +139,7 @@ public:
 
 /// Sets all the elements of all the tiles to zero
 template <Backend backend, class T, Device D>
-void set0(pika::threads::thread_priority priority, Matrix<T, D>& matrix) {
+void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
   using dlaf::internal::Policy;
   using pika::execution::experimental::start_detached;
 
@@ -149,7 +149,7 @@ void set0(pika::threads::thread_priority priority, Matrix<T, D>& matrix) {
 
 /// Sets all the elements of all the tiles in the active range to zero
 template <Backend backend, class T, Coord axis, Device D>
-void set0(pika::threads::thread_priority priority, Panel<axis, T, D>& panel) {
+void set0(pika::execution::thread_priority priority, Panel<axis, T, D>& panel) {
   using dlaf::internal::Policy;
   using pika::execution::experimental::start_detached;
 

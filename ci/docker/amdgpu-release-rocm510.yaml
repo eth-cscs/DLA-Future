@@ -27,8 +27,6 @@ spack:
       - ~rocm
       - ~openmp
     pika:
-      version:
-      - main
       variants:
       - malloc=mimalloc
       - amdgpu_target=gfx906:xnack-

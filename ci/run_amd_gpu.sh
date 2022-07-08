@@ -37,6 +37,7 @@ for label in `sarus run $IMAGE ctest --print-labels | egrep -o "RANK_[1-9][0-9]?
     if [ $? != 0 ]; then
       failed=$(( failed + 1 ))
     fi
+    sleep 1
   done <<< $"$var"
 done
 

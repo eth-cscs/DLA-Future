@@ -36,7 +36,7 @@ stages:
     - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL -f $DEPLOY_DOCKER_FILE --network=host .
+    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL --build-arg USE_ROCBLAS -f $DEPLOY_DOCKER_FILE --network=host .
     - docker push $DEPLOY_IMAGE
     - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
@@ -56,6 +56,7 @@ cpu release build gcc11:
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
@@ -74,6 +75,7 @@ cpu release build clang10:
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/deploy:$CI_COMMIT_SHA
@@ -93,6 +95,7 @@ cpu release build clang12:
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@12.0.1
     USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/deploy:$CI_COMMIT_SHA
@@ -112,6 +115,7 @@ cpu codecov build gcc11:
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     USE_MKL: "OFF"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
@@ -130,6 +134,7 @@ gpu release build gcc9:
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: gcc@9.3.0
     USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/deploy:$CI_COMMIT_SHA
@@ -148,6 +153,7 @@ gpu release build clang10:
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/deploy:$CI_COMMIT_SHA
@@ -166,6 +172,7 @@ gpu codecov build gcc9:
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: gcc@9.3.0
     USE_MKL: "OFF"
+    USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/deploy:$CI_COMMIT_SHA
@@ -184,6 +191,7 @@ amdgpu release build clang10+rocm-5.1.0:
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     USE_MKL: "OFF"
+    USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm510.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA

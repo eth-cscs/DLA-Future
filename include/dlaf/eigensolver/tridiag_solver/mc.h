@@ -131,7 +131,8 @@ void copyDiagTile(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyDiagTile, copyDiagTile_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, copyDiagTile,
+                                     copyDiagTile_o)
 
 template <class T>
 void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {

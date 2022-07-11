@@ -158,7 +158,8 @@ inline void initIndexTile(SizeType tile_row, const matrix::Tile<SizeType, Device
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(initIndexTile, initIndexTile_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, initIndexTile,
+                                     initIndexTile_o)
 
 // The index starts at `0` for tiles in the range [i_begin, i_end].
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
@@ -196,7 +197,8 @@ void copyTileRowAndNormalize(bool top_tile, T rho, const matrix::Tile<const T, D
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(copyTileRowAndNormalize);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copyTileRowAndNormalize, copyTileRowAndNormalize_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain,
+                                     copyTileRowAndNormalize, copyTileRowAndNormalize_o)
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
 //
@@ -364,7 +366,9 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       ex::when_all(ex::keep_future(k_fut), ex::when_all_vector(tc.read(vec)),
                    ex::when_all_vector(tc.read(in_index)), ex::when_all_vector(tc.readwrite(out_index)));
   ex::start_detached(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(sort_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(sort_fn),
+                                                                         std::move(sender)));
 }
 
 // Applies `index` to `in` to get `out`
@@ -395,7 +399,9 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device:
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(applyIndex_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(applyIndex_fn),
+                                                                         std::move(sender)));
 }
 
 inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
@@ -418,7 +424,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
 
   ex::start_detached(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(inv_fn),
+                                                                         std::move(sender)));
 }
 
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
@@ -465,7 +473,9 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
                              ex::when_all_vector(tc.readwrite(out)));
 
   return ex::make_future(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(part_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(part_fn),
+                                                                         std::move(sender)));
 }
 
 inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
@@ -476,7 +486,8 @@ inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColTy
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(setColTypeTile, setColTypeTile_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, setColTypeTile,
+                                     setColTypeTile_o)
 
 inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
                          Matrix<ColType, Device::CPU>& coltypes) {
@@ -593,7 +604,9 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
                              ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
 
   return ex::make_future(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(deflate_fn),
+                                                                         std::move(sender)));
 }
 
 // Assumption: the memory layout of the matrix from which the tiles are coming is column major.
@@ -685,7 +698,9 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
                    ex::when_all_vector(tc.readwrite(evecs)));
 
   ex::ensure_started(
-      di::transform<false>(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
+      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                         std::move(rank1_fn),
+                                                                         std::move(sender)));
 }
 
 // References:

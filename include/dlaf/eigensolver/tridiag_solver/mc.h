@@ -111,8 +111,8 @@ template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
@@ -137,8 +137,8 @@ template <class T>
 void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
     whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
@@ -207,7 +207,7 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
                                                       Matrix<T, Device::CPU>& d,
                                                       Matrix<T, Device::CPU>& mat_ev) {
   // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<Backend::MC, T, Device::CPU>(pika::threads::thread_priority::normal, mat_ev);
+  matrix::util::set0<Backend::MC, T, Device::CPU>(pika::execution::thread_priority::normal, mat_ev);
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);

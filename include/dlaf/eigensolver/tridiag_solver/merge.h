@@ -164,8 +164,8 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(initIndexTile, initIndexTile_o)
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   SizeType nb = index.distribution().blockSize().rows();
 
@@ -207,8 +207,8 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
@@ -249,7 +249,7 @@ auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
     tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read_sender(LocalTileIndex(i, 0))) |
-                        tile::lange(di::Policy<Backend::MC>(pika::threads::thread_priority::normal)));
+                        tile::lange(di::Policy<Backend::MC>(pika::execution::thread_priority::normal)));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -482,8 +482,8 @@ inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
                          Matrix<ColType, Device::CPU>& coltypes) {
   using dlaf::internal::Policy;
   using dlaf::internal::whenAllLift;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
@@ -922,8 +922,8 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
 template <class T>
 void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& mat) {
   using dlaf::internal::Policy;
+  using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-  using pika::threads::thread_priority;
 
   for (SizeType j = i_begin; j <= i_end; ++j) {
     for (SizeType i = i_begin; i <= i_end; ++i) {

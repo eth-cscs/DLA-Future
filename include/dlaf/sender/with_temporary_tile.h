@@ -102,14 +102,6 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
-           // In some cases we can directly use the input as a temporary tile.
-           // In that case we simply call the user-provided callable f, ignore
-           // the values sent by the sender returned from f, and finally send
-           // the input tile to continuations if the tile is non-const.
-           auto helper_notemp = [&]() {
-             return f(in) | ex::drop_value() | ex::then(moveNonConstTile{in});
-           };
-
            // In cases that we cannot use the input tile as the temporary tile we need to:
            // 1. allocate a new tile
            // 2. optionally copy the input to the temporary tile
@@ -158,12 +150,21 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            };
 
            // One of the helpers may be unused depending on which branch is taken
-           dlaf::internal::silenceUnusedWarningFor(helper_notemp);
            dlaf::internal::silenceUnusedWarningFor(helper_withtemp);
 
            // If the destination device is the same as the input device we may
            // be able to avoid allocating a new tile.
            if constexpr (in_device_type == destination_device) {
+             // In some cases we can directly use the input as a temporary tile.
+             // In that case we simply call the user-provided callable f, ignore
+             // the values sent by the sender returned from f, and finally send
+             // the input tile to continuations if the tile is non-const. This
+             // helper is inside the if constexpr to avoid instantiating it in
+             // cases where it's never needed.
+             auto helper_notemp = [&]() {
+               return f(in) | ex::drop_value() | ex::then(moveNonConstTile{in});
+             };
+
              // The destination device is the same as the input device, but if
              // we require that the temporary tile is contiguous we may have to
              // allocate a new tile in any case. We have to do a runtime check

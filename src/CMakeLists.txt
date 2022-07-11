@@ -229,10 +229,10 @@ target_add_warnings(dlaf.multiplication)
 DLAF_addPrecompiledHeaders(dlaf.multiplication)
 
 # Define DLAF's permutations library
-add_library(dlaf.permutations OBJECT
-  permutations/general/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:permutations/general/gpu.cpp>
-  )
+add_library(
+  dlaf.permutations OBJECT permutations/general/mc.cpp
+                           $<$<BOOL:${DLAF_WITH_CUDA}>:permutations/general/gpu.cpp>
+)
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)
 DLAF_addPrecompiledHeaders(dlaf.permutations)
@@ -246,7 +246,8 @@ target_add_warnings(dlaf.solver)
 DLAF_addPrecompiledHeaders(dlaf.solver)
 
 # Define DLAF's complete library
-add_library(DLAF
+add_library(
+  DLAF
   $<TARGET_OBJECTS:dlaf.core>
   $<TARGET_OBJECTS:dlaf.auxiliary>
   $<TARGET_OBJECTS:dlaf.eigensolver>

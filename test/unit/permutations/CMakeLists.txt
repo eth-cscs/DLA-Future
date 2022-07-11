@@ -8,7 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_permutations
+DLAF_addTest(
+  test_permutations
   SOURCES test_permutations.cpp
   LIBRARIES dlaf.permutations dlaf.core
   USE_MAIN PIKA

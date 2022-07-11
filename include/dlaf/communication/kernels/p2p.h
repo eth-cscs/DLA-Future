@@ -29,8 +29,8 @@ namespace internal {
 
 // Non-blocking point to point send
 template <class T, Device D>
-void send(const Communicator& comm, const matrix::Tile<const T, D>& tile, IndexT_MPI dest,
-          IndexT_MPI tag, MPI_Request* req) {
+void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
+          const matrix::Tile<const T, D>& tile, MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
 #endif
@@ -44,7 +44,7 @@ DLAF_MAKE_CALLABLE_OBJECT(send);
 
 // Non-blocking point to point receive
 template <class T, Device D>
-auto recv(const Communicator& comm, const matrix::Tile<T, D>& tile, IndexT_MPI source, IndexT_MPI tag,
+auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
           MPI_Request* req) {
 #if !defined(DLAF_WITH_CUDA_RDMA)
   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
@@ -58,19 +58,19 @@ DLAF_MAKE_CALLABLE_OBJECT(recv);
 }
 
 template <class CommSender, class Sender>
-[[nodiscard]] auto scheduleSend(IndexT_MPI dest, CommSender&& pcomm, IndexT_MPI tag, Sender&& tile) {
+[[nodiscard]] auto scheduleSend(CommSender&& pcomm, IndexT_MPI dest, IndexT_MPI tag, Sender&& tile) {
   using dlaf::internal::whenAllLift;
   using pika::execution::experimental::start_detached;
 
-  return whenAllLift(std::forward<CommSender>(pcomm), std::forward<Sender>(tile), dest, tag) |
+  return whenAllLift(std::forward<CommSender>(pcomm), dest, tag, std::forward<Sender>(tile)) |
          internal::transformMPI(internal::send_o);
 }
 
 template <class CommSender, class Sender>
-[[nodiscard]] auto scheduleRecv(IndexT_MPI source, CommSender&& pcomm, IndexT_MPI tag, Sender&& tile) {
+[[nodiscard]] auto scheduleRecv(CommSender&& pcomm, IndexT_MPI source, IndexT_MPI tag, Sender&& tile) {
   using dlaf::internal::whenAllLift;
 
-  return whenAllLift(std::forward<CommSender>(pcomm), std::forward<Sender>(tile), source, tag) |
+  return whenAllLift(std::forward<CommSender>(pcomm), source, tag, std::forward<Sender>(tile)) |
          internal::transformMPI(internal::recv_o);
 }
 }

@@ -32,16 +32,16 @@
 ///
 /// The function name is wrapped in parentheses in the last overload to disable
 /// ADL. We are only interested in forwarding to the first overload.
-#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(fname, callable)                                      \
+#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                 \
   template <Backend B, typename Sender,                                                            \
             typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>       \
   auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                      \
-    return dlaf::internal::transform<B>(p, callable, std::forward<Sender>(s));                     \
+    return dlaf::internal::transform<B, tag>(p, callable, std::forward<Sender>(s));                \
   }                                                                                                \
                                                                                                    \
   template <Backend B>                                                                             \
   auto fname(const dlaf::internal::Policy<B> p) {                                                  \
-    return dlaf::internal::PartialTransform{p, callable};                                          \
+    return dlaf::internal::makePartialTransform<tag>(p, callable);                                 \
   }                                                                                                \
                                                                                                    \
   template <Backend B, typename T1, typename T2, typename... Ts>                                   \

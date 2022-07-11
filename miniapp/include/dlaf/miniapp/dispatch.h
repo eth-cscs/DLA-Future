@@ -53,10 +53,12 @@ void dispatchMiniappBackend(const OptionsType& opts) {
       dispatchMiniappElementType<Miniapp, Backend::MC>(opts);
       break;
     case Backend::GPU:
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       dispatchMiniappElementType<Miniapp, Backend::GPU>(opts);
 #else
-      std::cout << "Attempting to dispatch to Backend::GPU but DLAF_WITH_CUDA is disabled!" << std::endl;
+      std::cout
+          << "Attempting to dispatch to Backend::GPU but both DLAF_WITH_CUDA and DLAF_WITH_HIP are disabled!"
+          << std::endl;
       std::terminate();
 #endif
       break;

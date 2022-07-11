@@ -12,10 +12,9 @@
 
 #include <type_traits>
 
-#if DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-
-#include "dlaf/cuda/error.h"
+#if DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/error.h"
 #endif
 
 #include "dlaf/common/callable_object.h"
@@ -36,7 +35,7 @@ struct CopyBackend<Device::CPU, Device::CPU> {
   static constexpr Backend value = Backend::MC;
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct CopyBackend<Device::CPU, Device::GPU> {
   static constexpr Backend value = Backend::GPU;
@@ -67,7 +66,7 @@ struct CopyTile<T, Device::CPU, Device::CPU> {
   }
 };
 
-#if DLAF_WITH_CUDA
+#if DLAF_WITH_GPU
 template <typename T>
 struct CopyTile<T, Device::CPU, Device::GPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -77,8 +76,8 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                      ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
@@ -88,9 +87,9 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                            ld_source * sizeof(T), m * sizeof(T), n,
-                                            cudaMemcpyHostToDevice, stream));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                           ld_source * sizeof(T), m * sizeof(T), n,
+                                           cudaMemcpyHostToDevice, stream));
   }
 };
 
@@ -103,8 +102,8 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                       ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                      ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -114,9 +113,9 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                            ld_source * sizeof(T), m * sizeof(T), n,
-                                            cudaMemcpyDeviceToHost, stream));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                           ld_source * sizeof(T), m * sizeof(T), n,
+                                           cudaMemcpyDeviceToHost, stream));
   }
 };
 
@@ -129,9 +128,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                       ld_source * sizeof(T), m * sizeof(T), n,
-                                       cudaMemcpyDeviceToDevice));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                      ld_source * sizeof(T), m * sizeof(T), n,
+                                      cudaMemcpyDeviceToDevice));
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
@@ -141,9 +140,9 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                            ld_source * sizeof(T), m * sizeof(T), n,
-                                            cudaMemcpyDeviceToDevice, stream));
+    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                                           ld_source * sizeof(T), m * sizeof(T), n,
+                                           cudaMemcpyDeviceToDevice, stream));
   }
 };
 #endif
@@ -158,7 +157,8 @@ void copy(const Tile<const T, Source>& source, const Tile<T, Destination>& desti
 DLAF_MAKE_CALLABLE_OBJECT(copy);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(copy, internal::copy_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, copy,
+                                     internal::copy_o)
 
 /// Helper struct for copying a given tile to a tile on Destination.
 ///

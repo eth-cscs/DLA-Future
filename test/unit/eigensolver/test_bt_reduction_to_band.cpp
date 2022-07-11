@@ -46,7 +46,7 @@ struct BackTransformationReductionToBandEigenSolverTestMC : public TestWithCommG
 
 TYPED_TEST_SUITE(BackTransformationReductionToBandEigenSolverTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct BackTransformationReductionToBandEigenSolverTestGPU : public TestWithCommGrids {};
 
@@ -220,7 +220,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessLocal)
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : sizes) {
     testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(m, n, mb, nb, b);

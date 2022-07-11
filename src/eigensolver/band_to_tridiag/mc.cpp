@@ -17,7 +17,7 @@ DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::CPU, std::complex<double>)
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::GPU, float)
 DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::GPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(, Backend::MC, Device::GPU, std::complex<float>)

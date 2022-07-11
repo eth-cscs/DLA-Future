@@ -15,7 +15,7 @@ DLAF_addTest(
   USE_MAIN PLAIN
 )
 
-if(DLAF_WITH_CUDA)
+if(DLAF_WITH_GPU)
   DLAF_addTest(
     test_util_cuda
     SOURCES test_util_cuda.cu

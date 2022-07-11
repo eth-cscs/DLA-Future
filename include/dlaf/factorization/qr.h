@@ -74,7 +74,7 @@ DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
 DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)

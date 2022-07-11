@@ -12,16 +12,12 @@
 
 #include <cstdlib>
 #include <memory>
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
-#endif
 
 #include <umpire/Allocator.hpp>
 
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/error.h"
 #include "dlaf/types.h"
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/cuda/error.h"
-#endif
 
 namespace dlaf {
 namespace memory {
@@ -31,7 +27,7 @@ umpire::Allocator& getUmpireHostAllocator();
 void initializeUmpireHostAllocator(std::size_t initial_bytes);
 void finalizeUmpireHostAllocator();
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 void initializeUmpireDeviceAllocator(std::size_t initial_bytes);
 void finalizeUmpireDeviceAllocator();
 umpire::Allocator& getUmpireDeviceAllocator();
@@ -59,7 +55,7 @@ public:
       return;
 
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
     if (device == Device::CPU) {
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
@@ -71,7 +67,8 @@ public:
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
     else {
-      std::cout << "[ERROR] CUDA code was requested but the `DLAF_WITH_CUDA` flag was not passed!";
+      std::cout
+          << "[ERROR] GPU memory was requested but the `DLAF_WITH_CUDA` or `DLAF_WITH_HIP` flags were not passed!";
       std::terminate();
     }
 #endif
@@ -147,7 +144,7 @@ public:
 private:
   void deallocate() {
     if (allocated_) {
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       if (device == Device::CPU) {
         internal::getUmpireHostAllocator().deallocate(ptr_);
       }

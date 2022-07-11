@@ -42,7 +42,7 @@ using RealTileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 TYPED_TEST_SUITE(RealTileOperationsTestMC, RealMatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
@@ -50,9 +50,10 @@ TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
 #endif
 
 // Tuple elements:  n, extra_lda, extra_ldb
-std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {{0, 0, 0},  {3, 0, 0},  {5, 3, 5},
-                                                                     {9, 0, 7},  {9, 1, 0},  {17, 0, 3},
-                                                                     {17, 7, 0}, {32, 0, 0}, {32, 4, 5}};
+std::vector<std::tuple<SizeType, SizeType, SizeType>> hegst_sizes = {
+    {0, 0, 0},  {3, 0, 0},  {5, 3, 5},  {9, 0, 7},  {9, 1, 0},
+    {17, 0, 3}, {17, 7, 0}, {32, 0, 0}, {32, 4, 5}, {64, 0, 0},
+};
 
 TYPED_TEST(TileOperationsTestMC, Hegst) {
   using Type = TypeParam;
@@ -68,7 +69,7 @@ TYPED_TEST(TileOperationsTestMC, Hegst) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Hegst) {
   using Type = TypeParam;
 
@@ -85,11 +86,11 @@ TYPED_TEST(TileOperationsTestGPU, Hegst) {
 #endif
 
 TYPED_TEST(TileOperationsTestMC, lange) {
-  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
-                                                                 {1, 1, 0},   {12, 8, 1},  {8, 12, 1},
-                                                                 {12, 12, 1}, {11, 17, 3}, {11, 17, 0},
-                                                                 {17, 11, 3}, {17, 11, 0}, {17, 17, 3},
-                                                                 {11, 11, 0}};
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
+      {0, 0, 0},   {0, 0, 2},  // 0 size
+      {1, 1, 0},   {12, 8, 1},  {8, 12, 1},  {12, 12, 1}, {11, 17, 3},   {11, 17, 0},
+      {17, 11, 3}, {17, 11, 0}, {17, 17, 3}, {11, 11, 0}, {128, 128, 0},
+  };
 
   for (const auto& [m, n, extra_lda] : sizes) {
     const SizeType lda = std::max<SizeType>(1, m) + extra_lda;
@@ -106,9 +107,10 @@ TYPED_TEST(TileOperationsTestMC, lange) {
 }
 
 TYPED_TEST(TileOperationsTestMC, lantr) {
-  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {{0, 0, 0},   {0, 0, 2},  // 0 size
-                                                                 {1, 1, 0},   {17, 11, 3}, {17, 11, 0},
-                                                                 {17, 17, 3}, {17, 17, 3}, {11, 11, 0}};
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
+      {0, 0, 0}, {0, 0, 2},  // 0 size
+      {1, 1, 0}, {17, 11, 3}, {17, 11, 0}, {17, 17, 3}, {17, 17, 3}, {11, 11, 0}, {128, 128, 0},
+  };
 
   for (auto [m, n, extra_lda] : sizes) {
     for (const auto uplo : blas_uplos) {
@@ -133,8 +135,10 @@ TYPED_TEST(TileOperationsTestMC, lantr) {
 }
 
 // Tuple elements:  n, extra_lda
-std::vector<std::tuple<SizeType, SizeType>> potrf_sizes = {{0, 0}, {0, 2},  // 0 size
-                                                           {1, 0}, {12, 1}, {17, 3}, {11, 0}};
+std::vector<std::tuple<SizeType, SizeType>> potrf_sizes = {
+    {0, 0}, {0, 2},  // 0 size
+    {1, 0}, {12, 1}, {17, 3}, {11, 0}, {128, 0},
+};
 
 TYPED_TEST(TileOperationsTestMC, Potrf) {
   using Type = TypeParam;
@@ -150,7 +154,7 @@ TYPED_TEST(TileOperationsTestMC, Potrf) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Potrf) {
   using Type = TypeParam;
 
@@ -180,7 +184,7 @@ TYPED_TEST(TileOperationsTestMC, PotrfNonPositiveDefinite) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, PotrfNonPositiveDefinite) {
   using Type = TypeParam;
 
@@ -242,7 +246,7 @@ TYPED_TEST(TileOperationsTestMC, Laset) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Laset) {
   using Type = TypeParam;
 
@@ -266,7 +270,7 @@ TYPED_TEST(TileOperationsTestMC, Set0) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Set0) {
   using Type = TypeParam;
 

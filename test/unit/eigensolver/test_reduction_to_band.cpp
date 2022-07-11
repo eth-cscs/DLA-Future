@@ -57,7 +57,7 @@ using ReductionToBandTestMC = ReductionToBandTest<T>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using ReductionToBandTestGPU = ReductionToBandTest<T>;
 
@@ -354,7 +354,7 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
   for (const auto& config : configs) {
     const auto& [size, block_size, band_size] = config;

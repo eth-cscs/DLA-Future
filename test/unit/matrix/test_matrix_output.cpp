@@ -11,7 +11,7 @@
 #include "dlaf/matrix/print_csv.h"
 #include "dlaf/matrix/print_numpy.h"
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 #include "dlaf/matrix/print_gpu.h"
 #endif
 
@@ -41,7 +41,7 @@ class MatrixOutputTest : public ::testing::Test {};
 
 TYPED_TEST_SUITE(MatrixOutputTest, dlaf::test::MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <typename Type>
 class MatrixOutputTestGPU : public ::testing::Test {};
 
@@ -118,7 +118,7 @@ struct test_tile_output<std::complex<T>> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 matrix::Tile<T, Device::GPU> gpuTile(const matrix::Tile<const T, Device::CPU>& tile) {
   const auto size = tile.size();
@@ -145,7 +145,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
@@ -175,7 +175,7 @@ TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, CsvFormatTile) {
   using test_output = test_tile_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
@@ -298,7 +298,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
   for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
@@ -465,7 +465,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrixDist) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrixDist) {
   using test_output_t = test_matrix_dist_output<TypeParam>;
   test_output_t instance;

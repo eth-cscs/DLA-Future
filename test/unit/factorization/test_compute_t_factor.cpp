@@ -46,7 +46,7 @@ struct ComputeTFactorTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(ComputeTFactorTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct ComputeTFactorTestGPU : public TestWithCommGrids {};
 
@@ -408,7 +408,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(ComputeTFactorTestGPU, CorrectnessLocal) {
   for (const auto& [m, k, mb, nb, v_start] : configs) {
     testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(m, k, mb, nb, v_start);

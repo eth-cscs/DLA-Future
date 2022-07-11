@@ -160,7 +160,7 @@ void checkTile(ElementGetter&& expected, const Tile<const T, Device::CPU>& tile,
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 /// Checks the elements of the tile.
 ///
 /// comp(expected({i, j}), (i, j)-element) is used to compare the elements.

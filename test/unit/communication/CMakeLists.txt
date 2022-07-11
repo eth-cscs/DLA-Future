@@ -104,8 +104,17 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
 )
 
-DLAF_addTest(test_transform_mpi
+DLAF_addTest(
+  test_transform_mpi
   SOURCES test_transform_mpi.cpp
+  LIBRARIES dlaf.core
+  MPIRANKS 2
+  USE_MAIN MPIPIKA
+)
+
+DLAF_addTest(
+  test_comm_p2p
+  SOURCES test_comm_p2p.cpp
   LIBRARIES dlaf.core
   MPIRANKS 2
   USE_MAIN MPIPIKA

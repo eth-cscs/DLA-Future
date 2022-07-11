@@ -39,7 +39,7 @@ using BacktransformationT2BTestMC = BacktransformationT2BTest<T>;
 
 TYPED_TEST_SUITE(BacktransformationT2BTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using BacktransformationT2BTestGPU = BacktransformationT2BTest<T>;
 
@@ -166,7 +166,7 @@ TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocal) {
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
@@ -182,7 +182,7 @@ TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocalSubBand) {
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);

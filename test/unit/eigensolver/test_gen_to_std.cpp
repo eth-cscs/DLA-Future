@@ -38,7 +38,7 @@ struct EigensolverGenToStdTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(EigensolverGenToStdTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct EigensolverGenToStdTestGPU : public TestWithCommGrids {};
 
@@ -128,7 +128,7 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
   for (const auto uplo : blas_uplos) {
     for (const auto& [m, mb] : sizes) {

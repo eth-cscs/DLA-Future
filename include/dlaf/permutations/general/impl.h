@@ -149,7 +149,8 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
     applyPermutations<T, D, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
                                mat_in_tiles, mat_out_tiles, std::forward<decltype(ts)>(ts)...);
   };
-  ex::start_detached(dlaf::internal::transform<false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
+  ex::start_detached(dlaf::internal::transform<dlaf::internal::TransformDispatchType::Plain,
+                                               false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
                                                       std::move(sender)));
 }
 }

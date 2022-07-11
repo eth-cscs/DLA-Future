@@ -121,7 +121,7 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
     testBandToTridiag<Device::CPU, TypeParam>(uplo, b, m, mb);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 

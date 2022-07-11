@@ -12,11 +12,11 @@
 
 #include "dlaf/types.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include "dlaf/cublas/error.h"
-#include "dlaf/cuda/error.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/blas/error.h"
+#include "dlaf/gpu/error.h"
 #endif
 
 namespace dlaf::test {
@@ -33,13 +33,13 @@ struct Invoke<Device::CPU> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct Invoke<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     f(std::forward<Args>(args)..., nullptr);
-    DLAF_CUDA_CHECK_ERROR(cudaDeviceSynchronize());
+    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
   }
 };
 #endif
@@ -55,16 +55,16 @@ struct InvokeBlas<Device::CPU> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct InvokeBlas<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     cublasHandle_t handle;
-    DLAF_CUBLAS_CHECK_ERROR(cublasCreate(&handle));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasCreate(&handle));
     f(handle, std::forward<Args>(args)...);
-    DLAF_CUDA_CHECK_ERROR(cudaDeviceSynchronize());
-    DLAF_CUBLAS_CHECK_ERROR(cublasDestroy(handle));
+    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDestroy(handle));
   }
 };
 #endif

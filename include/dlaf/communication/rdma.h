@@ -29,7 +29,7 @@ struct CommunicationDevice {
   static constexpr Device value = D;
 };
 
-#if defined(DLAF_WITH_CUDA) && !defined(DLAF_WITH_CUDA_RDMA)
+#if defined(DLAF_WITH_GPU) && !defined(DLAF_WITH_CUDA_RDMA)
 template <>
 struct CommunicationDevice<Device::GPU> {
   static constexpr Device value = Device::CPU;

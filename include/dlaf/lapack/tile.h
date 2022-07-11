@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <cstddef>
+
 #include <lapack.hh>
 // LAPACKPP includes complex.h which defines the macro I.
 // This breaks pika.
@@ -19,9 +21,7 @@
 #undef I
 #endif
 
-#ifdef DLAF_WITH_CUDA
-#include <cusolverDn.h>
-
+#ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
 #endif
 
@@ -37,16 +37,22 @@
 #include "dlaf/util_lapack.h"
 #include "dlaf/util_tile.h"
 
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/cusolver/assert_info.h"
-#include "dlaf/cusolver/error.h"
-#include "dlaf/cusolver/hegst.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/lapack/api.h"
+#include "dlaf/gpu/lapack/assert_info.h"
+#include "dlaf/gpu/lapack/error.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/util_cublas.h"
 #endif
+// hegst functions get exposed in rocSOLVER
+#ifdef DLAF_WITH_CUDA
+#include "dlaf/gpu/cusolver/hegst.h"
+#elif defined(DLAF_WITH_HIP)
+#include "dlaf/gpu/blas/error.h"
+#include "dlaf/util_rocblas.h"
+#endif
 
-namespace dlaf {
-namespace tile {
+namespace dlaf::tile {
 using matrix::Tile;
 
 // See LAPACK documentation for more details.
@@ -383,50 +389,111 @@ void scaleCol(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
   blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 namespace internal {
-#define DLAF_DECLARE_CUSOLVER_OP(Name) \
-  template <typename T>                \
+#define DLAF_DECLARE_GPULAPACK_OP(Name) \
+  template <typename T>                 \
   struct Cusolver##Name
 
-#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                     \
-  template <>                                                                             \
-  struct Cusolver##Name<Type> {                                                           \
-    template <typename... Args>                                                           \
-    static void call(Args&&... args) {                                                    \
-      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
-    }                                                                                     \
-    template <typename... Args>                                                           \
-    static void callBufferSize(Args&&... args) {                                          \
-      DLAF_CUSOLVER_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
-    }                                                                                     \
+DLAF_DECLARE_GPULAPACK_OP(Hegst);
+DLAF_DECLARE_GPULAPACK_OP(Potrf);
+
+#ifdef DLAF_WITH_CUDA
+
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                      \
+  template <>                                                                              \
+  struct Cusolver##Name<Type> {                                                            \
+    template <typename... Args>                                                            \
+    static void call(Args&&... args) {                                                     \
+      DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f(std::forward<Args>(args)...));              \
+    }                                                                                      \
+    template <typename... Args>                                                            \
+    static void callBufferSize(Args&&... args) {                                           \
+      DLAF_GPULAPACK_CHECK_ERROR(cusolverDn##f##_bufferSize(std::forward<Args>(args)...)); \
+    }                                                                                      \
   }
 
-DLAF_DECLARE_CUSOLVER_OP(Hegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, Ssygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, Dsygst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, Chegst);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, Zhegst);
 
-DLAF_DECLARE_CUSOLVER_OP(Potrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, Spotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, Dpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, Cpotrf);
 DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
+
+#elif defined(DLAF_WITH_HIP)
+
+#define DLAF_GET_ROCSOLVER_WORKSPACE(f)                                                               \
+  [&]() {                                                                                             \
+    std::size_t workspace_size;                                                                       \
+    DLAF_GPULAPACK_CHECK_ERROR(                                                                       \
+        rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
+    DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...));                   \
+    DLAF_GPULAPACK_CHECK_ERROR(                                                                       \
+        rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
+    return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \
+  }();
+
+inline void extendROCSolverWorkspace(cusolverDnHandle_t handle,
+                                     ::dlaf::memory::MemoryView<std::byte, Device::GPU>&& workspace) {
+  cudaStream_t stream;
+  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+  auto f = [workspace = std::move(workspace)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  pika::cuda::experimental::detail::add_event_callback(std::move(f), stream);
+}
+
+#define DLAF_DEFINE_CUSOLVER_OP_BUFFER(Name, Type, f)                                 \
+  template <>                                                                         \
+  struct Cusolver##Name<Type> {                                                       \
+    template <typename... Args>                                                       \
+    static void call(cusolverDnHandle_t handle, Args&&... args) {                     \
+      auto workspace = DLAF_GET_ROCSOLVER_WORKSPACE(f);                               \
+      DLAF_GPULAPACK_CHECK_ERROR(                                                     \
+          rocblas_set_workspace(handle, workspace(), to_sizet(workspace.size())));    \
+      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...)); \
+      DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, nullptr, 0));          \
+      extendROCSolverWorkspace(handle, std::move(workspace));                         \
+    }                                                                                 \
+  }
+
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, float, ssygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, double, dsygst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<float>, chegst);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Hegst, std::complex<double>, zhegst);
+
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, float, spotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, double, dpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<float>, cpotrf);
+DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, zpotrf);
+
+#endif
 }
 
 namespace internal {
 template <class T>
 class CusolverInfo {
+#ifdef DLAF_WITH_CUDA
   memory::MemoryView<T, Device::GPU> workspace_;
+#endif
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
+  CusolverInfo(int workspace_size)
+      :
+#ifdef DLAF_WITH_CUDA
+        workspace_(workspace_size),
+#endif
+        info_(1) {
+  }
+  CusolverInfo() : info_(1) {}
 
+#ifdef DLAF_WITH_CUDA
   T* workspace() {
     return workspace_();
   }
+#endif
   int* info() {
     return info_();
   }
@@ -435,10 +502,10 @@ public:
 template <class F, class T>
 void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
   cudaStream_t stream;
-  DLAF_CUSOLVER_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
+  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_CUDA_CHECK_ERROR(status); };
+  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 }
@@ -468,9 +535,9 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
 
 template <class T>
 void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_CUDA_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
-                                          sizeof(T) * to_sizet(tile.size().rows()),
-                                          to_sizet(tile.size().cols()), stream));
+  DLAF_GPU_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+                                         sizeof(T) * to_sizet(tile.size().rows()),
+                                         to_sizet(tile.size().cols()), stream));
 }
 
 template <class T>
@@ -481,6 +548,7 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
   DLAF_ASSERT(a.size() == b.size(), a, b);
   const auto n = a.size().rows();
 
+#ifdef DLAF_WITH_CUDA
   int workspace_size;
   internal::CusolverHegst<T>::callBufferSize(handle, itype, util::blasToCublas(uplo), to_int(n),
                                              util::blasToCublasCast(a.ptr()), to_int(a.ld()),
@@ -492,7 +560,12 @@ void hegst(cusolverDnHandle_t handle, const int itype, const blas::Uplo uplo,
                                    util::blasToCublasCast(b.ptr()), to_int(b.ld()),
                                    util::blasToCublasCast(info.workspace()), info.info());
 
-  assertExtendInfo(dlaf::cusolver::assertInfoHegst, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assertInfoHegst, handle, std::move(info));
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverHegst<T>::call(handle, util::blasToRocblas(itype), util::blasToRocblas(uplo),
+                                   to_int(n), util::blasToRocblasCast(a.ptr()), to_int(a.ld()),
+                                   util::blasToRocblasCast(b.ptr()), to_int(b.ld()));
+#endif
 }
 
 template <class T>
@@ -501,6 +574,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
   DLAF_ASSERT(square_size(a), a);
   const auto n = a.size().rows();
 
+#ifdef DLAF_WITH_CUDA
   int workspace_size;
   internal::CusolverPotrf<T>::callBufferSize(handle, util::blasToCublas(uplo), to_int(n),
                                              util::blasToCublasCast(a.ptr()), to_int(a.ld()),
@@ -510,6 +584,11 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
                                    util::blasToCublasCast(a.ptr()), to_int(a.ld()),
                                    util::blasToCublasCast(info.workspace()), workspace_size,
                                    info.info());
+#elif defined(DLAF_WITH_HIP)
+  internal::CusolverInfo<T> info{};
+  internal::CusolverPotrf<T>::call(handle, util::blasToRocblas(uplo), to_int(n),
+                                   util::blasToRocblasCast(a.ptr()), to_int(a.ld()), info.info());
+#endif
 
   return info;
 }
@@ -517,7 +596,7 @@ internal::CusolverInfo<T> potrfInfo(cusolverDnHandle_t handle, const blas::Uplo 
 template <class T>
 void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<T, Device::GPU>& a) {
   auto info = potrfInfo(handle, uplo, a);
-  assertExtendInfo(dlaf::cusolver::assertInfoPotrf, handle, std::move(info));
+  assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));
 }
 
 template <class T>
@@ -537,16 +616,24 @@ DLAF_MAKE_CALLABLE_OBJECT(stedc);
 DLAF_MAKE_CALLABLE_OBJECT(scaleCol);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lange, internal::lange_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(lantr, internal::lantr_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(laset, internal::laset_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(set0, internal::set0_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(hegst, internal::hegst_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrf, internal::potrf_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(potrfInfo, internal::potrfInfo_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(stedc, internal::stedc_o)
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(scaleCol, internal::scaleCol_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lange,
+                                     internal::lange_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lantr,
+                                     internal::lantr_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, laset,
+                                     internal::laset_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, set0,
+                                     internal::set0_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, hegst,
+                                     internal::hegst_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrf,
+                                     internal::potrf_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrfInfo,
+                                     internal::potrfInfo_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, stedc,
+                                     internal::stedc_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, scaleCol,
+                                     internal::scaleCol_o)
 
 #endif
-}
 }

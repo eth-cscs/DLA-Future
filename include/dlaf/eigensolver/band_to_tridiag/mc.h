@@ -137,7 +137,7 @@ struct BandBlock {
           },
           std::move(source));
     }
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
@@ -211,7 +211,7 @@ struct BandBlock {
           },
           std::move(source));
     }
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
@@ -248,11 +248,18 @@ struct BandBlock {
   }
 
 private:
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   bool isAccessibleFromGPU() const {
+#ifdef DLAF_WITH_CUDA
     cudaPointerAttributes attrs;
-    DLAF_CUDA_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
+    DLAF_GPU_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
     return cudaMemoryTypeUnregistered != attrs.type;
+#elif defined DLAF_WITH_HIP
+    // We don't have a similar way to check for accessibility from a device in
+    // HIP so we assume that it's always possible. Invalid accesses will result
+    // in segmentation faults instead.
+    return true;
+#endif
   }
 #endif
 

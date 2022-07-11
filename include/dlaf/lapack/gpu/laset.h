@@ -10,13 +10,13 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#include <blas.hh>
-
+#include "dlaf/gpu/api.h"
+#include "dlaf/gpu/blas/api.h"
 #include "dlaf/types.h"
+
+#include <blas.hh>
 
 namespace dlaf::gpulapack {
 

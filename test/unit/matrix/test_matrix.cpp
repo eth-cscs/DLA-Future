@@ -1070,7 +1070,7 @@ TYPED_TEST(MatrixTest, CopyFrom) {
   }
 }
 
-#if DLAF_WITH_CUDA
+#if DLAF_WITH_GPU
 TYPED_TEST(MatrixTest, GPUCopy) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;

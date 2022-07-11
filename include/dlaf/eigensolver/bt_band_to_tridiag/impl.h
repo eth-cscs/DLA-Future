@@ -141,7 +141,7 @@ struct ApplyHHToSingleTileRow<Backend::MC, T> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToSingleTileRow<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
@@ -181,7 +181,7 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
   void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v0,
@@ -363,7 +363,7 @@ protected:
   const SizeType b;
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct HHManager<Backend::GPU, Device::GPU, T> {
   static constexpr Backend B = Backend::GPU;
@@ -400,7 +400,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
            const matrix::Tile<const T, Device::CPU>& tile_t_h, matrix::Tile<T, Device::GPU>& tile_v,
            matrix::Tile<T, Device::GPU>& tile_t, matrix::Tile<T, Device::GPU>& tile_w) {
           cudaStream_t stream;
-          DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+          DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
           matrix::internal::copy(tile_v_h, tile_v, stream);
           matrix::internal::copy(tile_t_h, tile_t, stream);
@@ -417,7 +417,9 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     auto tup2 = ex::when_all(ex::keep_future(std::move(tile_v_h)), ex::keep_future(std::move(tile_t_h)),
                              splitTile(mat_v(ij), helper.specHH()), splitTile(mat_t(ij_t), t_spec),
                              splitTile(mat_w(ij), helper.specHH())) |
-                dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(), copyVTandComputeW) |
+                dlaf::internal::transform<
+                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(),
+                                                                 copyVTandComputeW) |
                 ex::make_future();
 
     return pika::split_future(std::move(tup2));
@@ -530,8 +532,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
                        mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
                        splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
-              dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
-                                        ApplyHHToSingleTileRow<B, T>{}) |
+              dlaf::internal::transform<
+                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                   thread_priority::normal),
+                                                               ApplyHHToSingleTileRow<B, T>{}) |
               ex::start_detached();
         }
         else {
@@ -543,8 +547,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                        splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
                        splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
                                  helper.bottomPart().specEV(sz_e.cols()))) |
-              dlaf::internal::transform(dlaf::internal::Policy<B>(thread_priority::normal),
-                                        ApplyHHToDoubleTileRow<B, T>{}) |
+              dlaf::internal::transform<
+                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                   thread_priority::normal),
+                                                               ApplyHHToDoubleTileRow<B, T>{}) |
               ex::start_detached();
         }
       }
@@ -556,5 +562,4 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     }
   }
 }
-
 }

@@ -548,7 +548,7 @@ DLAF_TILE_ETI(extern, double, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::CPU)
 DLAF_TILE_ETI(extern, std::complex<double>, Device::CPU)
 
-#if defined(DLAF_WITH_CUDA)
+#if defined(DLAF_WITH_GPU)
 DLAF_TILE_ETI(extern, float, Device::GPU)
 DLAF_TILE_ETI(extern, double, Device::GPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)

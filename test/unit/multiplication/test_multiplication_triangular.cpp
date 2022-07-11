@@ -40,7 +40,7 @@ struct TriangularMultiplicationTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(TriangularMultiplicationTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct TriangularMultiplicationTestGPU : public TestWithCommGrids {};
 
@@ -179,7 +179,7 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
   for (const auto side : blas_sides) {
     for (const auto uplo : blas_uplos) {

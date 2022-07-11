@@ -12,24 +12,15 @@
 
 /// @file
 
-#include <exception>
-#include <iostream>
+#include "dlaf/gpu/blas/api.h"
 
 #ifdef DLAF_WITH_CUDA
-#include <cublas_v2.h>
-#include <cuda_runtime.h>
-#endif
 
-#include "dlaf/common/source_location.h"
-
-namespace dlaf {
-namespace internal {
-
-#ifdef DLAF_WITH_CUDA
+namespace dlaf::gpublas::cublas::internal {
 
 /// CUBLAS equivalent to `cudaGetErrorString()`
 /// Reference: https://docs.nvidia.com/cuda/cublas/index.html#cublasstatus_t
-inline std::string cublasGetErrorString(cublasStatus_t st) {
+inline std::string getErrorString(cublasStatus_t st) {
   // clang-format off
   switch (st) {
     case CUBLAS_STATUS_SUCCESS:          return "CUBLAS_STATUS_SUCCESS";
@@ -47,16 +38,5 @@ inline std::string cublasGetErrorString(cublasStatus_t st) {
   return "UNKNOWN";
 }
 
-inline void cublasCall(cublasStatus_t st, const dlaf::common::internal::source_location& info) noexcept {
-  if (st != CUBLAS_STATUS_SUCCESS) {
-    std::cout << "[CUBLAS ERROR] " << info << std::endl << cublasGetErrorString(st) << std::endl;
-    std::terminate();
-  }
 }
-
-#define DLAF_CUBLAS_CHECK_ERROR(cublas_err) dlaf::internal::cublasCall((cublas_err), SOURCE_LOCATION())
-
 #endif
-
-}
-}

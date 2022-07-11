@@ -32,8 +32,8 @@
 #include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
 
-#ifdef DLAF_WITH_CUDA
-#include <cuda_runtime.h>
+#ifdef DLAF_WITH_GPU
+#include "dlaf/gpu/api.h"
 #endif
 
 namespace dlaf::eigensolver::internal {
@@ -54,7 +54,7 @@ struct Helpers<Backend::MC> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <>
 struct Helpers<Backend::GPU> {
   template <class T>

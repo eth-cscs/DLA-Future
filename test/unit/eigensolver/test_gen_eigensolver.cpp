@@ -37,7 +37,7 @@ using GenEigensolverTestMC = GenEigensolverTest<T>;
 
 TYPED_TEST_SUITE(GenEigensolverTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using GenEigensolverTestGPU = GenEigensolverTest<T>;
 
@@ -135,7 +135,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {

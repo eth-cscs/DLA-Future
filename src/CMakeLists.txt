@@ -60,9 +60,26 @@ option(DLAF_ASSERT_HEAVY_ENABLE "Enable high impact assertions" ${DLAF_ASSERT_HE
 
 # Define DLAF's PUBLIC properties
 add_library(dlaf.prop INTERFACE)
-target_include_directories(
-  dlaf.prop INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-                      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include> $<INSTALL_INTERFACE:include>
+target_include_directories(dlaf.prop
+  INTERFACE
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(dlaf.prop
+  INTERFACE
+    MPI::MPI_CXX
+    LAPACK::LAPACK
+    pika::pika
+    lapackpp
+    blaspp
+    umpire
+    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
+    $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
+    $<TARGET_NAME_IF_EXISTS:roc::hipblas>
+    $<TARGET_NAME_IF_EXISTS:roc::rocblas>
+    $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
 )
 target_link_libraries(
   dlaf.prop
@@ -76,15 +93,17 @@ target_link_libraries(
             $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
             $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
 )
-target_compile_features(dlaf.prop INTERFACE cxx_std_17)
-target_compile_definitions(
-  dlaf.prop
-  INTERFACE $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
-            $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
-            $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
-            DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
-            $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
-            $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
+target_compile_definitions(dlaf.prop
+  INTERFACE
+    $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
+    $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
+    $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
+    DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+    $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+    $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
+    $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
+    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
 # Precompiled headers
@@ -128,25 +147,35 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
 endif()
 
 # Define DLAF's CORE library
-add_library(
-  dlaf.core OBJECT
-  communication/communicator_impl.cpp
-  communication/communicator.cpp
-  communication/communicator_grid.cpp
-  communication/datatypes.cpp
-  init.cpp
-  matrix/distribution.cpp
-  matrix/layout_info.cpp
-  matrix/tile.cpp
-  matrix.cpp
-  matrix_mirror.cpp
-  memory/memory_view.cpp
-  memory/memory_chunk.cpp
-  lapack/laed4.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:cusolver/assert_info.cu>
-  $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/lacpy.cu>
-  $<$<BOOL:${DLAF_WITH_CUDA}>:lapack/gpu/laset.cu>
+add_library(dlaf.core
+  OBJECT
+    communication/communicator_impl.cpp
+    communication/communicator.cpp
+    communication/communicator_grid.cpp
+    communication/datatypes.cpp
+    init.cpp
+    matrix/distribution.cpp
+    matrix/layout_info.cpp
+    matrix/tile.cpp
+    matrix.cpp
+    matrix_mirror.cpp
+    memory/memory_view.cpp
+    memory/memory_chunk.cpp
+    lapack/laed4.cpp
 )
+
+if(DLAF_WITH_GPU)
+  set(dlaf_core_gpu_source_files
+    cusolver/assert_info.cu
+    lapack/gpu/lacpy.cu
+    lapack/gpu/laset.cu
+  )
+  target_sources(dlaf.core PRIVATE ${dlaf_core_gpu_source_files})
+  if(DLAF_WITH_HIP)
+    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE CXX)
+  endif()
+endif()
+
 target_compile_options(dlaf.core PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
 target_link_libraries(dlaf.core PUBLIC dlaf.prop)
 target_add_warnings(dlaf.core)
@@ -163,41 +192,38 @@ add_library(
   dlaf.eigensolver OBJECT
   eigensolver/band_to_tridiag/mc.cpp
   eigensolver/bt_band_to_tridiag/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
   eigensolver/bt_reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/bt_reduction_to_band/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_reduction_to_band/gpu.cpp>
   eigensolver/eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/eigensolver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/eigensolver/gpu.cpp>
   eigensolver/gen_eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_eigensolver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_eigensolver/gpu.cpp>
   eigensolver/gen_to_std/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/gen_to_std/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/reduction_to_band/gpu.cpp>
-)
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.eigensolver)
 DLAF_addPrecompiledHeaders(dlaf.eigensolver)
 
 # Define DLAF's factorization library
-add_library(
-  dlaf.factorization OBJECT
-  factorization/cholesky/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/cholesky/gpu.cpp>
-  factorization/qr/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:factorization/qr/gpu.cpp>
-)
-target_compile_options(
-  dlaf.factorization PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>
+add_library(dlaf.factorization OBJECT
+  factorization/cholesky/mc.cpp
+  $<$<BOOL:${DLAF_WITH_GPU}>:factorization/cholesky/gpu.cpp>
+  factorization/qr/mc.cpp
+  $<$<BOOL:${DLAF_WITH_GPU}>:factorization/qr/gpu.cpp>
 )
 target_link_libraries(dlaf.factorization PUBLIC dlaf.prop)
 target_add_warnings(dlaf.factorization)
 DLAF_addPrecompiledHeaders(dlaf.factorization)
 
 # Define DLAF's multiplication library
-add_library(
-  dlaf.multiplication OBJECT
-  multiplication/general/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/general/gpu.cpp>
-  multiplication/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/triangular/gpu.cpp>
-)
+add_library(dlaf.multiplication OBJECT
+  multiplication/general/mc.cpp
+  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/general/gpu.cpp>
+  multiplication/triangular/mc.cpp
+  $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
 target_add_warnings(dlaf.multiplication)
 DLAF_addPrecompiledHeaders(dlaf.multiplication)
@@ -212,9 +238,9 @@ target_add_warnings(dlaf.permutations)
 DLAF_addPrecompiledHeaders(dlaf.permutations)
 
 # Define DLAF's solver library
-add_library(
-  dlaf.solver OBJECT solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_CUDA}>:solver/triangular/gpu.cpp>
-)
+add_library(dlaf.solver OBJECT
+  solver/triangular/mc.cpp
+  $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>)
 target_link_libraries(dlaf.solver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.solver)
 DLAF_addPrecompiledHeaders(dlaf.solver)

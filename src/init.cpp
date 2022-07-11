@@ -56,13 +56,22 @@ struct Init<Backend::MC> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
 
 void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
   DLAF_ASSERT(!cuda_pool, "");
+  // HIP currently requires not using hipStreamNonBlocking as some rocSOLVER
+  // functions such as potrf are not safe to use with it (see
+  // https://github.com/ROCmSoftwarePlatform/rocSOLVER/issues/436).
   cuda_pool =
-      std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_np_streams, num_hp_streams);
+      std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_np_streams, num_hp_streams,
+#if defined(DLAF_WITH_CUDA)
+                                                            cudaStreamNonBlocking
+#else
+                                                            0
+#endif
+      );
 }
 
 void finalizeCudaPool() {
@@ -190,7 +199,7 @@ void initialize(pika::program_options::variables_map const& vm, configuration co
 
   DLAF_ASSERT(!internal::initialized(), "");
   internal::Init<Backend::MC>::initialize(cfg);
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   internal::Init<Backend::GPU>::initialize(cfg);
 #endif
   internal::initialized() = true;
@@ -209,7 +218,7 @@ void initialize(int argc, const char* const argv[], configuration const& user_cf
 void finalize() {
   DLAF_ASSERT(internal::initialized(), "");
   internal::Init<Backend::MC>::finalize();
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   internal::Init<Backend::GPU>::finalize();
 #endif
   internal::getConfiguration() = {};

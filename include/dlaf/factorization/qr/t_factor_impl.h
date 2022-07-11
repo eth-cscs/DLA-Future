@@ -30,8 +30,10 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#ifdef DLAF_WITH_CUDA
-#include "dlaf/cublas/api.h"
+#ifdef DLAF_WITH_GPU
+#include "dlaf/blas/tile.h"
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/blas/error.h"
 #endif
 
 namespace dlaf::factorization::internal {
@@ -125,7 +127,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
   }
 };
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct Helpers<Backend::GPU, Device::GPU, T> {
   template <class TSender>
@@ -156,11 +158,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
       if (first_row_tile == 0) {
         cudaStream_t stream;
-        DLAF_CUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+        DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        DLAF_CUDA_CHECK_ERROR(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
-                                                taus.data(), sizeof(T), sizeof(T), to_sizet(k),
-                                                cudaMemcpyDefault, stream));
+        DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
+                                               taus.data(), sizeof(T), sizeof(T), to_sizet(k),
+                                               cudaMemcpyDefault, stream));
       }
 
       for (SizeType j = 0; j < k; ++j) {
@@ -183,18 +185,22 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         TileElementIndex vb_start{first_element_in_col, j};
         TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
 
-        gpublas::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()), to_int(va_size.cols()),
-                               &mtau, util::blasToCublasCast(tile_v.ptr(va_start)), to_int(tile_v.ld()),
-                               util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
-                               util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+        gpublas::internal::Gemv<T>::call(handle, CUBLAS_OP_C, to_int(va_size.rows()),
+                                         to_int(va_size.cols()), &mtau,
+                                         util::blasToCublasCast(tile_v.ptr(va_start)),
+                                         to_int(tile_v.ld()),
+                                         util::blasToCublasCast(tile_v.ptr(vb_start)), 1, &one,
+                                         util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };
-    return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
-                                         pika::execution::thread_priority::high),
-                                     std::move(gemv_func),
-                                     ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
-                                                  std::forward<TSender>(tile_t)));
+    return dlaf::internal::transform<
+        dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
+                                                         pika::execution::thread_priority::high),
+                                                     std::move(gemv_func),
+                                                     ex::when_all(ex::keep_future(tile_vi),
+                                                                  ex::keep_future(taus),
+                                                                  std::forward<TSender>(tile_t)));
   }
 
   template <class TSender>
@@ -208,16 +214,19 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};
 
-        gpublas::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N, CUBLAS_DIAG_NON_UNIT,
-                               to_int(t_size.rows()), util::blasToCublasCast(tile_t.ptr()),
-                               to_int(tile_t.ld()), util::blasToCublasCast(tile_t.ptr(t_start)), 1);
+        gpublas::internal::Trmv<T>::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
+                                         CUBLAS_DIAG_NON_UNIT, to_int(t_size.rows()),
+                                         util::blasToCublasCast(tile_t.ptr()), to_int(tile_t.ld()),
+                                         util::blasToCublasCast(tile_t.ptr(t_start)), 1);
       }
       return std::move(tile_t);
     };
 
-    return dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(
-                                         pika::execution::thread_priority::high),
-                                     std::move(trmv_func), std::forward<TSender>(tile_t));
+    return dlaf::internal::transform<
+        dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
+                                                         pika::execution::thread_priority::high),
+                                                     std::move(trmv_func),
+                                                     std::forward<TSender>(tile_t));
   }
 };
 #endif

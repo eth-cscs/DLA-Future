@@ -33,8 +33,4 @@ DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp LIBR
 
 DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp LIBRARIES DLAF)
 
-if(DLAF_WITH_CUDA)
-  DLAF_addMiniapp(miniapp_cublas SOURCES miniapp_cublas.cpp LIBRARIES DLAF)
-endif()
-
 add_subdirectory(kernel)

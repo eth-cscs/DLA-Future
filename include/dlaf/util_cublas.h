@@ -10,10 +10,10 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 
-#include <cublas_v2.h>
 #include <blas.hh>
+#include "dlaf/gpu/blas/api.h"
 #include "dlaf/util_cuda.h"
 
 namespace dlaf {

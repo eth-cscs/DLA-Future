@@ -61,6 +61,7 @@ CMake option | Values | Note
 `DLAF_ASSERT_MODERATE_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable moderate assertions
 `DLAF_ASSERT_HEAVY_ENABLE` | `{ON,OFF}` (default: `ON` in Debug, `OFF` otherwise) | enable/disable heavy assertions
 `DLAF_WITH_CUDA` | `{ON,OFF}` (default: `OFF`) | enable CUDA support
+`DLAF_WITH_HIP` | `{ON,OFF}` (default: `OFF`) | enable HIP support
 `DLAF_BUILD_MINIAPPS` | `{ON,OFF}` (default: `ON`) | enable/disable building miniapps
 `DLAF_BUILD_TESTING` | `{ON,OFF}` (default: `ON`) | enable/disable building tests
 `DLAF_INSTALL_TESTS` | `{ON,OFF}` (default: `OFF`) | enable/disable installing tests

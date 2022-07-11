@@ -30,7 +30,7 @@ static_assert(sizeof(SizeType) >= 4, "SizeType should be >= 32bit");
 enum class Device {
   CPU,
   GPU,
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   Default = GPU
 #else
   Default = CPU
@@ -52,7 +52,7 @@ inline std::ostream& operator<<(std::ostream& os, const Device& device) {
 enum class Backend {
   MC,
   GPU,
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
   Default = GPU
 #else
   Default = MC

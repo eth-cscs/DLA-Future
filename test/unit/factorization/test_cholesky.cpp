@@ -38,7 +38,7 @@ struct CholeskyTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(CholeskyTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct CholeskyTestGPU : public TestWithCommGrids {};
 
@@ -115,7 +115,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (const auto& [m, mb] : sizes) {

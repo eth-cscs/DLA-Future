@@ -36,7 +36,7 @@ using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
 
 TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
 
@@ -49,7 +49,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeTyp
     {7, 0, 0, 3, 1, 0},  {0, 5, 0, 0, 0, 1},    {0, 0, 11, 1, 1, 2},  // two 0 sizes
     {0, 5, 13, 1, 0, 1}, {7, 0, 4, 1, 2, 0},    {3, 11, 0, 0, 1, 0},  // one 0 size
     {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
-    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7},
+    {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
 };
 
 TYPED_TEST(TileOperationsTestMC, Gemm) {
@@ -68,7 +68,7 @@ TYPED_TEST(TileOperationsTestMC, Gemm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Gemm) {
   using Type = TypeParam;
 
@@ -92,7 +92,7 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> hemm_s
     {7, 0, 3, 1, 0}, {0, 5, 0, 0, 1},   {0, 0, 1, 1, 2},   // two 0 sizes
     {0, 5, 1, 0, 1}, {7, 0, 1, 2, 0},   {3, 11, 0, 1, 0},  // one 0 size
     {1, 1, 0, 3, 0}, {1, 12, 1, 0, 7},  {17, 12, 1, 3, 0}, {11, 23, 0, 3, 4},
-    {6, 9, 1, 1, 1}, {32, 32, 0, 0, 0}, {32, 32, 4, 5, 7},
+    {6, 9, 1, 1, 1}, {32, 32, 0, 0, 0}, {32, 32, 4, 5, 7}, {128, 128, 0, 0, 0},
 };
 
 TYPED_TEST(TileOperationsTestMC, Hemm) {
@@ -111,7 +111,7 @@ TYPED_TEST(TileOperationsTestMC, Hemm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Hemm) {
   using Type = TypeParam;
 
@@ -130,11 +130,12 @@ TYPED_TEST(TileOperationsTestGPU, Hemm) {
 #endif
 
 // Tuple elements:  n, k, extra_lda, extra_ldc
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> herk_her2k_sizes =
-    {{0, 0, 0, 0},                 // all 0 sizes
-     {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
-     {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
-     {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> herk_her2k_sizes = {
+    {0, 0, 0, 0},                 // all 0 sizes
+    {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
+    {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
+    {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}, {128, 128, 0, 0},
+};
 
 TYPED_TEST(TileOperationsTestMC, Her2k) {
   using Type = TypeParam;
@@ -157,7 +158,7 @@ TYPED_TEST(TileOperationsTestMC, Her2k) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Her2k) {
   using Type = TypeParam;
 
@@ -201,7 +202,7 @@ TYPED_TEST(TileOperationsTestMC, Herk) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Herk) {
   using Type = TypeParam;
 
@@ -225,18 +226,20 @@ TYPED_TEST(TileOperationsTestGPU, Herk) {
 #endif
 
 // Tuple elements:  m, n, extra_lda, extra_ldb
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes =
-    {{0, 0, 0, 0},                 // all 0 sizes
-     {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
-     {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
-     {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7}};
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> trmm_trsm_sizes = {
+    {0, 0, 0, 0},                 // all 0 sizes
+    {0, 5, 1, 0},  {7, 0, 1, 2},  // one 0 size
+    {1, 1, 0, 3},  {1, 12, 1, 0},  {17, 12, 1, 3}, {11, 23, 0, 3},
+    {9, 12, 1, 1}, {32, 32, 0, 0}, {32, 32, 4, 7},
+};
 
 // Tuple elements:  m, n, extra_lda, extra_ldb, extra_ldc
-std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> trmm3_sizes =
-    {{0, 0, 0, 0, 0},                    // all 0 sizes
-     {0, 5, 1, 0, 3},  {7, 0, 1, 2, 0},  // one 0 size
-     {1, 1, 0, 3, 2},  {1, 12, 1, 0, 0},  {17, 12, 1, 3, 2}, {11, 23, 0, 3, 0},
-     {9, 12, 1, 1, 1}, {32, 32, 0, 0, 2}, {32, 32, 4, 7, 0}};
+std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> trmm3_sizes = {
+    {0, 0, 0, 0, 0},                    // all 0 sizes
+    {0, 5, 1, 0, 3},  {7, 0, 1, 2, 0},  // one 0 size
+    {1, 1, 0, 3, 2},  {1, 12, 1, 0, 0},  {17, 12, 1, 3, 2}, {11, 23, 0, 3, 0},
+    {9, 12, 1, 1, 1}, {32, 32, 0, 0, 2}, {32, 32, 4, 7, 0}, {128, 128, 0, 0, 0},
+};
 
 TYPED_TEST(TileOperationsTestMC, Trmm) {
   using Type = TypeParam;
@@ -278,7 +281,7 @@ TYPED_TEST(TileOperationsTestMC, Trmm3) {
     }
   }
 }
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Trmm) {
   using Type = TypeParam;
 
@@ -341,7 +344,7 @@ TYPED_TEST(TileOperationsTestMC, Trsm) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TileOperationsTestGPU, Trsm) {
   using Type = TypeParam;
 

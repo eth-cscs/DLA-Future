@@ -8,13 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 #pragma once
 
 #include <iostream>
 
-#include <cuda_runtime.h>
-
+#include "dlaf/gpu/api.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf::matrix {
@@ -37,7 +36,7 @@ void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& 
 
   if (!size.isEmpty()) {
     internal::copy_o(tile, tile_h, stream);
-    DLAF_CUDA_CHECK_ERROR(cudaStreamSynchronize(stream));
+    DLAF_GPU_CHECK_ERROR(cudaStreamSynchronize(stream));
   }
 
   print(format, tile_h, os);
@@ -52,12 +51,12 @@ template <class Format, class T>
 void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os = std::cout) {
   cudaStream_t stream = NULL;
   if (!tile.size().isEmpty())
-    DLAF_CUDA_CHECK_ERROR(cudaStreamCreate(&stream));
+    DLAF_GPU_CHECK_ERROR(cudaStreamCreate(&stream));
 
   print(format, tile, os, stream);
 
   if (!tile.size().isEmpty())
-    DLAF_CUDA_CHECK_ERROR(cudaStreamDestroy(stream));
+    DLAF_GPU_CHECK_ERROR(cudaStreamDestroy(stream));
 }
 
 }

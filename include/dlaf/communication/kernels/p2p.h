@@ -18,10 +18,12 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
+#include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/when_all_lift.h"
+#include "dlaf/sender/with_temporary_tile.h"
 
 namespace dlaf::comm {
 
@@ -59,18 +61,45 @@ DLAF_MAKE_CALLABLE_OBJECT(recv);
 
 template <class CommSender, class Sender>
 [[nodiscard]] auto scheduleSend(CommSender&& pcomm, IndexT_MPI dest, IndexT_MPI tag, Sender&& tile) {
+  using dlaf::comm::internal::send_o;
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
+  using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
-  using pika::execution::experimental::start_detached;
+  using dlaf::internal::withTemporaryTile;
 
-  return whenAllLift(std::forward<CommSender>(pcomm), dest, tag, std::forward<Sender>(tile)) |
-         internal::transformMPI(internal::send_o);
+  auto recv = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
+  };
+
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
+
+  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
+                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
 }
 
 template <class CommSender, class Sender>
 [[nodiscard]] auto scheduleRecv(CommSender&& pcomm, IndexT_MPI source, IndexT_MPI tag, Sender&& tile) {
+  using dlaf::comm::internal::recv_o;
+  using dlaf::comm::internal::transformMPI;
+  using dlaf::internal::CopyFromDestination;
+  using dlaf::internal::CopyToDestination;
+  using dlaf::internal::RequireContiguous;
+  using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
+  using dlaf::internal::withTemporaryTile;
 
-  return whenAllLift(std::forward<CommSender>(pcomm), source, tag, std::forward<Sender>(tile)) |
-         internal::transformMPI(internal::recv_o);
+  auto recv = [source, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+    return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
+  };
+
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
+
+  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
+                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
 }
 }

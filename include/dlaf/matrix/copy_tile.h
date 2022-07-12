@@ -23,9 +23,10 @@
 #include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
+#include "dlaf/types.h"
 
-namespace dlaf {
-namespace matrix {
+namespace dlaf::matrix {
+
 namespace internal {
 template <Device Source, Device Destination>
 struct CopyBackend;
@@ -62,7 +63,14 @@ template <typename T>
 struct CopyTile<T, Device::CPU, Device::CPU> {
   static void call(const matrix::Tile<const T, Device::CPU>& source,
                    const matrix::Tile<T, Device::CPU>& destination) {
-    dlaf::tile::lacpy<T>(source, destination);
+    if constexpr (IsFloatingPointOrComplex_v<T>) {
+      dlaf::tile::lacpy<T>(source, destination);
+    }
+    else {
+      // Fall back to a generic copy for non-floating point and non-complex
+      // types (which lapack::lacpy doesn't support)
+      common::copy(common::make_data(source), common::make_data(destination));
+    }
   }
 };
 
@@ -175,9 +183,6 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plai
 /// The allocated tile on Destination will be of the same size of the input one, but it will be also
 /// contiguous, i.e. whatever the input leading dimension is, the destination one will have the leading
 /// dimension equal to the number of rows.
-///
-/// This is useful for use with dataflow, since the output tile is allocated
-/// only when the input tile is ready.
 template <Device Destination>
 struct Duplicate {
   template <typename T, Device Source, typename... Ts>
@@ -190,56 +195,22 @@ struct Duplicate {
   }
 };
 
-/// Helper function for duplicating an input tile to Destination asynchronously,
-/// but only if the destination device is different from the source device.
+/// Helper struct for duplicating a given tile to a tile on Destination without
+/// copying the contents.
 ///
-/// When Destination and Source are the same, returns the input tile unmodified.
-template <Device Destination, typename T, Device Source>
-auto duplicateIfNeeded(pika::future<Tile<T, Source>> tile) {
-  namespace ex = pika::execution::experimental;
-
-  if constexpr (Source == Destination) {
-    return tile;
+/// Defines a call operator which allocates a tile of the same dimensions as the
+/// input tile on Destination.  The allocated tile on Destination will be of the
+/// same size of the input one, but it will be also contiguous, i.e. whatever
+/// the input leading dimension is, the destination one will have the leading
+/// dimension equal to the number of rows.
+template <Device Destination>
+struct DuplicateNoCopy {
+  template <typename T, Device Source>
+  Tile<T, Destination> operator()(const Tile<const T, Source>& source) {
+    auto source_size = source.size();
+    dlaf::memory::MemoryView<T, Destination> mem_view(source_size.linear_size());
+    Tile<T, Destination> destination(source_size, std::move(mem_view), source_size.rows());
+    return Tile<T, Destination>(std::move(destination));
   }
-  else {
-    return std::move(tile) |
-           dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                         pika::execution::thread_priority::normal),
-                                     dlaf::matrix::Duplicate<Destination>{});
-  }
-}
-
-template <Device Destination, typename T, Device Source>
-auto duplicateIfNeeded(pika::shared_future<Tile<T, Source>> tile) {
-  namespace ex = pika::execution::experimental;
-
-  if constexpr (Source == Destination) {
-    return tile;
-  }
-  else {
-    return ex::keep_future(std::move(tile)) |
-           dlaf::internal::transform(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-                                         pika::execution::thread_priority::normal),
-                                     dlaf::matrix::Duplicate<Destination>{});
-  }
-}
-
-/// Helper function for copying a source tile to a destination tile asynchronously,
-/// just if the destination tile is on a different device w.r.t. the source tile.
-///
-/// If the copy is going to happen, it will depend on @p wait_for_me.
-template <Device Destination, class T, Device Source, class U, template <class> class FutureD,
-          template <class> class FutureS>
-void copyIfNeeded(FutureS<Tile<U, Source>> tile_from, FutureD<Tile<T, Destination>> tile_to,
-                  pika::future<void> wait_for_me = pika::make_ready_future<void>()) {
-  namespace ex = pika::execution::experimental;
-
-  if constexpr (Destination != Source)
-    ex::when_all(std::move(wait_for_me), dlaf::internal::keepIfSharedFuture(std::move(tile_from)),
-                 dlaf::internal::keepIfSharedFuture(std::move(tile_to))) |
-        dlaf::matrix::copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>(
-            pika::execution::thread_priority::normal)) |
-        ex::start_detached();
-}
-}
+};
 }

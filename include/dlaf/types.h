@@ -88,6 +88,23 @@ struct DefaultDevice<Backend::GPU> {
 template <Backend backend>
 inline constexpr Device DefaultDevice_v = DefaultDevice<backend>::value;
 
+/// Default backend given a device.
+template <Device device>
+struct DefaultBackend;
+
+template <>
+struct DefaultBackend<Device::CPU> {
+  static constexpr Backend value = Backend::MC;
+};
+
+template <>
+struct DefaultBackend<Device::GPU> {
+  static constexpr Backend value = Backend::GPU;
+};
+
+template <Device device>
+inline constexpr Backend DefaultBackend_v = DefaultBackend<device>::value;
+
 template <class T>
 struct TypeInfo;
 
@@ -122,6 +139,17 @@ using ComplexType = typename TypeInfo<T>::ComplexType;
 
 template <class T>
 inline constexpr bool isComplex_v = std::is_same_v<T, ComplexType<T>>;
+
+namespace internal {
+template <typename T>
+struct IsFloatingPointOrComplex : std::is_floating_point<T> {};
+
+template <typename T>
+struct IsFloatingPointOrComplex<std::complex<T>> : IsFloatingPointOrComplex<T> {};
+}
+
+template <typename T>
+inline constexpr bool IsFloatingPointOrComplex_v = internal::IsFloatingPointOrComplex<T>::value;
 
 /// Compute the number of operations.
 ///

@@ -537,6 +537,7 @@ template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
+  namespace ex = pika::execution::experimental;
   using pika::execution::thread_priority;
 
   const comm::Index2D this_rank = grid.rank();
@@ -590,10 +591,14 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
-        if (this_rank.row() == rank_kk.row())
-          comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx));
-        else
-          comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx));
+        if (this_rank.row() == rank_kk.row()) {
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite_sender(idx)));
+        }
+        else {
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
+                                                      b_panel.read_sender(idx)));
+        }
       }
     }
 
@@ -710,6 +715,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+  namespace ex = pika::execution::experimental;
   using namespace triangular_lut;
   using pika::execution::thread_priority;
 
@@ -763,10 +769,14 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
-        if (this_rank.row() == rank_kk.row())
-          comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel(idx));
-        else
-          comm::scheduleReduceSend(rank_kk.row(), mpi_col_task_chain(), MPI_SUM, b_panel.read(idx));
+        if (this_rank.row() == rank_kk.row()) {
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite_sender(idx)));
+        }
+        else {
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
+                                                      b_panel.read_sender(idx)));
+        }
       }
     }
 
@@ -884,6 +894,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+  namespace ex = pika::execution::experimental;
   using namespace triangular_rlt;
   using pika::execution::thread_priority;
 
@@ -937,10 +948,14 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
-        if (this_rank.col() == rank_kk.col())
-          comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel(idx));
-        else
-          comm::scheduleReduceSend(rank_kk.col(), mpi_row_task_chain(), MPI_SUM, b_panel.read(idx));
+        if (this_rank.col() == rank_kk.col()) {
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite_sender(idx)));
+        }
+        else {
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
+                                                      b_panel.read_sender(idx)));
+        }
       }
     }
 
@@ -1059,6 +1074,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
 template <Backend backend, Device D, class T>
 void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
+  namespace ex = pika::execution::experimental;
   using namespace triangular_rut;
   using pika::execution::thread_priority;
 
@@ -1112,10 +1128,14 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
-        if (this_rank.col() == rank_kk.col())
-          comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel(idx));
-        else
-          comm::scheduleReduceSend(rank_kk.col(), mpi_row_task_chain(), MPI_SUM, b_panel.read(idx));
+        if (this_rank.col() == rank_kk.col()) {
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite_sender(idx)));
+        }
+        else {
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
+                                                      b_panel.read_sender(idx)));
+        }
       }
     }
 
@@ -1137,7 +1157,6 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     a_panel.reset();
   }
 }
-
 }
 }
 }

@@ -25,6 +25,7 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix::test;
+namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
 
 class CollectiveTest : public ::testing::Test {
@@ -75,13 +76,15 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matri
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix(idx));
+    ex::start_detached(
+        dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix.readwrite_sender(idx)));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
-    dlaf::comm::scheduleReduceSend(root_rank, chain(), MPI_SUM, matrix.read(idx));
+    ex::start_detached(
+        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM, matrix.read_sender(idx)));
 
     CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
 
@@ -113,7 +116,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> ma
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix(idx));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix.readwrite_sender(idx));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
@@ -152,7 +155,8 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(mat_in(idx).get(), input_tile);
 
-  dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out(idx));
+  ex::start_detached(dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read_sender(idx),
+                                                   mat_out.readwrite_sender(idx)));
 
   const auto& tile_in = mat_in.read(idx).get();
   const auto& tile_out = mat_out.read(idx).get();

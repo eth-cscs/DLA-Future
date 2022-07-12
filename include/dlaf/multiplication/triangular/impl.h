@@ -38,19 +38,20 @@ namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
+                                  std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -58,19 +59,19 @@ namespace triangular_llt {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
+                                  std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -78,19 +79,20 @@ namespace triangular_lun {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
+                                  std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -98,19 +100,19 @@ namespace triangular_lut {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(op, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
+                                  std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -118,19 +120,20 @@ namespace triangular_rln {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
+                                  std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -138,19 +141,19 @@ namespace triangular_rlt {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
+                                  std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -158,19 +161,20 @@ namespace triangular_run {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
                             BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
+                                  std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
@@ -178,19 +182,19 @@ namespace triangular_rut {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trmmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas::Diag diag, T alpha,
                     InSender&& in_tile, OutSender&& out_tile) {
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
-                              std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
+                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
+      tile::trmm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
 void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op op, T alpha,
                             ASender&& a_tile, BSender&& b_tile, CSender&& c_tile) {
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
-                              std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, op, alpha, std::forward<ASender>(a_tile),
+                                  std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 

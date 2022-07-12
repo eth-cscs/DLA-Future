@@ -30,11 +30,12 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
   for (SizeType j = idx_begin; j <= idx_end; ++j) {
     for (SizeType i = idx_begin; i <= idx_end; ++i) {
       for (SizeType k = idx_begin; k <= idx_end; ++k) {
-        dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read_sender(GlobalTileIndex(i, k)),
-                                    mat_b.read_sender(GlobalTileIndex(k, j)),
-                                    k == idx_begin ? beta : T(1),
-                                    mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
-            tile::gemm(dlaf::internal::Policy<B>()) | ex::start_detached();
+        ex::start_detached(dlaf::internal::whenAllLift(opA, opB, alpha,
+                                                       mat_a.read_sender(GlobalTileIndex(i, k)),
+                                                       mat_b.read_sender(GlobalTileIndex(k, j)),
+                                                       k == idx_begin ? beta : T(1),
+                                                       mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
+                           tile::gemm(dlaf::internal::Policy<B>()));
       }
     }
   }

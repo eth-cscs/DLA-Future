@@ -97,7 +97,7 @@ struct Panel<axis, const T, D> {
       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
       });
-      ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)) | ex::start_detached();
+      ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
     }
 #endif
 

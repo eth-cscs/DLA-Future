@@ -528,30 +528,30 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         auto tile_e = mat_e.read(idx_e);
 
         if (not helper.affectsMultipleTiles()) {
-          ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                       ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
-                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
-                       splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
+          ex::start_detached(
+              ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                           ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
+                           splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                    thread_priority::normal),
-                                                               ApplyHHToSingleTileRow<B, T>{}) |
-              ex::start_detached();
+                                                               ApplyHHToSingleTileRow<B, T>{}));
         }
         else {
           auto tile_vs = splitTile(tile_v, {helper.topPart().specHH(), helper.bottomPart().specHH()});
           auto tile_ws = splitTile(tile_w, {helper.topPart().specHH(), helper.bottomPart().specHH()});
-          ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
-                       ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
-                       mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
-                       splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
-                       splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
-                                 helper.bottomPart().specEV(sz_e.cols()))) |
+          ex::start_detached(
+              ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
+                           ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
+                           splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
+                           splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
+                                     helper.bottomPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                    thread_priority::normal),
-                                                               ApplyHHToDoubleTileRow<B, T>{}) |
-              ex::start_detached();
+                                                               ApplyHHToDoubleTileRow<B, T>{}));
         }
       }
 

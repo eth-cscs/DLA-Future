@@ -38,9 +38,9 @@ namespace internal {
 namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
-  dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::potrf(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -48,11 +48,12 @@ void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
-                              blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
+                                  blas::Diag::NonUnit, ElementType(1.0),
+                                  std::forward<KKTileSender>(kk_tile),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -60,11 +61,11 @@ void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSe
                           MatrixTileSender&& matrix_tile) {
   using BaseElementType = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
-  dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, BaseElementType(-1.0),
-                              std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, BaseElementType(-1.0),
+                                  std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::herk(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -72,21 +73,21 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTile
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, ElementType(-1.0),
-                              std::forward<PanelTileSender>(panel_tile),
-                              std::forward<ColPanelSender>(col_panel), ElementType(1.0),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, ElementType(-1.0),
+                                  std::forward<PanelTileSender>(panel_tile),
+                                  std::forward<ColPanelSender>(col_panel), ElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 
 namespace cholesky_u {
 template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
-  dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::potrf(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -94,11 +95,12 @@ void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_
                    MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<KKTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
-                              blas::Diag::NonUnit, ElementType(1.0), std::forward<KKTileSender>(kk_tile),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
+                                  blas::Diag::NonUnit, ElementType(1.0),
+                                  std::forward<KKTileSender>(kk_tile),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::trsm(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -106,11 +108,11 @@ void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSe
                           MatrixTileSender&& matrix_tile) {
   using base_element_type = BaseType<dlaf::internal::SenderElementType<PanelTileSender>>;
 
-  dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, base_element_type(-1.0),
-                              std::forward<PanelTileSender>(panel_tile), base_element_type(1.0),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, base_element_type(-1.0),
+                                  std::forward<PanelTileSender>(panel_tile), base_element_type(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::herk(dlaf::internal::Policy<backend>(priority)));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -118,12 +120,12 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTile
                             ColPanelSender&& col_panel, MatrixTileSender&& matrix_tile) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
 
-  dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(-1.0),
-                              std::forward<PanelTileSender>(panel_tile),
-                              std::forward<ColPanelSender>(col_panel), ElementType(1.0),
-                              std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)) |
-      pika::execution::experimental::start_detached();
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(-1.0),
+                                  std::forward<PanelTileSender>(panel_tile),
+                                  std::forward<ColPanelSender>(col_panel), ElementType(1.0),
+                                  std::forward<MatrixTileSender>(matrix_tile)) |
+      tile::gemm(dlaf::internal::Policy<backend>(priority)));
 }
 }
 

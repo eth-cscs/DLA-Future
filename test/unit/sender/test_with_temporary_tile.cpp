@@ -99,19 +99,23 @@ void testWithTemporaryTile() {
       check_tile_ptr(temp.ptr());
       check_tile_contiguous(temp);
 
+      ex::unique_any_sender<> check_tile_sender{ex::just()};
       if (bool(copy_to_destination) || !expect_new_tile) {
         // If the input tile should be copied to the temporary tile or if we
         // don't expect a copy the temporary tile should have the values set
-        // above.
-        auto tile_cpu = tt::sync_wait(
+        // above. This is done asynchronously since we don't know what context
+        // we are currently running on and it may not be safe to call
+        // sync_wait.
+        check_tile_sender =
             ex::just(std::cref(temp)) |
             internal::transform(internal::Policy<
                                     matrix::internal::CopyBackend_v<destination_device, Device::CPU>>(),
-                                matrix::Duplicate<Device::CPU>{}));
-        CHECK_TILE_EQ(check_input_value, tile_cpu);
+                                matrix::Duplicate<Device::CPU>{}) |
+            ex::then([&](const auto& tile_cpu) { CHECK_TILE_EQ(check_input_value, tile_cpu); });
       }
 
-      return internal::whenAllLift(blas::Uplo::General, output_value, output_value, std::cref(temp)) |
+      return internal::whenAllLift(std::move(check_tile_sender), blas::Uplo::General, output_value,
+                                   output_value, std::cref(temp)) |
              tile::laset(internal::Policy<DefaultBackend_v<destination_device>>());
     });
     static_assert(
@@ -153,19 +157,22 @@ void testWithTemporaryTile() {
       check_tile_ptr(temp.ptr());
       check_tile_contiguous(temp);
 
+      ex::unique_any_sender<> check_tile_sender{ex::just()};
       if (bool(copy_to_destination) || !expect_new_tile) {
         // If the input tile should be copied to the temporary tile or if we
         // don't expect a copy the temporary tile should have the values set
-        // above.
-        auto tile_cpu = tt::sync_wait(
+        // above. This is done asynchronously since we don't know what context
+        // we are currently running on and it may not be safe to call
+        // sync_wait.
+        check_tile_sender =
             ex::just(std::cref(temp)) |
             internal::transform(internal::Policy<
                                     matrix::internal::CopyBackend_v<destination_device, Device::CPU>>(),
-                                matrix::Duplicate<Device::CPU>{}));
-        CHECK_TILE_EQ(check_input_value, tile_cpu);
+                                matrix::Duplicate<Device::CPU>{}) |
+            ex::then([&](const auto& tile_cpu) { CHECK_TILE_EQ(check_input_value, tile_cpu); });
       }
 
-      return ex::just();
+      return check_tile_sender;
     });
     static_assert(std::is_void_v<decltype(tt::sync_wait(std::move(sender)))>);
     tt::sync_wait(std::move(sender));

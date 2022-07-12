@@ -1524,14 +1524,12 @@ TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
       // after the sync barrier, start a task on a tile (another one/the same) expecting that
       // the previous task has been fully completed (and the future mechanism still works)
       if (has_local) {
-        dlaf::internal::transform(
+        tt::sync_wait(dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-            matrix.read_sender(tile_tl)) |
-            tt::sync_wait();
-        dlaf::internal::transform(
+            matrix.read_sender(tile_tl)));
+        tt::sync_wait(dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-            matrix.read_sender(tile_br)) |
-            tt::sync_wait();
+            matrix.read_sender(tile_br)));
       }
     }
   }

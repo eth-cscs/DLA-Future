@@ -620,9 +620,9 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
   updateTrailingPanel(has_head, panel, j, w, tau);
 }
 
-template <class CommSender, class T>
+template <class TriggerSender, class CommSender, class T>
 pika::shared_future<common::internal::vector<T>> computePanelReflectors(
-    pika::future<void> trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
+    TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
     MatrixT<T>& mat_a, const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
     SizeType nrefls) {
   namespace ex = pika::execution::experimental;
@@ -645,7 +645,8 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
       };
 
   return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
-                      std::forward<CommSender>(mpi_col_chain_panel), std::move(trigger)) |
+                      std::forward<CommSender>(mpi_col_chain_panel),
+                      std::forward<TriggerSender>(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                        pika::execution::thread_priority::high),
                                    std::move(panel_task)) |
@@ -983,7 +984,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   common::RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist);
   common::RoundRobin<PanelT<Coord::Row, T>> panels_xt(n_workspaces, dist);
 
-  pika::future<void> trigger_panel = pika::make_ready_future<void>();
+  ex::unique_any_sender<> trigger_panel{ex::just()};
   for (SizeType j_block = 0; j_block < nblocks; ++j_block) {
     const GlobalTileIndex ai_start{GlobalTileIndex{j_block, j_block} + GlobalTileSize{1, 0}};
     const GlobalTileIndex at_start{ai_start + GlobalTileSize{0, 1}};
@@ -1125,7 +1126,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // blocked waiting to do nothing on the next iteration (computePanel), while other ranks would be
     // stuck waiting for it for completing steps of the previous iteration, needed for the update of the
     // trailing matrix that will unlock the next iteration.
-    trigger_panel = pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal()));
+    trigger_panel = pika::future<void>(
+        pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal())));
 
     // At -= X . V* + V . X*
     her2kUpdateTrailingMatrix(at_offset, mat_a, x, vt, v, xt);

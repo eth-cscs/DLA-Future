@@ -149,23 +149,22 @@ cuda release build gcc11:
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
-cuda release build clang12:
+cuda release build clang10:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
-    EXTRA_APTGET: clang-12
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: clang@12.0.1
+    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
+    DEPLOY_BASE_IMAGE: ubuntu:20.04
+    EXTRA_APTGET: clang-10
+    EXTRA_APTGET_DEPLOY: ""
+    COMPILER: clang@10.0.0
     CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang12/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang12/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
@@ -277,14 +276,14 @@ cuda release test gcc11:
       - artifact: pipeline.yml
         job: cuda release build gcc11
 
-cuda release test clang12:
+cuda release test clang10:
   extends: .run_common
   needs:
-    - cuda release build clang12
+    - cuda release build clang10
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cuda release build clang12
+        job: cuda release build clang10
 
 cuda codecov test gcc11:
   extends: .run_common

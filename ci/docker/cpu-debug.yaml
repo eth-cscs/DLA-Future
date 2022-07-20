@@ -12,14 +12,15 @@ spack:
   specs:
     - dla-future@develop build_type=Debug +miniapps +ci-test ^openblas ^mpich
   view: false
-  concretization: together
+  concretizer:
+    unify:
+      true
 
   packages:
     all:
       target: [x86_64]
       variants:
         - 'build_type=Release'
-        - 'cxxstd=17'
     blaspp:
       variants:
         - '~cuda'

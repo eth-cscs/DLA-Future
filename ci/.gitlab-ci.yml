@@ -27,13 +27,13 @@ stages:
     # Note: a tag can contain 0-9 A-Z a-z -_.
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
     - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
-    - TAG_COMPILER=`echo $COMPILER | sed 's/[@]//g'`
+    - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
     - TAG_DOCKERFILE=`sha256sum $BUILD_DOCKER_FILE | head -c 16`
     - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`sha256sum $SPACK_ENVIRONMENT | head -c 16`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
-    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
+    - docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:$TAG --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg CXXSTD --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
     - docker push $BUILD_IMAGE:$TAG
     - docker push $BUILD_IMAGE:latest
     - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL --build-arg USE_ROCBLAS -f $DEPLOY_DOCKER_FILE --network=host .
@@ -55,30 +55,12 @@ cpu release build gcc11:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
+    CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-
-cpu release build clang10:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: ubuntu:20.04
-    DEPLOY_BASE_IMAGE: ubuntu:20.04
-    EXTRA_APTGET: clang
-    EXTRA_APTGET_DEPLOY: ""
-    COMPILER: clang@10.0.0
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -94,11 +76,33 @@ cpu release build clang12:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@12.0.1
+    CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+    USE_CODECOV: "false"
+
+cpu release build clang13 cxx20:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: ubuntu:22.04
+    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    EXTRA_APTGET: clang-13
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: clang@13.0.1
+    CXXSTD: 20
+    USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang13-20/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -114,6 +118,7 @@ cpu codecov build gcc11:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
+    CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
@@ -123,76 +128,81 @@ cpu codecov build gcc11:
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
 
-gpu release build gcc9:
+cuda release build gcc11:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
-    DEPLOY_BASE_IMAGE: ubuntu:20.04
+    BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: ""
-    COMPILER: gcc@9.3.0
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-gcc9/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
-gpu release build clang10:
+cuda release build clang10:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
     BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
     DEPLOY_BASE_IMAGE: ubuntu:20.04
-    EXTRA_APTGET: clang
+    EXTRA_APTGET: clang-10
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
+    CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-gpu-clang10/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
-gpu codecov build gcc9:
+cuda codecov build gcc11:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.1.1-devel-ubuntu20.04
-    DEPLOY_BASE_IMAGE: ubuntu:20.04
+    BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: ""
-    COMPILER: gcc@9.3.0
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-gpu-gcc9/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
-amdgpu release build clang10+rocm-5.1.0:
+amdgpu release build clang10+rocm-5.1.3:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
-    BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1
-    DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1
+    BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1.3
+    DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.1.3
     EXTRA_APTGET: "clang hipblas hipblas-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu"
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
+    CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "ON"
-    SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm510.yaml
+    SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm513.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
@@ -229,15 +239,6 @@ cpu release test gcc11:
       - artifact: pipeline.yml
         job: cpu release build gcc11
 
-cpu release test clang10:
-  extends: .run_common
-  needs:
-    - cpu release build clang10
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu release build clang10
-
 cpu release test clang12:
   extends: .run_common
   needs:
@@ -246,6 +247,15 @@ cpu release test clang12:
     include:
       - artifact: pipeline.yml
         job: cpu release build clang12
+
+cpu release test clang13 cxx20:
+  extends: .run_common
+  needs:
+    - cpu release build clang13 cxx20
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build clang13 cxx20
 
 cpu codecov test gcc11:
   extends: .run_common
@@ -257,33 +267,33 @@ cpu codecov test gcc11:
       - artifact: pipeline.yml
         job: cpu codecov build gcc11
 
-gpu release test gcc9:
+cuda release test gcc11:
   extends: .run_common
   needs:
-    - gpu release build gcc9
+    - cuda release build gcc11
   trigger:
     include:
       - artifact: pipeline.yml
-        job: gpu release build gcc9
+        job: cuda release build gcc11
 
-gpu release test clang10:
+cuda release test clang10:
   extends: .run_common
   needs:
-    - gpu release build clang10
+    - cuda release build clang10
   trigger:
     include:
       - artifact: pipeline.yml
-        job: gpu release build clang10
+        job: cuda release build clang10
 
-gpu codecov test gcc9:
+cuda codecov test gcc11:
   extends: .run_common
   needs:
-    - gpu codecov build gcc9
+    - cuda codecov build gcc11
   trigger:
     strategy: depend
     include:
       - artifact: pipeline.yml
-        job: gpu codecov build gcc9
+        job: cuda codecov build gcc11
 
 notify_github_success:
   stage: notify

@@ -177,7 +177,8 @@ cuda codecov build gcc11:
     BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
     DEPLOY_BASE_IMAGE: ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: ""
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     CXXSTD: 17
     USE_MKL: "OFF"

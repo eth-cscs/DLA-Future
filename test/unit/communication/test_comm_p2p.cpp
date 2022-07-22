@@ -153,20 +153,18 @@ void testP2PAllReduce(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   matrix::Matrix<T, D> tmp(matrix.distribution().localSize(), matrix.blockSize());
 
   if (rank_src == world.rank()) {
-    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_dst, tag,
-                                                  matrix.readwrite_sender(idx),
+    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_dst, tag, matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_src, tag,
-                                                  matrix.readwrite_sender(idx),
+    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_src, tag, matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else {
     return;
   }
 
-  CHECK_TILE_EQ(fixedValueTile(26), matrix.read(idx).get());
+  CHECK_TILE_EQ(fixedValueTile(26), tmp.read(idx).get());
 }
 
 TEST_F(P2PTest, AllReduce) {
@@ -199,7 +197,7 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
         ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_dst, id,
-                                                      matrix.readwrite_sender(idx),
+                                                      matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }
@@ -215,7 +213,7 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
         ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_src, id,
-                                                      matrix.readwrite_sender(idx),
+                                                      matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }
@@ -231,7 +229,7 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
   // check that overall this mechanism work also with unordered tagged communications.
   for (const GlobalTileIndex idx : common::iterate_range2d(matrix.nrTiles())) {
     const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-    CHECK_TILE_EQ(fixedValueTile(2 * id), matrix.read(idx).get());
+    CHECK_TILE_EQ(fixedValueTile(2 * id), tmp.read(idx).get());
   }
 }
 

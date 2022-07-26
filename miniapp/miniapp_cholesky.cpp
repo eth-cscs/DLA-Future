@@ -330,11 +330,12 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                    L.read_sender(tile_wrt_local), keep_future(tile_to_transpose),
-                                    j_loc == 0 ? T(0.0) : T(1.0),
-                                    partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
-            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
+        start_detached(
+            dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
+                                        L.read_sender(tile_wrt_local), keep_future(tile_to_transpose),
+                                        j_loc == 0 ? T(0.0) : T(1.0),
+                                        partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
+            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));
       }
     }
 

@@ -37,8 +37,8 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     mat(index).get()({sz - 1, 0}) = 1.;
-    when_all(mat.readwrite_sender(index), ccomm()) | comm::internal::transformMPI(comm::sendBcast_o) |
-        start_detached();
+    start_detached(when_all(ccomm(), mat.readwrite_sender(index)) |
+                   comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite_sender(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
           tile({sz - 1, 0}) = 2.;
@@ -47,8 +47,8 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    when_all(mat.readwrite_sender(index), just(root), ccomm()) |
-        comm::internal::transformMPI(comm::recvBcast_o) | start_detached();
+    start_detached(when_all(ccomm(), just(root), mat.readwrite_sender(index)) |
+                   comm::internal::transformMPI(comm::internal::recvBcast_o));
     EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }
@@ -69,8 +69,8 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     mat(index).get()({sz - 1, 0}) = 1.;
-    when_all(mat.read_sender(index), ccomm()) | comm::internal::transformMPI(comm::sendBcast_o) |
-        start_detached();
+    start_detached(when_all(ccomm(), mat.read_sender(index)) |
+                   comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite_sender(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
           tile({sz - 1, 0}) = 2.;
@@ -79,8 +79,8 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    when_all(mat.readwrite_sender(index), just(root), ccomm()) |
-        comm::internal::transformMPI(comm::recvBcast_o) | start_detached();
+    start_detached(when_all(ccomm(), just(root), mat.readwrite_sender(index)) |
+                   comm::internal::transformMPI(comm::internal::recvBcast_o));
     EXPECT_EQ(1., mat.read(index).get()({sz - 1, 0}));
   }
 }

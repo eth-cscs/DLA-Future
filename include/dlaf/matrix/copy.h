@@ -40,10 +40,9 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
 
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
-      ex::when_all(source.read_sender(LocalTileIndex(i, j)),
-                   dest.readwrite_sender(LocalTileIndex(i, j))) |
-          copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>{}) |
-          ex::start_detached();
+      ex::start_detached(ex::when_all(source.read_sender(LocalTileIndex(i, j)),
+                                      dest.readwrite_sender(LocalTileIndex(i, j))) |
+                         copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>{}));
     }
   }
 }

@@ -59,11 +59,12 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, device>& panel
 
   const auto rank = panel.rankIndex().get(comm_coord);
 
+  namespace ex = pika::execution::experimental;
   for (const auto& index : panel.iteratorLocal()) {
     if (rank == rank_root)
-      scheduleSendBcast(panel.read(index), serial_comm());
+      ex::start_detached(scheduleSendBcast(serial_comm(), panel.read_sender(index)));
     else
-      scheduleRecvBcast(panel(index), rank_root, serial_comm());
+      ex::start_detached(scheduleRecvBcast(serial_comm(), rank_root, panel.readwrite_sender(index)));
   }
 }
 
@@ -172,16 +173,18 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, device>& panel
   for (const auto& indexT : range) {
     auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
 
+    namespace ex = pika::execution::experimental;
     if (dist.rankIndex().get(coord) == owner_diag) {
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        scheduleSendBcast(panelT.read(indexT), chain_step2());
+        ex::start_detached(scheduleSendBcast(chain_step2(), panelT.read_sender(indexT)));
     }
     else {
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        scheduleRecvBcast(panelT(indexT), owner_diag, chain_step2());
+        ex::start_detached(
+            scheduleRecvBcast(chain_step2(), owner_diag, panelT.readwrite_sender(indexT)));
     }
   }
 }

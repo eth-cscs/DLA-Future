@@ -242,9 +242,9 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
     for (const auto& idx : panel.iteratorLocal())
-      dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
-                                  panel.readwrite_sender(idx)) |
-          tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()) | start_detached();
+      start_detached(dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
+                                                 panel.readwrite_sender(idx)) |
+                     tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()));
 
     matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
 

@@ -157,6 +157,7 @@ public:
       const pika::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
 
   using ElementType = T;
+  static constexpr Device D = device;
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
@@ -220,6 +221,10 @@ public:
   /// Returns the leading dimension.
   SizeType ld() const noexcept {
     return data_.ld();
+  }
+
+  bool is_contiguous() const noexcept {
+    return data_.ld() == data_.size().rows();
   }
 
   /// Prints information about the tile.

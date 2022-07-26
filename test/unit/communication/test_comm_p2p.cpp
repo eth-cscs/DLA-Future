@@ -54,10 +54,10 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix) {
 
   if (rank_src == world.rank()) {
     matrix::test::set(matrix(idx).get(), input_tile);
-    ex::start_detached(comm::scheduleSend(rank_dst, world, tag, matrix.read_sender(idx)));
+    ex::start_detached(comm::scheduleSend(world, rank_dst, tag, matrix.read_sender(idx)));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleRecv(rank_src, world, tag, matrix.readwrite_sender(idx)));
+    ex::start_detached(comm::scheduleRecv(world, rank_src, tag, matrix.readwrite_sender(idx)));
   }
   else {
     return;
@@ -93,7 +93,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> mat
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleSend(rank_dst, world, id, matrix.read_sender(idx)));
+        ex::start_detached(comm::scheduleSend(world, rank_dst, id, matrix.read_sender(idx)));
       }
     }
   }
@@ -106,7 +106,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> mat
       for (SizeType c = matrix.nrTiles().cols() - 1; c >= 0; --c) {
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-        ex::start_detached(comm::scheduleRecv(rank_src, world, id, matrix.readwrite_sender(idx)));
+        ex::start_detached(comm::scheduleRecv(world, rank_src, id, matrix.readwrite_sender(idx)));
       }
     }
   }

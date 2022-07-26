@@ -12,10 +12,8 @@
 
 #include "gtest/gtest.h"
 #include "dlaf_test/matrix/util_matrix.h"
-//#include "dlaf_test/matrix/util_tile.h"
+#include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
-
-#include "dlaf/matrix/print_csv.h"
 
 template <typename Type>
 class TridiagEigensolverTest : public ::testing::Test {};
@@ -138,14 +136,114 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, error * n, error * n);
 }
 
-TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb8) {
-  solveLaplace1D<TypeParam>(16, 8);
+template <class T>
+void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
+  // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+  matrix::Matrix<T, Device::CPU> tridiag(LocalElementSize(n, 2), TileElementSize(nb, 2));
+  matrix::Matrix<T, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  matrix::Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+  // Initialize a random symmetric tridiagonal matrix using two arrays for the diagonal and the
+  // off-diagonal. The random numbers are in the range [-1, 1].
+  //
+  // Note: set_random() is not used here because the two arrays can be more easily reused to initialize
+  //       the same tridiagonal matrix but with explicit zeros for correctness checking further down.
+  std::vector<T> diag_arr(to_sizet(n));
+  std::vector<T> offdiag_arr(to_sizet(n));
+  SizeType diag_seed = n;
+  SizeType offdiag_seed = n - 1;
+  dlaf::matrix::util::internal::getter_random<T> diag_rand_gen(diag_seed);
+  dlaf::matrix::util::internal::getter_random<T> offdiag_rand_gen(offdiag_seed);
+  std::generate(std::begin(diag_arr), std::end(diag_arr), diag_rand_gen);
+  std::generate(std::begin(offdiag_arr), std::end(offdiag_arr), offdiag_rand_gen);
+
+  dlaf::matrix::util::set(tridiag, [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
+    if (i.col() == 0) {
+      return diag_arr[to_sizet(i.row())];
+    }
+    else {
+      return offdiag_arr[to_sizet(i.row())];
+    }
+  });
+
+  // Find eigenvalues and eigenvectors of the tridiagonal matrix.
+  //
+  // Note: this modifies `tridiag`
+  eigensolver::tridiagSolver<Backend::MC>(tridiag, evals, evecs);
+
+  // Check correctness with the following equation:
+  //
+  // A * E = E * D, where
+  //
+  // A - the tridiagonal matrix
+  // E - the eigenvector matrix
+  // D - the diagonal matrix of eigenvalues
+
+  // Make a copy of the tridiagonal matrix but with explicit zeroes.
+  matrix::Matrix<T, Device::CPU> tridiag_full(LocalElementSize(n, n), TileElementSize(nb, nb));
+  dlaf::matrix::util::set(tridiag_full, [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
+    if (i.row() == i.col()) {
+      return diag_arr[to_sizet(i.row())];
+    }
+    else if (i.row() == i.col() - 1) {
+      return offdiag_arr[to_sizet(i.row())];
+    }
+    else if (i.row() == i.col() + 1) {
+      return offdiag_arr[to_sizet(i.col())];
+    }
+    else {
+      return T(0);
+    }
+  });
+
+  // Compute A * E
+  const matrix::Distribution& dist = evecs.distribution();
+  matrix::Matrix<T, Device::CPU> AE_gemm(LocalElementSize(n, n), TileElementSize(nb, nb));
+  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(0, dist.nrTiles().rows() - 1,
+                                                                      blas::Op::NoTrans,
+                                                                      blas::Op::NoTrans, T(1),
+                                                                      tridiag_full, evecs, T(0),
+                                                                      AE_gemm);
+
+  // Scale the columns of E by the corresponding eigenvalue of D to get E * D
+  for (auto tile_wrt_local : common::iterate_range2d(dist.localNrTiles())) {
+    auto scale_f = [](const matrix::Tile<const T, Device::CPU>& evals_tile,
+                      const matrix::Tile<T, Device::CPU>& evecs_tile) {
+      for (auto el_idx_l : common::iterate_range2d(evecs_tile.size())) {
+        evecs_tile(el_idx_l) *= evals_tile(TileElementIndex(el_idx_l.col(), 0));
+      }
+    };
+
+    dlaf::internal::whenAllLift(evals.read_sender(LocalTileIndex(tile_wrt_local.col(), 0)),
+                                evecs.readwrite_sender(tile_wrt_local)) |
+        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(scale_f));
+  }
+
+  // Check that A * E is equal to E * D
+  constexpr T error = TypeUtilities<T>::error;
+  for (auto tile_wrt_local : common::iterate_range2d(dist.localNrTiles())) {
+    auto& ae_tile = AE_gemm.read(tile_wrt_local).get();
+    auto& evecs_tile = evecs.read(tile_wrt_local).get();
+    CHECK_TILE_NEAR(ae_tile, evecs_tile, error * n, error * n);
+  }
 }
 
-TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb4) {
-  solveLaplace1D<TypeParam>(16, 4);
+const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
+    // n, nb
+    {16, 8},
+    {16, 4},
+    {16, 5},
+    {100, 10},
+    {93, 7}};
+
+TYPED_TEST(TridiagEigensolverTest, Laplace1D) {
+  for (auto [n, nb] : tested_problems) {
+    solveLaplace1D<TypeParam>(n, nb);
+  }
 }
 
-TYPED_TEST(TridiagEigensolverTest, Laplace1D_n16_nb5) {
-  solveLaplace1D<TypeParam>(16, 5);
+TYPED_TEST(TridiagEigensolverTest, Random) {
+  for (auto [n, nb] : tested_problems) {
+    solveRandomTridiagMatrix<TypeParam>(n, nb);
+  }
 }

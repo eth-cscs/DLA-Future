@@ -35,8 +35,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("cmake@3.16:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
-    depends_on("blaspp")
-    depends_on("lapackpp")
+    depends_on("blaspp@2022.05.00:")
+    depends_on("lapackpp@2022.05.00:")
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")

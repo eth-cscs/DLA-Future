@@ -14,7 +14,6 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/lapack/laed4.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
@@ -685,8 +684,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
       SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
       T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
 
-      dlaf::internal::laed4_wrapper(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho,
-                                    &eigenval);
+      lapack::laed4(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho, &eigenval);
     });
   };
 

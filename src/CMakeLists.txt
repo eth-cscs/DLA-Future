@@ -161,7 +161,6 @@ add_library(dlaf.core
     matrix_mirror.cpp
     memory/memory_view.cpp
     memory/memory_chunk.cpp
-    lapack/laed4.cpp
 )
 
 if(DLAF_WITH_GPU)

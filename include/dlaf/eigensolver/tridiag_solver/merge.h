@@ -191,7 +191,7 @@ void copyTileRowAndNormalize(bool top_tile, T rho, const matrix::Tile<const T, D
   int sign = (top_tile && rho < 0) ? -1 : 1;
 
   for (SizeType i = 0; i < tile.size().cols(); ++i) {
-    col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / std::sqrt(2);
+    col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / T(std::sqrt(2));
   }
 }
 

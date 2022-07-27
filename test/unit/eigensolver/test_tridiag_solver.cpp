@@ -92,7 +92,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
       // diagonal
       return RealParam(2);
     else
-      // off-diagoanl
+      // off-diagonal
       return RealParam(-1);
   };
   matrix::util::set(tridiag, std::move(mat_trd_fn));

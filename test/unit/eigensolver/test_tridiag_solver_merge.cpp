@@ -167,8 +167,8 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   std::vector<ColType> c_arr{up, up, up, up, up, low, low, low, low, low};
   dlaf::matrix::util::set(c_mat, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
 
-  TypeParam tol = 0.01;
-  TypeParam rho = 1;
+  TypeParam tol = TypeParam(0.01);
+  TypeParam rho = TypeParam(1);
   SizeType i_begin = 0;
   SizeType i_end = 3;
   auto rots_fut =
@@ -229,10 +229,10 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   Matrix<T, Device::CPU> d_defl(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Matrix<T, Device::CPU> z_defl(LocalElementSize(n, 1), TileElementSize(nb, 1));
 
-  dlaf::matrix::util::set(d_defl, [](GlobalElementIndex i) { return std::log(4.2 + i.row()); });
-  constexpr T z_norm = 2.84813054;
+  dlaf::matrix::util::set(d_defl, [](GlobalElementIndex i) { return T(std::log(4.2 + i.row())); });
+  constexpr T z_norm = T(2.84813054);
   dlaf::matrix::util::set(z_defl,
-                          [](GlobalElementIndex i) { return (0.42 + std::sin(i.row())) / z_norm; });
+                          [](GlobalElementIndex i) { return T(0.42 + std::sin(i.row())) / z_norm; });
 
   Matrix<T, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
@@ -247,7 +247,8 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   auto expected_evals_fn = [&expected_evals](GlobalElementIndex i) {
     return expected_evals[to_sizet(i.row())];
   };
-  CHECK_MATRIX_NEAR(expected_evals_fn, evals, 1e-6, 1e-6);
+  constexpr T error = TypeUtilities<T>::error;
+  CHECK_MATRIX_NEAR(expected_evals_fn, evals, n * error, n * error);
 
   // Note: results obtained with numpy have eigenvectors at column indices 0, 1 and 6 negated! That is OK
   //       as eigenvectors are unique up to a sign!
@@ -268,5 +269,5 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   auto expected_evecs_fn = [&expected_evecs, n](GlobalElementIndex i) {
     return expected_evecs[to_sizet(i.col() + n * i.row())];
   };
-  CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, 1e-6, 1e-6);
+  CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, n * error, n * error);
 }

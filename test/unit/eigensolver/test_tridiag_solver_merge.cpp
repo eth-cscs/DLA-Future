@@ -247,7 +247,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SolveRank1Problem) {
   auto expected_evals_fn = [&expected_evals](GlobalElementIndex i) {
     return expected_evals[to_sizet(i.row())];
   };
-  constexpr T error = TypeUtilities<T>::error;
+  constexpr T error = T(1e-6);
   CHECK_MATRIX_NEAR(expected_evals_fn, evals, n * error, n * error);
 
   // Note: results obtained with numpy have eigenvectors at column indices 0, 1 and 6 negated! That is OK

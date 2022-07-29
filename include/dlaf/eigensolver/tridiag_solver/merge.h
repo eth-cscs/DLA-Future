@@ -73,9 +73,6 @@ struct ColTypeLens {
 // Auxiliary matrix and vectors used for the D&C algorithm
 template <class T>
 struct WorkSpace {
-  WorkSpace(WorkSpace&&) = default;
-  WorkSpace& operator=(WorkSpace&&) = default;
-
   // Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
   //
   //   ┌──────┬──────┬───┐
@@ -126,22 +123,6 @@ struct WorkSpace {
   // that bring them in matrix multiplication form.
   Matrix<ColType, Device::CPU> c;
 };
-
-template <class T>
-WorkSpace<T> initWorkSpace(const matrix::Distribution& ev_distr) {
-  LocalElementSize vec_size(ev_distr.size().rows(), 1);
-  TileElementSize vec_tile_size(ev_distr.blockSize().rows(), 1);
-  WorkSpace<T> ws{Matrix<T, Device::CPU>(ev_distr),
-                  Matrix<T, Device::CPU>(ev_distr),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
-  return ws;
-}
 
 // Calculates the problem size in the tile range [i_begin, i_end]
 inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Distribution& distr) {

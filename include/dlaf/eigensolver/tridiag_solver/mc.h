@@ -222,7 +222,18 @@ void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& ma
 
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = mat_ev.distribution();
-  WorkSpace<T> ws = initWorkSpace<T>(distr);
+
+  LocalElementSize vec_size(distr.size().rows(), 1);
+  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  WorkSpace<T> ws{Matrix<T, Device::CPU>(distr),
+                  Matrix<T, Device::CPU>(distr),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
+                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {

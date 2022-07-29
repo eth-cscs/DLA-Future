@@ -20,6 +20,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/traits.h"
+#include "dlaf/util_math.h"
 
 namespace dlaf {
 namespace matrix {

@@ -64,23 +64,28 @@ void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& d, Matrix<T, d
 template <Backend backend, Device device, class T>
 void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& d,
                    Matrix<std::complex<T>, device>& mat_ev) {
-  Matrix<T, Device::CPU> mat_real_ev(mat_ev.distribution());
+  Matrix<T, device> mat_real_ev(mat_ev.distribution());
   tridiagSolver<backend, device, T>(mat_trd, d, mat_real_ev);
 
-  // Convert real to complex numbers
-  const matrix::Distribution& dist = mat_ev.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    auto convert_to_complex_fn = [](const matrix::Tile<const T, Device::CPU>& in,
-                                    const matrix::Tile<std::complex<T>, Device::CPU>& out) {
-      for (auto el_idx : iterate_range2d(out.size())) {
-        out(el_idx) = std::complex<T>(in(el_idx), 0);
-      }
-    };
+  {
+    matrix::MatrixMirror<T, Device::CPU, device> mat_real_ev_h(mat_real_ev);
+    matrix::MatrixMirror<std::complex<T>, Device::CPU, device> mat_ev_h(mat_ev);
 
-    pika::execution::experimental::when_all(mat_real_ev.read_sender(tile_wrt_local),
-                                            mat_ev.readwrite_sender(tile_wrt_local)) |
-        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(),
-                                        std::move(convert_to_complex_fn));
+    // Convert real to complex numbers
+    const matrix::Distribution& dist = mat_ev.distribution();
+    for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+      auto convert_to_complex_fn = [](const matrix::Tile<const T, Device::CPU>& in,
+                                      const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+        for (auto el_idx : iterate_range2d(out.size())) {
+          out(el_idx) = std::complex<T>(in(el_idx), 0);
+        }
+      };
+
+      pika::execution::experimental::when_all(mat_real_ev_h.get().read_sender(tile_wrt_local),
+                                              mat_ev_h.get().readwrite_sender(tile_wrt_local)) |
+          dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(),
+                                          std::move(convert_to_complex_fn));
+    }
   }
 }
 

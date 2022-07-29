@@ -214,6 +214,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
                           Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
                           Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
 
+  matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(mat_trd);
+
   WorkSpaceHostMirror<T, device> ws_h{matrix::MatrixMirror<T, Device::CPU, device>(evals),     // evals
                                       matrix::MatrixMirror<T, Device::CPU, device>(evecs),     // evecs
                                       matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),   // mat1
@@ -224,14 +226,14 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
   ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs is on GPU
 
   // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
+  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag_h.get());
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `mat_ev` (nb x nb)
-  solveLeaf(mat_trd, ws_h.evecs.get());
+  solveLeaf(tridiag_h.get(), ws_h.evecs.get());
 
   // Offload the diagonal from `mat_trd` to `d`
-  offloadDiagonal(mat_trd, ws_h.evals.get());
+  offloadDiagonal(tridiag_h.get(), ws_h.evals.get());
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {

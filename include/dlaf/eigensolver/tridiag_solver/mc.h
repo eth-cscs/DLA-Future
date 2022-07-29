@@ -28,12 +28,6 @@
 
 namespace dlaf::eigensolver::internal {
 
-template <class T>
-struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d,
-                   Matrix<T, Device::CPU>& mat_ev);
-};
-
 /// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
 /// 1, i_end] before saving the triad <i_begin, i_middle, i_end> into `indices`.
 ///
@@ -203,53 +197,47 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CP
 /// 2. The overlap between U1' and U2' matches the number of shared columns between Q1' and Q2'
 /// 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
 ///    column vector of Q2.
-template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
-                                                      Matrix<T, Device::CPU>& d,
-                                                      Matrix<T, Device::CPU>& mat_ev) {
+template <Backend backend, Device device, class T>
+void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<T, device>& evals,
+                                             Matrix<T, device>& evecs) {
+  // Auxiliary matrix used for the D&C algorithm
+  const matrix::Distribution& distr = evecs.distribution();
+  LocalElementSize vec_size(distr.size().rows(), 1);
+  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  WorkSpace<T, device> ws{Matrix<T, device>(distr),                                // mat1
+                          Matrix<T, device>(distr),                                // mat2
+                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // dtmp
+                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // z
+                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // ztmp
+                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
+                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i2
+                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
+                          Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
+
+  WorkSpaceHostMirror<T, device> ws_h{matrix::MatrixMirror<T, Device::CPU, device>(evals),     // evals
+                                      matrix::MatrixMirror<T, Device::CPU, device>(evecs),     // evecs
+                                      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),   // mat1
+                                      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat2)};  // mat2
+
   // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<Backend::MC, T, Device::CPU>(pika::execution::thread_priority::normal, mat_ev);
+  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
+  ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs is on GPU
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `mat_ev` (nb x nb)
-  solveLeaf(mat_trd, mat_ev);
+  solveLeaf(mat_trd, ws_h.evecs.get());
 
   // Offload the diagonal from `mat_trd` to `d`
-  offloadDiagonal(mat_trd, d);
-
-  // Auxiliary matrix used for the D&C algorithm
-  const matrix::Distribution& distr = mat_ev.distribution();
-
-  LocalElementSize vec_size(distr.size().rows(), 1);
-  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  WorkSpace<T> ws{Matrix<T, Device::CPU>(distr),
-                  Matrix<T, Device::CPU>(distr),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
+  offloadDiagonal(mat_trd, ws_h.evals.get());
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems(i_begin, i_split, i_end, ws, offdiag_vals[to_sizet(i_split)], d, mat_ev);
+    mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
+                              evecs);
   }
 }
 
-/// ---- ETI
-#define DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
-
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
-
-#ifdef DLAF_WITH_CUDA
-// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, float)
-// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, double)
-#endif
 }

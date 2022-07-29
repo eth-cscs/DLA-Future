@@ -17,6 +17,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/multiplication/general.h"
 #include "dlaf/permutations/general.h"
 #include "dlaf/permutations/general/impl.h"
@@ -71,7 +72,7 @@ struct ColTypeLens {
 };
 
 // Auxiliary matrix and vectors used for the D&C algorithm
-template <class T>
+template <class T, Device device>
 struct WorkSpace {
   // Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
   //
@@ -86,8 +87,8 @@ struct WorkSpace {
   //   │            │    │
   //   └────────────┴────┘
   //
-  Matrix<T, Device::CPU> mat1;
-  Matrix<T, Device::CPU> mat2;
+  Matrix<T, device> mat1;
+  Matrix<T, device> mat2;
 
   // Holds the values of the deflated diagonal sorted in ascending order
   Matrix<T, Device::CPU> dtmp;
@@ -122,6 +123,17 @@ struct WorkSpace {
   // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
   // that bring them in matrix multiplication form.
   Matrix<ColType, Device::CPU> c;
+};
+
+template <class T, Device device>
+struct WorkSpaceHostMirror {
+  // Mirror to eigenvalues and eigenvectors on host memory
+  matrix::MatrixMirror<T, Device::CPU, device> evals;
+  matrix::MatrixMirror<T, Device::CPU, device> evecs;
+
+  // Mirrors to auxiliary matrices on the CPU
+  matrix::MatrixMirror<T, Device::CPU, device> mat1;
+  matrix::MatrixMirror<T, Device::CPU, device> mat2;
 };
 
 // Calculates the problem size in the tile range [i_begin, i_end]
@@ -927,21 +939,24 @@ void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& ma
   }
 }
 
-template <class T>
-void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSpace<T>& ws,
-                      pika::shared_future<T> rho_fut, Matrix<T, Device::CPU>& d,
-                      Matrix<T, Device::CPU>& mat_ev) {
+template <Backend backend, Device device, class T>
+void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
+                      WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
+                      Matrix<T, device>& evals, Matrix<T, device>& evecs) {
+  (void) evals;  // TODO: this has to be removed when evals kernels are ported to the GPU
+  ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs in on GPU
+
   // Calculate the size of the upper subproblem
-  SizeType n1 = problemSize(i_begin, i_split, mat_ev.distribution());
+  SizeType n1 = problemSize(i_begin, i_split, ws_h.evecs.get().distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_split, i_end, rho_fut, mat_ev, ws.z);
+  assembleZVec(i_begin, i_split, i_end, rho_fut, ws_h.evecs.get(), ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
-  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, d, ws.z);
+  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, ws_h.evals.get(), ws.z);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
@@ -955,10 +970,10 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // - apply Givens rotations to `Q` - `mat_ev`
   //
   initIndex(i_begin, i_end, ws.i1);
-  sortIndex(i_begin, i_end, pika::make_ready_future(n1), d, ws.i1, ws.i2);
+  sortIndex(i_begin, i_end, pika::make_ready_future(n1), ws_h.evals.get(), ws.i1, ws.i2);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, d, ws.z, ws.c);
-  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), mat_ev);
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, ws_h.evals.get(), ws.z, ws.c);
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), ws_h.evecs.get());
 
   // Step #2
   //
@@ -966,18 +981,18 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   //    i3 (out) : initial <--- deflated
   //
   // - reorder `d -> dtmp`, `z -> ztmp`, using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `ws.mat1`.
+  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   pika::shared_future<SizeType> k_fut =
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
-  applyIndex(i_begin, i_end, ws.i3, d, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.i3, ws_h.evals.get(), ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copyVector(i_begin, i_end, ws.dtmp, d);
-  resetSubMatrix(i_begin, i_end, ws.mat1);
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, d, ws.ztmp, ws.dtmp, ws.mat1);
-  formEvecs(i_begin, i_end, k_fut, d, ws.ztmp, ws.mat2, ws.mat1);
-  setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
+  copyVector(i_begin, i_end, ws.dtmp, ws_h.evals.get());
+  resetSubMatrix(i_begin, i_end, ws_h.mat1.get());
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws.ztmp, ws.dtmp, ws_h.mat1.get());
+  formEvecs(i_begin, i_end, k_fut, ws_h.evals.get(), ws.ztmp, ws_h.mat2.get(), ws_h.mat1.get());
+  setUnitDiag(i_begin, i_end, k_fut, ws_h.mat1.get());
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
@@ -988,11 +1003,14 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1,
-                                                                       ws.mat2);
-  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(i_begin, i_end, blas::Op::NoTrans,
-                                                                      blas::Op::NoTrans, T(1), mat_ev,
-                                                                      ws.mat2, T(0), ws.mat1);
+  // copy from CPU to GPU if `evecs`, `mat1` and `mat2` are on GPU
+  ws_h.evecs.copyTargetToSource();
+  ws_h.mat1.copyTargetToSource();
+  ws_h.mat2.copyTargetToSource();
+  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
+  dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
+                                                             blas::Op::NoTrans, T(1), evecs, ws.mat2,
+                                                             T(0), ws.mat1);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
@@ -1004,8 +1022,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, WorkSp
   // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
-  applyIndex(i_begin, i_end, ws.i2, ws.dtmp, d);
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1,
-                                                                       mat_ev);
+  applyIndex(i_begin, i_end, ws.i2, ws.dtmp, ws_h.evals.get());
+  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
 }
 }

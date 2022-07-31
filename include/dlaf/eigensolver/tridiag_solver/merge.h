@@ -944,7 +944,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
   (void) evals;  // TODO: this has to be removed when evals kernels are ported to the GPU
-  ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs in on GPU
 
   // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, ws_h.evecs.get().distribution());
@@ -1024,5 +1023,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, ws_h.evals.get());
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
+  ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs in on GPU
 }
 }

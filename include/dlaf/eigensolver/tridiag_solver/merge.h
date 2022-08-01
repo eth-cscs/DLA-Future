@@ -303,24 +303,15 @@ public:
 };
 
 // Note: not using matrix::copy for Tile<> here because this has to work for U = SizeType too.
-template <class U>
-void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& in,
-                Matrix<U, Device::CPU>& out) {
+template <Backend backend, Device device, class U>
+void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, Matrix<U, device>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto copy_fn = [](const matrix::Tile<const U, Device::CPU>& in,
-                    const matrix::Tile<U, Device::CPU>& out) {
-    SizeType rows = in.size().rows();
-    for (SizeType i = 0; i < rows; ++i) {
-      TileElementIndex idx(i, 0);
-      out(idx) = in(idx);
-    }
-  };
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex idx(i, 0);
     ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
-        di::transform(di::Policy<Backend::MC>(), copy_fn) | ex::start_detached();
+        di::transform(di::Policy<backend>(), matrix::internal::copy_o) | ex::start_detached();
   }
 }
 
@@ -987,7 +978,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
   applyIndex(i_begin, i_end, ws.i3, ws_h.evals.get(), ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copyVector(i_begin, i_end, ws.dtmp, ws_h.evals.get());
+  copyVector<backend>(i_begin, i_end, ws.dtmp, ws_h.evals.get());
   resetSubMatrix(i_begin, i_end, ws_h.mat1.get());
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws.ztmp, ws.dtmp, ws_h.mat1.get());
   formEvecs(i_begin, i_end, k_fut, ws_h.evals.get(), ws.ztmp, ws_h.mat2.get(), ws_h.mat1.get());

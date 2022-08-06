@@ -206,20 +206,25 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
   TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
   WorkSpace<T, device> ws{Matrix<T, device>(distr),                                // mat1
                           Matrix<T, device>(distr),                                // mat2
-                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // dtmp
+                          Matrix<T, device>(vec_size, vec_tile_size),              // dtmp
                           Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // z
                           Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // ztmp
-                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
-                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i2
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),       // i1
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),       // i2
                           Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
                           Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
 
   matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(mat_trd);
 
-  WorkSpaceHostMirror<T, device> ws_h{matrix::MatrixMirror<T, Device::CPU, device>(evals),     // evals
-                                      matrix::MatrixMirror<T, Device::CPU, device>(evecs),     // evecs
-                                      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),   // mat1
-                                      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat2)};  // mat2
+  WorkSpaceHostMirror<T, device> ws_h{
+      matrix::MatrixMirror<T, Device::CPU, device>(evals),         // evals
+      matrix::MatrixMirror<T, Device::CPU, device>(evecs),         // evecs
+      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),       // mat1
+      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat2),       // mat2
+      matrix::MatrixMirror<T, Device::CPU, device>(ws.dtmp),       // dtmp
+      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i1),  // i1
+      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2)   // i2
+  };
 
   // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);

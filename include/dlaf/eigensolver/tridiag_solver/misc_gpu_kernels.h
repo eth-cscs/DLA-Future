@@ -1,0 +1,33 @@
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2022, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
+
+#pragma once
+
+#ifdef DLAF_WITH_GPU
+
+#include "dlaf/types.h"
+
+namespace dlaf::eigensolver::internal {
+
+template <class T>
+void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
+                          SizeType* out_ptr, const T* v_ptr);
+
+#define DLAF_CUDA_MERGE_INDICES_ETI(kword, Type)                                                 \
+  kword template void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, \
+                                           const SizeType* end_ptr, SizeType* out_ptr,           \
+                                           const Type* v_ptr)
+
+DLAF_CUDA_MERGE_INDICES_ETI(extern, float);
+DLAF_CUDA_MERGE_INDICES_ETI(extern, double);
+
+}
+
+#endif

@@ -14,6 +14,7 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
+#include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
@@ -91,7 +92,7 @@ struct WorkSpace {
   Matrix<T, device> mat2;
 
   // Holds the values of the deflated diagonal sorted in ascending order
-  Matrix<T, Device::CPU> dtmp;
+  Matrix<T, device> dtmp;
   // Holds the values of Cuppen's rank-1 vector
   Matrix<T, Device::CPU> z;
   // Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
@@ -116,8 +117,8 @@ struct WorkSpace {
   //
   //        post_sorted <--- matmul
   //
-  Matrix<SizeType, Device::CPU> i1;
-  Matrix<SizeType, Device::CPU> i2;
+  Matrix<SizeType, device> i1;
+  Matrix<SizeType, device> i2;
   Matrix<SizeType, Device::CPU> i3;
 
   // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
@@ -134,6 +135,11 @@ struct WorkSpaceHostMirror {
   // Mirrors to auxiliary matrices on the CPU
   matrix::MatrixMirror<T, Device::CPU, device> mat1;
   matrix::MatrixMirror<T, Device::CPU, device> mat2;
+
+  matrix::MatrixMirror<T, Device::CPU, device> dtmp;
+
+  matrix::MatrixMirror<SizeType, Device::CPU, device> i1;
+  matrix::MatrixMirror<SizeType, Device::CPU, device> i2;
 };
 
 // Calculates the problem size in the tile range [i_begin, i_end]
@@ -279,8 +285,8 @@ struct TileCollector {
   SizeType i_end;
 
 private:
-  template <class T>
-  std::pair<GlobalTileIndex, GlobalTileSize> getRange(Matrix<const T, Device::CPU>& mat) {
+  template <class T, Device D>
+  std::pair<GlobalTileIndex, GlobalTileSize> getRange(Matrix<const T, D>& mat) {
     SizeType ntiles = i_end - i_begin + 1;
     bool is_col_matrix = mat.distribution().size().cols() == 1;
     SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
@@ -289,21 +295,20 @@ private:
   }
 
 public:
-  template <class T>
-  auto read(Matrix<const T, Device::CPU>& mat) {
+  template <class T, Device D>
+  auto read(Matrix<const T, D>& mat) {
     auto [begin, end] = getRange(mat);
     return matrix::util::collectReadTiles(begin, end, mat);
   }
 
-  template <class T>
-  auto readwrite(Matrix<T, Device::CPU>& mat) {
+  template <class T, Device D>
+  auto readwrite(Matrix<T, D>& mat) {
     auto [begin, end] = getRange(mat);
     return matrix::util::collectReadWriteTiles(begin, end, mat);
   }
 };
 
-// Note: not using matrix::copy for Tile<> here because this has to work for U = SizeType too.
-template <Backend backend, Device device, class U>
+template <Device device, class U>
 void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, Matrix<U, device>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -311,7 +316,9 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, M
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex idx(i, 0);
     ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
-        di::transform(di::Policy<backend>(), matrix::internal::copy_o) | ex::start_detached();
+        dlaf::matrix::copy(di::Policy<dlaf::matrix::internal::CopyBackend_v<device, device>>()) |
+        ex::start_detached();
+    // di::transform(di::Policy<CopyBackend_v<device, device>>(), matrix::internal::copy_o)
   }
 }
 
@@ -319,15 +326,16 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, M
 // `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that are
 // merged, the first is [0, k) and the second is [k, n).
 //
-template <class T>
+template <class T, Device D>
 void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-               Matrix<const T, Device::CPU>& vec, Matrix<const SizeType, Device::CPU>& in_index,
-               Matrix<SizeType, Device::CPU>& out_index) {
+               Matrix<const T, D>& vec, Matrix<const SizeType, D>& in_index,
+               Matrix<SizeType, D>& out_index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, vec.distribution());
-  auto sort_fn = [n](auto k_fut, auto vec_futs, auto in_index_futs, auto out_index) {
+  auto sort_fn = [n](const auto& k_fut, const auto& vec_futs, const auto& in_index_futs,
+                     const auto& out_index, [[maybe_unused]] auto&&... ts) {
     SizeType k = k_fut.get();
     DLAF_ASSERT(k <= n, k, n);
 
@@ -339,19 +347,26 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     auto begin_it = in_index_ptr;
     auto split_it = in_index_ptr + k;
     auto end_it = in_index_ptr + n;
-    pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
-                [v_ptr](SizeType i1, SizeType i2) { return v_ptr[i1] < v_ptr[i2]; });
+    if constexpr (D == Device::CPU) {
+      auto cmp = [v_ptr](SizeType i1, SizeType i2) { return v_ptr[i1] < v_ptr[i2]; };
+      pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
+                  std::move(cmp));
+    }
+    else {
+#ifdef DLAF_WITH_GPU
+      mergeIndicesOnDevice(begin_it, split_it, end_it, out_index_ptr, v_ptr);
+#endif
+    }
   };
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender =
-      ex::when_all(ex::keep_future(k_fut), ex::when_all_vector(tc.read(vec)),
-                   ex::when_all_vector(tc.read(in_index)), ex::when_all_vector(tc.readwrite(out_index)));
+  auto sender = ex::when_all(ex::keep_future(k_fut), ex::when_all_vector(tc.read<T, D>(vec)),
+                             ex::when_all_vector(tc.read<SizeType, D>(in_index)),
+                             ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
   ex::start_detached(
-      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                         std::move(sort_fn),
-                                                                         std::move(sender)));
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
+                                                             std::move(sort_fn), std::move(sender)));
 }
 
 // Applies `index` to `in` to get `out`
@@ -959,10 +974,15 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `mat_ev`
   //
-  initIndex(i_begin, i_end, ws.i1);
-  sortIndex(i_begin, i_end, pika::make_ready_future(n1), ws_h.evals.get(), ws.i1, ws.i2);
+  initIndex(i_begin, i_end, ws_h.i1.get());
+
+  ws_h.evals.copyTargetToSource();  // copy from CPU to GPU if `evals` is on GPU
+  ws_h.i1.copyTargetToSource();     // copy from CPU to GPU if `i1` is on GPU
+  sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
+  ws_h.i2.copySourceToTarget();  // copy from GPU to CPU if `i2` is on GPU
+
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, ws_h.evals.get(), ws.z, ws.c);
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2.get(), ws_h.evals.get(), ws.z, ws.c);
   applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), ws_h.evecs.get());
 
   // Step #2
@@ -975,12 +995,17 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   pika::shared_future<SizeType> k_fut =
-      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
-  applyIndex(i_begin, i_end, ws.i3, ws_h.evals.get(), ws.dtmp);
+      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws_h.i2.get(), ws.i3);
+  applyIndex(i_begin, i_end, ws.i3, ws_h.evals.get(), ws_h.dtmp.get());
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copyVector<backend>(i_begin, i_end, ws.dtmp, ws_h.evals.get());
+
+  ws_h.dtmp.copyTargetToSource();
+  copyVector(i_begin, i_end, ws.dtmp, evals);
+  ws_h.evals.copySourceToTarget();
+
   resetSubMatrix(i_begin, i_end, ws_h.mat1.get());
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws.ztmp, ws.dtmp, ws_h.mat1.get());
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws.ztmp, ws_h.dtmp.get(),
+                    ws_h.mat1.get());
   formEvecs(i_begin, i_end, k_fut, ws_h.evals.get(), ws.ztmp, ws_h.mat2.get(), ws_h.mat1.get());
   setUnitDiag(i_begin, i_end, k_fut, ws_h.mat1.get());
 
@@ -992,12 +1017,13 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   //
-  invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  invertIndex(i_begin, i_end, ws.i3, ws_h.i2.get());
   // copy from CPU to GPU if `evecs`, `mat1` and `mat2` are on GPU
   ws_h.evecs.copyTargetToSource();
   ws_h.mat1.copyTargetToSource();
   ws_h.mat2.copyTargetToSource();
-  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
+  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
+                                                              ws.mat2);
   dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
                                                              blas::Op::NoTrans, T(1), evecs, ws.mat2,
                                                              T(0), ws.mat1);
@@ -1011,9 +1037,15 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //   ascending order
   // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
   //
+  ws_h.i1.copyTargetToSource();
+
+  ws_h.dtmp.copyTargetToSource();
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
-  applyIndex(i_begin, i_end, ws.i2, ws.dtmp, ws_h.evals.get());
-  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
+  ws_h.i2.copySourceToTarget();
+
+  applyIndex(i_begin, i_end, ws_h.i2.get(), ws_h.dtmp.get(), ws_h.evals.get());
+  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
+                                                              evecs);
   ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs in on GPU
 }
 }

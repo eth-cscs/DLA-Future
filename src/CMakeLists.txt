@@ -203,7 +203,9 @@ add_library(
   eigensolver/reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/reduction_to_band/gpu.cpp>
   eigensolver/tridiag_solver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>)
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/misc_gpu_kernels.cu>
+  )
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.eigensolver)
 DLAF_addPrecompiledHeaders(dlaf.eigensolver)

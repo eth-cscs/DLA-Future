@@ -28,6 +28,16 @@ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, 
 DLAF_CUDA_MERGE_INDICES_ETI(extern, float);
 DLAF_CUDA_MERGE_INDICES_ETI(extern, double);
 
+template <class T>
+void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out, cudaStream_t stream);
+
+#define DLAF_CUDA_APPLY_INDEX_ETI(kword, Type)                                                \
+  kword template void applyIndexOnDevice(SizeType len, const SizeType* index, const Type* in, \
+                                         Type* out, cudaStream_t stream)
+
+DLAF_CUDA_APPLY_INDEX_ETI(extern, float);
+DLAF_CUDA_APPLY_INDEX_ETI(extern, double);
+
 }
 
 #endif

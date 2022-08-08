@@ -949,8 +949,6 @@ template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
-  (void) evals;  // TODO: this has to be removed when evals kernels are ported to the GPU
-
   // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, ws_h.evecs.get().distribution());
 

@@ -198,7 +198,7 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CP
 /// 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
 ///    column vector of Q2.
 template <Backend backend, Device device, class T>
-void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<T, device>& evals,
+void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
                                              Matrix<T, device>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
@@ -214,7 +214,7 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
                           Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
                           Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
 
-  matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(mat_trd);
+  matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(tridiag);
 
   WorkSpaceHostMirror<T, device> ws_h{
       matrix::MatrixMirror<T, Device::CPU, device>(evals),         // evals
@@ -226,7 +226,7 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
       matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2)   // i2
   };
 
-  // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
   ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs is on GPU
 
@@ -234,16 +234,45 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& mat_trd, Matrix<
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag_h.get());
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
-  // `mat_ev` (nb x nb)
+  // `evecs` (nb x nb)
   solveLeaf(tridiag_h.get(), ws_h.evecs.get());
 
-  // Offload the diagonal from `mat_trd` to `d`
+  // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag_h.get(), ws_h.evals.get());
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
                               evecs);
+  }
+}
+
+// Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
+template <Backend backend, Device device, class T>
+void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                                             Matrix<std::complex<T>, device>& evecs) {
+  Matrix<T, device> real_evecs(evecs.distribution());
+  TridiagSolver<backend, device, T>::call(tridiag, evals, real_evecs);
+
+  {
+    matrix::MatrixMirror<T, Device::CPU, device> real_evecs_h(real_evecs);
+    matrix::MatrixMirror<std::complex<T>, Device::CPU, device> evecs_h(evecs);
+
+    // Convert real to complex numbers
+    const matrix::Distribution& dist = evecs.distribution();
+    for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+      auto convert_to_complex_fn = [](const matrix::Tile<const T, Device::CPU>& in,
+                                      const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+        for (auto el_idx : iterate_range2d(out.size())) {
+          out(el_idx) = std::complex<T>(in(el_idx), 0);
+        }
+      };
+
+      pika::execution::experimental::when_all(real_evecs_h.get().read_sender(tile_wrt_local),
+                                              evecs_h.get().readwrite_sender(tile_wrt_local)) |
+          dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(),
+                                          std::move(convert_to_complex_fn));
+    }
   }
 }
 

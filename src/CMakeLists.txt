@@ -201,7 +201,7 @@ add_library(
   eigensolver/gen_to_std/mc.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/reduction_to_band/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
   eigensolver/tridiag_solver/mc.cpp)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.eigensolver)
@@ -221,7 +221,7 @@ DLAF_addPrecompiledHeaders(dlaf.factorization)
 # Define DLAF's multiplication library
 add_library(dlaf.multiplication OBJECT
   multiplication/general/mc.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:multiplication/general/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
   multiplication/triangular/mc.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>)
 target_link_libraries(dlaf.multiplication PUBLIC dlaf.prop)
@@ -231,7 +231,7 @@ DLAF_addPrecompiledHeaders(dlaf.multiplication)
 # Define DLAF's permutations library
 add_library(
   dlaf.permutations OBJECT permutations/general/mc.cpp
-                           $<$<BOOL:${DLAF_WITH_CUDA}>:permutations/general/gpu.cpp>
+                           $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
 )
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)

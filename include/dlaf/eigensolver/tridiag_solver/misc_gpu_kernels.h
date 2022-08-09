@@ -38,6 +38,17 @@ void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out
 DLAF_CUDA_APPLY_INDEX_ETI(extern, float);
 DLAF_CUDA_APPLY_INDEX_ETI(extern, double);
 
+template <class T>
+void castTileToComplex(SizeType m, SizeType n, SizeType ld, const T* in, std::complex<T>* out,
+                       cudaStream_t stream);
+
+#define DLAF_CUDA_CAST_TO_COMPLEX(kword, Type)                                               \
+  kword template void castTileToComplex(SizeType m, SizeType n, SizeType ld, const Type* in, \
+                                        std::complex<Type>* out, cudaStream_t stream)
+
+DLAF_CUDA_CAST_TO_COMPLEX(extern, float);
+DLAF_CUDA_CAST_TO_COMPLEX(extern, double);
+
 }
 
 #endif

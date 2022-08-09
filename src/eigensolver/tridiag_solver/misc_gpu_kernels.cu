@@ -13,8 +13,9 @@
 #include "dlaf/util_cuda.h"
 #include "dlaf/util_math.h"
 
-#include "thrust/execution_policy.h"
-#include "thrust/merge.h"
+#include <cuComplex.h>
+#include <thrust/execution_policy.h>
+#include <thrust/merge.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -31,25 +32,63 @@ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);
 DLAF_CUDA_MERGE_INDICES_ETI(, double);
 
-constexpr unsigned apply_index_sz = 64;
+constexpr unsigned apply_index_sz = 256;
 
 template <class T>
-__global__ void applyIndexOnDevice(const SizeType* index_arr, const T* in_arr, T* out_arr) {
-  const unsigned i = blockIdx.x * apply_index_sz + threadIdx.x;
+__global__ void applyIndexOnDevice(SizeType len, const SizeType* index_arr, const T* in_arr,
+                                   T* out_arr) {
+  const SizeType i = blockIdx.x * apply_index_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
   out_arr[i] = in_arr[index_arr[i]];
 }
 
 template <class T>
 void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out, cudaStream_t stream) {
-  const unsigned ulen = to_uint(len);
-
   dim3 nr_threads(apply_index_sz);
-  dim3 nr_blocks(util::ceilDiv(ulen, apply_index_sz));
-  applyIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(index, util::cppToCudaCast(in),
+  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(apply_index_sz)));
+  applyIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, index, util::cppToCudaCast(in),
                                                            util::cppToCudaCast(out));
 }
 
 DLAF_CUDA_APPLY_INDEX_ETI(, float);
 DLAF_CUDA_APPLY_INDEX_ETI(, double);
+
+constexpr unsigned cast_complex_kernel_tile_rows = 64;
+constexpr unsigned cast_complex_kernel_tile_cols = 16;
+
+template <class T, class CT>
+__global__ void castTileToComplex(const unsigned m, const unsigned n, SizeType ld, const T* in,
+                                  CT* out) {
+  const unsigned i = blockIdx.x * cast_complex_kernel_tile_rows + threadIdx.x;
+  const unsigned j = blockIdx.y * cast_complex_kernel_tile_cols + threadIdx.y;
+
+  if (i >= m || j >= n)
+    return;
+
+  SizeType idx = i + j * ld;
+  if constexpr (std::is_same<T, float>::value) {
+    out[idx] = make_cuComplex(in[idx], 0);
+  }
+  else {
+    out[idx] = make_cuDoubleComplex(in[idx], 0);
+  }
+}
+
+template <class T>
+void castTileToComplex(SizeType m, SizeType n, SizeType ld, const T* in, std::complex<T>* out,
+                       cudaStream_t stream) {
+  const unsigned um = to_uint(m);
+  const unsigned un = to_uint(n);
+  dim3 nr_threads(cast_complex_kernel_tile_rows, cast_complex_kernel_tile_cols);
+  dim3 nr_blocks(util::ceilDiv(um, cast_complex_kernel_tile_rows),
+                 util::ceilDiv(un, cast_complex_kernel_tile_cols));
+  castTileToComplex<<<nr_blocks, nr_threads, 0, stream>>>(um, un, ld, util::cppToCudaCast(in),
+                                                          util::cppToCudaCast(out));
+}
+
+DLAF_CUDA_CAST_TO_COMPLEX(, float);
+DLAF_CUDA_CAST_TO_COMPLEX(, double);
 
 }

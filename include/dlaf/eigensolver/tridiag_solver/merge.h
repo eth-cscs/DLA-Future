@@ -132,7 +132,7 @@ struct WorkSpaceHostMirror {
   matrix::MatrixMirror<T, Device::CPU, device> evals;
   matrix::MatrixMirror<T, Device::CPU, device> evecs;
 
-  // Mirrors to auxiliary matrices on the CPU
+  // Mirrors to auxiliary matrices, vectors and indices on host memory
   matrix::MatrixMirror<T, Device::CPU, device> mat1;
   matrix::MatrixMirror<T, Device::CPU, device> mat2;
 

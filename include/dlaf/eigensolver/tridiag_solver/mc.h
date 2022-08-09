@@ -216,6 +216,10 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 
   matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(tridiag);
 
+  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
+
+  // Mirror workspace on host memory for CPU-only kernels
   WorkSpaceHostMirror<T, device> ws_h{
       matrix::MatrixMirror<T, Device::CPU, device>(evals),         // evals
       matrix::MatrixMirror<T, Device::CPU, device>(evecs),         // evecs
@@ -225,10 +229,6 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
       matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i1),  // i1
       matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2)   // i2
   };
-
-  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
-  ws_h.evecs.copySourceToTarget();  // copy from GPU to CPU if evecs is on GPU
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag_h.get());

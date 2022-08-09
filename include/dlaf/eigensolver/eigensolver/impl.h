@@ -24,6 +24,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {
@@ -42,19 +43,19 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
   auto taus = reductionToBand<B>(mat_a, band_size);
   auto ret = bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
 
-  matrix::Matrix<T, Device::CPU> evals(LocalElementSize(size, 1),
-                                       TileElementSize(mat_a.blockSize().rows(), 1));
+  matrix::Matrix<BaseType<T>, Device::CPU> evals(LocalElementSize(size, 1),
+                                                 TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, Device::CPU> mat_e(LocalElementSize(size, size), mat_a.blockSize());
 
   eigensolver::tridiagSolver<Backend::MC>(ret.tridiagonal, evals, mat_e);
 
   // Note: This is just a temporary workaround. It will be removed as soon as we will have our
   // tridiagonal eigensolver implementation both on CPU and GPU.
-  Matrix<T, D> evals_device = [&]() {
+  Matrix<BaseType<T>, D> evals_device = [&]() {
     if constexpr (D == Device::CPU)
       return std::move(evals);
     else {
-      Matrix<T, D> evals_device(evals.distribution());
+      Matrix<BaseType<T>, D> evals_device(evals.distribution());
       dlaf::matrix::copy(evals, evals_device);
       return evals_device;
     }

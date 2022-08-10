@@ -17,6 +17,7 @@
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
+#include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"

@@ -91,4 +91,36 @@ void castTileToComplex(SizeType m, SizeType n, SizeType ld, const T* in, std::co
 DLAF_CUDA_CAST_TO_COMPLEX(, float);
 DLAF_CUDA_CAST_TO_COMPLEX(, double);
 
+constexpr unsigned invert_index_kernel_sz = 256;
+
+__global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out) {
+  const SizeType i = blockIdx.x * apply_index_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  out[in[i]] = i;
+}
+
+void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream) {
+  dim3 nr_threads(invert_index_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
+  invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
+}
+
+constexpr unsigned init_index_tile_kernel_sz = 256;
+
+__global__ void initIndexTileArr(SizeType offset, SizeType len, SizeType* index_arr) {
+  const SizeType i = blockIdx.x * apply_index_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  index_arr[offset + i] = i;
+}
+
+void initIndexTileArr(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream) {
+  dim3 nr_threads(init_index_tile_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
+  initIndexTileArr<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
+}
+
 }

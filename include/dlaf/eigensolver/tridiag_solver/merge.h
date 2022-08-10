@@ -412,29 +412,34 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& ind
                                           std::move(applyIndex_fn), std::move(sender)));
 }
 
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
-                        Matrix<SizeType, Device::CPU>& out) {
+template <Device D>
+inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& in,
+                        Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto inv_fn = [n](auto in_tiles_futs, auto out_tiles) {
+  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles, [[maybe_unused]] auto&&... ts) {
     TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
     SizeType* out_ptr = out_tiles[0].ptr(zero);
 
-    for (SizeType i = 0; i < n; ++i) {
-      out_ptr[in_ptr[i]] = i;
+    if constexpr (D == Device::CPU) {
+      for (SizeType i = 0; i < n; ++i) {
+        out_ptr[in_ptr[i]] = i;
+      }
+    }
+    else {
+      invertIndexOnDevice(n, in_ptr, out_ptr, ts...);
     }
   };
 
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
 
-  ex::start_detached(
-      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                         std::move(inv_fn),
-                                                                         std::move(sender)));
+  ex::start_detached(di::transform<dlaf::internal::TransformDispatchType::Plain,
+                                   false>(di::Policy<DefaultBackend<D>::value>(), std::move(inv_fn),
+                                          std::move(sender)));
 }
 
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
@@ -1029,7 +1034,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   //
-  invertIndex(i_begin, i_end, ws_h.i3.get(), ws_h.i2.get());
+  invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  ws_h.i2.copySourceToTarget();
   // copy from CPU to GPU if `evecs`, `mat1` and `mat2` are on GPU
   ws_h.evecs.copyTargetToSource();
   ws_h.mat1.copyTargetToSource();

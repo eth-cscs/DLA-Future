@@ -51,7 +51,7 @@ DLAF_CUDA_CAST_TO_COMPLEX(extern, double);
 
 void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream);
 
-void initIndexArr(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream);
+void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream);
 
 }
 

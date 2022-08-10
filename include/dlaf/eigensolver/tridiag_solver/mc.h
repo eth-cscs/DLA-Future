@@ -208,11 +208,11 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   WorkSpace<T, device> ws{Matrix<T, device>(distr),                                // mat1
                           Matrix<T, device>(distr),                                // mat2
                           Matrix<T, device>(vec_size, vec_tile_size),              // dtmp
-                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // z
-                          Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // ztmp
+                          Matrix<T, device>(vec_size, vec_tile_size),              // z
+                          Matrix<T, device>(vec_size, vec_tile_size),              // ztmp
                           Matrix<SizeType, device>(vec_size, vec_tile_size),       // i1
                           Matrix<SizeType, device>(vec_size, vec_tile_size),       // i2
-                          Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),       // i3
                           Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
 
   matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(tridiag);
@@ -227,8 +227,11 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
       matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),       // mat1
       matrix::MatrixMirror<T, Device::CPU, device>(ws.mat2),       // mat2
       matrix::MatrixMirror<T, Device::CPU, device>(ws.dtmp),       // dtmp
+      matrix::MatrixMirror<T, Device::CPU, device>(ws.z),          // z
+      matrix::MatrixMirror<T, Device::CPU, device>(ws.ztmp),       // ztmp
       matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i1),  // i1
-      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2)   // i2
+      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2),  // i2
+      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i3)   // i3
   };
 
   // Cuppen's decomposition

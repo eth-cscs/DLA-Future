@@ -110,17 +110,34 @@ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaSt
 constexpr unsigned init_index_tile_kernel_sz = 256;
 
 __global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr) {
-  const SizeType i = blockIdx.x * apply_index_sz + threadIdx.x;
+  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
   if (i >= len)
     return;
 
-  index_arr[offset + i] = i;
+  index_arr[i] = i + offset;
 }
 
 void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream) {
   dim3 nr_threads(init_index_tile_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
+}
+
+
+constexpr unsigned coltype_kernel_sz = 256;
+
+__global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
+  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  ct_arr[i] = ct;
+}
+
+void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream) { 
+  dim3 nr_threads(coltype_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), coltype_kernel_sz));
+  setColTypeTile<<<nr_blocks, nr_threads, 0, stream>>>(ct, len, ct_arr);
 }
 
 }

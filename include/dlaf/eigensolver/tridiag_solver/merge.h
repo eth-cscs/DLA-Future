@@ -14,6 +14,7 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
+#include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -32,14 +33,6 @@
 #include "dlaf/matrix/print_csv.h"
 
 namespace dlaf::eigensolver::internal {
-
-// The type of a column in the Q matrix
-enum class ColType {
-  UpperHalf,  // non-zeroes in the upper half only
-  LowerHalf,  // non-zeroes in the lower half only
-  Dense,      // full column vector
-  Deflated    // deflated vectors
-};
 
 inline std::ostream& operator<<(std::ostream& str, const ColType& ct) {
   if (ct == ColType::Deflated) {
@@ -123,7 +116,7 @@ struct WorkSpace {
 
   // Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
   // that bring them in matrix multiplication form.
-  Matrix<ColType, Device::CPU> c;
+  Matrix<ColType, device> c;
 };
 
 template <class T, Device device>
@@ -143,6 +136,8 @@ struct WorkSpaceHostMirror {
   matrix::MatrixMirror<SizeType, Device::CPU, device> i1;
   matrix::MatrixMirror<SizeType, Device::CPU, device> i2;
   matrix::MatrixMirror<SizeType, Device::CPU, device> i3;
+
+  matrix::MatrixMirror<ColType, Device::CPU, device> c;
 };
 
 // Calculates the problem size in the tile range [i_begin, i_end]
@@ -152,30 +147,33 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
   return (i_end - i_begin) * nb + nbr;
 }
 
-inline void initIndexTile(SizeType tile_row, const matrix::Tile<SizeType, Device::CPU>& index) {
-  for (SizeType i = 0; i < index.size().rows(); ++i) {
-    index(TileElementIndex(i, 0)) = tile_row + i;
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, initIndexTile,
-                                     initIndexTile_o)
-
 // The index starts at `0` for tiles in the range [i_begin, i_end].
-inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device::CPU>& index) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
+template <Device D>
+inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& index) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   SizeType nb = index.distribution().blockSize().rows();
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
     SizeType tile_row = (i - i_begin) * nb;
-    whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
-        initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+
+    auto init_fn = [tile_row](const auto& index_tile, [[maybe_unused]] auto&&... ts) {
+      if constexpr (D == Device::CPU) {
+        for (SizeType i = 0; i < index_tile.size().rows(); ++i) {
+          index_tile(TileElementIndex(i, 0)) = tile_row + i;
+        }
+      }
+      else {
+        initIndexTile(tile_row, index_tile.size().rows(), index_tile.ptr(), ts...);
+      }
+    };
+
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(init_fn),
+                                                        index.readwrite_sender(tile_idx)));
   }
 }
 
@@ -203,8 +201,8 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plai
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
 //
-// Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence to
-// normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
+// Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
+// to normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
 template <class T>
 void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
@@ -232,8 +230,9 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
 //
 template <class T>
 pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
-  // Note: `keep_future()` is needed here even though `T` is a scalar type (not a `Tile<>`) otherwise there
-  // is a compile-time error. A fix will be available in pika@0.6.0 : https://github.com/pika-org/pika/pull/282
+  // Note: `keep_future()` is needed here even though `T` is a scalar type (not a `Tile<>`) otherwise
+  // there is a compile-time error. A fix will be available in pika@0.6.0 :
+  // https://github.com/pika-org/pika/pull/282
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   return ex::keep_future(std::move(rho_fut)) |
@@ -241,7 +240,8 @@ pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
          ex::make_future();
 }
 
-// Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end` including.
+// Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
+// including.
 //
 template <class T>
 auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
@@ -321,13 +321,12 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, M
     ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
         dlaf::matrix::copy(di::Policy<dlaf::matrix::internal::CopyBackend_v<device, device>>()) |
         ex::start_detached();
-    // di::transform(di::Policy<CopyBackend_v<device, device>>(), matrix::internal::copy_o)
   }
 }
 
 // Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index
-// `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that are
-// merged, the first is [0, k) and the second is [k, n).
+// `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that
+// are merged, the first is [0, k) and the second is [k, n).
 //
 template <class T, Device D>
 void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
@@ -374,9 +373,9 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 
 // Applies `index` to `in` to get `out`
 //
-// Note: `pika::unwrapping()` can't be used on this function because std::vector<Tile<const >> is copied
-// internally which requires that Tile<const > is copiable which it isn't. As a consequence the API can't
-// be simplified unless const is dropped.
+// Note: `pika::unwrapping()` can't be used on this function because std::vector<Tile<const >> is
+// copied internally which requires that Tile<const > is copiable which it isn't. As a consequence the
+// API can't be simplified unless const is dropped.
 template <class T, Device D>
 void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& index,
                 Matrix<const T, D>& in, Matrix<T, D>& out) {
@@ -442,8 +441,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
                                           std::move(sender)));
 }
 
-// The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that ColType::Deflated
-// entries are moved to the end. The `c_ptr` array is implicitly ordered according to `in_ptr` on entry.
+// The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that
+// ColType::Deflated entries are moved to the end. The `c_ptr` array is implicitly ordered according to
+// `in_ptr` on entry.
 //
 inline SizeType stablePartitionIndexForDeflationArrays(SizeType n, const ColType* c_ptr,
                                                        const SizeType* in_ptr, SizeType* out_ptr) {
@@ -491,28 +491,30 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
                                                                          std::move(sender)));
 }
 
-inline void setColTypeTile(const matrix::Tile<ColType, Device::CPU>& tile, ColType val) {
-  SizeType len = tile.size().rows();
-  for (SizeType i = 0; i < len; ++i) {
-    tile(TileElementIndex(i, 0)) = val;
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, setColTypeTile,
-                                     setColTypeTile_o)
-
+template <Device D>
 inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
-                         Matrix<ColType, Device::CPU>& coltypes) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
+                         Matrix<ColType, D>& coltypes) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    whenAllLift(coltypes.readwrite_sender(LocalTileIndex(i, 0)), val) |
-        setColTypeTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+
+    auto set_fn = [val](const auto& ct_tile, [[maybe_unused]] auto&&... ts) {
+      if constexpr (D == Device::CPU) {
+        for (SizeType i = 0; i < ct_tile.size().rows(); ++i) {
+          ct_tile(TileElementIndex(i, 0)) = val;
+        }
+      }
+      else {
+        setColTypeTile(val, ct_tile.size().rows(), ct_tile.ptr(), ts...);
+      }
+    };
+
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(set_fn),
+                                                        coltypes.readwrite_sender(LocalTileIndex(i, 0))));
   }
 }
 
@@ -556,8 +558,8 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
     }
 
     // Given's deflation condition is the same as the one used in LAPACK's stedc implementation [1].
-    // However, here the second entry is deflated instead of the first (z2/d2 instead of z1/d1), thus `s`
-    // is not negated.
+    // However, here the second entry is deflated instead of the first (z2/d2 instead of z1/d1), thus
+    // `s` is not negated.
     //
     // [1] LAPACK 3.10.0, file dlaed2.f, line 393
     T r = std::sqrt(z1 * z1 + z2 * z2);
@@ -987,16 +989,16 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `mat_ev`
   //
-  initIndex(i_begin, i_end, ws_h.i1.get());
+  initIndex(i_begin, i_end, ws.i1);
 
   ws_h.evals.copyTargetToSource();  // copy from CPU to GPU if `evals` is on GPU
-  ws_h.i1.copyTargetToSource();     // copy from CPU to GPU if `i1` is on GPU
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
   ws_h.i2.copySourceToTarget();  // copy from GPU to CPU if `i2` is on GPU
+  ws_h.c.copySourceToTarget();
 
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2.get(), ws_h.evals.get(), ws_h.z.get(),
-                     ws.c);
+                     ws_h.c.get());
   applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), ws_h.evecs.get());
 
   // Step #2
@@ -1009,7 +1011,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   pika::shared_future<SizeType> k_fut =
-      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws_h.i2.get(), ws_h.i3.get());
+      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c.get(), ws_h.i2.get(), ws_h.i3.get());
   ws_h.i3.copyTargetToSource();
   ws_h.evals.copyTargetToSource();
   ws_h.z.copyTargetToSource();
@@ -1055,7 +1057,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //   ascending order
   // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
   //
-  ws_h.i1.copyTargetToSource();
   ws_h.dtmp.copyTargetToSource();
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);

@@ -123,7 +123,6 @@ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStrea
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
-
 constexpr unsigned coltype_kernel_sz = 256;
 
 __global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
@@ -134,10 +133,38 @@ __global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
   ct_arr[i] = ct;
 }
 
-void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream) { 
+void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream) {
   dim3 nr_threads(coltype_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_uint(len), coltype_kernel_sz));
   setColTypeTile<<<nr_blocks, nr_threads, 0, stream>>>(ct, len, ct_arr);
 }
+
+constexpr unsigned copy_tile_row_kernel_sz = 256;
+
+template <class T>
+__global__ void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile,
+                                                T* col) {
+  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  if constexpr (std::is_same<T, float>::value) {
+    col[i] = sign * tile[i * tile_ld] / sqrtf(T(2));
+  }
+  else {
+    col[i] = sign * tile[i * tile_ld] / sqrt(T(2));
+  }
+}
+
+template <class T>
+void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile, T* col,
+                                     cudaStream_t stream) {
+  dim3 nr_threads(copy_tile_row_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), copy_tile_row_kernel_sz));
+  copyTileRowAndNormalizeOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(sign, len, tile_ld, tile, col);
+}
+
+DLAF_COPY_TILE_ROW_ETI(, float);
+DLAF_COPY_TILE_ROW_ETI(, double);
 
 }

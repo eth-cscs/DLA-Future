@@ -177,39 +177,15 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& ind
   }
 }
 
-// Copies and normalizes a row of the `tile` into the column vector tile `col`
-//
-template <class T>
-void copyTileRowAndNormalize(bool top_tile, T rho, const matrix::Tile<const T, Device::CPU>& tile,
-                             const matrix::Tile<T, Device::CPU>& col) {
-  // Copy the bottom row of the top tile or the top row of the bottom tile
-  SizeType row = (top_tile) ? col.size().rows() - 1 : 0;
-
-  // Negate Q1's last row if rho < 0
-  //
-  // lapack 3.10.0, dlaed2.f, line 280 and 281
-  int sign = (top_tile && rho < 0) ? -1 : 1;
-
-  for (SizeType i = 0; i < tile.size().cols(); ++i) {
-    col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / T(std::sqrt(2));
-  }
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(copyTileRowAndNormalize);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain,
-                                     copyTileRowAndNormalize, copyTileRowAndNormalize_o)
-
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
 //
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
-// to normalize `z` we have to divide by sqrt(2). That is handled in `copyTileRowAndNormalize()`
-template <class T>
+// to normalize `z` we have to divide by sqrt(2).
+template <class T, Device D>
 void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
-                  Matrix<const T, Device::CPU>& mat_ev, Matrix<T, Device::CPU>& z) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
+                  Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
@@ -220,9 +196,33 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
     GlobalTileIndex mat_ev_idx(mat_ev_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
     GlobalTileIndex z_idx(i, 0);
+
     // Copy the row into the column vector `z`
-    whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
-        copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    auto copy_fn = [top_tile](const auto& rho, const auto& tile, const auto& col,
+                              [[maybe_unused]] auto&&... ts) {
+      // Copy the bottom row of the top tile or the top row of the bottom tile
+      SizeType row = (top_tile) ? col.size().rows() - 1 : 0;
+
+      // Negate Q1's last row if rho < 0
+      //
+      // lapack 3.10.0, dlaed2.f, line 280 and 281
+      int sign = (top_tile && rho < 0) ? -1 : 1;
+
+      if constexpr (D == Device::CPU) {
+        for (SizeType i = 0; i < tile.size().cols(); ++i) {
+          col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / T(std::sqrt(2));
+        }
+      }
+      else {
+        copyTileRowAndNormalizeOnDevice(sign, tile.size().cols(), tile.ld(),
+                                        tile.ptr(TileElementIndex(row, 0)), col.ptr(), ts...);
+      }
+    };
+
+    auto sender = ex::when_all(rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx));
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(copy_fn), std::move(sender)));
   }
 }
 
@@ -967,15 +967,16 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
   // Calculate the size of the upper subproblem
-  SizeType n1 = problemSize(i_begin, i_split, ws_h.evecs.get().distribution());
+  SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_split, i_end, rho_fut, ws_h.evecs.get(), ws_h.z.get());
+  assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
+  ws_h.z.copySourceToTarget();  // copy from GPU to CPU if `z` is on GPU
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, ws_h.evals.get(), ws_h.z.get());
 
   // Initialize the column types vector `c`
@@ -1063,7 +1064,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   ws_h.i2.copySourceToTarget();
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
                                                               evecs);
-  // copy from GPU to CPU if evecs in on GPU
+  // copy from GPU to CPU if on GPU
   ws_h.evecs.copySourceToTarget();
   ws_h.evals.copySourceToTarget();
 }

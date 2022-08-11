@@ -245,6 +245,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag_h.get(), ws_h.evals.get());
 
+  ws_h.evecs.copyTargetToSource();
+
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,

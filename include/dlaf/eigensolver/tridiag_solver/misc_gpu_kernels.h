@@ -56,6 +56,17 @@ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStrea
 
 void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream);
 
+template <class T>
+void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile, T* col,
+                                     cudaStream_t stream);
+
+#define DLAF_COPY_TILE_ROW_ETI(kword, Type)                                                     \
+  kword template void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, \
+                                                      const Type* tile, Type* col, cudaStream_t stream)
+
+DLAF_COPY_TILE_ROW_ETI(extern, float);
+DLAF_COPY_TILE_ROW_ETI(extern, double);
+
 }
 
 #endif

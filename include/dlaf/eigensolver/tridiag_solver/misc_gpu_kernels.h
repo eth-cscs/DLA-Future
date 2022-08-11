@@ -77,6 +77,15 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t str
 DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
 
+template <class T>
+void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t stream);
+
+#define DLAF_SET_UNIT_DIAG_ETI(kword, Type) \
+  kword template void setUnitDiagTileOnDevice(SizeType len, SizeType ld, Type* tile, cudaStream_t stream)
+
+DLAF_SET_UNIT_DIAG_ETI(extern, float);
+DLAF_SET_UNIT_DIAG_ETI(extern, double);
+
 }
 
 #endif

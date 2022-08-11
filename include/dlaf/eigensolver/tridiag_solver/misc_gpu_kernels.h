@@ -67,6 +67,16 @@ void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, c
 DLAF_COPY_TILE_ROW_ETI(extern, float);
 DLAF_COPY_TILE_ROW_ETI(extern, double);
 
+template <class T>
+void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream);
+
+#define DLAF_GIVENS_ROT_ETI(kword, Type)                                                     \
+  kword template void givensRotationOnDevice(SizeType len, Type* x, Type* y, Type c, Type s, \
+                                             cudaStream_t stream)
+
+DLAF_GIVENS_ROT_ETI(extern, float);
+DLAF_GIVENS_ROT_ETI(extern, double);
+
 }
 
 #endif

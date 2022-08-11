@@ -632,17 +632,17 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
 // Note: a column index may be paired to more than one other index, this may lead to a race condition if
 //       parallelized trivially. Current implementation is serial.
 //
-template <class T>
+template <class T, Device D>
 void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
                                          pika::future<std::vector<GivensRotation<T>>> rots_fut,
-                                         Matrix<T, Device::CPU>& mat) {
+                                         Matrix<T, D>& mat) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, mat.distribution());
   SizeType nb = mat.distribution().blockSize().rows();
 
-  auto givens_rots_fn = [n, nb](auto rots, auto tiles) {
+  auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {
     // Distribution of the merged subproblems
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
@@ -658,14 +658,21 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
       T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
 
       // Apply Givens rotations
-      blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+      if constexpr (D == Device::CPU) {
+        blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+      }
+      else {
+        givensRotationOnDevice(n, x, y, rot.c, rot.s, ts...);
+      }
     }
   };
 
   TileCollector tc{i_begin, i_end};
 
-  ex::when_all(std::move(rots_fut), ex::when_all_vector(tc.readwrite(mat))) |
-      di::transformDetach(di::Policy<Backend::MC>(), std::move(givens_rots_fn));
+  auto sender = ex::when_all(std::move(rots_fut), ex::when_all_vector(tc.readwrite(mat)));
+  ex::start_detached(
+      di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                      std::move(givens_rots_fn), std::move(sender)));
 }
 
 template <class T>
@@ -1000,7 +1007,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2.get(), ws_h.evals.get(), ws_h.z.get(),
                      ws_h.c.get());
-  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), ws_h.evecs.get());
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), evecs);
 
   // Step #2
   //
@@ -1039,8 +1046,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
   ws_h.i2.copySourceToTarget();
-  // copy from CPU to GPU if `evecs`, `mat1` and `mat2` are on GPU
-  ws_h.evecs.copyTargetToSource();
+  // copy from CPU to GPU if `mat1` and `mat2` are on GPU
   ws_h.mat1.copyTargetToSource();
   ws_h.mat2.copyTargetToSource();
   dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
@@ -1065,7 +1071,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
                                                               evecs);
   // copy from GPU to CPU if on GPU
-  ws_h.evecs.copySourceToTarget();
   ws_h.evals.copySourceToTarget();
 }
 }

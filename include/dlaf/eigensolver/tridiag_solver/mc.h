@@ -252,6 +252,7 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
                               evecs);
   }
+  ws_h.evecs.copySourceToTarget();
 }
 
 // Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.

@@ -126,7 +126,7 @@ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStrea
 constexpr unsigned coltype_kernel_sz = 256;
 
 __global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
-  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  const SizeType i = blockIdx.x * coltype_kernel_sz + threadIdx.x;
   if (i >= len)
     return;
 
@@ -144,7 +144,7 @@ constexpr unsigned copy_tile_row_kernel_sz = 256;
 template <class T>
 __global__ void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile,
                                                 T* col) {
-  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  const SizeType i = blockIdx.x * copy_tile_row_kernel_sz + threadIdx.x;
   if (i >= len)
     return;
 
@@ -166,5 +166,28 @@ void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, c
 
 DLAF_COPY_TILE_ROW_ETI(, float);
 DLAF_COPY_TILE_ROW_ETI(, double);
+
+constexpr unsigned givens_rot_kernel_sz = 256;
+
+template <class T>
+__global__ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s) {
+  const SizeType i = blockIdx.x * givens_rot_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  T tmp = c * x[i] + s * y[i];
+  y[i] = c * y[i] - s * x[i];
+  x[i] = tmp;
+}
+
+template <class T>
+void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream) {
+  dim3 nr_threads(givens_rot_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), givens_rot_kernel_sz));
+  givensRotationOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, x, y, c, s);
+}
+
+DLAF_GIVENS_ROT_ETI(, float);
+DLAF_GIVENS_ROT_ETI(, double);
 
 }

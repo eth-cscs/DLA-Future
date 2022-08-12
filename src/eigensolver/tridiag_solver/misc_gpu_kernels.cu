@@ -19,14 +19,20 @@
 
 namespace dlaf::eigensolver::internal {
 
+// https://github.com/NVIDIA/thrust/issues/1515
+//
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
                           SizeType* out_ptr, const T* v_ptr, cudaStream_t stream) {
   auto cmp = [v_ptr] __device__(const SizeType& i1, const SizeType& i2) {
     return v_ptr[i1] < v_ptr[i2];
   };
-  // TODO: with Thrust > 1.16 use `thrust::cuda::par_nosync.on(stream)` to avoid synchronization
-  thrust::merge(thrust::cuda::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
+  // NOTE: The call may be synchronous, to avoid that either wrap in a __global__ function as shown in
+  // thrust's `examples/cuda/async_reduce.cu` or use the policy `thrust::cuda::par_nosync.on(stream)` in
+  // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
+  //
+  thrust::merge(thrust::cuda::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
+                std::move(cmp));
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);

@@ -19,12 +19,12 @@ namespace dlaf::eigensolver::internal {
 
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
-                          SizeType* out_ptr, const T* v_ptr);
+                          SizeType* out_ptr, const T* v_ptr, cudaStream_t stream);
 
 #define DLAF_CUDA_MERGE_INDICES_ETI(kword, Type)                                                 \
   kword template void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, \
                                            const SizeType* end_ptr, SizeType* out_ptr,           \
-                                           const Type* v_ptr)
+                                           const Type* v_ptr, cudaStream_t stream)
 
 DLAF_CUDA_MERGE_INDICES_ETI(extern, float);
 DLAF_CUDA_MERGE_INDICES_ETI(extern, double);

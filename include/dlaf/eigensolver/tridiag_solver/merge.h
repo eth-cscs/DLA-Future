@@ -356,7 +356,7 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     }
     else {
 #ifdef DLAF_WITH_GPU
-      mergeIndicesOnDevice(begin_it, split_it, end_it, out_index_ptr, v_ptr);
+      mergeIndicesOnDevice(begin_it, split_it, end_it, out_index_ptr, v_ptr, ts...);
 #endif
     }
   };

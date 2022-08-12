@@ -217,4 +217,25 @@ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t st
 DLAF_SET_UNIT_DIAG_ETI(, float);
 DLAF_SET_UNIT_DIAG_ETI(, double);
 
+constexpr unsigned copy_diag_tile_kernel_sz = 256;
+
+template <class T>
+__global__ void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag) {
+  const SizeType i = blockIdx.x * copy_diag_tile_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  diag[i] = tridiag[i];
+}
+
+template <class T>
+void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag, cudaStream_t stream) {
+  dim3 nr_threads(copy_diag_tile_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), copy_diag_tile_kernel_sz));
+  copyDiagTileFromTridiagTile<<<nr_blocks, nr_threads, 0, stream>>>(len, tridiag, diag);
+}
+
+DLAF_COPY_DIAG_TILE_ETI(, float);
+DLAF_COPY_DIAG_TILE_ETI(, double);
+
 }

@@ -86,6 +86,16 @@ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t st
 DLAF_SET_UNIT_DIAG_ETI(extern, float);
 DLAF_SET_UNIT_DIAG_ETI(extern, double);
 
+template <class T>
+void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag, cudaStream_t stream);
+
+#define DLAF_COPY_DIAG_TILE_ETI(kword, Type)                                                     \
+  kword template void copyDiagTileFromTridiagTile(SizeType len, const Type* tridiag, Type* diag, \
+                                                  cudaStream_t stream)
+
+DLAF_COPY_DIAG_TILE_ETI(extern, float);
+DLAF_COPY_DIAG_TILE_ETI(extern, double);
+
 }
 
 #endif

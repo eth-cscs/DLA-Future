@@ -117,28 +117,28 @@ void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) 
   }
 }
 
-template <class T>
-void copyDiagTile(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
-                  const matrix::Tile<T, Device::CPU>& diag_tile) {
-  for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
-    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
-  }
-}
+template <class T, Device D>
+void offloadDiagonal(Matrix<const T, D>& mat_trd, Matrix<T, D>& evals) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
-DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, copyDiagTile,
-                                     copyDiagTile_o)
-
-template <class T>
-void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
-
-  for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
-    whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
-        copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+  for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
+    auto diag_fn = [](const auto& tridiag_tile, const auto& diag_tile, [[maybe_unused]] auto&&... ts) {
+      if constexpr (D == Device::CPU) {
+        for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
+          diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
+        }
+      }
+      else {
+        copyDiagTileFromTridiagTile(tridiag_tile.size().rows(), tridiag_tile.ptr(), diag_tile.ptr(),
+                                    ts...);
+      }
+    };
+    auto sender = ex::when_all(mat_trd.read_sender(GlobalTileIndex(i, 0)),
+                               evals.readwrite_sender(GlobalTileIndex(i, 0)));
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(diag_fn), std::move(sender)));
   }
 }
 
@@ -243,8 +243,10 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   solveLeaf(tridiag_h.get(), ws_h.evecs.get());
 
   // Offload the diagonal from `mat_trd` to `evals`
-  offloadDiagonal(tridiag_h.get(), ws_h.evals.get());
+  tridiag_h.copyTargetToSource();
+  offloadDiagonal(tridiag, evals);
 
+  ws_h.evals.copySourceToTarget();
   ws_h.evecs.copyTargetToSource();
 
   // Each triad represents two subproblems to be merged

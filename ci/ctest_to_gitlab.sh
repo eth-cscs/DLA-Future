@@ -41,7 +41,8 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '40:00'
+    SLURM_TIMELIMIT: '20:00'
+    XDG_DATA_HOME: /dev/shm/somedir
 
 {{JOBS}}
 
@@ -101,6 +102,7 @@ allocate:
   variables:
     PULL_IMAGE: 'YES'
     SLURM_TIMELIMIT: '15:00'
+    XDG_DATA_HOME: /dev/shm/somedir
 
 {{JOBS}}
 

@@ -15,6 +15,8 @@
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/types.h"
 
+#include <cusolverDn.h>
+
 namespace dlaf::eigensolver::internal {
 
 template <class T>
@@ -95,6 +97,17 @@ void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag, cudaSt
 
 DLAF_COPY_DIAG_TILE_ETI(extern, float);
 DLAF_COPY_DIAG_TILE_ETI(extern, double);
+
+template <class T>
+void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag, SizeType ld_evecs,
+               T* evecs);
+
+#define DLAF_CUSOLVER_SYEVC_ETI(kword, Type)                                        \
+  kword template void syevdTile(cusolverDnHandle_t handle, SizeType n, Type* evals, \
+                                const Type* offdiag, SizeType ld_evecs, Type* evecs)
+
+DLAF_CUSOLVER_SYEVC_ETI(extern, float);
+DLAF_CUSOLVER_SYEVC_ETI(extern, double);
 
 }
 

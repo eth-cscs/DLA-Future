@@ -251,13 +251,17 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   }
 }
 
+// clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
+    {16, 16},
     {16, 8},
     {16, 4},
     {16, 5},
     {100, 10},
-    {93, 7}};
+    {93, 7}
+};
+// clang-format on
 
 TYPED_TEST(TridiagEigensolverTestCPU, Laplace1D) {
   for (auto [n, nb] : tested_problems) {

@@ -464,30 +464,37 @@ inline SizeType stablePartitionIndexForDeflationArrays(SizeType n, const ColType
   return k;
 }
 
+template <Device D>
 inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_end,
-                                                               Matrix<const ColType, Device::CPU>& c,
-                                                               Matrix<const SizeType, Device::CPU>& in,
-                                                               Matrix<SizeType, Device::CPU>& out) {
+                                                               Matrix<const ColType, D>& c,
+                                                               Matrix<const SizeType, D>& in,
+                                                               Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto part_fn = [n](auto c_tiles_futs, auto in_tiles_futs, auto out_tiles) {
+  auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles,
+                     [[maybe_unused]] auto&&... ts) {
     TileElementIndex zero_idx(0, 0);
     const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
     SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
-    return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
+
+    if constexpr (D == Device::CPU) {
+      return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
+    }
+    else {
+      return stablePartitionIndexOnDevice(n, c_ptr, in_ptr, out_ptr, ts...);
+    }
   };
 
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
 
-  return ex::make_future(
-      di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                         std::move(part_fn),
-                                                                         std::move(sender)));
+  return ex::make_future(di::transform<dlaf::internal::TransformDispatchType::Plain,
+                                       false>(di::Policy<DefaultBackend<D>::value>(), std::move(part_fn),
+                                              std::move(sender)));
 }
 
 template <Device D>
@@ -1024,9 +1031,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
+  ws_h.c.copyTargetToSource();
   pika::shared_future<SizeType> k_fut =
-      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c.get(), ws_h.i2.get(), ws_h.i3.get());
-  ws_h.i3.copyTargetToSource();
+      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
   ws_h.evals.copyTargetToSource();
   ws_h.z.copyTargetToSource();
   applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);

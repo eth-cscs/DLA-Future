@@ -11,17 +11,32 @@
 #include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
 #include "dlaf/gpu/api.h"
 #include "dlaf/gpu/lapack/error.h"
-#include "dlaf/memory/memory_view.h"
 #include "dlaf/memory/memory_chunk.h"
+#include "dlaf/memory/memory_view.h"
 #include "dlaf/util_cuda.h"
 #include "dlaf/util_math.h"
 
 #include <cuComplex.h>
 #include <cusolverDn.h>
+#include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/merge.h>
+#include <thrust/partition.h>
 
 namespace dlaf::eigensolver::internal {
+
+// Note: that this blocks the thread until the kernels complete
+SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                  SizeType* out_ptr, cudaStream_t stream) {
+  // The number of non-deflated values
+  SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+
+  // Partition while preserving relative order such that deflated entries are at the end
+  auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
+  thrust::stable_partition_copy(thrust::cuda::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+                                std::move(cmp));
+  return k;
+}
 
 // https://github.com/NVIDIA/thrust/issues/1515
 //
@@ -278,7 +293,8 @@ __global__ void assertSyevdInfo(int* info) {
 // `evecs` [out] first holds the tridiagonal tile converted to an expanded form - lower triangular
 // matrix, on exit it holds the eigenvectors tridiag holds the eigenvectors on exit
 //
-// Example of using cusolverDnXsyevd() is provided here: https://github.com/NVIDIA/CUDALibrarySamples/blob/master/cuSOLVER/Xsyevd/cusolver_Xsyevd_example.cu
+// Example of using cusolverDnXsyevd() is provided here:
+// https://github.com/NVIDIA/CUDALibrarySamples/blob/master/cuSOLVER/Xsyevd/cusolver_Xsyevd_example.cu
 template <class T>
 void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag, SizeType ld_evecs,
                T* evecs) {
@@ -307,10 +323,9 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
 
   // Note: `info` has to be stored on device!
   memory::MemoryView<int, Device::GPU> info(1);
-  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnXsyevd(handle, NULL, jobz, uplo, n, dtype, evecs, ld_evecs,
-                                              dtype, evals, dtype, bufferOnDevice,
-                                              workspaceInBytesOnDevice, bufferOnHost,
-                                              workspaceInBytesOnHost, info()));
+  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnXsyevd(handle, NULL, jobz, uplo, n, dtype, evecs, ld_evecs, dtype,
+                                              evals, dtype, bufferOnDevice, workspaceInBytesOnDevice,
+                                              bufferOnHost, workspaceInBytesOnHost, info()));
   assertSyevdInfo<<<1, 1, 0, stream>>>(info());
 
   memory::internal::getUmpireDeviceAllocator().deallocate(bufferOnDevice);

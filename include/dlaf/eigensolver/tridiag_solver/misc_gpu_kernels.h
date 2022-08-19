@@ -19,6 +19,10 @@
 
 namespace dlaf::eigensolver::internal {
 
+// Returns the number of non-deflated entries
+SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                      SizeType* out_ptr, cudaStream_t stream);
+
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
                           SizeType* out_ptr, const T* v_ptr, cudaStream_t stream);

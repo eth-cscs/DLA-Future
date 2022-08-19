@@ -8,9 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-// This file is temporary until there is full support of the necessary functions
-// in hipSOLVER, which would rely only on hipBLAS.
-
 #pragma once
 
 #ifdef DLAF_WITH_GPU

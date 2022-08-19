@@ -36,7 +36,7 @@
     std::size_t workspace_size;                                                                       \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
-    DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+    DLAF_GPUBLAS_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));                       \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
     return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \
@@ -60,7 +60,7 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
       auto workspace = DLAF_GET_ROCBLAS_WORKSPACE(f);                                                   \
       DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(),  \
                                                      to_sizet(workspace.size())));                      \
-      DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+      DLAF_GPUBLAS_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));                       \
       DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), nullptr, 0)); \
       ::dlaf::tile::internal::extendROCBlasWorkspace(handle, std::move(workspace));                     \
     }                                                                                                   \
@@ -83,6 +83,23 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   template <typename T>               \
   struct Name
 
+#ifdef DLAF_WITH_HIP
+    // rocblas functions needs to be lowercase
+#define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
+  DLAF_DECLARE_GPUBLAS_OP(Name);                           \
+  DLAF_DEFINE_GPUBLAS_OP(Name, float, s##f);               \
+  DLAF_DEFINE_GPUBLAS_OP(Name, double, d##f);              \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, c##f); \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, z##f)
+
+#define DLAF_MAKE_GPUBLAS_SYHE_OP(Name, f)                   \
+  DLAF_DECLARE_GPUBLAS_OP(Name);                             \
+  DLAF_DEFINE_GPUBLAS_OP(Name, float, ssy##f);               \
+  DLAF_DEFINE_GPUBLAS_OP(Name, double, dsy##f);              \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, che##f); \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, zhe##f)
+
+#elif defined(DLAF_WITH_CUDA)
 #define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
   DLAF_DECLARE_GPUBLAS_OP(Name);                           \
   DLAF_DEFINE_GPUBLAS_OP(Name, float, S##f);               \
@@ -96,6 +113,7 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   DLAF_DEFINE_GPUBLAS_OP(Name, double, Dsy##f);              \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, Che##f); \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Zhe##f)
+#endif
 
 namespace dlaf::gpublas::internal {
 
@@ -485,7 +503,7 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
 #ifdef DLAF_WITH_CUDA
       blasToCublasCast(a.ptr());
 #elif defined(DLAF_WITH_HIP)
-      // The hipblas API requires a non-const argument
+      // The rocblas API requires a non-const argument
       blasToCublasCast(const_cast<T*>(a.ptr()));
 #endif
   gpublas::internal::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),

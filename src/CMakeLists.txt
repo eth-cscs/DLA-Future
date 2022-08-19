@@ -75,7 +75,6 @@ target_link_libraries(
             $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
             $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
             $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
             $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
             $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
             $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>

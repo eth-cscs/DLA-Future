@@ -14,56 +14,53 @@
 
 #ifdef DLAF_WITH_HIP
 
-#include <hipblas/hipblas.h>
 #include <rocblas/rocblas.h>
 
-#define cublasCall           hipblasCall
-#define cublasCherk          hipblasCherk
-#define cublasCreate         hipblasCreate
-#define cublasCtrmm          hipblasCtrmm
-#define cublasCtrsm          hipblasCtrsm
-#define cublasDaxpy          hipblasDaxpy
-#define cublasDestroy        hipblasDestroy
-#define cublasDgemm          hipblasDgemm
-#define cublasDiagType_t     hipblasDiagType_t
-#define cublasDtrmm          hipblasDtrmm
-#define cublasDtrsm          hipblasDtrsm
-#define cublasFillMode_t     hipblasFillMode_t
-#define cublasGetErrorString hipblasGetErrorString
-#define cublasGetStream      hipblasGetStream
-#define cublasHandle_t       hipblasHandle_t
-#define cublasOperation_t    hipblasOperation_t
-#define cublasPointerMode_t  hipblasPointerMode_t
-#define cublasSetPointerMode hipblasSetPointerMode
-#define cublasSetStream      hipblasSetStream
-#define cublasSgemm          hipblasSgemm
-#define cublasSideMode_t     hipblasSideMode_t
-#define cublasStrmm          hipblasStrmm
-#define cublasStrsm          hipblasStrsm
-#define cublasZgemm          hipblasZgemm
-#define cublasZherk          hipblasZherk
-#define cublasZtrmm          hipblasZtrmm
-#define cublasZtrsm          hipblasZtrsm
-#define cuComplex            hipblasComplex
-#define cuDoubleComplex      hipblasDoubleComplex
+#define cublasCherks         rocblas_cherk
+#define cublasCreate         rocblas_create_handle
+#define cublasCtrmm          rocblas_ctrmm
+#define cublasCtrsm          rocblas_ctrsm
+#define cublasDaxpy          rocblas_daxpy
+#define cublasDestroy        rocblas_destroy_handle
+#define cublasDgemm          rocblas_dgemm
+#define cublasDiagType_t     rocblas_diagonal
+#define cublasDtrmm          rocblas_dtrmm
+#define cublasDtrsm          rocblas_dtrsm
+#define cublasFillMode_t     rocblas_fill
+#define cublasGetStream      rocblas_get_stream
+#define cublasHandle_t       rocblas_handle
+#define cublasOperation_t    rocblas_operation
+#define cublasPointerMode_t  rocblas_pointer_mode
+#define cublasSetPointerMode rocblas_set_pointer_mode
+#define cublasSetStream      rocblas_set_stream
+#define cublasSgemm          rocblas_sgemm
+#define cublasSideMode_t     rocblas_side
+#define cublasStrmm          rocblas_strmm
+#define cublasStrsm          rocblas_strsm
+#define cublasZgemm          rocblas_zgemm
+#define cublasZherk          rocblas_zherk
+#define cublasZtrmm          rocblas_ztrmm
+#define cublasZtrsm          rocblas_ztrsm
+#define cuComplex            hipFloatComplex
+#define cuDoubleComplex      hipDoubleComplex
 
-#define CUBLAS_DIAG_NON_UNIT     HIPBLAS_DIAG_NON_UNIT
-#define CUBLAS_DIAG_UNIT         HIPBLAS_DIAG_UNIT
-#define CUBLAS_FILL_MODE_FULL    HIPBLAS_FILL_MODE_FULL
-#define CUBLAS_FILL_MODE_LOWER   HIPBLAS_FILL_MODE_LOWER
-#define CUBLAS_FILL_MODE_UPPER   HIPBLAS_FILL_MODE_UPPER
-#define CUBLAS_OP_C              HIPBLAS_OP_C
-#define CUBLAS_OP_N              HIPBLAS_OP_N
-#define CUBLAS_OP_T              HIPBLAS_OP_T
-#define CUBLAS_POINTER_MODE_HOST HIPBLAS_POINTER_MODE_HOST
-#define CUBLAS_SIDE_LEFT         HIPBLAS_SIDE_LEFT
-#define CUBLAS_SIDE_RIGHT        HIPBLAS_SIDE_RIGHT
+#define CUBLAS_DIAG_NON_UNIT     rocblas_diagonal_non_unit
+#define CUBLAS_DIAG_UNIT         rocblas_diagonal_unit
+#define CUBLAS_FILL_MODE_FULL    rocblas_fill_full
+#define CUBLAS_FILL_MODE_LOWER   rocblas_fill_lower
+#define CUBLAS_FILL_MODE_UPPER   rocblas_fill_upper
+#define CUBLAS_OP_C              rocblas_operation_conjugate_transpose
+#define CUBLAS_OP_N              rocblas_operation_none
+#define CUBLAS_OP_T              rocblas_operation_transpose
+#define CUBLAS_POINTER_MODE_HOST rocblas_pointer_mode_host
+#define CUBLAS_SIDE_LEFT         rocblas_side_left
+#define CUBLAS_SIDE_RIGHT        rocblas_side_right
 
 namespace dlaf::gpublas::internal {
 
 // Error handling
-using gpublasStatus_t = hipblasStatus_t;
-inline constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = HIPBLAS_STATUS_SUCCESS;
+using gpublasStatus_t = rocblas_status;
+inline constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = rocblas_status_success;
 
 }
 

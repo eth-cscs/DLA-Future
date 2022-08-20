@@ -20,14 +20,27 @@
 #include <cusolverDn.h>
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
+#include <thrust/extrema.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
 
 namespace dlaf::eigensolver::internal {
 
+template <class T>
+T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
+  auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
+  T max_el;
+  // TODO: this is slow and should be fixed eventually
+  cudaMemcpy(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost);
+  return max_el;
+}
+
+DLAF_CUDA_MAX_ELEMENT_ETI(, float);
+DLAF_CUDA_MAX_ELEMENT_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                  SizeType* out_ptr, cudaStream_t stream) {
+                                      SizeType* out_ptr, cudaStream_t stream) {
   // The number of non-deflated values
   SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
 

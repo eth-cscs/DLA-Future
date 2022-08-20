@@ -19,6 +19,16 @@
 
 namespace dlaf::eigensolver::internal {
 
+// Returns the maximum element in the array
+template <class T>
+T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream);
+
+#define DLAF_CUDA_MAX_ELEMENT_ETI(kword, Type) \
+  kword template Type maxElementOnDevice(SizeType len, const Type* arr, cudaStream_t stream)
+
+DLAF_CUDA_MAX_ELEMENT_ETI(extern, float);
+DLAF_CUDA_MAX_ELEMENT_ETI(extern, double);
+
 // Returns the number of non-deflated entries
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream);

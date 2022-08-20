@@ -242,16 +242,26 @@ pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
 // including.
 //
-template <class T>
-auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& vec) {
+template <class T, Device D>
+auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, D>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read_sender(LocalTileIndex(i, 0))) |
-                        tile::lange(di::Policy<Backend::MC>(pika::execution::thread_priority::normal)));
+    auto max_fn = [](auto const& tile, [[maybe_unused]] auto&&... ts) {
+      if constexpr (D == Device::CPU) {
+        return tile::internal::lange(lapack::Norm::Max, tile);
+      }
+      else {
+        return maxElementOnDevice(tile.size().rows(), tile.ptr(), ts...);
+      }
+    };
+    tiles_max.push_back(
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(max_fn),
+                                                        vec.read_sender(LocalTileIndex(i, 0))));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -265,9 +275,9 @@ auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, Device::
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
-template <class T>
-pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, Device::CPU>& d,
-                              Matrix<const T, Device::CPU>& z) {
+template <class T, Device D>
+pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, D>& d,
+                              Matrix<const T, D>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -996,8 +1006,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   rho_fut = scaleRho(rho_fut);
 
   // Calculate the tolerance used for deflation
-  ws_h.z.copySourceToTarget();  // copy from GPU to CPU if `z` is on GPU
-  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, ws_h.evals.get(), ws_h.z.get());
+  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
@@ -1011,12 +1020,11 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - apply Givens rotations to `Q` - `mat_ev`
   //
   initIndex(i_begin, i_end, ws.i1);
-
-  ws_h.evals.copyTargetToSource();  // copy from CPU to GPU if `evals` is on GPU
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
   ws_h.i2.copySourceToTarget();  // copy from GPU to CPU if `i2` is on GPU
+  ws_h.z.copySourceToTarget();   // copy from GPU to CPU if `z` is on GPU
   ws_h.c.copySourceToTarget();
-
+  ws_h.evals.copySourceToTarget();
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2.get(), ws_h.evals.get(), ws_h.z.get(),
                      ws_h.c.get());

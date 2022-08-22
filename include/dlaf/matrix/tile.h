@@ -12,12 +12,12 @@
 
 #include <exception>
 #include <ostream>
+#include <tuple>
 #include <type_traits>
 
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
-#include <pika/tuple.hpp>
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/data_descriptor.h"
@@ -405,7 +405,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
     auto dep_tracker = std::move(tile.dep_tracker_);
     tile.dep_tracker_ = std::move(promise);
 
-    return pika::make_tuple(std::move(tile), std::move(dep_tracker));
+    return std::make_tuple(std::move(tile), std::move(dep_tracker));
   };
   // old_tile = F1(PN) and will be used to create the subtiles
   auto [old_tile, dep_tracker] =

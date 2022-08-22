@@ -36,8 +36,8 @@ namespace dlaf::comm {
 /// reduced in `out`.
 ///
 /// @pre `op` == MPI_SUM (currently other reduce operations are not supported)
-template <class SenderIn, class SenderOut>
-[[nodiscard]] auto scheduleAllReduceP2P(MPI_Op op, Communicator comm, IndexT_MPI rank_mate,
+template <class CommSender, class SenderIn, class SenderOut>
+[[nodiscard]] auto scheduleAllReduceP2P(MPI_Op op, CommSender&& comm, IndexT_MPI rank_mate,
                                         IndexT_MPI tag, SenderIn&& in, SenderOut&& out) {
   namespace ex = pika::execution::experimental;
 
@@ -54,8 +54,9 @@ template <class SenderIn, class SenderOut>
   // independently from the rest of the allreduce operation.
   ex::start_detached(comm::scheduleSend(comm, rank_mate, tag, in));
 
-  auto tile_out = comm::scheduleRecv(comm, rank_mate, tag, std::forward<SenderOut>(out));
-  return dlaf::internal::whenAllLift(T(1), in, std::move(tile_out)) |
+  auto tile_out =
+      comm::scheduleRecv(std::forward<CommSender>(comm), rank_mate, tag, std::forward<SenderOut>(out));
+  return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<Backend::MC>());
 }
 

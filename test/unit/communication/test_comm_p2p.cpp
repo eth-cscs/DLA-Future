@@ -136,7 +136,7 @@ TEST_F(P2PTest, SendRecvMixTags) {
   testSendRecvMixTags(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
 }
 
-template <class T, Device D>
+template <Backend B, Device D, class T>
 void testP2PAllReduce(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   namespace ex = pika::execution::experimental;
 
@@ -153,11 +153,11 @@ void testP2PAllReduce(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   matrix::Matrix<T, D> tmp(matrix.distribution().localSize(), matrix.blockSize());
 
   if (rank_src == world.rank()) {
-    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_dst, tag, matrix.read_sender(idx),
+    ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_dst, tag, matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_src, tag, matrix.read_sender(idx),
+    ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_src, tag, matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else {
@@ -171,13 +171,13 @@ TEST_F(P2PTest, AllReduce) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testP2PAllReduce(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testP2PAllReduce<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testP2PAllReduce(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testP2PAllReduce<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
 }
 
-template <class T, Device D>
+template <Backend B, Device D, class T>
 void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   namespace ex = pika::execution::experimental;
 
@@ -196,8 +196,7 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_dst, id,
-                                                      matrix.read_sender(idx),
+        ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_dst, id, matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }
@@ -212,8 +211,7 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllReduceP2P(MPI_SUM, world, rank_src, id,
-                                                      matrix.read_sender(idx),
+        ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_src, id, matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }
@@ -237,8 +235,8 @@ TEST_F(P2PTest, AllReduceMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testP2PAllReduceMixTags(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
+  testP2PAllReduceMixTags<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
 
   // tiles are stored in non-contiguous memory
-  testP2PAllReduceMixTags(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
+  testP2PAllReduceMixTags<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
 }

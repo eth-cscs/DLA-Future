@@ -28,25 +28,22 @@
 
 namespace dlaf::comm {
 
-/// Schedule a P2P AllReduce operation between current rank and `rank_mate`.
+/// Schedule a P2P AllReduce Sum operation between current rank and `rank_mate`.
 ///
-/// A P2P AllReduce operation, i.e. an all-reduce involving just two ranks, is performed between
-/// the rank from which this function is called and `rank_mate`.
-/// `in` is a read-only tile that, togheter with the one received from `rank_mate`, will be
-/// reduced in `out`.
+/// A P2P AllReduce Sum operation, i.e. an all-reduce involving just two ranks with MPI_SUM as op,
+/// is performed between the rank where this function is called and `rank_mate`.
 ///
-/// @pre `op` == MPI_SUM (currently other reduce operations are not supported)
-template <class CommSender, class SenderIn, class SenderOut>
-[[nodiscard]] auto scheduleAllReduceP2P(MPI_Op op, CommSender&& comm, IndexT_MPI rank_mate,
-                                        IndexT_MPI tag, SenderIn&& in, SenderOut&& out) {
+/// `in` is a sender of a read-only tile that, togheter with the one received from `rank_mate`, will be
+/// summed in `out` (on both ranks)
+template <Backend B, class CommSender, class SenderIn, class SenderOut>
+[[nodiscard]] auto scheduleAllSumP2P(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,
+                                     SenderIn&& in, SenderOut&& out) {
   namespace ex = pika::execution::experimental;
 
   using T = dlaf::internal::SenderElementType<SenderIn>;
 
   static_assert(std::is_same_v<T, dlaf::internal::SenderElementType<SenderOut>>,
                 "in and out should send a tile of the same type");
-
-  DLAF_ASSERT(op == MPI_SUM, op, "MPI_SUM is the only reduce operation supported.");
 
   // Note:
   // Each rank in order to locally complete the operation just need to receive the other rank
@@ -57,7 +54,7 @@ template <class CommSender, class SenderIn, class SenderOut>
   auto tile_out =
       comm::scheduleRecv(std::forward<CommSender>(comm), rank_mate, tag, std::forward<SenderOut>(out));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
-         tile::add(dlaf::internal::Policy<Backend::MC>());
+         tile::add(dlaf::internal::Policy<B>());
 }
 
 }

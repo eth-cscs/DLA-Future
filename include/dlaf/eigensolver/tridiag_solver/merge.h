@@ -153,8 +153,8 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, Device:
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
     SizeType tile_row = (i - i_begin) * nb;
-    whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
-        initIndexTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    start_detached(whenAllLift(tile_row, index.readwrite_sender(tile_idx)) |
+                   initIndexTile(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 
@@ -202,8 +202,9 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
     GlobalTileIndex z_idx(i, 0);
     // Copy the row into the column vector `z`
-    whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
-        copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    start_detached(
+        whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx)) |
+        copyTileRowAndNormalize(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 
@@ -307,8 +308,8 @@ void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, Device::CPU>& 
   };
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex idx(i, 0);
-    ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
-        di::transform(di::Policy<Backend::MC>(), copy_fn) | ex::start_detached();
+    ex::start_detached(ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
+                       di::transform(di::Policy<Backend::MC>(), copy_fn));
   }
 }
 
@@ -478,8 +479,8 @@ inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    whenAllLift(coltypes.readwrite_sender(LocalTileIndex(i, 0)), val) |
-        setColTypeTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    start_detached(whenAllLift(coltypes.readwrite_sender(LocalTileIndex(i, 0)), val) |
+                   setColTypeTile(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 
@@ -921,8 +922,8 @@ void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& ma
 
   for (SizeType j = i_begin; j <= i_end; ++j) {
     for (SizeType i = i_begin; i <= i_end; ++i) {
-      mat.readwrite_sender(GlobalTileIndex(i, j)) |
-          tile::set0(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+      start_detached(mat.readwrite_sender(GlobalTileIndex(i, j)) |
+                     tile::set0(Policy<Backend::MC>(thread_priority::normal)));
     }
   }
 }

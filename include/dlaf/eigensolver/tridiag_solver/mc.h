@@ -116,9 +116,9 @@ void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) 
 
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
-        tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    start_detached(whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                               mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
+                   tile::stedc(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 
@@ -142,8 +142,9 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CP
   using pika::execution::experimental::start_detached;
 
   for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
-    whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)), d.readwrite_sender(GlobalTileIndex(i, 0))) |
-        copyDiagTile(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+    start_detached(whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)),
+                               d.readwrite_sender(GlobalTileIndex(i, 0))) |
+                   copyDiagTile(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 

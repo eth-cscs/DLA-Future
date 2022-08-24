@@ -76,6 +76,80 @@ TYPED_TEST(MatrixMirrorTest, Basics) {
 }
 
 template <typename T, Device Target, Device Source>
+void getTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+  GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+
+  {
+    MatrixMirror<T, Target, Source> mat_mirror(mat);
+
+    if constexpr (Target == Source) {
+      EXPECT_EQ(&mat, &mat_mirror.get());
+    }
+    else {
+      static_assert(!std::is_same_v<decltype(mat), std::decay_t<decltype(mat_mirror.get())>>);
+    }
+  }
+
+  {
+    Matrix<const T, Source>& mat_const = mat;
+    MatrixMirror<const T, Target, Source> mat_mirror(mat_const);
+
+    if constexpr (Target == Source) {
+      EXPECT_EQ(&mat, &mat_mirror.get());
+    }
+    else {
+      static_assert(!std::is_same_v<decltype(mat), std::decay_t<decltype(mat_mirror.get())>>);
+    }
+  }
+}
+
+TYPED_TEST(MatrixMirrorTest, Get) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      getTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+#ifdef DLAF_WITH_GPU
+      getTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      getTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      getTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+#endif
+    }
+  }
+}
+
+template <typename T, Device Target, Device Source>
+void getSourceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+  GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+
+  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+
+  {
+    MatrixMirror<T, Target, Source> mat_mirror(mat);
+    EXPECT_EQ(&mat, &mat_mirror.getSource());
+  }
+
+  {
+    Matrix<const T, Source>& mat_const = mat;
+    MatrixMirror<const T, Target, Source> mat_mirror(mat_const);
+    EXPECT_EQ(&mat_const, &mat_mirror.getSource());
+  }
+}
+
+TYPED_TEST(MatrixMirrorTest, GetSource) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      getSourceTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+#ifdef DLAF_WITH_GPU
+      getSourceTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      getSourceTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      getSourceTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+#endif
+    }
+  }
+}
+
+template <typename T, Device Target, Device Source>
 void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   BaseType<T> offset = 0.0;
   auto el = [&offset](const GlobalElementIndex& index) {

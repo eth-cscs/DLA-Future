@@ -48,6 +48,11 @@ public:
   Matrix<const T, SourceTarget>& get() {
     return mat_source;
   }
+
+  /// Return a reference to the source matrix.
+  Matrix<const T, SourceTarget>& getSource() {
+    return mat_source;
+  }
 };
 
 /// A mirror of a source matrix on the target device, where the source and
@@ -68,6 +73,11 @@ public:
 
   /// Return a reference to the mirror matrix on the target device.
   Matrix<T, SourceTarget>& get() {
+    return mat_source;
+  }
+
+  /// Return a reference to the source matrix.
+  Matrix<T, SourceTarget>& getSource() {
     return mat_source;
   }
 
@@ -107,6 +117,11 @@ public:
   Matrix<const T, Target>& get() {
     return mat_target;
   }
+
+  /// Return a reference to the source matrix.
+  Matrix<const T, Source>& getSource() {
+    return mat_source;
+  }
 };
 
 /// A mirror of a source matrix on the target device, where the source and
@@ -137,6 +152,11 @@ public:
   /// Return a reference to the mirror matrix on the target device.
   Matrix<T, Target>& get() {
     return mat_target;
+  }
+
+  /// Return a reference to the source matrix.
+  Matrix<T, Source>& getSource() {
+    return mat_source;
   }
 
   /// Copies the source to the target matrix.

@@ -30,7 +30,7 @@ template <class T>
 T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
   auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
   T max_el;
-  // TODO: this is slow and should be fixed eventually
+  // TODO: this is a peformance pessimization, the value is on device
   cudaMemcpy(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost);
   return max_el;
 }
@@ -347,5 +347,33 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
 
 DLAF_CUSOLVER_SYEVC_ETI(, float);
 DLAF_CUSOLVER_SYEVC_ETI(, double);
+
+template <class T>
+__global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
+  if constexpr (std::is_same<T, float>::value) {
+    *top_diag_val -= fabsf(*offdiag_val);
+    *bottom_diag_val -= fabsf(*offdiag_val);
+  }
+  else {
+    *top_diag_val -= fabs(*offdiag_val);
+    *bottom_diag_val -= fabs(*offdiag_val);
+  }
+}
+
+// Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
+//
+template <class T>
+T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_diag_val,
+                        cudaStream_t stream) {
+  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
+
+  // TODO: this is a peformance pessimization, the value is on device
+  T h_offdiag_val;
+  cudaMemcpy(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost);
+  return h_offdiag_val;
+}
+
+DLAF_CUDA_CUPPENS_DECOMP_ETI(, float);
+DLAF_CUDA_CUPPENS_DECOMP_ETI(, double);
 
 }

@@ -123,6 +123,17 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
 DLAF_CUSOLVER_SYEVC_ETI(extern, float);
 DLAF_CUSOLVER_SYEVC_ETI(extern, double);
 
+template <class T>
+T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_diag_val,
+                        cudaStream_t stream);
+
+#define DLAF_CUDA_CUPPENS_DECOMP_ETI(kword, Type)                                            \
+  kword template Type cuppensDecompOnDevice(const Type* d_offdiag_val, Type* d_top_diag_val, \
+                                            Type* d_bottom_diag_val, cudaStream_t stream)
+
+DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, float);
+DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, double);
+
 }
 
 #endif

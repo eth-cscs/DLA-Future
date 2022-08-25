@@ -61,30 +61,8 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
   return indices;
 }
 
-// Cuppen's decomposition
-//
-// Substracts the offdiagonal element at the split from the top and bottom diagonal elements and returns
-// the offdiagonal element. The split is between the last row of the top tile and the first row of the
-// bottom tile.
-//
-template <class T>
-T cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
-                           const matrix::Tile<T, Device::CPU>& bottom) {
-  T offdiag_val = top(TileElementIndex{top.size().rows() - 1, 1});
-  T& top_diag_val = top(TileElementIndex{top.size().rows() - 1, 0});
-  T& bottom_diag_val = bottom(TileElementIndex{0, 0});
-
-  // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-  //
-  top_diag_val -= std::abs(offdiag_val);
-  bottom_diag_val -= std::abs(offdiag_val);
-  return offdiag_val;
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(cuppensTileDecomposition);
-
-template <class T>
-std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
+template <class T, Device D>
+std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -93,10 +71,39 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>&
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+    // Cuppen's decomposition
+    //
+    // Substracts the offdiagonal element at the split from the top and bottom diagonal elements and
+    // returns the offdiagonal element. The split is between the last row of the top tile and the first
+    // row of the bottom tile.
+    //
+    auto cuppens_fn = [](const auto& top, const auto& bottom, [[maybe_unused]] auto&&... ts) {
+      TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
+      TileElementIndex top_idx{top.size().rows() - 1, 0};
+      TileElementIndex bottom_idx{0, 0};
+      if constexpr (D == Device::CPU) {
+        const T offdiag_val = top(offdiag_idx);
+
+        // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
+        //
+        top(top_idx) -= std::abs(offdiag_val);
+        bottom(bottom_idx) -= std::abs(offdiag_val);
+        return offdiag_val;
+      }
+      else {
+        return cuppensDecompOnDevice(top.ptr(offdiag_idx), top.ptr(top_idx), bottom.ptr(bottom_idx),
+                                     ts...);
+      }
+    };
+
+    auto sender =
+        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0)));
+
     // Cuppen's tridiagonal decomposition
     offdiag_vals.push_back(
-        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0))) |
-        di::transform(di::Policy<Backend::MC>(), cuppensTileDecomposition_o) | ex::make_future());
+        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
+                                                        std::move(cuppens_fn), std::move(sender)) |
+        ex::make_future());
   }
   return offdiag_vals;
 }
@@ -234,8 +241,6 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
                           Matrix<SizeType, device>(vec_size, vec_tile_size),  // i3
                           Matrix<ColType, device>(vec_size, vec_tile_size)};  // c
 
-  matrix::MatrixMirror<T, Device::CPU, device> tridiag_h(tridiag);
-
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
 
@@ -254,8 +259,7 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   };
 
   // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag_h.get());
-  tridiag_h.copyTargetToSource();
+  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)

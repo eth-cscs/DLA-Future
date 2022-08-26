@@ -744,104 +744,130 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 // - lapack 3.10.0, dlaed3.f, line 293
 // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
 //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
-template <class T>
+template <class T, Device D>
 void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-               Matrix<const T, Device::CPU>& diag, Matrix<const T, Device::CPU>& z,
-               Matrix<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evecs) {
+               Matrix<const T, D>& diag, Matrix<const T, D>& z, Matrix<T, D>& ws, Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  using ConstTileType = matrix::Tile<const T, Device::CPU>;
-  using TileType = matrix::Tile<T, Device::CPU>;
+  using ConstTileType = matrix::Tile<const T, D>;
+  using TileType = matrix::Tile<T, D>;
 
   const matrix::Distribution& distr = evecs.distribution();
 
+  // Reduce by multiplication into the first column of each tile of ws
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto mul_rows = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& diag_rows,
                                              const ConstTileType& diag_cols,
-                                             const ConstTileType& evecs_tile, const TileType& ws_tile) {
+                                             const ConstTileType& evecs_tile, const TileType& ws_tile,
+                                             [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
         SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
 
-        for (SizeType j = 0; j < ncols; ++j) {
-          for (SizeType i = 0; i < nrows; ++i) {
-            T di = diag_rows(TileElementIndex(i, 0));
-            T dj = diag_cols(TileElementIndex(j, 0));
-            T evec_el = evecs_tile(TileElementIndex(i, j));
-            T& ws_el = ws_tile(TileElementIndex(i, 0));
+        if constexpr (D == Device::CPU) {
+          for (SizeType j = 0; j < ncols; ++j) {
+            for (SizeType i = 0; i < nrows; ++i) {
+              T di = diag_rows(TileElementIndex(i, 0));
+              T dj = diag_cols(TileElementIndex(j, 0));
+              T evec_el = evecs_tile(TileElementIndex(i, j));
+              T& ws_el = ws_tile(TileElementIndex(i, 0));
 
-            // Exact comparison is OK because di and dj come from the same vector
-            T weight = (di == dj) ? evec_el : evec_el / (di - dj);
-            ws_el = (j == 0) ? weight : weight * ws_el;
+              // Exact comparison is OK because di and dj come from the same vector
+              T weight = (di == dj) ? evec_el : evec_el / (di - dj);
+              ws_el = (j == 0) ? weight : weight * ws_el;
+            }
           }
         }
+        else {
+          updateEigenvectorsWithDiagonal(nrows, ncols, evecs_tile.ld(), diag_rows.ptr(), diag_cols.ptr(),
+                                         evecs_tile.ptr(), ws_tile.ptr(), ts...);
+        }
       };
-      ex::when_all(ex::keep_future(k_fut), diag.read_sender(GlobalTileIndex(i_tile, 0)),
-                   diag.read_sender(GlobalTileIndex(j_tile, 0)),
-                   evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                   ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(mul_rows));
+
+      auto sender = ex::when_all(ex::keep_future(k_fut), diag.read_sender(GlobalTileIndex(i_tile, 0)),
+                                 diag.read_sender(GlobalTileIndex(j_tile, 0)),
+                                 evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                                 ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
+
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(mul_rows),
+                          std::move(sender));
     }
   }
 
-  // Accumulate weights into the first column of ws
+  // Reduce by multiplication into the first column of ws
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin + 1; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto acc_col_ws_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                                  const TileType& ws_tile_col) {
+                                                  const TileType& ws_tile_col,
+                                                  [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType nrows = std::min(k - i_subm_el, ws_tile.size().rows());
 
-        for (SizeType i = 0; i < nrows; ++i) {
-          TileElementIndex idx(i, 0);
-          ws_tile_col(idx) = ws_tile_col(idx) * ws_tile(idx);
+        if constexpr (D == Device::CPU) {
+          for (SizeType i = 0; i < nrows; ++i) {
+            TileElementIndex idx(i, 0);
+            ws_tile_col(idx) = ws_tile_col(idx) * ws_tile(idx);
+          }
+        }
+        else {
+          multiplyColumns(nrows, ws_tile.ptr(), ws_tile_col.ptr(), ts...);
         }
       };
 
-      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                   ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin))) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(acc_col_ws_fn));
+      auto sender = ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                                 ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
+
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(acc_col_ws_fn),
+                          std::move(sender));
     }
   }
 
-  // Use the first column of `ws` matrix to compute
+  // Use the first column of `ws` matrix to compute the eigenvectors
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto weights_vec = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& z_tile,
-                                                const ConstTileType& ws_tile,
-                                                const TileType& evecs_tile) {
+                                                const ConstTileType& ws_tile, const TileType& evecs_tile,
+                                                [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
         SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
 
-        for (SizeType j = 0; j < ncols; ++j) {
-          for (SizeType i = 0; i < nrows; ++i) {
-            T ws_el = ws_tile(TileElementIndex(i, 0));
-            T z_el = z_tile(TileElementIndex(i, 0));
-            T& el_evec = evecs_tile(TileElementIndex(i, j));
-            el_evec = std::copysign(std::sqrt(std::abs(ws_el)), z_el) / el_evec;
+        if constexpr (D == Device::CPU) {
+          for (SizeType j = 0; j < ncols; ++j) {
+            for (SizeType i = 0; i < nrows; ++i) {
+              T ws_el = ws_tile(TileElementIndex(i, 0));
+              T z_el = z_tile(TileElementIndex(i, 0));
+              T& el_evec = evecs_tile(TileElementIndex(i, j));
+              el_evec = std::copysign(std::sqrt(std::abs(ws_el)), z_el) / el_evec;
+            }
           }
+        }
+        else {
+          calcEvecsFromWeightVec(nrows, ncols, evecs_tile.ld(), z_tile.ptr(), ws_tile.ptr(),
+                                 evecs_tile.ptr(), ts...);
         }
       };
 
-      ex::when_all(ex::keep_future(k_fut), z.read_sender(GlobalTileIndex(i_tile, 0)),
-                   ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
-                   evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(weights_vec));
+      auto sender = ex::when_all(ex::keep_future(k_fut), z.read_sender(GlobalTileIndex(i_tile, 0)),
+                                 ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
+                                 evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
+
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(weights_vec),
+                          std::move(sender));
     }
   }
 
@@ -851,27 +877,34 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto locnorm_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& evecs_tile,
-                                               const TileType& ws_tile) {
+                                               const TileType& ws_tile, [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
         SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
 
-        for (SizeType j = 0; j < ncols; ++j) {
-          T loc_norm = 0;
-          for (SizeType i = 0; i < nrows; ++i) {
-            T el = evecs_tile(TileElementIndex(i, j));
-            loc_norm += el * el;
+        if constexpr (D == Device::CPU) {
+          for (SizeType j = 0; j < ncols; ++j) {
+            T loc_norm = 0;
+            for (SizeType i = 0; i < nrows; ++i) {
+              T el = evecs_tile(TileElementIndex(i, j));
+              loc_norm += el * el;
+            }
+            ws_tile(TileElementIndex(0, j)) = loc_norm;
           }
-          ws_tile(TileElementIndex(0, j)) = loc_norm;
+        }
+        else {
+          sumSqTileOnDevice(nrows, ncols, evecs_tile.ld(), evecs_tile.ptr(), ws_tile.ptr(), ts...);
         }
       };
 
       GlobalTileIndex mat_idx(i_tile, j_tile);
+      auto sender =
+          ex::when_all(ex::keep_future(k_fut), evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx));
 
-      ex::when_all(ex::keep_future(k_fut), evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx)) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(locnorm_fn));
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(locnorm_fn),
+                          std::move(sender));
     }
   }
 
@@ -881,19 +914,27 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto sum_first_tile_cols_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                                           const TileType& ws_row_tile) {
+                                                           const TileType& ws_row_tile,
+                                                           [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType ncols = std::min(k - j_subm_el, ws_tile.size().cols());
-        for (SizeType j = 0; j < ncols; ++j) {
-          ws_row_tile(TileElementIndex(0, j)) += ws_tile(TileElementIndex(0, j));
+
+        if constexpr (D == Device::CPU) {
+          for (SizeType j = 0; j < ncols; ++j) {
+            ws_row_tile(TileElementIndex(0, j)) += ws_tile(TileElementIndex(0, j));
+          }
+        }
+        else {
+          addFirstRows(ncols, ws_tile.ld(), ws_tile.ptr(), ws_row_tile.ptr(), ts...);
         }
       };
 
-      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                   ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile))) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(sum_first_tile_cols_fn));
+      auto sender = ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                                 ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(sum_first_tile_cols_fn),
+                          std::move(sender));
     }
   }
 
@@ -903,24 +944,32 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       auto scale_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                             const TileType& evecs_tile) {
+                                             const TileType& evecs_tile, [[maybe_unused]] auto&&... ts) {
         if (i_subm_el >= k || j_subm_el >= k)
           return;
 
         SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
         SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
 
-        for (SizeType j = 0; j < ncols; ++j) {
-          for (SizeType i = 0; i < nrows; ++i) {
-            T& evecs_el = evecs_tile(TileElementIndex(i, j));
-            evecs_el = evecs_el / std::sqrt(ws_tile(TileElementIndex(0, j)));
+        if constexpr (D == Device::CPU) {
+          for (SizeType j = 0; j < ncols; ++j) {
+            for (SizeType i = 0; i < nrows; ++i) {
+              T& evecs_el = evecs_tile(TileElementIndex(i, j));
+              evecs_el = evecs_el / std::sqrt(ws_tile(TileElementIndex(0, j)));
+            }
           }
+        }
+        else {
+          scaleTileWithRow(nrows, ncols, evecs_tile.ld(), ws_tile.ptr(), evecs_tile.ptr(), ts...);
         }
       };
 
-      ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
-                   evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile))) |
-          di::transformDetach(di::Policy<Backend::MC>(), std::move(scale_fn));
+      auto sender =
+          ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
+                       evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
+
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(scale_fn),
+                          std::move(sender));
     }
   }
 }
@@ -1054,8 +1103,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   resetSubMatrix(i_begin, i_end, ws_h.mat1.get());
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws_h.ztmp.get(), ws_h.dtmp.get(),
                     ws_h.mat1.get());
-  formEvecs(i_begin, i_end, k_fut, ws_h.evals.get(), ws_h.ztmp.get(), ws_h.mat2.get(), ws_h.mat1.get());
   ws_h.mat1.copyTargetToSource();
+  formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
@@ -1068,7 +1117,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
   ws_h.i2.copySourceToTarget();
-  ws_h.mat2.copyTargetToSource();
   dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
                                                               ws.mat2);
   dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,

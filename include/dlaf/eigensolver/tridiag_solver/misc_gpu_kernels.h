@@ -134,6 +134,71 @@ T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_d
 DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, float);
 DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, double);
 
+template <class T>
+void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
+                                    const T* d_cols, const T* evecs, T* ws, cudaStream_t stream);
+
+#define DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(kword, Type)                                         \
+  kword template void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, \
+                                                     const Type* d_rows, const Type* d_cols,      \
+                                                     const Type* evecs, Type* ws, cudaStream_t stream)
+
+DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(extern, float);
+DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(extern, double);
+
+template <class T>
+void multiplyColumns(SizeType len, const T* in, T* out, cudaStream_t stream);
+
+#define DLAF_CUDA_MULTIPLY_COLS_ETI(kword, Type) \
+  kword template void multiplyColumns(SizeType len, const Type* in, Type* out, cudaStream_t stream)
+
+DLAF_CUDA_MULTIPLY_COLS_ETI(extern, float);
+DLAF_CUDA_MULTIPLY_COLS_ETI(extern, double);
+
+template <class T>
+void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T* rank1_vec,
+                            const T* weight_vec, T* evecs, cudaStream_t stream);
+
+#define DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(kword, Type)                                    \
+  kword template void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld,   \
+                                             const Type* rank1_vec, const Type* weight_vec, \
+                                             Type* evecs, cudaStream_t stream)
+
+DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(extern, float);
+DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
+
+template <class T>
+void sumSqTileOnDevice(SizeType nrows, SizeType ncols, SizeType ld, const T* in, T* out,
+                       cudaStream_t stream);
+
+#define DLAF_CUDA_SUM_SQ_TILE_ETI(kword, Type)                                                       \
+  kword template void sumSqTileOnDevice(SizeType nrows, SizeType ncols, SizeType ld, const Type* in, \
+                                        Type* out, cudaStream_t stream)
+
+DLAF_CUDA_SUM_SQ_TILE_ETI(extern, float);
+DLAF_CUDA_SUM_SQ_TILE_ETI(extern, double);
+
+template <class T>
+void addFirstRows(SizeType len, SizeType ld, const T* in, T* out, cudaStream_t stream);
+
+#define DLAF_CUDA_ADD_FIRST_ROWS_ETI(kword, Type)                                        \
+  kword template void addFirstRows(SizeType len, SizeType ld, const Type* in, Type* out, \
+                                   cudaStream_t stream)
+
+DLAF_CUDA_ADD_FIRST_ROWS_ETI(extern, float);
+DLAF_CUDA_ADD_FIRST_ROWS_ETI(extern, double);
+
+template <class T>
+void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const T* norms, T* evecs,
+                      cudaStream_t stream);
+
+#define DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(kword, Type)                                                 \
+  kword template void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const Type* norms, \
+                                       Type* evecs, cudaStream_t stream)
+
+DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, float);
+DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, double);
+
 }
 
 #endif

@@ -35,7 +35,7 @@ namespace eigensolver {
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T, class CT>
 void tridiagSolver(Matrix<T, device>& tridiag, Matrix<T, device>& evals, Matrix<CT, device>& evecs) {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+  static_assert(std::is_floating_point_v<T>,
                 "The tridiagonal matrix and the resulting eigenvalues must be real values (float, double)!");
   static_assert(
       std::is_same<T, CT>::value || std::is_same<std::complex<T>, CT>::value,

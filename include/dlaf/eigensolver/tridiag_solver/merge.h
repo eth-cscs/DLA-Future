@@ -229,12 +229,9 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
 //
 template <class T>
 pika::future<T> scaleRho(pika::shared_future<T> rho_fut) {
-  // Note: `keep_future()` is needed here even though `T` is a scalar type (not a `Tile<>`) otherwise
-  // there is a compile-time error. A fix will be available in pika@0.6.0 :
-  // https://github.com/pika-org/pika/pull/282
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
-  return ex::keep_future(std::move(rho_fut)) |
+  return std::move(rho_fut) |
          di::transform(di::Policy<Backend::MC>(), [](T rho) { return 2 * std::abs(rho); }) |
          ex::make_future();
 }
@@ -345,9 +342,8 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, vec.distribution());
-  auto sort_fn = [n](const auto& k_fut, const auto& vec_futs, const auto& in_index_futs,
+  auto sort_fn = [n](const auto& k, const auto& vec_futs, const auto& in_index_futs,
                      const auto& out_index, [[maybe_unused]] auto&&... ts) {
-    SizeType k = k_fut.get();
     DLAF_ASSERT(k <= n, k, n);
 
     TileElementIndex zero_idx(0, 0);
@@ -372,9 +368,10 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender = ex::when_all(ex::keep_future(k_fut), ex::when_all_vector(tc.read<T, D>(vec)),
+  auto sender = ex::when_all(std::move(k_fut), ex::when_all_vector(tc.read<T, D>(vec)),
                              ex::when_all_vector(tc.read<SizeType, D>(in_index)),
                              ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
+
   ex::start_detached(
       di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
                                                              std::move(sort_fn), std::move(sender)));
@@ -618,21 +615,21 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
 
   SizeType n = problemSize(i_begin, i_end, index.distribution());
 
-  auto deflate_fn = [n](auto rho_fut, auto tol_fut, auto index_tiles_futs, auto d_tiles, auto z_tiles,
+  auto deflate_fn = [n](auto rho, auto tol, auto index_tiles_futs, auto d_tiles, auto z_tiles,
                         auto c_tiles) {
     TileElementIndex zero_idx(0, 0);
     const SizeType* i_ptr = index_tiles_futs[0].get().ptr(zero_idx);
     T* d_ptr = d_tiles[0].ptr(zero_idx);
     T* z_ptr = z_tiles[0].ptr(zero_idx);
     ColType* c_ptr = c_tiles[0].ptr(zero_idx);
-    return applyDeflationToArrays(rho_fut.get(), tol_fut.get(), n, i_ptr, d_ptr, z_ptr, c_ptr);
+    return applyDeflationToArrays(rho, tol, n, i_ptr, d_ptr, z_ptr, c_ptr);
   };
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender = ex::when_all(ex::keep_future(rho_fut), ex::keep_future(tol_fut),
-                             ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
-                             ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
+  auto sender = ex::when_all(std::move(rho_fut), std::move(tol_fut), ex::when_all_vector(tc.read(index)),
+                             ex::when_all_vector(tc.readwrite(d)), ex::when_all_vector(tc.readwrite(z)),
+                             ex::when_all_vector(tc.readwrite(c)));
 
   return ex::make_future(
       di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
@@ -702,11 +699,8 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
   SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
 
-  auto rank1_fn = [n, nb](auto k_fut, auto rho_fut, auto d_tiles_futs, auto z_tiles_futs,
-                          auto eval_tiles, auto evec_tiles) {
-    SizeType k = k_fut.get();
-    T rho = rho_fut.get();
-
+  auto rank1_fn = [n, nb](auto k, auto rho, auto d_tiles_futs, auto z_tiles_futs, auto eval_tiles,
+                          auto evec_tiles) {
     TileElementIndex zero(0, 0);
     const T* d_ptr = d_tiles_futs[0].get().ptr(zero);
     const T* z_ptr = z_tiles_futs[0].get().ptr(zero);
@@ -729,10 +723,9 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender =
-      ex::when_all(ex::keep_future(k_fut), ex::keep_future(rho_fut), ex::when_all_vector(tc.read(d)),
-                   ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
-                   ex::when_all_vector(tc.readwrite(evecs)));
+  auto sender = ex::when_all(std::move(k_fut), std::move(rho_fut), ex::when_all_vector(tc.read(d)),
+                             ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
+                             ex::when_all_vector(tc.readwrite(evecs)));
 
   ex::ensure_started(
       di::transform<dlaf::internal::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
@@ -790,7 +783,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      auto sender = ex::when_all(ex::keep_future(k_fut), diag.read_sender(GlobalTileIndex(i_tile, 0)),
+      auto sender = ex::when_all(k_fut, diag.read_sender(GlobalTileIndex(i_tile, 0)),
                                  diag.read_sender(GlobalTileIndex(j_tile, 0)),
                                  evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
                                  ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
@@ -824,7 +817,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      auto sender = ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
                                  ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
 
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(acc_col_ws_fn),
@@ -862,7 +855,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      auto sender = ex::when_all(ex::keep_future(k_fut), z.read_sender(GlobalTileIndex(i_tile, 0)),
+      auto sender = ex::when_all(k_fut, z.read_sender(GlobalTileIndex(i_tile, 0)),
                                  ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
                                  evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
 
@@ -900,8 +893,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       };
 
       GlobalTileIndex mat_idx(i_tile, j_tile);
-      auto sender =
-          ex::when_all(ex::keep_future(k_fut), evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx));
+      auto sender = ex::when_all(k_fut, evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx));
 
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(locnorm_fn),
                           std::move(sender));
@@ -931,7 +923,7 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      auto sender = ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
                                  ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(sum_first_tile_cols_fn),
                           std::move(sender));
@@ -964,9 +956,8 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
         }
       };
 
-      auto sender =
-          ex::when_all(ex::keep_future(k_fut), ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
-                       evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
+      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
+                                 evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
 
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(scale_fn),
                           std::move(sender));
@@ -1035,8 +1026,8 @@ void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& ma
 
   for (SizeType j = i_begin; j <= i_end; ++j) {
     for (SizeType i = i_begin; i <= i_end; ++i) {
-      mat.readwrite_sender(GlobalTileIndex(i, j)) |
-          tile::set0(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+      start_detached(mat.readwrite_sender(GlobalTileIndex(i, j)) |
+                     tile::set0(Policy<Backend::MC>(thread_priority::normal)));
     }
   }
 }
@@ -1052,7 +1043,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
-  rho_fut = scaleRho(rho_fut);
+  rho_fut = scaleRho(std::move(rho_fut));
 
   // Calculate the tolerance used for deflation
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);

@@ -9,7 +9,7 @@
 //
 
 #include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/communication/kernels/p2p_allreduce.h"
+#include "dlaf/communication/kernels/p2p_allsum.h"
 
 #include <gtest/gtest.h>
 #include <mpi.h>

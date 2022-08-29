@@ -137,7 +137,7 @@ TEST_F(P2PTest, SendRecvMixTags) {
 }
 
 template <Backend B, Device D, class T>
-void testP2PAllReduce(comm::Communicator world, matrix::Matrix<T, D> matrix) {
+void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   namespace ex = pika::execution::experimental;
 
   const LocalTileIndex idx(0, 0);
@@ -167,18 +167,18 @@ void testP2PAllReduce(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   CHECK_TILE_EQ(fixedValueTile(26), tmp.read(idx).get());
 }
 
-TEST_F(P2PTest, AllReduce) {
+TEST_F(P2PTest, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
-  testP2PAllReduce<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+  testP2PAllSum<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
 
   // single tile matrix whose columns are stored in non-contiguous memory
-  testP2PAllReduce<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+  testP2PAllSum<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
 }
 
 template <Backend B, Device D, class T>
-void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
+void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   namespace ex = pika::execution::experimental;
 
   // This test involves just 2 ranks, where rank_src sends all tiles allowing to "mirror" the
@@ -231,12 +231,12 @@ void testP2PAllReduceMixTags(comm::Communicator world, matrix::Matrix<T, D> matr
   }
 }
 
-TEST_F(P2PTest, AllReduceMixTags) {
+TEST_F(P2PTest, AllSumMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
-  testP2PAllReduceMixTags<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
+  testP2PAllSumMixTags<Backend::MC>(world, MatrixT(dist, matrix::tileLayout(dist, 3, 4)));
 
   // tiles are stored in non-contiguous memory
-  testP2PAllReduceMixTags<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
+  testP2PAllSumMixTags<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 10)));
 }

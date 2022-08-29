@@ -237,11 +237,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
 
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-    {16, 8},
-    {16, 4},
-    {16, 5},
-    {100, 10},
-    {93, 7}};
+    {0, 8}, {16, 8}, {16, 4}, {16, 5}, {100, 10}, {93, 7}};
 
 TYPED_TEST(TridiagEigensolverTest, Laplace1D) {
   for (auto [n, nb] : tested_problems) {

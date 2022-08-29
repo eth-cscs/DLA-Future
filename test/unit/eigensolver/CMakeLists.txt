@@ -19,7 +19,8 @@ DLAF_addTest(
   test_bt_band_to_tridiag
   SOURCES test_bt_band_to_tridiag.cpp
   LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
-  USE_MAIN PIKA
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
 )
 
 DLAF_addTest(

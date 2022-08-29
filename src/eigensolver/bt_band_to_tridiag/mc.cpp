@@ -12,8 +12,8 @@
 
 namespace dlaf::eigensolver::internal {
 
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::MC, Device::CPU, float)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::MC, Device::CPU, double)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::MC, Device::CPU, std::complex<double>)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::MC, Device::CPU, float)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::MC, Device::CPU, double)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::MC, Device::CPU, std::complex<double>)
 }

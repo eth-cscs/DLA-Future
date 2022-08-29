@@ -65,4 +65,22 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
 
   internal::BackTransformationT2B<B, D, T>::call(band_size, mat_e, mat_hh);
 }
+
+template <Backend B, Device D, class T>
+void backTransformationBandToTridiag(comm::CommunicatorGrid grid, const SizeType band_size, matrix::Matrix<T, D>& mat_e,
+                                     matrix::Matrix<const T, Device::CPU>& mat_hh) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat_e, grid), mat_e, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_hh, grid), mat_hh, grid);
+
+  DLAF_ASSERT(matrix::square_size(mat_hh), mat_hh);
+  DLAF_ASSERT(matrix::square_blocksize(mat_hh), mat_hh);
+
+  DLAF_ASSERT(mat_hh.size().rows() == mat_e.size().rows(), mat_hh, mat_e);
+  DLAF_ASSERT(mat_hh.blockSize().rows() == mat_e.blockSize().rows(), mat_hh, mat_e);
+
+  DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
+
+  internal::BackTransformationT2B_D<B, D, T>::call(grid, band_size, mat_e, mat_hh);
+}
+
 }

@@ -23,7 +23,8 @@ struct BackTransformationT2B {
 
 template <Backend B, Device D, class T>
 struct BackTransformationT2B_D {
-  static void call(comm::CommunicatorGrid grid, const SizeType band_size, Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
+  static void call(comm::CommunicatorGrid grid, const SizeType band_size, Matrix<T, D>& mat_e,
+                   Matrix<const T, Device::CPU>& mat_hh);
 };
 
 /// ---- ETI

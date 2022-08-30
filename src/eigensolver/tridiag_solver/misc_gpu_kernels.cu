@@ -424,12 +424,10 @@ void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld,
                                     const T* d_cols, const T* evecs, T* ws, cudaStream_t stream) {
   const unsigned unrows = to_uint(nrows);
   const unsigned uncols = to_uint(ncols);
-  {
-    dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
-    dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
-                   util::ceilDiv(uncols, evecs_diag_kernel_sz));
-    scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
-  }
+  dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
+                 util::ceilDiv(uncols, evecs_diag_kernel_sz));
+  scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
 
   // Multiply along rows
   //
@@ -447,11 +445,13 @@ void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld,
   OffsetIterator end_offsets = begin_offsets + 1;                // last column
   InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
 
-  cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows, begin_offsets,
-                                     end_offsets, mult_op, T(1), stream);
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
+                                                          begin_offsets, end_offsets, mult_op, T(1),
+                                                          stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter, ws, nrows,
-                                     begin_offsets, end_offsets, mult_op, T(1), stream);
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
+                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
+                                                          T(1), stream));
 }
 
 DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, float);
@@ -544,12 +544,13 @@ void sumSqTileOnDevice(SizeType nrows, SizeType ncols, SizeType ld, const T* in,
   // Note: the output of the reduction is saved in the first row.
   // TODO: use a segmented reduce sum with fancy iterators
   size_t temp_storage_bytes;
-  cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream);
+  DLAF_GPU_CHECK_ERROR(
+      cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
 
   for (SizeType j = 0; j < ncols; ++j) {
-    cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld], &out[j * ld], nrows,
-                           stream);
+    DLAF_GPU_CHECK_ERROR(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                &out[j * ld], nrows, stream));
   }
 }
 

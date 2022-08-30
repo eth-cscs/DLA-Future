@@ -1107,9 +1107,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  ws_h.i2.copySourceToTarget();
-  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
-                                                              ws.mat2);
+  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
   dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
                                                              blas::Op::NoTrans, T(1), evecs, ws.mat2,
                                                              T(0), ws.mat1);
@@ -1126,9 +1124,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   ws_h.dtmp.copyTargetToSource();
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
-  ws_h.i2.copySourceToTarget();
-  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws_h.i2.get(), ws.mat1,
-                                                              evecs);
+  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
   // copy from GPU to CPU if on GPU
   ws_h.evals.copySourceToTarget();
 }

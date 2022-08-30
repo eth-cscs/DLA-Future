@@ -235,6 +235,7 @@ DLAF_addPrecompiledHeaders(dlaf.multiplication)
 add_library(
   dlaf.permutations OBJECT permutations/general/mc.cpp
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
+                           $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/perms.cu>
 )
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)

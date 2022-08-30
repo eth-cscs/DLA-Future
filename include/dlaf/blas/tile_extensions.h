@@ -11,6 +11,7 @@
 
 #include <blas.hh>
 
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"

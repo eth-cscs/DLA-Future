@@ -14,6 +14,7 @@
 
 #include <pika/future.hpp>
 
+#include "dlaf/communication/kernels/broadcast.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/panel.h"

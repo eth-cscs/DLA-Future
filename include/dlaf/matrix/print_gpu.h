@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "dlaf/gpu/api.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf::matrix {

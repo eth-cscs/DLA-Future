@@ -45,6 +45,18 @@
 #       include/
 # )
 
+# Check if LIST_NAME contains at least an element that matches ELEMENT_REGEX. If not, add FALLBACK
+# to the list.
+function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
+  set(_TMP_LIST ${${LIST_NAME}})
+  list(FILTER _TMP_LIST INCLUDE REGEX ${ELEMENT_REGEX})
+  list(LENGTH _TMP_LIST _NUM_TMP_LIST)
+  if (_NUM_TMP_LIST EQUAL 0)
+    list(APPEND ${LIST_NAME} ${FALLBACK})
+    set(${LIST_NAME} ${${LIST_NAME}} PARENT_SCOPE)
+  endif()
+endfunction()
+
 function(DLAF_addTest test_target_name)
   set(options "")
   set(oneValueArgs MPIRANKS USE_MAIN)
@@ -147,15 +159,8 @@ function(DLAF_addTest test_target_name)
   if(IS_AN_PIKA_TEST)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
-    # APPLE platform does not support thread binding
-    if(NOT APPLE)
-      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:use-process-mask")
-      list(REMOVE_DUPLICATES _PIKA_EXTRA_ARGS_LIST)
-    endif()
-
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
-      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:bind")
-      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:bind=none")
+      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:bind" "--pika:bind=none")
     endif()
 
     if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
@@ -165,8 +170,7 @@ function(DLAF_addTest test_target_name)
         set(_DLAF_PIKA_THREADS 2)
       endif()
 
-      list(FILTER _PIKA_EXTRA_ARGS_LIST EXCLUDE REGEX "--pika:threads")
-      list(APPEND _PIKA_EXTRA_ARGS_LIST "--pika:threads=${_DLAF_PIKA_THREADS}")
+      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}")
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})

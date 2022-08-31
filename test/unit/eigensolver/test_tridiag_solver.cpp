@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/eigensolver/tridiag_solver.h"
+#include "dlaf/matrix/matrix_mirror.h"
 
 #include "gtest/gtest.h"
 #include "dlaf_test/matrix/util_matrix.h"

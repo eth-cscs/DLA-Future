@@ -245,18 +245,10 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
 
   // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, device> ws_h{
-      matrix::MatrixMirror<T, Device::CPU, device>(evals),         // evals
-      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat1),       // mat1
-      matrix::MatrixMirror<T, Device::CPU, device>(ws.mat2),       // mat2
-      matrix::MatrixMirror<T, Device::CPU, device>(ws.dtmp),       // dtmp
-      matrix::MatrixMirror<T, Device::CPU, device>(ws.z),          // z
-      matrix::MatrixMirror<T, Device::CPU, device>(ws.ztmp),       // ztmp
-      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i1),  // i1
-      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i2),  // i2
-      matrix::MatrixMirror<SizeType, Device::CPU, device>(ws.i3),  // i3
-      matrix::MatrixMirror<ColType, Device::CPU, device>(ws.c)     // c
-  };
+  WorkSpaceHostMirror<T, device> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
+                                      initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
+                                      initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
+                                      initMirrorMatrix(ws.c)};
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
@@ -269,7 +261,6 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   offloadDiagonal(tridiag, evals);
 
   // Each triad represents two subproblems to be merged
-  ws_h.evals.copySourceToTarget();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
                               evecs);

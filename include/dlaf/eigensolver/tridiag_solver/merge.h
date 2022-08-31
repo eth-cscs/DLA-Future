@@ -19,7 +19,6 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/multiplication/general.h"
 #include "dlaf/permutations/general.h"
 #include "dlaf/permutations/general/impl.h"
@@ -119,25 +118,38 @@ struct WorkSpace {
   Matrix<ColType, device> c;
 };
 
-template <class T, Device device>
+// Device::GPU
+template <class T, Device D>
 struct WorkSpaceHostMirror {
-  // Mirror to eigenvalues and eigenvectors on host memory
-  matrix::MatrixMirror<T, Device::CPU, device> evals;
-
-  // Mirrors to auxiliary matrices, vectors and indices on host memory
-  matrix::MatrixMirror<T, Device::CPU, device> mat1;
-  matrix::MatrixMirror<T, Device::CPU, device> mat2;
-
-  matrix::MatrixMirror<T, Device::CPU, device> dtmp;
-  matrix::MatrixMirror<T, Device::CPU, device> z;
-  matrix::MatrixMirror<T, Device::CPU, device> ztmp;
-
-  matrix::MatrixMirror<SizeType, Device::CPU, device> i1;
-  matrix::MatrixMirror<SizeType, Device::CPU, device> i2;
-  matrix::MatrixMirror<SizeType, Device::CPU, device> i3;
-
-  matrix::MatrixMirror<ColType, Device::CPU, device> c;
+  matrix::Matrix<T, Device::CPU> evals;
+  matrix::Matrix<T, Device::CPU> mat1;
+  matrix::Matrix<T, Device::CPU> dtmp;
+  matrix::Matrix<T, Device::CPU> z;
+  matrix::Matrix<T, Device::CPU> ztmp;
+  matrix::Matrix<SizeType, Device::CPU> i2;
+  matrix::Matrix<ColType, Device::CPU> c;
 };
+
+template <class T>
+struct WorkSpaceHostMirror<T, Device::CPU> {
+  matrix::Matrix<T, Device::CPU>& evals;
+  matrix::Matrix<T, Device::CPU>& mat1;
+  matrix::Matrix<T, Device::CPU>& dtmp;
+  matrix::Matrix<T, Device::CPU>& z;
+  matrix::Matrix<T, Device::CPU>& ztmp;
+  matrix::Matrix<SizeType, Device::CPU>& i2;
+  matrix::Matrix<ColType, Device::CPU>& c;
+};
+
+template <class T>
+Matrix<T, Device::CPU> initMirrorMatrix(Matrix<T, Device::GPU>& mat) {
+  return Matrix<T, Device::CPU>(mat.distribution());
+}
+
+template <class T>
+Matrix<T, Device::CPU>& initMirrorMatrix(Matrix<T, Device::CPU>& mat) {
+  return mat;
+}
 
 // Calculates the problem size in the tile range [i_begin, i_end]
 inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Distribution& distr) {
@@ -316,19 +328,6 @@ public:
     return matrix::util::collectReadWriteTiles(begin, end, mat);
   }
 };
-
-template <Device device, class U>
-void copyVector(SizeType i_begin, SizeType i_end, Matrix<const U, device>& in, Matrix<U, device>& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  for (SizeType i = i_begin; i <= i_end; ++i) {
-    GlobalTileIndex idx(i, 0);
-    ex::when_all(in.read_sender(idx), out.readwrite_sender(idx)) |
-        dlaf::matrix::copy(di::Policy<dlaf::matrix::internal::CopyBackend_v<device, device>>()) |
-        ex::start_detached();
-  }
-}
 
 // Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index
 // `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that
@@ -1032,6 +1031,32 @@ void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& ma
   }
 }
 
+template <class T, Device Source, Device Destination>
+void copy(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
+          Matrix<T, Destination>& dest) {
+  if constexpr (Source == Destination) {
+    if (&source == &dest)
+      return;
+  }
+
+  namespace ex = pika::execution::experimental;
+  const auto& distribution = source.distribution();
+
+  bool is_col_matrix = distribution.size().cols() == 1;
+  SizeType j_begin = (is_col_matrix) ? 0 : i_begin;
+  SizeType j_end = (is_col_matrix) ? 0 : i_end;
+
+  for (SizeType j = j_begin; j <= j_end; ++j) {
+    for (SizeType i = i_begin; i <= i_end; ++i) {
+      ex::start_detached(
+          ex::when_all(source.read_sender(LocalTileIndex(i, j)),
+                       dest.readwrite_sender(LocalTileIndex(i, j))) |
+          dlaf::matrix::copy(
+              dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
+    }
+  }
+}
+
 template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
@@ -1061,13 +1086,21 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
-  ws_h.i2.copySourceToTarget();  // copy from GPU to CPU if `i2` is on GPU
-  ws_h.z.copySourceToTarget();   // copy from GPU to CPU if `z` is on GPU
-  ws_h.c.copySourceToTarget();
-  ws_h.evals.copySourceToTarget();
+
+  // copy from GPU to CPU
+  copy(i_begin, i_end, ws.i2, ws_h.i2);
+  copy(i_begin, i_end, ws.z, ws_h.z);
+  copy(i_begin, i_end, ws.c, ws_h.c);
+  copy(i_begin, i_end, evals, ws_h.evals);
+
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2.get(), ws_h.evals.get(), ws_h.z.get(),
-                     ws_h.c.get());
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
+
+  // copy from CPU to GPU
+  copy(i_begin, i_end, ws_h.z, ws.z);
+  copy(i_begin, i_end, ws_h.c, ws.c);
+  copy(i_begin, i_end, ws_h.evals, evals);
+
   applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), evecs);
 
   // Step #2
@@ -1079,22 +1112,19 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
-  ws_h.c.copyTargetToSource();
   pika::shared_future<SizeType> k_fut =
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
-  ws_h.evals.copyTargetToSource();
-  ws_h.z.copyTargetToSource();
   applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copyVector(i_begin, i_end, ws.dtmp, evals);
-  ws_h.evals.copySourceToTarget();
-  ws_h.dtmp.copySourceToTarget();
-  ws_h.ztmp.copySourceToTarget();
+  copy(i_begin, i_end, ws.dtmp, evals);
 
-  resetSubMatrix(i_begin, i_end, ws_h.mat1.get());
-  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals.get(), ws_h.ztmp.get(), ws_h.dtmp.get(),
-                    ws_h.mat1.get());
-  ws_h.mat1.copyTargetToSource();
+  copy(i_begin, i_end, evals, ws_h.evals);
+  copy(i_begin, i_end, ws.dtmp, ws_h.dtmp);
+  copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
+  resetSubMatrix(i_begin, i_end, ws_h.mat1);
+  solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
+  copy(i_begin, i_end, ws_h.mat1, ws.mat1);
+  copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
   formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
@@ -1121,11 +1151,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //   ascending order
   // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
   //
-  ws_h.dtmp.copyTargetToSource();
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
-  // copy from GPU to CPU if on GPU
-  ws_h.evals.copySourceToTarget();
 }
 }

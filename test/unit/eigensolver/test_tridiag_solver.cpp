@@ -83,6 +83,9 @@ void solveLaplace1D(SizeType n, SizeType nb) {
 
     eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
   }
+  if (n == 0)
+    return;
+
   // Eigenvalues
   auto expected_evals_fn = [n](GlobalElementIndex i) {
     return RealParam(2 * (1 - std::cos(M_PI * (i.row() + 1) / (n + 1))));
@@ -142,7 +145,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   std::vector<RealParam> diag_arr(to_sizet(n));
   std::vector<RealParam> offdiag_arr(to_sizet(n));
   SizeType diag_seed = n;
-  SizeType offdiag_seed = n - 1;
+  SizeType offdiag_seed = n + 1;
   dlaf::matrix::util::internal::getter_random<RealParam> diag_rand_gen(diag_seed);
   dlaf::matrix::util::internal::getter_random<RealParam> offdiag_rand_gen(offdiag_seed);
   std::generate(std::begin(diag_arr), std::end(diag_arr), diag_rand_gen);
@@ -167,6 +170,9 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
     // Note: this modifies `tridiag`
     eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
   }
+
+  if (n == 0)
+    return;
 
   // Check correctness with the following equation:
   //
@@ -228,6 +234,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
+    {0, 8},
     {16, 16},
     {16, 8},
     {16, 4},

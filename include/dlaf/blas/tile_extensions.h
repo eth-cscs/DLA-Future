@@ -11,11 +11,13 @@
 
 #include <blas.hh>
 
+#include "dlaf/blas/tile.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
+#include "dlaf/util_matrix.h"
 
 #ifdef DLAF_WITH_GPU
 #include "dlaf/gpu/blas/api.h"

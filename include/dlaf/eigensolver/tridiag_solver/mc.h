@@ -54,7 +54,9 @@ inline void splitIntervalInTheMiddleRecursively(
 /// Note: the intervals are all closed!
 ///
 inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemIndices(SizeType n) {
-  DLAF_ASSERT(n > 0, n);
+  if (n == 0)
+    return {};
+
   std::vector<std::tuple<SizeType, SizeType, SizeType>> indices;
   indices.reserve(to_sizet(n));
   splitIntervalInTheMiddleRecursively(0, n - 1, indices);
@@ -66,7 +68,10 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  SizeType i_end = mat_trd.distribution().nrTiles().rows() - 1;
+  if (mat_trd.nrTiles().rows() == 0)
+    return {};
+
+  const SizeType i_end = mat_trd.nrTiles().rows() - 1;
   std::vector<pika::shared_future<T>> offdiag_vals;
   offdiag_vals.reserve(to_sizet(i_end));
 

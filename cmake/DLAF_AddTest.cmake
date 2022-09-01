@@ -128,6 +128,7 @@ function(DLAF_addTest test_target_name)
     if(DLAF_CI_RUNNER_USES_MPIRUN)
       set(_TEST_COMMAND $<TARGET_FILE:${test_target_name}>)
     else()
+      separate_arguments(MPIEXEC_PREFLAGS)
       set(_TEST_COMMAND
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
           ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS}

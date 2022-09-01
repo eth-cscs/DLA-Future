@@ -47,24 +47,6 @@ TYPED_TEST(TridiagEigensolverMergeTest, ApplyIndex) {
   CHECK_MATRIX_EQ(expected_out, out);
 }
 
-TEST(CopyVector, Index) {
-  SizeType n = 10;
-  SizeType nb = 3;
-
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
-
-  Matrix<SizeType, Device::CPU> in(sz, bk);
-  Matrix<SizeType, Device::CPU> out(sz, bk);
-  // reverse order: n-1, n-2, ... ,0
-  dlaf::matrix::util::set(in, [](GlobalElementIndex i) { return i.row(); });
-
-  copyVector(0, 3, in, out);
-
-  auto expected_out = [](GlobalElementIndex i) { return i.row(); };
-  CHECK_MATRIX_EQ(expected_out, out);
-}
-
 TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   SizeType n = 10;
   SizeType nb = 3;

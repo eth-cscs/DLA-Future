@@ -33,14 +33,9 @@ namespace eigensolver {
 /// @pre mat_trd has 2 columns
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
-template <Backend backend, Device device, class T, class CT>
-void tridiagSolver(Matrix<T, device>& tridiag, Matrix<T, device>& evals, Matrix<CT, device>& evecs) {
-  static_assert(std::is_floating_point_v<T>,
-                "The tridiagonal matrix and the resulting eigenvalues must be real values (float, double)!");
-  static_assert(
-      std::is_same<T, CT>::value || std::is_same<std::complex<T>, CT>::value,
-      "Eigenvectors must either match the floating point type of the eigenvalues or be of the corresponding complex type (std::complex<>).");
-
+template <Backend backend, Device device, class T>
+void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, device>& evals,
+                   Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
 
@@ -60,7 +55,7 @@ void tridiagSolver(Matrix<T, device>& tridiag, Matrix<T, device>& evals, Matrix<
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),
               tridiag.distribution().size().rows(), evals.distribution().size().rows());
 
-  internal::TridiagSolver<backend, device, T>::call(tridiag, evals, evecs);
+  internal::TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
 }
 
 }

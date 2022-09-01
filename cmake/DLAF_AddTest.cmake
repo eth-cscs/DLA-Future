@@ -51,7 +51,7 @@ function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
   set(_TMP_LIST ${${LIST_NAME}})
   list(FILTER _TMP_LIST INCLUDE REGEX ${ELEMENT_REGEX})
   list(LENGTH _TMP_LIST _NUM_TMP_LIST)
-  if (_NUM_TMP_LIST EQUAL 0)
+  if(_NUM_TMP_LIST EQUAL 0)
     list(APPEND ${LIST_NAME} ${FALLBACK})
     set(${LIST_NAME} ${${LIST_NAME}} PARENT_SCOPE)
   endif()
@@ -170,7 +170,9 @@ function(DLAF_addTest test_target_name)
         set(_DLAF_PIKA_THREADS 2)
       endif()
 
-      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}")
+      _set_element_to_fallback_value(
+        _PIKA_EXTRA_ARGS_LIST "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
+      )
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})

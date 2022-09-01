@@ -106,8 +106,7 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
 
     // Cuppen's tridiagonal decomposition
     offdiag_vals.push_back(
-        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
-                                                        std::move(cuppens_fn), std::move(sender)) |
+        di::transform(di::Policy<DefaultBackend<D>::value>(), std::move(cuppens_fn), std::move(sender)) |
         ex::make_future());
   }
   return offdiag_vals;
@@ -167,9 +166,7 @@ void offloadDiagonal(Matrix<const T, D>& mat_trd, Matrix<T, D>& evals) {
     };
     auto sender = ex::when_all(mat_trd.read_sender(GlobalTileIndex(i, 0)),
                                evals.readwrite_sender(GlobalTileIndex(i, 0)));
-    ex::start_detached(
-        di::transform<di::TransformDispatchType::Plain>(di::Policy<DefaultBackend<D>::value>(),
-                                                        std::move(diag_fn), std::move(sender)));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(diag_fn), std::move(sender));
   }
 }
 
@@ -299,13 +296,13 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 #ifdef DLAF_WITH_GPU
       namespace ex = pika::execution::experimental;
       namespace di = dlaf::internal;
-      ex::start_detached(di::transform<di::TransformDispatchType::Plain>(
+      di::transformDetach(
           dlaf::internal::Policy<Backend::GPU>(),
           [](const matrix::Tile<const T, Device::GPU>& in,
              const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
             castTileToComplex(in.size().rows(), in.size().cols(), in.ld(), in.ptr(), out.ptr(), stream);
           },
-          std::move(sender)));
+          std::move(sender));
 #endif
     }
   }

@@ -142,6 +142,8 @@ void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
       ex::start_detached(
           di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
                                                            std::move(solver_fn), std::move(sender)));
+#elif defined DLAF_WITH_HIP
+      DLAF_UNIMPLEMENTED("HIP implementation is currently not available.");
 #endif
     }
   }

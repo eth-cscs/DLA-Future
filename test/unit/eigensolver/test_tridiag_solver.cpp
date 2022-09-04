@@ -159,6 +159,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
       return offdiag_arr[to_sizet(i.row())];
     }
   });
+  tridiag.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
   {
     matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
@@ -198,6 +199,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
       return T(0);
     }
   });
+  tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
   // Compute A * E
   const matrix::Distribution& dist = evecs.distribution();
@@ -240,7 +242,7 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     {16, 4},
     {16, 5},
     {100, 10},
-    {93, 7}
+    //{93, 7},
 };
 // clang-format on
 

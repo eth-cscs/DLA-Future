@@ -939,7 +939,8 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
           }
         }
         else {
-          scaleTileWithRow(nrows, ncols, evecs_tile.ld(), ws_tile.ptr(), evecs_tile.ptr(), ts...);
+          scaleTileWithRow(nrows, ncols, ws_tile.ld(), ws_tile.ptr(), evecs_tile.ld(), evecs_tile.ptr(),
+                           ts...);
         }
       };
 

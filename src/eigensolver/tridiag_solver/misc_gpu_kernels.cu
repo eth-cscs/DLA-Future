@@ -24,6 +24,7 @@
 #include <thrust/merge.h>
 #include <thrust/partition.h>
 #include <cub/cub.cuh>
+#include <pika/cuda.hpp>
 
 namespace dlaf::eigensolver::internal {
 
@@ -32,7 +33,7 @@ T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
   auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
   T max_el;
   // TODO: this is a peformance pessimization, the value is on device
-  cudaMemcpy(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost);
+  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost, stream));
   return max_el;
 }
 
@@ -278,12 +279,14 @@ __global__ void expandTridiagonalToLowerTriangular(SizeType n, const T* diag, co
                                                    SizeType ld_evecs, T* evecs) {
   const SizeType i = blockIdx.x * tridiag_kernel_sz + threadIdx.x;
   const SizeType j = blockIdx.y * tridiag_kernel_sz + threadIdx.y;
+
+  // only the lower triangular part is set
+  if (i >= n || j >= n || j > i)
+    return;
+
   const SizeType idx = i + j * ld_evecs;
 
-  if (i >= n || j >= n || j > i) {
-    return;  // only the lower triangular part is set
-  }
-  else if (i == j) {
+  if (i == j) {
     evecs[idx] = diag[i];
   }
   else if (i == j + 1) {
@@ -322,6 +325,8 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
                                                                            evecs);
 
   // Determine additional memory needed and solve the symmetric eigenvalue problem
+  cusolverDnParams_t params;
+  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnCreateParams(&params));
   cusolverEigMode_t jobz = CUSOLVER_EIG_MODE_VECTOR;  // compute both eigenvalues and eigenvectors
   cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;     // the symmetric matrix is stored in the lower part
   cudaDataType dtype = (std::is_same<T, float>::value) ? CUDA_R_32F : CUDA_R_64F;
@@ -329,7 +334,7 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
   size_t workspaceInBytesOnDevice;
   size_t workspaceInBytesOnHost;
   DLAF_GPULAPACK_CHECK_ERROR(
-      cusolverDnXsyevd_bufferSize(handle, NULL, jobz, uplo, n, dtype, evecs, ld_evecs, dtype, evals,
+      cusolverDnXsyevd_bufferSize(handle, params, jobz, uplo, n, dtype, evecs, ld_evecs, dtype, evals,
                                   dtype, &workspaceInBytesOnDevice, &workspaceInBytesOnHost));
 
   void* bufferOnDevice = memory::internal::getUmpireDeviceAllocator().allocate(workspaceInBytesOnDevice);
@@ -337,13 +342,19 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
 
   // Note: `info` has to be stored on device!
   memory::MemoryView<int, Device::GPU> info(1);
-  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnXsyevd(handle, NULL, jobz, uplo, n, dtype, evecs, ld_evecs, dtype,
-                                              evals, dtype, bufferOnDevice, workspaceInBytesOnDevice,
-                                              bufferOnHost, workspaceInBytesOnHost, info()));
+  DLAF_GPULAPACK_CHECK_ERROR(cusolverDnXsyevd(handle, params, jobz, uplo, n, dtype, evecs, ld_evecs,
+                                              dtype, evals, dtype, bufferOnDevice,
+                                              workspaceInBytesOnDevice, bufferOnHost,
+                                              workspaceInBytesOnHost, info()));
   assertSyevdInfo<<<1, 1, 0, stream>>>(info());
 
-  memory::internal::getUmpireDeviceAllocator().deallocate(bufferOnDevice);
-  memory::internal::getUmpireHostAllocator().deallocate(bufferOnHost);
+  auto extend_info = [info = std::move(info), bufferOnDevice, bufferOnHost, params](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(bufferOnDevice);
+    memory::internal::getUmpireHostAllocator().deallocate(bufferOnHost);
+    DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroyParams(params));
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 
 DLAF_CUSOLVER_SYEVC_ETI(, float);
@@ -351,13 +362,17 @@ DLAF_CUSOLVER_SYEVC_ETI(, double);
 
 template <class T>
 __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
+  const T offdiag = *offdiag_val;
+  T& top_diag = *top_diag_val;
+  T& bottom_diag = *bottom_diag_val;
+
   if constexpr (std::is_same<T, float>::value) {
-    *top_diag_val -= fabsf(*offdiag_val);
-    *bottom_diag_val -= fabsf(*offdiag_val);
+    top_diag -= fabsf(offdiag);
+    bottom_diag -= fabsf(offdiag);
   }
   else {
-    *top_diag_val -= fabs(*offdiag_val);
-    *bottom_diag_val -= fabs(*offdiag_val);
+    top_diag -= fabs(offdiag);
+    bottom_diag -= fabs(offdiag);
   }
 }
 
@@ -370,7 +385,9 @@ T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_d
 
   // TODO: this is a peformance pessimization, the value is on device
   T h_offdiag_val;
-  cudaMemcpy(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost);
+  DLAF_GPU_CHECK_ERROR(
+      cudaMemcpyAsync(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost, stream));
+
   return h_offdiag_val;
 }
 
@@ -452,6 +469,12 @@ void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld,
   DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
                                                           ws, nrows, begin_offsets, end_offsets, mult_op,
                                                           T(1), stream));
+  // Deallocate memory
+  auto extend_info = [d_temp_storage](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 
 DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, float);
@@ -552,6 +575,13 @@ void sumSqTileOnDevice(SizeType nrows, SizeType ncols, SizeType ld, const T* in,
     DLAF_GPU_CHECK_ERROR(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
                                                 &out[j * ld], nrows, stream));
   }
+
+  // Deallocate memory
+  auto extend_info = [d_temp_storage](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 
 DLAF_CUDA_SUM_SQ_TILE_ETI(, float);
@@ -581,30 +611,37 @@ DLAF_CUDA_ADD_FIRST_ROWS_ETI(, double);
 constexpr unsigned scale_tile_with_row_kernel_sz = 32;
 
 template <class T>
-__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const T* norms, T* evecs) {
+__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
+                                 SizeType ld_evecs, T* evecs) {
   const SizeType i = blockIdx.x * scale_tile_with_row_kernel_sz + threadIdx.x;
   const SizeType j = blockIdx.y * scale_tile_with_row_kernel_sz + threadIdx.y;
 
   if (i >= nrows || j >= ncols)
     return;
 
+  const SizeType idx_evecs = i + j * ld_evecs;
+  const SizeType idx_norms = j * ld_norms;
+
+  const T el_norm = norms[idx_norms];
+  T& el_evec = evecs[idx_evecs];
+
   if constexpr (std::is_same<T, float>::value) {
-    evecs[i + j * ld] /= sqrtf(norms[j * ld]);
+    el_evec = el_evec / sqrtf(el_norm);
   }
   else {
-    evecs[i + j * ld] /= sqrt(norms[j * ld]);
+    el_evec = el_evec / sqrt(el_norm);
   }
 }
 
 template <class T>
-void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const T* norms, T* evecs,
-                      cudaStream_t stream) {
+void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
+                      SizeType ld_evecs, T* evecs, cudaStream_t stream) {
   const unsigned unrows = to_uint(nrows);
   const unsigned uncols = to_uint(ncols);
   dim3 nr_threads(scale_tile_with_row_kernel_sz, scale_tile_with_row_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(unrows, scale_tile_with_row_kernel_sz),
                  util::ceilDiv(uncols, scale_tile_with_row_kernel_sz));
-  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, norms, evecs);
+  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld_norms, norms, ld_evecs, evecs);
 }
 
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, float);

@@ -189,12 +189,13 @@ DLAF_CUDA_ADD_FIRST_ROWS_ETI(extern, float);
 DLAF_CUDA_ADD_FIRST_ROWS_ETI(extern, double);
 
 template <class T>
-void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const T* norms, T* evecs,
-                      cudaStream_t stream);
+void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
+                      SizeType ld_evecs, T* evecs, cudaStream_t stream);
 
-#define DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(kword, Type)                                                 \
-  kword template void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld, const Type* norms, \
-                                       Type* evecs, cudaStream_t stream)
+#define DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(kword, Type)                                    \
+  kword template void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, \
+                                       const Type* norms, SizeType ld_evecs, Type* evecs, \
+                                       cudaStream_t stream)
 
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, float);
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, double);

@@ -161,7 +161,6 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
 // The index starts at `0` for tiles in the range [i_begin, i_end].
 template <Device D>
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& index) {
-  namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType nb = index.distribution().blockSize().rows();

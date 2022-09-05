@@ -238,7 +238,7 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     {16, 4},
     {16, 5},
     {100, 10},
-    //{93, 7},
+    {93, 7},
 };
 // clang-format on
 

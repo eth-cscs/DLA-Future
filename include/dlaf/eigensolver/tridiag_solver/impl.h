@@ -123,9 +123,9 @@ void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     if constexpr (D == Device::CPU) {
-      whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                  mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
-          tile::stedc(Policy<Backend::MC>(thread_priority::normal)) | start_detached();
+      start_detached(whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                                 mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
+                     tile::stedc(Policy<Backend::MC>(thread_priority::normal)));
     }
     else {
 #ifdef DLAF_WITH_CUDA

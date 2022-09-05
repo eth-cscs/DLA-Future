@@ -48,14 +48,6 @@ MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
 
 constexpr unsigned perms_kernel_sz = 32;
 
-template <Coord coord>
-constexpr SizeType getCoord(SizeType row, SizeType col) {
-  if constexpr (coord == Coord::Row)
-    return row;
-  else
-    return col;
-}
-
 __device__ void swapIndices(SizeType& a, SizeType& b) {
   SizeType tmp = a;
   a = b;

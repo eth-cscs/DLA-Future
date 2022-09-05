@@ -26,7 +26,7 @@ template <typename Type>
 class PermutationsTestCPU : public ::testing::Test {};
 TYPED_TEST_SUITE(PermutationsTestCPU, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <typename Type>
 class PermutationsTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
@@ -99,7 +99,7 @@ TYPED_TEST(PermutationsTestCPU, Rows) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(PermutationsTestGPU, Columns) {
   for (auto [n, nb, i_begin, i_end] : sizes) {
     testPermutations<Backend::GPU, Device::GPU, TypeParam, Coord::Col>(n, nb, i_begin, i_end);

@@ -251,7 +251,7 @@ void initResourcePartitionerHandler(pika::resource::partitioner& rp,
     return;
 
   // Disable idle backoff on the MPI pool
-  using pika::threads::policies::scheduler_mode;
+  using pika::threads::scheduler_mode;
   auto mode = scheduler_mode::default_mode;
   mode = scheduler_mode(mode & ~scheduler_mode::enable_idle_backoff);
 

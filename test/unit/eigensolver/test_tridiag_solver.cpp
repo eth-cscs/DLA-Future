@@ -20,10 +20,6 @@ using namespace dlaf;
 using namespace dlaf::test;
 
 template <typename Type>
-class CuppensTest : public ::testing::Test {};
-TYPED_TEST_SUITE(CuppensTest, RealMatrixElementTypes);
-
-template <typename Type>
 class TridiagEigensolverTestCPU : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverTestCPU, MatrixElementTypes);
 

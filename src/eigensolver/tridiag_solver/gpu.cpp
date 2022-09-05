@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/mc.h"
+#include "dlaf/eigensolver/tridiag_solver/impl.h"
 
 namespace dlaf::eigensolver::internal {
 

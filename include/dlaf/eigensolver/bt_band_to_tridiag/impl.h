@@ -20,6 +20,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/assert.h"
+#include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
@@ -287,6 +288,11 @@ struct TileAccessHelper {
     return {{0, 0}, {part_top_.rows() + part_bottom_.rows(), nrefls_}};
   }
 
+  // Return SubTileSpec to use for accessing T factor
+  matrix::SubTileSpec specT() const noexcept {
+    return {{0, 0}, {nrefls_, nrefls_}};
+  }
+
   const auto& topPart() const noexcept {
     return part_top_;
   }
@@ -334,8 +340,83 @@ private:
   Part part_bottom_;
 };
 
+struct GlobalSubTile_TAG;
+struct TileSubTile_TAG;
+
+using GlobalSubTileIndex = common::Index2D<SizeType, GlobalSubTile_TAG>;
+using TileSubTileIndex = common::Index2D<SizeType, TileSubTile_TAG>;
+
+struct DistIndexing {
+  DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
+               const GlobalTileIndex& ij, const GlobalSubTileIndex& ij_b)
+      : dist_hh(dist_hh), b(b), nb(dist_hh.blockSize().rows()), helper(helper), ij(ij), ij_b(ij_b) {
+    rank = dist_hh.rankIndex();
+    rankHH = dist_hh.rankGlobalTile(ij);
+  }
+
+  comm::IndexT_MPI rankRowPartner() const {
+    return (rankHH.row() + 1) % dist_hh.commGridSize().rows();
+  }
+
+  bool isInvolved() const {
+    const bool isSameRow = rank.row() == rankHH.row();
+    const bool isPartnerRow = rank.row() == rankRowPartner();
+    return isSameRow ||
+           (dist_hh.commGridSize().rows() > 1 && isPartnerRow && helper.affectsMultipleTiles());
+  }
+
+  LocalTileIndex wsIndexHH() const {
+    return {ij_b.row(), 0};
+  }
+
+protected:
+  matrix::Distribution dist_hh;
+  SizeType b;
+  SizeType nb;
+
+  TileAccessHelper helper;
+
+  comm::Index2D rank;
+  comm::Index2D rankHH;
+
+  GlobalTileIndex ij;
+  GlobalSubTileIndex ij_b;
+};
+
 template <Backend B, Device D, class T>
 struct HHManager;
+
+template <Backend B, Device D, class T>
+struct HHManagerWithIndexer {
+  HHManagerWithIndexer(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution)
+      : b(b) {}
+
+  template <class MatrixLike>
+  std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
+  computeVW(const DistIndexing& indexing_helper, const TileAccessHelper& helper, MatrixLike& mat_hh,
+            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+            matrix::Panel<Coord::Col, T, D>& mat_w) {
+    namespace ex = pika::execution::experimental;
+
+    const LocalTileIndex ij_t = indexing_helper.wsIndexHH();  // how to access HH, T
+    const LocalTileIndex i_ws = indexing_helper.wsIndexHH();  // how to access V, W
+
+    auto tup =
+        dlaf::internal::whenAllLift(b,
+                                    ex::keep_future(
+                                        splitTile(mat_hh.read(ij_t), helper.specHHCompact())),
+                                    splitTile(mat_v(i_ws), helper.specHH()),
+                                    splitTile(mat_t(ij_t), helper.specT()),
+                                    splitTile(mat_w(i_ws), helper.specHH())) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
+        ex::make_future();
+
+    return pika::split_future(std::move(tup));
+  }
+
+protected:
+  const SizeType b;
+};
 
 template <class T>
 struct HHManager<Backend::MC, Device::CPU, T> {
@@ -624,7 +705,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
   RoundRobin<Panel<Coord::Row, T, D>> w2tmp_panels(n_workspaces, dist_w2);
 
-  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
+  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
 
   // Note: This distributed algorithm encompass two communication categories:
   // 1. exchange of HH: broadcast + send p2p
@@ -684,6 +765,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
          i_b < j_b + nrStepsForSweep(j_b * b, mat_hh.size().cols(), b); i_b += 2, ++j_b) {
       const SizeType step_b = i_b - j_b;
       const GlobalElementIndex ij_el(i_b * b, j_b * b);
+      const GlobalSubTileIndex ij_b(i_b, j_b);
       const GlobalTileIndex ij_g(dist_hh.globalTileIndex(ij_el));
 
       const comm::Index2D rank = dist_hh.rankIndex();
@@ -699,14 +781,10 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const TileAccessHelper helper(b, nrefls, mat_hh.distribution(), ij_el);
+      const TileAccessHelper helper(b, nrefls, dist_hh, ij_el);
+      const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, ij_b);
 
-      const auto rankPartnerRow = (rankHH.row() + 1) % grid.size().rows();
-      const bool isInvolved =
-          rank.row() == rankHH.row() ||
-          (grid.size().rows() > 1 && helper.affectsMultipleTiles() && rank.row() == rankPartnerRow);
-
-      if (!isInvolved)
+      if (!indexing_helper.isInvolved())
         continue;
 
       panel_hh.setWidth(dist_hh.tileSize(ij_g).cols());
@@ -726,7 +804,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       // for updating E.
 
       // Send HH to all involved ranks: broadcast on row + send p2p on col
-      const LocalTileIndex ij_hh_panel(dist_t.localTileFromGlobalTile<Coord::Row>(ij_g.row()), 0);
+      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHH();
 
       if (rank == rankHH)
         panel_hh.setTile(ij_hh_panel, mat_hh.read(ij_g));
@@ -749,7 +827,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       // Send P2P on col
       if (helper.affectsMultipleTiles() && grid.size().rows() > 1) {
         const comm::IndexT_MPI rank_src = rankHH.row();
-        const comm::IndexT_MPI rank_dst = rankPartnerRow;
+        const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
 
         if (rank.row() == rank_src) {
           ex::start_detached(
@@ -763,7 +841,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
 
       // COMPUTE V and W from HH and T
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(ij_hh_panel, nrefls, helper, panel_hh, mat_v, mat_t, mat_w);
+          helperBackend.computeVW(indexing_helper, helper, panel_hh, mat_v, mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e.localNrTiles().cols();
@@ -809,7 +887,8 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         }
         else {
           const bool isTopRank = rank.row() == rankHH.row();
-          const comm::IndexT_MPI rankPARTNER = isTopRank ? rankPartnerRow : rankHH.row();
+          const comm::IndexT_MPI rankPARTNER =
+              isTopRank ? indexing_helper.rankRowPartner() : rankHH.row();
 
           const comm::IndexT_MPI tag = to_int(j_e + i_b * ncols_local);
 

@@ -626,14 +626,14 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
 
   HHManager<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
 
-  // Note: These distributed algorithm encompass two communication categories:
+  // Note: This distributed algorithm encompass two communication categories:
   // 1. exchange of HH: broadcast + send p2p
   // 2. reduction for computing W2: all reduce p2p
   // P2P communication can happen out of order since they can be matched via tags, but this is not
-  // possible for collective operations as the broadcast.
+  // possible for collective operations such as the broadcast.
   //
-  // For this reason, communications of the 1 phase will be ordered with a pipeline. Instead, for the
-  // second part, with the aim to not over constraint execution of the update, no order will be
+  // For this reason, communications of the phase 1 will be ordered with a pipeline. Instead, for the
+  // second part, with the aim to not over constrain execution of the update, no order will be
   // enforced by relying solely on tags.
   common::Pipeline<comm::Communicator> mpi_chain_row(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_chain_col(grid.colCommunicator().clone());
@@ -652,7 +652,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   //
   // This basic rule for dependencies can be described collectively as a mechanism where elements are
   // "unlocked" in different epochs, which forms a pattern like if the matrix get scanned not
-  // perpendicular to their main axis, but instead it gets scanned by a line slightly skewed that goes
+  // perpendicularly to their main axis, but instead it gets scanned by a slightly skewed line that goes
   // from top right to bottom left.
   //
   //  5 x x x x

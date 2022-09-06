@@ -352,6 +352,7 @@ struct DistIndexing {
       : dist_hh(dist_hh), b(b), nb(dist_hh.blockSize().rows()), helper(helper), ij(ij), ij_b(ij_b) {
     rank = dist_hh.rankIndex();
     rankHH = dist_hh.rankGlobalTile(ij);
+    n_ws_per_block = to_SizeType(static_cast<size_t>(std::ceil(nb / b / 2.0f)) + 1);
   }
 
   comm::IndexT_MPI rankRowPartner() const {
@@ -366,6 +367,23 @@ struct DistIndexing {
   }
 
   LocalTileIndex wsIndexHH() const {
+    const SizeType row = [&]() -> SizeType {
+      if (rank.row() == rankHH.row()) {
+        // TODO use also other ws in the block, not just the first one
+        return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + 1;
+      }
+      else {
+        DLAF_ASSERT_HEAVY(helper.affectsMultipleTiles() && (rank.row() == rankRowPartner()),
+                          helper.affectsMultipleTiles(), rank.row(), rankRowPartner());
+        return dist_hh.localNrTiles().isEmpty()
+                   ? 0
+                   : dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row() + 1) * n_ws_per_block;
+      }
+    }();
+    return {row, 0};
+  }
+
+  LocalTileIndex wsIndexHHold() const {
     return {ij_b.row(), 0};
   }
 
@@ -373,6 +391,7 @@ protected:
   matrix::Distribution dist_hh;
   SizeType b;
   SizeType nb;
+  SizeType n_ws_per_block;
 
   TileAccessHelper helper;
 
@@ -398,15 +417,15 @@ struct HHManagerWithIndexer {
             matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
-    const LocalTileIndex ij_t = indexing_helper.wsIndexHH();  // how to access HH, T
-    const LocalTileIndex i_ws = indexing_helper.wsIndexHH();  // how to access V, W
+    const LocalTileIndex i_t = indexing_helper.wsIndexHH();      // how to access (HH), T
+    const LocalTileIndex i_ws = indexing_helper.wsIndexHHold();  // how to access (HH), V, W
 
     auto tup =
         dlaf::internal::whenAllLift(b,
                                     ex::keep_future(
-                                        splitTile(mat_hh.read(ij_t), helper.specHHCompact())),
+                                        splitTile(mat_hh.read(i_ws), helper.specHHCompact())),
                                     splitTile(mat_v(i_ws), helper.specHH()),
-                                    splitTile(mat_t(ij_t), helper.specT()),
+                                    splitTile(mat_t(i_t), helper.specT()),
                                     splitTile(mat_w(i_ws), helper.specHH())) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
@@ -671,6 +690,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
     return;
 
   const SizeType b = band_size;
+  const SizeType nb = mat_hh.blockSize().rows();
 
   const auto& dist_hh = mat_hh.distribution();
   const auto& dist_e = mat_e.distribution();
@@ -690,6 +710,16 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
+  // TODO HH/T
+  const SizeType nlocal_ws =
+      std::max<SizeType>(1, dist_hh.localNrTiles().rows() *
+                                to_SizeType(static_cast<SizeType>(std::ceil(nb / b / 2.0f)) + 1));
+  const matrix::Distribution dist_compact({nlocal_ws * b, b}, {b, b});
+
+  // TODO V
+  // TODO W
+  // TODO W2/W2tmp
+
   const SizeType dist_w_rows = mat_e.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
   const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
@@ -698,7 +728,8 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
 
   // TODO review memory usage
   constexpr std::size_t n_workspaces = 2;
-  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_t);
+  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_compact);
+
   RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_t);
   RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
@@ -804,7 +835,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       // for updating E.
 
       // Send HH to all involved ranks: broadcast on row + send p2p on col
-      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHH();
+      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHHold();
 
       if (rank == rankHH)
         panel_hh.setTile(ij_hh_panel, mat_hh.read(ij_g));

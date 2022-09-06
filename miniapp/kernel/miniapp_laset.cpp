@@ -10,6 +10,10 @@
 
 #include <future>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/format_short.h"
 #include "dlaf/lapack/tile.h"
@@ -75,7 +79,7 @@ struct Test {
     };
 #ifdef DLAF_WITH_CUDA
     [[maybe_unused]] auto kernel_GPU = [uplo, m, n, alpha, beta, &tiles](SizeType i,
-                                                                         cudaStream_t stream) {
+                                                                         whip::stream_t stream) {
       gpulapack::laset(uplo, m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld(), stream);
     };
 #endif

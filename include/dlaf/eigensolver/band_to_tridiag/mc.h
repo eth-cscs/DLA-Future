@@ -15,6 +15,10 @@
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -142,7 +146,7 @@ struct BandBlock {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
+          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
@@ -216,7 +220,7 @@ struct BandBlock {
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, cudaStream_t stream) {
+          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
             // The elements are copied in the following way:
@@ -252,7 +256,9 @@ private:
   bool isAccessibleFromGPU() const {
 #ifdef DLAF_WITH_CUDA
     cudaPointerAttributes attrs;
-    DLAF_GPU_CHECK_ERROR(cudaPointerGetAttributes(&attrs, mem_()));
+    if (auto status = cudaPointerGetAttributes(&attrs, mem_()); status != cudaSuccess) {
+      throw whip::exception(status);
+    }
     return cudaMemoryTypeUnregistered != attrs.type;
 #elif defined DLAF_WITH_HIP
     // We don't have a similar way to check for accessibility from a device in

@@ -15,6 +15,10 @@
 
 #include <blas.hh>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/factorization/qr/api.h"
 
 #include "dlaf/common/assert.h"
@@ -32,8 +36,6 @@
 
 #ifdef DLAF_WITH_GPU
 #include "dlaf/blas/tile.h"
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/blas/error.h"
 #endif
 
 namespace dlaf::factorization::internal {
@@ -136,7 +138,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
-        [](matrix::Tile<T, Device::GPU>& tile, cudaStream_t stream) {
+        [](matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream) {
           tile::internal::set0<T>(tile, stream);
           return std::move(tile);
         },
@@ -157,12 +159,11 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
       if (first_row_tile == 0) {
-        cudaStream_t stream;
+        whip::stream_t stream;
         DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T),
-                                               taus.data(), sizeof(T), sizeof(T), to_sizet(k),
-                                               cudaMemcpyDefault, stream));
+        whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.data(),
+                              sizeof(T), sizeof(T), to_sizet(k), whip::memcpy_default, stream);
       }
 
       for (SizeType j = 0; j < k; ++j) {

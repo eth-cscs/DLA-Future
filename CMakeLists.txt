@@ -75,6 +75,10 @@ elseif(DLAF_WITH_HIP)
   set(DLAF_WITH_GPU ON)
 endif()
 
+if(DLAF_WITH_GPU)
+  find_package(whip REQUIRED)
+endif()
+
 # ---------------------------------------------------------------------------
 # Coverage
 # ---------------------------------------------------------------------------

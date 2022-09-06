@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <whip.hpp>
+
 #include "dlaf/lapack/tile.h"
 #include "dlaf/util_cuda.h"
 
@@ -69,7 +71,7 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   // Note: `info` has to be stored on device!
   memory::MemoryView<int, Device::GPU> info(1);
 
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
 #ifdef DLAF_WITH_CUDA
   // Expand from compact tridiagonal form into lower triangular form
@@ -102,8 +104,9 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
 
   assertSyevdInfo<<<1, 1, 0, stream>>>(info());
 
-  auto extend_info = [info = std::move(info), bufferOnDevice, bufferOnHost, params](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
+  auto extend_info = [info = std::move(info), bufferOnDevice, bufferOnHost,
+                      params](whip::error_t status) {
+    whip::check_error(status);
     memory::internal::getUmpireDeviceAllocator().deallocate(bufferOnDevice);
     memory::internal::getUmpireHostAllocator().deallocate(bufferOnHost);
     DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroyParams(params));
@@ -141,7 +144,7 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   assertSyevdInfo<<<1, 1, 0, stream>>>(info());
 
   auto extend_info = [info = std::move(info), workspaceOnDevice = std::move(workspaceOnDevice)](
-                         cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+                         whip::error_t status) { whip::check_error(status); };
 #endif
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }

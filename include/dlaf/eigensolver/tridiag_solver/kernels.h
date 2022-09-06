@@ -18,6 +18,8 @@
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+
 #include "dlaf/gpu/lapack/api.h"
 #endif
 
@@ -48,12 +50,12 @@ DLAF_CPU_CAST_TO_COMPLEX_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 template <class T>
 void castToComplex(const matrix::Tile<const T, Device::GPU>& in,
-                   const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream);
+                   const matrix::Tile<std::complex<T>, Device::GPU>& out, whip::stream_t stream);
 
 #define DLAF_GPU_CAST_TO_COMPLEX_ETI(kword, Type)                                             \
   kword template void castToComplex(const matrix::Tile<const Type, Device::GPU>& in,          \
                                     const matrix::Tile<std::complex<Type>, Device::GPU>& out, \
-                                    cudaStream_t stream)
+                                    whip::stream_t stream)
 
 DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, float);
 DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, double);
@@ -89,11 +91,12 @@ DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 
 template <class T>
 T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                cudaStream_t stream);
+                whip::stream_t stream);
 
-#define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                \
-  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top, \
-                                    const matrix::Tile<Type, Device::GPU>& bottom, cudaStream_t stream)
+#define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
+  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
+                                    const matrix::Tile<Type, Device::GPU>& bottom, \
+                                    whip::stream_t stream)
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
@@ -129,13 +132,13 @@ DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
 template <class T>
 void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
-                                        cudaStream_t stream);
+                                        whip::stream_t stream);
 
 #define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
   kword template void                                                                           \
   copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::GPU>& tridiag_tile, \
                                      const matrix::Tile<Type, Device::GPU>& diag_tile,          \
-                                     cudaStream_t stream)
+                                     whip::stream_t stream)
 
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
@@ -173,13 +176,15 @@ DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
 template <class T>
 void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                                   const matrix::Tile<T, Device::GPU>& rank1_tile, cudaStream_t stream);
+                                   const matrix::Tile<T, Device::GPU>& rank1_tile,
+                                   whip::stream_t stream);
 
 #define DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                      \
   kword template void                                                                    \
   assembleRank1UpdateVectorTile(bool is_top_tile, Type rho,                              \
                                 const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
-                                const matrix::Tile<Type, Device::GPU>& rank1_tile, cudaStream_t stream)
+                                const matrix::Tile<Type, Device::GPU>& rank1_tile,       \
+                                whip::stream_t stream)
 
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
@@ -210,11 +215,11 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStream_t stream);
+T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream);
 
 #define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                    \
   kword template Type maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
-                                             cudaStream_t stream)
+                                             whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
@@ -234,7 +239,7 @@ void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>&
 
 #ifdef DLAF_WITH_GPU
 void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile,
-                    cudaStream_t stream);
+                    whip::stream_t stream);
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
@@ -251,7 +256,7 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& t
 
 #ifdef DLAF_WITH_GPU
 void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& tile,
-                   cudaStream_t stream);
+                   whip::stream_t stream);
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
@@ -288,7 +293,7 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                           const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+                           const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
 #define DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(kword, Type)                                           \
   kword template void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el,            \
@@ -297,7 +302,7 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
                                             const matrix::Tile<const Type, Device::GPU>& diag_cols,  \
                                             const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
                                             const matrix::Tile<Type, Device::GPU>& ws_tile,          \
-                                            cudaStream_t stream)
+                                            whip::stream_t stream)
 
 DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, float);
 DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
@@ -337,13 +342,13 @@ DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
 template <class T>
 void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
                           const matrix::Tile<const T, Device::GPU>& in,
-                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream);
+                          const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream);
 
 #define DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                                \
   kword template void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col, \
                                            const matrix::Tile<const Type, Device::GPU>& in,             \
                                            const matrix::Tile<Type, Device::GPU>& out,                  \
-                                           cudaStream_t stream)
+                                           whip::stream_t stream)
 
 DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, float);
 DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
@@ -381,7 +386,7 @@ template <class T>
 void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
                             const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
-                            const matrix::Tile<T, Device::GPU>& evecs_tile, cudaStream_t stream);
+                            const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream);
 
 #define DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(kword, Type)                                       \
   kword template void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row,               \
@@ -389,7 +394,7 @@ void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeTy
                                              const matrix::Tile<const Type, Device::GPU>& z_tile,  \
                                              const matrix::Tile<const Type, Device::GPU>& ws_tile, \
                                              const matrix::Tile<Type, Device::GPU>& evecs_tile,    \
-                                             cudaStream_t stream)
+                                             whip::stream_t stream)
 
 DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, float);
 DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
@@ -426,12 +431,12 @@ DLAF_CPU_SUMSQ_COLS_ETI(extern, double);
 template <class T>
 void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
-               const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+               const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
 #define DLAF_GPU_SUMSQ_COLS_ETI(kword, Type)                                                 \
   kword template void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col, \
                                 const matrix::Tile<const Type, Device::GPU>& evecs_tile,     \
-                                const matrix::Tile<Type, Device::GPU>& ws_tile, cudaStream_t stream)
+                                const matrix::Tile<Type, Device::GPU>& ws_tile, whip::stream_t stream)
 
 DLAF_GPU_SUMSQ_COLS_ETI(extern, float);
 DLAF_GPU_SUMSQ_COLS_ETI(extern, double);
@@ -465,12 +470,12 @@ DLAF_CPU_ADD_FIRST_ROWS_ETI(extern, double);
 template <class T>
 void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                  const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+                  const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
 #define DLAF_GPU_ADD_FIRST_ROWS_ETI(kword, Type)                                                \
   kword template void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col, \
                                    const matrix::Tile<const Type, Device::GPU>& in,             \
-                                   const matrix::Tile<Type, Device::GPU>& out, cudaStream_t stream)
+                                   const matrix::Tile<Type, Device::GPU>& out, whip::stream_t stream)
 
 DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, float);
 DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, double);
@@ -505,13 +510,13 @@ DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
 template <class T>
 void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
                           const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                          const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+                          const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
 #define DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                              \
   kword template void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col, \
                                            const matrix::Tile<const Type, Device::GPU>& in,             \
                                            const matrix::Tile<Type, Device::GPU>& out,                  \
-                                           cudaStream_t stream)
+                                           whip::stream_t stream)
 
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, float);
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
@@ -535,47 +540,48 @@ void divideColsByFirstRowAsync(pika::shared_future<SizeType> k_fut, SizeType row
 
 // Returns the number of non-deflated entries
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, cudaStream_t stream);
+                                      SizeType* out_ptr, whip::stream_t stream);
 
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
-                          SizeType* out_ptr, const T* v_ptr, cudaStream_t stream);
+                          SizeType* out_ptr, const T* v_ptr, whip::stream_t stream);
 
 #define DLAF_CUDA_MERGE_INDICES_ETI(kword, Type)                                                 \
   kword template void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, \
                                            const SizeType* end_ptr, SizeType* out_ptr,           \
-                                           const Type* v_ptr, cudaStream_t stream)
+                                           const Type* v_ptr, whip::stream_t stream)
 
 DLAF_CUDA_MERGE_INDICES_ETI(extern, float);
 DLAF_CUDA_MERGE_INDICES_ETI(extern, double);
 
 template <class T>
-void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out, cudaStream_t stream);
+void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out, whip::stream_t stream);
 
 #define DLAF_CUDA_APPLY_INDEX_ETI(kword, Type)                                                \
   kword template void applyIndexOnDevice(SizeType len, const SizeType* index, const Type* in, \
-                                         Type* out, cudaStream_t stream)
+                                         Type* out, whip::stream_t stream)
 
 DLAF_CUDA_APPLY_INDEX_ETI(extern, float);
 DLAF_CUDA_APPLY_INDEX_ETI(extern, double);
 
-void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream);
+void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream);
 
 template <class T>
-void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream);
+void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t stream);
 
 #define DLAF_GIVENS_ROT_ETI(kword, Type)                                                     \
   kword template void givensRotationOnDevice(SizeType len, Type* x, Type* y, Type c, Type s, \
-                                             cudaStream_t stream)
+                                             whip::stream_t stream)
 
 DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
 
 template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t stream);
+void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream);
 
-#define DLAF_SET_UNIT_DIAG_ETI(kword, Type) \
-  kword template void setUnitDiagTileOnDevice(SizeType len, SizeType ld, Type* tile, cudaStream_t stream)
+#define DLAF_SET_UNIT_DIAG_ETI(kword, Type)                                          \
+  kword template void setUnitDiagTileOnDevice(SizeType len, SizeType ld, Type* tile, \
+                                              whip::stream_t stream)
 
 DLAF_SET_UNIT_DIAG_ETI(extern, float);
 DLAF_SET_UNIT_DIAG_ETI(extern, double);

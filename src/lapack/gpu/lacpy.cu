@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/gpu/api.h"
+#include <whip.hpp>
+
 #include "dlaf/gpu/assert.cu.h"
 #include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/error.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/types.h"
 #include "dlaf/util_cublas.h"
@@ -107,7 +107,7 @@ __global__ void lacpy(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 
 template <class T>
 void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a, const SizeType lda,
-           T* b, const SizeType ldb, const cudaStream_t stream) {
+           T* b, const SizeType ldb, const whip::stream_t stream) {
   if (m == 0 || n == 0)
     return;
 
@@ -118,9 +118,9 @@ void lacpy(const blas::Uplo uplo, const SizeType m, const SizeType n, const T* a
   constexpr unsigned kernel_tile_size_cols = kernels::LacpyParams::kernel_tile_size_cols;
 
   if (uplo == blas::Uplo::General) {
-    const cudaMemcpyKind kind = cudaMemcpyDefault;
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
-                                           to_sizet(m) * sizeof(T), to_sizet(n), kind, stream));
+    const whip::memcpy_kind kind = whip::memcpy_default;
+    whip::memcpy_2d_async(b, to_sizet(ldb) * sizeof(T), a, to_sizet(lda) * sizeof(T),
+                          to_sizet(m) * sizeof(T), to_sizet(n), kind, stream);
   }
   else {
     const unsigned um = to_uint(m);

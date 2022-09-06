@@ -19,7 +19,7 @@ namespace dlaf::eigensolver {
 
 template <class T, Device D>
 struct EigensolverResult {
-  common::internal::vector<BaseType<T>> eigenvalues;
+  Matrix<BaseType<T>, D> eigenvalues;
   Matrix<T, D> eigenvectors;
 };
 

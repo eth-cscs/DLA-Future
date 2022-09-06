@@ -32,6 +32,9 @@
 #   - MPIPIKA: uses a main that initializes both pika and MPI
 # If not specified, no external main is used and it should exist in the test source code.
 #
+# Moreover, the variable DLAF_PIKATEST_EXTRA_ARGS can be used to pass extra arguments that will
+# be given to all tests involving PIKA (i.e. USE_MAIN=PIKA or USE_MAIN=MPIPIKA).
+#
 # e.g.
 #
 # DLAF_addTest(example_test
@@ -41,6 +44,18 @@
 #       boost::boost
 #       include/
 # )
+
+# Check if LIST_NAME contains at least an element that matches ELEMENT_REGEX. If not, add FALLBACK
+# to the list.
+function(_set_element_to_fallback_value LIST_NAME ELEMENT_REGEX FALLBACK)
+  set(_TMP_LIST ${${LIST_NAME}})
+  list(FILTER _TMP_LIST INCLUDE REGEX ${ELEMENT_REGEX})
+  list(LENGTH _TMP_LIST _NUM_TMP_LIST)
+  if(_NUM_TMP_LIST EQUAL 0)
+    list(APPEND ${LIST_NAME} ${FALLBACK})
+    set(${LIST_NAME} ${${LIST_NAME}} PARENT_SCOPE)
+  endif()
+endfunction()
 
 function(DLAF_addTest test_target_name)
   set(options "")
@@ -128,6 +143,7 @@ function(DLAF_addTest test_target_name)
     if(DLAF_CI_RUNNER_USES_MPIRUN)
       set(_TEST_COMMAND $<TARGET_FILE:${test_target_name}>)
     else()
+      separate_arguments(MPIEXEC_PREFLAGS)
       set(_TEST_COMMAND
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
           ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS}
@@ -145,7 +161,19 @@ function(DLAF_addTest test_target_name)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
-      list(APPEND _TEST_ARGUMENTS "--pika:bind=none")
+      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:bind" "--pika:bind=none")
+    endif()
+
+    if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+
+      if(_DLAF_PIKA_THREADS LESS 2)
+        set(_DLAF_PIKA_THREADS 2)
+      endif()
+
+      _set_element_to_fallback_value(
+        _PIKA_EXTRA_ARGS_LIST "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
+      )
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})

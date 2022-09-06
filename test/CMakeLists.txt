@@ -21,6 +21,8 @@ option(
 # significantly faster when threads are not pinned.
 option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." ON)
 
+set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
+
 # if a preset has been selected and it has been changed from previous configurations
 if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 
@@ -35,8 +37,18 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
           FORCE
     )
     set(MPIEXEC_NUMCORES "" CACHE STRING "Number of cores available for each MPI rank." FORCE)
+    if(DLAF_TEST_THREAD_BINDING_ENABLED)
+      message(WARNING "Disabling pika binding")
+      set(DLAF_TEST_THREAD_BINDING_ENABLED FALSE CACHE BOOL "" FORCE)
+    endif()
 
   elseif(DLAF_MPI_PRESET STREQUAL "slurm")
+    if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
+      message(WARNING "When using DLAF_MPI_PRESET=slurm this option should be enabled. "
+                      "You may incur in performance drop. Do it at your own risk."
+      )
+    endif()
+
     execute_process(COMMAND which srun OUTPUT_VARIABLE SLURM_EXECUTABLE OUTPUT_STRIP_TRAILING_WHITESPACE)
     set(MPIEXEC_EXECUTABLE ${SLURM_EXECUTABLE} CACHE STRING "Executable for running MPI programs" FORCE)
     set(MPIEXEC_NUMPROC_FLAG
@@ -95,9 +107,6 @@ if((MPIEXEC_NUMCORE_FLAG OR MPIEXEC_NUMCORES) AND NOT (MPIEXEC_NUMCORE_FLAG AND 
     FATAL_ERROR "MPIEXEC_NUMCORES and MPIEXEC_NUMCORE_FLAG must be either both sets or both empty."
   )
 endif()
-
-# ----- pika
-set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
 add_library(DLAF_test INTERFACE)
 

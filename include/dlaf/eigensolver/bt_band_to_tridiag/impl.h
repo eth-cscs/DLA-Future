@@ -369,8 +369,10 @@ struct DistIndexing {
   LocalTileIndex wsIndexHH() const {
     const SizeType row = [&]() -> SizeType {
       if (rank.row() == rankHH.row()) {
-        // TODO use also other ws in the block, not just the first one
-        return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + 1;
+        // Note: index starts at 1 (0 is the extra workspace), moreover max half blocks will run in parallel
+        const SizeType intra_idx = 1 + (ij_b.row() % (nb / b)) / 2;
+        DLAF_ASSERT_HEAVY(intra_idx < n_ws_per_block, intra_idx, n_ws_per_block);
+        return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + intra_idx;
       }
       else {
         DLAF_ASSERT_HEAVY(helper.affectsMultipleTiles() && (rank.row() == rankRowPartner()),
@@ -410,22 +412,20 @@ struct HHManagerWithIndexer {
   HHManagerWithIndexer(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution)
       : b(b) {}
 
-  template <class MatrixLike>
+  template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const DistIndexing& indexing_helper, const TileAccessHelper& helper, MatrixLike& mat_hh,
+  computeVW(const DistIndexing& indexing_helper, const TileAccessHelper& helper, SenderHH&& tile_hh,
             matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
             matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
-    const LocalTileIndex i_t = indexing_helper.wsIndexHH();      // how to access (HH), T
-    const LocalTileIndex i_ws = indexing_helper.wsIndexHHold();  // how to access (HH), V, W
+    const LocalTileIndex i_hh = indexing_helper.wsIndexHH();     // how to access HH, T
+    const LocalTileIndex i_ws = indexing_helper.wsIndexHHold();  // how to access V, W
 
     auto tup =
-        dlaf::internal::whenAllLift(b,
-                                    ex::keep_future(
-                                        splitTile(mat_hh.read(i_ws), helper.specHHCompact())),
+        dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
                                     splitTile(mat_v(i_ws), helper.specHH()),
-                                    splitTile(mat_t(i_t), helper.specT()),
+                                    splitTile(mat_t(i_hh), helper.specT()),
                                     splitTile(mat_w(i_ws), helper.specHH())) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
@@ -722,21 +722,20 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
 
   const SizeType dist_w_rows = mat_e.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
-  const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
   const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()},
                                      grid.size(), grid.rank(), {0, 0});
 
   // TODO review memory usage
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_compact);
+  RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_compact);
 
-  RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_t);
   RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
   RoundRobin<Panel<Coord::Row, T, D>> w2tmp_panels(n_workspaces, dist_w2);
 
-  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_t, dist_w);
+  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_compact, dist_w);
 
   // Note: This distributed algorithm encompass two communication categories:
   // 1. exchange of HH: broadcast + send p2p
@@ -835,18 +834,15 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       // for updating E.
 
       // Send HH to all involved ranks: broadcast on row + send p2p on col
-      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHHold();
-
-      if (rank == rankHH)
-        panel_hh.setTile(ij_hh_panel, mat_hh.read(ij_g));
+      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHH();
 
       // Broadcast on ROW
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(
               comm::scheduleSendBcast(mpi_chain_row(),
-                                      ex::keep_future(splitTile(panel_hh.read(ij_hh_panel),
-                                                                helper.specHHCompact()))));
+                                      ex::keep_future(
+                                          splitTile(mat_hh.read(ij_g), helper.specHHCompact()))));
         }
         else {
           ex::start_detached(
@@ -861,8 +857,8 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
 
         if (rank.row() == rank_src) {
-          ex::start_detached(
-              comm::scheduleSend(mpi_chain_col(), rank_dst, 0, panel_hh.read_sender(ij_hh_panel)));
+          auto tile_hh = rank.col() == rankHH.col() ? mat_hh.read(ij_g) : panel_hh.read(ij_hh_panel);
+          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, ex::keep_future(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
           ex::start_detached(
@@ -871,8 +867,11 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       }
 
       // COMPUTE V and W from HH and T
+      auto tile_hh = (rankHH == rank) ? mat_hh.read(ij_g) : panel_hh.read(indexing_helper.wsIndexHH());
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(indexing_helper, helper, panel_hh, mat_v, mat_t, mat_w);
+          helperBackend.computeVW(indexing_helper, helper,
+                                  ex::keep_future(splitTile(std::move(tile_hh), helper.specHHCompact())),
+                                  mat_v, mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e.localNrTiles().cols();

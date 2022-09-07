@@ -686,7 +686,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
     return;
 
   // Note: if no householder reflectors are going to be applied (in case of trivial matrix)
-  if (mat_hh.size().rows() <= (dlaf::isComplex_v<T> ? 1 : 2))
+  if (nrSweeps<T>(mat_hh.size().rows()) == 0)
     return;
 
   const SizeType b = band_size;

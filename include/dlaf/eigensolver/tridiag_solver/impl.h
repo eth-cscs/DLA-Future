@@ -16,8 +16,8 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
-#include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
@@ -76,37 +76,12 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    // Cuppen's decomposition
-    //
-    // Substracts the offdiagonal element at the split from the top and bottom diagonal elements and
-    // returns the offdiagonal element. The split is between the last row of the top tile and the first
-    // row of the bottom tile.
-    //
-    auto cuppens_fn = [](const auto& top, const auto& bottom, [[maybe_unused]] auto&&... ts) {
-      TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
-      TileElementIndex top_idx{top.size().rows() - 1, 0};
-      TileElementIndex bottom_idx{0, 0};
-      if constexpr (D == Device::CPU) {
-        const T offdiag_val = top(offdiag_idx);
-
-        // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-        //
-        top(top_idx) -= std::abs(offdiag_val);
-        bottom(bottom_idx) -= std::abs(offdiag_val);
-        return offdiag_val;
-      }
-      else {
-        return cuppensDecompOnDevice(top.ptr(offdiag_idx), top.ptr(top_idx), bottom.ptr(bottom_idx),
-                                     ts...);
-      }
-    };
-
     auto sender =
         ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0)));
 
     // Cuppen's tridiagonal decomposition
     offdiag_vals.push_back(
-        di::transform(di::Policy<DefaultBackend<D>::value>(), std::move(cuppens_fn), std::move(sender)) |
+        di::transform(di::Policy<DefaultBackend<D>::value>(), cuppensDecomp_o, std::move(sender)) |
         ex::make_future());
   }
   return offdiag_vals;

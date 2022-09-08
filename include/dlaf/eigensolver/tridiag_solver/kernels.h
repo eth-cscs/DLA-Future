@@ -10,14 +10,53 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_GPU
-
+#include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
 
+#ifdef DLAF_WITH_GPU
 #include <cusolverDn.h>
+#endif
 
 namespace dlaf::eigensolver::internal {
+
+// Cuppen's decomposition
+//
+// Substracts the offdiagonal element at the split from the top and bottom diagonal elements and
+// returns the offdiagonal element. The split is between the last row of the top tile and the first
+// row of the bottom tile.
+//
+template <class T>
+T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, Device::CPU>& bottom);
+
+#define DLAF_CPU_CUPPENS_DECOMP_ETI(kword, Type)                                \
+  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::CPU>& top, \
+                                    const matrix::Tile<Type, Device::CPU>& bottom)
+
+DLAF_CPU_CUPPENS_DECOMP_ETI(extern, float);
+DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+
+template <class T>
+T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                cudaStream_t stream);
+
+#define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                \
+  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top, \
+                                    const matrix::Tile<Type, Device::GPU>& bottom, cudaStream_t stream)
+
+DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
+DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomp);
+
+// ---------------------------
+
+#ifdef DLAF_WITH_GPU
 
 // Returns the maximum element in the array
 template <class T>
@@ -124,17 +163,6 @@ DLAF_CUSOLVER_SYEVC_ETI(extern, float);
 DLAF_CUSOLVER_SYEVC_ETI(extern, double);
 
 template <class T>
-T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_diag_val,
-                        cudaStream_t stream);
-
-#define DLAF_CUDA_CUPPENS_DECOMP_ETI(kword, Type)                                            \
-  kword template Type cuppensDecompOnDevice(const Type* d_offdiag_val, Type* d_top_diag_val, \
-                                            Type* d_bottom_diag_val, cudaStream_t stream)
-
-DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, float);
-DLAF_CUDA_CUPPENS_DECOMP_ETI(extern, double);
-
-template <class T>
 void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
                                     const T* d_cols, const T* evecs, T* ws, cudaStream_t stream);
 
@@ -200,6 +228,6 @@ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, float);
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(extern, double);
 
-}
-
 #endif
+
+}

@@ -15,7 +15,7 @@
 #include <pika/unwrap.hpp>
 
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
-#include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
+#include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"

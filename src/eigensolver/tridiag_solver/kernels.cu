@@ -8,7 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/misc_gpu_kernels.h"
+#include "dlaf/eigensolver/tridiag_solver/kernels.h"
+
 #include "dlaf/gpu/api.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
@@ -379,8 +380,15 @@ __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* 
 // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
 //
 template <class T>
-T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_diag_val,
-                        cudaStream_t stream) {
+T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                cudaStream_t stream) {
+  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
+  TileElementIndex top_idx{top.size().rows() - 1, 0};
+  TileElementIndex bottom_idx{0, 0};
+  const T* d_offdiag_val = top.ptr(offdiag_idx);
+  T* d_top_diag_val = top.ptr(top_idx);
+  T* d_bottom_diag_val = bottom.ptr(bottom_idx);
+
   cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
 
   // TODO: this is a peformance pessimization, the value is on device
@@ -391,8 +399,8 @@ T cuppensDecompOnDevice(const T* d_offdiag_val, T* d_top_diag_val, T* d_bottom_d
   return h_offdiag_val;
 }
 
-DLAF_CUDA_CUPPENS_DECOMP_ETI(, float);
-DLAF_CUDA_CUPPENS_DECOMP_ETI(, double);
+DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
+DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
 
 // --- Eigenvector formation kernels ---
 

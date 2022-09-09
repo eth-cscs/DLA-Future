@@ -385,10 +385,6 @@ struct DistIndexing {
     return {row, 0};
   }
 
-  LocalTileIndex wsIndexHHold() const {
-    return {ij_b.row(), 0};
-  }
-
 protected:
   matrix::Distribution dist_hh;
   SizeType b;
@@ -419,14 +415,13 @@ struct HHManagerWithIndexer {
             matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
-    const LocalTileIndex i_hh = indexing_helper.wsIndexHH();     // how to access HH, T
-    const LocalTileIndex i_ws = indexing_helper.wsIndexHHold();  // how to access V, W
+    const LocalTileIndex i_hh = indexing_helper.wsIndexHH();  // how to access HH, T
 
     auto tup =
         dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
-                                    splitTile(mat_v(i_ws), helper.specHH()),
+                                    splitTile(mat_v(i_hh), helper.specHH()),
                                     splitTile(mat_t(i_hh), helper.specT()),
-                                    splitTile(mat_w(i_ws), helper.specHH())) |
+                                    splitTile(mat_w(i_hh), helper.specHH())) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
 
@@ -710,32 +705,29 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
-  // TODO HH/T
   const SizeType nlocal_ws =
       std::max<SizeType>(1, dist_hh.localNrTiles().rows() *
                                 to_SizeType(static_cast<SizeType>(std::ceil(nb / b / 2.0f)) + 1));
-  const matrix::Distribution dist_compact({nlocal_ws * b, b}, {b, b});
+  const matrix::Distribution dist_ws_hh({nlocal_ws * b, b}, {b, b});
+  const matrix::Distribution dist_ws_v({nlocal_ws * w_tile_sz.rows(), w_tile_sz.cols()}, w_tile_sz);
 
-  // TODO V
-  // TODO W
   // TODO W2/W2tmp
-
-  const SizeType dist_w_rows = mat_e.nrTiles().rows() * w_tile_sz.rows();
-  const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
   const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()},
                                      grid.size(), grid.rank(), {0, 0});
 
   // TODO review memory usage
   constexpr std::size_t n_workspaces = 2;
-  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_compact);
-  RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_compact);
 
-  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_w);
-  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_w);
+  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_ws_hh);
+  RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_ws_hh);
+
+  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_ws_v);
+  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_ws_v);
+
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_w2);
   RoundRobin<Panel<Coord::Row, T, D>> w2tmp_panels(n_workspaces, dist_w2);
 
-  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_compact, dist_w);
+  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_ws_hh, dist_ws_v);
 
   // Note: This distributed algorithm encompass two communication categories:
   // 1. exchange of HH: broadcast + send p2p

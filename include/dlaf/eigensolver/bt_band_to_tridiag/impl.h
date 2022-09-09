@@ -931,10 +931,10 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
               dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
 
           // Compute final W2 by adding the contribution from the partner rank
-          // TODO communicate just the needed part of W2 and not the full tile
           ex::start_detached(comm::scheduleAllSumP2P<B>(mpi_col_comm, rankPARTNER, tag,
-                                                        mat_w2tmp.read_sender(idx_w2),
-                                                        mat_w2.readwrite_sender(idx_w2)));
+                                                        ex::keep_future(splitTile(mat_w2tmp.read(idx_w2),
+                                                                                  helper.specW2(nb))),
+                                                        splitTile(mat_w2(idx_w2), helper.specW2(nb))));
 
           // E -= W . W2
           ex::start_detached(

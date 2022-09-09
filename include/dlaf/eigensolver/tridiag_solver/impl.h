@@ -130,20 +130,10 @@ void offloadDiagonal(Matrix<const T, D>& mat_trd, Matrix<T, D>& evals) {
   namespace di = dlaf::internal;
 
   for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
-    auto diag_fn = [](const auto& tridiag_tile, const auto& diag_tile, [[maybe_unused]] auto&&... ts) {
-      if constexpr (D == Device::CPU) {
-        for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
-          diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
-        }
-      }
-      else {
-        copyDiagTileFromTridiagTile(tridiag_tile.size().rows(), tridiag_tile.ptr(), diag_tile.ptr(),
-                                    ts...);
-      }
-    };
     auto sender = ex::when_all(mat_trd.read_sender(GlobalTileIndex(i, 0)),
                                evals.readwrite_sender(GlobalTileIndex(i, 0)));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(diag_fn), std::move(sender));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), copyDiagonalFromCompactTridiagonal_o,
+                        std::move(sender));
   }
 }
 

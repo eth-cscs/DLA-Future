@@ -54,6 +54,38 @@ DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomp);
 
+template <class T>
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
+                                        const matrix::Tile<T, Device::CPU>& diag_tile);
+
+#define DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
+  kword template void                                                                           \
+  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::CPU>& tridiag_tile, \
+                                     const matrix::Tile<Type, Device::CPU>& diag_tile)
+
+DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
+DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+
+template <class T>
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
+                                        const matrix::Tile<T, Device::GPU>& diag_tile,
+                                        cudaStream_t stream);
+
+#define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
+  kword template void                                                                           \
+  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::GPU>& tridiag_tile, \
+                                     const matrix::Tile<Type, Device::GPU>& diag_tile,          \
+                                     cudaStream_t stream)
+
+DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
+DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(copyDiagonalFromCompactTridiagonal);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU

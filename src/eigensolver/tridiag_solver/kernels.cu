@@ -30,6 +30,62 @@
 namespace dlaf::eigensolver::internal {
 
 template <class T>
+__global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
+  const T offdiag = *offdiag_val;
+  T& top_diag = *top_diag_val;
+  T& bottom_diag = *bottom_diag_val;
+
+  if constexpr (std::is_same<T, float>::value) {
+    top_diag -= fabsf(offdiag);
+    bottom_diag -= fabsf(offdiag);
+  }
+  else {
+    top_diag -= fabs(offdiag);
+    bottom_diag -= fabs(offdiag);
+  }
+}
+
+// Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
+//
+template <class T>
+T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                cudaStream_t stream) {
+  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
+  TileElementIndex top_idx{top.size().rows() - 1, 0};
+  TileElementIndex bottom_idx{0, 0};
+  const T* d_offdiag_val = top.ptr(offdiag_idx);
+  T* d_top_diag_val = top.ptr(top_idx);
+  T* d_bottom_diag_val = bottom.ptr(bottom_idx);
+
+  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
+
+  // TODO: this is a peformance pessimization, the value is on device
+  T h_offdiag_val;
+  DLAF_GPU_CHECK_ERROR(
+      cudaMemcpyAsync(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost, stream));
+
+  return h_offdiag_val;
+}
+
+DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
+DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
+
+template <class T>
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
+                                        const matrix::Tile<T, Device::GPU>& diag_tile,
+                                        cudaStream_t stream) {
+  SizeType len = tridiag_tile.size().rows();
+  const T* tridiag_ptr = tridiag_tile.ptr();
+  T* diag_ptr = diag_tile.ptr();
+
+  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len),
+                                       cudaMemcpyDeviceToDevice, stream));
+}
+
+DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
+DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, double);
+
+template <class T>
 T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
   auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
   T max_el;
@@ -252,27 +308,6 @@ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t st
 DLAF_SET_UNIT_DIAG_ETI(, float);
 DLAF_SET_UNIT_DIAG_ETI(, double);
 
-constexpr unsigned copy_diag_tile_kernel_sz = 256;
-
-template <class T>
-__global__ void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag) {
-  const SizeType i = blockIdx.x * copy_diag_tile_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  diag[i] = tridiag[i];
-}
-
-template <class T>
-void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag, cudaStream_t stream) {
-  dim3 nr_threads(copy_diag_tile_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), copy_diag_tile_kernel_sz));
-  copyDiagTileFromTridiagTile<<<nr_blocks, nr_threads, 0, stream>>>(len, tridiag, diag);
-}
-
-DLAF_COPY_DIAG_TILE_ETI(, float);
-DLAF_COPY_DIAG_TILE_ETI(, double);
-
 constexpr unsigned tridiag_kernel_sz = 32;
 
 template <class T>
@@ -360,47 +395,6 @@ void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag
 
 DLAF_CUSOLVER_SYEVC_ETI(, float);
 DLAF_CUSOLVER_SYEVC_ETI(, double);
-
-template <class T>
-__global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
-  const T offdiag = *offdiag_val;
-  T& top_diag = *top_diag_val;
-  T& bottom_diag = *bottom_diag_val;
-
-  if constexpr (std::is_same<T, float>::value) {
-    top_diag -= fabsf(offdiag);
-    bottom_diag -= fabsf(offdiag);
-  }
-  else {
-    top_diag -= fabs(offdiag);
-    bottom_diag -= fabs(offdiag);
-  }
-}
-
-// Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-//
-template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                cudaStream_t stream) {
-  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
-  TileElementIndex top_idx{top.size().rows() - 1, 0};
-  TileElementIndex bottom_idx{0, 0};
-  const T* d_offdiag_val = top.ptr(offdiag_idx);
-  T* d_top_diag_val = top.ptr(top_idx);
-  T* d_bottom_diag_val = bottom.ptr(bottom_idx);
-
-  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
-
-  // TODO: this is a peformance pessimization, the value is on device
-  T h_offdiag_val;
-  DLAF_GPU_CHECK_ERROR(
-      cudaMemcpyAsync(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost, stream));
-
-  return h_offdiag_val;
-}
-
-DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
-DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
 
 // --- Eigenvector formation kernels ---
 

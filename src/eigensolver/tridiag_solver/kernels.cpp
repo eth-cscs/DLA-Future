@@ -29,4 +29,15 @@ T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, D
 DLAF_CPU_CUPPENS_DECOMP_ETI(, float);
 DLAF_CPU_CUPPENS_DECOMP_ETI(, double);
 
+template <class T>
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
+                                        const matrix::Tile<T, Device::CPU>& diag_tile) {
+  for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
+    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
+  }
+}
+
+DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
+DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, double);
+
 }

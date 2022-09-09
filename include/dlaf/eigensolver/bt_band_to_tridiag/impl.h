@@ -349,10 +349,10 @@ using TileSubTileIndex = common::Index2D<SizeType, TileSubTile_TAG>;
 struct DistIndexing {
   DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
                const GlobalTileIndex& ij, const GlobalSubTileIndex& ij_b)
-      : dist_hh(dist_hh), b(b), nb(dist_hh.blockSize().rows()), helper(helper), ij(ij), ij_b(ij_b) {
+      : dist_hh(dist_hh), b(b), mb(dist_hh.blockSize().rows()), helper(helper), ij(ij), ij_b(ij_b) {
     rank = dist_hh.rankIndex();
     rankHH = dist_hh.rankGlobalTile(ij);
-    n_ws_per_block = to_SizeType(static_cast<size_t>(std::ceil(nb / b / 2.0f)) + 1);
+    n_ws_per_block = to_SizeType(static_cast<size_t>(std::ceil(mb / b / 2.0f)) + 1);
   }
 
   comm::IndexT_MPI rankRowPartner() const {
@@ -370,7 +370,7 @@ struct DistIndexing {
     const SizeType row = [&]() -> SizeType {
       if (rank.row() == rankHH.row()) {
         // Note: index starts at 1 (0 is the extra workspace), moreover max half blocks will run in parallel
-        const SizeType intra_idx = 1 + (ij_b.row() % (nb / b)) / 2;
+        const SizeType intra_idx = 1 + (ij_b.row() % (mb / b)) / 2;
         DLAF_ASSERT_HEAVY(intra_idx < n_ws_per_block, intra_idx, n_ws_per_block);
         return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + intra_idx;
       }
@@ -388,7 +388,7 @@ struct DistIndexing {
 protected:
   matrix::Distribution dist_hh;
   SizeType b;
-  SizeType nb;
+  SizeType mb;
   SizeType n_ws_per_block;
 
   TileAccessHelper helper;
@@ -685,7 +685,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
     return;
 
   const SizeType b = band_size;
-  const SizeType nb = mat_hh.blockSize().rows();
+  const SizeType mb = mat_hh.blockSize().rows();
 
   const auto& dist_hh = mat_hh.distribution();
   const auto& dist_e = mat_e.distribution();
@@ -707,7 +707,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
 
   const SizeType nlocal_ws =
       std::max<SizeType>(1, dist_hh.localNrTiles().rows() *
-                                to_SizeType(static_cast<SizeType>(std::ceil(nb / b / 2.0f)) + 1));
+                                to_SizeType(static_cast<SizeType>(std::ceil(mb / b / 2.0f)) + 1));
   const matrix::Distribution dist_ws_hh({nlocal_ws * b, b}, {b, b});
   const matrix::Distribution dist_ws_v({nlocal_ws * w_tile_sz.rows(), w_tile_sz.cols()}, w_tile_sz);
 

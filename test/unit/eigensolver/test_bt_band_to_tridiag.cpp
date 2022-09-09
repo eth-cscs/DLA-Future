@@ -271,6 +271,14 @@ TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocalSubBand) {
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
+TYPED_TEST(BacktransformationT2BTestMC, CorrectnessDistributedSubBand) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+      testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
+}
+
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)

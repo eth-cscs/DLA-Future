@@ -283,6 +283,11 @@ struct TileAccessHelper {
     return input_spec_;
   }
 
+  // Return SubTileSpec to use for accessing Householder reflectors in compact form
+  matrix::SubTileSpec specHHCompactPanel() const noexcept {
+    return {{0, 0}, input_spec_.size};
+  }
+
   // Return SubTileSpec to use for accessing Householder reflectors in well formed form
   matrix::SubTileSpec specHH() const noexcept {
     return {{0, 0}, {part_top_.rows() + part_bottom_.rows(), nrefls_}};
@@ -810,8 +815,6 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       if (!indexing_helper.isInvolved())
         continue;
 
-      panel_hh.setWidth(dist_hh.tileSize(ij_g).cols());
-
       if (nrefls < b) {
         mat_t.setWidth(nrefls);
         mat_v.setWidth(nrefls);
@@ -840,7 +843,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         else {
           ex::start_detached(
               comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
-                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompact())));
+                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompactPanel())));
         }
       }
 
@@ -850,7 +853,9 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
 
         if (rank.row() == rank_src) {
-          auto tile_hh = rank.col() == rankHH.col() ? mat_hh.read(ij_g) : panel_hh.read(ij_hh_panel);
+          auto tile_hh = rank.col() == rankHH.col()
+                             ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
+                             : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompactPanel());
           ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, ex::keep_future(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
@@ -860,11 +865,12 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       }
 
       // COMPUTE V and W from HH and T
-      auto tile_hh = (rankHH == rank) ? mat_hh.read(ij_g) : panel_hh.read(indexing_helper.wsIndexHH());
+      auto tile_hh = (rankHH == rank)
+                         ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
+                         : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompactPanel());
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(indexing_helper, helper,
-                                  ex::keep_future(splitTile(std::move(tile_hh), helper.specHHCompact())),
-                                  mat_v, mat_t, mat_w);
+          helperBackend.computeVW(indexing_helper, helper, ex::keep_future(std::move(tile_hh)), mat_v,
+                                  mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e.localNrTiles().cols();

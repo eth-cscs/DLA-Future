@@ -184,17 +184,6 @@ DLAF_COPY_DIAG_TILE_ETI(extern, float);
 DLAF_COPY_DIAG_TILE_ETI(extern, double);
 
 template <class T>
-void syevdTile(cusolverDnHandle_t handle, SizeType n, T* evals, const T* offdiag, SizeType ld_evecs,
-               T* evecs);
-
-#define DLAF_CUSOLVER_SYEVC_ETI(kword, Type)                                        \
-  kword template void syevdTile(cusolverDnHandle_t handle, SizeType n, Type* evals, \
-                                const Type* offdiag, SizeType ld_evecs, Type* evecs)
-
-DLAF_CUSOLVER_SYEVC_ETI(extern, float);
-DLAF_CUSOLVER_SYEVC_ETI(extern, double);
-
-template <class T>
 void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
                                     const T* d_cols, const T* evecs, T* ws, cudaStream_t stream);
 

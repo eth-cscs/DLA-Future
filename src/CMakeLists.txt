@@ -166,6 +166,7 @@ add_library(dlaf.core
 if(DLAF_WITH_GPU)
   set(dlaf_core_gpu_source_files
     cusolver/assert_info.cu
+    cusolver/stedc.cu
     lapack/gpu/lacpy.cu
     lapack/gpu/laset.cu
   )

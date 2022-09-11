@@ -90,37 +90,16 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
 // Solve leaf eigensystem with stedc
 template <class T, Device D>
 void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    if constexpr (D == Device::CPU) {
-      start_detached(whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                                 mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
-                     tile::stedc(Policy<Backend::MC>(thread_priority::normal)));
-    }
-    else {
-#ifdef DLAF_WITH_CUDA
-      namespace ex = pika::execution::experimental;
-      namespace di = dlaf::internal;
-      using TileType = matrix::Tile<T, D>;
-
-      auto sender = ex::when_all(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                                 mat_ev.readwrite_sender(LocalTileIndex(i, i)));
-      auto solver_fn = [](cusolverDnHandle_t handle, const TileType& tridiag, const TileType& evecs) {
-        syevdTile(handle, tridiag.size().rows(), tridiag.ptr(TileElementIndex(0, 0)),
-                  tridiag.ptr(TileElementIndex(0, 1)), evecs.ld(), evecs.ptr());
-      };
-      ex::start_detached(
-          di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
-                                                           std::move(solver_fn), std::move(sender)));
-#elif defined DLAF_WITH_HIP
-      DLAF_UNIMPLEMENTED("HIP implementation is currently not available.");
-#endif
-    }
+    auto sender = ex::when_all(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                               mat_ev.readwrite_sender(LocalTileIndex(i, i)));
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
+                                                         tile::internal::stedc_o, std::move(sender)));
   }
 }
 

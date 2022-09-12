@@ -412,35 +412,6 @@ protected:
 template <Backend B, Device D, class T>
 struct HHManager;
 
-template <Backend B, Device D, class T>
-struct HHManagerWithIndexer {
-  HHManagerWithIndexer(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution)
-      : b(b) {}
-
-  template <class SenderHH>
-  std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const DistIndexing& indexing_helper, const TileAccessHelper& helper, SenderHH&& tile_hh,
-            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-            matrix::Panel<Coord::Col, T, D>& mat_w) {
-    namespace ex = pika::execution::experimental;
-
-    const LocalTileIndex i_hh = indexing_helper.wsIndexHH();  // how to access HH, T
-
-    auto tup =
-        dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
-                                    splitTile(mat_v(i_hh), helper.specHH()),
-                                    splitTile(mat_t(i_hh), helper.specT()),
-                                    splitTile(mat_w(i_hh), helper.specHH())) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
-        ex::make_future();
-
-    return pika::split_future(std::move(tup));
-  }
-
-protected:
-  const SizeType b;
-};
-
 template <class T>
 struct HHManager<Backend::MC, Device::CPU, T> {
   static constexpr Backend B = Backend::MC;
@@ -448,21 +419,17 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
-  template <class MatrixLike>
+  template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-            MatrixLike& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
+            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+            matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
-    const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
-    const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
-
     auto tup =
-        dlaf::internal::whenAllLift(b,
-                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+        dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
                                     splitTile(mat_v(ij), helper.specHH()),
-                                    splitTile(mat_t(ij_t), t_spec),
+                                    splitTile(mat_t(ij), helper.specT()),
                                     splitTile(mat_w(ij), helper.specHH())) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
@@ -484,26 +451,24 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
             matrix::Distribution dist_w)
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
-  template <class MatrixLike>
+  template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-            MatrixLike& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
+            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+            matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
     auto& mat_t_h = t_panels_h.nextResource();
 
-    const LocalTileIndex ij_t(ij.row(), 0);
-    const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
+    const LocalTileIndex ij_t = ij;
+    const matrix::SubTileSpec t_spec = helper.specT();
 
-    auto tup =
-        dlaf::internal::whenAllLift(b,
-                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
-                                    splitTile(mat_v_h(ij), helper.specHH()),
-                                    splitTile(mat_t_h(ij_t), t_spec)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
-        ex::make_future();
+    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
+                                           splitTile(mat_v_h(ij), helper.specHH()),
+                                           splitTile(mat_t_h(ij_t), t_spec)) |
+               dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
+               ex::make_future();
 
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
@@ -632,7 +597,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
-      auto [tile_v, tile_w] = helperBackend.computeVW(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
+      auto [tile_v, tile_w] =
+          helperBackend.computeVW(ij, helper,
+                                  ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+                                  mat_v, mat_t, mat_w);
 
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(ij.row(), j_e);
@@ -733,7 +701,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_ws_w2);
   RoundRobin<Panel<Coord::Row, T, D>> w2tmp_panels(n_workspaces, dist_ws_w2);
 
-  HHManagerWithIndexer<B, D, T> helperBackend(b, n_workspaces, dist_ws_hh, dist_ws_v);
+  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_ws_hh, dist_ws_v);
 
   // Note: This distributed algorithm encompass two communication categories:
   // 1. exchange of HH: broadcast + send p2p
@@ -869,8 +837,8 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
                          ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                          : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompactPanel());
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(indexing_helper, helper, ex::keep_future(std::move(tile_hh)), mat_v,
-                                  mat_t, mat_w);
+          helperBackend.computeVW(indexing_helper.wsIndexHH(), helper,
+                                  ex::keep_future(std::move(tile_hh)), mat_v, mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e.localNrTiles().cols();

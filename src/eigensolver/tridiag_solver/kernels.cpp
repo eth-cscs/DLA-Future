@@ -40,4 +40,24 @@ void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>
 DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
 DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, double);
 
+template <class T>
+void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
+                                   const matrix::Tile<const T, Device::CPU>& evecs_tile,
+                                   const matrix::Tile<T, Device::CPU>& rank1_tile) {
+  // Copy the bottom row of the top tile or the top row of the bottom tile
+  SizeType row = (is_top_tile) ? rank1_tile.size().rows() - 1 : 0;
+
+  // Negate the last row of the top eigenvector subproblem matrix (Q1) if rho < 0
+  //
+  // lapack 3.10.0, dlaed2.f, line 280 and 281
+  int sign = (is_top_tile && rho < 0) ? -1 : 1;
+
+  for (SizeType i = 0; i < evecs_tile.size().cols(); ++i) {
+    rank1_tile(TileElementIndex(i, 0)) = sign * evecs_tile(TileElementIndex(row, i)) / T(std::sqrt(2));
+  }
+}
+
+DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
+DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
+
 }

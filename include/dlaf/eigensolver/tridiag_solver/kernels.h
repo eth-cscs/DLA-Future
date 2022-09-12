@@ -86,6 +86,40 @@ DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(copyDiagonalFromCompactTridiagonal);
 
+template <class T>
+void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
+                                   const matrix::Tile<const T, Device::CPU>& evecs_tile,
+                                   const matrix::Tile<T, Device::CPU>& rank1_tile);
+
+#define DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                      \
+  kword template void                                                                    \
+  assembleRank1UpdateVectorTile(bool is_top_tile, Type rho,                              \
+                                const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
+                                const matrix::Tile<Type, Device::CPU>& rank1_tile)
+
+DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
+DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+
+template <class T>
+void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
+                                   const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                                   const matrix::Tile<T, Device::GPU>& rank1_tile, cudaStream_t stream);
+
+#define DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                      \
+  kword template void                                                                    \
+  assembleRank1UpdateVectorTile(bool is_top_tile, Type rho,                              \
+                                const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
+                                const matrix::Tile<Type, Device::GPU>& rank1_tile, cudaStream_t stream)
+
+DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
+DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(assembleRank1UpdateVectorTile);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU
@@ -142,17 +176,6 @@ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaSt
 void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream);
 
 void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream);
-
-template <class T>
-void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile, T* col,
-                                     cudaStream_t stream);
-
-#define DLAF_COPY_TILE_ROW_ETI(kword, Type)                                                     \
-  kword template void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, \
-                                                      const Type* tile, Type* col, cudaStream_t stream)
-
-DLAF_COPY_TILE_ROW_ETI(extern, float);
-DLAF_COPY_TILE_ROW_ETI(extern, double);
 
 template <class T>
 void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream);

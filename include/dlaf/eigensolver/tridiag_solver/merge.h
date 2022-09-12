@@ -33,35 +33,12 @@
 
 namespace dlaf::eigensolver::internal {
 
-inline std::ostream& operator<<(std::ostream& str, const ColType& ct) {
-  if (ct == ColType::Deflated) {
-    str << "Deflated";
-  }
-  else if (ct == ColType::Dense) {
-    str << "Dense";
-  }
-  else if (ct == ColType::UpperHalf) {
-    str << "UpperHalf";
-  }
-  else {
-    str << "LowerHalf";
-  }
-  return str;
-}
-
 template <class T>
 struct GivensRotation {
   SizeType i;  // the first column index
   SizeType j;  // the second column index
   T c;         // cosine
   T s;         // sine
-};
-
-struct ColTypeLens {
-  SizeType num_uphalf;
-  SizeType num_dense;
-  SizeType num_lowhalf;
-  SizeType num_deflated;
 };
 
 // Auxiliary matrix and vectors used for the D&C algorithm
@@ -192,7 +169,6 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& ind
 template <class T, Device D>
 void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
-  namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
@@ -206,29 +182,10 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
     GlobalTileIndex z_idx(i, 0);
 
     // Copy the row into the column vector `z`
-    auto copy_fn = [top_tile](const auto& rho, const auto& tile, const auto& col,
-                              [[maybe_unused]] auto&&... ts) {
-      // Copy the bottom row of the top tile or the top row of the bottom tile
-      SizeType row = (top_tile) ? col.size().rows() - 1 : 0;
-
-      // Negate Q1's last row if rho < 0
-      //
-      // lapack 3.10.0, dlaed2.f, line 280 and 281
-      int sign = (top_tile && rho < 0) ? -1 : 1;
-
-      if constexpr (D == Device::CPU) {
-        for (SizeType i = 0; i < tile.size().cols(); ++i) {
-          col(TileElementIndex(i, 0)) = sign * tile(TileElementIndex(row, i)) / T(std::sqrt(2));
-        }
-      }
-      else {
-        copyTileRowAndNormalizeOnDevice(sign, tile.size().cols(), tile.ld(),
-                                        tile.ptr(TileElementIndex(row, 0)), col.ptr(), ts...);
-      }
-    };
-
-    auto sender = ex::when_all(rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(copy_fn), std::move(sender));
+    auto sender =
+        di::whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), assembleRank1UpdateVectorTile_o,
+                        std::move(sender));
   }
 }
 

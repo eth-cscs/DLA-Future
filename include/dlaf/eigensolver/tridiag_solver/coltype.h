@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <iostream>
+
 namespace dlaf::eigensolver::internal {
 
 // The type of a column in the Q matrix
@@ -18,5 +20,21 @@ enum class ColType {
   Dense,      // full column vector
   Deflated    // deflated vectors
 };
+
+inline std::ostream& operator<<(std::ostream& str, const ColType& ct) {
+  if (ct == ColType::Deflated) {
+    str << "Deflated";
+  }
+  else if (ct == ColType::Dense) {
+    str << "Dense";
+  }
+  else if (ct == ColType::UpperHalf) {
+    str << "UpperHalf";
+  }
+  else {
+    str << "LowerHalf";
+  }
+  return str;
+}
 
 }

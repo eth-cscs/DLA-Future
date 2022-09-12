@@ -97,6 +97,48 @@ T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
 DLAF_CUDA_MAX_ELEMENT_ETI(, float);
 DLAF_CUDA_MAX_ELEMENT_ETI(, double);
 
+constexpr unsigned assemble_rank1_kernel_sz = 256;
+
+template <class T>
+__global__ void assembleRank1UpdateVectorTile(int sign, SizeType len, SizeType tile_ld, const T* tile,
+                                              T* col) {
+  const SizeType i = blockIdx.x * assemble_rank1_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  if constexpr (std::is_same<T, float>::value) {
+    col[i] = sign * tile[i * tile_ld] / sqrtf(T(2));
+  }
+  else {
+    col[i] = sign * tile[i * tile_ld] / sqrt(T(2));
+  }
+}
+
+template <class T>
+void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
+                                   const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                                   const matrix::Tile<T, Device::GPU>& rank1_tile, cudaStream_t stream) {
+  // Copy the bottom row of the top tile or the top row of the bottom tile
+  SizeType row = (is_top_tile) ? rank1_tile.size().rows() - 1 : 0;
+
+  // Negate Q1's last row if rho < 0
+  //
+  // lapack 3.10.0, dlaed2.f, line 280 and 281
+  int sign = (is_top_tile && rho < 0) ? -1 : 1;
+
+  SizeType len = evecs_tile.size().cols();
+  SizeType tile_ld = evecs_tile.ld();
+  const T* tile = evecs_tile.ptr(TileElementIndex(row, 0));
+  T* col = rank1_tile.ptr();
+
+  dim3 nr_threads(assemble_rank1_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), assemble_rank1_kernel_sz));
+  assembleRank1UpdateVectorTile<<<nr_blocks, nr_threads, 0, stream>>>(sign, len, tile_ld, tile, col);
+}
+
+DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
+DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -236,34 +278,6 @@ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stre
   setColTypeTile<<<nr_blocks, nr_threads, 0, stream>>>(ct, len, ct_arr);
 }
 
-constexpr unsigned copy_tile_row_kernel_sz = 256;
-
-template <class T>
-__global__ void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile,
-                                                T* col) {
-  const SizeType i = blockIdx.x * copy_tile_row_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  if constexpr (std::is_same<T, float>::value) {
-    col[i] = sign * tile[i * tile_ld] / sqrtf(T(2));
-  }
-  else {
-    col[i] = sign * tile[i * tile_ld] / sqrt(T(2));
-  }
-}
-
-template <class T>
-void copyTileRowAndNormalizeOnDevice(int sign, SizeType len, SizeType tile_ld, const T* tile, T* col,
-                                     cudaStream_t stream) {
-  dim3 nr_threads(copy_tile_row_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), copy_tile_row_kernel_sz));
-  copyTileRowAndNormalizeOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(sign, len, tile_ld, tile, col);
-}
-
-DLAF_COPY_TILE_ROW_ETI(, float);
-DLAF_COPY_TILE_ROW_ETI(, double);
-
 constexpr unsigned givens_rot_kernel_sz = 256;
 
 template <class T>
@@ -398,7 +412,7 @@ constexpr unsigned mult_cols_kernel_sz = 256;
 
 template <class T>
 __global__ void multiplyColumns(SizeType len, const T* in, T* out) {
-  const SizeType i = blockIdx.x * copy_tile_row_kernel_sz + threadIdx.x;
+  const SizeType i = blockIdx.x * mult_cols_kernel_sz + threadIdx.x;
   if (i >= len)
     return;
 

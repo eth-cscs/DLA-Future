@@ -120,19 +120,34 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(assembleRank1UpdateVectorTile);
 
-// ---------------------------
+template <class T>
+T maxElementInColumnTile(const matrix::Tile<const T, Device::CPU>& tile);
+
+#define DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type) \
+  kword template Type maxElementInColumnTile(const matrix::Tile<const Type, Device::CPU>& tile)
+
+DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
+DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 
-// Returns the maximum element in the array
 template <class T>
-T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream);
+T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStream_t stream);
 
-#define DLAF_CUDA_MAX_ELEMENT_ETI(kword, Type) \
-  kword template Type maxElementOnDevice(SizeType len, const Type* arr, cudaStream_t stream)
+#define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                    \
+  kword template Type maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
+                                             cudaStream_t stream)
 
-DLAF_CUDA_MAX_ELEMENT_ETI(extern, float);
-DLAF_CUDA_MAX_ELEMENT_ETI(extern, double);
+DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
+DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(maxElementInColumnTile);
+
+// ---------------------------
+
+#ifdef DLAF_WITH_GPU
 
 // Returns the number of non-deflated entries
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,

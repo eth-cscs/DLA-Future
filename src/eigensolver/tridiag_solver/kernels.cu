@@ -85,18 +85,6 @@ void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, double);
 
-template <class T>
-T maxElementOnDevice(SizeType len, const T* arr, cudaStream_t stream) {
-  auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
-  T max_el;
-  // TODO: this is a peformance pessimization, the value is on device
-  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost, stream));
-  return max_el;
-}
-
-DLAF_CUDA_MAX_ELEMENT_ETI(, float);
-DLAF_CUDA_MAX_ELEMENT_ETI(, double);
-
 constexpr unsigned assemble_rank1_kernel_sz = 256;
 
 template <class T>
@@ -138,6 +126,21 @@ void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
 
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
+
+template <class T>
+T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStream_t stream) {
+  SizeType len = tile.size().rows();
+  const T* arr = tile.ptr();
+
+  auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
+  T max_el;
+  // TODO: this is a peformance pessimization, the value is on device
+  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost, stream));
+  return max_el;
+}
+
+DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
+DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,

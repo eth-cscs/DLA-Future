@@ -211,15 +211,7 @@ auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, D>& vec)
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    auto max_fn = [](auto const& tile, [[maybe_unused]] auto&&... ts) {
-      if constexpr (D == Device::CPU) {
-        return tile::internal::lange(lapack::Norm::Max, tile);
-      }
-      else {
-        return maxElementOnDevice(tile.size().rows(), tile.ptr(), ts...);
-      }
-    };
-    tiles_max.push_back(di::transform(di::Policy<DefaultBackend<D>::value>(), std::move(max_fn),
+    tiles_max.push_back(di::transform(di::Policy<DefaultBackend<D>::value>(), maxElementInColumnTile_o,
                                       vec.read_sender(LocalTileIndex(i, 0))));
   }
 

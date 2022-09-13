@@ -160,7 +160,8 @@ function(DLAF_addTest test_target_name)
   if(IS_AN_PIKA_TEST)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
 
-    if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
+    # --pika:bind=none is useful just in case more ranks are going to be allocated on the same node.
+    if(IS_AN_MPI_TEST AND (DLAF_AT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
       _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST "--pika:bind" "--pika:bind=none")
     endif()
 

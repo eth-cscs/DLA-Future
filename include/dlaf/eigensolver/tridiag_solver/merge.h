@@ -446,26 +446,13 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
 }
 
 template <Device D>
-inline void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end,
-                         Matrix<ColType, D>& coltypes) {
+void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end, Matrix<ColType, D>& coltypes) {
   namespace di = dlaf::internal;
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-
-    auto set_fn = [val](const auto& ct_tile, [[maybe_unused]] auto&&... ts) {
-      if constexpr (D == Device::CPU) {
-        for (SizeType i = 0; i < ct_tile.size().rows(); ++i) {
-          ct_tile(TileElementIndex(i, 0)) = val;
-        }
-      }
-      else {
-        setColTypeTile(val, ct_tile.size().rows(), ct_tile.ptr(), ts...);
-      }
-    };
-
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(set_fn),
-                        coltypes.readwrite_sender(LocalTileIndex(i, 0)));
+    auto sender = di::whenAllLift(val, coltypes.readwrite_sender(LocalTileIndex(i, 0)));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), setColTypeTile_o, std::move(sender));
   }
 }
 

@@ -69,4 +69,10 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::CPU>& tile) {
 DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
+void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
+  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+    tile(TileElementIndex(i, 0)) = ct;
+  }
+}
+
 }

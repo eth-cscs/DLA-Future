@@ -142,6 +142,12 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStr
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
+void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile, cudaStream_t stream) {
+  std::size_t len = to_sizet(tile.size().rows()) * sizeof(ColType);
+  ColType* arr = tile.ptr();
+  DLAF_GPU_CHECK_ERROR(cudaMemsetAsync(arr, static_cast<int>(ct), len, stream));
+}
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -265,21 +271,7 @@ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStrea
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
-constexpr unsigned coltype_kernel_sz = 256;
 
-__global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
-  const SizeType i = blockIdx.x * coltype_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  ct_arr[i] = ct;
-}
-
-void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream) {
-  dim3 nr_threads(coltype_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), coltype_kernel_sz));
-  setColTypeTile<<<nr_blocks, nr_threads, 0, stream>>>(ct, len, ct_arr);
-}
 
 constexpr unsigned givens_rot_kernel_sz = 256;
 

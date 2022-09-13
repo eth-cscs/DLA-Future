@@ -33,8 +33,8 @@ namespace dlaf::permutations {
 ///        the closed range [i_begin,i_end] are accessed in write-only mode.
 ///
 template <Backend B, Device D, class T, Coord coord>
-void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& perms,
-             Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+             Matrix<T, D>& mat_out) {
   const matrix::Distribution& distr_perms = perms.distribution();
   const matrix::Distribution& distr_in = mat_in.distribution();
   const matrix::Distribution& distr_out = mat_out.distribution();

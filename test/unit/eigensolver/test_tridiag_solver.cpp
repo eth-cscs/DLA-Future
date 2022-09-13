@@ -9,23 +9,25 @@
 //
 
 #include "dlaf/eigensolver/tridiag_solver.h"
+#include "dlaf/matrix/matrix_mirror.h"
 
 #include "gtest/gtest.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-template <typename Type>
-class TridiagEigensolverTest : public ::testing::Test {};
-
-template <typename Type>
-class CuppensTest : public ::testing::Test {};
-
 using namespace dlaf;
 using namespace dlaf::test;
 
-TYPED_TEST_SUITE(CuppensTest, RealMatrixElementTypes);
-TYPED_TEST_SUITE(TridiagEigensolverTest, MatrixElementTypes);
+template <typename Type>
+class TridiagEigensolverTestCPU : public ::testing::Test {};
+TYPED_TEST_SUITE(TridiagEigensolverTestCPU, MatrixElementTypes);
+
+#ifdef DLAF_WITH_GPU
+template <typename Type>
+class TridiagEigensolverTestGPU : public ::testing::Test {};
+TYPED_TEST_SUITE(TridiagEigensolverTestGPU, MatrixElementTypes);
+#endif
 
 TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   SizeType n = 10;
@@ -39,33 +41,6 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   ASSERT_TRUE(actual_indices == expected_indices);
 }
 
-TYPED_TEST(CuppensTest, CuppensDecomposition) {
-  using matrix::test::createTile;
-
-  SizeType sz = 10;
-  auto laplace1d_fn = [](const TileElementIndex& idx) {
-    if (idx.col() == 0)
-      return TypeParam(2);
-    else
-      return TypeParam(-1);
-  };
-
-  TileElementSize tile_size(sz, 2);
-  auto top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  auto bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-
-  eigensolver::internal::cuppensTileDecomposition(top, bottom);
-
-  auto expected_top = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  auto expected_bottom = createTile<TypeParam, Device::CPU>(laplace1d_fn, tile_size, sz);
-  expected_top(TileElementIndex(sz - 1, 0)) = TypeParam(1);
-  expected_bottom(TileElementIndex(0, 0)) = TypeParam(1);
-
-  CHECK_TILE_NEAR(expected_top, top, TypeUtilities<TypeParam>::error, TypeUtilities<TypeParam>::error);
-  CHECK_TILE_NEAR(expected_bottom, bottom, TypeUtilities<TypeParam>::error,
-                  TypeUtilities<TypeParam>::error);
-}
-
 // import numpy as np
 // from scipy.sparse import diags
 // from scipy.linalg import eigh
@@ -76,7 +51,7 @@ TYPED_TEST(CuppensTest, CuppensDecomposition) {
 // trd = diags([e,d,e], [-1, 0, 1]).toarray()
 // evals, evecs = eigh(trd)
 //
-template <class T>
+template <Backend B, Device D, class T>
 void solveLaplace1D(SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
   constexpr RealParam complex_error = TypeUtilities<T>::error;
@@ -97,8 +72,13 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   };
   matrix::util::set(tridiag, std::move(mat_trd_fn));
 
-  eigensolver::tridiagSolver<Backend::MC>(tridiag, evals, evecs);
+  {
+    matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
+    matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
+    matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
+    eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+  }
   if (n == 0)
     return;
 
@@ -144,7 +124,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, complex_error * n, complex_error * n);
 }
 
-template <class T>
+template <Backend B, Device D, class T>
 void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
 
@@ -175,11 +155,18 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
       return offdiag_arr[to_sizet(i.row())];
     }
   });
+  tridiag.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
-  // Find eigenvalues and eigenvectors of the tridiagonal matrix.
-  //
-  // Note: this modifies `tridiag`
-  eigensolver::tridiagSolver<Backend::MC>(tridiag, evals, evecs);
+  {
+    matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
+    matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
+    matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
+
+    // Find eigenvalues and eigenvectors of the tridiagonal matrix.
+    //
+    // Note: this modifies `tridiag`
+    eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+  }
 
   if (n == 0)
     return;
@@ -208,6 +195,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
       return T(0);
     }
   });
+  tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
   // Compute A * E
   const matrix::Distribution& dist = evecs.distribution();
@@ -241,18 +229,41 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   }
 }
 
+// clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-    {0, 8}, {16, 8}, {16, 4}, {16, 5}, {100, 10}, {93, 7}};
+    {0, 8},
+    {16, 16},
+    {16, 8},
+    {16, 4},
+    {16, 5},
+    {100, 10},
+    {93, 7},
+};
+// clang-format on
 
-TYPED_TEST(TridiagEigensolverTest, Laplace1D) {
+TYPED_TEST(TridiagEigensolverTestCPU, Laplace1D) {
   for (auto [n, nb] : tested_problems) {
-    solveLaplace1D<TypeParam>(n, nb);
+    solveLaplace1D<Backend::MC, Device::CPU, TypeParam>(n, nb);
   }
 }
 
-TYPED_TEST(TridiagEigensolverTest, Random) {
+TYPED_TEST(TridiagEigensolverTestCPU, Random) {
   for (auto [n, nb] : tested_problems) {
-    solveRandomTridiagMatrix<TypeParam>(n, nb);
+    solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(n, nb);
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(TridiagEigensolverTestGPU, Laplace1D) {
+  for (auto [n, nb] : tested_problems) {
+    solveLaplace1D<Backend::GPU, Device::GPU, TypeParam>(n, nb);
+  }
+}
+
+TYPED_TEST(TridiagEigensolverTestGPU, Random) {
+  for (auto [n, nb] : tested_problems) {
+    solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(n, nb);
+  }
+}
+#endif

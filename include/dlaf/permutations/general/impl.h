@@ -11,6 +11,7 @@
 #pragma once
 
 #include "dlaf/permutations/general/api.h"
+#include "dlaf/permutations/general/perms.h"
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -79,50 +80,48 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
                        const std::vector<matrix::Tile<T, D>>& in_tiles,
                        const std::vector<matrix::Tile<T, D>>& out_tiles,
                        [[maybe_unused]] Args&&... args) {
-  constexpr Coord orth_coord = orthogonal(coord);
-  std::vector<SizeType> splits =
-      util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
-                             distr.distanceToAdjacentTile<orth_coord>(in_offset),
-                             distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
+  if constexpr (D == Device::CPU) {
+    constexpr Coord orth_coord = orthogonal(coord);
+    std::vector<SizeType> splits =
+        util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
+                               distr.distanceToAdjacentTile<orth_coord>(in_offset),
+                               distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
-  // Parallelized over the number of permuted columns or rows
-  pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
-    for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-      SizeType split = splits[i_split];
+    // Parallelized over the number of permuted columns or rows
+    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
+      for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
+        SizeType split = splits[i_split];
 
-      GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
-                                        out_begin.get<coord>() + i_perm);
-      TileElementSize region(splits[i_split + 1] - split, 1);
-      if constexpr (coord == Coord::Row) {
-        region.transpose();
-        i_split_gl_in.transpose();
-        i_split_gl_out.transpose();
-      }
+        GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
+        GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
+                                          out_begin.get<coord>() + i_perm);
+        TileElementSize region(splits[i_split + 1] - split, 1);
+        if constexpr (coord == Coord::Row) {
+          region.transpose();
+          i_split_gl_in.transpose();
+          i_split_gl_out.transpose();
+        }
 
-      TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
-      auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))];
-      TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
-      auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
+        TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
+        auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))];
+        TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
+        auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
-      if constexpr (D == Device::CPU) {
         dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
       }
-      else if constexpr (D == Device::GPU) {
-#if defined(DLAF_WITH_CUDA)
-        dlaf::gpulapack::lacpy<T>(blas::Uplo::General, region.rows(), region.cols(),
-                                  tile_in.ptr(i_subtile_in), tile_in.ld(), tile_out.ptr(i_subtile_out),
-                                  tile_out.ld(), args...);
+    });
+  }
+  else if constexpr (D == Device::GPU) {
+#if defined(DLAF_WITH_GPU)
+    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles, out_tiles,
+                                        args...);
 #endif
-      }
-    }
-  });
+  }
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end,
-                                    Matrix<const SizeType, Device::CPU>& perms, Matrix<T, D>& mat_in,
-                                    Matrix<T, D>& mat_out) {
+void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 

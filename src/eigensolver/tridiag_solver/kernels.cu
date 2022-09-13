@@ -142,10 +142,31 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStr
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
-void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile, cudaStream_t stream) {
+void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile,
+                    cudaStream_t stream) {
   std::size_t len = to_sizet(tile.size().rows()) * sizeof(ColType);
   ColType* arr = tile.ptr();
   DLAF_GPU_CHECK_ERROR(cudaMemsetAsync(arr, static_cast<int>(ct), len, stream));
+}
+
+constexpr unsigned init_index_tile_kernel_sz = 256;
+
+__global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr) {
+  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  index_arr[i] = i + offset;
+}
+
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& tile,
+                   cudaStream_t stream) {
+  SizeType len = tile.size().rows();
+  SizeType* index_arr = tile.ptr();
+
+  dim3 nr_threads(init_index_tile_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
+  initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
 // Note: that this blocks the thread until the kernels complete
@@ -254,24 +275,6 @@ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaSt
   dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
 }
-
-constexpr unsigned init_index_tile_kernel_sz = 256;
-
-__global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr) {
-  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  index_arr[i] = i + offset;
-}
-
-void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream) {
-  dim3 nr_threads(init_index_tile_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
-  initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
-}
-
-
 
 constexpr unsigned givens_rot_kernel_sz = 256;
 

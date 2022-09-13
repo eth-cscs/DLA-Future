@@ -75,4 +75,10 @@ void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>&
   }
 }
 
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile) {
+  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+    tile(TileElementIndex(i, 0)) = offset + i;
+  }
+}
+
 }

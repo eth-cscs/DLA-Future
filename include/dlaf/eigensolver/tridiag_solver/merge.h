@@ -139,26 +139,13 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
 template <Device D>
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& index) {
   namespace di = dlaf::internal;
-
   SizeType nb = index.distribution().blockSize().rows();
 
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
     SizeType tile_row = (i - i_begin) * nb;
-
-    auto init_fn = [tile_row](const auto& index_tile, [[maybe_unused]] auto&&... ts) {
-      if constexpr (D == Device::CPU) {
-        for (SizeType i = 0; i < index_tile.size().rows(); ++i) {
-          index_tile(TileElementIndex(i, 0)) = tile_row + i;
-        }
-      }
-      else {
-        initIndexTile(tile_row, index_tile.size().rows(), index_tile.ptr(), ts...);
-      }
-    };
-
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(init_fn),
-                        index.readwrite_sender(tile_idx));
+    auto sender = di::whenAllLift(tile_row, index.readwrite_sender(tile_idx));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), initIndexTile_o, std::move(sender));
   }
 }
 

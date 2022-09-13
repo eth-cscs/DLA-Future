@@ -154,6 +154,15 @@ void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>&
 
 DLAF_MAKE_CALLABLE_OBJECT(setColTypeTile);
 
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile);
+
+#ifdef DLAF_WITH_GPU
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& tile,
+                   cudaStream_t stream);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU
@@ -196,8 +205,6 @@ DLAF_CUDA_CAST_TO_COMPLEX(extern, float);
 DLAF_CUDA_CAST_TO_COMPLEX(extern, double);
 
 void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream);
-
-void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream);
 
 template <class T>
 void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream);

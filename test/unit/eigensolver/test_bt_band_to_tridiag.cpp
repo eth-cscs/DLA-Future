@@ -37,18 +37,18 @@ using namespace dlaf::matrix::test;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <typename Type>
-class BacktransformationT2BTest : public TestWithCommGrids {};
+class BacktransformationBandToTridiagTest : public TestWithCommGrids {};
 
 template <class T>
-using BacktransformationT2BTestMC = BacktransformationT2BTest<T>;
+using BacktransformationBandToTridiagTestMC = BacktransformationBandToTridiagTest<T>;
 
-TYPED_TEST_SUITE(BacktransformationT2BTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(BacktransformationBandToTridiagTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-using BacktransformationT2BTestGPU = BacktransformationT2BTest<T>;
+using BacktransformationBandToTridiagTestGPU = BacktransformationBandToTridiagTest<T>;
 
-TYPED_TEST_SUITE(BacktransformationT2BTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(BacktransformationBandToTridiagTestGPU, MatrixElementTypes);
 #endif
 
 // Note: Helper functions for computing the tau of a given reflector. Reflector pointer should
@@ -242,12 +242,12 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
   CHECK_MATRIX_NEAR(result, mat_e_h, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocal) {
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessDistributed) {
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs) {
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
@@ -256,7 +256,7 @@ TYPED_TEST(BacktransformationT2BTestMC, CorrectnessDistributed) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocal) {
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
 }
@@ -266,12 +266,12 @@ std::vector<config_t> configs_subband{
     {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
 };
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocalSubBand) {
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessDistributedSubBand) {
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs_subband) {
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
@@ -280,7 +280,7 @@ TYPED_TEST(BacktransformationT2BTestMC, CorrectnessDistributedSubBand) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocalSubBand) {
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
 }

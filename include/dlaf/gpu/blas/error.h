@@ -43,4 +43,22 @@ inline void checkError(gpublasStatus_t st,
 
 #endif
 
+#ifdef DLAF_WITH_HIP
+inline rocblas_status acceptWorkspaceStatus(rocblas_status error) {
+  switch (error) {
+    case rocblas_status_continue:
+    case rocblas_status_size_unchanged:
+    case rocblas_status_size_increased:
+    case rocblas_status_success:
+      return rocblas_status_success;
+    default:
+      return error;
+  }
+}
+
+#define DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(gpublas_err) \
+  ::dlaf::gpublas::internal::checkError(acceptWorkspaceStatus(gpublas_err), SOURCE_LOCATION())
+
+#endif
+
 }

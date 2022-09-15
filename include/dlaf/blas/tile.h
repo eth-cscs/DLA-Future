@@ -36,7 +36,7 @@
     std::size_t workspace_size;                                                                       \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
-    DLAF_GPUBLAS_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));                       \
+    DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));             \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
     return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \

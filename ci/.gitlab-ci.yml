@@ -19,7 +19,7 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 5c3e4f4a9215fc1bce0d76f8d4e64c0bb5d8391d
+    SPACK_SHA: eaf3f7c17c477aad586cfe94247e1f8201863149
     SPACK_DLAF_REPO: ./spack
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY

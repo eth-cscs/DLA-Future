@@ -84,7 +84,6 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   struct Name
 
 #ifdef DLAF_WITH_HIP
-    // rocblas functions needs to be lowercase
 #define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
   DLAF_DECLARE_GPUBLAS_OP(Name);                           \
   DLAF_DEFINE_GPUBLAS_OP(Name, float, s##f);               \

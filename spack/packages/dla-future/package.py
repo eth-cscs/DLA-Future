@@ -100,7 +100,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-            args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))

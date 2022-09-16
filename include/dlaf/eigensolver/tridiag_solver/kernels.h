@@ -204,6 +204,37 @@ DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(divideEvecsByDiagonal);
 
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out);
+
+#define DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                                \
+  kword template void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                           const matrix::Tile<const Type, Device::CPU>& in,             \
+                                           const matrix::Tile<Type, Device::CPU>& out)
+
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, float);
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& in,
+                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream);
+
+#define DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                                \
+  kword template void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                           const matrix::Tile<const Type, Device::GPU>& in,             \
+                                           const matrix::Tile<Type, Device::GPU>& out,                  \
+                                           cudaStream_t stream)
+
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, float);
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(multiplyFirstColumns);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU

@@ -268,6 +268,37 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
 DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
 DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
 
+constexpr unsigned mult_cols_kernel_sz = 256;
+
+template <class T>
+__global__ void multiplyColumns(SizeType len, const T* in, T* out) {
+  const SizeType i = blockIdx.x * mult_cols_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  out[i] *= in[i];
+}
+
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& in,
+                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, in.size().rows());
+
+  const T* in_ptr = in.ptr();
+  T* out_ptr = out.ptr();
+
+  dim3 nr_threads(mult_cols_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(nrows), mult_cols_kernel_sz));
+  multiplyColumns<<<nr_blocks, nr_threads, 0, stream>>>(nrows, in_ptr, out_ptr);
+}
+
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(, float);
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -421,27 +452,6 @@ DLAF_SET_UNIT_DIAG_ETI(, double);
 
 // --- Eigenvector formation kernels ---
 
-constexpr unsigned mult_cols_kernel_sz = 256;
-
-template <class T>
-__global__ void multiplyColumns(SizeType len, const T* in, T* out) {
-  const SizeType i = blockIdx.x * mult_cols_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  out[i] *= in[i];
-}
-
-template <class T>
-void multiplyColumns(SizeType len, const T* in, T* out, cudaStream_t stream) {
-  dim3 nr_threads(mult_cols_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), mult_cols_kernel_sz));
-  multiplyColumns<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
-}
-
-DLAF_CUDA_MULTIPLY_COLS_ETI(, float);
-DLAF_CUDA_MULTIPLY_COLS_ETI(, double);
-
 constexpr unsigned weight_vec_kernel_sz = 32;
 
 template <class T>
@@ -587,5 +597,4 @@ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T
 
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, float);
 DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, double);
-
 }

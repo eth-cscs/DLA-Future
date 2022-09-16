@@ -678,29 +678,11 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin + 1; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto acc_col_ws_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                                  const TileType& ws_tile_col,
-                                                  [[maybe_unused]] auto&&... ts) {
-        if (i_subm_el >= k || j_subm_el >= k)
-          return;
+      auto sender =
+          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                          ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
 
-        SizeType nrows = std::min(k - i_subm_el, ws_tile.size().rows());
-
-        if constexpr (D == Device::CPU) {
-          for (SizeType i = 0; i < nrows; ++i) {
-            TileElementIndex idx(i, 0);
-            ws_tile_col(idx) = ws_tile_col(idx) * ws_tile(idx);
-          }
-        }
-        else {
-          multiplyColumns(nrows, ws_tile.ptr(), ws_tile_col.ptr(), ts...);
-        }
-      };
-
-      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                                 ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
-
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(acc_col_ws_fn),
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), multiplyFirstColumns_o,
                           std::move(sender));
     }
   }

@@ -110,4 +110,22 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
 DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
 DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
 
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, in.size().rows());
+
+  for (SizeType i = 0; i < nrows; ++i) {
+    TileElementIndex idx(i, 0);
+    out(idx) = out(idx) * in(idx);
+  }
+}
+
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, float);
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, double);
+
 }

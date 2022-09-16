@@ -163,6 +163,47 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& t
 
 DLAF_MAKE_CALLABLE_OBJECT(initIndexTile);
 
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::CPU>& diag_rows,
+                           const matrix::Tile<const T, Device::CPU>& diag_cols,
+                           const matrix::Tile<const T, Device::CPU>& evecs_tile,
+                           const matrix::Tile<T, Device::CPU>& ws_tile);
+
+#define DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(kword, Type)                                           \
+  kword template void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el,            \
+                                            const SizeType& j_subm_el,                               \
+                                            const matrix::Tile<const Type, Device::CPU>& diag_rows,  \
+                                            const matrix::Tile<const Type, Device::CPU>& diag_cols,  \
+                                            const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
+                                            const matrix::Tile<Type, Device::CPU>& ws_tile)
+
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, float);
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::GPU>& diag_rows,
+                           const matrix::Tile<const T, Device::GPU>& diag_cols,
+                           const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                           const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+
+#define DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(kword, Type)                                           \
+  kword template void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el,            \
+                                            const SizeType& j_subm_el,                               \
+                                            const matrix::Tile<const Type, Device::GPU>& diag_rows,  \
+                                            const matrix::Tile<const Type, Device::GPU>& diag_cols,  \
+                                            const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
+                                            const matrix::Tile<Type, Device::GPU>& ws_tile,          \
+                                            cudaStream_t stream)
+
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, float);
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(divideEvecsByDiagonal);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU
@@ -234,18 +275,6 @@ void copyDiagTileFromTridiagTile(SizeType len, const T* tridiag, T* diag, cudaSt
 
 DLAF_COPY_DIAG_TILE_ETI(extern, float);
 DLAF_COPY_DIAG_TILE_ETI(extern, double);
-
-template <class T>
-void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
-                                    const T* d_cols, const T* evecs, T* ws, cudaStream_t stream);
-
-#define DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(kword, Type)                                         \
-  kword template void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, \
-                                                     const Type* d_rows, const Type* d_cols,      \
-                                                     const Type* evecs, Type* ws, cudaStream_t stream)
-
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(extern, float);
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(extern, double);
 
 template <class T>
 void multiplyColumns(SizeType len, const T* in, T* out, cudaStream_t stream);

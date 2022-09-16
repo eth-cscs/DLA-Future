@@ -81,4 +81,33 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& t
   }
 }
 
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::CPU>& diag_rows,
+                           const matrix::Tile<const T, Device::CPU>& diag_cols,
+                           const matrix::Tile<const T, Device::CPU>& evecs_tile,
+                           const matrix::Tile<T, Device::CPU>& ws_tile) {
+  if (i_subm_el >= k || j_subm_el >= k)
+    return;
+
+  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T di = diag_rows(TileElementIndex(i, 0));
+      T dj = diag_cols(TileElementIndex(j, 0));
+      T evec_el = evecs_tile(TileElementIndex(i, j));
+      T& ws_el = ws_tile(TileElementIndex(i, 0));
+
+      // Exact comparison is OK because di and dj come from the same vector
+      T weight = (di == dj) ? evec_el : evec_el / (di - dj);
+      ws_el = (j == 0) ? weight : weight * ws_el;
+    }
+  }
+}
+
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
+
 }

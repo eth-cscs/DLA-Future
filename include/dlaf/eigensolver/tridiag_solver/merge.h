@@ -662,42 +662,13 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto mul_rows = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& diag_rows,
-                                             const ConstTileType& diag_cols,
-                                             const ConstTileType& evecs_tile, const TileType& ws_tile,
-                                             [[maybe_unused]] auto&&... ts) {
-        if (i_subm_el >= k || j_subm_el >= k)
-          return;
+      auto sender =
+          di::whenAllLift(k_fut, i_subm_el, j_subm_el, diag.read_sender(GlobalTileIndex(i_tile, 0)),
+                          diag.read_sender(GlobalTileIndex(j_tile, 0)),
+                          evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                          ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
 
-        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
-        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
-
-        if constexpr (D == Device::CPU) {
-          for (SizeType j = 0; j < ncols; ++j) {
-            for (SizeType i = 0; i < nrows; ++i) {
-              T di = diag_rows(TileElementIndex(i, 0));
-              T dj = diag_cols(TileElementIndex(j, 0));
-              T evec_el = evecs_tile(TileElementIndex(i, j));
-              T& ws_el = ws_tile(TileElementIndex(i, 0));
-
-              // Exact comparison is OK because di and dj come from the same vector
-              T weight = (di == dj) ? evec_el : evec_el / (di - dj);
-              ws_el = (j == 0) ? weight : weight * ws_el;
-            }
-          }
-        }
-        else {
-          updateEigenvectorsWithDiagonal(nrows, ncols, evecs_tile.ld(), diag_rows.ptr(), diag_cols.ptr(),
-                                         evecs_tile.ptr(), ws_tile.ptr(), ts...);
-        }
-      };
-
-      auto sender = ex::when_all(k_fut, diag.read_sender(GlobalTileIndex(i_tile, 0)),
-                                 diag.read_sender(GlobalTileIndex(j_tile, 0)),
-                                 evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                                 ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(mul_rows),
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideEvecsByDiagonal_o,
                           std::move(sender));
     }
   }

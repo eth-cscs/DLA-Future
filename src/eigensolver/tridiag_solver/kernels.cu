@@ -169,6 +169,105 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& t
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
+constexpr unsigned evecs_diag_kernel_sz = 32;
+
+template <class T>
+__global__ void scaleByDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
+                                const T* d_cols, const T* evecs, T* ws) {
+  const SizeType i = blockIdx.x * evecs_diag_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * evecs_diag_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  const SizeType idx = i + j * ld;
+  const T di = d_rows[i];
+  const T dj = d_cols[j];
+
+  ws[idx] = (di == dj) ? evecs[idx] : evecs[idx] / (di - dj);
+}
+
+struct StrideOp {
+  SizeType ld;
+  SizeType offset;
+
+  __host__ __device__ __forceinline__ SizeType operator()(const SizeType i) const {
+    return offset + i * ld;
+  }
+};
+
+template <class T>
+struct Row2ColMajor {
+  SizeType ld;
+  SizeType ncols;
+  T* data;
+
+  __host__ __device__ __forceinline__ T operator()(const SizeType idx) const {
+    SizeType i = idx / ncols;
+    SizeType j = idx - i * ncols;
+    return data[i + j * ld];
+  }
+};
+
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::GPU>& diag_rows,
+                           const matrix::Tile<const T, Device::GPU>& diag_cols,
+                           const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                           const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream) {
+  if (i_subm_el >= k || j_subm_el >= k)
+    return;
+
+  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+  SizeType ld = evecs_tile.ld();
+  const T* d_rows = diag_rows.ptr();
+  const T* d_cols = diag_cols.ptr();
+  const T* evecs = evecs_tile.ptr();
+  T* ws = ws_tile.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
+                 util::ceilDiv(uncols, evecs_diag_kernel_sz));
+  scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
+
+  // Multiply along rows
+  //
+  // Note: the output of the reduction is saved in the first column.
+  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
+  size_t temp_storage_bytes;
+
+  using OffsetIterator =
+      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
+  using InputIterator =
+      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
+
+  cub::CountingInputIterator<SizeType> count_iter(0);
+  OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
+  OffsetIterator end_offsets = begin_offsets + 1;                // last column
+  InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
+
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
+                                                          begin_offsets, end_offsets, mult_op, T(1),
+                                                          stream));
+  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
+                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
+                                                          T(1), stream));
+  // Deallocate memory
+  auto extend_info = [d_temp_storage](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
+}
+
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -321,90 +420,6 @@ DLAF_SET_UNIT_DIAG_ETI(, float);
 DLAF_SET_UNIT_DIAG_ETI(, double);
 
 // --- Eigenvector formation kernels ---
-
-constexpr unsigned evecs_diag_kernel_sz = 32;
-
-template <class T>
-__global__ void scaleByDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
-                                const T* d_cols, const T* evecs, T* ws) {
-  const SizeType i = blockIdx.x * evecs_diag_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * evecs_diag_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  const SizeType idx = i + j * ld;
-  const T di = d_rows[i];
-  const T dj = d_cols[j];
-
-  ws[idx] = (di == dj) ? evecs[idx] : evecs[idx] / (di - dj);
-}
-
-struct StrideOp {
-  SizeType ld;
-  SizeType offset;
-
-  __host__ __device__ __forceinline__ SizeType operator()(const SizeType i) const {
-    return offset + i * ld;
-  }
-};
-
-template <class T>
-struct Row2ColMajor {
-  SizeType ld;
-  SizeType ncols;
-  T* data;
-
-  __host__ __device__ __forceinline__ T operator()(const SizeType idx) const {
-    SizeType i = idx / ncols;
-    SizeType j = idx - i * ncols;
-    return data[i + j * ld];
-  }
-};
-
-template <class T>
-void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
-                                    const T* d_cols, const T* evecs, T* ws, cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
-                 util::ceilDiv(uncols, evecs_diag_kernel_sz));
-  scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
-
-  // Multiply along rows
-  //
-  // Note: the output of the reduction is saved in the first column.
-  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
-  size_t temp_storage_bytes;
-
-  using OffsetIterator =
-      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
-  using InputIterator =
-      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
-
-  cub::CountingInputIterator<SizeType> count_iter(0);
-  OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
-  OffsetIterator end_offsets = begin_offsets + 1;                // last column
-  InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
-
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
-                                                          begin_offsets, end_offsets, mult_op, T(1),
-                                                          stream));
-  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
-                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
-                                                          T(1), stream));
-  // Deallocate memory
-  auto extend_info = [d_temp_storage](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
-    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
-  };
-  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
-}
-
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, float);
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, double);
 
 constexpr unsigned mult_cols_kernel_sz = 256;
 

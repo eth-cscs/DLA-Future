@@ -667,7 +667,6 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
                           diag.read_sender(GlobalTileIndex(j_tile, 0)),
                           evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
                           ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideEvecsByDiagonal_o,
                           std::move(sender));
     }
@@ -681,7 +680,6 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
       auto sender =
           di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
                           ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
-
       di::transformDetach(di::Policy<DefaultBackend<D>::value>(), multiplyFirstColumns_o,
                           std::move(sender));
     }
@@ -706,34 +704,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto locnorm_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& evecs_tile,
-                                               const TileType& ws_tile, [[maybe_unused]] auto&&... ts) {
-        if (i_subm_el >= k || j_subm_el >= k)
-          return;
-
-        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
-        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
-
-        if constexpr (D == Device::CPU) {
-          for (SizeType j = 0; j < ncols; ++j) {
-            T loc_norm = 0;
-            for (SizeType i = 0; i < nrows; ++i) {
-              T el = evecs_tile(TileElementIndex(i, j));
-              loc_norm += el * el;
-            }
-            ws_tile(TileElementIndex(0, j)) = loc_norm;
-          }
-        }
-        else {
-          sumSqTileOnDevice(nrows, ncols, evecs_tile.ld(), evecs_tile.ptr(), ws_tile.ptr(), ts...);
-        }
-      };
-
       GlobalTileIndex mat_idx(i_tile, j_tile);
-      auto sender = ex::when_all(k_fut, evecs.read_sender(mat_idx), ws.readwrite_sender(mat_idx));
-
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(locnorm_fn),
-                          std::move(sender));
+      auto sender = di::whenAllLift(k_fut, i_subm_el, j_subm_el, evecs.read_sender(mat_idx),
+                                    ws.readwrite_sender(mat_idx));
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), sumsqCols_o, std::move(sender));
     }
   }
 

@@ -152,4 +152,27 @@ void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeTy
 DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, float);
 DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, double);
 
+template <class T>
+void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+               const matrix::Tile<const T, Device::CPU>& evecs_tile,
+               const matrix::Tile<T, Device::CPU>& ws_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    T loc_norm = 0;
+    for (SizeType i = 0; i < nrows; ++i) {
+      T el = evecs_tile(TileElementIndex(i, j));
+      loc_norm += el * el;
+    }
+    ws_tile(TileElementIndex(0, j)) = loc_norm;
+  }
+}
+
+DLAF_CPU_SUMSQ_COLS_ETI(, float);
+DLAF_CPU_SUMSQ_COLS_ETI(, double);
+
 }

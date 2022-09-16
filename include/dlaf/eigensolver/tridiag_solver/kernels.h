@@ -272,6 +272,36 @@ DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(calcEvecsFromWeightVec);
 
+template <class T>
+void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+               const matrix::Tile<const T, Device::CPU>& evecs_tile,
+               const matrix::Tile<T, Device::CPU>& ws_tile);
+
+#define DLAF_CPU_SUMSQ_COLS_ETI(kword, Type)                                                 \
+  kword template void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                const matrix::Tile<const Type, Device::CPU>& evecs_tile,     \
+                                const matrix::Tile<Type, Device::CPU>& ws_tile)
+
+DLAF_CPU_SUMSQ_COLS_ETI(extern, float);
+DLAF_CPU_SUMSQ_COLS_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+               const matrix::Tile<const T, Device::GPU>& evecs_tile,
+               const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+
+#define DLAF_GPU_SUMSQ_COLS_ETI(kword, Type)                                                 \
+  kword template void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                const matrix::Tile<const Type, Device::GPU>& evecs_tile,     \
+                                const matrix::Tile<Type, Device::GPU>& ws_tile, cudaStream_t stream)
+
+DLAF_GPU_SUMSQ_COLS_ETI(extern, float);
+DLAF_GPU_SUMSQ_COLS_ETI(extern, double);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(sumsqCols);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU

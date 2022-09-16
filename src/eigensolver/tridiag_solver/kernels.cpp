@@ -192,4 +192,25 @@ void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
 DLAF_CPU_ADD_FIRST_ROWS_ETI(, float);
 DLAF_CPU_ADD_FIRST_ROWS_ETI(, double);
 
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, out.size().rows());
+  SizeType ncols = std::min(k - col, out.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T& evecs_el = out(TileElementIndex(i, j));
+      evecs_el = evecs_el / std::sqrt(in(TileElementIndex(0, j)));
+    }
+  }
+}
+
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
+
 }

@@ -331,6 +331,37 @@ DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(addFirstRows);
 
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out);
+
+#define DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                              \
+  kword template void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                           const matrix::Tile<const Type, Device::CPU>& in,             \
+                                           const matrix::Tile<Type, Device::CPU>& out)
+
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, float);
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                          const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream);
+
+#define DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                              \
+  kword template void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col, \
+                                           const matrix::Tile<const Type, Device::GPU>& in,             \
+                                           const matrix::Tile<Type, Device::GPU>& out,                  \
+                                           cudaStream_t stream)
+
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, float);
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(divideColsByFirstRow);
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU

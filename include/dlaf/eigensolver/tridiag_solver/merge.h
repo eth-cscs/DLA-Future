@@ -649,12 +649,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 template <class T, Device D>
 void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                Matrix<const T, D>& diag, Matrix<const T, D>& z, Matrix<T, D>& ws, Matrix<T, D>& evecs) {
-  namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
-
-  using ConstTileType = matrix::Tile<const T, D>;
-  using TileType = matrix::Tile<T, D>;
-
   const matrix::Distribution& distr = evecs.distribution();
 
   // Reduce by multiplication into the first column of each tile of ws
@@ -728,32 +723,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto scale_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                             const TileType& evecs_tile, [[maybe_unused]] auto&&... ts) {
-        if (i_subm_el >= k || j_subm_el >= k)
-          return;
-
-        SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
-        SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
-
-        if constexpr (D == Device::CPU) {
-          for (SizeType j = 0; j < ncols; ++j) {
-            for (SizeType i = 0; i < nrows; ++i) {
-              T& evecs_el = evecs_tile(TileElementIndex(i, j));
-              evecs_el = evecs_el / std::sqrt(ws_tile(TileElementIndex(0, j)));
-            }
-          }
-        }
-        else {
-          scaleTileWithRow(nrows, ncols, ws_tile.ld(), ws_tile.ptr(), evecs_tile.ld(), evecs_tile.ptr(),
-                           ts...);
-        }
-      };
-
-      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
-                                 evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(scale_fn),
+      auto sender =
+          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
+                          evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideColsByFirstRow_o,
                           std::move(sender));
     }
   }

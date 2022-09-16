@@ -441,6 +441,54 @@ void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
 DLAF_GPU_ADD_FIRST_ROWS_ETI(, float);
 DLAF_GPU_ADD_FIRST_ROWS_ETI(, double);
 
+constexpr unsigned scale_tile_with_row_kernel_sz = 32;
+
+template <class T>
+__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld, const T* in_ptr,
+                                 SizeType out_ld, T* out_ptr) {
+  const SizeType i = blockIdx.x * scale_tile_with_row_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * scale_tile_with_row_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  const T in_el = in_ptr[j * in_ld];
+  T& out_el = out_ptr[i + j * out_ld];
+
+  if constexpr (std::is_same<T, float>::value) {
+    out_el = out_el / sqrtf(in_el);
+  }
+  else {
+    out_el = out_el / sqrt(in_el);
+  }
+}
+
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& in,
+                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, out.size().rows());
+  SizeType ncols = std::min(k - col, out.size().cols());
+
+  SizeType in_ld = in.ld();
+  const T* in_ptr = in.ptr();
+  SizeType out_ld = out.ld();
+  T* out_ptr = out.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(scale_tile_with_row_kernel_sz, scale_tile_with_row_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, scale_tile_with_row_kernel_sz),
+                 util::ceilDiv(uncols, scale_tile_with_row_kernel_sz));
+  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, in_ld, in_ptr, out_ld, out_ptr);
+}
+
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -594,42 +642,4 @@ DLAF_SET_UNIT_DIAG_ETI(, double);
 
 // --- Eigenvector formation kernels ---
 
-constexpr unsigned scale_tile_with_row_kernel_sz = 32;
-
-template <class T>
-__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
-                                 SizeType ld_evecs, T* evecs) {
-  const SizeType i = blockIdx.x * scale_tile_with_row_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * scale_tile_with_row_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  const SizeType idx_evecs = i + j * ld_evecs;
-  const SizeType idx_norms = j * ld_norms;
-
-  const T el_norm = norms[idx_norms];
-  T& el_evec = evecs[idx_evecs];
-
-  if constexpr (std::is_same<T, float>::value) {
-    el_evec = el_evec / sqrtf(el_norm);
-  }
-  else {
-    el_evec = el_evec / sqrt(el_norm);
-  }
-}
-
-template <class T>
-void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
-                      SizeType ld_evecs, T* evecs, cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(scale_tile_with_row_kernel_sz, scale_tile_with_row_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, scale_tile_with_row_kernel_sz),
-                 util::ceilDiv(uncols, scale_tile_with_row_kernel_sz));
-  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld_norms, norms, ld_evecs, evecs);
-}
-
-DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, float);
-DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, double);
 }

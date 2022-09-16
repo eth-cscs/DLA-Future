@@ -716,28 +716,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sum_first_tile_cols_fn = [i_subm_el, j_subm_el](SizeType k, const ConstTileType& ws_tile,
-                                                           const TileType& ws_row_tile,
-                                                           [[maybe_unused]] auto&&... ts) {
-        if (i_subm_el >= k || j_subm_el >= k)
-          return;
-
-        SizeType ncols = std::min(k - j_subm_el, ws_tile.size().cols());
-
-        if constexpr (D == Device::CPU) {
-          for (SizeType j = 0; j < ncols; ++j) {
-            ws_row_tile(TileElementIndex(0, j)) += ws_tile(TileElementIndex(0, j));
-          }
-        }
-        else {
-          addFirstRows(ncols, ws_tile.ld(), ws_tile.ptr(), ws_row_tile.ptr(), ts...);
-        }
-      };
-
-      auto sender = ex::when_all(k_fut, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                                 ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(sum_first_tile_cols_fn),
-                          std::move(sender));
+      auto sender =
+          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                          ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
+      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), addFirstRows_o, std::move(sender));
     }
   }
 

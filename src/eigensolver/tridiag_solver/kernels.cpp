@@ -175,4 +175,21 @@ void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
 DLAF_CPU_SUMSQ_COLS_ETI(, float);
 DLAF_CPU_SUMSQ_COLS_ETI(, double);
 
+template <class T>
+void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+                  const matrix::Tile<const T, Device::CPU>& in,
+                  const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType ncols = std::min(k - col, in.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    out(TileElementIndex(0, j)) += in(TileElementIndex(0, j));
+  }
+}
+
+DLAF_CPU_ADD_FIRST_ROWS_ETI(, float);
+DLAF_CPU_ADD_FIRST_ROWS_ETI(, double);
+
 }

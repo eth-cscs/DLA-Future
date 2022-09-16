@@ -128,4 +128,28 @@ void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType
 DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, float);
 DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, double);
 
+template <class T>
+void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
+                            const matrix::Tile<const T, Device::CPU>& z_tile,
+                            const matrix::Tile<const T, Device::CPU>& ws_tile,
+                            const matrix::Tile<T, Device::CPU>& evecs_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T ws_el = ws_tile(TileElementIndex(i, 0));
+      T z_el = z_tile(TileElementIndex(i, 0));
+      T& el_evec = evecs_tile(TileElementIndex(i, j));
+      el_evec = std::copysign(std::sqrt(std::abs(ws_el)), z_el) / el_evec;
+    }
+  }
+}
+
+DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, float);
+DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, double);
+
 }

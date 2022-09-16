@@ -476,8 +476,21 @@ __global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType 
 }
 
 template <class T>
-void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T* rank1_vec,
-                            const T* weight_vec, T* evecs, cudaStream_t stream) {
+void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
+                            const matrix::Tile<const T, Device::GPU>& z_tile,
+                            const matrix::Tile<const T, Device::GPU>& ws_tile,
+                            const matrix::Tile<T, Device::GPU>& evecs_tile, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  SizeType ld = evecs_tile.ld();
+  const T* rank1_vec = z_tile.ptr();
+  const T* weight_vec = ws_tile.ptr();
+  T* evecs = evecs_tile.ptr();
+
   const unsigned unrows = to_uint(nrows);
   const unsigned uncols = to_uint(ncols);
   dim3 nr_threads(weight_vec_kernel_sz, weight_vec_kernel_sz);
@@ -487,8 +500,8 @@ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T
                                                                evecs);
 }
 
-DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(, float);
-DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(, double);
+DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, float);
+DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, double);
 
 constexpr unsigned sq_kernel_sz = 32;
 

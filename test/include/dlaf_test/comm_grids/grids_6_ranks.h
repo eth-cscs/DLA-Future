@@ -54,7 +54,12 @@ public:
         color = 3;
       }
       MPI_Comm split_comm;
-      DLAF_MPI_CHECK_ERROR(MPI_Comm_split(world, color, world.rank(), &split_comm));
+      // TODO
+      namespace ex = pika::execution::experimental;
+      namespace tt = pika::this_thread::experimental;
+      tt::sync_wait(ex::schedule(ex::std_thread_scheduler{}) | ex::then([&]() {
+                      DLAF_MPI_CHECK_ERROR(MPI_Comm_split(world, color, world.rank(), &split_comm));
+                    }));
 
       comm::Communicator comm(split_comm);
       comm_grids.emplace_back(comm, rows, cols, common::Ordering::ColumnMajor);

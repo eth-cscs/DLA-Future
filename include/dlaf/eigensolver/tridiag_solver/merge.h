@@ -941,8 +941,10 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
         }
       }
       else {
-        setUnitDiagTileOnDevice(tile.size().rows() - tile_offset, tile.ld(),
-                                tile.ptr(TileElementIndex(tile_offset, tile_offset)), ts...);
+        if (tile_offset < tile.size().rows()) {
+          setUnitDiagTileOnDevice(tile.size().rows() - tile_offset, tile.ld(),
+                                  tile.ptr(TileElementIndex(tile_offset, tile_offset)), ts...);
+        }
       }
     };
 

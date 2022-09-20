@@ -46,7 +46,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("umpire@6:")
 
     depends_on("pika +mpi")
-    depends_on("pika@0.7:")
+    depends_on("pika@0.8:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
@@ -100,7 +100,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-            args.append(self.define("MPIEXEC_EXECUTABLE", "srun"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))

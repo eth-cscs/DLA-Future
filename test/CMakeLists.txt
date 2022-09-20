@@ -23,6 +23,12 @@ option(DLAF_TEST_THREAD_BINDING_ENABLED "If OFF disables pika thread binding." O
 
 set(DLAF_PIKATEST_EXTRA_ARGS "" CACHE STRING "Extra arguments for tests with pika")
 
+# If DLAF_CI_RUNNER_USES_MPIRUN=on we don't want to use any preset, so we just go for the custom one
+# without setting any variable.
+if(DLAF_CI_RUNNER_USES_MPIRUN)
+  set(DLAF_MPI_PRESET "custom" CACHE STRING "" FORCE)
+endif()
+
 # if a preset has been selected and it has been changed from previous configurations
 if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 

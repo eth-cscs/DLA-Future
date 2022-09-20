@@ -10,7 +10,7 @@
 #pragma once
 
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/tridiag_solver/mc.h"
+#include "dlaf/eigensolver/tridiag_solver/impl.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -34,54 +34,28 @@ namespace eigensolver {
 /// @pre mat_ev is a square matrix
 /// @pre mat_ev has a square block size
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& d, Matrix<T, device>& mat_ev) {
-  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
-                "tridagSolver accepts only real values (float, double)!");
+void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, device>& evals,
+                   Matrix<T, device>& evecs) {
+  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
+  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
 
-  DLAF_ASSERT(matrix::local_matrix(mat_trd), mat_trd);
-  DLAF_ASSERT(mat_trd.distribution().size().cols() == 2, mat_trd);
+  DLAF_ASSERT(matrix::local_matrix(evals), evals);
+  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
 
-  DLAF_ASSERT(matrix::local_matrix(d), d);
-  DLAF_ASSERT(d.distribution().size().cols() == 1, d);
+  DLAF_ASSERT(matrix::local_matrix(evecs), evecs);
+  DLAF_ASSERT(matrix::square_size(evecs), evecs);
+  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
 
-  DLAF_ASSERT(matrix::local_matrix(mat_ev), mat_ev);
-  DLAF_ASSERT(matrix::square_size(mat_ev), mat_ev);
-  DLAF_ASSERT(matrix::square_blocksize(mat_ev), mat_ev);
+  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
+              evecs.distribution().blockSize().rows(), tridiag.distribution().blockSize().rows());
+  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),
+              tridiag.distribution().blockSize().rows(), evals.distribution().blockSize().rows());
+  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(),
+              evecs.distribution().size().rows(), tridiag.distribution().size().rows());
+  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),
+              tridiag.distribution().size().rows(), evals.distribution().size().rows());
 
-  DLAF_ASSERT(mat_trd.distribution().blockSize().rows() == mat_ev.distribution().blockSize().rows(),
-              mat_ev.distribution().blockSize().rows(), mat_trd.distribution().blockSize().rows());
-  DLAF_ASSERT(mat_trd.distribution().blockSize().rows() == d.distribution().blockSize().rows(),
-              mat_trd.distribution().blockSize().rows(), d.distribution().blockSize().rows());
-  DLAF_ASSERT(mat_trd.distribution().size().rows() == mat_ev.distribution().size().rows(),
-              mat_ev.distribution().size().rows(), mat_trd.distribution().size().rows());
-  DLAF_ASSERT(mat_trd.distribution().size().rows() == d.distribution().size().rows(),
-              mat_trd.distribution().size().rows(), d.distribution().size().rows());
-
-  internal::TridiagSolver<backend, device, T>::call(mat_trd, d, mat_ev);
-}
-
-// Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
-template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<T, device>& mat_trd, Matrix<T, device>& d,
-                   Matrix<std::complex<T>, device>& mat_ev) {
-  Matrix<T, Device::CPU> mat_real_ev(mat_ev.distribution());
-  tridiagSolver<backend, device, T>(mat_trd, d, mat_real_ev);
-
-  // Convert real to complex numbers
-  const matrix::Distribution& dist = mat_ev.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    auto convert_to_complex_fn = [](const matrix::Tile<const T, Device::CPU>& in,
-                                    const matrix::Tile<std::complex<T>, Device::CPU>& out) {
-      for (auto el_idx : iterate_range2d(out.size())) {
-        out(el_idx) = std::complex<T>(in(el_idx), 0);
-      }
-    };
-
-    pika::execution::experimental::when_all(mat_real_ev.read_sender(tile_wrt_local),
-                                            mat_ev.readwrite_sender(tile_wrt_local)) |
-        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(),
-                                        std::move(convert_to_complex_fn));
-  }
+  internal::TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
 }
 
 }

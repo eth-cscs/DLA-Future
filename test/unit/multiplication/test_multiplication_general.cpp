@@ -30,7 +30,7 @@ struct GeneralMultiplicationTestMC : public ::testing::Test {};
 
 TYPED_TEST_SUITE(GeneralMultiplicationTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <class T>
 struct GeneralMultiplicationTestGPU : public ::testing::Test {};
 
@@ -98,7 +98,7 @@ TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
   for (const auto opA : blas_ops) {
     for (const auto opB : blas_ops) {

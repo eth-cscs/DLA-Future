@@ -12,7 +12,7 @@
 
 namespace dlaf::eigensolver::internal {
 
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::MC, Device::CPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::MC, Device::CPU, double)
+DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::GPU, Device::GPU, float)
+DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::GPU, Device::GPU, double)
 
 }

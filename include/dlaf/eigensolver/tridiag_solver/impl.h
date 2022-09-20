@@ -16,6 +16,7 @@
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
+#include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -27,12 +28,6 @@
 #include "dlaf/matrix/print_csv.h"
 
 namespace dlaf::eigensolver::internal {
-
-template <class T>
-struct TridiagSolver<Backend::MC, Device::CPU, T> {
-  static void call(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d,
-                   Matrix<T, Device::CPU>& mat_ev);
-};
 
 /// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
 /// 1, i_end] before saving the triad <i_begin, i_middle, i_end> into `indices`.
@@ -68,30 +63,8 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
   return indices;
 }
 
-// Cuppen's decomposition
-//
-// Substracts the offdiagonal element at the split from the top and bottom diagonal elements and returns
-// the offdiagonal element. The split is between the last row of the top tile and the first row of the
-// bottom tile.
-//
-template <class T>
-T cuppensTileDecomposition(const matrix::Tile<T, Device::CPU>& top,
-                           const matrix::Tile<T, Device::CPU>& bottom) {
-  T offdiag_val = top(TileElementIndex{top.size().rows() - 1, 1});
-  T& top_diag_val = top(TileElementIndex{top.size().rows() - 1, 0});
-  T& bottom_diag_val = bottom(TileElementIndex{0, 0});
-
-  // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-  //
-  top_diag_val -= std::abs(offdiag_val);
-  bottom_diag_val -= std::abs(offdiag_val);
-  return offdiag_val;
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(cuppensTileDecomposition);
-
-template <class T>
-std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>& mat_trd) {
+template <class T, Device D>
+std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -103,53 +76,43 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, Device::CPU>&
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+    auto sender =
+        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0)));
+
     // Cuppen's tridiagonal decomposition
     offdiag_vals.push_back(
-        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0))) |
-        di::transform(di::Policy<Backend::MC>(), cuppensTileDecomposition_o) | ex::make_future());
+        di::transform(di::Policy<DefaultBackend<D>::value>(), cuppensDecomp_o, std::move(sender)) |
+        ex::make_future());
   }
   return offdiag_vals;
 }
 
 // Solve leaf eigensystem with stedc
-template <class T>
-void solveLeaf(Matrix<T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& mat_ev) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
+template <class T, Device D>
+void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    start_detached(whenAllLift(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                               mat_ev.readwrite_sender(LocalTileIndex(i, i))) |
-                   tile::stedc(Policy<Backend::MC>(thread_priority::normal)));
+    auto sender = ex::when_all(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                               mat_ev.readwrite_sender(LocalTileIndex(i, i)));
+    ex::start_detached(
+        di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
+                                                         tile::internal::stedc_o, std::move(sender)));
   }
 }
 
-template <class T>
-void copyDiagTile(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
-                  const matrix::Tile<T, Device::CPU>& diag_tile) {
-  for (SizeType i = 0; i < tridiag_tile.size().rows(); ++i) {
-    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
-  }
-}
+template <class T, Device D>
+void offloadDiagonal(Matrix<const T, D>& mat_trd, Matrix<T, D>& evals) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
-DLAF_MAKE_CALLABLE_OBJECT(copyDiagTile);
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, copyDiagTile,
-                                     copyDiagTile_o)
-
-template <class T>
-void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CPU>& d) {
-  using dlaf::internal::Policy;
-  using dlaf::internal::whenAllLift;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
-
-  for (SizeType i = 0; i < d.distribution().nrTiles().rows(); ++i) {
-    start_detached(whenAllLift(mat_trd.read_sender(GlobalTileIndex(i, 0)),
-                               d.readwrite_sender(GlobalTileIndex(i, 0))) |
-                   copyDiagTile(Policy<Backend::MC>(thread_priority::normal)));
+  for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
+    auto sender = ex::when_all(mat_trd.read_sender(GlobalTileIndex(i, 0)),
+                               evals.readwrite_sender(GlobalTileIndex(i, 0)));
+    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), copyDiagonalFromCompactTridiagonal_o,
+                        std::move(sender));
   }
 }
 
@@ -209,53 +172,85 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& mat_trd, Matrix<T, Device::CP
 /// 2. The overlap between U1' and U2' matches the number of shared columns between Q1' and Q2'
 /// 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
 ///    column vector of Q2.
-template <class T>
-void TridiagSolver<Backend::MC, Device::CPU, T>::call(Matrix<T, Device::CPU>& mat_trd,
-                                                      Matrix<T, Device::CPU>& d,
-                                                      Matrix<T, Device::CPU>& mat_ev) {
-  // Set `mat_ev` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<Backend::MC, T, Device::CPU>(pika::execution::thread_priority::normal, mat_ev);
-
-  // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(mat_trd);
-
-  // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
-  // `mat_ev` (nb x nb)
-  solveLeaf(mat_trd, mat_ev);
-
-  // Offload the diagonal from `mat_trd` to `d`
-  offloadDiagonal(mat_trd, d);
-
+template <Backend backend, Device device, class T>
+void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                                             Matrix<T, device>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
-  const matrix::Distribution& distr = mat_ev.distribution();
-
+  const matrix::Distribution& distr = evecs.distribution();
   LocalElementSize vec_size(distr.size().rows(), 1);
   TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  WorkSpace<T> ws{Matrix<T, Device::CPU>(distr),
-                  Matrix<T, Device::CPU>(distr),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<T, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),
-                  Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};
+  WorkSpace<T, device> ws{Matrix<T, device>(distr),                           // mat1
+                          Matrix<T, device>(distr),                           // mat2
+                          Matrix<T, device>(vec_size, vec_tile_size),         // dtmp
+                          Matrix<T, device>(vec_size, vec_tile_size),         // z
+                          Matrix<T, device>(vec_size, vec_tile_size),         // ztmp
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i1
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i2
+                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i3
+                          Matrix<ColType, device>(vec_size, vec_tile_size)};  // c
+
+  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
+
+  // Mirror workspace on host memory for CPU-only kernels
+  WorkSpaceHostMirror<T, device> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
+                                      initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
+                                      initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
+                                      initMirrorMatrix(ws.c)};
+
+  // Cuppen's decomposition
+  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
+
+  // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
+  // `evecs` (nb x nb)
+  solveLeaf(tridiag, evecs);
+
+  // Offload the diagonal from `mat_trd` to `evals`
+  offloadDiagonal(tridiag, evals);
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems(i_begin, i_split, i_end, ws, offdiag_vals[to_sizet(i_split)], d, mat_ev);
+    mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
+                              evecs);
   }
 }
 
-/// ---- ETI
-#define DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
+// Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
+template <Backend backend, Device device, class T>
+void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                                             Matrix<std::complex<T>, device>& evecs) {
+  Matrix<T, device> real_evecs(evecs.distribution());
+  TridiagSolver<backend, device, T>::call(tridiag, evals, real_evecs);
 
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
-
-#ifdef DLAF_WITH_CUDA
-// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, float)
-// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, double)
+  // Convert real to complex numbers
+  const matrix::Distribution& dist = evecs.distribution();
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    auto sender = pika::execution::experimental::when_all(real_evecs.read_sender(tile_wrt_local),
+                                                          evecs.readwrite_sender(tile_wrt_local));
+    if constexpr (device == Device::CPU) {
+      dlaf::internal::transformDetach(
+          dlaf::internal::Policy<Backend::MC>(),
+          [](const matrix::Tile<const T, Device::CPU>& in,
+             const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+            for (auto el_idx : iterate_range2d(out.size())) {
+              out(el_idx) = std::complex<T>(in(el_idx), 0);
+            }
+          },
+          std::move(sender));
+    }
+    else {
+#ifdef DLAF_WITH_GPU
+      namespace ex = pika::execution::experimental;
+      namespace di = dlaf::internal;
+      di::transformDetach(
+          dlaf::internal::Policy<Backend::GPU>(),
+          [](const matrix::Tile<const T, Device::GPU>& in,
+             const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
+            castTileToComplex(in.size().rows(), in.size().cols(), in.ld(), in.ptr(), out.ptr(), stream);
+          },
+          std::move(sender));
 #endif
+    }
+  }
+}
 }

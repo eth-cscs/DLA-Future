@@ -166,6 +166,7 @@ add_library(dlaf.core
 if(DLAF_WITH_GPU)
   set(dlaf_core_gpu_source_files
     cusolver/assert_info.cu
+    cusolver/stedc.cu
     lapack/gpu/lacpy.cu
     lapack/gpu/laset.cu
   )
@@ -202,7 +203,11 @@ add_library(
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
-  eigensolver/tridiag_solver/mc.cpp)
+  eigensolver/tridiag_solver/mc.cpp
+  eigensolver/tridiag_solver/kernels.cpp
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/kernels.cu>
+)
 target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.eigensolver)
 DLAF_addPrecompiledHeaders(dlaf.eigensolver)
@@ -232,6 +237,7 @@ DLAF_addPrecompiledHeaders(dlaf.multiplication)
 add_library(
   dlaf.permutations OBJECT permutations/general/mc.cpp
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
+                           $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/perms.cu>
 )
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)

@@ -732,21 +732,6 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
   }
 }
 
-template <class T, Device Source, Device Destination>
-void copySubMatrix(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
-                   Matrix<T, Destination>& dest) {
-  namespace ex = pika::execution::experimental;
-
-  for (SizeType j = i_begin; j <= i_end; ++j) {
-    for (SizeType i = i_begin; i <= i_end; ++i) {
-      ex::start_detached(
-          ex::when_all(source.read_sender(LocalTileIndex(i, j)),
-                       dest.readwrite_sender(LocalTileIndex(i, j))) |
-          matrix::copy(dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
-    }
-  }
-}
-
 template <class T, Device D>
 void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                  Matrix<T, D>& mat) {

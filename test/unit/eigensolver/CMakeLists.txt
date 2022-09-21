@@ -25,14 +25,14 @@ DLAF_addTest(
 DLAF_addTest(
   test_tridiag_solver_full
   SOURCES test_tridiag_solver.cpp
-  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver dlaf.multiplication dlaf.permutations
+  LIBRARIES dlaf.core dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
   USE_MAIN PIKA
 )
 
 DLAF_addTest(
   test_tridiag_solver_merge
   SOURCES test_tridiag_solver_merge.cpp
-  LIBRARIES dlaf.core
+  LIBRARIES dlaf.core dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
   USE_MAIN PIKA
 )
 

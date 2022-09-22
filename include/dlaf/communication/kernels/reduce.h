@@ -64,8 +64,10 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 /// The returned sender signals completion when the receive is done. The input
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
-template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleReduceRecvInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
+template <class TileSender>
+[[nodiscard]] auto scheduleReduceRecvInPlace(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    MPI_Op reduce_op, TileSender&& tile) {
   using dlaf::comm::internal::reduceRecvInPlace_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -74,8 +76,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto reduce_recv_in_place = [reduce_op,
-                               pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceRecvInPlace_o);
   };
@@ -95,9 +96,10 @@ template <class CommSender, class TileSender>
 /// The returned sender signals completion when the send is done. If the input
 /// tile is movable it will be sent by the returned sender. Otherwise a void
 /// sender is returned.
-template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleReduceSend(CommSender&& pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
-                                      TileSender&& tile) {
+template <class TileSender>
+[[nodiscard]] auto scheduleReduceSend(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    comm::IndexT_MPI rank_root, MPI_Op reduce_op, TileSender&& tile) {
   using dlaf::comm::internal::reduceSend_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -106,8 +108,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto reduce_send = [rank_root, reduce_op,
-                      pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto reduce_send = [rank_root, reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), rank_root, reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceSend_o);
   };

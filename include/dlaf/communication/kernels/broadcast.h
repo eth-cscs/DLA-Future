@@ -58,8 +58,10 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 /// The returned sender signals completion when the send is done. If the input
 /// tile is movable it will be sent by the returned sender. Otherwise a void
 /// sender is returned.
-template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
+template <class TileSender>
+[[nodiscard]] auto scheduleSendBcast(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    TileSender&& tile) {
   using dlaf::comm::internal::sendBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -69,7 +71,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto send = [pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
@@ -88,8 +90,10 @@ template <class CommSender, class TileSender>
 /// The returned sender signals completion when the receive is done. The input
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
-template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleRecvBcast(CommSender&& pcomm, comm::IndexT_MPI root_rank, TileSender&& tile) {
+template <class TileSender>
+[[nodiscard]] auto scheduleRecvBcast(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    comm::IndexT_MPI root_rank, TileSender&& tile) {
   using dlaf::comm::internal::recvBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -99,7 +103,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto recv = [root_rank, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto recv = [root_rank, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
   };
 
@@ -111,6 +115,6 @@ template <class CommSender, class TileSender>
   // back from the temporary tile to the input. A receive does not require
   // contiguous memory.
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           RequireContiguous::No>(std::forward<TileSender>(tile), std::move(recv));
+                           RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 }

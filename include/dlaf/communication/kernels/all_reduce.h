@@ -62,9 +62,10 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 /// signals completion when the reduction is done. The output sender tile must
 /// be writable so that the received and reduced data can be written to it. The
 /// output tile is sent by the returned sender.
-template <class CommSender, class TileInSender, class TileOutSender>
-[[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op, TileInSender&& tile_in,
-                                     TileOutSender&& tile_out) {
+template <class TileInSender, class TileOutSender>
+[[nodiscard]] auto scheduleAllReduce(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    MPI_Op reduce_op, TileInSender&& tile_in, TileOutSender&& tile_out) {
   using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduce_o;
   using dlaf::comm::internal::transformMPI;
@@ -78,7 +79,7 @@ template <class CommSender, class TileInSender, class TileOutSender>
   // We create two nested scopes for the input and output tiles with
   // withTemporaryTile. The output tile is in the outer scope as the output tile
   // will be returned by the returned sender.
-  auto all_reduce_final = [reduce_op, pcomm = std::forward<CommSender>(pcomm),
+  auto all_reduce_final = [reduce_op, pcomm = std::move(pcomm),
                            tile_in =
                                std::forward<TileInSender>(tile_in)](auto const& tile_out_comm) mutable {
     auto all_reduce = [reduce_op, pcomm = std::move(pcomm),
@@ -115,8 +116,10 @@ template <class CommSender, class TileInSender, class TileOutSender>
 /// The returned sender signals completion when the reduction is done.  The
 /// sender tile must be writable so that the received and reduced data can be
 /// written to it. The tile is sent by the returned sender.
-template <class CommSender, class TileSender>
-[[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
+template <class TileSender>
+[[nodiscard]] auto scheduleAllReduceInPlace(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    MPI_Op reduce_op, TileSender&& tile) {
   using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduceInPlace_o;
   using dlaf::comm::internal::transformMPI;
@@ -128,8 +131,7 @@ template <class CommSender, class TileSender>
 
   constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::device;
 
-  auto all_reduce_in_place = [reduce_op,
-                              pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(allReduceInPlace_o);
   };

@@ -349,16 +349,11 @@ private:
   Part part_bottom_;
 };
 
-struct GlobalSubTile_TAG;
-struct TileSubTile_TAG;
-
-using GlobalSubTileIndex = common::Index2D<SizeType, GlobalSubTile_TAG>;
-using TileSubTileIndex = common::Index2D<SizeType, TileSubTile_TAG>;
-
 struct DistIndexing {
   DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
-               const GlobalTileIndex& ij, const GlobalSubTileIndex& ij_b)
-      : dist_hh(dist_hh), b(b), mb(dist_hh.blockSize().rows()), helper(helper), ij(ij), ij_b(ij_b) {
+               const GlobalTileIndex& ij, const SizeType& ij_b_row)
+      : dist_hh(dist_hh), b(b), mb(dist_hh.blockSize().rows()), helper(helper), ij(ij),
+        ij_b_row(ij_b_row) {
     rank = dist_hh.rankIndex();
     rankHH = dist_hh.rankGlobalTile(ij);
     n_ws_per_block = to_SizeType(static_cast<size_t>(std::ceil(mb / b / 2.0f)) + 1);
@@ -379,7 +374,7 @@ struct DistIndexing {
     const SizeType row = [&]() -> SizeType {
       if (rank.row() == rankHH.row()) {
         // Note: index starts at 1 (0 is the extra workspace), moreover max half blocks will run in parallel
-        const SizeType intra_idx = 1 + (ij_b.row() % (mb / b)) / 2;
+        const SizeType intra_idx = 1 + (ij_b_row % (mb / b)) / 2;
         DLAF_ASSERT_HEAVY(intra_idx < n_ws_per_block, intra_idx, n_ws_per_block);
         return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + intra_idx;
       }
@@ -406,7 +401,7 @@ protected:
   comm::Index2D rankHH;
 
   GlobalTileIndex ij;
-  GlobalSubTileIndex ij_b;
+  SizeType ij_b_row;
 };
 
 template <Backend B, Device D, class T>
@@ -761,7 +756,6 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
          i_b < j_b + nrStepsForSweep(j_b * b, mat_hh.size().cols(), b); i_b += 2, ++j_b) {
       const SizeType step_b = i_b - j_b;
       const GlobalElementIndex ij_el(i_b * b, j_b * b);
-      const GlobalSubTileIndex ij_b(i_b, j_b);
       const GlobalTileIndex ij_g(dist_hh.globalTileIndex(ij_el));
 
       const comm::Index2D rank = dist_hh.rankIndex();
@@ -778,7 +772,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       }();
 
       const TileAccessHelper helper(b, nrefls, dist_hh, ij_el);
-      const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, ij_b);
+      const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, i_b);
 
       if (!indexing_helper.isInvolved())
         continue;

@@ -279,13 +279,15 @@ struct TileAccessHelper {
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in compact form
-  matrix::SubTileSpec specHHCompact() const noexcept {
+  //
+  // SubTileSpec returned points to the sub-block in the full tile containing the HH data in compact
+  // form. If @p reset_origin is true, then the origin component of the SubTileSpec is resetted and
+  // it will just describe the size of the sub-block containing the Householder reflectors (useful
+  // for panel access which might not have full-tiles).
+  matrix::SubTileSpec specHHCompact(const bool reset_origin = false) const noexcept {
+    if (reset_origin)
+      return {{0, 0}, input_spec_.size};
     return input_spec_;
-  }
-
-  // Return SubTileSpec to use for accessing Householder reflectors in compact form
-  matrix::SubTileSpec specHHCompactPanel() const noexcept {
-    return {{0, 0}, input_spec_.size};
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in well formed form
@@ -805,7 +807,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         else {
           ex::start_detached(
               comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
-                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompactPanel())));
+                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompact(true))));
         }
       }
 
@@ -817,7 +819,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         if (rank.row() == rank_src) {
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
-                             : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompactPanel());
+                             : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
           ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, ex::keep_future(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
@@ -829,7 +831,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
       // COMPUTE V and W from HH and T
       auto tile_hh = (rankHH == rank)
                          ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
-                         : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompactPanel());
+                         : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
       auto [tile_v, tile_w] =
           helperBackend.computeVW(indexing_helper.wsIndexHH(), helper,
                                   ex::keep_future(std::move(tile_hh)), mat_v, mat_t, mat_w);

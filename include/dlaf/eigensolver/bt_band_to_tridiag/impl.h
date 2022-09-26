@@ -744,8 +744,6 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   // 12  8 3 x x
   // 14 11 6 2 x
   // 15 13 9 4 1
-  //
-  // TODO test invert order intra-epoch if it gives a performance hit/improvement
   for (SizeType k = idx_last_sweep_b; k > -maxsteps_b; --k) {
     auto& mat_t = t_panels.nextResource();
     auto& panel_hh = hh_panels.nextResource();

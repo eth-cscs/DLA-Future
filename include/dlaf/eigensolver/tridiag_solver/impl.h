@@ -72,8 +72,9 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(cuppensDecompAsync<T, D>(mat_trd(LocalTileIndex(i_split, 0)),
-                                                    mat_trd(LocalTileIndex(i_split + 1, 0))));
+    offdiag_vals.push_back(
+        cuppensDecompAsync<T, D>(mat_trd.readwrite_sender(LocalTileIndex(i_split, 0)),
+                                 mat_trd.readwrite_sender(LocalTileIndex(i_split + 1, 0))));
   }
   return offdiag_vals;
 }

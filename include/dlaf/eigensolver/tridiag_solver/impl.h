@@ -22,7 +22,6 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
 #include "dlaf/matrix/print_csv.h"
@@ -65,9 +64,6 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 
 template <class T, Device D>
 std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
   if (mat_trd.nrTiles().rows() == 0)
     return {};
 
@@ -76,13 +72,9 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    auto sender =
-        ex::when_all(mat_trd(LocalTileIndex(i_split, 0)), mat_trd(LocalTileIndex(i_split + 1, 0)));
-
-    // Cuppen's tridiagonal decomposition
     offdiag_vals.push_back(
-        di::transform(di::Policy<DefaultBackend<D>::value>(), cuppensDecomp_o, std::move(sender)) |
-        ex::make_future());
+        cuppensDecompAsync<T, D>(mat_trd.readwrite_sender(LocalTileIndex(i_split, 0)),
+                                 mat_trd.readwrite_sender(LocalTileIndex(i_split + 1, 0))));
   }
   return offdiag_vals;
 }
@@ -90,29 +82,18 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
 // Solve leaf eigensystem with stedc
 template <class T, Device D>
 void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    auto sender = ex::when_all(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
-                               mat_ev.readwrite_sender(LocalTileIndex(i, i)));
-    ex::start_detached(
-        di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
-                                                         tile::internal::stedc_o, std::move(sender)));
+    stedcAsync<D>(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
+                  mat_ev.readwrite_sender(LocalTileIndex(i, i)));
   }
 }
 
 template <class T, Device D>
 void offloadDiagonal(Matrix<const T, D>& mat_trd, Matrix<T, D>& evals) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
   for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
-    auto sender = ex::when_all(mat_trd.read_sender(GlobalTileIndex(i, 0)),
-                               evals.readwrite_sender(GlobalTileIndex(i, 0)));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), copyDiagonalFromCompactTridiagonal_o,
-                        std::move(sender));
+    copyDiagonalFromCompactTridiagonalAsync<D>(mat_trd.read_sender(GlobalTileIndex(i, 0)),
+                                               evals.readwrite_sender(GlobalTileIndex(i, 0)));
   }
 }
 
@@ -189,14 +170,14 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
                           Matrix<SizeType, device>(vec_size, vec_tile_size),  // i3
                           Matrix<ColType, device>(vec_size, vec_tile_size)};  // c
 
-  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
-
   // Mirror workspace on host memory for CPU-only kernels
   WorkSpaceHostMirror<T, device> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
                                       initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
                                       initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
                                       initMirrorMatrix(ws.c)};
+
+  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
@@ -225,32 +206,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    auto sender = pika::execution::experimental::when_all(real_evecs.read_sender(tile_wrt_local),
-                                                          evecs.readwrite_sender(tile_wrt_local));
-    if constexpr (device == Device::CPU) {
-      dlaf::internal::transformDetach(
-          dlaf::internal::Policy<Backend::MC>(),
-          [](const matrix::Tile<const T, Device::CPU>& in,
-             const matrix::Tile<std::complex<T>, Device::CPU>& out) {
-            for (auto el_idx : iterate_range2d(out.size())) {
-              out(el_idx) = std::complex<T>(in(el_idx), 0);
-            }
-          },
-          std::move(sender));
-    }
-    else {
-#ifdef DLAF_WITH_GPU
-      namespace ex = pika::execution::experimental;
-      namespace di = dlaf::internal;
-      di::transformDetach(
-          dlaf::internal::Policy<Backend::GPU>(),
-          [](const matrix::Tile<const T, Device::GPU>& in,
-             const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
-            castTileToComplex(in.size().rows(), in.size().cols(), in.ld(), in.ptr(), out.ptr(), stream);
-          },
-          std::move(sender));
-#endif
-    }
+    castToComplexAsync<device>(real_evecs.read_sender(tile_wrt_local),
+                               evecs.readwrite_sender(tile_wrt_local));
   }
 }
 }

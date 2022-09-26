@@ -14,6 +14,17 @@
 namespace dlaf::eigensolver::internal {
 
 template <class T>
+void castToComplex(const matrix::Tile<const T, Device::CPU>& in,
+                   const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+  for (auto el_idx : iterate_range2d(out.size())) {
+    out(el_idx) = std::complex<T>(in(el_idx), 0);
+  }
+}
+
+DLAF_CPU_CAST_TO_COMPLEX_ETI(, float);
+DLAF_CPU_CAST_TO_COMPLEX_ETI(, double);
+
+template <class T>
 T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, Device::CPU>& bottom) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};
@@ -68,5 +79,149 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::CPU>& tile) {
 
 DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
+
+void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
+  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+    tile(TileElementIndex(i, 0)) = ct;
+  }
+}
+
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile) {
+  for (SizeType i = 0; i < tile.size().rows(); ++i) {
+    tile(TileElementIndex(i, 0)) = offset + i;
+  }
+}
+
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::CPU>& diag_rows,
+                           const matrix::Tile<const T, Device::CPU>& diag_cols,
+                           const matrix::Tile<const T, Device::CPU>& evecs_tile,
+                           const matrix::Tile<T, Device::CPU>& ws_tile) {
+  if (i_subm_el >= k || j_subm_el >= k)
+    return;
+
+  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T di = diag_rows(TileElementIndex(i, 0));
+      T dj = diag_cols(TileElementIndex(j, 0));
+      T evec_el = evecs_tile(TileElementIndex(i, j));
+      T& ws_el = ws_tile(TileElementIndex(i, 0));
+
+      // Exact comparison is OK because di and dj come from the same vector
+      T weight = (di == dj) ? evec_el : evec_el / (di - dj);
+      ws_el = (j == 0) ? weight : weight * ws_el;
+    }
+  }
+}
+
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
+DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
+
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, in.size().rows());
+
+  for (SizeType i = 0; i < nrows; ++i) {
+    TileElementIndex idx(i, 0);
+    out(idx) = out(idx) * in(idx);
+  }
+}
+
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, float);
+DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(, double);
+
+template <class T>
+void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
+                            const matrix::Tile<const T, Device::CPU>& z_tile,
+                            const matrix::Tile<const T, Device::CPU>& ws_tile,
+                            const matrix::Tile<T, Device::CPU>& evecs_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T ws_el = ws_tile(TileElementIndex(i, 0));
+      T z_el = z_tile(TileElementIndex(i, 0));
+      T& el_evec = evecs_tile(TileElementIndex(i, j));
+      el_evec = std::copysign(std::sqrt(std::abs(ws_el)), z_el) / el_evec;
+    }
+  }
+}
+
+DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, float);
+DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, double);
+
+template <class T>
+void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+               const matrix::Tile<const T, Device::CPU>& evecs_tile,
+               const matrix::Tile<T, Device::CPU>& ws_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    T loc_norm = 0;
+    for (SizeType i = 0; i < nrows; ++i) {
+      T el = evecs_tile(TileElementIndex(i, j));
+      loc_norm += el * el;
+    }
+    ws_tile(TileElementIndex(0, j)) = loc_norm;
+  }
+}
+
+DLAF_CPU_SUMSQ_COLS_ETI(, float);
+DLAF_CPU_SUMSQ_COLS_ETI(, double);
+
+template <class T>
+void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+                  const matrix::Tile<const T, Device::CPU>& in,
+                  const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType ncols = std::min(k - col, in.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    out(TileElementIndex(0, j)) += in(TileElementIndex(0, j));
+  }
+}
+
+DLAF_CPU_ADD_FIRST_ROWS_ETI(, float);
+DLAF_CPU_ADD_FIRST_ROWS_ETI(, double);
+
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::CPU>& in,
+                          const matrix::Tile<T, Device::CPU>& out) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, out.size().rows());
+  SizeType ncols = std::min(k - col, out.size().cols());
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    for (SizeType i = 0; i < nrows; ++i) {
+      T& evecs_el = out(TileElementIndex(i, j));
+      evecs_el = evecs_el / std::sqrt(in(TileElementIndex(0, j)));
+    }
+  }
+}
+
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
+DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
 }

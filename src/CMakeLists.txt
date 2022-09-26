@@ -203,14 +203,22 @@ add_library(
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
   eigensolver/reduction_to_band/mc.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
+)
+target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
+target_add_warnings(dlaf.eigensolver)
+DLAF_addPrecompiledHeaders(dlaf.eigensolver)
+
+# Define DLAF's tridiagonal eigensolver library
+add_library(
+  dlaf.tridiagonal_eigensolver OBJECT
   eigensolver/tridiag_solver/mc.cpp
   eigensolver/tridiag_solver/kernels.cpp
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/kernels.cu>
 )
-target_link_libraries(dlaf.eigensolver PUBLIC dlaf.prop)
-target_add_warnings(dlaf.eigensolver)
-DLAF_addPrecompiledHeaders(dlaf.eigensolver)
+target_link_libraries(dlaf.tridiagonal_eigensolver PUBLIC dlaf.prop)
+target_add_warnings(dlaf.tridiagonal_eigensolver)
+DLAF_addPrecompiledHeaders(dlaf.tridiagonal_eigensolver)
 
 # Define DLAF's factorization library
 add_library(dlaf.factorization OBJECT
@@ -257,6 +265,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.core>
   $<TARGET_OBJECTS:dlaf.auxiliary>
   $<TARGET_OBJECTS:dlaf.eigensolver>
+  $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver>
   $<TARGET_OBJECTS:dlaf.factorization>
   $<TARGET_OBJECTS:dlaf.multiplication>
   $<TARGET_OBJECTS:dlaf.permutations>

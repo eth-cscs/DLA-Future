@@ -29,6 +29,47 @@
 
 namespace dlaf::eigensolver::internal {
 
+constexpr unsigned cast_complex_kernel_tile_rows = 64;
+constexpr unsigned cast_complex_kernel_tile_cols = 16;
+
+template <class T, class CT>
+__global__ void castToComplex(const unsigned m, const unsigned n, SizeType ld, const T* in, CT* out) {
+  const unsigned i = blockIdx.x * cast_complex_kernel_tile_rows + threadIdx.x;
+  const unsigned j = blockIdx.y * cast_complex_kernel_tile_cols + threadIdx.y;
+
+  if (i >= m || j >= n)
+    return;
+
+  SizeType idx = i + j * ld;
+  if constexpr (std::is_same<T, float>::value) {
+    out[idx] = make_cuComplex(in[idx], 0);
+  }
+  else {
+    out[idx] = make_cuDoubleComplex(in[idx], 0);
+  }
+}
+
+template <class T>
+void castToComplex(const matrix::Tile<const T, Device::GPU>& in,
+                   const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
+  SizeType m = in.size().rows();
+  SizeType n = in.size().cols();
+  SizeType ld = in.ld();
+  const T* in_ptr = in.ptr();
+  std::complex<T>* out_ptr = out.ptr();
+
+  const unsigned um = to_uint(m);
+  const unsigned un = to_uint(n);
+  dim3 nr_threads(cast_complex_kernel_tile_rows, cast_complex_kernel_tile_cols);
+  dim3 nr_blocks(util::ceilDiv(um, cast_complex_kernel_tile_rows),
+                 util::ceilDiv(un, cast_complex_kernel_tile_cols));
+  castToComplex<<<nr_blocks, nr_threads, 0, stream>>>(um, un, ld, util::cppToCudaCast(in_ptr),
+                                                      util::cppToCudaCast(out_ptr));
+}
+
+DLAF_GPU_CAST_TO_COMPLEX_ETI(, float);
+DLAF_GPU_CAST_TO_COMPLEX_ETI(, double);
+
 template <class T>
 __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
   const T offdiag = *offdiag_val;
@@ -142,6 +183,353 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStr
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
+void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile,
+                    cudaStream_t stream) {
+  std::size_t len = to_sizet(tile.size().rows()) * sizeof(ColType);
+  ColType* arr = tile.ptr();
+  DLAF_GPU_CHECK_ERROR(cudaMemsetAsync(arr, static_cast<int>(ct), len, stream));
+}
+
+constexpr unsigned init_index_tile_kernel_sz = 256;
+
+__global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr) {
+  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  index_arr[i] = i + offset;
+}
+
+void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& tile,
+                   cudaStream_t stream) {
+  SizeType len = tile.size().rows();
+  SizeType* index_arr = tile.ptr();
+
+  dim3 nr_threads(init_index_tile_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
+  initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
+}
+
+constexpr unsigned evecs_diag_kernel_sz = 32;
+
+template <class T>
+__global__ void scaleByDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
+                                const T* d_cols, const T* evecs, T* ws) {
+  const SizeType i = blockIdx.x * evecs_diag_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * evecs_diag_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  const SizeType idx = i + j * ld;
+  const T di = d_rows[i];
+  const T dj = d_cols[j];
+
+  ws[idx] = (di == dj) ? evecs[idx] : evecs[idx] / (di - dj);
+}
+
+struct StrideOp {
+  SizeType ld;
+  SizeType offset;
+
+  __host__ __device__ __forceinline__ SizeType operator()(const SizeType i) const {
+    return offset + i * ld;
+  }
+};
+
+template <class T>
+struct Row2ColMajor {
+  SizeType ld;
+  SizeType ncols;
+  T* data;
+
+  __host__ __device__ __forceinline__ T operator()(const SizeType idx) const {
+    SizeType i = idx / ncols;
+    SizeType j = idx - i * ncols;
+    return data[i + j * ld];
+  }
+};
+
+template <class T>
+void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+                           const matrix::Tile<const T, Device::GPU>& diag_rows,
+                           const matrix::Tile<const T, Device::GPU>& diag_cols,
+                           const matrix::Tile<const T, Device::GPU>& evecs_tile,
+                           const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream) {
+  if (i_subm_el >= k || j_subm_el >= k)
+    return;
+
+  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+
+  SizeType ld = evecs_tile.ld();
+  const T* d_rows = diag_rows.ptr();
+  const T* d_cols = diag_cols.ptr();
+  const T* evecs = evecs_tile.ptr();
+  T* ws = ws_tile.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
+                 util::ceilDiv(uncols, evecs_diag_kernel_sz));
+  scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
+
+  // Multiply along rows
+  //
+  // Note: the output of the reduction is saved in the first column.
+  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
+  size_t temp_storage_bytes;
+
+  using OffsetIterator =
+      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
+  using InputIterator =
+      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
+
+  cub::CountingInputIterator<SizeType> count_iter(0);
+  OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
+  OffsetIterator end_offsets = begin_offsets + 1;                // last column
+  InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
+
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
+                                                          begin_offsets, end_offsets, mult_op, T(1),
+                                                          stream));
+  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
+  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
+                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
+                                                          T(1), stream));
+  // Deallocate memory
+  auto extend_info = [d_temp_storage](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
+}
+
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, float);
+DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(, double);
+
+constexpr unsigned mult_cols_kernel_sz = 256;
+
+template <class T>
+__global__ void multiplyColumns(SizeType len, const T* in, T* out) {
+  const SizeType i = blockIdx.x * mult_cols_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  out[i] *= in[i];
+}
+
+template <class T>
+void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& in,
+                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, in.size().rows());
+
+  const T* in_ptr = in.ptr();
+  T* out_ptr = out.ptr();
+
+  dim3 nr_threads(mult_cols_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(nrows), mult_cols_kernel_sz));
+  multiplyColumns<<<nr_blocks, nr_threads, 0, stream>>>(nrows, in_ptr, out_ptr);
+}
+
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(, float);
+DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(, double);
+
+constexpr unsigned weight_vec_kernel_sz = 32;
+
+template <class T>
+__global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T* rank1_vec,
+                                       const T* weight_vec, T* evecs) {
+  const SizeType i = blockIdx.x * weight_vec_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * weight_vec_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  T ws_el = weight_vec[i];
+  T z_el = rank1_vec[i];
+  T& el_evec = evecs[i + j * ld];
+
+  if constexpr (std::is_same<T, float>::value) {
+    el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
+  }
+  else {
+    el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
+  }
+}
+
+template <class T>
+void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
+                            const matrix::Tile<const T, Device::GPU>& z_tile,
+                            const matrix::Tile<const T, Device::GPU>& ws_tile,
+                            const matrix::Tile<T, Device::GPU>& evecs_tile, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  SizeType ld = evecs_tile.ld();
+  const T* rank1_vec = z_tile.ptr();
+  const T* weight_vec = ws_tile.ptr();
+  T* evecs = evecs_tile.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(weight_vec_kernel_sz, weight_vec_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, weight_vec_kernel_sz),
+                 util::ceilDiv(uncols, weight_vec_kernel_sz));
+  calcEvecsFromWeightVec<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, rank1_vec, weight_vec,
+                                                               evecs);
+}
+
+DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, float);
+DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(, double);
+
+constexpr unsigned sq_kernel_sz = 32;
+
+template <class T>
+__global__ void sqTile(SizeType nrows, SizeType ncols, SizeType ld, const T* in, T* out) {
+  const SizeType i = blockIdx.x * sq_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * sq_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  const SizeType idx = i + j * ld;
+  out[idx] = in[idx] * in[idx];
+}
+
+template <class T>
+void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+               const matrix::Tile<const T, Device::GPU>& evecs_tile,
+               const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+
+  SizeType ld = evecs_tile.ld();
+  const T* in = evecs_tile.ptr();
+  T* out = ws_tile.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(sq_kernel_sz, sq_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, sq_kernel_sz), util::ceilDiv(uncols, sq_kernel_sz));
+  sqTile<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, in, out);
+
+  // Sum along columns
+  //
+  // Note: the output of the reduction is saved in the first row.
+  // TODO: use a segmented reduce sum with fancy iterators
+  size_t temp_storage_bytes;
+  DLAF_GPU_CHECK_ERROR(
+      cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
+  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
+
+  for (SizeType j = 0; j < ncols; ++j) {
+    DLAF_GPU_CHECK_ERROR(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                &out[j * ld], nrows, stream));
+  }
+
+  // Deallocate memory
+  auto extend_info = [d_temp_storage](cudaError_t status) {
+    DLAF_GPU_CHECK_ERROR(status);
+    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
+  };
+  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
+}
+
+DLAF_GPU_SUMSQ_COLS_ETI(, float);
+DLAF_GPU_SUMSQ_COLS_ETI(, double);
+
+constexpr unsigned add_first_rows_kernel_sz = 256;
+
+template <class T>
+__global__ void addFirstRows(SizeType len, SizeType ld, const T* in, T* out) {
+  const SizeType i = blockIdx.x * add_first_rows_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  out[i * ld] += in[i * ld];
+}
+
+template <class T>
+void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+                  const matrix::Tile<const T, Device::GPU>& in, const matrix::Tile<T, Device::GPU>& out,
+                  cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType ncols = std::min(k - col, in.size().cols());
+
+  SizeType ld = in.ld();
+  const T* in_ptr = in.ptr();
+  T* out_ptr = out.ptr();
+
+  dim3 nr_threads(add_first_rows_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(ncols), add_first_rows_kernel_sz));
+  addFirstRows<<<nr_blocks, nr_threads, 0, stream>>>(ncols, ld, in_ptr, out_ptr);
+}
+
+DLAF_GPU_ADD_FIRST_ROWS_ETI(, float);
+DLAF_GPU_ADD_FIRST_ROWS_ETI(, double);
+
+constexpr unsigned scale_tile_with_row_kernel_sz = 32;
+
+template <class T>
+__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld, const T* in_ptr,
+                                 SizeType out_ld, T* out_ptr) {
+  const SizeType i = blockIdx.x * scale_tile_with_row_kernel_sz + threadIdx.x;
+  const SizeType j = blockIdx.y * scale_tile_with_row_kernel_sz + threadIdx.y;
+
+  if (i >= nrows || j >= ncols)
+    return;
+
+  const T in_el = in_ptr[j * in_ld];
+  T& out_el = out_ptr[i + j * out_ld];
+
+  if constexpr (std::is_same<T, float>::value) {
+    out_el = out_el / sqrtf(in_el);
+  }
+  else {
+    out_el = out_el / sqrt(in_el);
+  }
+}
+
+template <class T>
+void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
+                          const matrix::Tile<const T, Device::GPU>& in,
+                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+  if (row >= k || col >= k)
+    return;
+
+  SizeType nrows = std::min(k - row, out.size().rows());
+  SizeType ncols = std::min(k - col, out.size().cols());
+
+  SizeType in_ld = in.ld();
+  const T* in_ptr = in.ptr();
+  SizeType out_ld = out.ld();
+  T* out_ptr = out.ptr();
+
+  const unsigned unrows = to_uint(nrows);
+  const unsigned uncols = to_uint(ncols);
+  dim3 nr_threads(scale_tile_with_row_kernel_sz, scale_tile_with_row_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(unrows, scale_tile_with_row_kernel_sz),
+                 util::ceilDiv(uncols, scale_tile_with_row_kernel_sz));
+  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, in_ld, in_ptr, out_ld, out_ptr);
+}
+
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
+DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, cudaStream_t stream) {
@@ -197,42 +585,6 @@ void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out
 DLAF_CUDA_APPLY_INDEX_ETI(, float);
 DLAF_CUDA_APPLY_INDEX_ETI(, double);
 
-constexpr unsigned cast_complex_kernel_tile_rows = 64;
-constexpr unsigned cast_complex_kernel_tile_cols = 16;
-
-template <class T, class CT>
-__global__ void castTileToComplex(const unsigned m, const unsigned n, SizeType ld, const T* in,
-                                  CT* out) {
-  const unsigned i = blockIdx.x * cast_complex_kernel_tile_rows + threadIdx.x;
-  const unsigned j = blockIdx.y * cast_complex_kernel_tile_cols + threadIdx.y;
-
-  if (i >= m || j >= n)
-    return;
-
-  SizeType idx = i + j * ld;
-  if constexpr (std::is_same<T, float>::value) {
-    out[idx] = make_cuComplex(in[idx], 0);
-  }
-  else {
-    out[idx] = make_cuDoubleComplex(in[idx], 0);
-  }
-}
-
-template <class T>
-void castTileToComplex(SizeType m, SizeType n, SizeType ld, const T* in, std::complex<T>* out,
-                       cudaStream_t stream) {
-  const unsigned um = to_uint(m);
-  const unsigned un = to_uint(n);
-  dim3 nr_threads(cast_complex_kernel_tile_rows, cast_complex_kernel_tile_cols);
-  dim3 nr_blocks(util::ceilDiv(um, cast_complex_kernel_tile_rows),
-                 util::ceilDiv(un, cast_complex_kernel_tile_cols));
-  castTileToComplex<<<nr_blocks, nr_threads, 0, stream>>>(um, un, ld, util::cppToCudaCast(in),
-                                                          util::cppToCudaCast(out));
-}
-
-DLAF_CUDA_CAST_TO_COMPLEX(, float);
-DLAF_CUDA_CAST_TO_COMPLEX(, double);
-
 constexpr unsigned invert_index_kernel_sz = 256;
 
 __global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out) {
@@ -247,38 +599,6 @@ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaSt
   dim3 nr_threads(invert_index_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
-}
-
-constexpr unsigned init_index_tile_kernel_sz = 256;
-
-__global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr) {
-  const SizeType i = blockIdx.x * init_index_tile_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  index_arr[i] = i + offset;
-}
-
-void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr, cudaStream_t stream) {
-  dim3 nr_threads(init_index_tile_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), init_index_tile_kernel_sz));
-  initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
-}
-
-constexpr unsigned coltype_kernel_sz = 256;
-
-__global__ void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr) {
-  const SizeType i = blockIdx.x * coltype_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  ct_arr[i] = ct;
-}
-
-void setColTypeTile(ColType ct, SizeType len, ColType* ct_arr, cudaStream_t stream) {
-  dim3 nr_threads(coltype_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), coltype_kernel_sz));
-  setColTypeTile<<<nr_blocks, nr_threads, 0, stream>>>(ct, len, ct_arr);
 }
 
 constexpr unsigned givens_rot_kernel_sz = 256;
@@ -326,256 +646,5 @@ DLAF_SET_UNIT_DIAG_ETI(, float);
 DLAF_SET_UNIT_DIAG_ETI(, double);
 
 // --- Eigenvector formation kernels ---
-
-constexpr unsigned evecs_diag_kernel_sz = 32;
-
-template <class T>
-__global__ void scaleByDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
-                                const T* d_cols, const T* evecs, T* ws) {
-  const SizeType i = blockIdx.x * evecs_diag_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * evecs_diag_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  const SizeType idx = i + j * ld;
-  const T di = d_rows[i];
-  const T dj = d_cols[j];
-
-  ws[idx] = (di == dj) ? evecs[idx] : evecs[idx] / (di - dj);
-}
-
-struct StrideOp {
-  SizeType ld;
-  SizeType offset;
-
-  __host__ __device__ __forceinline__ SizeType operator()(const SizeType i) const {
-    return offset + i * ld;
-  }
-};
-
-template <class T>
-struct Row2ColMajor {
-  SizeType ld;
-  SizeType ncols;
-  T* data;
-
-  __host__ __device__ __forceinline__ T operator()(const SizeType idx) const {
-    SizeType i = idx / ncols;
-    SizeType j = idx - i * ncols;
-    return data[i + j * ld];
-  }
-};
-
-template <class T>
-void updateEigenvectorsWithDiagonal(SizeType nrows, SizeType ncols, SizeType ld, const T* d_rows,
-                                    const T* d_cols, const T* evecs, T* ws, cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(evecs_diag_kernel_sz, evecs_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, evecs_diag_kernel_sz),
-                 util::ceilDiv(uncols, evecs_diag_kernel_sz));
-  scaleByDiagonal<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, d_rows, d_cols, evecs, ws);
-
-  // Multiply along rows
-  //
-  // Note: the output of the reduction is saved in the first column.
-  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
-  size_t temp_storage_bytes;
-
-  using OffsetIterator =
-      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
-  using InputIterator =
-      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
-
-  cub::CountingInputIterator<SizeType> count_iter(0);
-  OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
-  OffsetIterator end_offsets = begin_offsets + 1;                // last column
-  InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
-
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
-                                                          begin_offsets, end_offsets, mult_op, T(1),
-                                                          stream));
-  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
-                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
-                                                          T(1), stream));
-  // Deallocate memory
-  auto extend_info = [d_temp_storage](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
-    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
-  };
-  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
-}
-
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, float);
-DLAF_CUDA_UPDATE_EVECS_WITH_DIAG_ETI(, double);
-
-constexpr unsigned mult_cols_kernel_sz = 256;
-
-template <class T>
-__global__ void multiplyColumns(SizeType len, const T* in, T* out) {
-  const SizeType i = blockIdx.x * mult_cols_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  out[i] *= in[i];
-}
-
-template <class T>
-void multiplyColumns(SizeType len, const T* in, T* out, cudaStream_t stream) {
-  dim3 nr_threads(mult_cols_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), mult_cols_kernel_sz));
-  multiplyColumns<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
-}
-
-DLAF_CUDA_MULTIPLY_COLS_ETI(, float);
-DLAF_CUDA_MULTIPLY_COLS_ETI(, double);
-
-constexpr unsigned weight_vec_kernel_sz = 32;
-
-template <class T>
-__global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T* rank1_vec,
-                                       const T* weight_vec, T* evecs) {
-  const SizeType i = blockIdx.x * evecs_diag_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * evecs_diag_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  T ws_el = weight_vec[i];
-  T z_el = rank1_vec[i];
-  T& el_evec = evecs[i + j * ld];
-
-  if constexpr (std::is_same<T, float>::value) {
-    el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
-  }
-  else {
-    el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
-  }
-}
-
-template <class T>
-void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType ld, const T* rank1_vec,
-                            const T* weight_vec, T* evecs, cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(weight_vec_kernel_sz, weight_vec_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, weight_vec_kernel_sz),
-                 util::ceilDiv(uncols, weight_vec_kernel_sz));
-  calcEvecsFromWeightVec<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, rank1_vec, weight_vec,
-                                                               evecs);
-}
-
-DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(, float);
-DLAF_CUDA_EVECS_FROM_WEIGHT_VEC_ETI(, double);
-
-constexpr unsigned sq_kernel_sz = 32;
-
-template <class T>
-__global__ void sqTile(SizeType nrows, SizeType ncols, SizeType ld, const T* in, T* out) {
-  const SizeType i = blockIdx.x * sq_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * sq_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  const SizeType idx = i + j * ld;
-  out[idx] = in[idx] * in[idx];
-}
-
-template <class T>
-void sumSqTileOnDevice(SizeType nrows, SizeType ncols, SizeType ld, const T* in, T* out,
-                       cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(sq_kernel_sz, sq_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, sq_kernel_sz), util::ceilDiv(uncols, sq_kernel_sz));
-  sqTile<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld, in, out);
-
-  // Sum along columns
-  //
-  // Note: the output of the reduction is saved in the first row.
-  // TODO: use a segmented reduce sum with fancy iterators
-  size_t temp_storage_bytes;
-  DLAF_GPU_CHECK_ERROR(
-      cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
-  void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-
-  for (SizeType j = 0; j < ncols; ++j) {
-    DLAF_GPU_CHECK_ERROR(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                                &out[j * ld], nrows, stream));
-  }
-
-  // Deallocate memory
-  auto extend_info = [d_temp_storage](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
-    memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
-  };
-  pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
-}
-
-DLAF_CUDA_SUM_SQ_TILE_ETI(, float);
-DLAF_CUDA_SUM_SQ_TILE_ETI(, double);
-
-constexpr unsigned add_first_rows_kernel_sz = 256;
-
-template <class T>
-__global__ void addFirstRows(SizeType len, SizeType ld, const T* in, T* out) {
-  const SizeType i = blockIdx.x * add_first_rows_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  out[i * ld] += in[i * ld];
-}
-
-template <class T>
-void addFirstRows(SizeType len, SizeType ld, const T* in, T* out, cudaStream_t stream) {
-  dim3 nr_threads(add_first_rows_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), add_first_rows_kernel_sz));
-  addFirstRows<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, in, out);
-}
-
-DLAF_CUDA_ADD_FIRST_ROWS_ETI(, float);
-DLAF_CUDA_ADD_FIRST_ROWS_ETI(, double);
-
-constexpr unsigned scale_tile_with_row_kernel_sz = 32;
-
-template <class T>
-__global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
-                                 SizeType ld_evecs, T* evecs) {
-  const SizeType i = blockIdx.x * scale_tile_with_row_kernel_sz + threadIdx.x;
-  const SizeType j = blockIdx.y * scale_tile_with_row_kernel_sz + threadIdx.y;
-
-  if (i >= nrows || j >= ncols)
-    return;
-
-  const SizeType idx_evecs = i + j * ld_evecs;
-  const SizeType idx_norms = j * ld_norms;
-
-  const T el_norm = norms[idx_norms];
-  T& el_evec = evecs[idx_evecs];
-
-  if constexpr (std::is_same<T, float>::value) {
-    el_evec = el_evec / sqrtf(el_norm);
-  }
-  else {
-    el_evec = el_evec / sqrt(el_norm);
-  }
-}
-
-template <class T>
-void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType ld_norms, const T* norms,
-                      SizeType ld_evecs, T* evecs, cudaStream_t stream) {
-  const unsigned unrows = to_uint(nrows);
-  const unsigned uncols = to_uint(ncols);
-  dim3 nr_threads(scale_tile_with_row_kernel_sz, scale_tile_with_row_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(unrows, scale_tile_with_row_kernel_sz),
-                 util::ceilDiv(uncols, scale_tile_with_row_kernel_sz));
-  scaleTileWithRow<<<nr_blocks, nr_threads, 0, stream>>>(nrows, ncols, ld_norms, norms, ld_evecs, evecs);
-}
-
-DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, float);
-DLAF_CUDA_SCALE_TILE_WITH_ROW_ETI(, double);
 
 }

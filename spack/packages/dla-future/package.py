@@ -32,7 +32,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
-    depends_on("cmake@3.16:", type="build")
+    depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
@@ -84,12 +84,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
         args.append(self.define_from_variant("DLAF_WITH_HIP", "rocm"))
-
-        # HIP support requires compiling with hipcc
-        if '+rocm' in self.spec:
-            args += [self.define('CMAKE_CXX_COMPILER', self.spec['hip'].hipcc)]
-            if self.spec.satisfies('^cmake@3.21.0:3.21.2'):
-                args += [self.define('__skip_rocmclang', True)]
+        if "+rocm" in spec:
+            archs = self.spec.variants["amdgpu_target"].value
+            if archs != "none":
+                arch_str = ";".join(archs)
+                args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

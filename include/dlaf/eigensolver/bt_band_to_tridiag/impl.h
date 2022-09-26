@@ -592,8 +592,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         mat_w2.setHeight(nrefls);
       }
 
-      // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
-
       auto [tile_v, tile_w] =
           helperBackend.computeVW(ij, helper,
                                   ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
@@ -784,8 +782,6 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
         mat_w2.setHeight(nrefls);
         mat_w2tmp.setHeight(nrefls);
       }
-
-      // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
 
       // Note:
       // From HH it is possible to extract V that is needed for computing W and W2, both required

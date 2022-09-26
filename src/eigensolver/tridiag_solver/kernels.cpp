@@ -14,6 +14,17 @@
 namespace dlaf::eigensolver::internal {
 
 template <class T>
+void castToComplex(const matrix::Tile<const T, Device::CPU>& in,
+                   const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+  for (auto el_idx : iterate_range2d(out.size())) {
+    out(el_idx) = std::complex<T>(in(el_idx), 0);
+  }
+}
+
+DLAF_CPU_CAST_TO_COMPLEX_ETI(, float);
+DLAF_CPU_CAST_TO_COMPLEX_ETI(, double);
+
+template <class T>
 T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, Device::CPU>& bottom) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};

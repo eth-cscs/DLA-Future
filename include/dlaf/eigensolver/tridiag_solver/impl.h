@@ -206,32 +206,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    auto sender = pika::execution::experimental::when_all(real_evecs.read_sender(tile_wrt_local),
-                                                          evecs.readwrite_sender(tile_wrt_local));
-    if constexpr (device == Device::CPU) {
-      dlaf::internal::transformDetach(
-          dlaf::internal::Policy<Backend::MC>(),
-          [](const matrix::Tile<const T, Device::CPU>& in,
-             const matrix::Tile<std::complex<T>, Device::CPU>& out) {
-            for (auto el_idx : iterate_range2d(out.size())) {
-              out(el_idx) = std::complex<T>(in(el_idx), 0);
-            }
-          },
-          std::move(sender));
-    }
-    else {
-#ifdef DLAF_WITH_GPU
-      namespace ex = pika::execution::experimental;
-      namespace di = dlaf::internal;
-      di::transformDetach(
-          dlaf::internal::Policy<Backend::GPU>(),
-          [](const matrix::Tile<const T, Device::GPU>& in,
-             const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
-            castTileToComplex(in.size().rows(), in.size().cols(), in.ld(), in.ptr(), out.ptr(), stream);
-          },
-          std::move(sender));
-#endif
-    }
+    castToComplexAsync<device>(real_evecs.read_sender(tile_wrt_local),
+                               evecs.readwrite_sender(tile_wrt_local));
   }
 }
 }

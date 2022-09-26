@@ -34,6 +34,41 @@ void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
                                                        tile::internal::stedc_o, std::move(sender)));
 }
 
+template <class T>
+void castToComplex(const matrix::Tile<const T, Device::CPU>& in,
+                   const matrix::Tile<std::complex<T>, Device::CPU>& out);
+
+#define DLAF_CPU_CAST_TO_COMPLEX_ETI(kword, Type)                                    \
+  kword template void castToComplex(const matrix::Tile<const Type, Device::CPU>& in, \
+                                    const matrix::Tile<std::complex<Type>, Device::CPU>& out)
+
+DLAF_CPU_CAST_TO_COMPLEX_ETI(extern, float);
+DLAF_CPU_CAST_TO_COMPLEX_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void castToComplex(const matrix::Tile<const T, Device::GPU>& in,
+                   const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream);
+
+#define DLAF_GPU_CAST_TO_COMPLEX_ETI(kword, Type)                                             \
+  kword template void castToComplex(const matrix::Tile<const Type, Device::GPU>& in,          \
+                                    const matrix::Tile<std::complex<Type>, Device::GPU>& out, \
+                                    cudaStream_t stream)
+
+DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, float);
+DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, double);
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(castToComplex);
+
+template <Device D, class InTileSender, class OutTileSender>
+void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
+  namespace di = dlaf::internal;
+  namespace ex = pika::execution::experimental;
+  auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
+  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), castToComplex_o, std::move(sender));
+}
+
 // Cuppen's decomposition
 //
 // Substracts the offdiagonal element at the split from the top and bottom diagonal elements and
@@ -525,17 +560,6 @@ void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out
 
 DLAF_CUDA_APPLY_INDEX_ETI(extern, float);
 DLAF_CUDA_APPLY_INDEX_ETI(extern, double);
-
-template <class T>
-void castTileToComplex(SizeType m, SizeType n, SizeType ld, const T* in, std::complex<T>* out,
-                       cudaStream_t stream);
-
-#define DLAF_CUDA_CAST_TO_COMPLEX(kword, Type)                                               \
-  kword template void castTileToComplex(SizeType m, SizeType n, SizeType ld, const Type* in, \
-                                        std::complex<Type>* out, cudaStream_t stream)
-
-DLAF_CUDA_CAST_TO_COMPLEX(extern, float);
-DLAF_CUDA_CAST_TO_COMPLEX(extern, double);
 
 void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream);
 

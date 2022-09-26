@@ -73,7 +73,7 @@ struct Test {
     [[maybe_unused]] auto kernel_MC = [uplo, m, n, alpha, beta, &tiles](SizeType i) {
       lapack::laset(uplo, m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld());
     };
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
     [[maybe_unused]] auto kernel_GPU = [uplo, m, n, alpha, beta, &tiles](SizeType i,
                                                                          cudaStream_t stream) {
       gpulapack::laset(uplo, m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld(), stream);
@@ -90,7 +90,7 @@ struct Test {
       if constexpr (backend == Backend::MC) {
         elapsed_time = runner.run(kernel_MC);
       }
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
       if constexpr (backend == Backend::GPU) {
         elapsed_time = runner.runStream(kernel_GPU);
       }

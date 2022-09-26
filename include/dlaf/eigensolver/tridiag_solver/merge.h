@@ -138,14 +138,11 @@ inline SizeType problemSize(SizeType i_begin, SizeType i_end, const matrix::Dist
 // The index starts at `0` for tiles in the range [i_begin, i_end].
 template <Device D>
 inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& index) {
-  namespace di = dlaf::internal;
   SizeType nb = index.distribution().blockSize().rows();
-
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
     SizeType tile_row = (i - i_begin) * nb;
-    auto sender = di::whenAllLift(tile_row, index.readwrite_sender(tile_idx));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), initIndexTile_o, std::move(sender));
+    initIndexTileAsync<D>(tile_row, index.readwrite_sender(tile_idx));
   }
 }
 
@@ -156,8 +153,6 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& ind
 template <class T, Device D>
 void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                   Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
-  namespace di = dlaf::internal;
-
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
     // True if tile is in Q1
@@ -169,10 +164,8 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shar
     GlobalTileIndex z_idx(i, 0);
 
     // Copy the row into the column vector `z`
-    auto sender =
-        di::whenAllLift(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx), z.readwrite_sender(z_idx));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), assembleRank1UpdateVectorTile_o,
-                        std::move(sender));
+    assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx),
+                                             z.readwrite_sender(z_idx));
   }
 }
 
@@ -198,8 +191,7 @@ auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, D>& vec)
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    tiles_max.push_back(di::transform(di::Policy<DefaultBackend<D>::value>(), maxElementInColumnTile_o,
-                                      vec.read_sender(LocalTileIndex(i, 0))));
+    tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read_sender(LocalTileIndex(i, 0))));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -434,12 +426,9 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
 
 template <Device D>
 void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end, Matrix<ColType, D>& coltypes) {
-  namespace di = dlaf::internal;
-
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    auto sender = di::whenAllLift(val, coltypes.readwrite_sender(LocalTileIndex(i, 0)));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), setColTypeTile_o, std::move(sender));
+    setColTypeTileAsync<D>(val, coltypes.readwrite_sender(LocalTileIndex(i, 0)));
   }
 }
 
@@ -657,13 +646,11 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sender =
-          di::whenAllLift(k_fut, i_subm_el, j_subm_el, diag.read_sender(GlobalTileIndex(i_tile, 0)),
-                          diag.read_sender(GlobalTileIndex(j_tile, 0)),
-                          evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                          ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideEvecsByDiagonal_o,
-                          std::move(sender));
+      divideEvecsByDiagonalAsync<D>(k_fut, i_subm_el, j_subm_el,
+                                    diag.read_sender(GlobalTileIndex(i_tile, 0)),
+                                    diag.read_sender(GlobalTileIndex(j_tile, 0)),
+                                    evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                                    ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
     }
   }
 
@@ -672,11 +659,9 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin + 1; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sender =
-          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                          ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), multiplyFirstColumns_o,
-                          std::move(sender));
+      multiplyFirstColumnsAsync<D>(k_fut, i_subm_el, j_subm_el,
+                                   ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                                   ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
     }
   }
 
@@ -685,12 +670,10 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sender =
-          di::whenAllLift(k_fut, i_subm_el, j_subm_el, z.read_sender(GlobalTileIndex(i_tile, 0)),
-                          ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
-                          evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), calcEvecsFromWeightVec_o,
-                          std::move(sender));
+      calcEvecsFromWeightVecAsync<D>(k_fut, i_subm_el, j_subm_el,
+                                     z.read_sender(GlobalTileIndex(i_tile, 0)),
+                                     ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
+                                     evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
     }
   }
 
@@ -700,9 +683,8 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
       GlobalTileIndex mat_idx(i_tile, j_tile);
-      auto sender = di::whenAllLift(k_fut, i_subm_el, j_subm_el, evecs.read_sender(mat_idx),
-                                    ws.readwrite_sender(mat_idx));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), sumsqCols_o, std::move(sender));
+      sumsqColsAsync<D>(k_fut, i_subm_el, j_subm_el, evecs.read_sender(mat_idx),
+                        ws.readwrite_sender(mat_idx));
     }
   }
 
@@ -711,10 +693,8 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sender =
-          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                          ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), addFirstRows_o, std::move(sender));
+      addFirstRowsAsync<D>(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+                           ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
     }
   }
 
@@ -723,11 +703,9 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
     SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
     for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
       SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      auto sender =
-          di::whenAllLift(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
-                          evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-      di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideColsByFirstRow_o,
-                          std::move(sender));
+      divideColsByFirstRowAsync<D>(k_fut, i_subm_el, j_subm_el,
+                                   ws.read_sender(GlobalTileIndex(i_begin, j_tile)),
+                                   evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
     }
   }
 }

@@ -52,7 +52,7 @@ spack:
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.2.3
-        prefix: /opt/amdgpu
+        prefix: /opt/rocm-5.2.3/llvm
         buildable: false
     hip:
       externals:

@@ -29,9 +29,9 @@ void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<DiagTileSenderIn>(in), std::forward<DiagTileSenderOut>(out));
-  ex::start_detached(
-      di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend<D>::value>(),
-                                                       tile::internal::stedc_o, std::move(sender)));
+  ex::start_detached(di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend_v<D>>(),
+                                                                      tile::internal::stedc_o,
+                                                                      std::move(sender)));
 }
 
 template <class T>
@@ -66,7 +66,7 @@ void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
   auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), castToComplex_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), castToComplex_o, std::move(sender));
 }
 
 // Cuppen's decomposition
@@ -108,7 +108,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
-  return di::transform(di::Policy<DefaultBackend<D>::value>(), cuppensDecomp_o, std::move(sender)) |
+  return di::transform(di::Policy<DefaultBackend_v<D>>(), cuppensDecomp_o, std::move(sender)) |
          ex::make_future();
 }
 
@@ -150,7 +150,7 @@ void copyDiagonalFromCompactTridiagonalAsync(TridiagTile&& in, DiagTile&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<TridiagTile>(in), std::forward<DiagTile>(out));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), copyDiagonalFromCompactTridiagonal_o,
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), copyDiagonalFromCompactTridiagonal_o,
                       std::move(sender));
 }
 
@@ -194,7 +194,7 @@ void assembleRank1UpdateVectorTileAsync(bool top_tile, pika::shared_future<T> rh
   namespace di = dlaf::internal;
   auto sender = di::whenAllLift(top_tile, rho_fut, std::forward<EvecsTileSender>(evecs),
                                 std::forward<Rank1TileSender>(rank1));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), assembleRank1UpdateVectorTile_o,
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), assembleRank1UpdateVectorTile_o,
                       std::move(sender));
 }
 
@@ -226,7 +226,7 @@ DLAF_MAKE_CALLABLE_OBJECT(maxElementInColumnTile);
 template <class T, Device D, class TileSender>
 auto maxElementInColumnTileAsync(TileSender&& tile) {
   namespace di = dlaf::internal;
-  return di::transform(di::Policy<DefaultBackend<D>::value>(), maxElementInColumnTile_o,
+  return di::transform(di::Policy<DefaultBackend_v<D>>(), maxElementInColumnTile_o,
                        std::forward<TileSender>(tile));
 }
 
@@ -244,7 +244,7 @@ void setColTypeTileAsync(ColType val, TileSender&& tile) {
   namespace di = dlaf::internal;
 
   auto sender = di::whenAllLift(val, std::forward<TileSender>(tile));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), setColTypeTile_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setColTypeTile_o, std::move(sender));
 }
 
 void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile);
@@ -261,7 +261,7 @@ void initIndexTileAsync(SizeType tile_row, TileSender&& tile) {
   namespace di = dlaf::internal;
 
   auto sender = di::whenAllLift(tile_row, std::forward<TileSender>(tile));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), initIndexTile_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), initIndexTile_o, std::move(sender));
 }
 
 template <class T>
@@ -317,8 +317,7 @@ void divideEvecsByDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType i_
                       std::forward<DiagRowsTileSender>(diag_rows),
                       std::forward<DiagColsTileSender>(diag_cols), std::forward<EvecsTileSender>(evecs),
                       std::forward<TempTileSender>(temp));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideEvecsByDiagonal_o,
-                      std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideEvecsByDiagonal_o, std::move(sender));
 }
 
 template <class T>
@@ -358,7 +357,7 @@ void multiplyFirstColumnsAsync(pika::shared_future<SizeType> k_fut, SizeType row
   namespace di = dlaf::internal;
   auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), multiplyFirstColumns_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), multiplyFirstColumns_o, std::move(sender));
 }
 
 template <class T>
@@ -407,8 +406,7 @@ void calcEvecsFromWeightVecAsync(pika::shared_future<SizeType> k_fut, SizeType r
   auto sender =
       di::whenAllLift(std::move(k_fut), row, col, std::forward<Rank1TileSender>(rank1),
                       std::forward<TempTileSender>(temp), std::forward<EvecsTileSender>(evecs));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), calcEvecsFromWeightVec_o,
-                      std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), calcEvecsFromWeightVec_o, std::move(sender));
 }
 
 template <class T>
@@ -448,7 +446,7 @@ void sumsqColsAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType 
 
   auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<EvecsTileSender>(evecs),
                                 std::forward<TempTileSender>(temp));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), sumsqCols_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), sumsqCols_o, std::move(sender));
 }
 
 template <class T>
@@ -487,7 +485,7 @@ void addFirstRowsAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeTy
 
   auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), addFirstRows_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), addFirstRows_o, std::move(sender));
 }
 
 template <class T>
@@ -528,7 +526,7 @@ void divideColsByFirstRowAsync(pika::shared_future<SizeType> k_fut, SizeType row
 
   auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), divideColsByFirstRow_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideColsByFirstRow_o, std::move(sender));
 }
 
 // ---------------------------

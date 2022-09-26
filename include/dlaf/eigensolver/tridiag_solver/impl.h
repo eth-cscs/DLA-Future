@@ -22,7 +22,6 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
 #include "dlaf/matrix/print_csv.h"

@@ -293,7 +293,7 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
                              ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
 
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
                                                              std::move(sort_fn), std::move(sender)));
 }
 
@@ -333,7 +333,7 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& ind
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
                                                              std::move(applyIndex_fn),
                                                              std::move(sender)));
 }
@@ -363,7 +363,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
                                                              std::move(inv_fn), std::move(sender)));
 }
 
@@ -420,7 +420,7 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
                              ex::when_all_vector(tc.readwrite(out)));
 
   return ex::make_future(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend<D>::value>(),
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
                                                              std::move(part_fn), std::move(sender)));
 }
 
@@ -583,8 +583,7 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
   TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(std::move(rots_fut), ex::when_all_vector(tc.readwrite(mat)));
-  di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(givens_rots_fn),
-                      std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(givens_rots_fn), std::move(sender));
 }
 
 template <class T>
@@ -638,7 +637,6 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 template <class T, Device D>
 void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                Matrix<const T, D>& diag, Matrix<const T, D>& z, Matrix<T, D>& ws, Matrix<T, D>& evecs) {
-  namespace di = dlaf::internal;
   const matrix::Distribution& distr = evecs.distribution();
 
   // Reduce by multiplication into the first column of each tile of ws
@@ -743,7 +741,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
     };
 
     auto sender = ex::when_all(k_fut, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
-    di::transformDetach(di::Policy<DefaultBackend<D>::value>(), std::move(diag_fn), std::move(sender));
+    di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(diag_fn), std::move(sender));
   }
 }
 

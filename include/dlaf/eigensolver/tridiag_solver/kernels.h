@@ -18,7 +18,7 @@
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include <cusolverDn.h>
+#include "dlaf/gpu/lapack/api.h"
 #endif
 
 namespace dlaf::eigensolver::internal {

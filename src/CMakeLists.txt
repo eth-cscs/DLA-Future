@@ -172,7 +172,7 @@ if(DLAF_WITH_GPU)
   )
   target_sources(dlaf.core PRIVATE ${dlaf_core_gpu_source_files})
   if(DLAF_WITH_HIP)
-    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE HIP)
   endif()
 endif()
 

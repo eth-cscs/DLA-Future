@@ -81,6 +81,6 @@ void backTransformationBandToTridiag(comm::CommunicatorGrid grid, const SizeType
 
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
 
-  internal::BackTransformationT2B_D<B, D, T>::call(grid, band_size, mat_e, mat_hh);
+  internal::BackTransformationT2B<B, D, T>::call(grid, band_size, mat_e, mat_hh);
 }
 }

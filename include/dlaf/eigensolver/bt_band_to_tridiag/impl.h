@@ -639,8 +639,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType band_size,
-                                            Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
+void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType band_size,
+                                          Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
 
@@ -688,7 +688,7 @@ void BackTransformationT2B_D<B, D, T>::call(comm::CommunicatorGrid grid, const S
   constexpr std::size_t n_workspaces = 2;
 
   RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_ws_hh);
-  RoundRobin<Panel<Coord::Col, T, D>> hh_panels(n_workspaces, dist_ws_hh);
+  RoundRobin<Panel<Coord::Col, T, Device::CPU>> hh_panels(n_workspaces, dist_ws_hh);
 
   RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_ws_v);
   RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_ws_v);

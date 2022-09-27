@@ -179,7 +179,7 @@ int pika_main(pika::program_options::variables_map& vm) {
 
 int main(int argc, char** argv) {
   // Init MPI
-  dlaf::comm::mpi_init mpi_initter(argc, argv, dlaf::comm::mpi_thread_level::multiple);
+  dlaf::comm::mpi_init mpi_initter(argc, argv);
 
   // options
   using namespace pika::program_options;

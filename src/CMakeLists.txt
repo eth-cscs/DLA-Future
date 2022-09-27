@@ -216,6 +216,9 @@ add_library(
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
   $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/kernels.cu>
 )
+if (DLAF_WITH_HIP)
+    set_source_files_properties(eigensolver/tridiag_solver/kernels.cu PROPERTIES LANGUAGE HIP)
+endif()
 target_link_libraries(dlaf.tridiagonal_eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.tridiagonal_eigensolver)
 DLAF_addPrecompiledHeaders(dlaf.tridiagonal_eigensolver)
@@ -247,6 +250,9 @@ add_library(
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/perms.cu>
 )
+if (DLAF_WITH_HIP)
+    set_source_files_properties(permutations/general/perms.cu PROPERTIES LANGUAGE HIP)
+endif()
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)
 DLAF_addPrecompiledHeaders(dlaf.permutations)

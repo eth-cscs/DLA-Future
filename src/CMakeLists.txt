@@ -213,8 +213,8 @@ add_library(
   dlaf.tridiagonal_eigensolver OBJECT
   eigensolver/tridiag_solver/mc.cpp
   eigensolver/tridiag_solver/kernels.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/kernels.cu>
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
 )
 if (DLAF_WITH_HIP)
     set_source_files_properties(eigensolver/tridiag_solver/kernels.cu PROPERTIES LANGUAGE HIP)

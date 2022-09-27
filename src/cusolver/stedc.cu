@@ -112,27 +112,29 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   rocblas_handle rochandle = static_cast<rocblas_handle>(handle);
   rocblas_evect evect = rocblas_evect::rocblas_evect_tridiagonal;
 
-  auto stedc_fn =
-      [=](rocblas_int* info) {
-        if constexpr (std::is_same<T, float>::value) {
-          DLAF_GPULAPACK_CHECK_ERROR(
-              rocsolver_sstedc(rochandle, evect, n, evals_ptr, offdiag_ptr, evecs_ptr, ld_evecs, info));
-        }
-        else {
-          DLAF_GPULAPACK_CHECK_ERROR(
-              rocsolver_dstedc(rochandle, evect, n, evals_ptr, offdiag_ptr, evecs_ptr, ld_evecs, info));
-        }
-      }
+  // rocsolver_*stedc takes a const as 5th argument
+  auto stedc_fn = [=](rocblas_int* info) {
+    if constexpr (std::is_same<T, float>::value) {
+      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_sstedc(rochandle, evect, n, evals_ptr,
+                                                  const_cast<T*>(offdiag_ptr), evecs_ptr, ld_evecs,
+                                                  info));
+    }
+    else {
+      DLAF_GPULAPACK_CHECK_ERROR(rocsolver_dstedc(rochandle, evect, n, evals_ptr,
+                                                  const_cast<T*>(offdiag_ptr), evecs_ptr, ld_evecs,
+                                                  info));
+    }
+  };
 
   // Pre-allocate temporary buffers
   std::size_t workspace_size;
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_start_device_memory_size_query(rochandle));
   stedc_fn(info());
-  DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle), &workspace_size);
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle, &workspace_size));
   dlaf::memory::MemoryView<std::byte, Device::GPU> workspaceOnDevice(to_int(workspace_size));
 
   DLAF_GPULAPACK_CHECK_ERROR(
-      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace.size())));
+      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace_size)));
   stedc_fn(info());
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(rochandle, nullptr, 0));
 

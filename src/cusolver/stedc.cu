@@ -122,17 +122,17 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
           DLAF_GPULAPACK_CHECK_ERROR(
               rocsolver_dstedc(rochandle, evect, n, evals_ptr, offdiag_ptr, evecs_ptr, ld_evecs, info));
         }
-      }
+      };
 
   // Pre-allocate temporary buffers
   std::size_t workspace_size;
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_start_device_memory_size_query(rochandle));
   stedc_fn(info());
-  DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle), &workspace_size);
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle, &workspace_size));
   dlaf::memory::MemoryView<std::byte, Device::GPU> workspaceOnDevice(to_int(workspace_size));
 
   DLAF_GPULAPACK_CHECK_ERROR(
-      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace.size())));
+      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace_size)));
   stedc_fn(info());
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(rochandle, nullptr, 0));
 

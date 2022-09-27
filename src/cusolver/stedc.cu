@@ -41,7 +41,11 @@ __global__ void expandTridiagonalToLowerTriangular(SizeType n, const T* diag, co
 __global__ void assertSyevdInfo(int* info) {
   if (*info != 0) {
     printf("Error SYEVD: info != 0 (%d)\n", *info);
+#ifdef DLAF_WITH_CUDA
     __trap();
+#elif defined(DLAF_WITH_HIP)
+    abort();
+#endif
   }
 }
 
@@ -62,9 +66,13 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   SizeType ld_evecs = evecs.ld();
   T* evecs_ptr = evecs.ptr();
 
-  // Expand from compact tridiagonal form into lower triangular form
+  // Note: `info` has to be stored on device!
+  memory::MemoryView<int, Device::GPU> info(1);
+
   cudaStream_t stream;
   DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
+#ifdef DLAF_WITH_CUDA
+  // Expand from compact tridiagonal form into lower triangular form
   const unsigned un = to_uint(n);
   dim3 nr_threads(tridiag_kernel_sz, tridiag_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(un, tridiag_kernel_sz), util::ceilDiv(un, tridiag_kernel_sz));
@@ -87,12 +95,11 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   void* bufferOnDevice = memory::internal::getUmpireDeviceAllocator().allocate(workspaceInBytesOnDevice);
   void* bufferOnHost = memory::internal::getUmpireHostAllocator().allocate(workspaceInBytesOnHost);
 
-  // Note: `info` has to be stored on device!
-  memory::MemoryView<int, Device::GPU> info(1);
   DLAF_GPULAPACK_CHECK_ERROR(cusolverDnXsyevd(handle, params, jobz, uplo, n, dtype, evecs_ptr, ld_evecs,
                                               dtype, evals_ptr, dtype, bufferOnDevice,
                                               workspaceInBytesOnDevice, bufferOnHost,
                                               workspaceInBytesOnHost, info()));
+
   assertSyevdInfo<<<1, 1, 0, stream>>>(info());
 
   auto extend_info = [info = std::move(info), bufferOnDevice, bufferOnHost, params](cudaError_t status) {
@@ -101,6 +108,39 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
     memory::internal::getUmpireHostAllocator().deallocate(bufferOnHost);
     DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroyParams(params));
   };
+#elif defined(DLAF_WITH_HIP)
+  rocblas_handle rochandle = static_cast<rocblas_handle>(handle);
+  rocblas_evect evect = rocblas_evect::rocblas_evect_tridiagonal;
+
+  auto stedc_fn =
+      [=](rocblas_int* info) {
+        if constexpr (std::is_same<T, float>::value) {
+          DLAF_GPULAPACK_CHECK_ERROR(
+              rocsolver_sstedc(rochandle, evect, n, evals_ptr, offdiag_ptr, evecs_ptr, ld_evecs, info));
+        }
+        else {
+          DLAF_GPULAPACK_CHECK_ERROR(
+              rocsolver_dstedc(rochandle, evect, n, evals_ptr, offdiag_ptr, evecs_ptr, ld_evecs, info));
+        }
+      }
+
+  // Pre-allocate temporary buffers
+  std::size_t workspace_size;
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_start_device_memory_size_query(rochandle));
+  stedc_fn(info());
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle), &workspace_size);
+  dlaf::memory::MemoryView<std::byte, Device::GPU> workspaceOnDevice(to_int(workspace_size));
+
+  DLAF_GPULAPACK_CHECK_ERROR(
+      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace.size())));
+  stedc_fn(info());
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(rochandle, nullptr, 0));
+
+  assertSyevdInfo<<<1, 1, 0, stream>>>(info());
+
+  auto extend_info = [info = std::move(info), workspaceOnDevice = std::move(workspaceOnDevice)](
+                         cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+#endif
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 

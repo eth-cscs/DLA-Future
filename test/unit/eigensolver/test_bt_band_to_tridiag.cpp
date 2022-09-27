@@ -81,17 +81,6 @@ void computeTaus(const SizeType max_refl_size, const SizeType k, matrix::Tile<T,
   }
 }
 
-struct config_t {
-  const SizeType m, n, mb, nb, b = mb;
-};
-
-std::vector<config_t> configs{
-    {0, 0, 4, 4},                                  // empty
-    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
-    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
-    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
-};
-
 template <Backend B, Device D, class T>
 void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, const SizeType b) {
   Matrix<T, Device::CPU> mat_e_h({m, n}, {mb, nb});
@@ -242,6 +231,17 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
   CHECK_MATRIX_NEAR(result, mat_e_h, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
+struct config_t {
+  const SizeType m, n, mb, nb, b = mb;
+};
+
+std::vector<config_t> configs{
+    {0, 0, 4, 4},                                  // empty
+    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
+    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
+    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
+};
+
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
@@ -259,6 +259,14 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs) {
+      testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
 }
 #endif
 
@@ -283,5 +291,13 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+      testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
 }
 #endif

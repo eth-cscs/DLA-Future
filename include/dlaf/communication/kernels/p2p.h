@@ -77,7 +77,7 @@ template <class CommSender, class Sender>
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
-  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
+  return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
                            RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
 }
 

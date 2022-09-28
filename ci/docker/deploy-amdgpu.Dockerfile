@@ -70,7 +70,7 @@ RUN if [ "$USE_MKL" = "ON" ]; then \
 # Deploy Extra RocBlas files separately.
 ARG USE_ROCBLAS=OFF
 RUN if [ "$USE_ROCBLAS" = "ON" ]; then \
-      cp -r `spack -e ci location -i rocblas`/lib/library ${DEPLOY}/usr/lib ; \
+      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib ; \
     fi
 
 # Multistage build, this is the final small image

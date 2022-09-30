@@ -12,38 +12,66 @@
 #include "dlaf/communication/kernels/p2p_allsum.h"
 
 #include <gtest/gtest.h>
-#include <mpi.h>
 
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
+#include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 
 #include "dlaf_test/matrix/util_tile.h"
 
 using namespace dlaf;
-using namespace dlaf::matrix::test;
+using dlaf::matrix::test::fixedValueTile;
+using dlaf::matrix::test::set;
 
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
+
+template <Device D>
 class P2PTest : public ::testing::Test {
   static_assert(NUM_MPI_RANKS >= 2, "at least 2 ranks are required");
 
 protected:
-  using T = int;
-  using MatrixT = matrix::Matrix<T, Device::CPU>;
+  using T = float;
+  using MatrixT = matrix::Matrix<T, D>;
 
   comm::Communicator world = MPI_COMM_WORLD;
 };
 
-template <class T, Device device>
-void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix) {
-  namespace ex = pika::execution::experimental;
+using P2PTestMC = P2PTest<Device::CPU>;
 
+#ifdef DLAF_WITH_GPU
+using P2PTestGPU = P2PTest<Device::GPU>;
+#endif
+
+template <class T, class SenderTile>
+auto setTileTo(SenderTile&& tile, const T input_value) {
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  return internal::whenAllLift(blas::Uplo::General, input_value, input_value,
+                               std::forward<SenderTile>(tile)) |
+         tile::laset(internal::Policy<DefaultBackend_v<D>>());
+}
+
+template <class SenderTile, class TileLike>
+auto checkTileEq(TileLike&& ref_tile, SenderTile&& tile) {
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  return std::forward<SenderTile>(tile) |
+         internal::transform(internal::Policy<DefaultBackend_v<D>>(), matrix::Duplicate<Device::CPU>{}) |
+         ex::then([&](const auto& tile_cpu) { CHECK_TILE_EQ(ref_tile, tile_cpu); });
+}
+
+template <class T, Device D>
+void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   const LocalTileIndex idx(0, 0);
 
   const comm::IndexT_MPI rank_src = world.size() - 1;
@@ -51,10 +79,11 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix) {
 
   constexpr comm::IndexT_MPI tag = 13;
 
-  auto input_tile = fixedValueTile(26);
+  const T input_value = 26;
+  const auto input_tile = fixedValueTile<T>(input_value);
 
   if (rank_src == world.rank()) {
-    matrix::test::set(matrix(idx).get(), input_tile);
+    tt::sync_wait(setTileTo(matrix.readwrite_sender(idx), input_value));
     ex::start_detached(comm::scheduleSend(world, rank_dst, tag, matrix.read_sender(idx)));
   }
   else if (rank_dst == world.rank()) {
@@ -64,10 +93,10 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, device> matrix) {
     return;
   }
 
-  CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
+  tt::sync_wait(checkTileEq(input_tile, matrix.read_sender(idx)));
 }
 
-TEST_F(P2PTest, SendRecv) {
+TEST_F(P2PTestMC, SendRecv) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
@@ -77,10 +106,20 @@ TEST_F(P2PTest, SendRecv) {
   testSendRecv(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
 }
 
+#ifdef DLAF_WITH_GPU
+TEST_F(P2PTestGPU, SendRecv) {
+  auto dist = matrix::Distribution({13, 13}, {13, 13});
+
+  // single tile matrix whose columns are stored in contiguous memory
+  testSendRecv(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+
+  // single tile matrix whose columns are stored in non-contiguous memory
+  testSendRecv(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+}
+#endif
+
 template <class T, Device device>
 void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> matrix) {
-  namespace ex = pika::execution::experimental;
-
   // This test involves just 2 ranks, where rank_src sends all tiles allowing to "mirror" the
   // entire matrix on rank_dst. P2P communications are issued by the different ranks in different
   // orders, linking them using the tag of the MPI communication.
@@ -126,7 +165,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> mat
   }
 }
 
-TEST_F(P2PTest, SendRecvMixTags) {
+TEST_F(P2PTestMC, SendRecvMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())
@@ -138,8 +177,6 @@ TEST_F(P2PTest, SendRecvMixTags) {
 
 template <Backend B, Device D, class T>
 void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
-  namespace ex = pika::execution::experimental;
-
   const LocalTileIndex idx(0, 0);
 
   const comm::IndexT_MPI rank_src = world.size() - 1;
@@ -147,8 +184,8 @@ void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
 
   constexpr comm::IndexT_MPI tag = 13;
 
-  auto input_tile = fixedValueTile(13);
-  matrix::test::set(matrix(idx).get(), input_tile);
+  const T input_value = 13;
+  tt::sync_wait(setTileTo(matrix.readwrite_sender(idx), input_value));
 
   matrix::Matrix<T, D> tmp(matrix.distribution().localSize(), matrix.blockSize());
 
@@ -164,10 +201,10 @@ void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
     return;
   }
 
-  CHECK_TILE_EQ(fixedValueTile(26), tmp.read(idx).get());
+  tt::sync_wait(checkTileEq(fixedValueTile(26), tmp.read_sender(idx)));
 }
 
-TEST_F(P2PTest, AllSum) {
+TEST_F(P2PTestMC, AllSum) {
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
   // single tile matrix whose columns are stored in contiguous memory
@@ -177,10 +214,20 @@ TEST_F(P2PTest, AllSum) {
   testP2PAllSum<Backend::MC>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
 }
 
+#ifdef DLAF_WITH_GPU
+TEST_F(P2PTestGPU, AllSum) {
+  auto dist = matrix::Distribution({13, 13}, {13, 13});
+
+  // single tile matrix whose columns are stored in contiguous memory
+  testP2PAllSum<Backend::GPU>(world, MatrixT(dist, matrix::tileLayout(dist, 13, 13)));
+
+  // single tile matrix whose columns are stored in non-contiguous memory
+  testP2PAllSum<Backend::GPU>(world, MatrixT(dist, matrix::colMajorLayout(dist, 13)));
+}
+#endif
+
 template <Backend B, Device D, class T>
 void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
-  namespace ex = pika::execution::experimental;
-
   // This test involves just 2 ranks, where rank_src sends all tiles allowing to "mirror" the
   // entire matrix on rank_dst. P2P communications are issued by the different ranks in different
   // orders, linking them using the tag of the MPI communication.
@@ -231,7 +278,7 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
   }
 }
 
-TEST_F(P2PTest, AllSumMixTags) {
+TEST_F(P2PTestMC, AllSumMixTags) {
   const auto dist = matrix::Distribution({10, 10}, {3, 3});
 
   // each tile is stored in contiguous memory (i.e. ld == blocksize.rows())

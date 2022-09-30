@@ -61,7 +61,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
 
   auto elC = [a, b, k](const GlobalElementIndex ij) {
     if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
-      return TypeUtilities<T>::polar(-99, 99);
+      return -TypeUtilities<T>::polar(99, 99);
 
     const double i = ij.row();
     const double j = ij.col();
@@ -71,7 +71,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
 
   auto elR = [a, b, k, alpha, beta](const GlobalElementIndex ij) {
     if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
-      return TypeUtilities<T>::polar(13, -26);
+      return -TypeUtilities<T>::polar(99, 99);
 
     const double i = ij.row();
     const double j = ij.col();

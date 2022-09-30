@@ -40,8 +40,15 @@ TYPED_TEST_SUITE(GeneralMultiplicationTestGPU, MatrixElementTypes);
 const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>> sizes = {
     // m, n, k, mb, a, b
-    {3, 3, 3, 1, 0, 2}, {3, 3, 3, 3, 0, 0},    {6, 6, 6, 3, 0, 1},
-    {9, 9, 9, 3, 0, 2}, {21, 21, 21, 3, 0, 6},
+    // full gemm
+    {3, 3, 3, 1, 0, 2},
+    {3, 3, 3, 3, 0, 0},
+    {6, 6, 6, 3, 0, 1},
+    {9, 9, 9, 3, 0, 2},
+    {21, 21, 21, 3, 0, 6},
+    // sub gemm
+    {9, 9, 9, 3, 1, 2},
+    {21, 21, 21, 3, 3, 6},
 };
 
 GlobalElementSize globalTestSize(const LocalElementSize& size) {

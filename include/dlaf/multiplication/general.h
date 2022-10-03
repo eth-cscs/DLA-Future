@@ -13,6 +13,7 @@
 #include <blas.hh>
 
 #include "dlaf/common/assert.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/multiplication/general/api.h"
 #include "dlaf/util_matrix.h"
@@ -66,4 +67,32 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   else
     DLAF_UNIMPLEMENTED(opA, opB);
 }
+
+template <Backend B, Device D, class T>
+void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const SizeType k,
+                       const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
+                       Matrix<T, D>& mat_c) {
+  // TODO check about grid distribution
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_c), mat_c);
+
+  // TODO check assertions. these are superflous
+  DLAF_ASSERT(dlaf::matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(dlaf::matrix::square_size(mat_b), mat_b);
+  DLAF_ASSERT(dlaf::matrix::square_size(mat_c), mat_c);
+
+  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
+  DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
+  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
+
+  const SizeType m = mat_a.nrTiles().rows();
+  DLAF_ASSERT(a <= b, a, b);
+  DLAF_ASSERT(a >= 0 && a < m, a, m);
+
+  // TODO add check about k
+
+  internal::GeneralSubK<B, D, T>::call(grid, a, b, k, alpha, mat_a, mat_b, beta, mat_c);
+}
+
 }

@@ -171,10 +171,17 @@ void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>>
     subk_sizes = {
         // m, n, k, mb, a, b, r
-        {3, 3, 3, 1, 0, 2, 3}, {3, 3, 3, 3, 0, 0, 0},     {6, 6, 6, 3, 0, 1, 3},
-        {9, 9, 9, 3, 0, 2, 9}, {21, 21, 21, 3, 0, 6, 21},
-        // TODO test for partial tiles
-        // TODO test for partial tiles and less nrefls
+        // full tile, all reflectors
+        {3, 3, 3, 1, 0, 2, 3},
+        {3, 3, 3, 3, 0, 0, 0},
+        {6, 6, 6, 3, 0, 1, 3},
+        {9, 9, 9, 3, 0, 2, 9},
+        {21, 21, 21, 3, 0, 6, 21},
+        // partial tile, all reflectors
+        {9, 9, 9, 3, 1, 2, 6},
+        {21, 21, 21, 3, 3, 6, 12},
+        // TODO full tile, partial reflectors
+        // TODO partial tile, partial reflectors
 };
 
 TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {

@@ -49,7 +49,7 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 
 template <Backend B, Device D, class T>
 void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_begin,
-                                const SizeType idx_last, const SizeType k, const T alpha,
+                                const SizeType idx_last, const SizeType nrefls, const T alpha,
                                 Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                 Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;

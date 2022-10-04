@@ -35,6 +35,8 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
   if (opB != blas::Op::NoTrans)
     DLAF_UNIMPLEMENTED(opB);
 
+  const auto sub = b - a + 1;
+
   DLAF_ASSERT(a >= 0 and a < m and a < n, a, m, n);
   DLAF_ASSERT(b >= 0 and b < m and b < n, b, m, n);
   DLAF_ASSERT(a <= b, a, b);
@@ -69,14 +71,14 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
     return TypeUtilities<T>::polar((i + k + 1) / (j + 5), i + j + k);
   };
 
-  auto elR = [a, b, k, alpha, beta](const GlobalElementIndex ij) {
+  auto elR = [a, b, sub, k, alpha, beta](const GlobalElementIndex ij) {
     if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
       return -TypeUtilities<T>::polar(99, 99);
 
     const double i = ij.row();
     const double j = ij.col();
 
-    return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * (b - a + 1), (2 * i) + j) +
+    return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * sub, (2 * i) + j) +
            beta * TypeUtilities<T>::polar((i + k + 1) / (j + 5), k + i + j);
   };
 

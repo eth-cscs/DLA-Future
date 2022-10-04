@@ -139,11 +139,11 @@ void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a
                                    const SizeType nrefls, const T alpha, const T beta, const SizeType m,
                                    const SizeType n, const SizeType k, const SizeType mb) {
   const SizeType a_el = a * mb;
-  const SizeType b_el = std::min((b + 1) * mb - 1, m - 1);  // TODO use r
+  const SizeType b_el = std::min(a_el + nrefls - 1, std::min((b + 1) * mb - 1, m - 1));
 
   auto [refA, refB, refC, refResult] =
-      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, n, k, alpha, beta, blas::Op::NoTrans,
-                                                     blas::Op::NoTrans);
+      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, n, nrefls, alpha, beta,
+                                                     blas::Op::NoTrans, blas::Op::NoTrans);
 
   auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
     Matrix<T, Device::CPU> matrix(size, block_size);
@@ -173,8 +173,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, S
         // m, n, k, mb, a, b, r
         // full tile, all reflectors
         {3, 3, 3, 1, 0, 2, 3},
-        {3, 3, 3, 3, 0, 0, 0},
-        {6, 6, 6, 3, 0, 1, 3},
+        {3, 3, 3, 3, 0, 0, 3},
+        {6, 6, 6, 3, 0, 1, 6},
         {9, 9, 9, 3, 0, 2, 9},
         {21, 21, 21, 3, 0, 6, 21},
         // partial tile, all reflectors

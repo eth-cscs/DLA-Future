@@ -58,5 +58,29 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
   internal::TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
 }
 
+template <Backend backend, Device device, class T>
+void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& tridiag,
+                   Matrix<BaseType<T>, device>& evals, Matrix<T, device>& evecs) {
+  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
+  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
+
+  DLAF_ASSERT(matrix::local_matrix(evals), evals);
+  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
+
+  DLAF_ASSERT(matrix::square_size(evecs), evecs);
+  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
+
+  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
+              evecs, tridiag);
+  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),
+              tridiag, evals);
+  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(), evecs,
+              tridiag);
+  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,
+              evals);
+
+  internal::TridiagSolver<backend, device, BaseType<T>>::call(grid, tridiag, evals, evecs);
+}
+
 }
 }

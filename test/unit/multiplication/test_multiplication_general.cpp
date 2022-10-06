@@ -134,6 +134,13 @@ struct GeneralSubKMultiplicationTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(GeneralSubKMultiplicationTestMC, MatrixElementTypes);
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct GeneralSubKMultiplicationTestGPU : public TestWithCommGrids {};
+
+TYPED_TEST_SUITE(GeneralSubKMultiplicationTestGPU, MatrixElementTypes);
+#endif
+
 template <class T, Backend B, Device D>
 void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
                                    const SizeType nrefls, const T alpha, const T beta, const SizeType m,
@@ -198,3 +205,16 @@ TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(GeneralSubKMultiplicationTestGPU, CorrectnessDistributed) {
+  for (auto comm_grid : this->commGrids()) {
+    for (const auto& [m, n, k, mb, a, b, nrefls] : subk_sizes) {
+      const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+      const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+      testGeneralSubKMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, nrefls, alpha,
+                                                                          beta, m, n, k, mb);
+    }
+  }
+}
+#endif

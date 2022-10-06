@@ -855,18 +855,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           const LocalTileIndex idx_e(i_e, j_e);
           const auto nb = mat_e.tileSize({i_e_g, j_e_g}).cols();
 
-          if (!helper.affectsMultipleTiles()) {
-            ex::start_detached(
-                ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                             ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
-                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
-                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb))) |
-                dlaf::internal::transform<
-                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                     thread_priority::normal),
-                                                                 ApplyHHToSingleTileRow<B, T>{}));
-          }
-          else {
+          // TWO ROWs (same RANK)
+          if (helper.affectsMultipleTiles()) {
             const auto partsSpecs = {helper.topPart().specHH(), helper.bottomPart().specHH()};
             const auto tile_vs = splitTile(tile_v, partsSpecs);
             const auto tile_ws = splitTile(tile_w, partsSpecs);
@@ -883,7 +873,20 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                                                                      thread_priority::normal),
                                                                  ApplyHHToDoubleTileRow<B, T>{}));
           }
+          // SINGLE ROW (edge-case)
+          else {
+            ex::start_detached(
+                ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                             ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
+                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb))) |
+                dlaf::internal::transform<
+                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                     thread_priority::normal),
+                                                                 ApplyHHToSingleTileRow<B, T>{}));
+          }
         }
+        // TWO RANKs UPDATE (MAIN + PARTNER) on TWO ROWS
         else {
           const bool isTopRank = rank.row() == rankHH.row();
           const comm::IndexT_MPI rankPartner =

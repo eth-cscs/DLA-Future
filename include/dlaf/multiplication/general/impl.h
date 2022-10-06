@@ -61,11 +61,6 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
-  // TODO minimize panel memory allocation (in order to reduce also communications)
-  constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> col_panels(n_workspaces, dist_c);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> row_panels(n_workspaces, dist_c);
-
   const SizeType idx_end = std::min(idx_last + 1, dist_a.nrTiles().rows());
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
@@ -73,44 +68,86 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   const SizeType j_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Col>(idx_begin);
   const SizeType j_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Col>(idx_end);
 
-  for (SizeType k = idx_begin; k <= idx_last; ++k) {
-    auto& col_panel = col_panels.nextResource();
-    auto& row_panel = row_panels.nextResource();
+  const SizeType mb = dist_a.blockSize().rows();
+  const bool isKPartialTile = nrefls % mb != 0;
 
-    const auto rank_k = dist_a.template rankGlobalTile<Coord::Col>(k);
-    if (rank_k == rank.col()) {
+  // Note: minimize panel memory allocation
+  // TODO In particular, it will be reduced on both head and tail
+  const SizeType till_k = idx_begin * mb + nrefls;
+  const matrix::Distribution dist_panel({till_k, till_k}, dist_a.blockSize(), dist_a.commGridSize(),
+                                        dist_a.rankIndex(), dist_a.sourceRankIndex());
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_panel,
+                                                              GlobalTileIndex{idx_begin, idx_begin});
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_panel,
+                                                              GlobalTileIndex{idx_begin, idx_begin});
+  const auto iRows = [i_end, nrefls, isKPartialTile, mb](const SizeType i_loc_tile) {
+    const bool isLastRow = i_loc_tile == i_end - 1;
+    // TODO workaround for tile_c
+    const SizeType nrows = (isLastRow && isKPartialTile) ? (nrefls % mb) : mb;
+    return std::tuple{isLastRow, nrows};
+  };
+
+  const auto jCols = [j_end, nrefls, isKPartialTile, mb](const SizeType j_loc_tile) {
+    const bool isLastCol = j_loc_tile == j_end - 1;
+    // TODO workaround for tile_c
+    const SizeType ncols = (isLastCol && isKPartialTile) ? (nrefls % mb) : mb;
+    return std::tuple{isLastCol, ncols};
+  };
+
+  for (SizeType k = idx_begin; k <= idx_last; ++k) {
+    auto& panelA = panelsA.nextResource();
+    auto& panelB = panelsB.nextResource();
+
+    const auto [nrows, ncols] = [&]() {
+      if (k == idx_last && isKPartialTile) {
+        panelA.setWidth(nrefls % mb);
+        panelB.setHeight(nrefls % mb);
+        return std::tuple{nrefls % mb, nrefls % mb};
+      }
+      return std::tuple{mb, mb};
+    }();
+
+    const auto rank_k = dist_a.rankGlobalTile({k, k});
+    if (rank_k.col() == rank.col()) {
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Col>(k);
       for (SizeType i = i_beg; i < i_end; ++i) {
-        const LocalTileIndex i0(i, 0);
-        col_panel.setTile(i0, mat_a.read(LocalTileIndex{i, k_local}));
+        const LocalTileIndex ik(i, k_local);
+        panelA.setTile(ik, splitTile(mat_a.read(ik), {{0, 0}, {std::get<1>(iRows(i)), ncols}}));
       }
     }
-    if (rank_k == rank.row()) {
+    if (rank_k.row() == rank.row()) {
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Row>(k);
       for (SizeType j = j_beg; j < j_end; ++j) {
-        const LocalTileIndex j0(0, j);
-        row_panel.setTile(j0, mat_b.read(LocalTileIndex{k_local, j}));
+        const LocalTileIndex kj(k_local, j);
+        panelB.setTile(kj, splitTile(mat_b.read(kj), {{0, 0}, {nrows, std::get<1>(jCols(j))}}));
       }
     }
 
-    broadcast(rank.col(), col_panel, mpi_row_task_chain);
-    broadcast(rank.row(), row_panel, mpi_col_task_chain);
+    broadcast(rank.col(), panelA, mpi_row_task_chain);
+    broadcast(rank.row(), panelB, mpi_col_task_chain);
 
     for (SizeType i = i_beg; i < i_end; ++i) {
+      const auto [isLastRow, nrows] = iRows(i);
       for (SizeType j = j_beg; j < j_end; ++j) {
-        // TODO split last tile if not all elements are used
+        const auto [isLastCol, ncols] = jCols(j);
 
-        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                                       col_panel.read_sender(LocalTileIndex{i, 0}),
-                                                       row_panel.read_sender(LocalTileIndex{0, j}),
-                                                       k == idx_begin ? beta : T(1),
-                                                       mat_c.readwrite_sender(LocalTileIndex(i, j))) |
+        const LocalTileIndex ij(i, j);
+
+        auto tile_c = (!isLastRow && !isLastCol) ? mat_c.readwrite_sender(ij)
+                                                 : splitTile(mat_c(ij), {{0, 0}, {nrows, ncols}});
+
+        using dlaf::internal::whenAllLift;
+        ex::start_detached(whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                       panelA.read_sender(ij), panelB.read_sender(ij),
+                                       k == idx_begin ? beta : T(1), std::move(tile_c)) |
                            tile::gemm(dlaf::internal::Policy<B>()));
       }
     }
 
-    col_panel.reset();
-    row_panel.reset();
+    panelA.reset();
+    panelB.reset();
   }
 }
 }

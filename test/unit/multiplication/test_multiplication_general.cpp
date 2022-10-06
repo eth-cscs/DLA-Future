@@ -180,8 +180,12 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, S
         // partial tile, all reflectors
         {9, 9, 9, 3, 1, 2, 6},
         {21, 21, 21, 3, 3, 6, 12},
-        // TODO full tile, partial reflectors
-        // TODO partial tile, partial reflectors
+        // full tile, partial reflectors
+        {9, 9, 9, 3, 0, 2, 8},
+        {6, 6, 6, 2, 0, 2, 5},
+        // partial tile, partial reflectors
+        {9, 9, 9, 3, 1, 2, 5},
+        // TODO incomplete tiles
 };
 
 TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {

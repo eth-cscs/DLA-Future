@@ -47,6 +47,11 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
   }
 }
 
+// This implementations is based on
+//
+// Van De Geijn, Robert A., and Jerrell Watts.
+// SUMMA: Scalable universal matrix multiplication algorithm.
+// Concurrency: Practice and Experience 9.4 (1997): 255-274
 template <Backend B, Device D, class T>
 void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_begin,
                                 const SizeType idx_last, const SizeType nrefls, const T alpha,

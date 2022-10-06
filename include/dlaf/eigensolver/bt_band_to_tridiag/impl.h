@@ -351,6 +351,18 @@ private:
   Part part_bottom_;
 };
 
+/// Note:
+/// This is a helper specific for the distributed version of the algorithm. It provides:
+/// - helper for checking if a rank is involved, as main or partner, in a given step of the algorithm
+/// - helper for computing rank of the row partner for P2P communications
+/// - helper for indexing panel tile
+///
+/// In particular, about the latter one, the panel has an extra workspace used when a row is involved
+/// in the computation as partner of the row above it (e.g. P2P communication).
+/// This is needed because applying a block of HH affects (excluding some edge-cases) two rows of tiles,
+/// that might reside on different ranks.
+/// wsIndexHH() job is to return the right index to use in the panel, according to the row this rank
+/// is working on, and its role as a main or partner row.
 struct DistIndexing {
   DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
                const GlobalTileIndex& ij, const SizeType& ij_b_row)

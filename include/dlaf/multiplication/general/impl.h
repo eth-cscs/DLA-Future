@@ -147,8 +147,8 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
     }
 
     // Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)
-    broadcast(rank.col(), panelA, mpi_row_task_chain);
-    broadcast(rank.row(), panelB, mpi_col_task_chain);
+    broadcast(rank_k.col(), panelA, mpi_row_task_chain);
+    broadcast(rank_k.row(), panelB, mpi_col_task_chain);
 
     // This is the core loop where the k step performs the update step over the full local matrix
     // using the col and row workspaces.

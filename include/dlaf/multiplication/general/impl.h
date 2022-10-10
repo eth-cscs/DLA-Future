@@ -65,6 +65,9 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
+  const bool hasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
+  const bool hasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
+
   const SizeType idx_end = std::min(idx_last + 1, dist_a.nrTiles().rows());
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
@@ -101,21 +104,15 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   // Tiles are going to be splitted because either just a subset of rows or columns are involved.
   // The first boolean information allows a minor optimization, allowing to avoid a splitTile in
   // case the full tile is going to be used.
-  const bool isEndRangePartiallyUsed = ((nrefls % mb) != 0);
   const SizeType partialSize = (nrefls % mb);
-  const auto sizeOfIndexInRange = [mb, &isEndRangePartiallyUsed, &partialSize](const SizeType index,
-                                                                               const SizeType end) {
-    const bool isLastRow = (index == (end - 1));
-    const bool isPartial = (isLastRow && isEndRangePartiallyUsed);
-    const SizeType size = isPartial ? partialSize : mb;
-    return std::tuple{isPartial, size};
-  };
+  const bool isEndRangePartial = nrefls % mb != 0;
 
   for (SizeType k = idx_begin; k <= idx_last; ++k) {
     auto& panelA = panelsA.nextResource();
     auto& panelB = panelsB.nextResource();
 
-    const auto [isKPartial, kSize] = sizeOfIndexInRange(k, idx_last + 1);
+    const bool isKPartial = k == idx_last && isEndRangePartial;
+    const SizeType kSize = isKPartial ? partialSize : mb;
     if (isKPartial) {
       panelA.setWidth(kSize);
       panelB.setHeight(kSize);
@@ -128,7 +125,8 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Col>(k);
       for (SizeType i = i_beg; i < i_end; ++i) {
         const LocalTileIndex ik(i, k_local);
-        const auto [isRowPartial, nrows] = sizeOfIndexInRange(i, i_end);
+        const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && hasLastRow);
+        const SizeType nrows = isRowPartial ? partialSize : mb;
         panelA.setTile(ik, (isRowPartial || isKPartial)
                                ? splitTile(mat_a.read(ik), {{0, 0}, {nrows, kSize}})
                                : mat_a.read(ik));
@@ -139,7 +137,8 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Row>(k);
       for (SizeType j = j_beg; j < j_end; ++j) {
         const LocalTileIndex kj(k_local, j);
-        const auto [isColPartial, ncols] = sizeOfIndexInRange(j, j_end);
+        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && hasLastCol);
+        const SizeType ncols = isColPartial ? partialSize : mb;
         panelB.setTile(kj, (isKPartial || isColPartial)
                                ? splitTile(mat_b.read(kj), {{0, 0}, {kSize, ncols}})
                                : mat_b.read(kj));
@@ -153,10 +152,14 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
     // This is the core loop where the k step performs the update step over the full local matrix
     // using the col and row workspaces.
     for (SizeType i = i_beg; i < i_end; ++i) {
-      const auto [isRowPartial, nrows] = sizeOfIndexInRange(i, i_end);
+      const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && hasLastRow);
+      const SizeType nrows = isRowPartial ? partialSize : mb;
+
       for (SizeType j = j_beg; j < j_end; ++j) {
         const LocalTileIndex ij(i, j);
-        const auto [isColPartial, ncols] = sizeOfIndexInRange(j, j_end);
+
+        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && hasLastCol);
+        const SizeType ncols = isColPartial ? partialSize : mb;
 
         ex::start_detached(
             dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,

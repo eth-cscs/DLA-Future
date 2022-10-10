@@ -144,23 +144,26 @@ TYPED_TEST_SUITE(GeneralSubKMultiplicationTestGPU, MatrixElementTypes);
 template <class T, Backend B, Device D>
 void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
                                    const SizeType nrefls, const T alpha, const T beta, const SizeType m,
-                                   const SizeType n, const SizeType k, const SizeType mb) {
+                                   const SizeType mb) {
+  // TODO source_rank_index
+  matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
+
   const SizeType a_el = a * mb;
   const SizeType b_el = std::min(a_el + nrefls - 1, std::min((b + 1) * mb - 1, m - 1));
 
   auto [refA, refB, refC, refResult] =
-      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, n, nrefls, alpha, beta,
+      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, nrefls, alpha, beta,
                                                      blas::Op::NoTrans, blas::Op::NoTrans);
 
-  auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
-    Matrix<T, Device::CPU> matrix(size, block_size);
+  auto distributedMatrixFrom = [&dist](auto elSetter) {
+    Matrix<T, Device::CPU> matrix(dist);
     dlaf::matrix::util::set(matrix, elSetter);
     return matrix;
   };
 
-  Matrix<const T, Device::CPU> mat_ah = setMatrix(refA, {m, k}, {mb, mb});
-  Matrix<const T, Device::CPU> mat_bh = setMatrix(refB, {k, n}, {mb, mb});
-  Matrix<T, Device::CPU> mat_ch = setMatrix(refC, {m, n}, {mb, mb});
+  Matrix<const T, Device::CPU> mat_ah(distributedMatrixFrom(refA));
+  Matrix<const T, Device::CPU> mat_bh(distributedMatrixFrom(refB));
+  Matrix<T, Device::CPU> mat_ch(distributedMatrixFrom(refC));
 
   {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
@@ -175,33 +178,35 @@ void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a
                     40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
-const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeType, SizeType>>
-    subk_sizes = {
-        // m, n, k, mb, a, b, r
-        // full tile, all reflectors
-        {3, 3, 3, 1, 0, 2, 3},
-        {3, 3, 3, 3, 0, 0, 3},
-        {6, 6, 6, 3, 0, 1, 6},
-        {9, 9, 9, 3, 0, 2, 9},
-        {21, 21, 21, 3, 0, 6, 21},
-        // partial tile, all reflectors
-        {9, 9, 9, 3, 1, 2, 6},
-        {21, 21, 21, 3, 3, 6, 12},
-        // full tile, partial reflectors
-        {9, 9, 9, 3, 0, 2, 8},
-        {6, 6, 6, 2, 0, 2, 5},
-        // partial tile, partial reflectors
-        {9, 9, 9, 3, 1, 2, 5},
-        // TODO incomplete tiles
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> subk_sizes = {
+    // m, mb, a, b, k
+    // full tile, all reflectors
+    {3, 1, 0, 2, 3},
+    {3, 3, 0, 0, 3},
+    {6, 3, 0, 1, 6},
+    {9, 3, 0, 2, 9},
+    {21, 3, 0, 6, 21},
+    // partial tile, all reflectors
+    {9, 3, 1, 2, 6},
+    {21, 3, 3, 6, 12},
+    // full tile, partial reflectors
+    {9, 3, 0, 2, 8},
+    {6, 2, 0, 2, 5},
+    // partial tile, partial reflectors
+    {9, 3, 1, 2, 5},
+    // incomplete tiles, full reflectors
+    {8, 3, 1, 2, 5},
+    // incomplete tiles, partial reflectors
+    {8, 3, 1, 2, 4},
 };
 
 TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& [m, n, k, mb, a, b, nrefls] : subk_sizes) {
+    for (const auto& [m, mb, a, b, nrefls] : subk_sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
       testGeneralSubKMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, a, b, nrefls, alpha,
-                                                                         beta, m, n, k, mb);
+                                                                         beta, m, mb);
     }
   }
 }
@@ -209,11 +214,11 @@ TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GeneralSubKMultiplicationTestGPU, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& [m, n, k, mb, a, b, nrefls] : subk_sizes) {
+    for (const auto& [m, mb, a, b, nrefls] : subk_sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
       testGeneralSubKMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, nrefls, alpha,
-                                                                          beta, m, n, k, mb);
+                                                                          beta, m, mb);
     }
   }
 }

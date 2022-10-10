@@ -82,10 +82,6 @@ void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const Size
   DLAF_ASSERT(dlaf::matrix::square_size(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_size(mat_c), mat_c);
 
-  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
-  DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
-  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
-
   const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
   DLAF_ASSERT(a >= 0 && a < m, a, m);

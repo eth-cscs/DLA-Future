@@ -13,7 +13,8 @@
 #include <exception>
 #include <vector>
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
+#include <pika/synchronization/async_rw_mutex.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
@@ -141,12 +142,22 @@ public:
     return readwrite_sender(this->distribution().localTileIndex(index));
   }
 
+  auto readwrite_sender2(const LocalTileIndex& index) noexcept {
+    const auto i = tileLinearIndex(index);
+    return tile_managers_senders_[i].readwrite();
+  }
+
+  auto readwrite_sender2(const GlobalTileIndex& index) {
+    return readwrite_sender2(this->distribution().localTileIndex(index));
+  }
+
 protected:
   using Matrix<const T, D>::tileLinearIndex;
 
 private:
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
+  using Matrix<const T, D>::tile_managers_senders_;
 };
 
 template <class T, Device D>
@@ -201,6 +212,15 @@ public:
     return read_sender(distribution().localTileIndex(index));
   }
 
+  auto read_sender2(const LocalTileIndex& index) noexcept {
+    const auto i = tileLinearIndex(index);
+    return tile_managers_senders_[i].read();
+  }
+
+  auto read_sender2(const GlobalTileIndex& index) {
+    return read_sender2(distribution().localTileIndex(index));
+  }
+
   /// Synchronization barrier for all local tiles in the matrix
   ///
   /// This blocking call does not return until all operations, i.e. both RO and RW,
@@ -213,6 +233,8 @@ protected:
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
   std::vector<internal::TileFutureManager<T, D>> tile_managers_;
+  std::vector<pika::experimental::async_rw_mutex<Tile<ElementType, D>, Tile<const ElementType, device>>>
+      tile_managers_senders_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

@@ -141,12 +141,12 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
     // Cholesky decomposition on mat_a(k,k) r/w potrf (lapack operation)
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk));
+    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender2(kk));
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       // Update panel mat_a(i,k) with trsm (blas operation), using data mat_a.read(k,k)
-      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk),
-                             mat_a.readwrite_sender(LocalTileIndex{i, k}));
+      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender2(kk),
+                             mat_a.readwrite_sender2(LocalTileIndex{i, k}));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -155,15 +155,15 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
           (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
       // Update trailing matrix: diagonal element mat_a(j,j), reading mat_a.read(j,k), using herk (blas operation)
-      herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(LocalTileIndex{j, k}),
-                                    mat_a.readwrite_sender(LocalTileIndex{j, j}));
+      herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender2(LocalTileIndex{j, k}),
+                                    mat_a.readwrite_sender2(LocalTileIndex{j, j}));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         // Update remaining trailing matrix mat_a(i,j), reading mat_a.read(i,k) and mat_a.read(j,k),
         // using gemm (blas operation)
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender(LocalTileIndex{i, k}),
-                                        mat_a.read_sender(LocalTileIndex{j, k}),
-                                        mat_a.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender2(LocalTileIndex{i, k}),
+                                        mat_a.read_sender2(LocalTileIndex{j, k}),
+                                        mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
     }
   }
@@ -193,7 +193,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Factorization of diagonal tile and broadcast it along the k-th column
     if (kk_rank == this_rank)
-      potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk_idx));
+      potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender2(kk_idx));
 
     // If there is no trailing matrix
     const SizeType kt = k + 1;
@@ -224,7 +224,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ik_idx(i, distr.localTileFromGlobalTile<Coord::Col>(k));
 
         trsmPanelTile<backend>(thread_priority::high, panelT.read_sender(diag_wp_idx),
-                               mat_a.readwrite_sender(ik_idx));
+                               mat_a.readwrite_sender2(ik_idx));
 
         panel.setTile(local_idx, mat_a.read(ik_idx));
       }
@@ -251,7 +251,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const auto i = distr.localTileFromGlobalTile<Coord::Row>(jt_idx);
 
         herkTrailingDiagTile<backend>(trailing_matrix_priority, panel.read_sender({Coord::Row, i}),
-                                      mat_a.readwrite_sender(LocalTileIndex{i, j}));
+                                      mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
 
       for (SizeType i_idx = jt_idx + 1; i_idx < nrtile; ++i_idx) {
@@ -265,7 +265,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         // be trailing_matrix_executor/priority?
         gemmTrailingMatrixTile<backend>(thread_priority::normal, panel.read_sender({Coord::Row, i}),
                                         panelT.read_sender({Coord::Col, j}),
-                                        mat_a.readwrite_sender(LocalTileIndex{i, j}));
+                                        mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
     }
 
@@ -286,24 +286,24 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
   for (SizeType k = 0; k < nrtile; ++k) {
     auto kk = LocalTileIndex{k, k};
 
-    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender(kk));
+    potrfDiagTile<backend>(thread_priority::normal, mat_a.readwrite_sender2(kk));
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
-      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk),
-                             mat_a.readwrite_sender(LocalTileIndex{k, j}));
+      trsmPanelTile<backend>(thread_priority::high, mat_a.read_sender2(kk),
+                             mat_a.readwrite_sender2(LocalTileIndex{k, j}));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const auto trailing_matrix_priority =
           (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
-      herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(LocalTileIndex{k, i}),
-                                    mat_a.readwrite_sender(LocalTileIndex{i, i}));
+      herkTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender2(LocalTileIndex{k, i}),
+                                    mat_a.readwrite_sender2(LocalTileIndex{i, i}));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender(LocalTileIndex{k, i}),
-                                        mat_a.read_sender(LocalTileIndex{k, j}),
-                                        mat_a.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, mat_a.read_sender2(LocalTileIndex{k, i}),
+                                        mat_a.read_sender2(LocalTileIndex{k, j}),
+                                        mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
     }
   }
@@ -364,7 +364,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_idx(distr.localTileFromGlobalTile<Coord::Row>(k), j);
 
         trsmPanelTile<backend>(thread_priority::high, panelT.read_sender(diag_wp_idx),
-                               mat_a.readwrite_sender(kj_idx));
+                               mat_a.readwrite_sender2(kj_idx));
 
         panel.setTile(local_idx, mat_a.read(kj_idx));
       }
@@ -391,7 +391,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const auto j = distr.localTileFromGlobalTile<Coord::Col>(it_idx);
 
         herkTrailingDiagTile<backend>(trailing_matrix_priority, panel.read_sender({Coord::Col, j}),
-                                      mat_a.readwrite_sender(LocalTileIndex{i, j}));
+                                      mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
 
       for (SizeType j_idx = it_idx + 1; j_idx < nrtile; ++j_idx) {
@@ -404,7 +404,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
         gemmTrailingMatrixTile<backend>(thread_priority::normal, panelT.read_sender({Coord::Row, i}),
                                         panel.read_sender({Coord::Col, j}),
-                                        mat_a.readwrite_sender(LocalTileIndex{i, j}));
+                                        mat_a.readwrite_sender2(LocalTileIndex{i, j}));
       }
     }
 

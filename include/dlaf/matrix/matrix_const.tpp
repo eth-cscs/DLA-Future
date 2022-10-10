@@ -69,6 +69,9 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
       tile_managers_.emplace_back(
           TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
                        layout.ldTile()));
+      tile_managers_senders_.emplace_back(
+          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
+                       layout.ldTile()));
     }
   }
 }

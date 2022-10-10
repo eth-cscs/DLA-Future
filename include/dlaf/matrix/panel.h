@@ -467,7 +467,7 @@ struct Panel : public Panel<axis, const T, D> {
     has_been_used_ = true;
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
-    auto tile = BaseT::data_(BaseT::fullIndex(index));
+    auto tile = BaseT::data_.readwrite_sender(BaseT::fullIndex(index));
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else

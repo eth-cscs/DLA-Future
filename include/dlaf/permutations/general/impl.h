@@ -152,4 +152,18 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                                                false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
                                                       std::move(sender)));
 }
+
+template <Backend B, Device D, class T, Coord coord>
+void Permutations<B, D, T, coord>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                                        Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+                                        Matrix<T, D>& mat_out) {
+  (void) grid;
+  (void) i_begin;
+  (void) i_end;
+  (void) perms;
+  (void) mat_in;
+  (void) mat_out;
+  // TODO
+}
+
 }

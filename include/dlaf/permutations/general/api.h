@@ -21,6 +21,8 @@ template <Backend B, Device D, class T, Coord coord>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out);
+  static void call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                   Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out);
 };
 
 /// ---- ETI

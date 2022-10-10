@@ -13,6 +13,7 @@
 #include <blas.hh>
 
 #include "dlaf/common/assert.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/permutations/general/api.h"
 #include "dlaf/util_matrix.h"
@@ -55,6 +56,24 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   DLAF_ASSERT(distr_in.blockSize().get<coord>() == distr_perms.blockSize().rows(), mat_in, perms);
 
   internal::Permutations<B, D, T, coord>::call(i_begin, i_end, perms, mat_in, mat_out);
+}
+
+template <Backend B, Device D, class T, Coord coord>
+void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+             Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+  const matrix::Distribution& distr_perms = perms.distribution();
+  const matrix::Distribution& distr_in = mat_in.distribution();
+
+  DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
+  DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
+  DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in, mat_out);
+  DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);
+
+  DLAF_ASSERT(matrix::local_matrix(perms), perms);
+  DLAF_ASSERT(distr_perms.size().cols() == 1, perms);
+  DLAF_ASSERT(distr_in.blockSize().rows() == distr_perms.blockSize().rows(), mat_in, perms);
+
+  internal::Permutations<B, D, T, coord>::call(grid, i_begin, i_end, perms, mat_in, mat_out);
 }
 
 }

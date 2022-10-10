@@ -9,8 +9,16 @@
 #
 
 DLAF_addTest(
-  test_permutations
-  SOURCES test_permutations.cpp
+  test_permutations_local
+  SOURCES test_permutations_local.cpp
   LIBRARIES dlaf.permutations dlaf.core
   USE_MAIN PIKA
+)
+
+DLAF_addTest(
+  test_permutations_distributed
+  SOURCES test_permutations_distributed.cpp
+  LIBRARIES dlaf.permutations dlaf.core
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
 )

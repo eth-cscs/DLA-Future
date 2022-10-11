@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 project(DLAF VERSION 0.1.0)
 
@@ -68,10 +68,8 @@ if (DLAF_WITH_CUDA)
   find_package(CUDALIBS REQUIRED)
   set(DLAF_WITH_GPU ON)
 elseif(DLAF_WITH_HIP)
-  if (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    message(FATAL_ERROR "DLAF_WITH_HIP=ON and the compiler used is not Clang. "
-      "Please specify CMAKE_CXX_COMPILER=hipcc or export CXX=hipcc.")
-  endif()
+  set(CMAKE_HIP_EXTENSIONS OFF)
+  enable_language(HIP)
   find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
   find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
   set(DLAF_WITH_GPU ON)

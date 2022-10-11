@@ -114,17 +114,25 @@ DLAF_MAKE_GPUBLAS_SYHE_OP(Her2k, r2k);
 
 DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
 
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #endif
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
-
 }
 #endif
 

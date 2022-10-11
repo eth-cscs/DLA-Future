@@ -64,9 +64,11 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
-  const bool hasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
-  const bool hasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
+  // which rank has the last tile involved
+  const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
+  const bool rankHasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
 
+  // translate from global to local indices
   const SizeType idx_end = idx_last + 1;
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
@@ -75,40 +77,28 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   const SizeType j_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Col>(idx_end);
 
   const SizeType mb = dist_a.blockSize().rows();
+  const SizeType lastTileElement = std::min(idx_end * mb - 1, dist_a.size().rows() - 1);
+  const SizeType nrefls = lastTileElement - idx_begin * mb + 1;
 
-  const SizeType element_last = std::min(idx_end * mb - 1, dist_a.size().rows() - 1);
-  const SizeType nrefls = element_last - idx_begin * mb + 1;
+  // Note: if last tile is incomplete, compute the size of it
+  const bool isEndRangePartial = nrefls % mb != 0;
+  const SizeType partialSize = (nrefls % mb);
 
   // Note:
-  // Workspace needed is limited to the range [i_begin:i_last], but it can be constrained even more
-  // to store just nrefls rows or cols, for column and row panel respectively.
-  // The panel will be allocated just for that range, by creating an ad hoc distribution that starts
-  // in the origin of the matrix an with a size covering all needed elements. Then, when the panel
-  // will be created, the part before the range will be shrinked and it won't be allocated by
-  // specifying the offset.
+  // Workspace needed is limited to the range [i_begin:i_last]. Its allocation is obtained by creating an
+  // ad hoc distribution that starts in the origin of the matrix and with a size covering all needed
+  // elements. This would lead to a [0:i_last] range, but by using panel offset at initialization, the
+  // part before the range will be left out from allocation, actually getting [i_begin:i_last]
   const GlobalTileIndex panel_offset(idx_begin, idx_begin);
-  const SizeType till_k = element_last + 1;
-  const matrix::Distribution dist_panel({till_k, till_k}, dist_a.blockSize(), dist_a.commGridSize(),
-                                        dist_a.rankIndex(), dist_a.sourceRankIndex());
+  const matrix::Distribution dist_panel({lastTileElement + 1, lastTileElement + 1}, dist_a.blockSize(),
+                                        dist_a.commGridSize(), dist_a.rankIndex(),
+                                        dist_a.sourceRankIndex());
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_panel, panel_offset);
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_panel, panel_offset);
 
-  // Note:
-  // This helper lambda, given an index and its end (first index after the last valid one), returns
-  // two information:
-  // - it returns true if not all elements of the tile are interesting (last tile + partially used)
-  // - the number of interesting elements at the specified tile index, along the axis of the index
-  //
-  // This helps when splitting the tile to extract just relevant part involved in the computation.
-  //
-  // Tiles are going to be splitted because either just a subset of rows or columns are involved.
-  // The first boolean information allows a minor optimization, allowing to avoid a splitTile in
-  // case the full tile is going to be used.
-  const SizeType partialSize = (nrefls % mb);
-  const bool isEndRangePartial = nrefls % mb != 0;
-
+  // This loops over the global indices for k, because every rank have to participate in communication
   for (SizeType k = idx_begin; k <= idx_last; ++k) {
     auto& panelA = panelsA.nextResource();
     auto& panelB = panelsB.nextResource();
@@ -127,7 +117,7 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Col>(k);
       for (SizeType i = i_beg; i < i_end; ++i) {
         const LocalTileIndex ik(i, k_local);
-        const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && hasLastRow);
+        const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && rankHasLastRow);
         const SizeType nrows = isRowPartial ? partialSize : mb;
         panelA.setTile(ik, (isRowPartial || isKPartial)
                                ? splitTile(mat_a.read(ik), {{0, 0}, {nrows, kSize}})
@@ -139,7 +129,7 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
       const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Row>(k);
       for (SizeType j = j_beg; j < j_end; ++j) {
         const LocalTileIndex kj(k_local, j);
-        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && hasLastCol);
+        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && rankHasLastCol);
         const SizeType ncols = isColPartial ? partialSize : mb;
         panelB.setTile(kj, (isKPartial || isColPartial)
                                ? splitTile(mat_b.read(kj), {{0, 0}, {kSize, ncols}})
@@ -151,16 +141,17 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
     broadcast(rank_k.col(), panelA, mpi_row_task_chain);
     broadcast(rank_k.row(), panelB, mpi_col_task_chain);
 
-    // This is the core loop where the k step performs the update step over the full local matrix
-    // using the col and row workspaces.
+    // This is the core loop where the k step performs the update over the entire local matrix using
+    // the col and row workspaces.
+    // Everything needed for the update is available locally thanks to previous broadcasts.
     for (SizeType i = i_beg; i < i_end; ++i) {
-      const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && hasLastRow);
+      const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && rankHasLastRow);
       const SizeType nrows = isRowPartial ? partialSize : mb;
 
       for (SizeType j = j_beg; j < j_end; ++j) {
         const LocalTileIndex ij(i, j);
 
-        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && hasLastCol);
+        const bool isColPartial = (j == j_end - 1 && isEndRangePartial && rankHasLastCol);
         const SizeType ncols = isColPartial ? partialSize : mb;
 
         ex::start_detached(

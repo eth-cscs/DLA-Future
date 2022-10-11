@@ -69,8 +69,8 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 }
 
 template <Backend B, Device D, class T>
-void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const SizeType k,
-                       const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
+void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
+                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                        Matrix<T, D>& mat_c) {
   // TODO check about grid distribution
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
@@ -88,7 +88,7 @@ void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const Size
 
   // TODO add check about k
 
-  internal::GeneralSubK<B, D, T>::call(grid, a, b, k, alpha, mat_a, mat_b, beta, mat_c);
+  internal::GeneralSubK<B, D, T>::call(grid, a, b, alpha, mat_a, mat_b, beta, mat_c);
 }
 
 }

@@ -54,9 +54,8 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 // Concurrency: Practice and Experience 9.4 (1997): 255-274
 template <Backend B, Device D, class T>
 void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_begin,
-                                const SizeType idx_last, const SizeType nrefls, const T alpha,
-                                Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
-                                Matrix<T, D>& mat_c) {
+                                const SizeType idx_last, const T alpha, Matrix<const T, D>& mat_a,
+                                Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   const auto& dist_a = mat_a.distribution();
@@ -68,7 +67,7 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   const bool hasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
   const bool hasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
 
-  const SizeType idx_end = std::min(idx_last + 1, dist_a.nrTiles().rows());
+  const SizeType idx_end = idx_last + 1;
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
 
@@ -76,6 +75,9 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   const SizeType j_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Col>(idx_end);
 
   const SizeType mb = dist_a.blockSize().rows();
+
+  const SizeType element_last = std::min(idx_end * mb - 1, dist_a.size().rows() - 1);
+  const SizeType nrefls = element_last - idx_begin * mb + 1;
 
   // Note:
   // Workspace needed is limited to the range [i_begin:i_last], but it can be constrained even more
@@ -85,7 +87,7 @@ void GeneralSubK<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType idx_
   // will be created, the part before the range will be shrinked and it won't be allocated by
   // specifying the offset.
   const GlobalTileIndex panel_offset(idx_begin, idx_begin);
-  const SizeType till_k = idx_begin * mb + nrefls;
+  const SizeType till_k = element_last + 1;
   const matrix::Distribution dist_panel({till_k, till_k}, dist_a.blockSize(), dist_a.commGridSize(),
                                         dist_a.rankIndex(), dist_a.sourceRankIndex());
 

@@ -144,8 +144,9 @@ TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
 template <class T, Backend B, Device D>
 void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
                                   const T alpha, const T beta, const SizeType m, const SizeType mb) {
-  // TODO source_rank_index
-  matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
+  const comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1),
+                                     std::min(1, grid.size().cols() - 1));
+  matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
 
   const SizeType a_el = a * mb;
   const SizeType b_el = std::min((b + 1) * mb - 1, m - 1);

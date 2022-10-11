@@ -23,6 +23,9 @@ struct GeneralSub {
   static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
                      const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
+  static void callNN(comm::CommunicatorGrid grid, const SizeType i_tile_from, const SizeType i_tile_to,
+                     const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
+                     Matrix<T, D>& mat_c);
 };
 
 /// ---- ETI
@@ -39,28 +42,6 @@ DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-#endif
-
-template <Backend B, Device D, class T>
-struct GeneralSubK {
-  static void callNN(comm::CommunicatorGrid grid, const SizeType i_tile_from, const SizeType i_tile_to,
-                     const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
-                     Matrix<T, D>& mat_c);
-};
-
-#define DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct GeneralSubK<BACKEND, DEVICE, DATATYPE>;
-
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_GPU
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 
 }

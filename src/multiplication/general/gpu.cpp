@@ -17,9 +17,4 @@ DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
 
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(, Backend::GPU, Device::GPU, float)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(, Backend::GPU, Device::GPU, double)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
-
 }

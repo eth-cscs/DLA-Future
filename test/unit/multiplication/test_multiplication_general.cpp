@@ -130,20 +130,20 @@ TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <class T>
-struct GeneralSubKMultiplicationTestMC : public TestWithCommGrids {};
+struct GeneralSubMultiplicationDistTestMC : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(GeneralSubKMultiplicationTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct GeneralSubKMultiplicationTestGPU : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(GeneralSubKMultiplicationTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
 #endif
 
 template <class T, Backend B, Device D>
-void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
-                                   const T alpha, const T beta, const SizeType m, const SizeType mb) {
+void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
+                                  const T alpha, const T beta, const SizeType m, const SizeType mb) {
   // TODO source_rank_index
   matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
 
@@ -170,7 +170,7 @@ void testGeneralSubKMultiplication(comm::CommunicatorGrid grid, const SizeType a
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::generalSubMatrixK<B>(grid, a, b, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
+    multiplication::generalSubMatrix<B>(grid, a, b, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
@@ -192,25 +192,25 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> subk_sizes
     {8, 3, 1, 2},
 };
 
-TYPED_TEST(GeneralSubKMultiplicationTestMC, CorrectnessDistributed) {
+TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b] : subk_sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-      testGeneralSubKMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, a, b, alpha, beta, m,
-                                                                         mb);
+      testGeneralSubMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, a, b, alpha, beta, m,
+                                                                        mb);
     }
   }
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralSubKMultiplicationTestGPU, CorrectnessDistributed) {
+TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b, nrefls] : subk_sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-      testGeneralSubKMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, alpha, beta,
-                                                                          m, mb);
+      testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, alpha, beta, m,
+                                                                         mb);
     }
   }
 }

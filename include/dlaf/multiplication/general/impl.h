@@ -53,9 +53,9 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 // SUMMA: Scalable universal matrix multiplication algorithm.
 // Concurrency: Practice and Experience 9.4 (1997): 255-274
 template <Backend B, Device D, class T>
-void GeneralSubK<B, D, T>::callNN(comm::CommunicatorGrid grid, const SizeType idx_begin,
-                                  const SizeType idx_last, const T alpha, Matrix<const T, D>& mat_a,
-                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+void GeneralSub<B, D, T>::callNN(comm::CommunicatorGrid grid, const SizeType idx_begin,
+                                 const SizeType idx_last, const T alpha, Matrix<const T, D>& mat_a,
+                                 Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   const auto& dist_a = mat_a.distribution();

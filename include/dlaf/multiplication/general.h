@@ -38,7 +38,7 @@ namespace dlaf::multiplication {
 ///         overwritten with the result, while others are left untouched.
 ///         Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed.
 /// @pre mat_a, mat_b and mat_c have the same square block size,
-/// @pre mat_a, mat_b and mat_c have the same square size,
+/// @pre mat_a, mat_b and mat_c have the same size,
 /// @pre mat_a, mat_b and mat_c are not distributed,
 /// @pre a <= b < mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
@@ -74,6 +74,21 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
     DLAF_UNIMPLEMENTED(opA, opB);
 }
 
+/// General sub-matrix distributed multiplication, computing
+/// C[a:b][a:b] = alpha * A[a:b][a:b] * B[a:b][a:b] + beta * C[a:b][a:b]
+/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (included)
+///
+/// @param  mat_a contains the input matrix A. Only tiles whose both row and col tile coords are in
+///         the closed range [a,b] are accessed in read-only mode (elements are not modified)
+/// @param  mat_b contains the input matrix B. Only tiles whose both row and col tile coords are in
+///         the closed range [a,b] are accessed in read-only mode (elements are not modified)
+/// @param  mat_c On entry it contains the input matrix C. On exit matrix tiles in the range will be
+///         overwritten with the result, while others are left untouched.
+///         Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed.
+/// @pre mat_a, mat_b and mat_c are distributed in the same way,
+/// @pre mat_a, mat_b and mat_c have the same square block size,
+/// @pre mat_a, mat_b and mat_c have the same size,
+/// @pre a <= b < mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
 void generalSubMatrix(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,

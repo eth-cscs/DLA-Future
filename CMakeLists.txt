@@ -104,6 +104,9 @@ endif()
 # ----- MPI
 find_package(MPI REQUIRED)
 
+# ----- OpenMP
+find_package(OpenMP REQUIRED)
+
 # ----- LAPACK/SCALAPACK
 if(DLAF_WITH_MKL)
   find_package(MKL REQUIRED)

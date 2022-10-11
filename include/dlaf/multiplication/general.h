@@ -86,9 +86,7 @@ void generalSubMatrixK(comm::CommunicatorGrid grid, const SizeType a, const Size
   DLAF_ASSERT(a <= b, a, b);
   DLAF_ASSERT(a >= 0 && a < m, a, m);
 
-  // TODO add check about k
-
-  internal::GeneralSubK<B, D, T>::call(grid, a, b, alpha, mat_a, mat_b, beta, mat_c);
+  internal::GeneralSubK<B, D, T>::callNN(grid, a, b, alpha, mat_a, mat_b, beta, mat_c);
 }
 
 }

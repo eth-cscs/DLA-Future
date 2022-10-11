@@ -43,9 +43,9 @@ DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<
 
 template <Backend B, Device D, class T>
 struct GeneralSubK {
-  static void call(comm::CommunicatorGrid grid, const SizeType i_tile_from, const SizeType i_tile_to,
-                   const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
-                   Matrix<T, D>& mat_c);
+  static void callNN(comm::CommunicatorGrid grid, const SizeType i_tile_from, const SizeType i_tile_to,
+                     const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
+                     Matrix<T, D>& mat_c);
 };
 
 #define DLAF_MULTIPLICATION_GENERAL_SUBK_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \

@@ -74,24 +74,12 @@ target_link_libraries(dlaf.prop
     lapackpp
     blaspp
     umpire
-    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
-    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-    $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
-    $<TARGET_NAME_IF_EXISTS:roc::hipblas>
-    $<TARGET_NAME_IF_EXISTS:roc::rocblas>
-    $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
-)
-target_link_libraries(
-  dlaf.prop
-  INTERFACE MPI::MPI_CXX
-            LAPACK::LAPACK
-            pika::pika
-            lapackpp
-            blaspp
-            umpire
-            $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
-            $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-            $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
 )
 target_compile_definitions(dlaf.prop
   INTERFACE

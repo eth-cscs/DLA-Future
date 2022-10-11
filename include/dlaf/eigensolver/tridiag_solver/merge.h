@@ -533,6 +533,8 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
     // Distribution of the merged subproblems
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+    common::internal::SingleThreadedOmpScope single;
+
     for (const GivensRotation<T>& rot : rots) {
       // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
       SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));

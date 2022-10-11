@@ -28,6 +28,7 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
+#include "dlaf/common/single_threaded_omp.h"
 #include "dlaf/lapack/enum_output.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/tile.h"
@@ -70,6 +71,7 @@ void lacpy(const Tile<const T, Device::CPU>& a, const Tile<T, Device::CPU>& b) {
   const SizeType m = a.size().rows();
   const SizeType n = a.size().cols();
 
+  common::internal::SingleThreadedOmpScope single;
   lapack::lacpy(blas::Uplo::General, m, n, a.ptr(), a.ld(), b.ptr(), b.ld());
 }
 
@@ -86,6 +88,7 @@ void lacpy(TileElementSize region, TileElementIndex in_idx, const Tile<const T, 
   DLAF_ASSERT_MODERATE(out_idx.isIn(out.size() - region + TileElementSize(1, 1)),
                        "Region goes out of bounds for `out`!", region, out_idx, out);
 
+  common::internal::SingleThreadedOmpScope single;
   lapack::lacpy(blas::Uplo::General, region.rows(), region.cols(), in.ptr(in_idx), in.ld(),
                 out.ptr(out_idx), out.ld());
 }
@@ -305,6 +308,7 @@ namespace internal {
 
 template <class T>
 dlaf::BaseType<T> lange(const lapack::Norm norm, const Tile<T, Device::CPU>& a) noexcept {
+  common::internal::SingleThreadedOmpScope single;
   return lapack::lange(norm, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 
@@ -322,6 +326,7 @@ dlaf::BaseType<T> lantr(const lapack::Norm norm, const blas::Uplo uplo, const bl
       DLAF_ASSERT(blas::Uplo::General == uplo, uplo);
       break;
   }
+  common::internal::SingleThreadedOmpScope single;
   return lapack::lantr(norm, uplo, diag, a.size().rows(), a.size().cols(), a.ptr(), a.ld());
 }
 
@@ -330,6 +335,7 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::CPU>& t
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();
 
+  common::internal::SingleThreadedOmpScope single;
   lapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld());
 }
 
@@ -346,6 +352,7 @@ void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a
   DLAF_ASSERT(a.size() == b.size(), a, b);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
+  common::internal::SingleThreadedOmpScope single;
   auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
 
   DLAF_ASSERT(info == 0, info);
@@ -355,6 +362,7 @@ template <class T>
 long long potrfInfo(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
   DLAF_ASSERT(square_size(a), a);
 
+  common::internal::SingleThreadedOmpScope single;
   auto info = lapack::potrf(uplo, a.size().rows(), a.ptr(), a.ld());
   DLAF_ASSERT_HEAVY(info >= 0, info);
 
@@ -378,6 +386,7 @@ void stedc(const Tile<T, Device::CPU>& tridiag, const Tile<T, Device::CPU>& evec
   // Note that `lapack::Job::Vec` corresponds to `compz=I` in the LAPACK
 
   // compz, n, D, E, Z, ldz
+  common::internal::SingleThreadedOmpScope single;
   lapack::stedc(lapack::Job::Vec, evecs.size().rows(), tridiag.ptr(),
                 tridiag.ptr(TileElementIndex(0, 1)), evecs.ptr(), evecs.ld());
 }
@@ -386,6 +395,7 @@ template <class T>
 void scaleCol(T alpha, SizeType col, const Tile<T, Device::CPU>& tile) {
   DLAF_ASSERT(col >= 0, col);
   DLAF_ASSERT(tile.size().cols() > col, tile, col);
+  common::internal::SingleThreadedOmpScope single;
   blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);
 }
 

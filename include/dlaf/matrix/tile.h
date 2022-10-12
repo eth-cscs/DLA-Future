@@ -370,11 +370,8 @@ template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                        const SubTileSpec& spec) {
   namespace ex = pika::execution::experimental;
-  auto f = [](pika::shared_future<Tile<T, D>>&& tile, SubTileSpec&& spec) {
-    return Tile<T, D>(std::move(tile), std::move(spec));
-  };
-  return dlaf::internal::whenAllLift(ex::keep_future(tile), spec) | ex::then(std::move(f)) |
-         ex::make_future();
+  auto f = [spec](pika::shared_future<Tile<T, D>>&& tile) { return Tile<T, D>(std::move(tile), spec); };
+  return ex::keep_future(tile) | ex::then(std::move(f)) | ex::make_future();
 }
 
 template <class T, Device D>

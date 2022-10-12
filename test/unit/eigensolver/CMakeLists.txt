@@ -74,3 +74,11 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
+
+DLAF_addTest(
+  test_tridiag_solver_rot
+  SOURCES test_tridiag_solver_rot.cpp
+  LIBRARIES dlaf.core dlaf.eigensolver dlaf.factorization dlaf.solver dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)

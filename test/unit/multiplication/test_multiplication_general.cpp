@@ -136,7 +136,7 @@ TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-struct GeneralSubKMultiplicationTestGPU : public TestWithCommGrids {};
+struct GeneralSubMultiplicationDistTestGPU : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
 #endif
@@ -207,7 +207,7 @@ TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
-    for (const auto& [m, mb, a, b, nrefls] : subk_sizes) {
+    for (const auto& [m, mb, a, b] : subk_sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
       testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, alpha, beta, m,

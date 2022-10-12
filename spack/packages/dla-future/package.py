@@ -86,7 +86,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         args.append(self.define_from_variant("DLAF_WITH_HIP", "rocm"))
         if "+rocm" in spec:
             archs = self.spec.variants["amdgpu_target"].value
-            if archs != "none":
+            if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
 

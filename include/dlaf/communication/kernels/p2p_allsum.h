@@ -52,7 +52,9 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
   ex::start_detached(comm::scheduleSend(comm, rank_mate, tag, in));
 
   auto tile_out =
-      comm::scheduleRecv(std::forward<CommSender>(comm), rank_mate, tag, std::forward<SenderOut>(out));
+      comm::scheduleRecv(ex::make_unique_any_sender(std::forward<CommSender>(comm)), rank_mate, tag,
+                         pika::execution::experimental::make_unique_any_sender(
+                             std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());
 }

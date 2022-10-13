@@ -175,6 +175,7 @@ DLAF_addSublibrary(
           communication/datatypes.cpp
           communication/kernels/all_reduce.cpp
           communication/kernels/broadcast.cpp
+          communication/kernels/p2p.cpp
           communication/kernels/reduce.cpp
           init.cpp
           matrix/distribution.cpp

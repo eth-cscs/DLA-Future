@@ -44,19 +44,19 @@ void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
 
 DLAF_MAKE_CALLABLE_OBJECT(send);
 
-// Non-blocking point to point receive
-template <class T, Device D>
-auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
-          MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
-#endif
+// // Non-blocking point to point receive
+// template <class T, Device D>
+// auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
+//           MPI_Request* req) {
+// #if !defined(DLAF_WITH_CUDA_RDMA)
+//   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
+// #endif
 
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Irecv(msg.data(), msg.count(), msg.mpi_type(), source, tag, comm, req));
-}
+//   auto msg = comm::make_message(common::make_data(tile));
+//   DLAF_MPI_CHECK_ERROR(MPI_Irecv(msg.data(), msg.count(), msg.mpi_type(), source, tag, comm, req));
+// }
 
-DLAF_MAKE_CALLABLE_OBJECT(recv);
+// DLAF_MAKE_CALLABLE_OBJECT(recv);
 }
 
 template <class CommSender, class Sender>
@@ -81,25 +81,24 @@ template <class CommSender, class Sender>
                            RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
 }
 
-template <class CommSender, class Sender>
-[[nodiscard]] auto scheduleRecv(CommSender&& pcomm, IndexT_MPI source, IndexT_MPI tag, Sender&& tile) {
-  using dlaf::comm::internal::recv_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::SenderSingleValueType;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
+template <class T, Device D, class Comm>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecv(
+    pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
 
-  auto recv = [source, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
-  };
+#define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, Comm)                                       \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>   \
+  scheduleRecv(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, \
+               IndexT_MPI tag,                                                                  \
+               pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
-  constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
+DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::CPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::CPU, Communicator);
 
-  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
-}
+DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
 }

@@ -835,7 +835,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         }
         else if (rank.row() == rank_dst) {
           ex::start_detached(
-              comm::scheduleRecv(mpi_chain_col(), rank_src, 0, panel_hh.readwrite_sender(ij_hh_panel)));
+              comm::scheduleRecv(ex::make_unique_any_sender(mpi_chain_col()), rank_src, 0,
+                                 ex::make_unique_any_sender(panel_hh.readwrite_sender(ij_hh_panel))));
         }
       }
 

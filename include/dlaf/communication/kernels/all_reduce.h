@@ -42,18 +42,6 @@ auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<co
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduce);
-
-template <class T, Device D>
-auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
-                      MPI_Request* req) {
-  DLAF_ASSERT(tile.is_contiguous(), "");
-
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 /// Schedule an all reduce.
@@ -116,30 +104,22 @@ template <class TileInSender, class TileOutSender>
 /// The returned sender signals completion when the reduction is done.  The
 /// sender tile must be writable so that the received and reduced data can be
 /// written to it. The tile is sent by the returned sender.
-template <class TileSender>
-[[nodiscard]] auto scheduleAllReduceInPlace(
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduceInPlace(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, TileSender&& tile) {
-  using dlaf::comm::CommunicationDevice_v;
-  using dlaf::comm::internal::allReduceInPlace_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
+    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
 
-  constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::device;
+#define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)                                      \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>           \
+  scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender<                            \
+                               dlaf::common::PromiseGuard<Communicator>>                                \
+                               pcomm,                                                                   \
+                           MPI_Op reduce_op,                                                            \
+                           pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+                               tile)
 
-  auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
-           transformMPI(allReduceInPlace_o);
-  };
-
-  // The tile has to be copied both to and from the temporary tile since the
-  // reduction is done in-place.
-  return withTemporaryTile<CommunicationDevice_v<D>, CopyToDestination::Yes, CopyFromDestination::Yes,
-                           RequireContiguous::Yes>(std::forward<TileSender>(tile),
-                                                   std::move(all_reduce_in_place));
-}
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
 }

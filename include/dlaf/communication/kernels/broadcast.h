@@ -38,19 +38,6 @@ void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, M
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
-
-template <class T, Device D>
-void recvBcast(const Communicator& comm, comm::IndexT_MPI root_rank, const matrix::Tile<T, D>& tile,
-               MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
-#endif
-
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 }
 
 /// Schedule a broadcast send.
@@ -90,31 +77,22 @@ template <class TileSender>
 /// The returned sender signals completion when the receive is done. The input
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
-template <class TileSender>
-[[nodiscard]] auto scheduleRecvBcast(
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecvBcast(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    comm::IndexT_MPI root_rank, TileSender&& tile) {
-  using dlaf::comm::internal::recvBcast_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::SenderSingleValueType;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
+    comm::IndexT_MPI root_rank,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
 
-  auto recv = [root_rank, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
-  };
+#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device)                                     \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+  scheduleRecvBcast(pika::execution::experimental::unique_any_sender<                         \
+                        dlaf::common::PromiseGuard<Communicator>>                             \
+                        pcomm,                                                                \
+                    comm::IndexT_MPI root_rank,                                               \
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::device;
-  constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
-
-  // Since this is a receive we don't need to copy the input to the temporary
-  // tile (the input tile may be uninitialized). The received data is copied
-  // back from the temporary tile to the input. A receive does not require
-  // contiguous memory.
-  return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,
-                           RequireContiguous::No>(std::move(tile), std::move(recv));
-}
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, std::complex<double>, Device::CPU);
 }

@@ -341,8 +341,10 @@ void BackTransformationReductionToBand<B, D, T>::call(
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
-                                                              panelW2.readwrite_sender(kj_panel)));
+      ex::start_detached(
+          dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
+                                               pika::execution::experimental::make_unique_any_sender(
+                                                   panelW2.readwrite_sender(kj_panel))));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 

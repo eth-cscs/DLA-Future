@@ -815,9 +815,10 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                                           splitTile(mat_hh.read(ij_g), helper.specHHCompact()))));
         }
         else {
-          ex::start_detached(
-              comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
-                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompact(true))));
+          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
+                                                     ex::make_unique_any_sender(
+                                                         splitTile(panel_hh(ij_hh_panel),
+                                                                   helper.specHHCompact(true)))));
         }
       }
 

@@ -32,18 +32,18 @@
 
 namespace dlaf::comm {
 namespace internal {
-template <class T, Device D>
-void reduceRecvInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
-                       MPI_Request* req) {
-  static_assert(D == Device::CPU, "reduceRecvInPlace requires CPU memory");
-  DLAF_ASSERT(tile.is_contiguous(), "");
+// template <class T, Device D>
+// void reduceRecvInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
+//                        MPI_Request* req) {
+//   static_assert(D == Device::CPU, "reduceRecvInPlace requires CPU memory");
+//   DLAF_ASSERT(tile.is_contiguous(), "");
 
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
-                                   comm.rank(), comm, req));
-}
+//   auto msg = comm::make_message(common::make_data(tile));
+//   DLAF_MPI_CHECK_ERROR(MPI_Ireduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
+//                                    comm.rank(), comm, req));
+// }
 
-DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
+// DLAF_MAKE_CALLABLE_OBJECT(reduceRecvInPlace);
 
 template <class T, Device D>
 void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op reduce_op,
@@ -64,32 +64,24 @@ DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
 /// The returned sender signals completion when the receive is done. The input
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
-template <class TileSender>
-[[nodiscard]] auto scheduleReduceRecvInPlace(
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleReduceRecvInPlace(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, TileSender&& tile) {
-  using dlaf::comm::internal::reduceRecvInPlace_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
+    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
 
-  auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
-           transformMPI(reduceRecvInPlace_o);
-  };
+#define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)                                      \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>            \
+  scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender<                            \
+                                dlaf::common::PromiseGuard<Communicator>>                                \
+                                pcomm,                                                                   \
+                            MPI_Op reduce_op,                                                            \
+                            pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+                                tile)
 
-  // The input tile must be copied to the temporary tile to participate in the
-  // reduction. The temporary tile is also copied back so that the reduced
-  // result can be used. The reduction is explicitly done on CPU memory so that
-  // we can manage potential asynchronous copies between CPU and GPU. A
-  // reduction requires contiguous memory.
-  return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
-                           RequireContiguous::Yes>(std::forward<TileSender>(tile),
-                                                   std::move(reduce_recv_in_place));
-}
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
 
 /// Schedule a reduction send.
 ///

@@ -15,6 +15,9 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/communication/communicator.h"
+#include "dlaf/communication/message.h"
+#include "dlaf/communication/rdma.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -25,6 +28,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
+#include <mpi.h>
 #include "pika/algorithm.hpp"
 
 namespace dlaf::permutations::internal {
@@ -153,17 +157,85 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                                                       std::move(sender)));
 }
 
-template <Backend B, Device D, class T, Coord coord>
-void Permutations<B, D, T, coord>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
-                                        Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
-                                        Matrix<T, D>& mat_out) {
+template <class T, Device D, Coord C, class OfssetsArrSender>
+void gatherData(const comm::Communicator& comm, comm::IndexT_MPI root_rank,
+                OfssetsArrSender&& offsets_sender, Matrix<T, D>& send_mat, Matrix<T, D>& recv_mat) {
+  //(void) offssets_sender;
+
+  // Note: the leading dimension is equal to the the size of the region.
+  SizeType lenvecs;  // TODO: calculate subproblem size
+  auto gather_f = [comm, root_rank, lenvecs](const std::vector<SizeType>& offsets,
+                                             const matrix::Tile<T, D>& send_tile,
+                                             const matrix::Tile<T, D>& recv_tile, MPI_Request* req) {
+    // TODO: offsets should include the end size
+    SizeType offset = offsets[to_sizet(root_rank)];
+    SizeType numvecs = offsets[to_sizet(root_rank + 1)] - offset;
+
+    T* sendbuf;
+    comm::IndexT_MPI sendcount;
+    MPI_Datatype sendtype;
+
+    auto send_msg = comm::make_message(
+        common::make_data(common::DataDescriptor<T>(tile.ptr({0, 0}), numvecs, lenvecs, lenvecs)));
+
+    // The choice of receive information is only significant at the root rank
+    void* recvbuf = nullptr;
+    comm::IndexT_MPI recvcount = 0;
+    MPI_Datatype recvtype = MPI_DATATYPE_NULL;
+
+    // TODO:
+    std::vector<int> recvcounts;
+    std::vector<int> displs;
+
+    if (comm.rank() == root_rank) {
+      // recv
+      auto recv_msg = comm::make_message(
+          common::make_data(common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(),
+                                                      tile.size().rows(), tile.ld())));
+      DLAF_MPI_CHECK_ERROR(MPI_Igather(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs,
+                                       recvtype, root_rank, comm, req));
+      // TODO: initialize receive buffers
+    }
+    else {
+      // send
+      DLAF_MPI_CHECK_ERROR(MPI_Igatherv(sendbuf, sendcount, sendtype, recvbuf, nullptr, nullptr,
+                                        MPI_DATATYPE_NULL, root_rank, comm, req));
+    }
+    // TODO MPI_Igatherv should be used
+  };
+}
+
+template <Backend B, Device D, class T, Coord C>
+void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                                    Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+                                    Matrix<T, D>& mat_out) {
   (void) grid;
   (void) i_begin;
   (void) i_end;
   (void) perms;
   (void) mat_in;
   (void) mat_out;
+
+  // const matrix::Distribution& distr = mat_in.distribution();
+
+  comm::Communicator comm = grid.subCommunicator(C);
+
+  // TODO: pack data
+
+  // Send and receive packed data
+  for (int rank = 0; rank < comm.size(); ++rank) {
+  }
+
+  // TODO: unpack data
+
+  // TODO: use the global column index as tag
+
   // TODO
+  //
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+    }
+  }
 }
 
 }

@@ -34,10 +34,7 @@ namespace di = dlaf::eigensolver::internal;
 template <typename T>
 class TridiagEigensolverRotTest : public TestWithCommGrids {};
 
-// TODO use MatrixElementTypes
-using JustThisType = ::testing::Types<float>;
-
-TYPED_TEST_SUITE(TridiagEigensolverRotTest, JustThisType);
+TYPED_TEST_SUITE(TridiagEigensolverRotTest, RealMatrixElementTypes);
 
 template <class T>
 void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, const SizeType mb,
@@ -54,7 +51,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
   matrix::test::MatrixLocal<T> mat_loc = matrix::test::allGather(blas::Uplo::General, mat, grid);
 
-  applyGivensRotationsToMatrixColumns(grid, idx_begin, idx_last, ex::just(rots), mat);
+  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), idx_begin, idx_last, ex::just(rots), mat);
 
   // Apply Given Rotations
   for (auto rot : rots) {
@@ -87,7 +84,7 @@ TYPED_TEST(TridiagEigensolverRotTest, ApplyGivenRotations) {
                                                3,
                                                0,
                                                2,
-                                               {// di::GivensRotation<TypeParam>{0, 8, 0.5f, 0.5f},
+                                               {di::GivensRotation<TypeParam>{0, 8, 0.5f, 0.5f},
                                                 di::GivensRotation<TypeParam>{0, 2, 0.5f, 0.5f}}}};
 
   for (const auto& grid : this->commGrids()) {

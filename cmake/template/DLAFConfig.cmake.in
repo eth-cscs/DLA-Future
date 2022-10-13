@@ -34,12 +34,25 @@ if(DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "@MKL_THREADING@")
 
   find_dependency(MKL)
+
+  set(MKL_LAPACK_TARGET "@MKL_LAPACK_TARGET@")
+  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
+  target_link_libraries(DLAF::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
 else()
   set(LAPACK_CUSTOM_TYPE "@LAPACK_TYPE@")
   set(LAPACK_CUSTOM_INCLUDE_DIR "@LAPACK_INCLUDE_DIR@")
   set(LAPACK_CUSTOM_LIBRARY "@LAPACK_LIBRARY@")
 
   find_dependency(LAPACK)
+endif()
+
+if(DLAF_WITH_CUDA)
+  find_dependency(CUDAToolkit)
+endif()
+
+if(DLAF_WITH_HIP)
+  find_dependency(hipblas)
+  find_dependency(rocsolver)
 endif()
 
 find_dependency(blaspp PATHS @blaspp_DIR@)

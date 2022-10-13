@@ -20,7 +20,7 @@ RUN apt-get -yqq update && \
     gawk \
     python3 python3-distutils \
     git tar wget curl ca-certificates gpg-agent jq tzdata \
-    patchelf unzip file gnupg2 && \
+    patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake
@@ -69,6 +69,7 @@ RUN spack external find \
     findutils \
     git \
     m4 \
+    ncurses \
     openssl \
     perl \
     python \

@@ -26,60 +26,51 @@
 #include "dlaf/sender/with_temporary_tile.h"
 
 namespace dlaf::comm {
+template <class T, Device D, class Comm>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleSend(
+    pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
 
-namespace internal {
+#define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, Comm)                                     \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+  scheduleSend(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, \
+               IndexT_MPI tag,                                                                \
+               pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
 
-// Non-blocking point to point send
-template <class T, Device D>
-void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
-          const matrix::Tile<const T, D>& tile, MPI_Request* req) {
-#if !defined(DLAF_WITH_CUDA_RDMA)
-  static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
-#endif
+DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::CPU, Communicator);
 
-  auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Isend(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), dest, tag, comm, req));
-}
+DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
 
-DLAF_MAKE_CALLABLE_OBJECT(send);
+template <class T, Device D, class Comm>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
+    pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
+    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>> tile);
 
-// // Non-blocking point to point receive
-// template <class T, Device D>
-// auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const matrix::Tile<T, D>& tile,
-//           MPI_Request* req) {
-// #if !defined(DLAF_WITH_CUDA_RDMA)
-//   static_assert(D == Device::CPU, "DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.");
-// #endif
+#define DLAF_SCHEDULE_SEND_SFTILE_ETI(kword, Type, Device, Comm)                              \
+  kword template pika::execution::experimental::unique_any_sender<>                           \
+  scheduleSend(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, \
+               IndexT_MPI tag,                                                                \
+               pika::execution::experimental::unique_any_sender<                              \
+                   pika::shared_future<matrix::Tile<const Type, Device>>>                     \
+                   tile)
 
-//   auto msg = comm::make_message(common::make_data(tile));
-//   DLAF_MPI_CHECK_ERROR(MPI_Irecv(msg.data(), msg.count(), msg.mpi_type(), source, tag, comm, req));
-// }
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, float, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, double, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::CPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::CPU, Communicator);
 
-// DLAF_MAKE_CALLABLE_OBJECT(recv);
-}
-
-template <class CommSender, class Sender>
-[[nodiscard]] auto scheduleSend(CommSender&& pcomm, IndexT_MPI dest, IndexT_MPI tag, Sender&& tile) {
-  using dlaf::comm::internal::send_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::SenderSingleValueType;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
-
-  auto recv = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
-  };
-
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
-  constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
-
-  return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
-                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
-}
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, float, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, double, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::CPU,
+                              common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::CPU,
+                              common::PromiseGuard<Communicator>);
 
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecv(

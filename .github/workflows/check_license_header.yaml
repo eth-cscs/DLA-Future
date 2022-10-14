@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - uses: actions/javascript-action@v1
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Check file extensions
         if: always()          # needed so that it runs even if previous one fails

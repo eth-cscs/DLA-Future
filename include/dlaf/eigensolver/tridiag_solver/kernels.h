@@ -29,9 +29,7 @@ void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<DiagTileSenderIn>(in), std::forward<DiagTileSenderOut>(out));
-  ex::start_detached(di::transform<di::TransformDispatchType::Lapack>(di::Policy<DefaultBackend_v<D>>(),
-                                                                      tile::internal::stedc_o,
-                                                                      std::move(sender)));
+  ex::start_detached(tile::stedc(di::Policy<DefaultBackend_v<D>>(), std::move(sender)));
 }
 
 template <class T>

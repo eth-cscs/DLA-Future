@@ -13,8 +13,7 @@
 #include <type_traits>
 
 #if DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
-#include "dlaf/gpu/error.h"
+#include <whip.hpp>
 #endif
 
 #include "dlaf/common/callable_object.h"
@@ -84,20 +83,19 @@ struct CopyTile<T, Device::CPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                      ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyHostToDevice));
+    whip::memcpy_2d(destination.ptr(), ld_destination * sizeof(T), source.ptr(), ld_source * sizeof(T),
+                    m * sizeof(T), n, whip::memcpy_host_to_device);
   }
 
   static void call(const matrix::Tile<const T, Device::CPU>& source,
-                   const matrix::Tile<T, Device::GPU>& destination, cudaStream_t stream) {
+                   const matrix::Tile<T, Device::GPU>& destination, whip::stream_t stream) {
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                           ld_source * sizeof(T), m * sizeof(T), n,
-                                           cudaMemcpyHostToDevice, stream));
+    whip::memcpy_2d_async(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                          ld_source * sizeof(T), m * sizeof(T), n, whip::memcpy_host_to_device, stream);
   }
 };
 
@@ -110,20 +108,19 @@ struct CopyTile<T, Device::GPU, Device::CPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                      ld_source * sizeof(T), m * sizeof(T), n, cudaMemcpyDeviceToHost));
+    whip::memcpy_2d(destination.ptr(), ld_destination * sizeof(T), source.ptr(), ld_source * sizeof(T),
+                    m * sizeof(T), n, whip::memcpy_device_to_host);
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
-                   const matrix::Tile<T, Device::CPU>& destination, cudaStream_t stream) {
+                   const matrix::Tile<T, Device::CPU>& destination, whip::stream_t stream) {
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                           ld_source * sizeof(T), m * sizeof(T), n,
-                                           cudaMemcpyDeviceToHost, stream));
+    whip::memcpy_2d_async(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                          ld_source * sizeof(T), m * sizeof(T), n, whip::memcpy_device_to_host, stream);
   }
 };
 
@@ -136,21 +133,20 @@ struct CopyTile<T, Device::GPU, Device::GPU> {
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2D(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                      ld_source * sizeof(T), m * sizeof(T), n,
-                                      cudaMemcpyDeviceToDevice));
+    whip::memcpy_2d(destination.ptr(), ld_destination * sizeof(T), source.ptr(), ld_source * sizeof(T),
+                    m * sizeof(T), n, whip::memcpy_device_to_device);
   }
 
   static void call(const matrix::Tile<const T, Device::GPU>& source,
-                   const matrix::Tile<T, Device::GPU>& destination, cudaStream_t stream) {
+                   const matrix::Tile<T, Device::GPU>& destination, whip::stream_t stream) {
     const std::size_t m = to_sizet(source.size().rows());
     const std::size_t n = to_sizet(source.size().cols());
     const std::size_t ld_source = to_sizet(source.ld());
     const std::size_t ld_destination = to_sizet(destination.ld());
 
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy2DAsync(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
-                                           ld_source * sizeof(T), m * sizeof(T), n,
-                                           cudaMemcpyDeviceToDevice, stream));
+    whip::memcpy_2d_async(destination.ptr(), ld_destination * sizeof(T), source.ptr(),
+                          ld_source * sizeof(T), m * sizeof(T), n, whip::memcpy_device_to_device,
+                          stream);
   }
 };
 #endif

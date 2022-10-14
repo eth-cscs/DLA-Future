@@ -12,10 +12,11 @@
 
 #ifdef DLAF_WITH_GPU
 
-#include "dlaf/gpu/api.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/types.h"
+
+#include <whip.hpp>
 
 #include <vector>
 
@@ -26,7 +27,7 @@ void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize s
                                const matrix::Distribution& distr, const SizeType* perms,
                                const std::vector<matrix::Tile<T, Device::GPU>>& in_tiles,
                                const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles,
-                               cudaStream_t stream);
+                               whip::stream_t stream);
 
 #define DLAF_CUDA_PERMUTE_ON_DEVICE(kword, Type, Coord)                                                 \
   kword template void                                                                                   \
@@ -35,7 +36,7 @@ void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize s
                                          const SizeType* perms,                                         \
                                          const std::vector<matrix::Tile<Type, Device::GPU>>& in_tiles,  \
                                          const std::vector<matrix::Tile<Type, Device::GPU>>& out_tiles, \
-                                         cudaStream_t stream)
+                                         whip::stream_t stream)
 
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, float, Coord::Col);
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, double, Coord::Col);

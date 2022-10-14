@@ -15,8 +15,6 @@
 
 #include <umpire/Allocator.hpp>
 
-#include "dlaf/gpu/api.h"
-#include "dlaf/gpu/error.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

@@ -80,6 +80,7 @@ target_link_libraries(dlaf.prop
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
 target_compile_definitions(dlaf.prop
   INTERFACE

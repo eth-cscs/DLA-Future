@@ -12,6 +12,10 @@
 #include <pika/future.hpp>
 #include <pika/thread.hpp>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -31,10 +35,6 @@
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/util_matrix.h"
-
-#ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
-#endif
 
 namespace dlaf::eigensolver::internal {
 
@@ -59,7 +59,7 @@ template <>
 struct Helpers<Backend::GPU> {
   template <class T>
   static void copyAndSetHHUpperTiles(SizeType j_diag, const matrix::Tile<const T, Device::GPU>& src,
-                                     const matrix::Tile<T, Device::GPU>& dst, cudaStream_t stream) {
+                                     const matrix::Tile<T, Device::GPU>& dst, whip::stream_t stream) {
     matrix::internal::copy_o(src, dst, stream);
     gpulapack::laset(blas::Uplo::Upper, dst.size().rows(), dst.size().cols() - j_diag, T{0.}, T{1.},
                      dst.ptr({0, j_diag}), dst.ld(), stream);

@@ -18,6 +18,10 @@
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
@@ -485,7 +489,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
         [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
            const matrix::Tile<const T, Device::CPU>& tile_t_h, matrix::Tile<T, Device::GPU>& tile_v,
            matrix::Tile<T, Device::GPU>& tile_t, matrix::Tile<T, Device::GPU>& tile_w) {
-          cudaStream_t stream;
+          whip::stream_t stream;
           DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
           matrix::internal::copy(tile_v_h, tile_v, stream);

@@ -13,6 +13,8 @@
 #include "dlaf/util_cublas.h"
 #include "dlaf/util_math.h"
 
+#include <whip.hpp>
+
 namespace dlaf::gpulapack {
 namespace kernels {
 
@@ -101,7 +103,7 @@ __global__ void laset(cublasFillMode_t uplo, const unsigned m, const unsigned n,
 
 template <class T>
 void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
-           cudaStream_t stream) {
+           whip::stream_t stream) {
   constexpr unsigned kernel_tile_size_rows = kernels::LasetParams::kernel_tile_size_rows;
   constexpr unsigned kernel_tile_size_cols = kernels::LasetParams::kernel_tile_size_cols;
   const unsigned um = to_uint(m);

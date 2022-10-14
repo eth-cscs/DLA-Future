@@ -20,7 +20,6 @@
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/lapack/api.h"
 

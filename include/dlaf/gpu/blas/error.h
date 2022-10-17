@@ -44,6 +44,13 @@ inline void checkError(gpublasStatus_t st,
 #endif
 
 #ifdef DLAF_WITH_HIP
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wswitch-enum"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wswitch-enum"
+#endif
 inline rocblas_status acceptWorkspaceStatus(rocblas_status error) {
   switch (error) {
     case rocblas_status_continue:
@@ -55,6 +62,11 @@ inline rocblas_status acceptWorkspaceStatus(rocblas_status error) {
       return error;
   }
 }
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #define DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(gpublas_err) \
   ::dlaf::gpublas::internal::checkError(acceptWorkspaceStatus(gpublas_err), SOURCE_LOCATION())

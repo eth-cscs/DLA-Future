@@ -389,7 +389,7 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 
 /// The tiles are returned in column major order
 template <class T, Device D>
-auto collectReadWriteTiles(GlobalTileIndex begin, GlobalTileSize sz, Matrix<T, D>& mat) {
+auto collectReadWriteTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<T, D>& mat) {
   std::vector<decltype(mat.readwrite_sender(std::declval<LocalTileIndex>()))> tiles;
   tiles.reserve(to_sizet(sz.linear_size()));
   for (auto idx : iterate_range2d(begin, sz)) {
@@ -400,7 +400,7 @@ auto collectReadWriteTiles(GlobalTileIndex begin, GlobalTileSize sz, Matrix<T, D
 
 /// The tiles are returned in column major order
 template <class T, Device D>
-auto collectReadTiles(GlobalTileIndex begin, GlobalTileSize sz, Matrix<const T, D>& mat) {
+auto collectReadTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<const T, D>& mat) {
   std::vector<decltype(mat.read_sender(std::declval<LocalTileIndex>()))> tiles;
   tiles.reserve(to_sizet(sz.linear_size()));
   for (auto idx : iterate_range2d(begin, sz)) {

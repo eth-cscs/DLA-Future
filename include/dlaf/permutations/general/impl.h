@@ -137,14 +137,14 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
-                                                                      GlobalTileSize(ntiles, 1), perms)),
-                             ex::when_all_vector(
-                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                           GlobalTileSize(ntiles, ntiles), mat_in)),
-                             ex::when_all_vector(
-                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                           GlobalTileSize(ntiles, ntiles), mat_out)));
+  auto sender =
+      ex::when_all(ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, 0),
+                                                            LocalTileSize(ntiles, 1), perms)),
+                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
+                                                                 LocalTileSize(ntiles, ntiles), mat_in)),
+                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
+                                                                 LocalTileSize(ntiles, ntiles),
+                                                                 mat_out)));
 
   auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
                                  const auto& mat_out_tiles, auto&&... ts) {
@@ -158,105 +158,110 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                                                       std::move(sender)));
 }
 
-//template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
-//void gatherData(const comm::Communicator& comm, comm::IndexT_MPI root_rank,
-//                SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
-//                RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
-//  auto gather_f = [comm, root_rank](const std::vector<int>& send_counts,
-//                                    const matrix::Tile<T, D>& send_tile,
-//                                    const std::vector<int>& recv_counts,
-//                                    const matrix::Tile<T, D>& recv_tile, MPI_Request* req) {
-//    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-//    SizeType send_offset = std::accumulate(send_counts.begin(), send_counts.begin() + comm.rank(), 0);
-//    T* sendbuf = send_tile.ptr() + send_offset;
-//    int send_count = send_counts[to_sizet(comm.rank())];
+// Note: matrices are assumed to be in column-major layout!
 //
-//    if (comm.rank() == root_rank) {
-//      // recv
-//      T* recvbuf = recv_tile.ptr();
-//      std::vector<int> displs(to_sizet(comm.size()));
-//      std::exclusive_scan(recv_counts.begin(), recv_counts.end(), displs.data(), 0);
-//      DLAF_MPI_CHECK_ERROR(MPI_Igatherv(sendbuf, send_count, dtype, recvbuf, recv_counts.data(),
-//                                        displs.data(), dtype, root_rank, comm, req));
-//    }
-//    else {
-//      // send
-//      DLAF_MPI_CHECK_ERROR(MPI_Igatherv(sendbuf, send_count, dtype, nullptr, nullptr, nullptr,
-//                                        MPI_DATATYPE_NULL, root_rank, comm, req));
-//    }
-//  };
-//
-//  auto sender =
-//      pika::execution::experimental::when_all(std::forward<SendCountsSender>(send_counts_sender),
-//                                              send_mat.readwrite_sender(LocalTileIndex(0, 0)),
-//                                              std::forward<RecvCountsSender>(recv_counts_sender),
-//                                              recv_mat.readwrite_sender(LocalTileIndex(0, 0)));
-//  dlaf::comm::internal::transformMPIDetach(std::move(gather_f), std::move(sender));
-//}
+template <class T, Device D, class SendCountsSender, class RecvCountsSender>
+void all2allData(const comm::Communicator& comm, SizeType i_loc_begin, SizeType sz_loc,
+                 SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
+                 RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
+  namespace ut = matrix::util;
+  namespace sr = pika::execution::experimental;
+
+  auto all2all_f = [comm](const std::vector<int>& send_counts,
+                          const std::vector<matrix::Tile<T, D>>& send_tiles,
+                          const std::vector<int>& recv_counts,
+                          const std::vector<matrix::Tile<T, D>>& recv_tiles, MPI_Request* req) {
+    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+
+    // send
+    T* send_ptr = send_tiles[0].ptr();
+    std::vector<int> send_displs(to_sizet(comm.size()));
+    std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+
+    // recv
+    T* recv_ptr = recv_tiles[0].ptr();
+    std::vector<int> recv_displs(to_sizet(comm.size()));
+    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+
+    // All-to-All communication
+    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
+                                        recv_ptr, recv_counts.data(), recv_displs.data(), dtype, comm,
+                                        req));
+  };
+
+  LocalTileIndex begin(i_loc_begin, i_loc_begin);
+  LocalTileSize sz(sz_loc, sz_loc);
+
+  auto sender = sr::when_all(std::forward<SendCountsSender>(send_counts_sender),
+                             sr::when_all_vector(ut::collectReadWriteTiles(begin, sz, send_mat)),
+                             std::forward<RecvCountsSender>(recv_counts_sender),
+                             sr::when_all_vector(ut::collectReadWriteTiles(begin, sz, recv_mat)));
+  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
+}
 
 template <Device D>
-auto initPackingIndex(comm::CommunicatorGrid grid, const matrix::Distribution& distr, SizeType i_begin,
+auto initPackingIndex(comm::Communicator comm, const matrix::Distribution& dist, SizeType i_begin,
                       SizeType i_end, Matrix<const SizeType, D>& perms,
                       Matrix<SizeType, D>& packing_index) {
+  namespace ex = pika::execution::experimental;
+
   // TODO:
-  (void) grid;
-  (void) distr;
+  (void) comm;
+  (void) dist;
   (void) i_begin;
   (void) i_end;
   (void) perms;
   (void) packing_index;
 
-  namespace ex = pika::execution::experimental;
-  return ex::just(std::vector<int>());  // TODO: has to be copiable
+  return ex::just(std::vector<int>());
 }
 
 template <Device D>
-auto initUnpackingIndex(comm::CommunicatorGrid grid, const matrix::Distribution& distr, SizeType i_begin,
+auto initUnpackingIndex(comm::Communicator comm, const matrix::Distribution& dist, SizeType i_begin,
                         SizeType i_end, Matrix<const SizeType, D>& perms,
                         Matrix<SizeType, D>& unpacking_index) {
+  namespace ex = pika::execution::experimental;
   // TODO:
-  (void) grid;
-  (void) distr;
+  (void) comm;
+  (void) dist;
   (void) i_begin;
   (void) i_end;
   (void) perms;
   (void) unpacking_index;
 
-  namespace ex = pika::execution::experimental;
-  return ex::just(std::vector<int>());  // TODO: has to be copiable
+  return ex::just(std::vector<int>());
 }
 
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
-  (void) mat_out;
-
   comm::Communicator comm = grid.subCommunicator(C);
-  const matrix::Distribution& distr = mat_in.distribution();
+  const matrix::Distribution& dist = mat_in.distribution();
 
-  // Local matrices used for communication - matrix of a single tile
-  LocalElementSize vec_size =
-      distr.localSize();  // TODO: this is wrong, the locSize should be inside [i_begin, i_end]
-  TileElementSize vec_tile_size(vec_size.rows(), vec_size.cols());
-  Matrix<T, D> send_mat(vec_size, vec_tile_size);
-  Matrix<T, D> recv_mat(vec_size, vec_tile_size);
+  // Local size and index of subproblem [i_begin, i_end]
+  SizeType nb = dist.blockSize().rows();
+  SizeType sz_loc = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end - i_begin + 1);
+  SizeType i_loc_begin = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin);
 
   // Local indices used for packing and unpacking
-  Matrix<SizeType, D> packing_index(vec_size.get<C>(), 1);
-  Matrix<SizeType, D> unpacking_index(vec_size.get<C>(), 1);
+  LocalElementSize loc_index_sz(sz_loc, 1);
+  TileElementSize loc_index_block_sz(nb, 1);
+  Matrix<SizeType, D> packing_index(loc_index_sz, loc_index_block_sz);
+  Matrix<SizeType, D> unpacking_index(loc_index_sz, loc_index_block_sz);
 
-  auto send_counts_sender = initPackingIndex(grid, distr, i_begin, i_end, perms, packing_index);
-  auto recv_counts_sender = initUnpackingIndex(grid, distr, i_begin, i_end, perms, unpacking_index);
+  auto send_counts_sender = initPackingIndex<D>(comm, dist, i_begin, i_end, perms, packing_index);
+  auto recv_counts_sender = initUnpackingIndex<D>(comm, dist, i_begin, i_end, perms, unpacking_index);
 
   // TODO: pack data
+  // TODO: transpose for Coord::Row
 
-  // Send and receive packed data
-  for (int rank = 0; rank < comm.size(); ++rank) {
-    gatherData<T, D, C>(comm, rank, send_counts_sender, send_mat, recv_counts_sender, recv_mat);
-  }
+  // Communicate data
+  all2allData(comm, i_loc_begin, sz_loc, std::move(send_counts_sender), mat_in,
+              std::move(recv_counts_sender), mat_out);
 
   // TODO: unpack data
+  // TODO: transpose for Coord::Col
 }
 
 }

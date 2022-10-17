@@ -14,10 +14,13 @@
 #include <pika/parallel/algorithms/for_each.hpp>
 #include <pika/unwrap.hpp>
 
+#include "dlaf/common/range2d.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
+#include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/multiplication/general.h"
 #include "dlaf/permutations/general.h"
@@ -223,30 +226,43 @@ pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, 
 }
 
 struct TileCollector {
-  SizeType i_begin;
-  SizeType i_end;
+  SizeType idx_begin;
+  SizeType idx_last;
 
 private:
-  template <class T, Device D>
-  std::pair<GlobalTileIndex, GlobalTileSize> getRange(Matrix<const T, D>& mat) {
-    SizeType ntiles = i_end - i_begin + 1;
-    bool is_col_matrix = mat.distribution().size().cols() == 1;
-    SizeType col_begin = (is_col_matrix) ? 0 : i_begin;
+  std::pair<GlobalTileIndex, GlobalTileSize> getRange(const matrix::Distribution& dist) const {
+    SizeType ntiles = idx_last - idx_begin + 1;
+    bool is_col_matrix = dist.size().cols() == 1;
+    SizeType col_begin = (is_col_matrix) ? 0 : idx_begin;
     SizeType col_sz = (is_col_matrix) ? 1 : ntiles;
-    return std::make_pair(GlobalTileIndex(i_begin, col_begin), GlobalTileSize(ntiles, col_sz));
+
+    return std::make_pair(GlobalTileIndex{idx_begin, col_begin}, GlobalTileSize{ntiles, col_sz});
   }
 
 public:
-  template <class T, Device D>
-  auto read(Matrix<const T, D>& mat) {
-    auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadTiles(begin, end, mat);
+  auto iteratorLocal(const matrix::Distribution& dist) const {
+    auto [g_begin, g_size] = getRange(dist);
+    const LocalTileIndex begin{
+        dist.template nextLocalTileFromGlobalTile<Coord::Row>(g_begin.row()),
+        dist.template nextLocalTileFromGlobalTile<Coord::Col>(g_begin.col()),
+    };
+    const LocalTileSize size{
+        dist.template nextLocalTileFromGlobalTile<Coord::Row>(g_size.rows()),
+        dist.template nextLocalTileFromGlobalTile<Coord::Col>(g_size.cols()),
+    };
+    return std::make_pair(begin, size);
   }
 
   template <class T, Device D>
-  auto readwrite(Matrix<T, D>& mat) {
-    auto [begin, end] = getRange(mat);
-    return matrix::util::collectReadWriteTiles(begin, end, mat);
+  auto read(Matrix<const T, D>& mat) const {
+    auto [begin, size] = iteratorLocal(mat.distribution());
+    return matrix::util::collectReadTiles(begin, size, mat);
+  }
+
+  template <class T, Device D>
+  auto readwrite(Matrix<T, D>& mat) const {
+    auto [begin, size] = iteratorLocal(mat.distribution());
+    return matrix::util::collectReadWriteTiles(begin, size, mat);
   }
 };
 

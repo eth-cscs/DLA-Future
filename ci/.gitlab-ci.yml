@@ -5,7 +5,6 @@ include:
 stages:
   - build
   - test
-  - notify
 
 ##
 ## BUILDS
@@ -231,10 +230,6 @@ amdgpu release build clang10+rocm-5.2.3:
 
 .run_common:
   stage: test
-  only:
-    - master
-    - staging
-    - trying
   trigger:
     strategy: depend
 

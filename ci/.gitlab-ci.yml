@@ -31,10 +31,34 @@ stages:
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`sha256sum $SPACK_ENVIRONMENT | head -c 16`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
-    - (podman pull $BUILD_IMAGE:$TAG && podman tag $BUILD_IMAGE:$TAG $BUILD_IMAGE:latest) || podman build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from=$CSCS_REGISTRY_PATH/podman_cache --cache-to=$CSCS_REGISTRY_PATH/podman_cache --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg CXXSTD --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
+    - '(podman pull $BUILD_IMAGE:$TAG && podman tag $BUILD_IMAGE:$TAG $BUILD_IMAGE:latest)
+       ||  podman build
+           -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest
+           --cache-from=$CSCS_REGISTRY_PATH/podman_cache --cache-to=$CSCS_REGISTRY_PATH/podman_cache
+           --format docker --layers --isolation chroot
+           --build-arg BASE_IMAGE
+           --build-arg BUILDKIT_INLINE_CACHE=1
+           --build-arg SPACK_SHA
+           --build-arg EXTRA_APTGET
+           --build-arg COMPILER
+           --build-arg CXXSTD
+           --build-arg SPACK_ENVIRONMENT
+           --build-arg SPACK_DLAF_REPO --build-arg USE_MKL
+           --build-arg NUM_PROCS=$(echo "$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us) $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us) $(nproc)" | awk ''{ print ($1/$2 > 0) ? int($1/$2+0.5) : $3; }'')
+           -f $BUILD_DOCKER_FILE .'
     - podman push $BUILD_IMAGE:$TAG
     - podman push $BUILD_IMAGE:latest
-    - podman build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL --build-arg USE_ROCBLAS -f $DEPLOY_DOCKER_FILE --network=host .
+    - 'podman build
+      -t $DEPLOY_IMAGE
+      --cache-from=$CSCS_REGISTRY_PATH/podman_cache --cache-to=$CSCS_REGISTRY_PATH/podman_cache
+      --format docker --layers --isolation chroot
+      --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG
+      --build-arg DEPLOY_BASE_IMAGE
+      --build-arg EXTRA_APTGET_DEPLOY
+      --build-arg USE_MKL
+      --build-arg USE_ROCBLAS
+      --build-arg NUM_PROCS=$(echo "$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us) $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us) $(nproc)" | awk ''{ print ($1/$2 > 0) ? int($1/$2+0.5) : $3; }'')
+      -f $DEPLOY_DOCKER_FILE .'
     - podman push $DEPLOY_IMAGE
     - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:

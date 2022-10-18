@@ -14,11 +14,11 @@ on: [pull_request]
 
 jobs:
   check-licenses:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/javascript-action@v1
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Check file extensions
         if: always()          # needed so that it runs even if previous one fails

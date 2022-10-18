@@ -35,7 +35,6 @@ stages:
     - '(podman pull $BUILD_IMAGE:$TAG && podman tag $BUILD_IMAGE:$TAG $BUILD_IMAGE:latest)
        ||  podman build
            -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest
-           --cache-from=$CI_REGISTRY/podman_cache --cache-to=$CI_REGISTRY/podman_cache
            --format docker --layers --isolation chroot
            --build-arg BASE_IMAGE
            --build-arg BUILDKIT_INLINE_CACHE=1
@@ -52,7 +51,6 @@ stages:
     - podman push $BUILD_IMAGE:latest
     - 'podman build
       -t $DEPLOY_IMAGE
-      --cache-from=$CI_REGISTRY/podman_cache --cache-to=$CI_REGISTRY/podman_cache
       --format docker --layers --isolation chroot
       --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG
       --build-arg DEPLOY_BASE_IMAGE

@@ -199,6 +199,54 @@ void all2allData(const comm::Communicator& comm, SizeType i_loc_begin, SizeType 
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
 }
 
+// Maps packed to unpacked indices and vice-versa based on rank
+template <bool isMapFromUnpackedToPacked, class T, Device D>
+std::vector<int> partitionBasedOnRank(int nranks, const Matrix<const T, D>& in,
+                                      const Matrix<T, D>& out) {
+  namespace ut = matrix::util;
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  LocalTileIndex begin(0, 0);
+  LocalTileSize size = in.distribution().localNrTiles();
+  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadWriteTiles(begin, size, in)),
+                             ex::when_all_vector(ut::collectReadWriteTiles(begin, size, out)));
+
+  auto partition_fn = [nranks, len = in.distribution().size().rows()](const auto& in_tiles,
+                                                                      const auto& out_tiles) {
+    TileElementIndex zero(0, 0);
+    const SizeType* in = in_tiles[0].get().ptr(zero);
+    SizeType* out = out_tiles[0].ptr(zero);
+
+    // Note: this can also be implemented by calling `stable_partition()` multiple times
+    std::vector<int> counts(to_sizet(nranks));
+
+    int offset = 0;
+    for (int rank = 0; rank < nranks; ++rank) {
+      int& count = counts[to_sizet(rank)];
+      count = 0;
+      for (SizeType i = 0; i < len; ++i) {
+        SizeType i_packed = offset + count;
+        if (in[i] == rank) {
+          if constexpr (isMapFromUnpackedToPacked) {
+            out[i] = i_packed;
+          }
+          else {
+            out[i_packed] = i;
+          }
+          ++count;
+        }
+      }
+      offset += count;
+    }
+
+    return counts;
+  };
+  return di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>{},
+                                                                std::move(partition_fn),
+                                                                std::move(sender));
+}
+
 template <Device D>
 auto initPackingIndex(comm::Communicator comm, const matrix::Distribution& dist, SizeType i_begin,
                       SizeType i_end, Matrix<const SizeType, D>& perms,
@@ -216,18 +264,24 @@ auto initPackingIndex(comm::Communicator comm, const matrix::Distribution& dist,
   return ex::just(std::vector<int>());
 }
 
+// Initializes an permutation index which unpacks the received vectors
+//
 template <Device D>
-auto initUnpackingIndex(comm::Communicator comm, const matrix::Distribution& dist, SizeType i_begin,
-                        SizeType i_end, Matrix<const SizeType, D>& perms,
+auto initUnpackingIndex(comm::Communicator comm, const matrix::Distribution& dist, SizeType i_loc_begin,
+                        Matrix<const SizeType, D>& perms, Matrix<SizeType, D>& ws_index,
                         Matrix<SizeType, D>& unpacking_index) {
   namespace ex = pika::execution::experimental;
-  // TODO:
-  (void) comm;
-  (void) dist;
-  (void) i_begin;
-  (void) i_end;
-  (void) perms;
-  (void) unpacking_index;
+
+  for (auto tile_wrt_local : common::iterate_range2d(unpacking_index.distribution().localNrTiles())) {
+    SizeType tile_wrt_global =
+        dist.globalTileFromLocalTile<Coord::Row>(i_loc_begin + tile_wrt_local.row());
+    ex::start_detached(ex::when_all(perms.read_sender(GlobalTileIndex(tile_wrt_global, 0)),
+                                    unpacking_index.readwrite_sender(tile_wrt_local)) |
+                       dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
+  }
+
+  // TODO: iterate over tiles that belong to the current process
+  // TODO: use `dist` to partition the index for each rank
 
   return ex::just(std::vector<int>());
 }
@@ -261,7 +315,6 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
               std::move(recv_counts_sender), mat_out);
 
   // TODO: unpack data
-  // TODO: transpose for Coord::Col
 }
 
 }

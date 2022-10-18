@@ -90,8 +90,6 @@ cpu release build gcc11:
 
 cpu release build clang12:
   extends: .build_spack_common
-  needs:
-    - cpu release build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
@@ -113,8 +111,6 @@ cpu release build clang12:
 
 cpu release build clang13 cxx20:
   extends: .build_spack_common
-  needs:
-    - cpu release build clang12
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
@@ -136,8 +132,6 @@ cpu release build clang13 cxx20:
 
 cpu codecov build gcc11:
   extends: .build_spack_common
-  needs:
-    - cpu release build clang13 cxx20
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
@@ -180,8 +174,6 @@ cuda release build gcc11:
 
 cuda codecov build gcc11:
   extends: .build_spack_common
-  needs:
-    - cuda release build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
@@ -203,8 +195,6 @@ cuda codecov build gcc11:
 
 amdgpu release build clang10+rocm-5.2.3:
   extends: .build_spack_common
-  needs:
-    - cuda codecov build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile

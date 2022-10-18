@@ -36,7 +36,6 @@ stages:
        ||  podman build
            -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest
            --format docker --layers --isolation chroot
-           --cache-from=$CI_REGISTRY_IMAGE/podman_cache --cache-to=$CI_REGISTRY_IMAGE/podman_cache
            --build-arg BASE_IMAGE
            --build-arg BUILDKIT_INLINE_CACHE=1
            --build-arg SPACK_SHA
@@ -53,7 +52,6 @@ stages:
     - 'podman build
       -t $DEPLOY_IMAGE
       --format docker --layers --isolation chroot
-      --cache-from=$CI_REGISTRY_IMAGE/podman_cache --cache-to=$CI_REGISTRY_IMAGE/podman_cache
       --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG
       --build-arg DEPLOY_BASE_IMAGE
       --build-arg EXTRA_APTGET_DEPLOY

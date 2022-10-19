@@ -33,7 +33,7 @@ namespace dlaf::comm {
 /// A P2P AllReduce Sum operation, i.e. an all-reduce involving just two ranks with MPI_SUM as op,
 /// is performed between the rank where this function is called and `rank_mate`.
 ///
-/// `in` is a sender of a read-only tile that, togheter with the one received from `rank_mate`, will be
+/// `in` is a sender of a read-only tile that, together with the one received from `rank_mate`, will be
 /// summed in `out` (on both ranks)
 template <Backend B, class CommSender, class SenderIn, class SenderOut>
 [[nodiscard]] auto scheduleAllSumP2P(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,

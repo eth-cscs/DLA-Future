@@ -810,15 +810,15 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(
-              comm::scheduleSendBcast(mpi_chain_row(),
+              comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_chain_row()),
                                       ex::make_unique_any_sender(ex::keep_future(
                                           splitTile(mat_hh.read(ij_g), helper.specHHCompact())))));
         }
         else {
-          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
-                                                     ex::make_unique_any_sender(
-                                                         splitTile(panel_hh(ij_hh_panel),
-                                                                   helper.specHHCompact(true)))));
+          ex::start_detached(
+              comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_chain_row()), rankHH.col(),
+                                      ex::make_unique_any_sender(
+                                          splitTile(panel_hh(ij_hh_panel), helper.specHHCompact(true)))));
         }
       }
 

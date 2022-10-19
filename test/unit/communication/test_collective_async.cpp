@@ -76,14 +76,16 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   if (root_rank == world.rank()) {
     // use -> read
     ex::start_detached(
-        dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix.readwrite_sender(idx)));
+        dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM,
+                                              ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
     ex::start_detached(
-        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM, matrix.read_sender(idx)));
+        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM,
+                                       ex::make_unique_any_sender(matrix.read_sender(idx))));
 
     CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
 
@@ -114,7 +116,9 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix.readwrite_sender(idx));
+  auto after =
+      dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
+                                           ex::make_unique_any_sender(matrix.readwrite_sender(idx)));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
@@ -153,8 +157,10 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(mat_in(idx).get(), input_tile);
 
-  ex::start_detached(dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read_sender(idx),
-                                                   mat_out.readwrite_sender(idx)));
+  ex::start_detached(
+      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
+                                    ex::make_unique_any_sender(mat_in.read_sender(idx)),
+                                    ex::make_unique_any_sender(mat_out.readwrite_sender(idx))));
 
   const auto& tile_in = mat_in.read(idx).get();
   const auto& tile_out = mat_out.read(idx).get();

@@ -28,76 +28,60 @@
 #include "dlaf/sender/with_temporary_tile.h"
 
 namespace dlaf::comm {
-namespace internal {
-template <class T, Device D>
-auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, D>& tile_in,
-               const matrix::Tile<T, D>& tile_out, MPI_Request* req) {
-  DLAF_ASSERT(tile_in.is_contiguous(), "");
-  DLAF_ASSERT(tile_out.is_contiguous(), "");
-
-  auto msg_in = comm::make_message(common::make_data(tile_in));
-  auto msg_out = comm::make_message(common::make_data(tile_out));
-  DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(msg_in.data(), msg_out.data(), msg_in.count(), msg_in.mpi_type(),
-                                      reduce_op, comm, req));
-}
-
-DLAF_MAKE_CALLABLE_OBJECT(allReduce);
-}
-
 /// Schedule an all reduce.
 ///
 /// An input and output tile is required for the reduction. The returned sender
 /// signals completion when the reduction is done. The output sender tile must
 /// be writable so that the received and reduced data can be written to it. The
 /// output tile is sent by the returned sender.
-template <class TileInSender, class TileOutSender>
-[[nodiscard]] auto scheduleAllReduce(
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, TileInSender&& tile_in, TileOutSender&& tile_out) {
-  using dlaf::comm::CommunicationDevice_v;
-  using dlaf::comm::internal::allReduce_o;
-  using dlaf::comm::internal::transformMPI;
-  using dlaf::internal::CopyFromDestination;
-  using dlaf::internal::CopyToDestination;
-  using dlaf::internal::RequireContiguous;
-  using dlaf::internal::SenderSingleValueType;
-  using dlaf::internal::whenAllLift;
-  using dlaf::internal::withTemporaryTile;
+    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_in,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out);
 
-  // We create two nested scopes for the input and output tiles with
-  // withTemporaryTile. The output tile is in the outer scope as the output tile
-  // will be returned by the returned sender.
-  auto all_reduce_final = [reduce_op, pcomm = std::move(pcomm),
-                           tile_in =
-                               std::forward<TileInSender>(tile_in)](auto const& tile_out_comm) mutable {
-    auto all_reduce = [reduce_op, pcomm = std::move(pcomm),
-                       &tile_out_comm](auto const& tile_in_comm) mutable {
-      return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
-                         std::cref(tile_out_comm)) |
-             transformMPI(allReduce_o);
-    };
+#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                        \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>    \
+  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                            \
+                        dlaf::common::PromiseGuard<Communicator>>                                \
+                        pcomm,                                                                   \
+                    MPI_Op reduce_op,                                                            \
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+                        tile_in,                                                                 \
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+                        tile_out)
 
-    // The input tile must be copied to the temporary tile used for the
-    // reduction, but the temporary tile does not need to be copied back to the
-    // input since the data is not changed by the reduction (the result is
-    // written into the output tile instead).
-    constexpr static Device in_device = SenderSingleValueType<TileInSender>::device;
-    constexpr static Device in_comm_device = CommunicationDevice_v<in_device>;
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<double>, Device::CPU);
 
-    return withTemporaryTile<in_comm_device, CopyToDestination::Yes, CopyFromDestination::No,
-                             RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
-  };
+/// \overload scheduleAllReduce
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    MPI_Op reduce_op,
+    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
+        tile_in,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out);
 
-  // The output tile does not need to be copied to the temporary tile since it
-  // is only written to. The written data is copied back from the temporary tile
-  // to the output tile.
-  constexpr static Device out_device = SenderSingleValueType<TileOutSender>::device;
-  constexpr static Device out_comm_device = CommunicationDevice_v<out_device>;
+#define DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(kword, Type, Device)                                 \
+  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>    \
+  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                            \
+                        dlaf::common::PromiseGuard<Communicator>>                                \
+                        pcomm,                                                                   \
+                    MPI_Op reduce_op,                                                            \
+                    pika::execution::experimental::unique_any_sender<                            \
+                        pika::shared_future<matrix::Tile<const Type, Device>>>                   \
+                        tile_in,                                                                 \
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
+                        tile_out)
 
-  return withTemporaryTile<out_comm_device, CopyToDestination::No, CopyFromDestination::Yes,
-                           RequireContiguous::Yes>(std::forward<TileOutSender>(tile_out),
-                                                   std::move(all_reduce_final));
-}
+DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, int, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, std::complex<double>, Device::CPU);
 
 /// Schedule an in-place all reduce.
 ///
@@ -118,6 +102,7 @@ template <class T, Device D>
                            pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
                                tile)
 
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);

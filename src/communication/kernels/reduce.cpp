@@ -109,6 +109,7 @@ template <class T, Device D>
                            RequireContiguous::Yes>(std::move(tile), std::move(reduce_recv_in_place));
 }
 
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, float, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<float>, Device::CPU);
@@ -135,6 +136,7 @@ template <class T, Device D>
   return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }
 
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, float, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<float>, Device::CPU);

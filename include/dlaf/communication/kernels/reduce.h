@@ -50,6 +50,7 @@ template <class T, Device D>
                             pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
                                 tile)
 
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
@@ -79,22 +80,24 @@ DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<double>, Device::CPU);
 
+/// \overload scheduleReduceSend
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op,
     pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>> tile);
 
-#define DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(kword, Type, Device)         \
-  kword template pika::execution::experimental::unique_any_sender<>       \
-  scheduleReduceSend(pika::execution::experimental::unique_any_sender<    \
-                         dlaf::common::PromiseGuard<Communicator>>        \
-                         pcomm,                                           \
-                     comm::IndexT_MPI rank_root, MPI_Op reduce_op,        \
-                     pika::execution::experimental::unique_any_sender<    \
+#define DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(kword, Type, Device)               \
+  kword template pika::execution::experimental::unique_any_sender<>             \
+  scheduleReduceSend(pika::execution::experimental::unique_any_sender<          \
+                         dlaf::common::PromiseGuard<Communicator>>              \
+                         pcomm,                                                 \
+                     comm::IndexT_MPI rank_root, MPI_Op reduce_op,              \
+                     pika::execution::experimental::unique_any_sender<          \
                          pika::shared_future<matrix::Tile<const Type, Device>>> \
                          tile)
 
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, float, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::CPU);

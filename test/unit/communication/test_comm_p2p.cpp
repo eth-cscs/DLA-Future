@@ -84,10 +84,12 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
 
   if (rank_src == world.rank()) {
     tt::sync_wait(setTileTo(matrix.readwrite_sender(idx), input_value));
-    ex::start_detached(comm::scheduleSend(world, rank_dst, tag, matrix.read_sender(idx)));
+    ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, tag,
+                                          ex::make_unique_any_sender(matrix.read_sender(idx))));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleRecv(world, rank_src, tag, matrix.readwrite_sender(idx)));
+    ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, tag,
+                                          ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
   }
   else {
     return;
@@ -133,7 +135,8 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleSend(world, rank_dst, id, matrix.read_sender(idx)));
+        ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, id,
+                                              ex::make_unique_any_sender(matrix.read_sender(idx))));
       }
     }
   }
@@ -146,7 +149,8 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
       for (SizeType c = matrix.nrTiles().cols() - 1; c >= 0; --c) {
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-        ex::start_detached(comm::scheduleRecv(world, rank_src, id, matrix.readwrite_sender(idx)));
+        ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, id,
+                                              ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
       }
     }
   }
@@ -190,11 +194,13 @@ void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   matrix::Matrix<T, D> tmp(matrix.distribution().localSize(), matrix.blockSize());
 
   if (rank_src == world.rank()) {
-    ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_dst, tag, matrix.read_sender(idx),
+    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, tag,
+                                                  matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_src, tag, matrix.read_sender(idx),
+    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, tag,
+                                                  matrix.read_sender(idx),
                                                   tmp.readwrite_sender(LocalTileIndex{0, 0})));
   }
   else {
@@ -243,7 +249,8 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_dst, id, matrix.read_sender(idx),
+        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, id,
+                                                      matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }
@@ -258,7 +265,8 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllSumP2P<B>(world, rank_src, id, matrix.read_sender(idx),
+        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, id,
+                                                      matrix.read_sender(idx),
                                                       tmp.readwrite_sender(idx)));
       }
     }

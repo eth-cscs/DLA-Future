@@ -8,10 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/kernels/all_reduce.h"
+#include <complex>
+#include <utility>
+
+#include <mpi.h>
+#include <pika/execution.hpp>
+
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
+#include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"

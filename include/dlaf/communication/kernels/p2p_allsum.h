@@ -12,7 +12,8 @@
 
 /// @file
 
-#include <functional>
+#include <type_traits>
+#include <utility>
 
 #include <mpi.h>
 #include <pika/execution.hpp>

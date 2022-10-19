@@ -12,17 +12,18 @@
 
 /// @file
 
+#include <complex>
+
 #include <mpi.h>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/data.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
-#include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/with_temporary_tile.h"
 
 namespace dlaf::comm {
 namespace internal {

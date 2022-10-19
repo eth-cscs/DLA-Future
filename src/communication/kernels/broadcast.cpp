@@ -8,7 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
+#include <utility>
+
 #include <mpi.h>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/callable_object.h"

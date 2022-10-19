@@ -12,8 +12,10 @@
 #warning "Reduce is not using CUDA_RDMA."
 #endif
 
-#include <mpi.h>
+#include <complex>
+#include <utility>
 
+#include <mpi.h>
 #include <pika/execution.hpp>
 
 #include "dlaf/common/data.h"
@@ -22,7 +24,6 @@
 #include "dlaf/communication/kernels/reduce.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/schedulers.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/with_temporary_tile.h"

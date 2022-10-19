@@ -96,6 +96,18 @@ DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, common::PromiseGuard<Communicator>
 DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
 
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, Communicator);
+
+DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+#endif
+
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
@@ -112,6 +124,18 @@ DLAF_SCHEDULE_SEND_SFTILE_ETI(, float, Device::CPU, common::PromiseGuard<Communi
 DLAF_SCHEDULE_SEND_SFTILE_ETI(, double, Device::CPU, common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, float, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, double, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<double>, Device::GPU, Communicator);
+
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+#endif
 
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecv(
@@ -146,4 +170,16 @@ DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, common::PromiseGuard<Communicator>)
 DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, Communicator);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, Communicator);
+
+DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+#endif
 }

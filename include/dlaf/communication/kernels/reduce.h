@@ -49,6 +49,14 @@ DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
 
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, int, Device::GPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::GPU);
+#endif
+
 /// Schedule a reduction send.
 ///
 /// The returned sender signals completion when the send is done. If the input
@@ -73,6 +81,13 @@ DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<double>, Device::CPU);
 
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<double>, Device::GPU);
+#endif
+
 /// \overload scheduleReduceSend
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
@@ -95,4 +110,12 @@ DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, float, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::CPU);
+
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, int, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::GPU);
+#endif
 }

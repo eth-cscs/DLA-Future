@@ -50,6 +50,13 @@ DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<double>, Device::CPU);
 
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<double>, Device::GPU);
+#endif
+
 /// \overload scheduleAllReduce
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
@@ -101,4 +108,12 @@ DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
+
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::GPU);
+#endif
 }

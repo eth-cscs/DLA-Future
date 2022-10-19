@@ -99,4 +99,5 @@ RUN spack env create --without-view ci /spack_environment/spack.yaml
 ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Install only the dependencies of this (top level is our package)
-RUN spack -e ci install --fail-fast --only=dependencies
+ARG NUM_PROCS
+RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies

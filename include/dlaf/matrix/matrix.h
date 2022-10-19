@@ -56,6 +56,7 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
 template <class T, Device D>
 class Matrix : public Matrix<const T, D> {
 public:
+  static constexpr Device device = D;
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;

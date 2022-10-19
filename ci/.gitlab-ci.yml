@@ -14,10 +14,6 @@ stages:
   tags: [rosa-k8s]
   image: quay.io/podman/stable:latest
   stage: build
-  only:
-    - master
-    - staging
-    - trying
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
@@ -224,10 +220,6 @@ amdgpu release build clang10+rocm-5.2.3:
 
 .run_common:
   stage: test
-  only:
-    - master
-    - staging
-    - trying
   trigger:
     strategy: depend
 

@@ -75,9 +75,6 @@ template <class CommSender, class TileInSender, class TileOutSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  constexpr static auto D_IN = dlaf::internal::SenderSingleValueType<TileInSender>::D;
-  constexpr static auto D_OUT = dlaf::internal::SenderSingleValueType<TileOutSender>::D;
-
   // We create two nested scopes for the input and output tiles with
   // withTemporaryTile. The output tile is in the outer scope as the output tile
   // will be returned by the returned sender.
@@ -90,19 +87,25 @@ template <class CommSender, class TileInSender, class TileOutSender>
                          std::cref(tile_out_comm)) |
              transformMPI(allReduce_o);
     };
+
     // The input tile must be copied to the temporary tile used for the
     // reduction, but the temporary tile does not need to be copied back to the
     // input since the data is not changed by the reduction (the result is
     // written into the output tile instead).
-    return withTemporaryTile<CommunicationDevice_v<D_IN>, CopyToDestination::Yes,
-                             CopyFromDestination::No, RequireContiguous::Yes>(std::move(tile_in),
-                                                                              std::move(all_reduce));
+    constexpr static Device in_device = SenderSingleValueType<TileInSender>::D;
+    constexpr static Device in_comm_device = CommunicationDevice_v<in_device>;
+
+    return withTemporaryTile<in_comm_device, CopyToDestination::Yes, CopyFromDestination::No,
+                             RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
   };
 
   // The output tile does not need to be copied to the temporary tile since it
   // is only written to. The written data is copied back from the temporary tile
   // to the output tile.
-  return withTemporaryTile<CommunicationDevice_v<D_OUT>, CopyToDestination::No, CopyFromDestination::Yes,
+  constexpr static Device out_device = SenderSingleValueType<TileOutSender>::D;
+  constexpr static Device out_comm_device = CommunicationDevice_v<out_device>;
+
+  return withTemporaryTile<out_comm_device, CopyToDestination::No, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileOutSender>(tile_out),
                                                    std::move(all_reduce_final));
 }

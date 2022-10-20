@@ -802,7 +802,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     //                            nrefls);
     // TODO copy back to GPU
     // return taus;
-    return {};
+    return pika::shared_future<common::internal::vector<T>>{};
   }
 
 protected:

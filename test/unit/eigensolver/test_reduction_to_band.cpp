@@ -381,22 +381,26 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
 
   // setup the reference input matrix
-  Matrix<const T, D> reference = [&]() {
-    Matrix<T, D> reference(distribution);
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(distribution);
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
-  Matrix<T, D> matrix_a(distribution);
-  copy(reference, matrix_a);
+  Matrix<T, Device::CPU> matrix_a_h(distribution);
+  copy(reference, matrix_a_h);
 
-  auto local_taus = eigensolver::reductionToBand<Backend::MC>(grid, matrix_a);
-  pika::threads::get_thread_manager().wait();
+  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
+  {
+    MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
+    local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get());
+    pika::threads::get_thread_manager().wait();
+  }
 
-  checkUpperPartUnchanged(reference, matrix_a);
+  checkUpperPartUnchanged(reference, matrix_a_h);
 
-  auto mat_v = allGather(blas::Uplo::Lower, matrix_a, grid);
-  auto mat_b = makeLocal(matrix_a);
+  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
+  auto mat_b = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
   auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus, grid);

@@ -7,6 +7,7 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+
 #include "dlaf/eigensolver/bt_reduction_to_band.h"
 
 #include <functional>
@@ -16,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
+#include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
@@ -232,10 +234,26 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : sizes) {
       // b != mb is currently not supported by the implementation yet.
-      (void) mb;
+      dlaf::internal::silenceUnusedWarningFor(b);
 
-      testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, b, nb);
+      testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, mb,
+                                                                                 nb);
       pika::threads::get_thread_manager().wait();
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessDistributed) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : sizes) {
+      // b != mb is currently not supported by the implementation yet.
+      dlaf::internal::silenceUnusedWarningFor(b);
+
+      testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, n, mb,
+                                                                                  nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
+#endif

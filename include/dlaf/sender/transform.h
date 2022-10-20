@@ -26,6 +26,8 @@
 #include <pika/cuda.hpp>
 #endif
 
+#include <type_traits>
+
 namespace dlaf {
 namespace internal {
 
@@ -85,7 +87,16 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, bool Unwrap 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
   auto f_unwrapping = [&]() {
-    if constexpr (Unwrap) {
+    // pika::unwrapping does not compile with a nullary callable. Since nothing
+    // needs to be unwrapped for a nullary callable we can simply not use
+    // pika::unwrapping as a workaround (this is checked with is_invocable).
+    // This is not 100% correct since a sender may have multiple completion
+    // signatures, with one of them being nullary and others requiring
+    // unwrapping. However, since:
+    //   1. unwrapping/futures are due to be removed, and
+    //   2. this works for all current use cases in DLA-Future
+    // this suffices as a workaround.
+    if constexpr (Unwrap && !std::is_invocable_v<F>) {
       return pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
     }
     else {

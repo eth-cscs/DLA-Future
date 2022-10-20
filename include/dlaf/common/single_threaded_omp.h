@@ -16,7 +16,7 @@ class [[nodiscard]] SingleThreadedOmpScope {
 public:
   SingleThreadedOmpScope();
   ~SingleThreadedOmpScope();
-  SingleThreadedOmpScope(SingleThreadedOmpScope&&) = delete;
+  SingleThreadedOmpScope(SingleThreadedOmpScope &&) = delete;
   SingleThreadedOmpScope(SingleThreadedOmpScope const&) = delete;
   SingleThreadedOmpScope& operator=(SingleThreadedOmpScope&&) = delete;
   SingleThreadedOmpScope& operator=(SingleThreadedOmpScope const&) = delete;

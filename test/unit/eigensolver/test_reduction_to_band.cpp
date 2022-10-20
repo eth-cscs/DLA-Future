@@ -412,3 +412,13 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs) {
+      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
+#endif

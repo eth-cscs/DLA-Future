@@ -552,31 +552,30 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
   updateTrailingPanel(has_head, panel, j, w, tau);
 }
 
-template <Device D, class T, class TriggerSender, class CommSender>
-pika::shared_future<common::internal::vector<T>> computePanelReflectors(
-    TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-    Matrix<T, D>& mat_a, const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
-    SizeType nrefls) {
+template <class MatrixLike, class TriggerSender, class CommSender>
+auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
+                            CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
+                            const SubPanelView& panel_view, const SizeType nrefls) {
+  using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task =
-      [rank_v0, nrefls,
-       cols = mat_a.blockSize().cols()](auto&& panel_tiles,
-                                        common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
-        auto communicator = comm_wrapper.ref();
-        const bool has_head = communicator.rank() == rank_v0;
+  auto panel_task = [rank_v0, nrefls,
+                     cols = panel_view.cols()](auto&& panel_tiles,
+                                               common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
+    auto communicator = comm_wrapper.ref();
+    const bool has_head = communicator.rank() == rank_v0;
 
-        common::internal::vector<T> taus;
-        taus.reserve(nrefls);
-        for (SizeType j = 0; j < nrefls; ++j) {
-          taus.emplace_back(computeReflector(has_head, communicator, panel_tiles, j));
-          updateTrailingPanelWithReflector(has_head, communicator, panel_tiles, j, cols - (j + 1),
-                                           taus.back());
-        }
-        return taus;
-      };
+    common::internal::vector<T> taus;
+    taus.reserve(nrefls);
+    for (SizeType j = 0; j < nrefls; ++j) {
+      taus.emplace_back(computeReflector(has_head, communicator, panel_tiles, j));
+      updateTrailingPanelWithReflector(has_head, communicator, panel_tiles, j, cols - (j + 1),
+                                       taus.back());
+    }
+    return taus;
+  };
 
-  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
+  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, panel_view.iteratorLocal())),
                       std::forward<CommSender>(mpi_col_chain_panel),
                       std::forward<TriggerSender>(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
@@ -753,12 +752,10 @@ struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a,
-            const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
-            SizeType nrefls) {
+            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view, SizeType nrefls) {
     using red2band::distributed::computePanelReflectors;
     return computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                                  std::forward<CommSender>(mpi_col_chain_panel), mat_a, ai_panel_range,
+                                  std::forward<CommSender>(mpi_col_chain_panel), mat_a, panel_view,
                                   nrefls);
   }
 };
@@ -791,18 +788,23 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a,
-            const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
-            SizeType nrefls) {
+            Matrix<T, D>& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
+    auto& v = panels_v.nextResource();
+
     // TODO copy to CPU (which has to happen after the trigger)
-    // compute on CPU
+    copyToCPU(panel_view, mat_a, v);
+
+    // TODO compute on CPU
+    pika::shared_future<common::internal::vector<T>> taus;
     // auto taus = dlaf::eigensolver::internal::red2band::distributed::
     //     computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
     //                            std::forward<CommSender>(mpi_col_chain_panel), mat_a, ai_panel_range,
     //                            nrefls);
-    // TODO copy back to GPU
-    // return taus;
-    return pika::shared_future<common::internal::vector<T>>{};
+
+    // copy back to GPU
+    copyFromCPU(panel_view, v, mat_a);
+
+    return taus;
   }
 
 protected:
@@ -1041,10 +1043,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
         dist.template nextLocalTileFromGlobalTile<Coord::Col>(at_start.col()),
     };
 
-    const auto ai_panel =
-        iterate_range2d(indexFromOrigin(ai_offset),
-                        LocalTileSize(dist.localNrTiles().rows() - ai_offset.rows(), 1));
-
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
     const auto v0_size = mat_a.tileSize(ai_start);
@@ -1073,11 +1071,12 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     matrix::Matrix<T, D> t({nrefls, nrefls}, dist.blockSize());
 
     // PANEL
-    const matrix::SubPanelView panel_view(dist, ij_offset, nrefls);
+    const SizeType band_size = dist.blockSize().cols();
+    const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     if (is_panel_rank_col) {
       taus.emplace_back(compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(),
-                                                  mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
+                                                  mpi_col_chain_panel(), mat_a, panel_view, nrefls));
 
       red2band::local::setupReflectorPanelV<B, D>(rank.row() == rank_v0.row(), panel_view, nrefls, v,
                                                   mat_a);

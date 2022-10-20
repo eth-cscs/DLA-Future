@@ -73,7 +73,7 @@ target_link_libraries(
   dlaf.prop
   INTERFACE
     MPI::MPI_CXX
-    OpenMP::OpenMP_CXX
+    $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
     pika::pika
     lapackpp

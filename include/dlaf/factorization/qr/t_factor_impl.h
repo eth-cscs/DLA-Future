@@ -11,7 +11,6 @@
 #pragma once
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include <blas.hh>
 

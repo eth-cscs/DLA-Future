@@ -13,7 +13,6 @@
 #include <vector>
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/data.h"

@@ -17,7 +17,6 @@
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"

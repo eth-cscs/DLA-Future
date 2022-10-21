@@ -17,7 +17,6 @@
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"

@@ -13,7 +13,6 @@
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>

@@ -12,7 +12,6 @@
 #include <pika/algorithm.hpp>
 #include <pika/future.hpp>
 #include <pika/parallel/algorithms/for_each.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/kernels.h"

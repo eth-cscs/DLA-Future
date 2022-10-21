@@ -9,10 +9,10 @@
 //
 #pragma once
 
-#include <pika/unwrap.hpp>
 #include <type_traits>
 
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/unwrap.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/sender/when_all_lift.h"

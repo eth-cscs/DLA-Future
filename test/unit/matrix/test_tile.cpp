@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"

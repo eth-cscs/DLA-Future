@@ -16,7 +16,6 @@
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
 #include <pika/thread.hpp>
-#include <pika/unwrap.hpp>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>

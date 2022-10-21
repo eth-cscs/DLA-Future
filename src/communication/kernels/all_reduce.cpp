@@ -105,26 +105,26 @@ auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
-template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_in,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out) {
-  return internal::scheduleAllReduce(std::move(pcomm), reduce_op, std::move(tile_in),
-                                     std::move(tile_out));
-}
+// template <class T, Device D>
+// [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
+//     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+//     MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_in,
+//     pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out) {
+//   return internal::scheduleAllReduce(std::move(pcomm), reduce_op, std::move(tile_in),
+//                                      std::move(tile_out));
+// }
 
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<double>, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, float, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, double, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<float>, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<double>, Device::CPU);
 
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<double>, Device::GPU);
-#endif
+// #ifdef DLAF_WITH_GPU
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, float, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, double, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<float>, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_ETI(, std::complex<double>, Device::GPU);
+// #endif
 
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
@@ -137,19 +137,21 @@ template <class T, Device D>
                                      std::move(tile_out));
 }
 
+// TODO: This is only for a test (test_collective_async)
 DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, int, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<double>, Device::CPU);
 
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, int, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<double>, Device::GPU);
-#endif
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, float, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, double, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<float>, Device::CPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<double>, Device::CPU);
+
+// #ifdef DLAF_WITH_GPU
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, int, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, float, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, double, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<float>, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, std::complex<double>, Device::GPU);
+// #endif
 
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduceInPlace(
@@ -177,14 +179,16 @@ template <class T, Device D>
                            RequireContiguous::Yes>(std::move(tile), std::move(all_reduce_in_place));
 }
 
+// TODO: This is only for a test (test_collective_async)
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, int, Device::CPU);
+
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, float, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, double, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<double>, Device::CPU);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, int, Device::GPU);
+// DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, int, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, float, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, double, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<float>, Device::GPU);

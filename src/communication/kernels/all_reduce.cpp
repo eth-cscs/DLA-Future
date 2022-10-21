@@ -50,6 +50,7 @@ template <class TileInSender, class TileOutSender>
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
   using dlaf::internal::RequireContiguous;
+  using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
@@ -162,8 +163,6 @@ template <class T, Device D>
   using dlaf::internal::RequireContiguous;
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
-
-  constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::device;
 
   auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |

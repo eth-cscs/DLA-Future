@@ -559,11 +559,21 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task = [rank_v0, nrefls,
-                     cols = panel_view.cols()](auto&& panel_tiles,
-                                               common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
-    auto communicator = comm_wrapper.ref();
-    const bool has_head = communicator.rank() == rank_v0;
+  auto panel_task =
+      [rank_v0, nrefls,
+       cols = mat_a.blockSize().cols()](std::vector<typename MatrixT<T>::TileType>&& panel_tiles,
+                                        comm::Communicator& communicator) {
+        const bool has_head = communicator.rank() == rank_v0;
+
+        common::internal::vector<T> taus;
+        taus.reserve(nrefls);
+        for (SizeType j = 0; j < nrefls; ++j) {
+          taus.emplace_back(computeReflector(has_head, communicator, panel_tiles, j));
+          updateTrailingPanelWithReflector(has_head, communicator, panel_tiles, j, cols - (j + 1),
+                                           taus.back());
+        }
+        return taus;
+      };
 
     common::internal::vector<T> taus;
     taus.reserve(nrefls);

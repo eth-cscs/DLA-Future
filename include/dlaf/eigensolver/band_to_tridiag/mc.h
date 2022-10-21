@@ -652,7 +652,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   //       deps[j] as well.
 
   using common::Pipeline;
-  using common::PromiseGuard;
   using common::internal::vector;
   using util::ceilDiv;
 
@@ -712,14 +711,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   for (SizeType i = 0; i < max_workers; ++i)
     workers.emplace_back(SweepWorker<T>(size, b));
 
-  auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>> worker) {
-    worker.ref().startSweep(sweep, *a_ws);
+  auto init_sweep = [a_ws](SizeType sweep, SweepWorker<T>& worker) {
+    worker.startSweep(sweep, *a_ws);
   };
-  auto cont_sweep = [a_ws, b](SizeType nr_steps, PromiseGuard<SweepWorker<T>> worker,
+  auto cont_sweep = [a_ws, b](SizeType nr_steps, SweepWorker<T>& worker,
                               matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
     for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.ref().compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
-      worker.ref().doStep(*a_ws);
+      worker.compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
+      worker.doStep(*a_ws);
     }
   };
 

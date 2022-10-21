@@ -791,15 +791,14 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
             Matrix<T, D>& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
     auto& v = panels_v.nextResource();
 
-    // TODO copy to CPU (which has to happen after the trigger)
+    // copy to CPU
     copyToCPU(panel_view, mat_a, v);
 
-    // TODO compute on CPU
-    pika::shared_future<common::internal::vector<T>> taus;
-    // auto taus = dlaf::eigensolver::internal::red2band::distributed::
-    //     computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-    //                            std::forward<CommSender>(mpi_col_chain_panel), mat_a, ai_panel_range,
-    //                            nrefls);
+    // compute on CPU
+    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
+    auto taus =
+        computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                               std::forward<CommSender>(mpi_col_chain_panel), v, panel_view, nrefls);
 
     // copy back to GPU
     copyFromCPU(panel_view, v, mat_a);
@@ -1164,8 +1163,9 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // blocked waiting to do nothing on the next iteration (computePanel), while other ranks would be
     // stuck waiting for it for completing steps of the previous iteration, needed for the update of the
     // trailing matrix that will unlock the next iteration.
-    trigger_panel = pika::future<void>(
-        pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal())));
+    trigger_panel =
+        pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal())) |
+        ex::drop_value();
 
     // At -= X . V* + V . X*
     her2kUpdateTrailingMatrix<B>(at_offset, mat_a, x, vt, v, xt);

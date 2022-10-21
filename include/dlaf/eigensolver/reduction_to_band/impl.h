@@ -28,6 +28,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
+#include "dlaf/communication/rdma.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -1151,21 +1152,86 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // TRAILING MATRIX UPDATE
 
     // Note:
-    // This is a checkpoint that it is used to trigger the computation of the next iteration.
+    // This trigger mechanism allows to control when the next iteration of compute panel will start.
     //
-    // It is a checkpoint to ensure advancements in specific edge cases, due to the usage of
-    // blocking MPI calls inside the panel computation.
-    // If there is just a single worker thread (MPI excluded) per rank, and one of the ranks ends up
-    // having an empty panel, it does not have any dependency so it is ready to start the computation
-    // of this empty panel, but at the same time, since it has to partecipate to the collective blocking
-    // calls, it may start and block the only worker thread available. If it starts before this point of
-    // the previous iteration is reached, then a deadlock is created. Indeed, the offending rank is
-    // blocked waiting to do nothing on the next iteration (computePanel), while other ranks would be
-    // stuck waiting for it for completing steps of the previous iteration, needed for the update of the
-    // trailing matrix that will unlock the next iteration.
-    trigger_panel =
-        pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal())) |
-        ex::drop_value();
+    // * What?
+    // Compute panel uses MPI blocking communication that might block the only computing thread
+    // available (since blocking communication are scheduled on normal queues and not on the MPI
+    // dedicated one).
+    //
+    // * How?
+    // If pika runtime has only 2 threads, one is dedicated to MPI and there is just one for
+    // computation, that might get blocked by blocking MPI communication, without the chance to do
+    // anything else. (TODO this might happen even with more reductions happening in parallel)
+    //
+    // * Why?
+    // Panel computation at step i is done on the first column of the trailing matrix computed
+    // at step i-1.
+    // The rank owning the top-left tile of the trailing matrix, can update it as soon as it
+    // receives X[0], which due to the pivot position is also the Xt[0]. Once it can go to the next
+    // iteration, it ends up stucked in an MPI blocking communication, waiting for the others joining
+    // before being able to advance.
+    //
+    // But at the same time, other ranks in the same column (needed for the next panel update), cannot
+    // complete the trailing matrix update. Indeed, they are waiting for the pivot rank to communicate
+    // column-wise Xt[0] (during x -> xt panel transpose broadcast), but he is not going to schedule
+    // anything because the only normal thread which can do that is stuck in an MPI blocking
+    // communication that is not going to advance... and so it's a DEADLOCK!
+    //
+    // * Solution:
+    // The idea is to make the next panel depending not only on tiles stored locally, but also to
+    // ensure that others have received Xt[0], which is needed to advance the computation and let
+    // others arrive at the next iteration where the pivot will wait for them to complete the MPI
+    // blocking communication.
+    //
+    // * Why is it different between MC and GPU?
+    // As said above, the problem is related to the communication. But the communication is not said
+    // to be an atomic operation happening in a single task. It might have to create a copy to
+    // a buffer more suitable for the communication (e.g. GPU -> CPU if RDMA is not available).
+    //
+    // And in order to not be blocked, it must be ensured that the actual communication task has
+    // been scheduled.
+    const comm::IndexT_MPI rank_next_col = (rank_v0.col() + 1) % dist.commGridSize().cols();
+    if (rank.col() == rank_next_col) {
+      const LocalTileIndex at(indexFromOrigin(at_offset));
+
+      if constexpr (dlaf::comm::CommunicationDevice_v<D> == D) {
+        // Note:
+        // if there is no need for additional buffers, we can just wait that xt[0] is ready for
+        // reading.
+        if (rank.row() == rank_v0.row()) {
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+        else {
+          // Note:
+          // Conservatively ensure that xt[0] needed for updating the first column has been
+          // received. Just wait for xt because communication of x happens over rows, while the
+          // pivot rank can just block rank in the same column.
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+      }
+      else {
+        const LocalTileIndex at(indexFromOrigin(at_offset));
+        if (rank.row() == rank_v0.row()) {
+          // Note:
+          // on the pivot rank, i.e. the one that would quickly go to the next panel and block, from
+          // implementation we know that xt[0] is set as an external tile pointing to x[0].
+          // We cannot wait on xt readwrite (because it is an external tile in a panel, that constraints
+          // it to be just readable), but we can wait on its source x[0]. This has a subtle implication,
+          // since we will wait not just for the communication to be complete (which is already more
+          // than what needed), but we will also wait till xt[0] will be released, so after all local
+          // communication and computation on the first column of the trailing matrix will be completed.
+          trigger_panel = x.readwrite_sender(at) | ex::drop_value();
+        }
+        else {
+          // Note:
+          // Conservatively ensure that xt[0] needed for updating the first column has been
+          // received. Just wait for xt because communication of x happens over rows, while the
+          // pivot rank can just block rank in the same column.
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+      }
+    }
 
     // At -= X . V* + V . X*
     her2kUpdateTrailingMatrix<B>(at_offset, mat_a, x, vt, v, xt);

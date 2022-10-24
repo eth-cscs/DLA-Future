@@ -28,6 +28,8 @@ TEST(SingleThreadedOmp, Basic) {
 #endif
 #ifdef DLAF_WITH_MKL
   mkl_set_num_threads(num_threads);
+  // If MKL is sequential mkl_set_num_threads will have no effect
+  bool mkl_set_num_threads_applied = mkl_get_max_threads() == 2;
 #endif
   {
     dlaf::common::internal::SingleThreadedOmpScope omp;
@@ -43,6 +45,8 @@ TEST(SingleThreadedOmp, Basic) {
   EXPECT_EQ(omp_get_max_threads(), num_threads);
 #endif
 #ifdef DLAF_WITH_MKL
-  EXPECT_EQ(mkl_get_max_threads(), num_threads);
+  if (mkl_set_num_threads_applied) {
+    EXPECT_EQ(mkl_get_max_threads(), num_threads);
+  }
 #endif
 }

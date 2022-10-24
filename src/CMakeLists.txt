@@ -208,10 +208,8 @@ DLAF_addSublibrary(
   tridiagonal_eigensolver
   SOURCES eigensolver/tridiag_solver/mc.cpp
           eigensolver/tridiag_solver/kernels.cpp
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
-          # TODO: This should be moved to GPU_SOURCES once HIP is supported for the
-          # tridiagonal solver.
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
+  GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
 )
 

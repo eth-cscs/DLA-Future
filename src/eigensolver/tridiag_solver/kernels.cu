@@ -17,16 +17,17 @@
 #include "dlaf/util_cuda.h"
 #include "dlaf/util_math.h"
 
-#include <cuComplex.h>
-#include <cusolverDn.h>
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/extrema.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
-#include <cub/cub.cuh>
 #include <pika/cuda.hpp>
 #include <whip.hpp>
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/cub/api.h"
+#include "dlaf/gpu/lapack/api.h"
+#include "dlaf/gpu/lapack/error.h"
 
 namespace dlaf::eigensolver::internal {
 
@@ -174,7 +175,11 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::s
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
+#ifdef DLAF_WITH_CUDA
   auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
+#elif defined(DLAF_WITH_HIP)
+  auto d_max_ptr = thrust::max_element(thrust::hip::par.on(stream), arr, arr + len);
+#endif
   T max_el;
   // TODO: this is a peformance pessimization, the value is on device
   whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
@@ -602,11 +607,19 @@ DLAF_GPU_COPY_1D_ETI(, double);
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, whip::stream_t stream) {
   // The number of non-deflated values
+#ifdef DLAF_WITH_CUDA
   SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+#elif defined(DLAF_WITH_HIP)
+  SizeType k = n - thrust::count(thrust::hip::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+#endif
 
   // Partition while preserving relative order such that deflated entries are at the end
   auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
+#ifdef DLAF_WITH_CUDA
   thrust::stable_partition_copy(thrust::cuda::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+#elif defined(DLAF_WITH_HIP)
+  thrust::stable_partition_copy(thrust::hip::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+#endif
                                 std::move(cmp));
   return k;
 }
@@ -623,7 +636,11 @@ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, 
   // thrust's `examples/cuda/async_reduce.cu` or use the policy `thrust::cuda::par_nosync.on(stream)` in
   // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
   //
+#ifdef DLAF_WITH_CUDA
   thrust::merge(thrust::cuda::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
+#elif defined(DLAF_WITH_HIP)
+  thrust::merge(thrust::hip::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
+#endif
                 std::move(cmp));
 }
 

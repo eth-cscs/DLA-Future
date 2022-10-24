@@ -77,6 +77,8 @@ target_link_libraries(
             $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
             $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
             $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+            $<$<LINK_LANGUAGE:HIP>:roc::rocprim>
+            $<$<LINK_LANGUAGE:HIP>:roc::rocthrust>
             $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
 target_compile_definitions(
@@ -149,7 +151,7 @@ function(DLAF_addSublibrary name)
   if(DLAF_WITH_GPU)
     target_sources(${object_lib_name} PRIVATE ${DLAF_ASL_GPU_SOURCES})
     if(DLAF_WITH_HIP)
-      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP)
+      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP LINKER_LANGUAGE HIP)
     endif()
   endif()
 

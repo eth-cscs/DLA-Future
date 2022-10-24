@@ -31,6 +31,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
+    variant("mkl", default='seq', values=('seq', 'omp', 'tbb'), description="MKL variant to use.", when="^intel-mkl")
+
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
@@ -97,7 +99,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-            args.append(self.define("DLAF_WITH_MKL", True))
+            args += [
+                self.define("DLAF_WITH_MKL", True),
+                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(self.spec.variants["mkl"].value)),
+            ]
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(self.define("LAPACK_TYPE", "Custom"))

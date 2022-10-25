@@ -161,10 +161,12 @@ DLAF_MEMVIEW_ETI(extern, double, Device::CPU)
 DLAF_MEMVIEW_ETI(extern, std::complex<float>, Device::CPU)
 DLAF_MEMVIEW_ETI(extern, std::complex<double>, Device::CPU)
 
+#ifdef DLAF_WITH_GPU
 DLAF_MEMVIEW_ETI(extern, float, Device::GPU)
 DLAF_MEMVIEW_ETI(extern, double, Device::GPU)
 DLAF_MEMVIEW_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_MEMVIEW_ETI(extern, std::complex<double>, Device::GPU)
+#endif
 
 }
 }

@@ -44,8 +44,8 @@ SizeType elIndex(TileElementIndex index, SizeType ld) {
 
 using TileSizes = std::tuple<TileElementSize, SizeType>;
 
-template <class T, Device device>
-TileSizes getSizes(const Tile<T, device>& tile) {
+template <class T, Device D>
+TileSizes getSizes(const Tile<T, D>& tile) {
   return TileSizes(tile.size(), tile.ld());
 }
 

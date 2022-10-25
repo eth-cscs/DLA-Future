@@ -118,8 +118,8 @@ TEST_F(P2PTestGPU, SendRecv) {
 }
 #endif
 
-template <class T, Device device>
-void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+template <class T, Device D>
+void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   // This test involves just 2 ranks, where rank_src sends all tiles allowing to "mirror" the
   // entire matrix on rank_dst. P2P communications are issued by the different ranks in different
   // orders, linking them using the tag of the MPI communication.

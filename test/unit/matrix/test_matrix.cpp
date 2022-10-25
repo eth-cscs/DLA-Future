@@ -73,24 +73,25 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 }
 
 TYPED_TEST(MatrixLocalTest, StaticAPI) {
-  constexpr Device D = Device::CPU;
+  constexpr Device device = Device::CPU;
 
-  using matrix_t = Matrix<TypeParam, D>;
+  using matrix_t = Matrix<TypeParam, device>;
 
   static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, D>, typename matrix_t::TileType>, "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, D>, typename matrix_t::ConstTileType>,
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
 TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
-  constexpr Device D = Device::CPU;
+  constexpr Device device = Device::CPU;
 
-  using const_matrix_t = Matrix<const TypeParam, D>;
+  using const_matrix_t = Matrix<const TypeParam, device>;
 
   static_assert(std::is_same_v<TypeParam, typename const_matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, D>, typename const_matrix_t::TileType>, "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, D>, typename const_matrix_t::ConstTileType>,
+  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_t::TileType>,
+                "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename const_matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
@@ -1230,7 +1231,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 // usage, but they are just meant to test that the Matrix does not wait on destruction for any left
 // task on one of its tiles.
 
-constexpr Device D = dlaf::Device::CPU;
+constexpr Device device = dlaf::Device::CPU;
 using T = std::complex<float>;  // randomly chosen element type for matrix
 
 // wait for guard to become true
@@ -1243,13 +1244,13 @@ auto try_waiting_guard = [](auto& guard) {
 
 // Create a single-element matrix
 template <class T>
-auto createMatrix() -> Matrix<T, D> {
+auto createMatrix() -> Matrix<T, device> {
   return {{1, 1}, {1, 1}};
 }
 
 // Create a single-element matrix with user-provided memory
 template <class T>
-auto createMatrix(T& data) -> Matrix<T, D> {
+auto createMatrix(T& data) -> Matrix<T, device> {
   return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 

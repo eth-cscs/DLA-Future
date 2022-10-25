@@ -119,32 +119,11 @@ DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<double>, Device::CPU);
 
 #ifdef DLAF_WITH_GPU
-// DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, int, Device::GPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, float, Device::GPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, double, Device::GPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<float>, Device::GPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<double>, Device::GPU);
 #endif
-
-// template <class T, Device D>
-// [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleReduceSend(
-//     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-//     comm::IndexT_MPI rank_root, MPI_Op reduce_op,
-//     pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile) {
-//   return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
-// }
-
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::CPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::CPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::CPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::CPU);
-
-// #ifdef DLAF_WITH_GPU
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::GPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::GPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::GPU);
-// DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::GPU);
-// #endif
 
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
@@ -163,7 +142,6 @@ DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<double>, Device::CPU);
 
 #ifdef DLAF_WITH_GPU
-// DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, int, Device::GPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, float, Device::GPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, double, Device::GPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU);

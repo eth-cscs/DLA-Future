@@ -15,3 +15,5 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
+
+target_compile_options(test_broadcast_panel PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)

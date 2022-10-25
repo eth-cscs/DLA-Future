@@ -59,6 +59,11 @@ DLAF_addTest(
   MPIRANKS 6
 )
 
+target_compile_options(
+  test_reduction_to_band PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=stringop-overflow
+                                 -Wno-error=array-bounds>
+)
+
 DLAF_addTest(
   test_bt_reduction_to_band
   SOURCES test_bt_reduction_to_band.cpp

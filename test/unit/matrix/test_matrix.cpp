@@ -73,25 +73,24 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 }
 
 TYPED_TEST(MatrixLocalTest, StaticAPI) {
-  const Device device = Device::CPU;
+  constexpr Device D = Device::CPU;
 
-  using matrix_t = Matrix<TypeParam, device>;
+  using matrix_t = Matrix<TypeParam, D>;
 
   static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>, "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
+  static_assert(std::is_same_v<Tile<TypeParam, D>, typename matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, D>, typename matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
 TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
-  const Device device = Device::CPU;
+  constexpr Device D = Device::CPU;
 
-  using const_matrix_t = Matrix<const TypeParam, device>;
+  using const_matrix_t = Matrix<const TypeParam, D>;
 
   static_assert(std::is_same_v<TypeParam, typename const_matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_t::TileType>,
-                "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename const_matrix_t::ConstTileType>,
+  static_assert(std::is_same_v<Tile<TypeParam, D>, typename const_matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const TypeParam, D>, typename const_matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
@@ -187,9 +186,9 @@ bool ownIndex(const Distribution& distribution, const GlobalElementIndex& index)
   return distribution.rankIndex() == distribution.rankGlobalTile(global_tile_index);
 }
 
-template <class T, Device device>
+template <class T, Device D>
 void checkDistributionLayout(T* p, const Distribution& distribution, const LayoutInfo& layout,
-                             Matrix<T, device>& matrix) {
+                             Matrix<T, D>& matrix) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -238,9 +237,9 @@ void checkDistributionLayout(T* p, const Distribution& distribution, const Layou
   }
 }
 
-template <class T, Device device>
+template <class T, Device D>
 void checkDistributionLayout(T* p, const Distribution& distribution, const LayoutInfo& layout,
-                             Matrix<const T, device>& matrix) {
+                             Matrix<const T, D>& matrix) {
   auto el = [](const GlobalElementIndex& index) {
     SizeType i = index.row();
     SizeType j = index.col();
@@ -703,13 +702,13 @@ const std::vector<TestLocalColMajor> col_major_sizes_tests({
     {{6, 11}, {4, 3}, 7},   // padded ld
 });
 
-template <class T, Device device>
-bool haveConstElements(const Matrix<T, device>&) {
+template <class T, Device D>
+bool haveConstElements(const Matrix<T, D>&) {
   return false;
 }
 
-template <class T, Device device>
-bool haveConstElements(const Matrix<const T, device>&) {
+template <class T, Device D>
+bool haveConstElements(const Matrix<const T, D>&) {
   return true;
 }
 
@@ -1231,8 +1230,8 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
 // usage, but they are just meant to test that the Matrix does not wait on destruction for any left
 // task on one of its tiles.
 
-const auto device = dlaf::Device::CPU;
-using TypeParam = std::complex<float>;  // randomly chosen element type for matrix
+constexpr Device D = dlaf::Device::CPU;
+using T = std::complex<float>;  // randomly chosen element type for matrix
 
 // wait for guard to become true
 auto try_waiting_guard = [](auto& guard) {
@@ -1244,13 +1243,13 @@ auto try_waiting_guard = [](auto& guard) {
 
 // Create a single-element matrix
 template <class T>
-auto createMatrix() -> Matrix<T, device> {
+auto createMatrix() -> Matrix<T, D> {
   return {{1, 1}, {1, 1}};
 }
 
 // Create a single-element matrix with user-provided memory
 template <class T>
-auto createMatrix(T& data) -> Matrix<T, device> {
+auto createMatrix(T& data) -> Matrix<T, D> {
   return createMatrixFromColMajor<Device::CPU>({1, 1}, {1, 1}, 1, &data);
 }
 
@@ -1276,7 +1275,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<TypeParam>();
+    auto matrix = createMatrix<T>();
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
@@ -1291,7 +1290,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<TypeParam>();
+    auto matrix = createMatrix<T>();
 
     auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
     last_task = shared_future |
@@ -1309,7 +1308,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<TypeParam>();
+    auto matrix = createMatrix<T>();
 
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
@@ -1325,7 +1324,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    auto matrix = createMatrix<TypeParam>();
+    auto matrix = createMatrix<T>();
 
     auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
     last_task = std::move(future) |
@@ -1343,8 +1342,8 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    TypeParam data;
-    auto matrix = createMatrix<TypeParam>(data);
+    T data;
+    auto matrix = createMatrix<T>(data);
 
     auto shared_future = matrix.read(LocalTileIndex(0, 0));
     last_task = shared_future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
@@ -1359,8 +1358,8 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    TypeParam data;
-    auto matrix = createMatrix<TypeParam>(data);
+    T data;
+    auto matrix = createMatrix<T>(data);
 
     auto shared_future = matrix.read_sender(LocalTileIndex(0, 0));
     last_task = shared_future |
@@ -1378,8 +1377,8 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    TypeParam data;
-    auto matrix = createMatrix<TypeParam>(data);
+    T data;
+    auto matrix = createMatrix<T>(data);
 
     auto future = matrix(LocalTileIndex(0, 0));
     last_task = future.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
@@ -1394,8 +1393,8 @@ TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    TypeParam data;
-    auto matrix = createConstMatrix<TypeParam>(data);
+    T data;
+    auto matrix = createConstMatrix<T>(data);
 
     auto sf = matrix.read(LocalTileIndex(0, 0));
     last_task = sf.then(pika::launch::async, WaitGuardHelper{is_exited_from_scope});
@@ -1410,8 +1409,8 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemor
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    TypeParam data;
-    auto matrix = createMatrix<TypeParam>(data);
+    T data;
+    auto matrix = createMatrix<T>(data);
 
     auto future = matrix.readwrite_sender(LocalTileIndex(0, 0));
     last_task = std::move(future) |
@@ -1538,7 +1537,7 @@ TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
 struct CustomException final : public std::exception {};
 
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
@@ -1547,7 +1546,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccess) {
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInRWAccessWithSenderAdaptors) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
            ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
@@ -1558,7 +1557,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInRWAccessWithSenderAdaptors) {
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto f = matrix(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
@@ -1567,7 +1566,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccess) {
 }
 
 TEST(MatrixExceptionPropagation, RWPropagatesInReadAccessWithSenderAdaptors) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto s = matrix.readwrite_sender(LocalTileIndex(0, 0)) |
            ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
@@ -1578,7 +1577,7 @@ TEST(MatrixExceptionPropagation, RWPropagatesInReadAccessWithSenderAdaptors) {
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto f =
       matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto const&) { throw CustomException{}; }));
@@ -1588,7 +1587,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccessWithSenderAdaptors) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
            ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();
@@ -1598,7 +1597,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccessWithSenderAdaptor
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto f = matrix.read(LocalTileIndex(0, 0)).then(unwrapping([](auto&&) { throw CustomException{}; }));
 
@@ -1607,7 +1606,7 @@ TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccessWithSenderAdaptors) {
-  auto matrix = createMatrix<TypeParam>();
+  auto matrix = createMatrix<T>();
 
   auto s = matrix.read_sender(LocalTileIndex(0, 0)) |
            ex::then(unwrapping([](auto&&) { throw CustomException{}; })) | ex::ensure_started();

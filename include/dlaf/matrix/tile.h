@@ -39,11 +39,10 @@ struct ContinuationException final : public std::runtime_error {
 namespace matrix {
 namespace internal {
 
-template <class T, Device device>
+template <class T, Device D>
 class TileData {
 public:
-  TileData(const TileElementSize& size, memory::MemoryView<T, device>&& memory_view,
-           SizeType ld) noexcept
+  TileData(const TileElementSize& size, memory::MemoryView<T, D>&& memory_view, SizeType ld) noexcept
       : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
     DLAF_ASSERT(size_.isValid(), size_);
     DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
@@ -107,7 +106,7 @@ private:
   }
 
   TileElementSize size_;
-  memory::MemoryView<T, device> memory_view_;
+  memory::MemoryView<T, D> memory_view_;
   SizeType ld_;
 };
 }
@@ -119,11 +118,11 @@ struct SubTileSpec {
 };
 
 // forward declarations
-template <class T, Device device>
+template <class T, Device D>
 class Tile;
 
-template <class T, Device device>
-class Tile<const T, device>;
+template <class T, Device D>
+class Tile<const T, D>;
 
 namespace internal {
 template <class T, Device D>
@@ -144,20 +143,20 @@ pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& ti
 ///
 /// Note: The constructor of tiles of const elements, requires a MemoryView of non-const memory, however
 /// the tile of const elements ensure that the memory will not be modified.
-template <class T, Device device>
-class Tile<const T, device> {
+template <class T, Device D>
+class Tile<const T, D> {
 public:
-  using TileType = Tile<T, device>;
-  using ConstTileType = Tile<const T, device>;
-  using TileDataType = internal::TileData<T, device>;
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using TileDataType = internal::TileData<T, D>;
   using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend TileType;
-  friend pika::future<Tile<const T, device>> internal::createSubTile<>(
-      const pika::shared_future<Tile<const T, device>>& tile, const SubTileSpec& spec);
+  friend pika::future<Tile<const T, D>> internal::createSubTile<>(
+      const pika::shared_future<Tile<const T, D>>& tile, const SubTileSpec& spec);
 
   using ElementType = T;
-  static constexpr Device D = device;
+  static constexpr Device device = D;
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
@@ -165,7 +164,7 @@ public:
   /// @pre ld >= max(1, @p size.rows()),
   /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, D>&& memory_view,
        SizeType ld) noexcept
       : data_(size, std::move(memory_view), ld) {}
 
@@ -233,16 +232,16 @@ public:
   }
 
 private:
-  static memory::MemoryView<T, device> createMemoryViewForSubtile(const Tile<const T, device>& tile,
-                                                                  const SubTileSpec& spec) {
+  static memory::MemoryView<T, D> createMemoryViewForSubtile(const Tile<const T, D>& tile,
+                                                             const SubTileSpec& spec) {
     DLAF_ASSERT(spec.origin.isValid(), spec.origin);
     DLAF_ASSERT(spec.origin.isInOrOn(tile.size()), spec.origin, tile.size());
     DLAF_ASSERT(spec.size.isValid(), spec.size);
     DLAF_ASSERT((spec.origin + spec.size).isInOrOn(tile.size()), spec.origin, spec.size, tile.size());
 
-    return memory::MemoryView<T, device>(tile.data_.memoryView(),
-                                         spec.size.isEmpty() ? 0 : tile.data_.linearIndex(spec.origin),
-                                         tile.data_.linearSize(spec.size, tile.ld()));
+    return memory::MemoryView<T, D>(tile.data_.memoryView(),
+                                    spec.size.isEmpty() ? 0 : tile.data_.linearIndex(spec.origin),
+                                    tile.data_.linearSize(spec.size, tile.ld()));
   };
 
   // Creates an untracked subtile.
@@ -254,7 +253,7 @@ private:
   // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
   Tile(pika::shared_future<ConstTileType> tile, const SubTileSpec& spec)
-      : Tile<const T, device>(tile.get(), spec) {
+      : Tile<const T, D>(tile.get(), spec) {
     dep_tracker_ = std::move(tile);
   }
 
@@ -264,8 +263,8 @@ private:
       dep_tracker_;
 };
 
-template <class T, Device device>
-Tile<const T, device>::~Tile() {
+template <class T, Device D>
+Tile<const T, D>::~Tile() {
   if (std::holds_alternative<TilePromise>(dep_tracker_)) {
     auto& p_ = std::get<TilePromise>(dep_tracker_);
     if (std::uncaught_exceptions() > 0)
@@ -275,23 +274,23 @@ Tile<const T, device>::~Tile() {
   }
 }
 
-template <class T, Device device>
-Tile<const T, device>::Tile(const Tile<const T, device>& tile, const SubTileSpec& spec) noexcept
-    : Tile<const T, device>(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
+template <class T, Device D>
+Tile<const T, D>::Tile(const Tile<const T, D>& tile, const SubTileSpec& spec) noexcept
+    : Tile<const T, D>(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
-template <class T, Device device>
-class Tile : public Tile<const T, device> {
+template <class T, Device D>
+class Tile : public Tile<const T, D> {
 public:
-  using TileType = Tile<T, device>;
-  using ConstTileType = Tile<const T, device>;
-  using TileDataType = internal::TileData<T, device>;
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using TileDataType = internal::TileData<T, D>;
   using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend ConstTileType;
-  friend pika::future<Tile<T, device>> internal::createSubTile<>(
-      const pika::shared_future<Tile<T, device>>& tile, const SubTileSpec& spec);
-  friend pika::shared_future<Tile<T, device>> internal::splitTileInsertFutureInChain<>(
-      pika::future<Tile<T, device>>& tile);
+  friend pika::future<Tile<T, D>> internal::createSubTile<>(const pika::shared_future<Tile<T, D>>& tile,
+                                                            const SubTileSpec& spec);
+  friend pika::shared_future<Tile<T, D>> internal::splitTileInsertFutureInChain<>(
+      pika::future<Tile<T, D>>& tile);
 
   using ElementType = T;
 
@@ -301,9 +300,9 @@ public:
   /// @pre ld >= max(1, @p size.rows()),
   /// @pre memory_view contains enough elements.
   /// The (i, j)-th element of the Tile is stored in the (i+ld*j)-th element of memory_view.
-  Tile(const TileElementSize& size, memory::MemoryView<ElementType, device>&& memory_view,
+  Tile(const TileElementSize& size, memory::MemoryView<ElementType, D>&& memory_view,
        SizeType ld) noexcept
-      : Tile<const T, device>(size, std::move(memory_view), ld) {}
+      : Tile<const T, D>(size, std::move(memory_view), ld) {}
 
   Tile(TileDataType&& data) noexcept : ConstTileType(std::move(data)) {}
 
@@ -360,8 +359,8 @@ private:
 };
 
 /// Create a common::Buffer from a Tile.
-template <class T, Device device>
-auto create_data(const Tile<T, device>& tile) {
+template <class T, Device D>
+auto create_data(const Tile<T, D>& tile) {
   return common::DataDescriptor<T>(tile.ptr({0, 0}), tile.size().cols(), tile.size().rows(), tile.ld());
 }
 

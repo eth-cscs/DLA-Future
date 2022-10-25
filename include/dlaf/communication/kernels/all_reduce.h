@@ -92,7 +92,7 @@ template <class CommSender, class TileInSender, class TileOutSender>
     // reduction, but the temporary tile does not need to be copied back to the
     // input since the data is not changed by the reduction (the result is
     // written into the output tile instead).
-    constexpr static Device in_device = SenderSingleValueType<TileInSender>::D;
+    constexpr static Device in_device = SenderSingleValueType<TileInSender>::device;
     constexpr static Device in_comm_device = CommunicationDevice_v<in_device>;
 
     return withTemporaryTile<in_comm_device, CopyToDestination::Yes, CopyFromDestination::No,
@@ -102,7 +102,7 @@ template <class CommSender, class TileInSender, class TileOutSender>
   // The output tile does not need to be copied to the temporary tile since it
   // is only written to. The written data is copied back from the temporary tile
   // to the output tile.
-  constexpr static Device out_device = SenderSingleValueType<TileOutSender>::D;
+  constexpr static Device out_device = SenderSingleValueType<TileOutSender>::device;
   constexpr static Device out_comm_device = CommunicationDevice_v<out_device>;
 
   return withTemporaryTile<out_comm_device, CopyToDestination::No, CopyFromDestination::Yes,
@@ -126,7 +126,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::D;
+  constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::device;
 
   auto all_reduce_in_place = [reduce_op,
                               pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {

@@ -56,7 +56,7 @@ using P2PTestGPU = P2PTest<Device::GPU>;
 
 template <class T, class SenderTile>
 auto setTileTo(SenderTile&& tile, const T input_value) {
-  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::device;
   return internal::whenAllLift(blas::Uplo::General, input_value, input_value,
                                std::forward<SenderTile>(tile)) |
          tile::laset(internal::Policy<DefaultBackend_v<D>>());
@@ -64,7 +64,7 @@ auto setTileTo(SenderTile&& tile, const T input_value) {
 
 template <class SenderTile, class TileLike>
 auto checkTileEq(TileLike&& ref_tile, SenderTile&& tile) {
-  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::device;
   return std::forward<SenderTile>(tile) |
          internal::transform(internal::Policy<DefaultBackend_v<D>>(), matrix::Duplicate<Device::CPU>{}) |
          ex::then([&](const auto& tile_cpu) { CHECK_TILE_EQ(ref_tile, tile_cpu); });

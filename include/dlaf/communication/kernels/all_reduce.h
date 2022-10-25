@@ -31,36 +31,6 @@ namespace dlaf::comm {
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_in,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out);
-
-#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                        \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>    \
-  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                            \
-                        dlaf::common::PromiseGuard<Communicator>>                                \
-                        pcomm,                                                                   \
-                    MPI_Op reduce_op,                                                            \
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-                        tile_in,                                                                 \
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-                        tile_out)
-
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, float, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, double, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, std::complex<double>, Device::GPU);
-#endif
-
-/// \overload scheduleAllReduce
-template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     MPI_Op reduce_op,
     pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
         tile_in,
@@ -79,10 +49,6 @@ template <class T, Device D>
                         tile_out)
 
 DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, int, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, std::complex<double>, Device::CPU);
 
 /// Schedule an in-place all reduce.
 ///
@@ -110,7 +76,6 @@ DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::GPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::GPU);

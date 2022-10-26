@@ -11,17 +11,17 @@
 namespace dlaf {
 namespace matrix {
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
-    : Matrix<T, device>(Distribution(size, block_size)) {}
+template <class T, Device D>
+Matrix<T, D>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
+    : Matrix<T, D>(Distribution(size, block_size)) {}
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
-                          const comm::CommunicatorGrid& comm)
-    : Matrix<T, device>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
+template <class T, Device D>
+Matrix<T, D>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
+                     const comm::CommunicatorGrid& comm)
+    : Matrix<T, D>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(std::move(distribution)) {
+template <class T, Device D>
+Matrix<T, D>::Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {
   const SizeType alignment = 64;
   const SizeType ld =
       std::max<SizeType>(1,
@@ -30,35 +30,34 @@ Matrix<T, device>::Matrix(Distribution distribution) : Matrix<const T, device>(s
   auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   SizeType memory_size = layout.minMemSize();
-  memory::MemoryView<ElementType, device> mem(memory_size);
+  memory::MemoryView<ElementType, D> mem(memory_size);
 
   setUpTiles(mem, layout);
 }
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout) noexcept
-    : Matrix<const T, device>(std::move(distribution)) {
+template <class T, Device D>
+Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout) noexcept
+    : Matrix<const T, D>(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
               layout.size());
   DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
-  memory::MemoryView<ElementType, device> mem(layout.minMemSize());
+  memory::MemoryView<ElementType, D> mem(layout.minMemSize());
 
   setUpTiles(mem, layout);
 }
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
-    : Matrix<const T, device>(std::move(distribution), layout, ptr) {}
+template <class T, Device D>
+Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
+    : Matrix<const T, D>(std::move(distribution), layout, ptr) {}
 
-template <class T, Device device>
-Matrix<T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
-    : Matrix<const T, device>(layout, ptr) {}
+template <class T, Device D>
+Matrix<T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr) : Matrix<const T, D>(layout, ptr) {}
 
-template <class T, Device device>
-pika::future<Tile<T, device>> Matrix<T, device>::operator()(const LocalTileIndex& index) noexcept {
+template <class T, Device D>
+pika::future<Tile<T, D>> Matrix<T, D>::operator()(const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_managers_[i].getRWTileFuture();
 }

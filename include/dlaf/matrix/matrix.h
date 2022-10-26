@@ -53,14 +53,14 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
 /// More details are available in misc/matrix_distribution.md.
 /// Details about the Tile synchronization mechanism can be found in misc/synchronization.md.
 
-template <class T, Device device>
-class Matrix : public Matrix<const T, device> {
+template <class T, Device D>
+class Matrix : public Matrix<const T, D> {
 public:
   using ElementType = T;
-  using TileType = Tile<ElementType, device>;
-  using ConstTileType = Tile<const ElementType, device>;
-  using TileDataType = internal::TileData<const ElementType, device>;
-  friend Matrix<const ElementType, device>;
+  using TileType = Tile<ElementType, D>;
+  using ConstTileType = Tile<const ElementType, D>;
+  using TileDataType = internal::TileData<const ElementType, D>;
+  friend Matrix<const ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
   ///
@@ -139,21 +139,21 @@ public:
   }
 
 protected:
-  using Matrix<const T, device>::tileLinearIndex;
+  using Matrix<const T, D>::tileLinearIndex;
 
 private:
-  using Matrix<const T, device>::setUpTiles;
-  using Matrix<const T, device>::tile_managers_;
+  using Matrix<const T, D>::setUpTiles;
+  using Matrix<const T, D>::tile_managers_;
 };
 
-template <class T, Device device>
-class Matrix<const T, device> : public internal::MatrixBase {
+template <class T, Device D>
+class Matrix<const T, D> : public internal::MatrixBase {
 public:
   using ElementType = T;
-  using TileType = Tile<ElementType, device>;
-  using ConstTileType = Tile<const ElementType, device>;
-  using TileDataType = internal::TileData<ElementType, device>;
-  friend Matrix<ElementType, device>;
+  using TileType = Tile<ElementType, D>;
+  using ConstTileType = Tile<const ElementType, D>;
+  using TileDataType = internal::TileData<ElementType, D>;
+  friend Matrix<ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);
 
@@ -205,9 +205,9 @@ public:
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
 
-  void setUpTiles(const memory::MemoryView<ElementType, device>& mem, const LayoutInfo& layout) noexcept;
+  void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<internal::TileFutureManager<T, device>> tile_managers_;
+  std::vector<internal::TileFutureManager<T, D>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
@@ -224,10 +224,10 @@ protected:
 /// @pre ld >= max(1, size.row()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
-                                           const TileElementSize& block_size, SizeType ld, T* ptr) {
-  return Matrix<T, device>(colMajorLayout(size, block_size, ld), ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromColMajor(const LocalElementSize& size, const TileElementSize& block_size,
+                                      SizeType ld, T* ptr) {
+  return Matrix<T, D>(colMajorLayout(size, block_size, ld), ptr);
 }
 
 /// Create a non distributed matrix of size @p size and block size @p block_size
@@ -237,10 +237,10 @@ Matrix<T, device> createMatrixFromColMajor(const LocalElementSize& size,
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
-                                       T* ptr) {
-  return Matrix<T, device>(tileLayout(size, block_size), ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
+                                  T* ptr) {
+  return Matrix<T, D>(tileLayout(size, block_size), ptr);
 }
 
 /// Create a non distributed matrix of size @p size and block size @p block_size
@@ -254,10 +254,10 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
-                                       SizeType ld_tile, SizeType tiles_per_col, T* ptr) {
-  return Matrix<T, device>(tileLayout(size, block_size, ld_tile, tiles_per_col), ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
+                                  SizeType ld_tile, SizeType tiles_per_col, T* ptr) {
+  return Matrix<T, D>(tileLayout(size, block_size, ld_tile, tiles_per_col), ptr);
 }
 
 // Distributed versions
@@ -273,15 +273,14 @@ Matrix<T, device> createMatrixFromTile(const LocalElementSize& size, const TileE
 /// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
-                                           const TileElementSize& block_size, SizeType ld,
-                                           const comm::CommunicatorGrid& comm,
-                                           const comm::Index2D& source_rank_index, T* ptr) {
+template <Device D, class T>
+Matrix<T, D> createMatrixFromColMajor(const GlobalElementSize& size, const TileElementSize& block_size,
+                                      SizeType ld, const comm::CommunicatorGrid& comm,
+                                      const comm::Index2D& source_rank_index, T* ptr) {
   Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
   auto layout = colMajorLayout(distribution.localSize(), block_size, ld);
 
-  return Matrix<T, device>(std::move(distribution), layout, ptr);
+  return Matrix<T, D>(std::move(distribution), layout, ptr);
 }
 
 /// Create a distributed matrix of size @p size and block size @p block_size
@@ -294,11 +293,10 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// @pre @p ld >= max(1, size.row()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
-                                           const TileElementSize& block_size, SizeType ld,
-                                           const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromColMajor<device>(size, block_size, ld, comm, {0, 0}, ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromColMajor(const GlobalElementSize& size, const TileElementSize& block_size,
+                                      SizeType ld, const comm::CommunicatorGrid& comm, T* ptr) {
+  return createMatrixFromColMajor<D>(size, block_size, ld, comm, {0, 0}, ptr);
 }
 
 /// Create a distributed matrix of size @p size and block size @p block_size
@@ -310,14 +308,14 @@ Matrix<T, device> createMatrixFromColMajor(const GlobalElementSize& size,
 /// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                       const comm::CommunicatorGrid& comm,
-                                       const comm::Index2D& source_rank_index, T* ptr) {
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+                                  const comm::CommunicatorGrid& comm,
+                                  const comm::Index2D& source_rank_index, T* ptr) {
   Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
   auto layout = tileLayout(distribution.localSize(), block_size);
 
-  return Matrix<T, device>(std::move(distribution), layout, ptr);
+  return Matrix<T, D>(std::move(distribution), layout, ptr);
 }
 
 /// Create a distributed matrix of size @p size and block size @p block_size
@@ -328,10 +326,10 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                       const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromTile<device>(size, block_size, comm, {0, 0}, ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+                                  const comm::CommunicatorGrid& comm, T* ptr) {
+  return createMatrixFromTile<D>(size, block_size, comm, {0, 0}, ptr);
 }
 
 /// Create a distributed matrix of size @p size and block size @p block_size
@@ -347,15 +345,15 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @pre @p source_rank_index.isIn(grid_size),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                       SizeType ld_tile, SizeType tiles_per_col,
-                                       const comm::CommunicatorGrid& comm,
-                                       const comm::Index2D& source_rank_index, T* ptr) {
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+                                  SizeType ld_tile, SizeType tiles_per_col,
+                                  const comm::CommunicatorGrid& comm,
+                                  const comm::Index2D& source_rank_index, T* ptr) {
   Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
   auto layout = tileLayout(distribution.localSize(), block_size, ld_tile, tiles_per_col);
 
-  return Matrix<T, device>(std::move(distribution), layout, ptr);
+  return Matrix<T, D>(std::move(distribution), layout, ptr);
 }
 
 /// Create a distributed matrix of size @p size and block size @p block_size
@@ -370,11 +368,11 @@ Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const Tile
 /// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
 /// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
 /// stored in the given layout.
-template <Device device, class T>
-Matrix<T, device> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                       SizeType ld_tile, SizeType tiles_per_col,
-                                       const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromTile<device>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
+template <Device D, class T>
+Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
+                                  SizeType ld_tile, SizeType tiles_per_col,
+                                  const comm::CommunicatorGrid& comm, T* ptr) {
+  return createMatrixFromTile<D>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
 }
 
 /// Returns a container grouping all the tiles retrieved using Matrix::read

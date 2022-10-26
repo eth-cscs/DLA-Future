@@ -65,12 +65,12 @@ pika::future<ReturnTileType> getTileFuture(
 
 // TileFutureManager manages the futures and promises for tiles in the Matrix object.
 // See misc/synchronization.md for details.
-template <class T, Device device>
+template <class T, Device D>
 class TileFutureManager {
 public:
-  using TileType = Tile<T, device>;
-  using ConstTileType = Tile<const T, device>;
-  using TileDataType = internal::TileData<T, device>;
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using TileDataType = internal::TileData<T, D>;
 
   TileFutureManager() {}
 

@@ -56,7 +56,7 @@ using P2PTestGPU = P2PTest<Device::GPU>;
 
 template <class T, class SenderTile>
 auto setTileTo(SenderTile&& tile, const T input_value) {
-  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::device;
   return internal::whenAllLift(blas::Uplo::General, input_value, input_value,
                                std::forward<SenderTile>(tile)) |
          tile::laset(internal::Policy<DefaultBackend_v<D>>());
@@ -64,7 +64,7 @@ auto setTileTo(SenderTile&& tile, const T input_value) {
 
 template <class SenderTile, class TileLike>
 auto checkTileEq(TileLike&& ref_tile, SenderTile&& tile) {
-  constexpr auto D = internal::SenderSingleValueType<SenderTile>::D;
+  constexpr auto D = internal::SenderSingleValueType<SenderTile>::device;
   return std::forward<SenderTile>(tile) |
          internal::transform(internal::Policy<DefaultBackend_v<D>>(), matrix::Duplicate<Device::CPU>{}) |
          ex::then([&](const auto& tile_cpu) { CHECK_TILE_EQ(ref_tile, tile_cpu); });
@@ -118,8 +118,8 @@ TEST_F(P2PTestGPU, SendRecv) {
 }
 #endif
 
-template <class T, Device device>
-void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, device> matrix) {
+template <class T, Device D>
+void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   // This test involves just 2 ranks, where rank_src sends all tiles allowing to "mirror" the
   // entire matrix on rank_dst. P2P communications are issued by the different ranks in different
   // orders, linking them using the tag of the MPI communication.

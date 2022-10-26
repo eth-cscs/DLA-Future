@@ -42,7 +42,7 @@ template <class CommSender, class TileSender>
     return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::D;
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   // The input tile must be copied to the temporary tile used for the send, but

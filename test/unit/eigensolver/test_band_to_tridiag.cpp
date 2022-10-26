@@ -51,12 +51,12 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {4, 6, 3}, {8, 4, 2}, {18, 4, 4}, {34, 6, 6}, {37, 9, 3}  // m != mb
 };
 
-template <class T>
+template <class T, class... GridIfDistributed>
 void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType band_size,
                                         const SizeType m, const SizeType mb,
                                         Matrix<const T, Device::CPU>& mat_a_h,
                                         Matrix<BaseType<T>, Device::CPU>& mat_trid,
-                                        Matrix<T, Device::CPU>& mat_v) {
+                                        Matrix<T, Device::CPU>& mat_v, GridIfDistributed... grid) {
   auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a_h.size(), mat_a_h.blockSize());
   const auto ld = mat_local.ld();
@@ -69,7 +69,7 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
   }
   mat_local({m - 1, m - 1}) = mat_trid_local({m - 1, 0});
 
-  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v);
+  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid...);
 
   auto apply_left_right = [&mat_local, m, ld](SizeType size_hhr, T* v, SizeType first_index) {
     T tau = v[0];
@@ -139,15 +139,11 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
 
   auto el_a = [](auto index) { return T(((double) 100 + 100 * index.row() - 99 * index.col()) / 500.); };
   set(mat_a_h, el_a);
-  // matrix::print(format::numpy(), "A", mat_a_h);
 
   auto [mat_trid, mat_v] = [&]() {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
     return eigensolver::bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a.get());
   }();
-
-  // if (grid.rank() == comm::Index2D{0, 0})
-  //   matrix::print(format::csv(), "T", mat_trid);
 
   if (m == 0)
     return;
@@ -162,13 +158,26 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
     Matrix<T, Device::CPU> mat_a_h(size, block_size);
     set(mat_a_h, el_a);
 
+    auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid);
+
     auto [mat_trid2, mat_v] = [&]() {
       MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
       return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
     }();
 
-    // if (grid.rank() == comm::Index2D{0, 0})
-    //   matrix::print(format::csv(), "T", mat_trid2);
+    auto up = [](T& a, const T& b) {
+      a -= b;
+      if (std::abs(a) < 1e-7)
+        a = T{0};
+    };
+    for (SizeType j = 0; j < mat_v_local.size().cols(); ++j) {
+      for (SizeType i = 0; i < mat_v_local.size().rows(); ++i) {
+        GlobalElementIndex gei{i, j};
+        auto ti = mat_v.distribution().tileElementIndex(gei);
+        auto gi = mat_v.distribution().globalTileIndex(gei);
+        up(mat_v(gi).get()(ti), mat_v_local(gei));
+      }
+    }
 
     auto& ref = mat_trid2;
     auto exp = [unused, &ref](const GlobalElementIndex& i) {
@@ -181,15 +190,21 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
                       100 * m * TypeUtilities<T>::error);
   }
 
-  // testBandToTridiagOutputCorrectness(uplo, band_size, m, mb, mat_a_h, mat_trid, mat_v);
+  // SCOPED_TRACE cannot yield.
+  mat_trid.waitLocalTiles();
+  mat_v.waitLocalTiles();
+  SCOPED_TRACE(::testing::Message() << "size " << m << ", block " << mb << ", band " << band_size
+                                    << ", grid " << grid.size());
+
+  testBandToTridiagOutputCorrectness(uplo, band_size, m, mb, mat_a_h, mat_trid, mat_v, grid);
 }
 
-// TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
-//  const blas::Uplo uplo = blas::Uplo::Lower;
-//
-//  for (const auto& [m, mb, b] : sizes)
-//    testBandToTridiag<Device::CPU, TypeParam>(uplo, b, m, mb);
-//}
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
+  const blas::Uplo uplo = blas::Uplo::Lower;
+
+  for (const auto& [m, mb, b] : sizes)
+    testBandToTridiag<Device::CPU, TypeParam>(uplo, b, m, mb);
+}
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
@@ -205,10 +220,10 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, b] : sizes) {
-      if (comm_grid.rank() == comm::Index2D{0, 0}) {
-        std::cout << "\n----------------------------\n" << std::endl;
-        std::cout << m << ", " << mb << ":" << b << " " << comm_grid.size() << std::endl;
-      }
+      //      if (comm_grid.rank() == comm::Index2D{0, 0}) {
+      std::cout << "\n----------------------------\n" << std::endl;
+      std::cout << m << ", " << mb << ":" << b << " " << comm_grid.size() << std::endl;
+      //      }
 
       testBandToTridiag<Device::CPU, TypeParam>(comm_grid, uplo, b, m, mb);
     }

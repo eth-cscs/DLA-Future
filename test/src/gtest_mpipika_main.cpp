@@ -76,15 +76,6 @@ GTEST_API_ int main(int argc, char** argv) {
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-  // std::cout << getpid() << std::endl;
-  int rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if (rank == 1) {
-    bool flag = 1;
-    std::cout << getpid() << std::endl;
-    // while (flag);
-  }
-
   // Gets hold of the event listener list.
   ::testing::TestEventListeners& listeners = ::testing::UnitTest::GetInstance()->listeners();
 

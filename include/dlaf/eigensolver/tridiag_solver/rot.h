@@ -30,35 +30,32 @@ namespace wrapper {
 
 template <class T>
 void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
-             const matrix::Tile<T, Device::CPU>& tile, TileElementIndex idx, SizeType n,
-             MPI_Request* req) {
-  DLAF_MPI_CHECK_ERROR(MPI_Isend(tile.ptr(idx), static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+             const T* col_data, const SizeType n, MPI_Request* req) {
+  DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
                                  rank_dest, tag, comm, req));
 }
 DLAF_MAKE_CALLABLE_OBJECT(sendCol);
 
 template <class T>
-void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
-             const matrix::Tile<T, Device::CPU>& tile, SizeType n, MPI_Request* req) {
-  DLAF_MPI_CHECK_ERROR(MPI_Irecv(tile.ptr({0, 0}), static_cast<int>(n),
-                                 dlaf::comm::mpi_datatype<T>::type, rank_dest, tag, comm, req));
+void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag, T* col_data,
+             const SizeType n, MPI_Request* req) {
+  DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                 rank_dest, tag, comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(recvCol);
 
-template <class T, class CommSender, class Sender>
-auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, Sender&& tile,
-                     TileElementIndex idx, SizeType n) {
-  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), dest, tag,
-                                     std::forward<Sender>(tile), idx, n) |
+template <class T, class CommSender>
+auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, const T* col_data,
+                     const SizeType n) {
+  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), dest, tag, col_data, n) |
          dlaf::comm::internal::transformMPI(sendCol_o);
 }
 
-template <class T, class CommSender, class Sender>
-auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, Sender&& tile,
+template <class T, class CommSender>
+auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, T* col_data,
                      SizeType n) {
-  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), source, tag,
-                                     std::forward<Sender>(tile), n) |
+  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), source, tag, col_data, n) |
          dlaf::comm::internal::transformMPI(recvCol_o);
 }
 
@@ -144,13 +141,11 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
         // TODO possible optimization, check if it is zero or not
 
-        auto tile = ex::just(std::cref(hasX ? tile_x : tile_y));
+        const auto& tile = hasX ? tile_x : tile_y;
         const TileElementIndex idx = hasX ? idx_x : idx_y;
 
-        cps.emplace_back(
-            wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, std::move(tile), idx, m));
-        cps.emplace_back(
-            wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, ex::just(std::cref(tile_ws)), m));
+        cps.emplace_back(wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, tile.ptr(idx), m));
+        cps.emplace_back(wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, tile_ws.ptr({0, 0}), m));
       }
 
       // each one computes his own, but just stores either x or y

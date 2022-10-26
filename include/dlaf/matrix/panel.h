@@ -443,6 +443,7 @@ protected:
 
 template <Coord axis, class T, Device D>
 struct Panel : public Panel<axis, const T, D> {
+  constexpr static Coord coord = orthogonal(axis);
   constexpr static Device device = D;
 
   using TileType = Tile<T, D>;

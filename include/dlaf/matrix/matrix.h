@@ -57,6 +57,7 @@ template <class T, Device D>
 class Matrix : public Matrix<const T, D> {
 public:
   static constexpr Device device = D;
+
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
@@ -150,6 +151,8 @@ private:
 template <class T, Device D>
 class Matrix<const T, D> : public internal::MatrixBase {
 public:
+  static constexpr Device device = D;
+
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;

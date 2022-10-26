@@ -108,30 +108,22 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       if (!hasX && !hasY)
         continue;
 
-      // TODO assume column layout and operate on the full column? also workspace must obey
-      const auto& tile_x = [&]() -> matrix::Tile<T, D> const& {
-        if (hasX) {
-          const LocalTileIndex loc_tile{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
-                                        dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(rot.i)};
-          const std::size_t idx_x = to_sizet(dist_sub.localTileLinearIndex(loc_tile));
-          return tiles[idx_x];
+      auto getColPtr = [&](const SizeType col_index, const bool hasIt) -> T* {
+        // TODO document column layout assumption
+        // TODO assume column layout and operate on the full column? also workspace must obey
+        if (hasIt) {
+          const LocalTileIndex tile_col{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
+                                        dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(col_index)};
+          const std::size_t linear_tile_col = to_sizet(dist_sub.localTileLinearIndex(tile_col));
+          return tiles[linear_tile_col].ptr(dist_sub.tileElementIndex({0, col_index}));
         }
-        return tile_ws;
-      }();
-      const auto& tile_y = [&]() -> matrix::Tile<T, D> const& {
-        if (hasY) {
-          const LocalTileIndex loc_tile{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
-                                        dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(rot.j)};
-          const std::size_t idx_y = to_sizet(dist_sub.localTileLinearIndex(loc_tile));
-          return tiles[idx_y];
-        }
-        return tile_ws;
-      }();
+        return tile_ws.ptr({0, 0});
+      };
+
+      T* col_x = getColPtr(rot.i, hasX);
+      T* col_y = getColPtr(rot.j, hasY);
 
       const bool hasBothXY = hasX && hasY;
-
-      const TileElementIndex idx_x(0, rot.i % mb);  // TODO check if dist can be used
-      const TileElementIndex idx_y(0, rot.j % mb);
 
       std::vector<ex::unique_any_sender<>> cps;
       if (!hasBothXY) {
@@ -141,26 +133,24 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
         // TODO possible optimization, check if it is zero or not
 
-        const auto& tile = hasX ? tile_x : tile_y;
-        const TileElementIndex idx = hasX ? idx_x : idx_y;
+        const T* col_send = hasX ? col_x : col_y;
+        T* col_recv = hasX ? col_y : col_x;
 
-        cps.emplace_back(wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, tile.ptr(idx), m));
-        cps.emplace_back(wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, tile_ws.ptr({0, 0}), m));
+        cps.emplace_back(wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, col_send, m));
+        cps.emplace_back(wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, col_recv, m));
       }
 
       // each one computes his own, but just stores either x or y
       // (or both if are on the same rank)
-      T* x = hasX ? tile_x.ptr(idx_x) : tile_ws.ptr({0, 0});
-      T* y = hasY ? tile_y.ptr(idx_y) : tile_ws.ptr({0, 0});
-
-      tt::sync_wait(di::whenAllLift(ex::when_all_vector(std::move(cps))) |
-                    di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, x, y](auto&&... ts) {
-                      if constexpr (D == Device::CPU)
-                        blas::rot(m, x, 1, y, 1, rot.c, rot.s);
-                      // TODO GPU NOT IMPLEMENTED
-                      // else
-                      //   givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
-                    }));
+      tt::sync_wait(
+          di::whenAllLift(ex::when_all_vector(std::move(cps))) |
+          di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
+            if constexpr (D == Device::CPU)
+              blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
+            // TODO GPU NOT IMPLEMENTED
+            // else
+            //   givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+          }));
     }
   };
 

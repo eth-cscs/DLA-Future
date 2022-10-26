@@ -80,18 +80,22 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
   namespace di = dlaf::internal;
 
   const matrix::Distribution& dist = mat.distribution();
-
   const SizeType mb = dist.blockSize().rows();
 
-  const matrix::Distribution dist_sub = [&]() {
-    const SizeType sub_size = (i_last + 1 - i_begin) * mb;
-    return matrix::Distribution({sub_size, sub_size}, dist.blockSize(), dist.commGridSize(),
-                                dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
-  }();
+  const SizeType sub_square_edge = (i_last + 1 - i_begin) * mb;
+  const GlobalElementSize sub_square_size(sub_square_edge, sub_square_edge);
+  const matrix::Distribution dist_sub(sub_square_size, dist.blockSize(), dist.commGridSize(),
+                                      dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  auto givens_rots_fn = [comm_row, mb, dist, dist_sub](std::vector<GivensRotation<T>> rots,
-                                                       std::vector<matrix::Tile<T, D>> tiles,
-                                                       matrix::Tile<T, D> tile_ws) {
+  // TODO check workspace distribution (partial allocation and its usage with dist_sub)
+  const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
+                                     dist.rankIndex(), dist.sourceRankIndex());
+  // TODO allocate just sub-range
+  matrix::Panel<Coord::Col, T, D> workspace(dist_ws);
+
+  auto givens_rots_fn = [comm_row, dist_sub, mb](std::vector<GivensRotation<T>> rots,
+                                                 std::vector<matrix::Tile<T, D>> tiles,
+                                                 matrix::Tile<T, D> tile_ws) {
     const SizeType m = dist_sub.localSize().rows();
 
     for (const GivensRotation<T>& rot : rots) {
@@ -101,8 +105,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       const comm::IndexT_MPI rankColX = dist_sub.template rankGlobalTile<Coord::Col>(j_x);
       const comm::IndexT_MPI rankColY = dist_sub.template rankGlobalTile<Coord::Col>(j_y);
 
-      const bool hasX = dist.rankIndex().col() == rankColX;
-      const bool hasY = dist.rankIndex().col() == rankColY;
+      const bool hasX = dist_sub.rankIndex().col() == rankColX;
+      const bool hasY = dist_sub.rankIndex().col() == rankColY;
 
       if (!hasX && !hasY)
         continue;
@@ -165,12 +169,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
     }
   };
 
-  const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
-                                     dist.rankIndex(), dist.sourceRankIndex());
-  // TODO allocate just sub-range
-  matrix::Panel<Coord::Col, T, D> workspace(dist_ws);
-
   const TileCollector tc{i_begin, i_last};
+
   // TODO check if there could be any problem passing just the first tile of workspace (and using the full panel)
   di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
                   workspace.readwrite_sender({0, 0})) |

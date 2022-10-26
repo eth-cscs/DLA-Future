@@ -46,8 +46,6 @@
 namespace dlaf::eigensolver::internal {
 
 namespace red2band {
-using matrix::SubMatrixView;
-using matrix::SubPanelView;
 
 // Extract x0 and compute local cumulative sum of squares of the reflector column
 template <Device D, class T>
@@ -264,7 +262,8 @@ void updateTrailingPanelWithReflector(const std::vector<matrix::Tile<T, D>>& pan
 }
 
 template <class MatrixLike>
-auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
+auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel_view,
+                            const SizeType nrefls) {
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
@@ -296,7 +295,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
 }
 
 template <Backend B, Device D, class T, bool force_copy = false>
-void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
+void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view, const SizeType nrefls,
                           matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
 
@@ -389,7 +388,7 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 }
 
 template <Backend B, Device D, class T>
-void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
+void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
   using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
@@ -467,7 +466,7 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
 }
 
 template <Backend B, Device D, class T>
-void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& a,
+void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix<T, D>& a,
                                matrix::Panel<Coord::Col, const T, D>& x,
                                matrix::Panel<Coord::Col, const T, D>& v) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
@@ -556,7 +555,7 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
 template <class MatrixLike, class TriggerSender, class CommSender>
 auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                             CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
-                            const SubPanelView& panel_view, const SizeType nrefls) {
+                            const matrix::SubPanelView& panel_view, const SizeType nrefls) {
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
@@ -789,7 +788,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
+            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view, const SizeType nrefls) {
     auto& v = panels_v.nextResource();
 
     // copy to CPU
@@ -810,7 +809,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 protected:
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
 
-  void copyToCPU(const SubPanelView panel_view, matrix::Matrix<T, Device::GPU>& mat_a,
+  void copyToCPU(const matrix::SubPanelView panel_view, matrix::Matrix<T, Device::GPU>& mat_a,
                  matrix::Panel<Coord::Col, T, Device::CPU>& v) {
     namespace ex = pika::execution::experimental;
 
@@ -827,7 +826,7 @@ protected:
     }
   }
 
-  void copyFromCPU(const SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
+  void copyFromCPU(const matrix::SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
                    matrix::Matrix<T, Device::GPU>& mat_a) {
     namespace ex = pika::execution::experimental;
 

@@ -373,6 +373,9 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   Matrix<SizeType, D> inverse_perms(perms.distribution());
   invertIndex(i_begin, i_end, perms, inverse_perms);
 
+  std::cout << "MARK #1" << std::endl;
+
+
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
   LocalElementSize loc_index_sz(sz_loc, 1);
@@ -384,12 +387,18 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, perms, ws_index);
   auto recv_counts_sender = initPackingIndex<D, C, false>(comm.size(), dist, ws_index, unpacking_index);
 
+  std::cout << "MARK #2" << std::endl;
+
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, inverse_perms, ws_index);
   auto send_counts_sender = initPackingIndex<D, C, true>(comm.size(), dist, ws_index, packing_index);
 
+  std::cout << "MARK #3" << std::endl;
+
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(i_loc_begin, packing_index, mat_in, mat_out);
+
+  std::cout << "MARK #4" << std::endl;
 
   if constexpr (C == Coord::Row) {
     // Transpose `mat_out` into `mat_in` (used as a scratchpad)
@@ -399,9 +408,13 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
     std::swap(mat_in, mat_out);
   }
 
+  std::cout << "MARK #5" << std::endl;
+
   // Communicate data
   all2allData(comm, i_loc_begin, sz_loc, std::move(send_counts_sender), mat_in,
               std::move(recv_counts_sender), mat_out);
+
+  std::cout << "MARK #6" << std::endl;
 
   if constexpr (C == Coord::Row) {
     // transpose `mat_out` into `mat_in` (used as a scratchpad)
@@ -411,8 +424,12 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
     std::swap(mat_in, mat_out);
   }
 
+  std::cout << "MARK #7" << std::endl;
+
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(i_loc_begin, unpacking_index, mat_in, mat_out);
+
+  std::cout << "MARK #8" << std::endl;
 }
 
 }

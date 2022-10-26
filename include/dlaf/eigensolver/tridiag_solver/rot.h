@@ -26,6 +26,44 @@
 
 namespace dlaf::eigensolver::internal {
 
+namespace wrapper {
+
+template <class T>
+void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
+             const matrix::Tile<T, Device::CPU>& tile, TileElementIndex idx, SizeType n,
+             MPI_Request* req) {
+  DLAF_MPI_CHECK_ERROR(MPI_Isend(tile.ptr(idx), static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                 rank_dest, tag, comm, req));
+}
+DLAF_MAKE_CALLABLE_OBJECT(sendCol);
+
+template <class T>
+void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
+             const matrix::Tile<T, Device::CPU>& tile, SizeType n, MPI_Request* req) {
+  DLAF_MPI_CHECK_ERROR(MPI_Irecv(tile.ptr({0, 0}), static_cast<int>(n),
+                                 dlaf::comm::mpi_datatype<T>::type, rank_dest, tag, comm, req));
+}
+
+DLAF_MAKE_CALLABLE_OBJECT(recvCol);
+
+template <class T, class CommSender, class Sender>
+auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, Sender&& tile,
+                     TileElementIndex idx, SizeType n) {
+  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), dest, tag,
+                                     std::forward<Sender>(tile), idx, n) |
+         dlaf::comm::internal::transformMPI(sendCol_o);
+}
+
+template <class T, class CommSender, class Sender>
+auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, Sender&& tile,
+                     SizeType n) {
+  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), source, tag,
+                                     std::forward<Sender>(tile), n) |
+         dlaf::comm::internal::transformMPI(recvCol_o);
+}
+
+}
+
 // @param tiles The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)`
 // that are potentially affected by the Givens rotations.
 // @param n column size
@@ -107,25 +145,13 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
         // TODO possible optimization, check if it is zero or not
 
-        auto sender = [idx = hasX ? idx_x : idx_y, n](comm::Communicator& comm,
-                                                      comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
-                                                      const auto& tile, MPI_Request* req) {
-          DLAF_MPI_CHECK_ERROR(MPI_Isend(tile.ptr(idx), static_cast<int>(n),
-                                         dlaf::comm::mpi_datatype<T>::type, rank_dest, tag, comm, req));
-        };
-        auto cp_send =
-            dlaf::internal::whenAllLift(comm_row, rank_partner, 0, std::cref(hasX ? tile_x : tile_y)) |
-            dlaf::comm::internal::transformMPI(sender);
+        auto tile = ex::just(std::cref(hasX ? tile_x : tile_y));
+        const TileElementIndex idx = hasX ? idx_x : idx_y;
 
-        auto receiver = [n](comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
-                            const matrix::Tile<T, Device::CPU>& tile, MPI_Request* req) {
-          DLAF_MPI_CHECK_ERROR(MPI_Irecv(tile.ptr({0, 0}), static_cast<int>(n),
-                                         dlaf::comm::mpi_datatype<T>::type, rank_dest, tag, comm, req));
-        };
-        auto cp_recv = dlaf::internal::whenAllLift(comm_row, rank_partner, 0, std::cref(tile_ws)) |
-                       dlaf::comm::internal::transformMPI(receiver);
-        cps.emplace_back(std::move(cp_send));
-        cps.emplace_back(std::move(cp_recv));
+        cps.emplace_back(
+            wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, std::move(tile), idx, m));
+        cps.emplace_back(
+            wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, ex::just(std::cref(tile_ws)), m));
       }
 
       // each one computes his own, but just stores either x or y
@@ -138,7 +164,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
     }
   };
 
-  TileCollector tc{i_begin, i_last};
+  const TileCollector tc{i_begin, i_last};
   auto sender =
       di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), givens_rots_fn, std::move(sender));

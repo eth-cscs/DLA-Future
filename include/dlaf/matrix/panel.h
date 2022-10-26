@@ -42,7 +42,7 @@ struct Panel<axis, const T, D> {
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
   constexpr static Coord coord = orthogonal(axis);
-  constexpr static Device D = device;
+  constexpr static Device device = D;
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;

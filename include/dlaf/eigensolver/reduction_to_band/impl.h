@@ -265,7 +265,7 @@ void updateTrailingPanelWithReflector(const std::vector<matrix::Tile<T, D>>& pan
 
 template <class MatrixLike>
 auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
-  static auto constexpr D = MatrixLike::D;
+  static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 

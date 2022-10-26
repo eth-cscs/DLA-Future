@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.22)
 
 project(DLAF VERSION 0.1.0)
 
@@ -65,16 +65,18 @@ if (DLAF_WITH_CUDA)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
-  find_package(CUDALIBS REQUIRED)
+  find_package(CUDAToolkit REQUIRED)
   set(DLAF_WITH_GPU ON)
 elseif(DLAF_WITH_HIP)
-  if (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    message(FATAL_ERROR "DLAF_WITH_HIP=ON and the compiler used is not Clang. "
-      "Please specify CMAKE_CXX_COMPILER=hipcc or export CXX=hipcc.")
-  endif()
+  set(CMAKE_HIP_EXTENSIONS OFF)
+  enable_language(HIP)
   find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
   find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
   set(DLAF_WITH_GPU ON)
+endif()
+
+if(DLAF_WITH_GPU)
+  find_package(whip REQUIRED)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -108,8 +110,8 @@ if(DLAF_WITH_MKL)
 
   if(TARGET ${MKL_LAPACK_TARGET})
     set(LAPACK_FOUND TRUE)
-    add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
-    target_link_libraries(LAPACK::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
+    add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(DLAF::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
   else()
     message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
   endif()

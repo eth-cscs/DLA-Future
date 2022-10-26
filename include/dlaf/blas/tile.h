@@ -23,6 +23,8 @@
 #include "dlaf/util_blas.h"
 
 #ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/blas/error.h"
 #include "dlaf/util_cublas.h"
@@ -43,9 +45,9 @@
 namespace dlaf::tile::internal {
 inline void extendROCBlasWorkspace(cublasHandle_t handle,
                                    ::dlaf::memory::MemoryView<std::byte, Device::GPU>&& workspace) {
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
-  auto f = [workspace = std::move(workspace)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  auto f = [workspace = std::move(workspace)](whip::error_t status) { whip::check_error(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(f), stream);
 }
 }
@@ -114,17 +116,25 @@ DLAF_MAKE_GPUBLAS_SYHE_OP(Her2k, r2k);
 
 DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
 
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #endif
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
-
 }
 #endif
 
@@ -451,7 +461,7 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
 #ifdef DLAF_WITH_HIP
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
   matrix::internal::copy(b, c, stream);
 #endif

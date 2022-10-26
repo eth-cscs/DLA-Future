@@ -23,6 +23,7 @@
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/with_temporary_tile.h"
 
@@ -31,7 +32,6 @@ namespace internal {
 template <class T, Device D>
 auto allReduce(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<const T, D>& tile_in,
                const matrix::Tile<T, D>& tile_out, MPI_Request* req) {
-  static_assert(D == Device::CPU, "allReduce requires CPU memory");
   DLAF_ASSERT(tile_in.is_contiguous(), "");
   DLAF_ASSERT(tile_out.is_contiguous(), "");
 
@@ -46,7 +46,6 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 template <class T, Device D>
 auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::Tile<T, D>& tile,
                       MPI_Request* req) {
-  static_assert(D == Device::CPU, "allReduceInPlace requires CPU memory");
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto msg = comm::make_message(common::make_data(tile));
@@ -66,11 +65,13 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 template <class CommSender, class TileInSender, class TileOutSender>
 [[nodiscard]] auto scheduleAllReduce(CommSender&& pcomm, MPI_Op reduce_op, TileInSender&& tile_in,
                                      TileOutSender&& tile_out) {
+  using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduce_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
   using dlaf::internal::RequireContiguous;
+  using dlaf::internal::SenderSingleValueType;
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
@@ -86,22 +87,25 @@ template <class CommSender, class TileInSender, class TileOutSender>
                          std::cref(tile_out_comm)) |
              transformMPI(allReduce_o);
     };
+
     // The input tile must be copied to the temporary tile used for the
     // reduction, but the temporary tile does not need to be copied back to the
     // input since the data is not changed by the reduction (the result is
-    // written into the output tile instead).  The reduction is explicitly done
-    // on CPU memory so that we can manage potential asynchronous copies between
-    // CPU and GPU. A reduction requires contiguous memory.
-    return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::No,
+    // written into the output tile instead).
+    constexpr static Device in_device = SenderSingleValueType<TileInSender>::device;
+    constexpr static Device in_comm_device = CommunicationDevice_v<in_device>;
+
+    return withTemporaryTile<in_comm_device, CopyToDestination::Yes, CopyFromDestination::No,
                              RequireContiguous::Yes>(std::move(tile_in), std::move(all_reduce));
   };
 
   // The output tile does not need to be copied to the temporary tile since it
   // is only written to. The written data is copied back from the temporary tile
-  // to the output tile. The reduction is explicitly done on CPU memory so that
-  // we can manage potential asynchronous copies between CPU and GPU. A
-  // reduction requires contiguous memory.
-  return withTemporaryTile<Device::CPU, CopyToDestination::No, CopyFromDestination::Yes,
+  // to the output tile.
+  constexpr static Device out_device = SenderSingleValueType<TileOutSender>::device;
+  constexpr static Device out_comm_device = CommunicationDevice_v<out_device>;
+
+  return withTemporaryTile<out_comm_device, CopyToDestination::No, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileOutSender>(tile_out),
                                                    std::move(all_reduce_final));
 }
@@ -113,6 +117,7 @@ template <class CommSender, class TileInSender, class TileOutSender>
 /// written to it. The tile is sent by the returned sender.
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleAllReduceInPlace(CommSender&& pcomm, MPI_Op reduce_op, TileSender&& tile) {
+  using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduceInPlace_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -121,6 +126,8 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
+  constexpr static auto D = dlaf::internal::SenderSingleValueType<TileSender>::device;
+
   auto all_reduce_in_place = [reduce_op,
                               pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
@@ -128,10 +135,8 @@ template <class CommSender, class TileSender>
   };
 
   // The tile has to be copied both to and from the temporary tile since the
-  // reduction is done in-place. The reduction is explicitly done on CPU memory
-  // so that we can manage potential asynchronous copies between CPU and GPU. A
-  // reduction requires contiguous memory.
-  return withTemporaryTile<Device::CPU, CopyToDestination::Yes, CopyFromDestination::Yes,
+  // reduction is done in-place.
+  return withTemporaryTile<CommunicationDevice_v<D>, CopyToDestination::Yes, CopyFromDestination::Yes,
                            RequireContiguous::Yes>(std::forward<TileSender>(tile),
                                                    std::move(all_reduce_in_place));
 }

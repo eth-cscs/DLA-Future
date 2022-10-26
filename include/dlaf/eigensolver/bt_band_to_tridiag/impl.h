@@ -18,10 +18,21 @@
 #include <pika/thread.hpp>
 #include <pika/unwrap.hpp>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/assert.h"
+#include "dlaf/common/index2d.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
+#include "dlaf/communication/communicator.h"
+#include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/kernels/broadcast.h"
+#include "dlaf/communication/kernels/p2p.h"
+#include "dlaf/communication/kernels/p2p_allsum.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -272,13 +283,29 @@ struct TileAccessHelper {
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in compact form
-  matrix::SubTileSpec specHHCompact() const noexcept {
+  //
+  // SubTileSpec returned points to the sub-block in the full tile containing the HH data in compact
+  // form. If @p reset_origin is true, then the origin component of the SubTileSpec is resetted and
+  // it will just describe the size of the sub-block containing the Householder reflectors (useful
+  // for panel access which might not have full-tiles).
+  matrix::SubTileSpec specHHCompact(const bool reset_origin = false) const noexcept {
+    if (reset_origin)
+      return {{0, 0}, input_spec_.size};
     return input_spec_;
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in well formed form
   matrix::SubTileSpec specHH() const noexcept {
     return {{0, 0}, {part_top_.rows() + part_bottom_.rows(), nrefls_}};
+  }
+
+  // Return SubTileSpec to use for accessing T factor
+  matrix::SubTileSpec specT() const noexcept {
+    return {{0, 0}, {nrefls_, nrefls_}};
+  }
+
+  matrix::SubTileSpec specW2(const SizeType cols) const noexcept {
+    return {{0, 0}, {nrefls_, cols}};
   }
 
   const auto& topPart() const noexcept {
@@ -328,6 +355,73 @@ private:
   Part part_bottom_;
 };
 
+/// Note:
+/// This is a helper specific for the distributed version of the algorithm. It provides:
+/// - helper for checking if a rank is involved, as main or partner, in a given step of the algorithm
+/// - helper for computing rank of the row partner for P2P communications
+/// - helper for indexing panel tile
+///
+/// In particular, about the latter one, the panel has an extra workspace used when a row is involved
+/// in the computation as partner of the row above it (e.g. P2P communication).
+/// This is needed because applying a block of HH affects (excluding some edge-cases) two rows of tiles,
+/// that might reside on different ranks.
+/// wsIndexHH() job is to return the right index to use in the panel, according to the row this rank
+/// is working on, and its role as a main or partner row.
+struct DistIndexing {
+  DistIndexing(const TileAccessHelper& helper, const matrix::Distribution& dist_hh, const SizeType b,
+               const GlobalTileIndex& ij, const SizeType& ij_b_row)
+      : dist_hh(dist_hh), b(b), mb(dist_hh.blockSize().rows()), helper(helper), ij(ij),
+        ij_b_row(ij_b_row) {
+    rank = dist_hh.rankIndex();
+    rankHH = dist_hh.rankGlobalTile(ij);
+    n_ws_per_block = to_SizeType(static_cast<size_t>(std::ceil(mb / b / 2.0f)) + 1);
+  }
+
+  comm::IndexT_MPI rankRowPartner() const {
+    return (rankHH.row() + 1) % dist_hh.commGridSize().rows();
+  }
+
+  bool isInvolved() const {
+    const bool isSameRow = rank.row() == rankHH.row();
+    const bool isPartnerRow = rank.row() == rankRowPartner();
+    return isSameRow ||
+           (dist_hh.commGridSize().rows() > 1 && isPartnerRow && helper.affectsMultipleTiles());
+  }
+
+  LocalTileIndex wsIndexHH() const {
+    const SizeType row = [&]() -> SizeType {
+      if (rank.row() == rankHH.row()) {
+        // Note: index starts at 1 (0 is the extra workspace), moreover max half blocks will run in parallel
+        const SizeType intra_idx = 1 + (ij_b_row % (mb / b)) / 2;
+        DLAF_ASSERT_HEAVY(intra_idx < n_ws_per_block, intra_idx, n_ws_per_block);
+        return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + intra_idx;
+      }
+      else {
+        DLAF_ASSERT_HEAVY(helper.affectsMultipleTiles() && (rank.row() == rankRowPartner()),
+                          helper.affectsMultipleTiles(), rank.row(), rankRowPartner());
+        return dist_hh.localNrTiles().isEmpty()
+                   ? 0
+                   : dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row() + 1) * n_ws_per_block;
+      }
+    }();
+    return {row, 0};
+  }
+
+protected:
+  matrix::Distribution dist_hh;
+  SizeType b;
+  SizeType mb;
+  SizeType n_ws_per_block;
+
+  TileAccessHelper helper;
+
+  comm::Index2D rank;
+  comm::Index2D rankHH;
+
+  GlobalTileIndex ij;
+  SizeType ij_b_row;
+};
+
 template <Backend B, Device D, class T>
 struct HHManager;
 
@@ -338,20 +432,17 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
+  template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-            matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
+            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+            matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
-    const matrix::SubTileSpec t_spec{{0, 0}, {nrefls, nrefls}};
-    const LocalTileIndex ij_t(LocalTileIndex(ij.row(), 0));
-
     auto tup =
-        dlaf::internal::whenAllLift(b,
-                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+        dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
                                     splitTile(mat_v(ij), helper.specHH()),
-                                    splitTile(mat_t(ij_t), t_spec),
+                                    splitTile(mat_t(ij), helper.specT()),
                                     splitTile(mat_w(ij), helper.specHH())) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
         ex::make_future();
@@ -373,25 +464,24 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
             matrix::Distribution dist_w)
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
+  template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const LocalTileIndex ij, const SizeType nrefls, const TileAccessHelper& helper,
-            matrix::Matrix<const T, Device::CPU>& mat_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
+            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
+            matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
     auto& mat_t_h = t_panels_h.nextResource();
 
-    const LocalTileIndex ij_t(ij.row(), 0);
-    const matrix::SubTileSpec t_spec = {{0, 0}, {nrefls, nrefls}};
+    const LocalTileIndex ij_t = ij;
+    const matrix::SubTileSpec t_spec = helper.specT();
 
-    auto tup =
-        dlaf::internal::whenAllLift(b,
-                                    ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
-                                    splitTile(mat_v_h(ij), helper.specHH()),
-                                    splitTile(mat_t_h(ij_t), t_spec)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
-        ex::make_future();
+    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
+                                           splitTile(mat_v_h(ij), helper.specHH()),
+                                           splitTile(mat_t_h(ij_t), t_spec)) |
+               dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
+               ex::make_future();
 
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
@@ -399,7 +489,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
         [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
            const matrix::Tile<const T, Device::CPU>& tile_t_h, matrix::Tile<T, Device::GPU>& tile_v,
            matrix::Tile<T, Device::GPU>& tile_t, matrix::Tile<T, Device::GPU>& tile_w) {
-          cudaStream_t stream;
+          whip::stream_t stream;
           DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
           matrix::internal::copy(tile_v_h, tile_v, stream);
@@ -518,9 +608,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         mat_w2.setHeight(nrefls);
       }
 
-      // TODO setRange? it would mean setting the range to a specific tile for each step, and resetting at the end
-
-      auto [tile_v, tile_w] = helperBackend.computeVW(ij, nrefls, helper, mat_hh, mat_v, mat_t, mat_w);
+      auto [tile_v, tile_w] =
+          helperBackend.computeVW(ij, helper,
+                                  ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
+                                  mat_v, mat_t, mat_w);
 
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(ij.row(), j_e);
@@ -558,6 +649,292 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       mat_t.reset();
       mat_v.reset();
       mat_w.reset();
+      mat_w2.reset();
+    }
+  }
+}
+
+template <Backend B, Device D, class T>
+void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType band_size,
+                                          Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
+  using pika::execution::thread_priority;
+  namespace ex = pika::execution::experimental;
+
+  using common::iterate_range2d;
+  using common::RoundRobin;
+  using matrix::Panel;
+  using namespace bt_tridiag;
+
+  if (mat_hh.size().isEmpty() || mat_e.size().isEmpty())
+    return;
+
+  // Note: if no householder reflectors are going to be applied (in case of trivial matrix)
+  if (nrSweeps<T>(mat_hh.size().rows()) == 0)
+    return;
+
+  const SizeType b = band_size;
+  const SizeType mb = mat_hh.blockSize().rows();
+
+  const auto& dist_hh = mat_hh.distribution();
+  const auto& dist_e = mat_e.distribution();
+
+  // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
+  // stored in compact form.
+  //
+  // e.g. Given b = 4
+  //
+  // compact       w_tile_sz
+  // 1 1 1 1       1 0 0 0
+  // a b c d       a 1 0 0
+  // a b c d       a b 1 0
+  // a b c d       a b c 1
+  //               0 b c d
+  //               0 0 c d
+  //               0 0 0 d
+  const TileElementSize w_tile_sz(2 * b - 1, b);
+
+  const SizeType nlocal_ws =
+      std::max<SizeType>(1, dist_hh.localNrTiles().rows() *
+                                to_SizeType(static_cast<SizeType>(std::ceil(mb / b / 2.0f)) + 1));
+  const matrix::Distribution dist_ws_hh({nlocal_ws * b, b}, {b, b});
+  const matrix::Distribution dist_ws_v({nlocal_ws * w_tile_sz.rows(), w_tile_sz.cols()}, w_tile_sz);
+  const matrix::Distribution dist_ws_w2({nlocal_ws * b, mat_e.size().cols()},
+                                        {b, mat_e.blockSize().cols()});
+
+  constexpr std::size_t n_workspaces = 2;
+
+  RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_ws_hh);
+  RoundRobin<Panel<Coord::Col, T, Device::CPU>> hh_panels(n_workspaces, dist_ws_hh);
+
+  RoundRobin<Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_ws_v);
+  RoundRobin<Panel<Coord::Col, T, D>> w_panels(n_workspaces, dist_ws_v);
+
+  RoundRobin<Panel<Coord::Row, T, D>> w2_panels(n_workspaces, dist_ws_w2);
+  RoundRobin<Panel<Coord::Row, T, D>> w2tmp_panels(n_workspaces, dist_ws_w2);
+
+  HHManager<B, D, T> helperBackend(b, n_workspaces, dist_ws_hh, dist_ws_v);
+
+  // Note: This distributed algorithm encompass two communication categories:
+  // 1. exchange of HH: broadcast + send p2p
+  // 2. reduction for computing W2: all reduce p2p
+  // P2P communication can happen out of order since they can be matched via tags, but this is not
+  // possible for collective operations such as the broadcast.
+  //
+  // For this reason, communications of the phase 1 will be ordered with a pipeline. Instead, for the
+  // second part, with the aim to not over constrain execution of the update, no order will be
+  // enforced by relying solely on tags.
+  common::Pipeline<comm::Communicator> mpi_chain_row(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> mpi_chain_col(grid.colCommunicator().clone());
+  const auto mpi_col_comm = ex::just(grid.colCommunicator().clone());
+
+  const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
+  const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
+
+  // Note: Next two nested `for`s describe a special order loop over the matrix, which allow to
+  // better schedule communications considering the structure of the algorithm.
+  //
+  // Each element depends on:
+  // - top
+  // - bottom-right
+  // - right
+  //
+  // This basic rule for dependencies can be described collectively as a mechanism where elements are
+  // "unlocked" in different epochs, which forms a pattern like if the matrix get scanned not
+  // perpendicularly to their main axis, but instead it gets scanned by a slightly skewed line that goes
+  // from top right to bottom left.
+  //
+  //  5 x x x x
+  //  6 4 x x x
+  //  7 5 3 x x
+  //  8 6 4 2 x
+  //  9 7 5 3 1
+  //
+  // Elements of the same epoch are somehow "independent" and so they can potentially run in parallel,
+  // given that previous epoch has been completed. Since scheduling happens sequentially, elements
+  // of the same epoch will be ordered starting from top-most one, resulting in
+  //
+  //  7  x x x x
+  // 10  5 x x x
+  // 12  8 3 x x
+  // 14 11 6 2 x
+  // 15 13 9 4 1
+  for (SizeType k = idx_last_sweep_b; k > -maxsteps_b; --k) {
+    auto& mat_t = t_panels.nextResource();
+    auto& panel_hh = hh_panels.nextResource();
+    auto& mat_v = v_panels.nextResource();
+    auto& mat_w = w_panels.nextResource();
+    auto& mat_w2 = w2_panels.nextResource();
+    auto& mat_w2tmp = w2tmp_panels.nextResource();
+
+    for (SizeType i_b = std::abs<SizeType>(k), j_b = std::max<SizeType>(0, k);
+         i_b < j_b + nrStepsForSweep(j_b * b, mat_hh.size().cols(), b); i_b += 2, ++j_b) {
+      const SizeType step_b = i_b - j_b;
+      const GlobalElementIndex ij_el(i_b * b, j_b * b);
+      const GlobalTileIndex ij_g(dist_hh.globalTileIndex(ij_el));
+
+      const comm::Index2D rank = dist_hh.rankIndex();
+      const comm::Index2D rankHH = dist_hh.rankGlobalTile(ij_g);
+
+      // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
+      //        with complex type
+      const SizeType nrefls = [&]() {
+        const bool allowSize1 = isComplex_v<T> && j_b == idx_last_sweep_b &&
+                                step_b == nrStepsForSweep(j_b * b, mat_hh.size().cols(), b) - 1;
+        const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
+                                      std::min(b, dist_hh.size().cols() - ij_el.col()));
+        return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
+      }();
+
+      const TileAccessHelper helper(b, nrefls, dist_hh, ij_el);
+      const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, i_b);
+
+      if (!indexing_helper.isInvolved())
+        continue;
+
+      if (nrefls < b) {
+        mat_t.setWidth(nrefls);
+        mat_v.setWidth(nrefls);
+        mat_w.setWidth(nrefls);
+        mat_w2.setHeight(nrefls);
+        mat_w2tmp.setHeight(nrefls);
+      }
+
+      // Note:
+      // From HH it is possible to extract V that is needed for computing W and W2, both required
+      // for updating E.
+
+      // Send HH to all involved ranks: broadcast on row + send p2p on col
+      const LocalTileIndex ij_hh_panel = indexing_helper.wsIndexHH();
+
+      // Broadcast on ROW
+      if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
+        if (rank.col() == rankHH.col()) {
+          ex::start_detached(
+              comm::scheduleSendBcast(mpi_chain_row(),
+                                      ex::keep_future(
+                                          splitTile(mat_hh.read(ij_g), helper.specHHCompact()))));
+        }
+        else {
+          ex::start_detached(
+              comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
+                                      splitTile(panel_hh(ij_hh_panel), helper.specHHCompact(true))));
+        }
+      }
+
+      // Send P2P on col
+      if (helper.affectsMultipleTiles() && grid.size().rows() > 1) {
+        const comm::IndexT_MPI rank_src = rankHH.row();
+        const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
+
+        if (rank.row() == rank_src) {
+          auto tile_hh = rank.col() == rankHH.col()
+                             ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
+                             : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
+          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, ex::keep_future(tile_hh)));
+        }
+        else if (rank.row() == rank_dst) {
+          ex::start_detached(
+              comm::scheduleRecv(mpi_chain_col(), rank_src, 0, panel_hh.readwrite_sender(ij_hh_panel)));
+        }
+      }
+
+      // COMPUTE V and W from HH and T
+      auto tile_hh = (rankHH == rank)
+                         ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
+                         : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
+      auto [tile_v, tile_w] =
+          helperBackend.computeVW(indexing_helper.wsIndexHH(), helper,
+                                  ex::keep_future(std::move(tile_hh)), mat_v, mat_t, mat_w);
+
+      // UPDATE E
+      const SizeType ncols_local = dist_e.localNrTiles().cols();
+      for (SizeType j_e = 0; j_e < ncols_local; ++j_e) {
+        const SizeType j_e_g = dist_e.template globalTileFromLocalTile<Coord::Col>(j_e);
+        const LocalTileIndex idx_w2(indexing_helper.wsIndexHH().row(), j_e);
+
+        // SINGLE RANK UPDATE
+        if (!helper.affectsMultipleTiles() || grid.size().rows() == 1) {
+          const SizeType i_e_g = ij_g.row();
+          const SizeType i_e = dist_e.template localTileFromGlobalTile<Coord::Row>(ij_g.row());
+          const LocalTileIndex idx_e(i_e, j_e);
+          const auto nb = mat_e.tileSize({i_e_g, j_e_g}).cols();
+
+          // TWO ROWs (same RANK)
+          if (helper.affectsMultipleTiles()) {
+            const auto partsSpecs = {helper.topPart().specHH(), helper.bottomPart().specHH()};
+            const auto tile_vs = splitTile(tile_v, partsSpecs);
+            const auto tile_ws = splitTile(tile_w, partsSpecs);
+
+            ex::start_detached(
+                ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
+                             ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
+                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
+                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb)),
+                             splitTile(mat_e(LocalTileIndex{idx_e.row() + 1, j_e}),
+                                       helper.bottomPart().specEV(nb))) |
+                dlaf::internal::transform<
+                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                     thread_priority::normal),
+                                                                 ApplyHHToDoubleTileRow<B, T>{}));
+          }
+          // SINGLE ROW (edge-case)
+          else {
+            ex::start_detached(
+                ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
+                             ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
+                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb))) |
+                dlaf::internal::transform<
+                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                     thread_priority::normal),
+                                                                 ApplyHHToSingleTileRow<B, T>{}));
+          }
+        }
+        // TWO RANKs UPDATE (MAIN + PARTNER) on TWO ROWS
+        else {
+          const bool isTopRank = rank.row() == rankHH.row();
+          const comm::IndexT_MPI rankPartner =
+              isTopRank ? indexing_helper.rankRowPartner() : rankHH.row();
+
+          const comm::IndexT_MPI tag = to_int(j_e + i_b * ncols_local);
+
+          const auto part = isTopRank ? helper.topPart() : helper.bottomPart();
+          const SizeType i_e_g = isTopRank ? ij_g.row() : (ij_g.row() + 1);
+          const SizeType i_e = dist_e.template localTileFromGlobalTile<Coord::Row>(i_e_g);
+          const LocalTileIndex idx_e(i_e, j_e);
+
+          const auto nb = mat_e.tileSize({i_e_g, j_e_g}).cols();
+
+          // W2 = V* . E
+          ex::start_detached(
+              dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+                                          ex::keep_future(splitTile(tile_v, part.specHH())),
+                                          splitTile(mat_e(idx_e), part.specEV(nb)), T(0),
+                                          splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
+              dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
+
+          // Compute final W2 by adding the contribution from the partner rank
+          ex::start_detached(comm::scheduleAllSumP2P<B>(mpi_col_comm, rankPartner, tag,
+                                                        ex::keep_future(splitTile(mat_w2tmp.read(idx_w2),
+                                                                                  helper.specW2(nb))),
+                                                        splitTile(mat_w2(idx_w2), helper.specW2(nb))));
+
+          // E -= W . W2
+          ex::start_detached(
+              dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),
+                                          ex::keep_future(splitTile(tile_w, part.specHH())),
+                                          ex::keep_future(
+                                              splitTile(mat_w2.read(idx_w2), helper.specW2(nb))),
+                                          T(1), splitTile(mat_e(idx_e), part.specEV(nb))) |
+              dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
+        }
+      }
+
+      mat_t.reset();
+      panel_hh.reset();
+      mat_v.reset();
+      mat_w.reset();
+      mat_w2tmp.reset();
       mat_w2.reset();
     }
   }

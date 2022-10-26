@@ -21,6 +21,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(DLAF_WITH_MKL @DLAF_WITH_MKL@)
 set(DLAF_WITH_CUDA @DLAF_WITH_CUDA@)
 set(DLAF_WITH_HIP @DLAF_WITH_HIP@)
+set(DLAF_WITH_GPU @DLAF_WITH_GPU@)
 
 # ===== DEPENDENCIES
 include(CMakeFindDependencyMacro)
@@ -34,6 +35,10 @@ if(DLAF_WITH_MKL)
   set(MKL_CUSTOM_THREADING "@MKL_THREADING@")
 
   find_dependency(MKL)
+
+  set(MKL_LAPACK_TARGET "@MKL_LAPACK_TARGET@")
+  add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
+  target_link_libraries(DLAF::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
 else()
   set(LAPACK_CUSTOM_TYPE "@LAPACK_TYPE@")
   set(LAPACK_CUSTOM_INCLUDE_DIR "@LAPACK_INCLUDE_DIR@")
@@ -42,9 +47,22 @@ else()
   find_dependency(LAPACK)
 endif()
 
+if(DLAF_WITH_CUDA)
+  find_dependency(CUDAToolkit)
+endif()
+
+if(DLAF_WITH_HIP)
+  find_dependency(hipblas)
+  find_dependency(rocsolver)
+endif()
+
 find_dependency(blaspp PATHS @blaspp_DIR@)
 find_dependency(lapackpp PATHS @lapackpp_DIR@)
 find_dependency(Umpire PATHS @Umpire_DIR@)
+
+if(DLAF_WITH_GPU)
+  find_dependency(whip)
+endif()
 
 # ----- pika
 find_dependency(pika PATHS @pika_DIR@)

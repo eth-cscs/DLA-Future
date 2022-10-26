@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
 
 #include <gtest/gtest.h>
@@ -19,6 +20,7 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/util_matrix.h"
 
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -31,19 +33,22 @@ using namespace dlaf::matrix::util;
 using namespace dlaf::test;
 using namespace dlaf::matrix::test;
 
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
 template <typename Type>
-class BacktransformationT2BTest : public ::testing::Test {};
+class BacktransformationBandToTridiagTest : public TestWithCommGrids {};
 
 template <class T>
-using BacktransformationT2BTestMC = BacktransformationT2BTest<T>;
+using BacktransformationBandToTridiagTestMC = BacktransformationBandToTridiagTest<T>;
 
-TYPED_TEST_SUITE(BacktransformationT2BTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(BacktransformationBandToTridiagTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-using BacktransformationT2BTestGPU = BacktransformationT2BTest<T>;
+using BacktransformationBandToTridiagTestGPU = BacktransformationBandToTridiagTest<T>;
 
-TYPED_TEST_SUITE(BacktransformationT2BTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(BacktransformationBandToTridiagTestGPU, MatrixElementTypes);
 #endif
 
 // Note: Helper functions for computing the tau of a given reflector. Reflector pointer should
@@ -75,17 +80,6 @@ void computeTaus(const SizeType max_refl_size, const SizeType k, matrix::Tile<T,
     *tile.ptr({0, j}) = tau;
   }
 }
-
-struct config_t {
-  const SizeType m, n, mb, nb, b = mb;
-};
-
-std::vector<config_t> configs{
-    {0, 0, 4, 4},                                  // empty
-    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
-    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
-    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
-};
 
 template <Backend B, Device D, class T>
 void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, const SizeType b) {
@@ -161,15 +155,118 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
   CHECK_MATRIX_NEAR(result, mat_e_h, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocal) {
+template <Backend B, Device D, class T>
+void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb,
+                            SizeType nb, const SizeType b) {
+  const Distribution dist({m, n}, {mb, nb}, grid.size(), grid.rank(), {0, 0});
+
+  Matrix<T, Device::CPU> mat_e_h(dist);
+  set_random(mat_e_h);
+  auto mat_e_local = allGather(blas::Uplo::General, mat_e_h, grid);
+
+  Matrix<const T, Device::CPU> mat_hh = [grid, m, mb, b]() {
+    const Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
+
+    Matrix<T, Device::CPU> mat_hh(dist);
+    set_random(mat_hh);
+
+    for (SizeType j = 0; j < dist.localNrTiles().cols(); j += b) {
+      for (SizeType i = j; i < dist.localNrTiles().rows(); i += b) {
+        const TileElementIndex sub_origin(0, 0);
+        const TileElementSize sub_size(std::min(b, dist.localSize().rows() - i * b),
+                                       std::min(b, dist.localSize().cols() - j * b));
+
+        const SizeType n = std::min(2 * b - 1, dist.localSize().rows() - i * b - 1);
+        const SizeType k = std::min(n - 1, sub_size.cols());
+
+        if (k <= 0)
+          continue;
+
+        dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
+                                            b, k,
+                                            splitTile(mat_hh(LocalTileIndex{i, j}),
+                                                      {sub_origin, sub_size}));
+      }
+    }
+
+    return mat_hh;
+  }();
+
+  MatrixLocal<T> mat_hh_local = allGather(blas::Uplo::Lower, mat_hh, grid);
+
+  {
+    MatrixMirror<T, D, Device::CPU> mat_e(mat_e_h);
+    eigensolver::backTransformationBandToTridiag<B>(grid, b, mat_e.get(), mat_hh);
+  }
+
+  if (m == 0 || n == 0)
+    return;
+
+  using eigensolver::internal::nrStepsForSweep;
+  using eigensolver::internal::nrSweeps;
+  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
+      const SizeType j = sweep;
+      const SizeType i = j + 1 + step * b;
+
+      const SizeType size = std::min(b, m - i);
+      const SizeType i_v = (i - 1) / b * b;
+
+      T& v_head = *mat_hh_local.ptr({i_v, j});
+      const T tau = v_head;
+      v_head = 1;
+
+      using blas::Side;
+      lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+    }
+  }
+
+  auto result = [&dist = mat_e_h.distribution(),
+                 &mat_local = mat_e_local](const GlobalElementIndex& element) {
+    const auto tile_index = dist.globalTileIndex(element);
+    const auto tile_element = dist.tileElementIndex(element);
+    return mat_local.tile_read(tile_index)(tile_element);
+  };
+
+  CHECK_MATRIX_NEAR(result, mat_e_h, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
+}
+
+struct config_t {
+  const SizeType m, n, mb, nb, b = mb;
+};
+
+std::vector<config_t> configs{
+    {0, 0, 4, 4},                                  // empty
+    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
+    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
+    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
+};
+
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs) {
+      testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
+}
+
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocal) {
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocal) {
   for (const auto& [m, n, mb, nb, b] : configs)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs) {
+      testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
 }
 #endif
 
@@ -177,14 +274,30 @@ std::vector<config_t> configs_subband{
     {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
 };
 
-TYPED_TEST(BacktransformationT2BTestMC, CorrectnessLocalSubBand) {
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
 }
 
+TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+      testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
+}
+
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(BacktransformationT2BTestGPU, CorrectnessLocalSubBand) {
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocalSubBand) {
   for (const auto& [m, n, mb, nb, b] : configs_subband)
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+}
+
+TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+      testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+    }
+  }
 }
 #endif

@@ -52,7 +52,7 @@ spack:
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.2.3
-        prefix: /opt/amdgpu
+        prefix: /opt/rocm-5.2.3/llvm
         buildable: false
     hip:
       externals:
@@ -62,17 +62,17 @@ spack:
     hipblas:
       externals:
       - spec: hipblas@5.2.3
-        prefix: /opt/rocm-5.2.3/hipblas
+        prefix: /opt/rocm-5.2.3
         buildable: false
     rocblas:
       externals:
       - spec: rocblas@5.2.3
-        prefix: /opt/rocm-5.2.3/rocblas
+        prefix: /opt/rocm-5.2.3
         buildable: false
     rocsolver:
       externals:
       - spec: rocsolver@5.2.3
-        prefix: /opt/rocm-5.2.3/rocsolver
+        prefix: /opt/rocm-5.2.3
         buildable: false
     hsa-rocr-dev:
       externals:

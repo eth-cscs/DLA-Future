@@ -11,10 +11,10 @@
 #include "dlaf/lapack/gpu/lacpy.h"
 
 #include <gtest/gtest.h>
+#include <whip.hpp>
 
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/gpu/blas/error.h"
-#include "dlaf/gpu/error.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
@@ -39,8 +39,8 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
 
   using blas::Uplo;
 
-  cudaStream_t stream;
-  DLAF_GPU_CHECK_ERROR(cudaStreamCreate(&stream));
+  whip::stream_t stream;
+  whip::stream_create(&stream);
   cublasHandle_t handle;
   DLAF_GPUBLAS_CHECK_ERROR(cublasCreate(&handle));
   DLAF_GPUBLAS_CHECK_ERROR(cublasSetStream(handle, stream));
@@ -67,7 +67,7 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
       auto tile_dst = createTile<T, Device::GPU>(zero, {m, n}, ldb);
 
       gpulapack::lacpy(uplo, m, n, tile_src.ptr(), tile_src.ld(), tile_dst.ptr(), tile_dst.ld(), stream);
-      DLAF_GPU_CHECK_ERROR(cudaStreamSynchronize(stream));
+      whip::stream_synchronize(stream);
 
       // Verify
       SCOPED_TRACE(::testing::Message() << "Comparison test m=" << m << " n=" << n << " lda=" << lda
@@ -79,5 +79,5 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
   }
 
   DLAF_GPUBLAS_CHECK_ERROR(cublasDestroy(handle));
-  DLAF_GPU_CHECK_ERROR(cudaStreamDestroy(stream));
+  whip::stream_destroy(stream);
 }

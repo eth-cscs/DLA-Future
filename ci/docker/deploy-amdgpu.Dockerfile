@@ -29,7 +29,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci install --keep-stage
+    spack -e ci install --keep-stage --verbose
 
 WORKDIR ${BUILD}
 
@@ -69,8 +69,9 @@ RUN if [ "$USE_MKL" = "ON" ]; then \
 
 # Deploy Extra RocBlas files separately.
 ARG USE_ROCBLAS=OFF
-RUN if [ "$USE_ROCBLAS" = "ON" ]; then \
-      cp -r `spack -e ci location -i rocblas`/lib/library ${DEPLOY}/usr/lib ; \
+RUN mkdir ${DEPLOY}/usr/lib/rocblas; \
+    if [ "$USE_ROCBLAS" = "ON" ]; then \
+      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib/rocblas ; \
     fi
 
 # Multistage build, this is the final small image

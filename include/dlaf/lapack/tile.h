@@ -23,6 +23,7 @@
 
 #ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
+#include <whip.hpp>
 #endif
 
 #include "dlaf/common/assert.h"
@@ -437,9 +438,9 @@ DLAF_DEFINE_CUSOLVER_OP_BUFFER(Potrf, std::complex<double>, Zpotrf);
 
 inline void extendROCSolverWorkspace(cusolverDnHandle_t handle,
                                      ::dlaf::memory::MemoryView<std::byte, Device::GPU>&& workspace) {
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
-  auto f = [workspace = std::move(workspace)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  auto f = [workspace = std::move(workspace)](whip::error_t status) { whip::check_error(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(f), stream);
 }
 
@@ -500,11 +501,11 @@ public:
 
 template <class F, class T>
 void assertExtendInfo(F assertFunc, cusolverDnHandle_t handle, CusolverInfo<T>&& info) {
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPULAPACK_CHECK_ERROR(cusolverDnGetStream(handle, &stream));
   assertFunc(stream, info.info());
   // Extend info scope to the end of the kernel execution
-  auto extend_info = [info = std::move(info)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  auto extend_info = [info = std::move(info)](whip::error_t status) { whip::check_error(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
 }
 }
@@ -525,7 +526,7 @@ dlaf::BaseType<T> lantr(cusolverDnHandle_t handle, const lapack::Norm norm, cons
 
 template <class T>
 void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& tile,
-           cudaStream_t stream) {
+           whip::stream_t stream) {
   const SizeType m = tile.size().rows();
   const SizeType n = tile.size().cols();
 
@@ -533,10 +534,9 @@ void laset(const blas::Uplo uplo, T alpha, T beta, const Tile<T, Device::GPU>& t
 }
 
 template <class T>
-void set0(const Tile<T, Device::GPU>& tile, cudaStream_t stream) {
-  DLAF_GPU_CHECK_ERROR(cudaMemset2DAsync(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
-                                         sizeof(T) * to_sizet(tile.size().rows()),
-                                         to_sizet(tile.size().cols()), stream));
+void set0(const Tile<T, Device::GPU>& tile, whip::stream_t stream) {
+  whip::memset_2d_async(tile.ptr(), sizeof(T) * to_sizet(tile.ld()), 0,
+                        sizeof(T) * to_sizet(tile.size().rows()), to_sizet(tile.size().cols()), stream);
 }
 
 template <class T>

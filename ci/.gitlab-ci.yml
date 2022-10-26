@@ -19,7 +19,7 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: eaf3f7c17c477aad586cfe94247e1f8201863149
+    SPACK_SHA: 08efe13efb627793fbe048542890ee85668c8100
     SPACK_DLAF_REPO: ./spack
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
@@ -178,28 +178,27 @@ cuda codecov build gcc11:
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
-# Temporarly disabled (see issue #646)
-# amdgpu release build clang10+rocm-5.2.3:
-#   extends: .build_spack_common
-#   needs:
-#     - cuda codecov build gcc11
-#   variables:
-#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-#     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
-#     BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
-#     DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
-#     EXTRA_APTGET: "clang hipblas hipblas-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu"
-#     EXTRA_APTGET_DEPLOY: ""
-#     COMPILER: clang@10.0.0
-#     CXXSTD: 17
-#     USE_MKL: "OFF"
-#     USE_ROCBLAS: "ON"
-#     SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm523.yaml
-#     BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/build
-#     DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
-#     SLURM_CONSTRAINT: mc
-#     THREADS_PER_NODE: 64
-#     USE_CODECOV: "false"
+amdgpu release build clang10+rocm-5.2.3:
+  extends: .build_spack_common
+  needs:
+    - cuda codecov build gcc11
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
+    BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
+    DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
+    EXTRA_APTGET: "clang hipblas hipblas-dev rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu"
+    EXTRA_APTGET_DEPLOY: ""
+    COMPILER: clang@10.0.0
+    CXXSTD: 17
+    USE_MKL: "OFF"
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm523.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 64
+    USE_CODECOV: "false"
 
 notify_github_start:
   stage: build

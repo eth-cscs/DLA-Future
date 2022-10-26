@@ -22,7 +22,7 @@
 # This module sets the following variables:
 #   LAPACK_FOUND - set to true if a library implementing the LAPACK interface is found
 #
-# If LAPACK symbols got found, it creates target LAPACK::LAPACK
+# If LAPACK symbols got found, it creates target DLAF::LAPACK
 
 macro(_lapack_check_is_working)
   include(CMakePushCheckState)
@@ -72,9 +72,9 @@ if(LAPACK_LIBRARY STREQUAL "LAPACK_LIBRARIES-PLACEHOLDER-FOR-EMPTY-LIBRARIES")
 endif()
 
 if(LAPACK_FOUND)
-  if(NOT TARGET LAPACK::LAPACK)
-    add_library(LAPACK::LAPACK INTERFACE IMPORTED GLOBAL)
+  if(NOT TARGET DLAF::LAPACK)
+    add_library(DLAF::LAPACK INTERFACE IMPORTED GLOBAL)
   endif()
 
-  target_link_libraries(LAPACK::LAPACK INTERFACE "${LAPACK_LIBRARY}" "${_DEPS}")
+  target_link_libraries(DLAF::LAPACK INTERFACE "${LAPACK_LIBRARY}" "${_DEPS}")
 endif()

@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include <dlaf/gpu/api.h>
-
 #include <stdio.h>
+
+#include <whip.hpp>
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
 

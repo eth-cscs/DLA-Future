@@ -69,29 +69,18 @@ target_include_directories(dlaf.prop
 target_link_libraries(dlaf.prop
   INTERFACE
     MPI::MPI_CXX
-    LAPACK::LAPACK
+    DLAF::LAPACK
     pika::pika
     lapackpp
     blaspp
     umpire
-    $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
-    $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-    $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
-    $<TARGET_NAME_IF_EXISTS:roc::hipblas>
-    $<TARGET_NAME_IF_EXISTS:roc::rocblas>
-    $<TARGET_NAME_IF_EXISTS:roc::rocsolver>
-)
-target_link_libraries(
-  dlaf.prop
-  INTERFACE MPI::MPI_CXX
-            LAPACK::LAPACK
-            pika::pika
-            lapackpp
-            blaspp
-            umpire
-            $<TARGET_NAME_IF_EXISTS:dlaf::cublas>
-            $<TARGET_NAME_IF_EXISTS:dlaf::cudart>
-            $<TARGET_NAME_IF_EXISTS:dlaf::cusolver>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
 target_compile_definitions(dlaf.prop
   INTERFACE
@@ -172,7 +161,7 @@ if(DLAF_WITH_GPU)
   )
   target_sources(dlaf.core PRIVATE ${dlaf_core_gpu_source_files})
   if(DLAF_WITH_HIP)
-    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE HIP)
   endif()
 endif()
 
@@ -213,9 +202,12 @@ add_library(
   dlaf.tridiagonal_eigensolver OBJECT
   eigensolver/tridiag_solver/mc.cpp
   eigensolver/tridiag_solver/kernels.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/kernels.cu>
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
+  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
 )
+if (DLAF_WITH_HIP)
+    set_source_files_properties(eigensolver/tridiag_solver/kernels.cu PROPERTIES LANGUAGE HIP)
+endif()
 target_link_libraries(dlaf.tridiagonal_eigensolver PUBLIC dlaf.prop)
 target_add_warnings(dlaf.tridiagonal_eigensolver)
 DLAF_addPrecompiledHeaders(dlaf.tridiagonal_eigensolver)
@@ -248,6 +240,9 @@ add_library(
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/perms.cu>
                            $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/invert.cu>
 )
+if (DLAF_WITH_HIP)
+    set_source_files_properties(permutations/general/perms.cu PROPERTIES LANGUAGE HIP)
+endif()
 target_link_libraries(dlaf.permutations PUBLIC dlaf.prop)
 target_add_warnings(dlaf.permutations)
 DLAF_addPrecompiledHeaders(dlaf.permutations)

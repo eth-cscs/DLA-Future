@@ -14,6 +14,10 @@
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"

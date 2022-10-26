@@ -14,8 +14,8 @@
 
 #ifdef DLAF_WITH_HIP
 
-#include <rocblas.h>
-#include <rocsolver.h>
+#include <rocblas/rocblas.h>
+#include <rocsolver/rocsolver.h>
 
 // Use of rocblas when the corresponding rocsolver functions are deprecated
 #define cusolverDnChegst    rocsolver_chegst

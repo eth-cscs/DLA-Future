@@ -28,35 +28,44 @@ namespace dlaf::eigensolver::internal {
 
 namespace wrapper {
 
-template <class T>
+template <Device D, class T>
 void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
              const T* col_data, const SizeType n, MPI_Request* req) {
-  DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
-                                 rank_dest, tag, comm, req));
+  if constexpr (D == Device::CPU) {
+    DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                   rank_dest, tag, comm, req));
+  }
+  else {
+    dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
+    DLAF_UNIMPLEMENTED(D);
+  }
 }
-DLAF_MAKE_CALLABLE_OBJECT(sendCol);
 
-template <class T>
+template <Device D, class T>
 void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag, T* col_data,
              const SizeType n, MPI_Request* req) {
-  DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
-                                 rank_dest, tag, comm, req));
+  if constexpr (D == Device::CPU) {
+    DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                   rank_dest, tag, comm, req));
+  }
+  else {
+    dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
+    DLAF_UNIMPLEMENTED(D);
+  }
 }
 
-DLAF_MAKE_CALLABLE_OBJECT(recvCol);
-
-template <class T, class CommSender>
+template <Device D, class T, class CommSender>
 auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, const T* col_data,
                      const SizeType n) {
   return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), dest, tag, col_data, n) |
-         dlaf::comm::internal::transformMPI(sendCol_o);
+         dlaf::comm::internal::transformMPI(sendCol<D, T>);
 }
 
-template <class T, class CommSender>
+template <Device D, class T, class CommSender>
 auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, T* col_data,
                      SizeType n) {
   return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), source, tag, col_data, n) |
-         dlaf::comm::internal::transformMPI(recvCol_o);
+         dlaf::comm::internal::transformMPI(recvCol<D, T>);
 }
 
 }
@@ -95,6 +104,18 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
                                                  matrix::Tile<T, D> tile_ws) {
     const SizeType m = dist_sub.localSize().rows();
 
+    auto getColPtr = [&dist_sub, &tiles, &tile_ws](const SizeType col_index, const bool hasIt) -> T* {
+      // TODO document column layout assumption
+      // TODO assume column layout and operate on the full column? also workspace must obey
+      if (hasIt) {
+        const LocalTileIndex tile_col{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
+                                      dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(col_index)};
+        const std::size_t linear_tile_col = to_sizet(dist_sub.localTileLinearIndex(tile_col));
+        return tiles[linear_tile_col].ptr(dist_sub.tileElementIndex({0, col_index}));
+      }
+      return tile_ws.ptr({0, 0});
+    };
+
     for (const GivensRotation<T>& rot : rots) {
       const SizeType j_x = rot.i / mb;
       const SizeType j_y = rot.j / mb;
@@ -107,18 +128,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
       if (!hasX && !hasY)
         continue;
-
-      auto getColPtr = [&](const SizeType col_index, const bool hasIt) -> T* {
-        // TODO document column layout assumption
-        // TODO assume column layout and operate on the full column? also workspace must obey
-        if (hasIt) {
-          const LocalTileIndex tile_col{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
-                                        dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(col_index)};
-          const std::size_t linear_tile_col = to_sizet(dist_sub.localTileLinearIndex(tile_col));
-          return tiles[linear_tile_col].ptr(dist_sub.tileElementIndex({0, col_index}));
-        }
-        return tile_ws.ptr({0, 0});
-      };
 
       T* col_x = getColPtr(rot.i, hasX);
       T* col_y = getColPtr(rot.j, hasY);
@@ -136,8 +145,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         const T* col_send = hasX ? col_x : col_y;
         T* col_recv = hasX ? col_y : col_x;
 
-        cps.emplace_back(wrapper::scheduleSendCol<T>(comm_row, rank_partner, 0, col_send, m));
-        cps.emplace_back(wrapper::scheduleRecvCol<T>(comm_row, rank_partner, 0, col_recv, m));
+        cps.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, 0, col_send, m));
+        cps.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, 0, col_recv, m));
       }
 
       // each one computes his own, but just stores either x or y

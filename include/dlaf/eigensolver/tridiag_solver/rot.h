@@ -37,7 +37,7 @@ void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_
   }
   else {
     dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
-    DLAF_UNIMPLEMENTED(D);
+    DLAF_STATIC_UNIMPLEMENTED(D);
   }
 }
 
@@ -50,7 +50,7 @@ void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_
   }
   else {
     dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
-    DLAF_UNIMPLEMENTED(D);
+    DLAF_STATIC_UNIMPLEMENTED(D);
   }
 }
 

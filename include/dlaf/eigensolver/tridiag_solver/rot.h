@@ -81,18 +81,18 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
   const matrix::Distribution& dist = mat.distribution();
 
-  const SizeType mb = mat.distribution().blockSize().rows();
+  const SizeType mb = dist.blockSize().rows();
 
-  const matrix::Distribution dist_sub = [=]() {
-    const SizeType size = (i_last + 1 - i_begin) * mb;
-    return matrix::Distribution({size, size}, dist.blockSize(), dist.commGridSize(), dist.rankIndex(),
-                                dist.rankGlobalTile({i_begin, i_begin}));
+  const matrix::Distribution dist_sub = [&]() {
+    const SizeType sub_size = (i_last + 1 - i_begin) * mb;
+    return matrix::Distribution({sub_size, sub_size}, dist.blockSize(), dist.commGridSize(),
+                                dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
   }();
 
-  const SizeType n = dist_sub.localSize().rows();
+  auto givens_rots_fn = [comm_row, mb, dist, dist_sub](const std::vector<GivensRotation<T>>& rots,
+                                                       auto&& tiles, [[maybe_unused]] auto&&... ts) {
+    const SizeType m = dist_sub.localSize().rows();
 
-  auto givens_rots_fn = [comm_row, n, mb, dist, dist_sub](const std::vector<GivensRotation<T>>& rots,
-                                                          auto&& tiles, [[maybe_unused]] auto&&... ts) {
     const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
                                        dist.rankIndex(), dist.sourceRankIndex());
     // TODO allocate just sub-range
@@ -160,7 +160,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       T* y = hasY ? tile_y.ptr(idx_y) : tile_ws.ptr({0, 0});
 
       tt::sync_wait(ex::when_all_vector(std::move(cps)) |
-                    ex::then([rot, n, x, y]() { blas::rot(n, x, 1, y, 1, rot.c, rot.s); }));
+                    ex::then([rot, m, x, y]() { blas::rot(m, x, 1, y, 1, rot.c, rot.s); }));
     }
   };
 

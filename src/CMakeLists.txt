@@ -135,152 +135,131 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
   target_precompile_headers(dlaf.pch_exe PRIVATE ${precompiled_headers})
 endif()
 
-# Define DLAF's CORE library
-add_library(dlaf.core_obj
-  OBJECT
-    communication/communicator_impl.cpp
-    communication/communicator.cpp
-    communication/communicator_grid.cpp
-    communication/datatypes.cpp
-    init.cpp
-    matrix/distribution.cpp
-    matrix/layout_info.cpp
-    matrix/tile.cpp
-    matrix.cpp
-    matrix_mirror.cpp
-    memory/memory_view.cpp
-    memory/memory_chunk.cpp
-)
+# Helper function for creating sub-libraries that libDLAF consists of. It
+# creates two variants of the library: one object library with the name
+# dlaf.${name}_object and one static/shared library with the name dlaf.${name}.
+# The object libraries are only meant for creating libDLAF. The static/shared
+# libraries are meant for internal use in tests and miniapps.
+function(DLAF_addSublibrary name)
+  set(options "")
+  set(oneValueArgs "")
+  set(multiValueArgs SOURCES GPU_SOURCES COMPILE_OPTIONS LIBRARIES)
+  cmake_parse_arguments(DLAF_ASL "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-if(DLAF_WITH_GPU)
-  set(dlaf_core_gpu_source_files
-    cusolver/assert_info.cu
-    cusolver/stedc.cu
-    lapack/gpu/lacpy.cu
-    lapack/gpu/laset.cu
-  )
-  target_sources(dlaf.core_obj PRIVATE ${dlaf_core_gpu_source_files})
-  if(DLAF_WITH_HIP)
-    set_source_files_properties(${dlaf_core_gpu_source_files} PROPERTIES LANGUAGE HIP)
+  set(object_lib_name dlaf.${name}_object)
+  set(lib_name dlaf.${name})
+
+  add_library(${object_lib_name} OBJECT ${DLAF_ASL_SOURCES})
+  if(DLAF_WITH_GPU)
+    target_sources(${object_lib_name} PRIVATE ${DLAF_ASL_GPU_SOURCES})
+    if(DLAF_WITH_HIP)
+      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP)
+    endif()
   endif()
-endif()
 
-target_compile_options(dlaf.core_obj PRIVATE $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>)
-target_link_libraries(dlaf.core_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.core_obj)
-DLAF_addPrecompiledHeaders(dlaf.core_obj)
-add_library(dlaf.core $<TARGET_OBJECTS:dlaf.core_obj>)
-target_link_libraries(dlaf.core PUBLIC dlaf.prop)
+  target_compile_options(${object_lib_name} PRIVATE ${DLAF_ASL_COMPILE_OPTIONS})
+  target_link_libraries(${object_lib_name} PRIVATE dlaf.prop)
+  target_add_warnings(${object_lib_name})
+  DLAF_addPrecompiledHeaders(${object_lib_name})
+  add_library(${lib_name} $<TARGET_OBJECTS:${object_lib_name}>)
+  target_link_libraries(${lib_name} PUBLIC dlaf.prop)
+  target_link_libraries(${lib_name} PUBLIC ${DLAF_ASL_LIBRARIES})
+endfunction()
+
+# Define DLAF's CORE library
+DLAF_addSublibrary(
+  core
+  SOURCES communication/communicator_impl.cpp
+          communication/communicator.cpp
+          communication/communicator_grid.cpp
+          communication/datatypes.cpp
+          init.cpp
+          matrix/distribution.cpp
+          matrix/layout_info.cpp
+          matrix/tile.cpp
+          matrix.cpp
+          matrix_mirror.cpp
+          memory/memory_view.cpp
+          memory/memory_chunk.cpp
+  GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/lacpy.cu lapack/gpu/laset.cu
+  COMPILE_OPTIONS $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>
+)
 
 # Define DLAF's auxiliary library
-add_library(dlaf.auxiliary_obj OBJECT auxiliary/norm/mc.cpp)
-target_link_libraries(dlaf.auxiliary_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.auxiliary_obj)
-DLAF_addPrecompiledHeaders(dlaf.auxiliary_obj)
-add_library(dlaf.auxiliary $<TARGET_OBJECTS:dlaf.auxiliary_obj>)
-target_link_libraries(dlaf.auxiliary PUBLIC dlaf.core dlaf.prop)
+DLAF_addSublibrary(auxiliary SOURCES auxiliary/norm/mc.cpp LIBRARIES dlaf.core)
 
 # Define DLAF's eigensolver library
-add_library(
-  dlaf.eigensolver_obj OBJECT
-  eigensolver/band_to_tridiag/mc.cpp
-  eigensolver/bt_band_to_tridiag/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
-  eigensolver/bt_reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_reduction_to_band/gpu.cpp>
-  eigensolver/eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/eigensolver/gpu.cpp>
-  eigensolver/gen_eigensolver/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_eigensolver/gpu.cpp>
-  eigensolver/gen_to_std/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
-  eigensolver/reduction_to_band/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
+DLAF_addSublibrary(
+  eigensolver
+  SOURCES eigensolver/band_to_tridiag/mc.cpp
+          eigensolver/bt_band_to_tridiag/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_band_to_tridiag/gpu.cpp>
+          eigensolver/bt_reduction_to_band/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/bt_reduction_to_band/gpu.cpp>
+          eigensolver/eigensolver/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/eigensolver/gpu.cpp>
+          eigensolver/gen_eigensolver/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_eigensolver/gpu.cpp>
+          eigensolver/gen_to_std/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/gen_to_std/gpu.cpp>
+          eigensolver/reduction_to_band/mc.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/reduction_to_band/gpu.cpp>
+  LIBRARIES dlaf.tridiagonal_eigensolver dlaf.solver dlaf.factorization dlaf.core
 )
-target_link_libraries(dlaf.eigensolver_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.eigensolver_obj)
-DLAF_addPrecompiledHeaders(dlaf.eigensolver_obj)
-add_library(dlaf.eigensolver $<TARGET_OBJECTS:dlaf.eigensolver_obj>)
-target_link_libraries(dlaf.eigensolver PUBLIC dlaf.core dlaf.prop)
 
 # Define DLAF's tridiagonal eigensolver library
-add_library(
-  dlaf.tridiagonal_eigensolver_obj OBJECT
-  eigensolver/tridiag_solver/mc.cpp
-  eigensolver/tridiag_solver/kernels.cpp
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
-  $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
+DLAF_addSublibrary(
+  tridiagonal_eigensolver
+  SOURCES eigensolver/tridiag_solver/mc.cpp
+          eigensolver/tridiag_solver/kernels.cpp
+          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
+          # TODO: This should be moved to GPU_SOURCES once HIP is supported for the
+          # tridiagonal solver.
+          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
+  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
 )
-if (DLAF_WITH_HIP)
-    set_source_files_properties(eigensolver/tridiag_solver/kernels.cu PROPERTIES LANGUAGE HIP)
-endif()
-target_link_libraries(dlaf.tridiagonal_eigensolver_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.tridiagonal_eigensolver_obj)
-DLAF_addPrecompiledHeaders(dlaf.tridiagonal_eigensolver_obj)
-add_library(dlaf.tridiagonal_eigensolver $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver_obj>)
-target_link_libraries(dlaf.tridiagonal_eigensolver PUBLIC dlaf.eigensolver dlaf.factorization dlaf.solver dlaf.core dlaf.prop)
 
 # Define DLAF's factorization library
-add_library(dlaf.factorization_obj OBJECT
-  factorization/cholesky/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:factorization/cholesky/gpu.cpp>
-  factorization/qr/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:factorization/qr/gpu.cpp>
+DLAF_addSublibrary(
+  factorization
+  SOURCES factorization/cholesky/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:factorization/cholesky/gpu.cpp>
+          factorization/qr/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:factorization/qr/gpu.cpp>
+  LIBRARIES dlaf.core
 )
-target_link_libraries(dlaf.factorization_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.factorization_obj)
-DLAF_addPrecompiledHeaders(dlaf.factorization_obj)
-add_library(dlaf.factorization $<TARGET_OBJECTS:dlaf.factorization_obj>)
-target_link_libraries(dlaf.factorization PUBLIC dlaf.core dlaf.prop)
 
 # Define DLAF's multiplication library
-add_library(dlaf.multiplication_obj OBJECT
-  multiplication/general/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
-  multiplication/triangular/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>)
-target_link_libraries(dlaf.multiplication_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.multiplication_obj)
-DLAF_addPrecompiledHeaders(dlaf.multiplication_obj)
-add_library(dlaf.multiplication $<TARGET_OBJECTS:dlaf.multiplication_obj>)
-target_link_libraries(dlaf.multiplication PUBLIC dlaf.core dlaf.prop)
+DLAF_addSublibrary(
+  multiplication
+  SOURCES multiplication/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
+          multiplication/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>
+  LIBRARIES dlaf.core
+)
 
 # Define DLAF's permutations library
-add_library(
-  dlaf.permutations_obj OBJECT permutations/general/mc.cpp
-                           $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
-                           $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/perms.cu>
+DLAF_addSublibrary(
+  permutations
+  SOURCES permutations/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
+  GPU_SOURCES permutations/general/perms.cu
+  LIBRARIES dlaf.core
 )
-if (DLAF_WITH_HIP)
-    set_source_files_properties(permutations/general/perms.cu PROPERTIES LANGUAGE HIP)
-endif()
-target_link_libraries(dlaf.permutations_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.permutations_obj)
-DLAF_addPrecompiledHeaders(dlaf.permutations_obj)
-add_library(dlaf.permutations $<TARGET_OBJECTS:dlaf.permutations_obj>)
-target_link_libraries(dlaf.permutations PUBLIC dlaf.core dlaf.prop)
 
 # Define DLAF's solver library
-add_library(dlaf.solver_obj OBJECT
-  solver/triangular/mc.cpp
-  $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>)
-target_link_libraries(dlaf.solver_obj PUBLIC dlaf.prop)
-target_add_warnings(dlaf.solver_obj)
-DLAF_addPrecompiledHeaders(dlaf.solver_obj)
-add_library(dlaf.solver $<TARGET_OBJECTS:dlaf.solver_obj>)
-target_link_libraries(dlaf.solver PUBLIC dlaf.core dlaf.prop)
+DLAF_addSublibrary(
+  solver SOURCES solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>
+  LIBRARIES dlaf.core
+)
 
 # Define DLAF's complete library
 add_library(
   DLAF
-  $<TARGET_OBJECTS:dlaf.core_obj>
-  $<TARGET_OBJECTS:dlaf.auxiliary_obj>
-  $<TARGET_OBJECTS:dlaf.eigensolver_obj>
-  $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver_obj>
-  $<TARGET_OBJECTS:dlaf.factorization_obj>
-  $<TARGET_OBJECTS:dlaf.multiplication_obj>
-  $<TARGET_OBJECTS:dlaf.permutations_obj>
-  $<TARGET_OBJECTS:dlaf.solver_obj>
+  $<TARGET_OBJECTS:dlaf.core_object>
+  $<TARGET_OBJECTS:dlaf.auxiliary_object>
+  $<TARGET_OBJECTS:dlaf.eigensolver_object>
+  $<TARGET_OBJECTS:dlaf.tridiagonal_eigensolver_object>
+  $<TARGET_OBJECTS:dlaf.factorization_object>
+  $<TARGET_OBJECTS:dlaf.multiplication_object>
+  $<TARGET_OBJECTS:dlaf.permutations_object>
+  $<TARGET_OBJECTS:dlaf.solver_object>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_add_warnings(DLAF)

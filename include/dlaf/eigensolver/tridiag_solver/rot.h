@@ -89,14 +89,10 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
                                 dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
   }();
 
-  auto givens_rots_fn = [comm_row, mb, dist, dist_sub](const std::vector<GivensRotation<T>>& rots,
-                                                       auto&& tiles, [[maybe_unused]] auto&&... ts) {
+  auto givens_rots_fn = [comm_row, mb, dist, dist_sub](std::vector<GivensRotation<T>> rots,
+                                                       std::vector<matrix::Tile<T, D>> tiles,
+                                                       matrix::Tile<T, D> tile_ws) {
     const SizeType m = dist_sub.localSize().rows();
-
-    const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
-                                       dist.rankIndex(), dist.sourceRankIndex());
-    // TODO allocate just sub-range
-    matrix::Panel<Coord::Col, T, D> workspace(dist_ws);
 
     for (const GivensRotation<T>& rot : rots) {
       const SizeType j_x = rot.i / mb;
@@ -112,8 +108,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         continue;
 
       // TODO assume column layout and operate on the full column? also workspace must obey
-      auto&& tile_ws = workspace({0, 0}).get();
-      const auto& tile_x = [&]() -> matrix::Tile<T, Device::CPU> const& {
+      const auto& tile_x = [&]() -> matrix::Tile<T, D> const& {
         if (hasX) {
           const LocalTileIndex loc_tile{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
                                         dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(rot.i)};
@@ -122,7 +117,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         }
         return tile_ws;
       }();
-      const auto& tile_y = [&]() -> matrix::Tile<T, Device::CPU> const& {
+      const auto& tile_y = [&]() -> matrix::Tile<T, D> const& {
         if (hasY) {
           const LocalTileIndex loc_tile{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
                                         dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(rot.j)};
@@ -159,14 +154,26 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       T* x = hasX ? tile_x.ptr(idx_x) : tile_ws.ptr({0, 0});
       T* y = hasY ? tile_y.ptr(idx_y) : tile_ws.ptr({0, 0});
 
-      tt::sync_wait(ex::when_all_vector(std::move(cps)) |
-                    ex::then([rot, m, x, y]() { blas::rot(m, x, 1, y, 1, rot.c, rot.s); }));
+      tt::sync_wait(di::whenAllLift(ex::when_all_vector(std::move(cps))) |
+                    di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, x, y](auto&&... ts) {
+                      if constexpr (D == Device::CPU)
+                        blas::rot(m, x, 1, y, 1, rot.c, rot.s);
+                      // TODO GPU NOT IMPLEMENTED
+                      // else
+                      //   givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+                    }));
     }
   };
 
+  const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
+                                     dist.rankIndex(), dist.sourceRankIndex());
+  // TODO allocate just sub-range
+  matrix::Panel<Coord::Col, T, D> workspace(dist_ws);
+
   const TileCollector tc{i_begin, i_last};
-  auto sender =
-      di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), givens_rots_fn, std::move(sender));
+  // TODO check if there could be any problem passing just the first tile of workspace (and using the full panel)
+  di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
+                  workspace.readwrite_sender({0, 0})) |
+      di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
 }
 }

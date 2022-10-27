@@ -70,9 +70,9 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 template <class T, Device D>
 auto cuppensDecomposition(Matrix<T, D>& tridiag) {
   namespace ex = pika::execution::experimental;
-  using sender_type = decltype(ex::split(
-      cuppensDecompAsync<T, D>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
-                               tridiag.readwrite_sender(std::declval<LocalTileIndex>()))));
+  using sender_type = decltype(
+      ex::split(cuppensDecompAsync<T, D>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
+                                         tridiag.readwrite_sender(std::declval<LocalTileIndex>()))));
   using vector_type = std::vector<sender_type>;
 
   if (tridiag.nrTiles().rows() == 0)

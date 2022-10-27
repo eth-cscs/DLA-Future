@@ -68,6 +68,17 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     conflicts("+cuda", when="+rocm")
 
+    with when("+rocm"):
+        for val in ROCmPackage.amdgpu_targets:
+            depends_on("pika amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocsolver amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocblas amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("umpire amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+
     def cmake_args(self):
         spec = self.spec
 

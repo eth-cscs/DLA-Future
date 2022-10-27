@@ -32,6 +32,16 @@ with section("parse"):
         "MPIRANKS": '1',
       }
     },
+    "DLAF_addSublibrary": {
+      "pargs": 1,
+      "flags": [],
+      "kwargs": {
+        "SOURCES": '*',
+        "GPU_SOURCES": '*',
+        "COMPILE_OPTIONS": '*',
+        "LIBRARIES": '*',
+      }
+    },
     "DLAF_addPrecompiledHeaders": {
       "pargs": 1,
     },

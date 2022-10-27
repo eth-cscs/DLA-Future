@@ -223,7 +223,12 @@ auto calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, D>& d, Matr
   };
 
   return ex::when_all(std::move(dmax), std::move(zmax)) |
-         di::transform(di::Policy<Backend::MC>(), std::move(tol_fn));
+         di::transform(di::Policy<Backend::MC>(), std::move(tol_fn)) |
+         // TODO: This releases the tiles that are kept in the operation state.
+         // This is a temporary fix and needs to be replaced by a different
+         // adaptor or different lifetime guarantees. This is tracked in
+         // https://github.com/pika-org/pika/issues/479.
+         ex::ensure_started();
 }
 
 // Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index

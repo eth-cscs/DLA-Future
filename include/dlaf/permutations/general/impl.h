@@ -364,6 +364,14 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   comm::Communicator comm = grid.subCommunicator(C);
   const matrix::Distribution& dist = mat_in.distribution();
 
+  comm::Communicator world(MPI_COMM_WORLD);
+  auto debug_barrier = [&, rank = grid.rank()](int i) {
+    std::cout << "MARK " << i << " | RANK " << rank << std::endl;
+    mat_in.waitLocalTiles();
+    mat_out.waitLocalTiles();
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+  };
+
   // Local size and index of subproblem [i_begin, i_end]
   SizeType nb = dist.blockSize().rows();
   SizeType sz_loc = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end - i_begin + 1);
@@ -373,8 +381,7 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   Matrix<SizeType, D> inverse_perms(perms.distribution());
   invertIndex(i_begin, i_end, perms, inverse_perms);
 
-  std::cout << "MARK #1" << std::endl;
-
+  debug_barrier(1);
 
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
@@ -387,18 +394,18 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, perms, ws_index);
   auto recv_counts_sender = initPackingIndex<D, C, false>(comm.size(), dist, ws_index, unpacking_index);
 
-  std::cout << "MARK #2" << std::endl;
+  debug_barrier(2);
 
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, inverse_perms, ws_index);
   auto send_counts_sender = initPackingIndex<D, C, true>(comm.size(), dist, ws_index, packing_index);
 
-  std::cout << "MARK #3" << std::endl;
+  debug_barrier(3);
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(i_loc_begin, packing_index, mat_in, mat_out);
 
-  std::cout << "MARK #4" << std::endl;
+  debug_barrier(4);
 
   if constexpr (C == Coord::Row) {
     // Transpose `mat_out` into `mat_in` (used as a scratchpad)
@@ -408,13 +415,13 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
     std::swap(mat_in, mat_out);
   }
 
-  std::cout << "MARK #5" << std::endl;
+  debug_barrier(5);
 
   // Communicate data
   all2allData(comm, i_loc_begin, sz_loc, std::move(send_counts_sender), mat_in,
               std::move(recv_counts_sender), mat_out);
 
-  std::cout << "MARK #6" << std::endl;
+  debug_barrier(6);
 
   if constexpr (C == Coord::Row) {
     // transpose `mat_out` into `mat_in` (used as a scratchpad)
@@ -424,12 +431,12 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
     std::swap(mat_in, mat_out);
   }
 
-  std::cout << "MARK #7" << std::endl;
+  debug_barrier(7);
 
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(i_loc_begin, unpacking_index, mat_in, mat_out);
 
-  std::cout << "MARK #8" << std::endl;
+  debug_barrier(8);
 }
 
 }

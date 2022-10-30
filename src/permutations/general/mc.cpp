@@ -13,8 +13,8 @@
 namespace dlaf::permutations::internal {
 
 DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, float)
-DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, double)
-DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<double>)
+//DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, double)
+//DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<float>)
+//DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::MC, Device::CPU, std::complex<double>)
 
 }

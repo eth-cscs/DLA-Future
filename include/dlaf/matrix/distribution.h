@@ -270,7 +270,8 @@ public:
 
   /// Returns the local index in current process of the global tile
   /// whose index is the smallest index larger or equal @p global_tile
-  /// and which is stored in current process.
+  /// and which is stored in current process. If there is no such tile
+  /// index, the local tile grid size along @rc is returned.
   ///
   /// @pre 0 <= global_tile <= nrTiles().get<rc>().
   template <Coord rc>
@@ -278,6 +279,21 @@ public:
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
+                                                     rank_index_.get<rc>(),
+                                                     source_rank_index_.get<rc>());
+  }
+
+  /// Returns the local index in process @p rank of global tile
+  /// whose index is the biggest index smaller or equal @p global_tile
+  /// and which is stored in process @p rank. If there is no such tile
+  /// index, -1 is returned.
+  ///
+  /// @pre 0 <= global_tile <= nrTiles().get<rc>().
+  template <Coord rc>
+  SizeType prevLocalTileFromGlobalTile(SizeType global_tile) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
+                      global_nr_tiles_.get<rc>());
+    return util::matrix::prevLocalTileFromGlobalTile(global_tile, grid_size_.get<rc>(),
                                                      rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>());
   }
@@ -325,9 +341,41 @@ public:
   /// Returns the global element distance between tiles along the @p rc coordinate
   template <Coord rc>
   SizeType globalTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
-    DLAF_ASSERT(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
     return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) -
            globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+  }
+
+  /// Returns the global element size of the region between global tile indices @p i_begin and @p i_end
+  /// (including) along the @p rc coordinate
+  template <Coord rc>
+  SizeType globalElementSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) {
+    DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(0 <= i_begin && i_end < global_nr_tiles_.get<rc>(), i_begin, i_end);
+    SizeType n = size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, n - i_end * nb);  // size of last tile along `rc`
+    return (i_end - i_begin) * nb + nbr;
+  }
+
+  /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
+  /// (including) along the @p rc coordinate
+  template <Coord rc>
+  SizeType localSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) {
+    DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(0 <= i_begin && i_end < global_nr_tiles_.get<rc>(), i_begin, i_end);
+
+    SizeType i_loc_begin = nextLocalTileFromGlobalTile<rc>(i_begin);
+    SizeType i_loc_end = prevLocalTileFromGlobalTile<rc>(i_end);
+
+    if (i_loc_begin > i_loc_end)
+      return 0;
+
+    SizeType l = local_size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, l - i_loc_end * nb);  // size of last local tile along `rc`
+
+    return (i_loc_end - i_loc_begin) * nb + nbr;
   }
 
 private:

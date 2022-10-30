@@ -28,12 +28,12 @@ struct Permutations {
 /// ---- ETI
 #define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \
   KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col>; \
-  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row>;
+//  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row>;
 
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)
+// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+// DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_GPU
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)

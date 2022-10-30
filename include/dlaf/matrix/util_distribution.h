@@ -89,6 +89,11 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, int grid_size, int
     return -1;
 }
 
+/// Renumbers (remaps) ranks such that src_rank is 0.
+inline int remapSourceRankToZero(int rank, int src_rank, int grid_size) {
+  return (rank + grid_size - src_rank) % grid_size;
+}
+
 /// Returns the local index in process @p rank of global tile
 /// whose index is the smallest index larger or equal @p global_tile
 /// and which is stored in process @p rank.
@@ -104,16 +109,39 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size,
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
 
-  // Renumber ranks such that src_rank is 0.
-  int rank_to_src = (rank + grid_size - src_rank) % grid_size;
+  int rank_to_src = remapSourceRankToZero(rank, src_rank, grid_size);
   SizeType owner_to_src = global_tile % grid_size;
-
   SizeType local_tile = global_tile / grid_size;
 
   if (rank_to_src < owner_to_src)
-    return local_tile + 1;
-  else
-    return local_tile;
+    ++local_tile;
+
+  return local_tile;
+}
+
+/// Returns the local index in process @p rank of global tile
+/// whose index is the biggest index smaller or equal @p global_tile
+/// and which is stored in process @p rank.
+///
+/// @pre 0 <= global_tile,
+/// @pre 0 < grid_size,
+/// @pre 0 <= rank < grid_size,
+/// @pre 0 <= src_rank < grid_size.
+inline SizeType prevLocalTileFromGlobalTile(SizeType global_tile, int grid_size, int rank,
+                                            int src_rank) {
+  DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
+  DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
+
+  int rank_to_src = remapSourceRankToZero(rank, src_rank, grid_size);
+  SizeType owner_to_src = global_tile % grid_size;
+  SizeType local_tile = global_tile / grid_size;
+
+  if (rank_to_src > owner_to_src)
+    --local_tile;
+
+  return local_tile;
 }
 
 /// Returns the global tile index of the tile that has index @p local_tile

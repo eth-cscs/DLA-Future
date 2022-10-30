@@ -89,11 +89,13 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 
-TYPED_TEST(PermutationsDistTestMC, Columns) {
-  for (const auto& comm_grid : this->commGrids()) {
+TEST(PermutationsDistTestMC, Columns) {
+  using TypeParam = float;
+      CommunicatorGrid comm_grid (MPI_COMM_WORLD, 3, 2, common::Ordering::RowMajor);
+  //for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end] : params) {
       testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
       pika::threads::get_thread_manager().wait();
     }
-  }
+  //}
 }

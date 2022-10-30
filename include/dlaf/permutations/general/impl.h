@@ -278,7 +278,7 @@ void applyPackingIndex(SizeType i_loc_begin, Matrix<const SizeType, D>& index_ma
 
   SizeType tile_grid_sz = index_dist.localNrTiles().rows();
   LocalTileIndex index_begin(0, 0);
-  LocalTileSize index_sz = index_map.distribution().localNrTiles();
+  LocalTileSize index_sz = index_dist.localNrTiles();
   LocalTileIndex mat_begin(i_loc_begin, i_loc_begin);
   LocalTileSize mat_sz(tile_grid_sz, tile_grid_sz);
   auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(index_begin, index_sz, index_map)),
@@ -366,16 +366,25 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
 
   comm::Communicator world(MPI_COMM_WORLD);
   auto debug_barrier = [&, rank = grid.rank()](int i) {
-    std::cout << "MARK " << i << " | RANK " << rank << std::endl;
     mat_in.waitLocalTiles();
     mat_out.waitLocalTiles();
     DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+    std::cout << "MARK " << i << " | RANK " << rank << std::endl;
   };
 
   // Local size and index of subproblem [i_begin, i_end]
   SizeType nb = dist.blockSize().rows();
-  SizeType sz_loc = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end - i_begin + 1);
-  SizeType i_loc_begin = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin);
+  SizeType i_loc_begin = dist.nextLocalTileFromGlobalTile<C>(i_begin);
+  SizeType i_loc_end = dist.prevLocalTileFromGlobalTile<C>(i_end);
+  SizeType sz_loc = dist.localSizeFromGlobalTileIndexRange<C>(i_end, i_begin);
+
+  // if there are no tiles in this rank return
+  // TODO: this is wrong, the rank still needs to participate in the all2all call
+  if (sz_loc == 0)
+    return;
+
+  LocalTileIndex mat_begin(i_loc_begin, i_loc_begin);
+  LocalTileSize mat_sz(i_loc_end + 1, i_loc_end + 1);
 
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());

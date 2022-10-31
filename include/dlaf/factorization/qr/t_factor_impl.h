@@ -30,6 +30,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/views.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -101,7 +102,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
                                      std::move(gemv_func),
-                                     ex::when_all(ex::keep_future(tile_vi), ex::keep_future(taus),
+                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
+                                                  dlaf::internal::keepFuture(taus),
                                                   std::forward<TSender>(tile_t)));
   }
 
@@ -198,8 +200,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
                                                          pika::execution::thread_priority::high),
                                                      std::move(gemv_func),
-                                                     ex::when_all(ex::keep_future(tile_vi),
-                                                                  ex::keep_future(taus),
+                                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
+                                                                  dlaf::internal::keepFuture(taus),
                                                                   std::forward<TSender>(tile_t)));
   }
 

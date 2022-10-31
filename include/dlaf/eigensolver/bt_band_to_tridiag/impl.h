@@ -530,6 +530,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
   using common::iterate_range2d;
   using common::RoundRobin;
+  using dlaf::internal::keepFuture;
   using matrix::Panel;
   using namespace bt_tridiag;
 
@@ -609,8 +610,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
       auto [tile_v, tile_w] =
           helperBackend.computeVW(ij, helper,
-                                  ex::keep_future(splitTile(mat_hh.read(ij), helper.specHHCompact())),
-                                  mat_v, mat_t, mat_w);
+                                  keepFuture(splitTile(mat_hh.read(ij), helper.specHHCompact())), mat_v,
+                                  mat_t, mat_w);
 
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(ij.row(), j_e);
@@ -619,8 +620,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
         if (not helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                           ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+              ex::when_all(keepFuture(splitTile(tile_v, helper.topPart().specHH())),
+                           keepFuture(splitTile(tile_w, helper.topPart().specHH())),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
                            splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
@@ -632,9 +633,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           auto tile_vs = splitTile(tile_v, {helper.topPart().specHH(), helper.bottomPart().specHH()});
           auto tile_ws = splitTile(tile_w, {helper.topPart().specHH(), helper.bottomPart().specHH()});
           ex::start_detached(
-              ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
-                           ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
-                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
+              ex::when_all(keepFuture(tile_vs[0]), keepFuture(tile_vs[1]), keepFuture(tile_ws[0]),
+                           keepFuture(tile_ws[1]), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
                            splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
                            splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
                                      helper.bottomPart().specEV(sz_e.cols()))) |
@@ -661,6 +661,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
   using common::iterate_range2d;
   using common::RoundRobin;
+  using dlaf::internal::keepFuture;
   using matrix::Panel;
   using namespace bt_tridiag;
 
@@ -810,8 +811,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         if (rank.col() == rankHH.col()) {
           ex::start_detached(
               comm::scheduleSendBcast(mpi_chain_row(),
-                                      ex::keep_future(
-                                          splitTile(mat_hh.read(ij_g), helper.specHHCompact()))));
+                                      keepFuture(splitTile(mat_hh.read(ij_g), helper.specHHCompact()))));
         }
         else {
           ex::start_detached(
@@ -829,7 +829,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                              : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, ex::keep_future(tile_hh)));
+          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, keepFuture(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
           ex::start_detached(
@@ -842,8 +842,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                          ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                          : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(indexing_helper.wsIndexHH(), helper,
-                                  ex::keep_future(std::move(tile_hh)), mat_v, mat_t, mat_w);
+          helperBackend.computeVW(indexing_helper.wsIndexHH(), helper, keepFuture(std::move(tile_hh)),
+                                  mat_v, mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e.localNrTiles().cols();
@@ -865,9 +865,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
             const auto tile_ws = splitTile(tile_w, partsSpecs);
 
             ex::start_detached(
-                ex::when_all(ex::keep_future(tile_vs[0]), ex::keep_future(tile_vs[1]),
-                             ex::keep_future(tile_ws[0]), ex::keep_future(tile_ws[1]),
-                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
+                ex::when_all(keepFuture(tile_vs[0]), keepFuture(tile_vs[1]), keepFuture(tile_ws[0]),
+                             keepFuture(tile_ws[1]), splitTile(mat_w2(idx_w2), helper.specW2(nb)),
                              splitTile(mat_e(idx_e), helper.topPart().specEV(nb)),
                              splitTile(mat_e(LocalTileIndex{idx_e.row() + 1, j_e}),
                                        helper.bottomPart().specEV(nb))) |
@@ -879,8 +878,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           // SINGLE ROW (edge-case)
           else {
             ex::start_detached(
-                ex::when_all(ex::keep_future(splitTile(tile_v, helper.topPart().specHH())),
-                             ex::keep_future(splitTile(tile_w, helper.topPart().specHH())),
+                ex::when_all(keepFuture(splitTile(tile_v, helper.topPart().specHH())),
+                             keepFuture(splitTile(tile_w, helper.topPart().specHH())),
                              splitTile(mat_w2(idx_w2), helper.specW2(nb)),
                              splitTile(mat_e(idx_e), helper.topPart().specEV(nb))) |
                 dlaf::internal::transform<
@@ -907,23 +906,22 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           // W2 = V* . E
           ex::start_detached(
               dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                                          ex::keep_future(splitTile(tile_v, part.specHH())),
+                                          keepFuture(splitTile(tile_v, part.specHH())),
                                           splitTile(mat_e(idx_e), part.specEV(nb)), T(0),
                                           splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
               dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
 
           // Compute final W2 by adding the contribution from the partner rank
           ex::start_detached(comm::scheduleAllSumP2P<B>(mpi_col_comm, rankPartner, tag,
-                                                        ex::keep_future(splitTile(mat_w2tmp.read(idx_w2),
-                                                                                  helper.specW2(nb))),
+                                                        keepFuture(splitTile(mat_w2tmp.read(idx_w2),
+                                                                             helper.specW2(nb))),
                                                         splitTile(mat_w2(idx_w2), helper.specW2(nb))));
 
           // E -= W . W2
           ex::start_detached(
               dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),
-                                          ex::keep_future(splitTile(tile_w, part.specHH())),
-                                          ex::keep_future(
-                                              splitTile(mat_w2.read(idx_w2), helper.specW2(nb))),
+                                          keepFuture(splitTile(tile_w, part.specHH())),
+                                          keepFuture(splitTile(mat_w2.read(idx_w2), helper.specW2(nb))),
                                           T(1), splitTile(mat_e(idx_e), part.specEV(nb))) |
               dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
         }

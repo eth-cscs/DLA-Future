@@ -30,7 +30,12 @@ pika::future<ReturnTileType> setPromiseTileFuture(
 
   DLAF_ASSERT_HEAVY(old_future.valid(), "");
 
-  // This uses keep_future because we want to handle exceptions in a special way
+  // This uses keep_future because we want to handle exceptions in a special
+  // way. This is special case where we want to use keep_future on a regular
+  // future. This case is ok because we:
+  // 1. are not dealing with Tiles but TileData
+  // 2. are using plain then and don't have special lifetime requirements like
+  //    in transform
   auto set_promise = [p = std::move(p)](pika::future<TileDataType>&& tile) mutable {
     std::exception_ptr current_exception_ptr;
 

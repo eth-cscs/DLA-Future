@@ -27,7 +27,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-using pika::execution::experimental::keep_future;
 using pika::execution::experimental::make_future;
 using pika::execution::experimental::then;
 using pika::this_thread::experimental::sync_wait;
@@ -429,7 +428,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // As one subtile (last_dep) is still alive next_tile is still locked.
   for (std::size_t i = 0; i < subtiles.size(); ++i) {
     if (i != last_dep) {
-      checkSubtile(tile_ptr, sync_wait(keep_future(std::move(subtiles[i]))).get(), specs[i]);
+      checkSubtile(tile_ptr, std::move(subtiles[i]).get(), specs[i]);
       subtiles[i] = {};
     }
   }
@@ -441,7 +440,7 @@ void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTil
   // next_tile_f should be ready.
   {
     std::size_t i = last_dep;
-    checkSubtile(tile_ptr, sync_wait(keep_future(std::move(subtiles[i]))).get(), specs[i]);
+    checkSubtile(tile_ptr, std::move(subtiles[i]).get(), specs[i]);
     subtiles[i] = {};
   }
   EXPECT_TRUE(next_tile_f.is_ready());

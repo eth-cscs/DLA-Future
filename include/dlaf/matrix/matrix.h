@@ -21,6 +21,7 @@
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 #include "dlaf/common/range2d.h"
@@ -193,7 +194,7 @@ public:
   auto read_sender(const LocalTileIndex& index) noexcept {
     // We want to explicitly deal with the shared_future, not the const& to the
     // value.
-    return pika::execution::experimental::keep_future(read(index));
+    return dlaf::internal::keepFuture(read(index));
   }
 
   auto read_sender(const GlobalTileIndex& index) {

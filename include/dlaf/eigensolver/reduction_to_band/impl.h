@@ -36,6 +36,7 @@
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/util_matrix.h"
 
@@ -298,6 +299,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
                           matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
 
+  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   // Note:
@@ -323,9 +325,9 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
     // single task doing both.
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
-    ex::start_detached(dlaf::internal::whenAllLift(ex::keep_future(splitTile(mat_a.read(i), spec)),
-                                                   v.readwrite_sender(i)) |
-                       matrix::copy(p));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(keepFuture(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
+        matrix::copy(p));
     ex::start_detached(
         dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) |
         tile::laset(p));
@@ -346,9 +348,9 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        tile, memory provided internally by the panel is used as support. In this way, the two
     //        subtiles used in the operation belong to different tiles.
     if constexpr (force_copy)
-      ex::start_detached(ex::when_all(ex::keep_future(matrix::splitTile(mat_a.read(idx), spec)),
-                                      v.readwrite_sender(idx)) |
-                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
+      ex::start_detached(
+          ex::when_all(keepFuture(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
+          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -359,12 +361,14 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
                   pika::shared_future<matrix::Tile<const T, D>> tile_t) {
   namespace ex = pika::execution::experimental;
 
+  using dlaf::internal::keepFuture;
+
   using pika::execution::thread_priority;
   using namespace blas;
 
   for (const auto& index_i : w.iteratorLocal())
     ex::start_detached(dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
-                                                   T(1), ex::keep_future(tile_t), v.read_sender(index_i),
+                                                   T(1), keepFuture(tile_t), v.read_sender(index_i),
                                                    w.readwrite_sender(index_i)) |
                        tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)));
 }
@@ -389,8 +393,10 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 template <Backend B, Device D, class T>
 void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
-  using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
+
+  using dlaf::internal::keepFuture;
+  using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
 
@@ -412,7 +418,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
       const auto& tile_a = splitTile(a.read(ij), view(ij));
 
       if (is_diagonal_tile) {
-        hemmDiag<B>(thread_priority::high, ex::keep_future(tile_a), w.read_sender(ij),
+        hemmDiag<B>(thread_priority::high, keepFuture(tile_a), w.read_sender(ij),
                     x.readwrite_sender(ij));
       }
       else {
@@ -425,7 +431,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
         {
           const LocalTileIndex index_x(Coord::Row, ij.row());
           const LocalTileIndex index_w(Coord::Row, ij.col());
-          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, ex::keep_future(tile_a),
+          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, keepFuture(tile_a),
                          w.read_sender(index_w), x.readwrite_sender(index_x));
         }
 
@@ -433,7 +439,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
           const LocalTileIndex index_pretended = transposed(ij);
           const LocalTileIndex index_x(Coord::Row, index_pretended.row());
           const LocalTileIndex index_w(Coord::Row, index_pretended.col());
-          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, ex::keep_future(tile_a),
+          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
                          w.read_sender(index_w), x.readwrite_sender(index_x));
         }
       }
@@ -810,6 +816,7 @@ protected:
                  matrix::Panel<Coord::Col, T, Device::CPU>& v) {
     namespace ex = pika::execution::experimental;
 
+    using dlaf::internal::keepFuture;
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
@@ -818,7 +825,7 @@ protected:
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite_sender(i);
       ex::start_detached(
-          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+          ex::when_all(keepFuture(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
     }
   }
@@ -827,6 +834,7 @@ protected:
                    matrix::Matrix<T, Device::GPU>& mat_a) {
     namespace ex = pika::execution::experimental;
 
+    using dlaf::internal::keepFuture;
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
@@ -835,7 +843,7 @@ protected:
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite_sender(i);
       ex::start_detached(
-          ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
+          ex::when_all(keepFuture(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
     }
   }

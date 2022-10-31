@@ -116,6 +116,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       return tile_ws.ptr({0, 0});
     };
 
+    ex::unique_any_sender<> serializer = ex::just();
     for (const GivensRotation<T>& rot : rots) {
       const SizeType j_x = rot.i / mb;
       const SizeType j_y = rot.j / mb;
@@ -151,16 +152,17 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
       // each one computes his own, but just stores either x or y
       // (or both if are on the same rank)
-      tt::sync_wait(
-          di::whenAllLift(ex::when_all_vector(std::move(cps))) |
+      serializer =
+          di::whenAllLift(std::move(serializer), ex::when_all_vector(std::move(cps))) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             if constexpr (D == Device::CPU)
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
             // TODO GPU NOT IMPLEMENTED
             // else
             //   givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
-          }));
+          });
     }
+    tt::sync_wait(std::move(serializer));
   };
 
   const TileCollector tc{i_begin, i_last};

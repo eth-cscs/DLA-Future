@@ -158,6 +158,19 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                                                       std::move(sender)));
 }
 
+template <class T>
+void all2allEmptyData(const comm::Communicator& comm) {
+  namespace ex = pika::execution::experimental;
+
+  auto all2all_f = [comm](MPI_Request* req) {
+    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+    std::vector<int> arr(to_sizet(comm.size()), 0);
+    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(nullptr, arr.data(), arr.data(), dtype, nullptr, arr.data(),
+                                        arr.data(), dtype, comm, req));
+  };
+  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), ex::just());
+}
+
 // Note: matrices are assumed to be in column-major layout!
 //
 template <class T, Device D, class SendCountsSender, class RecvCountsSender>
@@ -378,10 +391,11 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   SizeType i_loc_end = dist.prevLocalTileFromGlobalTile<C>(i_end);
   SizeType sz_loc = dist.localSizeFromGlobalTileIndexRange<C>(i_end, i_begin);
 
-  // if there are no tiles in this rank return
-  // TODO: this is wrong, the rank still needs to participate in the all2all call
-  if (sz_loc == 0)
+  // if there are no tiles in this rank participate in the all2all call and return
+  if (sz_loc == 0) {
+    all2allEmptyData<T>(comm);
     return;
+  }
 
   LocalTileIndex mat_begin(i_loc_begin, i_loc_begin);
   LocalTileSize mat_sz(i_loc_end + 1, i_loc_end + 1);

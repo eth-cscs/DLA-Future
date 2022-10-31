@@ -349,7 +349,7 @@ public:
   /// Returns the global element size of the region between global tile indices @p i_begin and @p i_end
   /// (including) along the @p rc coordinate
   template <Coord rc>
-  SizeType globalElementSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) {
+  SizeType globalElementSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
     DLAF_ASSERT_HEAVY(0 <= i_begin && i_end < global_nr_tiles_.get<rc>(), i_begin, i_end);
     SizeType n = size_.get<rc>();
@@ -361,7 +361,7 @@ public:
   /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
   /// (including) along the @p rc coordinate
   template <Coord rc>
-  SizeType localSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) {
+  SizeType localSizeFromGlobalTileIndexRange(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
     DLAF_ASSERT_HEAVY(0 <= i_begin && i_end < global_nr_tiles_.get<rc>(), i_begin, i_end);
 

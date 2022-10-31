@@ -374,7 +374,7 @@ template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
-  comm::Communicator comm = grid.subCommunicator(C);
+  comm::Communicator comm = grid.subCommunicator(orthogonal(C));
   const matrix::Distribution& dist = mat_in.distribution();
 
   comm::Communicator world(MPI_COMM_WORLD);
@@ -391,7 +391,7 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   SizeType i_loc_end = dist.prevLocalTileFromGlobalTile<C>(i_end);
   SizeType sz_loc = dist.localSizeFromGlobalTileIndexRange<C>(i_end, i_begin);
 
-  // if there are no tiles in this rank participate in the all2all call and return
+  // if there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc == 0) {
     all2allEmptyData<T>(comm);
     return;

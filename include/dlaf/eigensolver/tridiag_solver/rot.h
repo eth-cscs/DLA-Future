@@ -157,9 +157,9 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             if constexpr (D == Device::CPU)
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
-            // TODO GPU NOT IMPLEMENTED
-            // else
-            //   givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+            else
+              // givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+              DLAF_STATIC_UNIMPLEMENTED(T);
           });
     }
     tt::sync_wait(std::move(serializer));

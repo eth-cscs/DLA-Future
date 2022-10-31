@@ -158,27 +158,62 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
                                                       std::move(sender)));
 }
 
+template <class T, Device D>
+auto whenAllReadWriteTilesArray(SizeType i_loc_begin, SizeType i_loc_end, Matrix<T, D>& matrix) {
+  SizeType nrtiles = i_loc_end - i_loc_begin + 1;
+  namespace ex = pika::execution::experimental;
+  namespace ut = matrix::util;
+  return ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_loc_begin, i_loc_begin),
+                                                       LocalTileSize(nrtiles, nrtiles), matrix));
+}
+
+template <class T, Device D>
+auto whenAllReadWriteTilesArray(Matrix<T, D>& matrix) {
+  namespace ex = pika::execution::experimental;
+  namespace ut = matrix::util;
+  return ex::when_all_vector(
+      ut::collectReadWriteTiles(LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix));
+}
+
+template <class T, Device D>
+auto whenAllReadOnlyTilesArray(SizeType i_loc_begin, SizeType i_loc_end, Matrix<const T, D>& matrix) {
+  SizeType nrtiles = i_loc_end - i_loc_begin + 1;
+  namespace ex = pika::execution::experimental;
+  namespace ut = matrix::util;
+  return ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_loc_begin, i_loc_begin),
+                                                  LocalTileSize(nrtiles, nrtiles), matrix));
+}
+
+template <class T, Device D>
+auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
+  namespace ex = pika::execution::experimental;
+  namespace ut = matrix::util;
+  return ex::when_all_vector(
+      ut::collectReadTiles(LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix));
+}
+
+// No data is sent or received but the processes participates in the collective call
 template <class T>
 void all2allEmptyData(const comm::Communicator& comm) {
   namespace ex = pika::execution::experimental;
 
-  auto all2all_f = [comm](MPI_Request* req) {
+  auto all2all_f = [comm](const std::vector<int>& arr, MPI_Request* req) {
     MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    std::vector<int> arr(to_sizet(comm.size()), 0);
-    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(nullptr, arr.data(), arr.data(), dtype, nullptr, arr.data(),
+    // Avoid buffer aliasing error reported when send_ptr and recv_ptr are the same.
+    int irrelevant = 42;
+    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(nullptr, arr.data(), arr.data(), dtype, &irrelevant, arr.data(),
                                         arr.data(), dtype, comm, req));
   };
-  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), ex::just());
+  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f),
+                                           ex::just(std::vector<int>(to_sizet(comm.size()), 0)));
 }
 
 // Note: matrices are assumed to be in column-major layout!
 //
 template <class T, Device D, class SendCountsSender, class RecvCountsSender>
-void all2allData(const comm::Communicator& comm, SizeType i_loc_begin, SizeType sz_loc,
-                 SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
-                 RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
-  namespace ut = matrix::util;
-  namespace sr = pika::execution::experimental;
+void all2allData(const comm::Communicator& comm, SizeType sz_loc, SendCountsSender&& send_counts_sender,
+                 Matrix<T, D>& send_mat, RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
+  namespace ex = pika::execution::experimental;
 
   auto all2all_f = [comm, sz_loc](std::vector<int>& send_counts,
                                   const std::vector<matrix::Tile<T, D>>& send_tiles,
@@ -207,13 +242,10 @@ void all2allData(const comm::Communicator& comm, SizeType i_loc_begin, SizeType 
                                         req));
   };
 
-  LocalTileIndex begin(i_loc_begin, i_loc_begin);
-  LocalTileSize sz(sz_loc, sz_loc);
-
-  auto sender = sr::when_all(std::forward<SendCountsSender>(send_counts_sender),
-                             sr::when_all_vector(ut::collectReadWriteTiles(begin, sz, send_mat)),
+  auto sender = ex::when_all(std::forward<SendCountsSender>(send_counts_sender),
+                             whenAllReadWriteTilesArray(send_mat),
                              std::forward<RecvCountsSender>(recv_counts_sender),
-                             sr::when_all_vector(ut::collectReadWriteTiles(begin, sz, recv_mat)));
+                             whenAllReadWriteTilesArray(recv_mat));
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
 }
 
@@ -227,12 +259,11 @@ void all2allData(const comm::Communicator& comm, SizeType i_loc_begin, SizeType 
 template <Device D, Coord C, bool PackBasedOnGlobalIndex>
 auto initPackingIndex(int nranks, const matrix::Distribution& dist,
                       Matrix<const SizeType, D>& loc2gl_index, Matrix<SizeType, D>& packing_index) {
-  namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto counts_fn = [nranks, dist](const auto& loc2gl_index_tiles, const auto& packing_index_tiles) {
-    SizeType len = dist.localSize().get<C>();
+  auto counts_fn = [nranks, dist, len = packing_index.size().rows()](const auto& loc2gl_index_tiles,
+                                                                     const auto& packing_index_tiles) {
     const SizeType* in = loc2gl_index_tiles[0].get().ptr();
     SizeType* out = packing_index_tiles[0].ptr();
 
@@ -257,10 +288,8 @@ auto initPackingIndex(int nranks, const matrix::Distribution& dist,
     return counts;
   };
 
-  LocalTileIndex begin(0, 0);
-  LocalTileSize end = loc2gl_index.distribution().localNrTiles();
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, end, loc2gl_index)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(begin, end, packing_index)));
+  auto sender =
+      ex::when_all(whenAllReadOnlyTilesArray(loc2gl_index), whenAllReadWriteTilesArray(packing_index));
   return di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>{},
                                                                 std::move(counts_fn), std::move(sender));
 }
@@ -280,28 +309,21 @@ void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribut
 }
 
 // @param index_map a column matrix that represents a map from local `out` to local `in` indices
-template <class T, Device D, Coord C>
-void applyPackingIndex(SizeType i_loc_begin, Matrix<const SizeType, D>& index_map, Matrix<T, D>& in,
-                       Matrix<T, D>& out) {
-  namespace ut = matrix::util;
+// @param in
+template <class T, Device D, Coord C, class IndexMapSender, class InSender, class OutSender>
+void applyPackingIndex(const matrix::Distribution& index_dist, IndexMapSender&& index_map, InSender&& in,
+                       OutSender&& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  const matrix::Distribution& index_dist = index_map.distribution();
-
-  SizeType tile_grid_sz = index_dist.localNrTiles().rows();
-  LocalTileIndex index_begin(0, 0);
-  LocalTileSize index_sz = index_dist.localNrTiles();
-  LocalTileIndex mat_begin(i_loc_begin, i_loc_begin);
-  LocalTileSize mat_sz(tile_grid_sz, tile_grid_sz);
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(index_begin, index_sz, index_map)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(mat_begin, mat_sz, in)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(mat_begin, mat_sz, out)));
+  auto sender = ex::when_all(std::forward<IndexMapSender>(index_map), std::forward<InSender>(in),
+                             std::forward<OutSender>(out));
 
   auto permute_fn = [sz = index_dist.size().rows(),
                      nb = index_dist.blockSize().rows()](const auto& index_tile_futs,
                                                          const auto& mat_in_tiles,
                                                          const auto& mat_out_tiles, auto&&... ts) {
+    std::cout << "ALIVE!!" << std::endl;
     matrix::Distribution subm_dist(LocalElementSize(sz, sz), TileElementSize(nb, nb));
     const SizeType* i_ptr = index_tile_futs[0].get().ptr();
     applyPermutations<T, D, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
@@ -377,19 +399,15 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   comm::Communicator comm = grid.subCommunicator(orthogonal(C));
   const matrix::Distribution& dist = mat_in.distribution();
 
-  comm::Communicator world(MPI_COMM_WORLD);
-  auto debug_barrier = [&, rank = grid.rank()](int i) {
-    mat_in.waitLocalTiles();
-    mat_out.waitLocalTiles();
-    DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
-    std::cout << "MARK " << i << " | RANK " << rank << std::endl;
-  };
-
   // Local size and index of subproblem [i_begin, i_end]
   SizeType nb = dist.blockSize().rows();
   SizeType i_loc_begin = dist.nextLocalTileFromGlobalTile<C>(i_begin);
   SizeType i_loc_end = dist.prevLocalTileFromGlobalTile<C>(i_end);
-  SizeType sz_loc = dist.localSizeFromGlobalTileIndexRange<C>(i_end, i_begin);
+  SizeType sz_loc = dist.localSizeFromGlobalTileIndexRange<C>(i_begin, i_end);
+
+  std::cout << "i_loc_begin " << i_loc_begin << std::endl;
+  std::cout << "i_loc_end " << i_loc_end << std::endl;
+  std::cout << "sz_loc " << sz_loc << std::endl;
 
   // if there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc == 0) {
@@ -397,67 +415,86 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
     return;
   }
 
-  LocalTileIndex mat_begin(i_loc_begin, i_loc_begin);
-  LocalTileSize mat_sz(i_loc_end + 1, i_loc_end + 1);
-
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());
   invertIndex(i_begin, i_end, perms, inverse_perms);
 
-  debug_barrier(1);
-
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
-  LocalElementSize loc_index_sz(sz_loc, 1);
-  TileElementSize loc_index_block_sz(nb, 1);
-  Matrix<SizeType, D> ws_index(loc_index_sz, loc_index_block_sz);
-  Matrix<SizeType, D> packing_index(loc_index_sz, loc_index_block_sz);
-  Matrix<SizeType, D> unpacking_index(loc_index_sz, loc_index_block_sz);
+  matrix::Distribution index_dist(LocalElementSize(sz_loc, 1), TileElementSize(nb, 1));
+  Matrix<SizeType, D> ws_index(index_dist);
+  Matrix<SizeType, D> packing_index(index_dist);
+  Matrix<SizeType, D> unpacking_index(index_dist);
 
+  // Local matrices used for packing data contiguously for communication. Both matrices are in column-major order.
+  matrix::Distribution comm_dist(LocalElementSize(sz_loc, sz_loc), TileElementSize(nb, nb));
+  Matrix<T, D> mat_send(comm_dist);
+  Matrix<T, D> mat_recv(comm_dist);
+
+  comm::Communicator world(MPI_COMM_WORLD);
+  auto debug_barrier = [&, rank = grid.rank()](int i) {
+    mat_in.waitLocalTiles();
+    mat_out.waitLocalTiles();
+    ws_index.waitLocalTiles();
+    packing_index.waitLocalTiles();
+    unpacking_index.waitLocalTiles();
+    mat_send.waitLocalTiles();
+    mat_recv.waitLocalTiles();
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+    std::cout << "MARK " << i << " | RANK " << rank << std::endl;
+  };
+  namespace ex = pika::execution::experimental;
+
+  // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, perms, ws_index);
-  auto recv_counts_sender = initPackingIndex<D, C, false>(comm.size(), dist, ws_index, unpacking_index);
+  debug_barrier(1);
+  auto recv_counts_sender =
+      ex::ensure_started(initPackingIndex<D, C, false>(comm.size(), dist, ws_index, unpacking_index));
 
   debug_barrier(2);
 
+  // Initiaze the packing index
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin, dist, inverse_perms, ws_index);
-  auto send_counts_sender = initPackingIndex<D, C, true>(comm.size(), dist, ws_index, packing_index);
+  auto send_counts_sender =
+      ex::ensure_started(initPackingIndex<D, C, true>(comm.size(), dist, ws_index, packing_index));
 
   debug_barrier(3);
 
   // Pack local rows or columns to be sent from this rank
-  applyPackingIndex<T, D, C>(i_loc_begin, packing_index, mat_in, mat_out);
+  applyPackingIndex<T, D, C>(index_dist, whenAllReadOnlyTilesArray(packing_index),
+                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             whenAllReadWriteTilesArray(mat_send));
 
   debug_barrier(4);
 
   if constexpr (C == Coord::Row) {
     // Transpose `mat_out` into `mat_in` (used as a scratchpad)
-    transposeLocalParts(i_loc_begin, sz_loc, mat_out, mat_in);
-  }
-  else {
-    std::swap(mat_in, mat_out);
+    transposeLocalParts(i_loc_begin, sz_loc, mat_send, mat_recv);
+    std::swap(mat_send, mat_recv);
   }
 
   debug_barrier(5);
 
   // Communicate data
-  all2allData(comm, i_loc_begin, sz_loc, std::move(send_counts_sender), mat_in,
-              std::move(recv_counts_sender), mat_out);
+  all2allData(comm, sz_loc, std::move(send_counts_sender), mat_send, std::move(recv_counts_sender),
+              mat_recv);
 
   debug_barrier(6);
 
   if constexpr (C == Coord::Row) {
     // transpose `mat_out` into `mat_in` (used as a scratchpad)
-    transposeLocalParts(i_loc_begin, sz_loc, mat_out, mat_in);
-  }
-  else {
-    std::swap(mat_in, mat_out);
+    transposeLocalParts(i_loc_begin, sz_loc, mat_recv, mat_send);
+    std::swap(mat_send, mat_recv);
   }
 
   debug_barrier(7);
 
   // Unpack local rows or columns received on this rank
-  applyPackingIndex<T, D, C>(i_loc_begin, unpacking_index, mat_in, mat_out);
+  applyPackingIndex<T, D, C>(index_dist, whenAllReadOnlyTilesArray(unpacking_index),
+                             whenAllReadWriteTilesArray(mat_recv),
+                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 
   debug_barrier(8);
 }

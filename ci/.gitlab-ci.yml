@@ -19,6 +19,8 @@ stages:
     - trying
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
+    # Custom spack sha used to make an umpire fix available
+    # (https://github.com/aurianer/spack/commit/e4f4b70ed153167c06aa63eefa41d975394af066)
     SPACK_SHA: e4f4b70ed153167c06aa63eefa41d975394af066
     SPACK_DLAF_REPO: ./spack
   before_script:

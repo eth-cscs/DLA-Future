@@ -18,6 +18,8 @@
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
+#include "dlaf/matrix/print_csv.h"
+
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
@@ -35,7 +37,8 @@ TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {
     // n, nb, i_begin, i_end
-    {100, 10, 0, 9},
+    {6, 2, 0, 2},
+    {10, 3, 0, 3}
 };
 
 template <class T, Device D, Coord C>
@@ -43,7 +46,8 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
                           SizeType i_end) {
   const GlobalElementSize size(n, n);
   const TileElementSize block_size(nb, nb);
-  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  // Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  Index2D src_rank_index(0, 0);
 
   Distribution dist(size, block_size, grid.size(), grid.rank(), src_rank_index);
 
@@ -64,6 +68,13 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
     return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
   });
   dlaf::matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, mat_out_h);
+
+  Matrix<T, Device::CPU> mat_print_in(LocalElementSize(n, n), TileElementSize(nb, nb));
+  dlaf::matrix::util::set(mat_print_in, [](GlobalElementIndex i) {
+    return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
+  });
+  matrix::print(format::csv{}, "INPUT", mat_print_in);
+  matrix::print(format::csv{}, "INDEX", perms_h);
 
   {
     matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
@@ -91,11 +102,11 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
 
 TEST(PermutationsDistTestMC, Columns) {
   using TypeParam = float;
-      CommunicatorGrid comm_grid (MPI_COMM_WORLD, 3, 2, common::Ordering::RowMajor);
-  //for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [n, nb, i_begin, i_end] : params) {
-      testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
-      pika::threads::get_thread_manager().wait();
-    }
+  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::RowMajor);
+  // for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& [n, nb, i_begin, i_end] : params) {
+    testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+    pika::threads::get_thread_manager().wait();
+  }
   //}
 }

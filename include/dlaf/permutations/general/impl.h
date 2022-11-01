@@ -29,6 +29,8 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
+#include "dlaf/matrix/print_csv.h"
+
 #include <mpi.h>
 #include "pika/algorithm.hpp"
 
@@ -220,21 +222,26 @@ void all2allData(const comm::Communicator& comm, LocalElementSize sz_loc,
                                                        std::vector<int>& recv_counts,
                                                        const std::vector<matrix::Tile<T, D>>& recv_tiles,
                                                        MPI_Request* req) {
+    std::size_t nranks = to_sizet(comm.size());
+
+    // datatype to be sent to each rank
+    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+
     // scale by the length of the row or column vectors to get the number of elements sent to each process
     auto mul_const = [len](int num) { return to_int(len) * num; };
     std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
     std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
 
-    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-
-    // send
+    // Note: that was guaranteed to be contiguous on allocation
     T* send_ptr = send_tiles[0].ptr();
-    std::vector<int> send_displs(to_sizet(comm.size()));
+    T* recv_ptr = recv_tiles[0].ptr();
+
+    // send displacements
+    std::vector<int> send_displs(nranks);
     std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
 
-    // recv
-    T* recv_ptr = recv_tiles[0].ptr();
-    std::vector<int> recv_displs(to_sizet(comm.size()));
+    // recv displacements
+    std::vector<int> recv_displs(nranks);
     std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
 
     // All-to-All communication
@@ -268,6 +275,10 @@ auto initPackingIndex(int nranks, const matrix::Distribution& dist,
     const SizeType* in = loc2gl_index_tiles[0].get().ptr();
     SizeType* out = packing_index_tiles[0].ptr();
 
+    for (SizeType i = 0; i < len; ++i) {
+      std::cout << in[i] << std::endl;
+    }
+
     std::vector<int> counts(to_sizet(nranks));
     int offset = 0;
     for (int rank = 0; rank < nranks; ++rank) {
@@ -285,6 +296,17 @@ auto initPackingIndex(int nranks, const matrix::Distribution& dist,
       }
       offset += count;
     }
+
+    if (PackBasedOnGlobalIndex)
+      std::cout << "send ";
+    else
+      std::cout << "recv ";
+
+    for (int i = 0; i < nranks; ++i) {
+      std::cout << counts[i] << " ";
+    }
+
+    std::cout << std::endl;
 
     return counts;
   };
@@ -405,10 +427,6 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   LocalElementSize sz_loc{dist.localSizeFromGlobalTileIndexRange<Coord::Row>(i_begin, i_end),
                           dist.localSizeFromGlobalTileIndexRange<Coord::Col>(i_begin, i_end)};
 
-  std::cout << "i_loc_begin " << i_loc_begin << std::endl;
-  std::cout << "i_loc_end " << i_loc_end << std::endl;
-  std::cout << "sz_loc " << sz_loc << std::endl;
-
   // if there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.get<C>() == 0) {
     all2allEmptyData<T>(comm);
@@ -426,10 +444,15 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   Matrix<SizeType, D> packing_index(index_dist);
   Matrix<SizeType, D> unpacking_index(index_dist);
 
-  // Local matrices used for packing data contiguously for communication. Both matrices are in column-major order.
+  // Local matrices used for packing data for communication. Both matrices are in column-major order. The
+  // particular constructor is used on purpose to guarantee that columns are stored contiguosly, such
+  // that there is no padding and gaps between them.
   matrix::Distribution subm_dist(sz_loc, TileElementSize(nb, nb));
-  Matrix<T, D> mat_send(subm_dist);
-  Matrix<T, D> mat_recv(subm_dist);
+  matrix::LayoutInfo subm_layout =
+      matrix::colMajorLayout(subm_dist.localSize(), subm_dist.blockSize(), sz_loc.rows());
+  Matrix<T, D> mat_send(subm_dist, subm_layout);
+  Matrix<T, D> mat_recv(subm_dist, subm_layout);
+  DLAF_ASSERT(sz_loc.rows() * sz_loc.cols() == subm_layout.minMemSize(), sz_loc);
 
   comm::Communicator world(MPI_COMM_WORLD);
   auto debug_barrier = [&, rank = grid.rank()](int i) {
@@ -477,12 +500,14 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   }
 
   debug_barrier(5);
+  matrix::print(format::csv{}, "MATRIX SEND", mat_send);
 
   // Communicate data
   all2allData<T, D, C>(comm, sz_loc, std::move(send_counts_sender), mat_send,
                        std::move(recv_counts_sender), mat_recv);
 
   debug_barrier(6);
+  matrix::print(format::csv{}, "MATRIX RECV", mat_recv);
 
   // TODO: this needs to be fixed, the local shape may not be square
   if constexpr (C == Coord::Row) {

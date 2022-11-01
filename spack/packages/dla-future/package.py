@@ -79,6 +79,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on("umpire amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
 
+    with when("+cuda"):
+        for val in CudaPackage.cuda_arch_values:
+            depends_on("pika cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
+            depends_on("umpire cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
+
     def cmake_args(self):
         spec = self.spec
 

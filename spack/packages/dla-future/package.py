@@ -110,6 +110,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
+        if "+cuda" in spec:
+            archs = self.spec.variants["cuda_arch"].value
+            if "none" not in archs:
+                arch_str = ";".join(archs)
+                args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

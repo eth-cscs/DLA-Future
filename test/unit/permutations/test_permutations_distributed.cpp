@@ -38,8 +38,8 @@ TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {
     // n, nb, i_begin, i_end
     {6, 2, 0, 2},
-    {10, 3, 0, 3}
-};
+    {10, 3, 0, 3},
+    {17, 5, 0, 3}};
 
 template <class T, Device D, Coord C>
 void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, SizeType i_begin,

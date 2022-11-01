@@ -286,7 +286,12 @@ auto initPackingIndex(int nranks, const matrix::Distribution& dist,
       count = 0;
       for (SizeType i = 0; i < len; ++i) {
         if (dist.rankGlobalElement<C>(in[i]) == rank) {
-          out[offset + count] = i;
+          if constexpr (PackBasedOnGlobalIndex) {
+            out[offset + count] = i;
+          }
+          else {
+            out[i] = offset + count;
+          }
           ++count;
         }
       }
@@ -444,9 +449,9 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   Matrix<SizeType, D> packing_index(index_dist);
   Matrix<SizeType, D> unpacking_index(index_dist);
 
-  // Local matrices used for packing data for communication. Both matrices are in column-major order. The
-  // particular constructor is used on purpose to guarantee that columns are stored contiguosly, such
-  // that there is no padding and gaps between them.
+  // Local matrices used for packing data for communication. Both matrices are in column-major order.
+  // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
+  // such that there is no padding and gaps between them.
   matrix::Distribution subm_dist(sz_loc, TileElementSize(nb, nb));
   matrix::LayoutInfo subm_layout =
       matrix::colMajorLayout(subm_dist.localSize(), subm_dist.blockSize(), sz_loc.rows());
@@ -525,5 +530,4 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
 
   debug_barrier(8);
 }
-
 }

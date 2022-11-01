@@ -20,8 +20,8 @@ stages:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
     # Custom spack sha used to make an umpire fix available
-    # (https://github.com/aurianer/spack/commit/e4f4b70ed153167c06aa63eefa41d975394af066)
-    SPACK_SHA: e4f4b70ed153167c06aa63eefa41d975394af066
+    # (https://github.com/msimberg/spack/commit/715f222173c7dc309d2cf687ea18bce84b75ac3e)
+    SPACK_SHA: 715f222173c7dc309d2cf687ea18bce84b75ac3e
     SPACK_DLAF_REPO: ./spack
   before_script:
     - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY

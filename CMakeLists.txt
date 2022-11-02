@@ -56,12 +56,13 @@ enable_language(C)
 enable_language(CXX)
 
 # ---- CUDA/HIP
-if (DLAF_WITH_CUDA AND DLAF_WITH_HIP)
+if(DLAF_WITH_CUDA AND DLAF_WITH_HIP)
   message(FATAL_ERROR "DLAF_WITH_CUDA=ON and DLAF_WITH_HIP=ON. Only one of "
-    "them can be enabled at the same time.")
+                      "them can be enabled at the same time."
+  )
 endif()
-if (DLAF_WITH_CUDA)
-  if (NOT CMAKE_CUDA_ARCHITECTURES)
+if(DLAF_WITH_CUDA)
+  if(NOT CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)

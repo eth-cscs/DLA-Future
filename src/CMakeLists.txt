@@ -60,39 +60,37 @@ option(DLAF_ASSERT_HEAVY_ENABLE "Enable high impact assertions" ${DLAF_ASSERT_HE
 
 # Define DLAF's PUBLIC properties
 add_library(dlaf.prop INTERFACE)
-target_include_directories(dlaf.prop
-  INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+target_include_directories(
+  dlaf.prop INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include> $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(dlaf.prop
-  INTERFACE
-    MPI::MPI_CXX
-    DLAF::LAPACK
-    pika::pika
-    lapackpp
-    blaspp
-    umpire
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
-    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
+target_link_libraries(
+  dlaf.prop
+  INTERFACE MPI::MPI_CXX
+            DLAF::LAPACK
+            pika::pika
+            lapackpp
+            blaspp
+            umpire
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+            $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
+            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+            $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
-target_compile_definitions(dlaf.prop
-  INTERFACE
-    $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
-    $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
-    $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
-    DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
-    $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
-    $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
-    $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
-    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
+target_compile_definitions(
+  dlaf.prop
+  INTERFACE $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
+            $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
+            $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
+            DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+            $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+            $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
+            $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
+            $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
 # Precompiled headers

@@ -8,7 +8,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(test_with_temporary_tile
+DLAF_addTest(
+  test_with_temporary_tile
   SOURCES test_with_temporary_tile.cpp
   LIBRARIES dlaf.core
   USE_MAIN PIKA

@@ -1232,7 +1232,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           const auto local_index_tile_panel_v =
               VAccessHelper::indexPanel(b, init_step + block_step, dist, dist_panel);
 
-          deps_block.at(ceilDiv(block_step, steps_per_task)) =
+          deps_block[ceilDiv(block_step, steps_per_task)] =
               dlaf::internal::whenAllLift(a_block, nr_steps, w_pipeline(),
                                           v_panel.readwrite_sender(local_index_tile_panel_v),
                                           TileElementIndex{0, sweep % b}, deps_block[dep_index]) |

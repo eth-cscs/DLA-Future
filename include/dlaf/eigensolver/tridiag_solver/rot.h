@@ -155,11 +155,15 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       serializer =
           di::whenAllLift(std::move(serializer), ex::when_all_vector(std::move(cps))) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
-            if constexpr (D == Device::CPU)
+            if constexpr (D == Device::CPU) {
+              static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
-            else
-              // givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+            }
+            else {
               DLAF_STATIC_UNIMPLEMENTED(T);
+              dlaf::internal::silenceUnusedWarningFor(ts...);
+              // givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+            }
           });
     }
     tt::sync_wait(std::move(serializer));

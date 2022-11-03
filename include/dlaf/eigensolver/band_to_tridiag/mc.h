@@ -834,16 +834,6 @@ struct VAccessHelper {
       size_top_ = TileElementSize{rows_panel, cols};
       size_bottom_ = TileElementSize{0, 0};
     }
-
-    std::cout << dist_band.size().cols() << ", " << band << ", " << dist_band.rankIndex().col() << ", "
-              << sweep0 << ", " << step0;
-    std::cout << "| " << index_panel_ << ", " << specPanelTop();
-    if (copyIsSplitted())
-      std::cout << ", " << specPanelBottom();
-    std::cout << "| " << indexVTop() << ", " << specVTop();
-    if (copyIsSplitted())
-      std::cout << ", " << indexVBottom() << ", " << specVBottom();
-    std::cout << std::endl;
   }
 
   bool copyIsSplitted() const noexcept {

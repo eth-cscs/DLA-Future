@@ -25,9 +25,6 @@
 #include "dlaf_test/matrix/util_matrix_local.h"
 #include "dlaf_test/util_types.h"
 
-#include "dlaf/matrix/print_csv.h"
-#include "dlaf/matrix/print_numpy.h"
-
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
@@ -165,20 +162,6 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
       return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
     }();
 
-    auto up = [](T& a, const T& b) {
-      a -= b;
-      if (std::abs(a) < 1e-7)
-        a = T{0};
-    };
-    for (SizeType j = 0; j < mat_v_local.size().cols(); ++j) {
-      for (SizeType i = 0; i < mat_v_local.size().rows(); ++i) {
-        GlobalElementIndex gei{i, j};
-        auto ti = mat_v.distribution().tileElementIndex(gei);
-        auto gi = mat_v.distribution().globalTileIndex(gei);
-        up(mat_v(gi).get()(ti), mat_v_local(gei));
-      }
-    }
-
     auto& ref = mat_trid2;
     auto exp = [unused, &ref](const GlobalElementIndex& i) {
       if (i == unused)
@@ -220,11 +203,6 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, b] : sizes) {
-      //      if (comm_grid.rank() == comm::Index2D{0, 0}) {
-      std::cout << "\n----------------------------\n" << std::endl;
-      std::cout << m << ", " << mb << ":" << b << " " << comm_grid.size() << std::endl;
-      //      }
-
       testBandToTridiag<Device::CPU, TypeParam>(comm_grid, uplo, b, m, mb);
     }
   }

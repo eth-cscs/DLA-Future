@@ -44,9 +44,15 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
   };
 
   const std::vector<config_t<T>> configs{
-      {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}},
-      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+      // range with one-sided margin
       {9, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+      {9, 3, 0, 1, {di::GivensRotation<T>{2, 4, 0.5f, 0.5f}}},
+      // range fully in-bound
+      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+      // incomplete tile
+      {8, 3, 1, 2, {di::GivensRotation<T>{3, 7, 0.5f, 0.5f}}},
+      // full-range, multiple rotations
+      {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}},
   };
 };
 
@@ -77,8 +83,9 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
   }
 
   // Apply Given Rotations
+  const SizeType n = std::min((idx_last + 1) * mb, m) - idx_begin * mb;
+
   for (auto rot : rots) {
-    const SizeType n = (idx_last + 1 - idx_begin) * mb;
     T* x = mat_loc.ptr({idx_begin * mb, rot.i});
     T* y = mat_loc.ptr({idx_begin * mb, rot.j});
     blas::rot(n, x, 1, y, 1, rot.c, rot.s);

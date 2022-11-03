@@ -87,8 +87,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
   const matrix::Distribution& dist = mat.distribution();
 
-  const comm::Index2D rank = dist.rankIndex();
-
   const SizeType mb = dist.blockSize().rows();
   const SizeType i_end = i_last + 1;
   const SizeType range_tile_size = i_end - i_begin;
@@ -97,19 +95,16 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
   // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which
   // ranks are involved in order to operate in the range [i_begin, i_last].
-  const comm::Index2D rank_begin = dist.rankGlobalTile({i_begin, i_begin});
   const bool isInRangeRow = [&]() {
-    if (range_tile_size < dist.commGridSize().rows())
-      return (rank_begin.row() <= rank.row()) ||
-             rank.row() < ((rank_begin.row() + range_tile_size) % dist.commGridSize().rows());
-    return true;
+    const SizeType begin = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin);
+    const SizeType end = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end);
+    return end - begin != 0;
   }();
 
   const bool isInRangeCol = [&]() {
-    if (range_tile_size < dist.commGridSize().cols())
-      return (rank_begin.col() <= rank.col()) ||
-             rank.col() < ((rank_begin.col() + range_tile_size) % dist.commGridSize().cols());
-    return true;
+    const SizeType begin = dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin);
+    const SizeType end = dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end);
+    return end - begin != 0;
   }();
 
   const bool isInRange = isInRangeRow && isInRangeCol;

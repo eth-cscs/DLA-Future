@@ -95,13 +95,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
   const SizeType range_size = range_tile_size * mb;
 
   // Note:
-  // This is the distribution that will be used inside the task. Differently from the original one,
-  // this targets just the range defined by [i_begin, i_last], but keeping the same distribution over
-  // ranks.
-  const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
-                                      dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
-
-  // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which
   // ranks are involved in order to operate in the range [i_begin, i_last].
   const comm::Index2D rank_begin = dist.rankGlobalTile({i_begin, i_begin});
@@ -124,15 +117,23 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
     return;
 
   // Note:
-  // Using a combination of shrinked distribution and an offset given to the panel, the workspace
-  // is allocated just for the part strictly needed by the range [i_begin, i_last]
-  const matrix::Distribution dist_ws({i_end * mb, 1}, dist.blockSize(), dist.commGridSize(),
-                                     dist.rankIndex(), dist.sourceRankIndex());
-  matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
+  // This is the distribution that will be used inside the task. Differently from the original one,
+  // this targets just the range defined by [i_begin, i_last], but keeping the same distribution over
+  // ranks.
+  const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
+                                      dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
   auto givens_rots_fn = [comm_row, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
                                                           std::vector<matrix::Tile<T, D>> tiles,
-                                                          matrix::Tile<T, D> tile_ws) {
+                                                          std::vector<matrix::Tile<T, D>> all_ws) {
+    // Note:
+    // It would have been enough to just get the first tile from the beginning, and it would have
+    // worked anyway (thanks to the fact that panel has its own memorychunk and the first tile would
+    // keep alive the entire chunk, so also the part of other tiles, through its memory view).
+    // Anyway, it is more clean to get them all, and then just here use a single one to access the
+    // full column.
+    matrix::Tile<T, D>& tile_ws = all_ws[0];
+
     auto getColPtr = [&dist_sub, &tiles, &tile_ws](const SizeType col_index, const bool hasIt) -> T* {
       // TODO document column layout assumption
       // TODO assume column layout and operate on the full column? also workspace must obey
@@ -204,12 +205,17 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
     tt::sync_wait(std::move(serializer));
   };
 
-  const TileCollector tc{i_begin, i_last};
+  // Note:
+  // Using a combination of shrinked distribution and an offset given to the panel, the workspace
+  // is allocated just for the part strictly needed by the range [i_begin, i_last]
+  const matrix::Distribution dist_ws({i_end * mb, 1}, dist.blockSize(), dist.commGridSize(),
+                                     dist.rankIndex(), dist.sourceRankIndex());
+  matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
 
-  // TODO check if there could be any problem passing just the first tile of workspace (and using the full panel)
+  const TileCollector tc(i_begin, i_last);
+
   di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
-                  workspace.readwrite_sender(
-                      LocalTileIndex(dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin), 0))) |
+                  select(workspace, workspace.iteratorLocal())) |
       di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
 }
 }

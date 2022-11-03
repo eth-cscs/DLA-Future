@@ -149,7 +149,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
     const SizeType m = dist_sub.localSize().rows();
 
-    ex::unique_any_sender<> serializer = ex::just();
     for (const GivensRotation<T>& rot : rots) {
       const SizeType j_x = rot.i / mb;
       const SizeType j_y = rot.j / mb;
@@ -185,8 +184,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
       // each one computes his own, but just stores either x or y
       // (or both if are on the same rank)
-      serializer =
-          di::whenAllLift(std::move(serializer), ex::when_all_vector(std::move(cps))) |
+      tt::sync_wait(
+          di::whenAllLift(ex::when_all_vector(std::move(cps))) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             if constexpr (D == Device::CPU) {
               static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
@@ -195,9 +194,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
             else {
               givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
             }
-          });
+          }));
     }
-    tt::sync_wait(std::move(serializer));
   };
 
   // Note:

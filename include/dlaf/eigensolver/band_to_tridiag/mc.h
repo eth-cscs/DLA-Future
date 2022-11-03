@@ -919,7 +919,7 @@ private:
 
 // Distributed implementation of bandToTridiag.
 template <Device D, class T>
-TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
+TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   using common::iterate_range2d;
   using common::Pipeline;
@@ -934,6 +934,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using pika::resource::get_num_threads;
 
   namespace ex = pika::execution::experimental;
+
+  static_assert(D == Device::CPU);
 
   // Should be dispatched to local implementation if (1x1) grid.
   DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);

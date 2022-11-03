@@ -86,24 +86,53 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
   namespace di = dlaf::internal;
 
   const matrix::Distribution& dist = mat.distribution();
-  const SizeType mb = dist.blockSize().rows();
 
-  const SizeType sub_square_edge = (i_last + 1 - i_begin) * mb;
-  const GlobalElementSize sub_square_size(sub_square_edge, sub_square_edge);
-  const matrix::Distribution dist_sub(sub_square_size, dist.blockSize(), dist.commGridSize(),
+  const comm::Index2D rank = dist.rankIndex();
+
+  const SizeType mb = dist.blockSize().rows();
+  const SizeType i_end = i_last + 1;
+  const SizeType range_tile_size = i_end - i_begin;
+  const SizeType range_size = range_tile_size * mb;
+
+  // Note:
+  // This is the distribution that will be used inside the task. Differently from the original one,
+  // this targets just the range defined by [i_begin, i_last], but keeping the same distribution over
+  // ranks.
+  const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  // TODO check workspace distribution (partial allocation and its usage with dist_sub)
-  const matrix::Distribution dist_ws({dist.size().rows(), 1}, dist.blockSize(), dist.commGridSize(),
+  // Note:
+  // Some ranks might not participate to the application of given rotations. This logic checks which
+  // ranks are involved in order to operate in the range [i_begin, i_last].
+  const comm::Index2D rank_begin = dist.rankGlobalTile({i_begin, i_begin});
+  const bool isInRangeRow = [&]() {
+    if (range_tile_size < dist.commGridSize().rows())
+      return (rank_begin.row() <= rank.row()) ||
+             rank.row() < ((rank_begin.row() + range_tile_size) % dist.commGridSize().rows());
+    return true;
+  }();
+
+  const bool isInRangeCol = [&]() {
+    if (range_tile_size < dist.commGridSize().cols())
+      return (rank_begin.col() <= rank.col()) ||
+             rank.col() < ((rank_begin.col() + range_tile_size) % dist.commGridSize().cols());
+    return true;
+  }();
+
+  const bool isInRange = isInRangeRow && isInRangeCol;
+  if (!isInRange)
+    return;
+
+  // Note:
+  // Using a combination of shrinked distribution and an offset given to the panel, the workspace
+  // is allocated just for the part strictly needed by the range [i_begin, i_last]
+  const matrix::Distribution dist_ws({i_end * mb, 1}, dist.blockSize(), dist.commGridSize(),
                                      dist.rankIndex(), dist.sourceRankIndex());
-  // TODO allocate just sub-range
-  matrix::Panel<Coord::Col, T, D> workspace(dist_ws);
+  matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
 
-  auto givens_rots_fn = [comm_row, dist_sub, mb](std::vector<GivensRotation<T>> rots,
-                                                 std::vector<matrix::Tile<T, D>> tiles,
-                                                 matrix::Tile<T, D> tile_ws) {
-    const SizeType m = dist_sub.localSize().rows();
-
+  auto givens_rots_fn = [comm_row, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
+                                                          std::vector<matrix::Tile<T, D>> tiles,
+                                                          matrix::Tile<T, D> tile_ws) {
     auto getColPtr = [&dist_sub, &tiles, &tile_ws](const SizeType col_index, const bool hasIt) -> T* {
       // TODO document column layout assumption
       // TODO assume column layout and operate on the full column? also workspace must obey
@@ -115,6 +144,14 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       }
       return tile_ws.ptr({0, 0});
     };
+
+    // Change SoR for the rotations to just the range, by removing the offset
+    std::transform(rots.begin(), rots.end(), rots.begin(),
+                   [offset = i_begin * mb](const GivensRotation<T>& rot) {
+                     return GivensRotation<T>{rot.i - offset, rot.j - offset, rot.c, rot.s};
+                   });
+
+    const SizeType m = dist_sub.localSize().rows();
 
     ex::unique_any_sender<> serializer = ex::just();
     for (const GivensRotation<T>& rot : rots) {
@@ -160,9 +197,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
             }
             else {
-              DLAF_STATIC_UNIMPLEMENTED(T);
-              dlaf::internal::silenceUnusedWarningFor(ts...);
-              // givensRotationOnDevice(m, x, y, rot.c, rot.s, ts...);
+              givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
             }
           });
     }
@@ -173,7 +208,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
   // TODO check if there could be any problem passing just the first tile of workspace (and using the full panel)
   di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
-                  workspace.readwrite_sender({0, 0})) |
+                  workspace.readwrite_sender(
+                      LocalTileIndex(dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin), 0))) |
       di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
 }
 }

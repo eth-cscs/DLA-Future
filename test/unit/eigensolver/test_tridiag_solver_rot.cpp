@@ -53,6 +53,11 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
       {8, 3, 1, 2, {di::GivensRotation<T>{3, 7, 0.5f, 0.5f}}},
       // full-range, multiple rotations
       {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}},
+      // range fully in-bound, independent rotations from same tiles
+      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{4, 7, 0.5f, 0.5f}}},
+      // range fully in-bound, non-independent rotations, between same pair of tiles
+      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{3, 7, 0.5f, 0.5f}}},
+      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{4, 8, 0.5f, 0.5f}}},
   };
 };
 

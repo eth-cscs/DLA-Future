@@ -44,7 +44,10 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
   };
 
   const std::vector<config_t<T>> configs{
-      {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}}};
+      {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}},
+      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+      {9, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+  };
 };
 
 template <typename T>
@@ -75,9 +78,9 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
   // Apply Given Rotations
   for (auto rot : rots) {
-    const SizeType n = mat_loc.size().rows();
-    T* x = mat_loc.ptr({0, rot.i});
-    T* y = mat_loc.ptr({0, rot.j});
+    const SizeType n = (idx_last + 1 - idx_begin) * mb;
+    T* x = mat_loc.ptr({idx_begin * mb, rot.i});
+    T* y = mat_loc.ptr({idx_begin * mb, rot.j});
     blas::rot(n, x, 1, y, 1, rot.c, rot.s);
   }
 

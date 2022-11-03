@@ -132,10 +132,9 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
                        const SizeType m, const SizeType mb) {
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
   Distribution distr({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
-  Matrix<T, Device::CPU> mat_a_h(std::move(distr));
 
-  auto el_a = [](auto index) { return T(((double) 100 + 100 * index.row() - 99 * index.col()) / 500.); };
-  set(mat_a_h, el_a);
+  Matrix<T, Device::CPU> mat_a_h(std::move(distr));
+  matrix::util::set_random_hermitian(mat_a_h);
 
   auto [mat_trid, mat_v] = [&]() {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
@@ -144,34 +143,6 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
 
   if (m == 0)
     return;
-
-  GlobalElementIndex unused = {m - 1, 1};
-  mat_trid(mat_trid.distribution().globalTileIndex(unused))
-      .get()(mat_trid.distribution().tileElementIndex(unused)) = BaseType<T>{9};
-  {
-    const LocalElementSize size(m, m);
-    const TileElementSize block_size(mb, mb);
-
-    Matrix<T, Device::CPU> mat_a_h(size, block_size);
-    set(mat_a_h, el_a);
-
-    auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid);
-
-    auto [mat_trid2, mat_v] = [&]() {
-      MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
-      return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
-    }();
-
-    auto& ref = mat_trid2;
-    auto exp = [unused, &ref](const GlobalElementIndex& i) {
-      if (i == unused)
-        return BaseType<T>{9};
-      return ref.read(ref.distribution().globalTileIndex(i))
-          .get()(ref.distribution().tileElementIndex(i));
-    };
-    CHECK_MATRIX_NEAR(exp, mat_trid, 100 * m * TypeUtilities<T>::error,
-                      100 * m * TypeUtilities<T>::error);
-  }
 
   // SCOPED_TRACE cannot yield.
   mat_trid.waitLocalTiles();

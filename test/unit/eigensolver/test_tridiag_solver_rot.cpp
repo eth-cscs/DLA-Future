@@ -70,8 +70,6 @@ template <class T, Device D>
 void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, const SizeType mb,
                              const SizeType idx_begin, const SizeType idx_last,
                              std::vector<di::GivensRotation<T>> rots) {
-  // TODO check about "independent" rots?
-
   using dlaf::eigensolver::internal::applyGivensRotationsToMatrixColumns;
 
   matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});

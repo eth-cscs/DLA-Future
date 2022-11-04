@@ -175,7 +175,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
       const bool hasBothXY = hasX && hasY;
 
-      std::vector<ex::unique_any_sender<>> cps;
+      std::vector<ex::unique_any_sender<>> comm_checkpoints;
       if (!hasBothXY) {
         // TODO compute TAG
 
@@ -189,8 +189,10 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         // Note:
         // These communications use raw pointers, so correct lifetime management of related tiles
         // is up to the caller.
-        cps.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, 0, col_send, m));
-        cps.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, 0, col_recv, m));
+        comm_checkpoints.emplace_back(
+            wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, 0, col_send, m));
+        comm_checkpoints.emplace_back(
+            wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, 0, col_recv, m));
       }
 
       // Note:
@@ -212,7 +214,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
       // would require a tag ad hoc ensuring that communication between same ranks do not get mixed
       // (in addition to having a tag ensuring that other calls to this algorithm do not get mixed too).
       tt::sync_wait(
-          di::whenAllLift(ex::when_all_vector(std::move(cps))) |
+          di::whenAllLift(ex::when_all_vector(std::move(comm_checkpoints))) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             // Note:
             // each one computes his own, but just stores either x or y (or both if on the same rank)

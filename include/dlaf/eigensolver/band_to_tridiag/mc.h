@@ -387,16 +387,12 @@ template <class CommSender, class T, class DepSender>
   namespace ex = pika::execution::experimental;
 
   auto send = [dest, tag, b, j](const comm::Communicator& comm,
-                                std::shared_ptr<BandBlock<T, true>> a_block, MPI_Request* req) {
+                                std::shared_ptr<BandBlock<T, true>>& a_block, MPI_Request* req) {
     DLAF_MPI_CHECK_ERROR(MPI_Isend(a_block->ptr(0, j), to_int(2 * b), dlaf::comm::mpi_datatype<T>::type,
                                    dest, tag, comm, req));
   };
-
-  auto comm_sender =
-      whenAllLift(std::forward<CommSender>(pcomm), a_block, std::forward<DepSender>(dep)) |
-      transformMPI(send);
-  // Ensure lifetime shared pointer.
-  return whenAllLift(std::move(a_block), std::move(comm_sender)) | ex::then([](auto) {});
+  return whenAllLift(std::forward<CommSender>(pcomm), std::move(a_block), std::forward<DepSender>(dep)) |
+         transformMPI(send);
 }
 
 template <class CommSender, class T, class DepSender>
@@ -407,7 +403,7 @@ template <class CommSender, class T, class DepSender>
   using dlaf::internal::whenAllLift;
 
   auto recv = [src, tag, b, j](const comm::Communicator& comm,
-                               std::shared_ptr<BandBlock<T, true>> a_block, MPI_Request* req) {
+                               std::shared_ptr<BandBlock<T, true>>& a_block, MPI_Request* req) {
     DLAF_MPI_CHECK_ERROR(MPI_Irecv(a_block->ptr(0, j), to_int(2 * b), dlaf::comm::mpi_datatype<T>::type,
                                    src, tag, comm, req));
   };

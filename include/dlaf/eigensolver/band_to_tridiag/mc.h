@@ -485,7 +485,7 @@ protected:
   }
 
   T& tau() noexcept {
-    return *data_();
+    return *data_(0);
   }
   const T& tau() const noexcept {
     return *data_(0);
@@ -605,29 +605,6 @@ template <class CommSender, class PromiseSender>
   return whenAllLift(std::forward<CommSender>(pcomm), std::forward<PromiseSender>(worker)) |
          transformMPI(recv);
 }
-
-template <class T>
-class vector2D {
-public:
-  vector2D(SizeType nr, SizeType size) : data_(nr * size), ld_(size) {}
-
-  T& operator()(SizeType block, SizeType index) noexcept {
-    return data_[id(block, index)];
-  }
-  const T& operator()(SizeType block, SizeType index) const noexcept {
-    return data_[id(block, index)];
-  }
-
-private:
-  SizeType id(SizeType block, SizeType index) {
-    DLAF_ASSERT_HEAVY(index < ld_, index, ld_);
-    DLAF_ASSERT_HEAVY(block < data_.size() / ld_, block, data_.size(), ld_);
-    return ld_ * block + index;
-  }
-
-  common::internal::vector<T> data_;
-  SizeType ld_;
-};
 
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
@@ -796,11 +773,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   copy_tridiag(size - 1, std::move(deps[0]));
 
   return {std::move(mat_trid), std::move(mat_v)};
-}
-
-std::ostream& operator<<(std::ostream& out, matrix::SubTileSpec spec) {
-  out << spec.origin << "+" << spec.size;
-  return out;
 }
 
 struct VAccessHelper {

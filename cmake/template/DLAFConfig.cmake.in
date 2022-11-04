@@ -52,7 +52,7 @@ if(DLAF_WITH_CUDA)
 endif()
 
 if(DLAF_WITH_HIP)
-  find_dependency(hipblas)
+  find_dependency(rocblas)
   find_dependency(rocsolver)
 endif()
 

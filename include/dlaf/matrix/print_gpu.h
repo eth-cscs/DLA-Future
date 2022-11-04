@@ -51,7 +51,7 @@ void print(Format format, const Tile<const T, Device::GPU>& tile, whip::stream_t
 
 template <class Format, class T>
 void print(Format format, const Tile<const T, Device::GPU>& tile, std::ostream& os = std::cout) {
-  whip::stream_t stream;
+  whip::stream_t stream{};
   if (!tile.size().isEmpty())
     whip::stream_create(&stream);
 

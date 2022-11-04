@@ -31,10 +31,8 @@
 namespace dlaf {
 namespace internal {
 
-// hipBLAS functions take a handle of type hipblasHandle_t which is a typedef
-// for a void pointer. Those functions can be therefore called with a
-// rocblas_handle (handle used for rocsolver functions). This tag is here to
-// disambiguate the call.
+// Both rocblas and rocsolver functions are called with a rocblas_handle. This
+// tag is here to disambiguate the call.
 enum class TransformDispatchType { Plain, Blas, Lapack };
 
 // The following are DLA-Future-specific transforms, with some helper variations

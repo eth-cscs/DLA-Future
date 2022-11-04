@@ -71,7 +71,7 @@ if(DLAF_WITH_CUDA)
 elseif(DLAF_WITH_HIP)
   set(CMAKE_HIP_EXTENSIONS OFF)
   enable_language(HIP)
-  find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
+  find_package(rocblas HINTS $ENV{ROCBLAS_ROOT} REQUIRED)
   find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
   set(DLAF_WITH_GPU ON)
 endif()
@@ -121,7 +121,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.8.0 REQUIRED)
+find_package(pika 0.9.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

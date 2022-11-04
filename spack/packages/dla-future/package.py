@@ -46,7 +46,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("umpire@6:")
 
     depends_on("pika +mpi")
-    depends_on("pika@0.8:")
+    depends_on("pika@0.9:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
@@ -63,7 +63,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("whip +rocm", when="+rocm")
 
     depends_on("rocblas", when="+rocm")
-    depends_on("hipblas", when="+rocm")
     depends_on("rocsolver", when="+rocm")
 
     conflicts("+cuda", when="+rocm")

@@ -174,7 +174,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= offset && offset < ld_ + 1, offset, ld_);
     DLAF_ASSERT_HEAVY(0 <= j && j < size_, j, size_);
 
-    if (dist) {
+    if constexpr (dist) {
       return mem_(memoryIndex(j) * (ld_ + 1) + offset);
     }
     else {
@@ -356,7 +356,7 @@ private:
 #endif
 
   SizeType memoryIndex(SizeType j) {
-    if (dist) {
+    if constexpr (dist) {
       DLAF_ASSERT_HEAVY(block_size_ * id_ <= j && j < size_, j, id_, block_size_, size_);
       return (j - block_size_ * id_) % mem_size_col_;
     }
@@ -1058,7 +1058,7 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
           }
         }
 
-        deps[id_block_local].push_back(dep);
+        deps[id_block_local].push_back(std::move(dep));
       }
       else {
         if (rank == rank_diag) {

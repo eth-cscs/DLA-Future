@@ -94,7 +94,9 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
   blas::ger(ColMaj, m, n, -tau, w, 1, v, 1, a, lda);
 }
 
-// split versions of the previous operations
+// As the compact band matrix is stored in a rotating buffer it might happen that the operations
+// have to act on a matrix which layes on the last columns and first columns of the buffer.
+// The following versions take care of this case.
 template <class T>
 void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1, T* a2,
                           const SizeType lda, T* w) {
@@ -772,6 +774,33 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 }
 
 struct VAccessHelper {
+  // As panel_v are populated in the following way (e.g. with 4 ranks, nb = 2b and tiles_per_block = 2):
+  //   Rank 0  Rank1  Rank2  Rank3     Rank 0  Rank1  Rank2  Rank3
+  //   A0      A4      A8      A12     B0      B4      B8      B12
+  //   A1      A5      A9      A13     B1      B5      B9      B13
+  //   --      --      ---     ---     --      --      ---     ---
+  //   A2      A6      A10     A14     B2      B6      B10     B14
+  //   A3      A7      A11     A15     B3      B7      B11     B15
+  //   ---     ---     ---     ---     ---     ---     ---     ---
+  //   A16     A20     A24     A28     B16     B20     B24     B28
+  //   ...     ...     ...     ...     ...     ...     ...     ...
+  //
+  // (XN represent a compact (b x b) HH reflector block)
+  //
+  // and mat_v is populated in the following way:
+  //   A0 ** | ** ** | ** ..
+  //   A1 B0 | ** ** | ** ..
+  //   -- --   -- --   --
+  //   A2 B1 | C0 ** | ** ..
+  //   A3 B2 | C1 D0 | ** ..
+  //   -- --   -- --   --
+  //   A4 B3 | C2 D1 | E0 ..
+  //   .. .. | .. .. | .. ..
+  //
+  // the communication of a tile of a panel might be splitted in two parts (e.g. B2 B3 tile).
+  // If copyIsSplitted() is true the copy/communication has to happen in two parts Top and Bottom,
+  // otherwise only Top is set.
+
   VAccessHelper(const comm::CommunicatorGrid& grid, const SizeType band, const SizeType sweeps,
                 const SizeType sweep0, const SizeType step0, const matrix::Distribution& dist_band,
                 const matrix::Distribution& dist_panel, const matrix::Distribution& dist_v) noexcept {
@@ -848,6 +877,8 @@ struct VAccessHelper {
 
   static comm::IndexT_MPI rankPanel(const SizeType band, const SizeType step,
                                     const matrix::Distribution& dist_band) noexcept {
+    // Need to use dist_band to identify the rank
+    // as the panel distribution is local (mismatch between tile size and distribution block-size).
     const GlobalElementIndex id{0, step * band};
     const GlobalTileIndex index = dist_band.globalTileIndex(id);
 
@@ -857,6 +888,9 @@ struct VAccessHelper {
   static LocalTileIndex indexPanel(const SizeType band, const SizeType step,
                                    const matrix::Distribution& dist_band,
                                    const matrix::Distribution& dist_panel) noexcept {
+    // Need to use dist_band to compute the local element index
+    // as dist_panel is local (mismatch between tile size and distribution block-size).
+    // Then dist_panel is used to compute the local tile index.
     const GlobalElementIndex id{0, step * band};
     const GlobalTileIndex index = dist_band.globalTileIndex(id);
 
@@ -866,6 +900,11 @@ struct VAccessHelper {
     const SizeType local_row_panel_v =
         dist_band.localTileIndex(index).col() * dist_band.blockSize().cols() +
         dist_band.tileElementIndex(id).col();
+
+    DLAF_ASSERT_HEAVY(dist_panel.tileElementIndex(GlobalElementIndex{local_row_panel_v, 0}) ==
+                          TileElementIndex(0, 0),
+                      local_row_panel_v, dist_panel.blockSize().rows());
+
     return dist_panel.localTileIndex(
         dist_panel.globalTileIndex(GlobalElementIndex{local_row_panel_v, 0}));
   }
@@ -889,6 +928,33 @@ private:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+  // Note on the algorithm, data distribution and dependency tracking:tiles_per_block
+  // The band matrix is redistribuited in 1D block cyclic. The new block size is a multiple of the
+  // block_size of mat_a. As sweeps are performed the matrix is shifted one column to the left (The
+  // computed diagonal and off diagonal elements of the resulting tridiagonal matrix are copied into the
+  // result such that the column of the buffer can be reused.)
+  //
+  // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
+  // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
+  // Then the sweep continues applying steps.
+  // The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
+  // The steps in the same sweep has to be executed in order and the dependencies are managed by the
+  // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
+  //
+  // assuming b = 4 and nb = 8 (i.e each task applies two steps) distributed with block 2 * nb (i.e.
+  // tiles_per_block = 2):
+  //               RANK 0                                                 RANK 1
+  // Copy of band: A A A A B B B B C C C C D D D D                        E E E E F F F F G ...
+  //                 deps[0][0]   |  deps[0][1]   | deps[0][2]      <-col-  deps[0][0]   |  ...
+  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3        -worker->       4 4 4 4 5 5 5 5
+  //                |  deps[0][0]   |  deps[0][1]   | deps[0][2]    <-col-    deps[0][0]   |  ...
+  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3      -worker->         4 4 4 4 5 5 5 5 ...
+  //                  |  deps[0][0]   |  deps[0][1]   | deps[0][2]  <-col-      deps[0][0]   |  ...
+  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3    -worker->           4 4 4 4 5 5 5 5 ...
+  //                    ...
+  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depends explicitly only on deps[*][j+1],
+  //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on
+  //       deps[*][j] as well.
   using common::iterate_range2d;
   using common::Pipeline;
   using common::PromiseGuard;
@@ -1079,6 +1145,9 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
   }
 
   constexpr std::size_t n_workspaces = 2;
+  // As the panel has tiles of size (nb x b), while it should be distributed with a row block-size
+  // of nb * tiles_per_block, we use a local distribution and we manage the computation of the
+  // local panel index with VAccessHelper.
   matrix::Distribution dist_panel({dist.localSize().cols(), b}, {nb, b});
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_panel);
 
@@ -1290,10 +1359,10 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
     }
   }
 
-  // Rank 0 (owner of the first band matrix block) copies the last parts of the tridiag. matrix.
+  // Rank 0 (owner of the first band matrix block) copies the last parts of the tridiag matrix.
   if (rank == 0) {
     // copy the last elements of the diagonals
-    if (!isComplex_v<T>) {
+    if constexpr (!isComplex_v<T>) {
       // only needed for real types as they don't perform sweep size-2
       copy_tridiag(a_ws[0], size - 2, deps[0][0]);
     }

@@ -129,9 +129,17 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
     // full column.
     matrix::Tile<T, D>& tile_ws = all_ws[0];
 
+    // Note:
+    // The entire algorithm relies on a strong assumption about memory layout of all tiles involved,
+    // i.e. both the input tiles selected from the matrix and the tiles for the workspace.
+    // By relying on the fact that all of them are stored in a column-layout, we can work on column
+    // vectors ignoring their distribution over different tiles, and it would be enough just getting
+    // the pointer to the top head of the column and all other data can be easily accessed since it
+    // is stored contiguously after that.
+    // Ignoring tile organization of the memory comes handy also for communication. Indeed, during
+    // column exchange, just a single MPI operation per column is issued, instead of communicating
+    // independently the parts of column from each tile.
     auto getColPtr = [&dist_sub, &tiles, &tile_ws](const SizeType col_index, const bool hasIt) -> T* {
-      // TODO document column layout assumption
-      // TODO assume column layout and operate on the full column? also workspace must obey
       if (hasIt) {
         const LocalTileIndex tile_col{dist_sub.nextLocalTileFromGlobalElement<Coord::Row>(0),
                                       dist_sub.nextLocalTileFromGlobalElement<Coord::Col>(col_index)};
@@ -178,15 +186,36 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         const T* col_send = hasX ? col_x : col_y;
         T* col_recv = hasX ? col_y : col_x;
 
+        // Note:
+        // These communications use raw pointers, so correct lifetime management of related tiles
+        // is up to the caller.
         cps.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, 0, col_send, m));
         cps.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, 0, col_recv, m));
       }
 
-      // each one computes his own, but just stores either x or y
-      // (or both if are on the same rank)
+      // Note:
+      // With a single workspace, just one rotation per time can be done.
+      //
+      // Communications of a step can happen together, since the only available workspace is used
+      // only for receiving the counterpart column. When communications are finished, the rank has
+      // everything needed to compute the rotation, so the actual computation task can start.
+      //
+      // However, communications of multiple steps, even with multiple workspaces, might need to be
+      // kept serialized. Indeed, if rotations are not independent, i.e. if the same column appears
+      // in multiple rotations, the second time the column is communicated, it must be the one rotated
+      // resulting from the previous step, not the original one.
+      // For simplicity, we add the constraint that communications of a step depends on previous step
+      // computation, which might be too tight, but currently it looks like the most straightforward
+      // solution.
+      //
+      // Moreover, even if rotations are independent, scheduling all communications all together
+      // would require a tag ad hoc ensuring that communication between same ranks do not get mixed
+      // (in addition to having a tag ensuring that other calls to this algorithm do not get mixed too).
       tt::sync_wait(
           di::whenAllLift(ex::when_all_vector(std::move(cps))) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
+            // Note:
+            // each one computes his own, but just stores either x or y (or both if on the same rank)
             if constexpr (D == Device::CPU) {
               static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);

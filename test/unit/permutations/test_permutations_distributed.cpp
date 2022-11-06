@@ -37,9 +37,12 @@ TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {
     // n, nb, i_begin, i_end
-    {6, 2, 0, 2},
-    {10, 3, 0, 3},
-    {17, 5, 0, 3}};
+    //{6, 2, 0, 2},
+    //{10, 3, 0, 3},
+    //{17, 5, 0, 3},
+    //{17, 5, 1, 2},
+    {10, 3, 1, 2},
+};
 
 template <class T, Device D, Coord C>
 void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, SizeType i_begin,
@@ -69,12 +72,14 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
   });
   dlaf::matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, mat_out_h);
 
+  // DEBUG
   Matrix<T, Device::CPU> mat_print_in(LocalElementSize(n, n), TileElementSize(nb, nb));
   dlaf::matrix::util::set(mat_print_in, [](GlobalElementIndex i) {
     return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
   });
   matrix::print(format::csv{}, "INPUT", mat_print_in);
   matrix::print(format::csv{}, "INDEX", perms_h);
+  // DEBUG
 
   {
     matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
@@ -84,6 +89,8 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
     permutations::permute<DefaultBackend_v<D>, D, T, C>(grid, i_begin, i_end, perms.get(), mat_in.get(),
                                                         mat_out.get());
   }
+
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
 
   auto expected_out = [i_begin, i_end, index_start, index_finish, &dist](const GlobalElementIndex i) {
     GlobalTileIndex i_tile = dist.globalTileIndex(i);
@@ -96,6 +103,12 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
     }
     return T(0);
   };
+
+  // DEBUG
+  Matrix<T, Device::CPU> mat_exp_out(LocalElementSize(n, n), TileElementSize(nb, nb));
+  dlaf::matrix::util::set(mat_exp_out, expected_out);
+  matrix::print(format::csv{}, "RESULT", mat_exp_out);
+  // DEBUG
 
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }

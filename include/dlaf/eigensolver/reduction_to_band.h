@@ -134,19 +134,13 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 }
 
 /// ---- ETI
-#define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)             \
+#define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE)                   \
   KWORD template common::internal::vector<pika::shared_future<common::internal::vector<DATATYPE>>> \
   reductionToBand<BACKEND, DEVICE, DATATYPE>(Matrix<DATATYPE, DEVICE> & mat_a,                     \
-                                             const SizeType band_size);
-
-#define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE)             \
+                                             const SizeType band_size);                            \
   KWORD template common::internal::vector<pika::shared_future<common::internal::vector<DATATYPE>>> \
   reductionToBand<BACKEND, DEVICE, DATATYPE>(comm::CommunicatorGrid grid,                          \
                                              Matrix<DATATYPE, DEVICE> & mat_a);
-
-#define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_EIGENSOLVER_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE)
 
 DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, double)
@@ -154,9 +148,9 @@ DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::co
 DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_GPU
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 }

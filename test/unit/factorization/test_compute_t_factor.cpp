@@ -16,6 +16,7 @@
 #include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix/copy.h"
@@ -67,14 +68,18 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 
   // ortho = matrix . matrix*
   // clang-format off
-  blas::gemm(blas::Layout::ColMajor,
-      blas::Op::NoTrans, blas::Op::ConjTrans,
-      matrix.size().rows(), matrix.size().cols(), matrix.size().rows(),
-      1,
-      matrix.ptr(), matrix.ld(),
-      matrix.ptr(), matrix.ld(),
-      0,
-      ortho.ptr(), ortho.ld());
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
+    blas::gemm(blas::Layout::ColMajor,
+               blas::Op::NoTrans, blas::Op::ConjTrans,
+               matrix.size().rows(), matrix.size().cols(), matrix.size().rows(),
+               1,
+               matrix.ptr(), matrix.ld(),
+               matrix.ptr(), matrix.ld(),
+               0,
+               ortho.ptr(), ortho.ld());
+  }
   // clang-format on
 
   MatrixLocal<const T> eye = [&]() {
@@ -94,6 +99,8 @@ template <class T>
 std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor(
     const SizeType k, const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
   // PRE: m >= k
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 
@@ -151,6 +158,8 @@ template <class T>
 MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device::CPU>& t,
                                    const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
   // PRE: m >= k
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 

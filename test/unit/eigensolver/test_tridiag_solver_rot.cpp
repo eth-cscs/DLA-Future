@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
@@ -106,6 +107,8 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
   // Apply Given Rotations
   const SizeType n = std::min((idx_last + 1) * mb, m) - idx_begin * mb;
   const GlobalElementSize offset(idx_begin * mb, idx_begin * mb);
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   for (auto rot : rots) {
     T* x = mat_loc.ptr(GlobalElementIndex{0, rot.i} + offset);

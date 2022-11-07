@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -82,6 +83,9 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   }();
 
   MatrixLocal<T> mat_be_local({m, m}, reference_a.blockSize());
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   // Compute B E which is needed for both checks.
   blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, m, T{1}, mat_b_local.ptr(),
              mat_b_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, mat_be_local.ptr(),

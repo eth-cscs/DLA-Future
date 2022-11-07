@@ -9,6 +9,7 @@
 //
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/lapack/tile.h"
 
 namespace dlaf::eigensolver::internal {
@@ -245,6 +246,8 @@ template <class T>
 void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const Coord& in_coord,
             const matrix::Tile<const T, Device::CPU>& in_tile, const Coord& out_coord,
             const matrix::Tile<T, Device::CPU>& out_tile) {
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   if (row >= k || col >= k)
     return;
 

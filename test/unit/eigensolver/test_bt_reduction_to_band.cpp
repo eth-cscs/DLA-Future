@@ -19,6 +19,7 @@
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
@@ -92,6 +93,8 @@ common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal
   taus.reserve(nr_reflectors);
 
   dlaf::matrix::util::internal::getter_random<BaseType<T>> random_value(443);
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   // Compute taus such that Q = I - v tau vH is orthogonal.
   // Real case: tau = 2 / (vH v)

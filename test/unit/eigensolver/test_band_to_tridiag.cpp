@@ -14,6 +14,7 @@
 #include <sstream>
 #include <tuple>
 #include "gtest/gtest.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -69,6 +70,8 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
   auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid...);
 
   auto apply_left_right = [&mat_local, m, ld](SizeType size_hhr, T* v, SizeType first_index) {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     T tau = v[0];
     v[0] = T{1};
     lapack::larf(blas::Side::Left, size_hhr, m, v, 1, tau, mat_local.ptr({first_index, 0}), ld);

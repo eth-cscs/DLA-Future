@@ -35,30 +35,31 @@ namespace di = dlaf::eigensolver::internal;
 
 template <typename T>
 struct TridiagEigensolverRotTest : public TestWithCommGrids {
-  template <class U>
+  using GRot = di::GivensRotation<T>;
+
   struct config_t {
     SizeType m;
     SizeType mb;
     SizeType i_begin;
     SizeType i_last;
-    std::vector<di::GivensRotation<U>> rots;
+    std::vector<GRot> rots;
   };
 
-  const std::vector<config_t<T>> configs{
+  const std::vector<config_t> configs{
       // range with one-sided margin
-      {9, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
-      {9, 3, 0, 1, {di::GivensRotation<T>{2, 4, 0.5f, 0.5f}}},
+      {9, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}}},
+      {9, 3, 0, 1, {GRot{2, 4, cos(2.6f), sin(2.6f)}}},
       // range fully in-bound
-      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}}},
+      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}}},
       // incomplete tile
-      {8, 3, 1, 2, {di::GivensRotation<T>{3, 7, 0.5f, 0.5f}}},
+      {8, 3, 1, 2, {GRot{3, 7, cos(2.6f), sin(2.6f)}}},
       // full-range, multiple rotations
-      {9, 3, 0, 2, {di::GivensRotation<T>{0, 8, 0.5f, 0.5f}, di::GivensRotation<T>{0, 2, 0.5f, 0.5f}}},
+      {9, 3, 0, 2, {GRot{0, 8, cos(2.6f), sin(2.6f)}, GRot{0, 2, cos(2.6f), sin(2.6f)}}},
       // range fully in-bound, independent rotations from same tiles
-      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{4, 7, 0.5f, 0.5f}}},
+      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{4, 7, cos(2.6f), sin(2.6f)}}},
       // range fully in-bound, non-independent rotations, between same pair of tiles
-      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{3, 7, 0.5f, 0.5f}}},
-      {12, 3, 1, 2, {di::GivensRotation<T>{3, 8, 0.5f, 0.5f}, di::GivensRotation<T>{4, 8, 0.5f, 0.5f}}},
+      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{3, 7, cos(2.6f), sin(2.6f)}}},
+      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{4, 8, cos(2.6f), sin(2.6f)}}},
   };
 };
 

@@ -25,7 +25,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
-#include "dlaf/common/single_threaded_omp.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/lapack/tile.h"
@@ -71,7 +71,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size() == k, taus.size(), k);
 
-      common::internal::SingleThreadedOmpScope single;
+      common::internal::SingleThreadedBlasScope single;
       for (SizeType j = 0; j < k; ++j) {
         const T tau = taus[j];
 
@@ -116,7 +116,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     // Update each column (in order) t = T . t
     // remember that T is upper triangular, so it is possible to use TRMV
     auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
-      common::internal::SingleThreadedOmpScope single;
+      common::internal::SingleThreadedBlasScope single;
       for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
         const TileElementIndex t_start{0, j};
         const TileElementSize t_size{j, 1};

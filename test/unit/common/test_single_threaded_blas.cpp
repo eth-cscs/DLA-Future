@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/common/single_threaded_omp.h"
+#include "dlaf/common/single_threaded_blas.h"
 
 #ifdef DLAF_WITH_OPENMP
 #include <omp.h>
@@ -19,9 +19,9 @@
 
 #include <gtest/gtest.h>
 
-TEST(SingleThreadedOmp, Basic) {
+TEST(SingleThreadedBlas, Basic) {
   // Set the number of threads to something bigger than 1 so that we can
-  // actually observe if SingleThreadedOmpScope has an effect.
+  // actually observe if SingleThreadedBlasScope has an effect.
   [[maybe_unused]] constexpr int num_threads = 2;
 #ifdef DLAF_WITH_OPENMP
   omp_set_num_threads(num_threads);
@@ -32,7 +32,7 @@ TEST(SingleThreadedOmp, Basic) {
   bool mkl_set_num_threads_applied = mkl_get_max_threads() == 2;
 #endif
   {
-    dlaf::common::internal::SingleThreadedOmpScope omp;
+    dlaf::common::internal::SingleThreadedBlasScope single;
 #ifdef DLAF_WITH_OPENMP
     EXPECT_EQ(omp_get_max_threads(), 1);
 #endif

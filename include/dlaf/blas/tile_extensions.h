@@ -13,7 +13,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_omp.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
@@ -61,7 +61,7 @@ template <class T>
 void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
          const matrix::Tile<T, Device::CPU>& tile_a) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
-  common::internal::SingleThreadedOmpScope single;
+  common::internal::SingleThreadedBlasScope single;
   for (auto j = 0; j < tile_a.size().cols(); ++j)
     blas::axpy(tile_a.size().rows(), alpha, tile_b.ptr({0, j}), 1, tile_a.ptr({0, j}), 1);
 }

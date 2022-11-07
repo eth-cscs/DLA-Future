@@ -10,16 +10,15 @@
 
 #pragma once
 
-// TODO: internal?
 namespace dlaf::common::internal {
-class [[nodiscard]] SingleThreadedOmpScope {
+class [[nodiscard]] SingleThreadedBlasScope {
 public:
-  SingleThreadedOmpScope();
-  ~SingleThreadedOmpScope();
-  SingleThreadedOmpScope(SingleThreadedOmpScope &&) = delete;
-  SingleThreadedOmpScope(SingleThreadedOmpScope const&) = delete;
-  SingleThreadedOmpScope& operator=(SingleThreadedOmpScope&&) = delete;
-  SingleThreadedOmpScope& operator=(SingleThreadedOmpScope const&) = delete;
+  SingleThreadedBlasScope();
+  ~SingleThreadedBlasScope();
+  SingleThreadedBlasScope(SingleThreadedBlasScope &&) = delete;
+  SingleThreadedBlasScope(SingleThreadedBlasScope const&) = delete;
+  SingleThreadedBlasScope& operator=(SingleThreadedBlasScope&&) = delete;
+  SingleThreadedBlasScope& operator=(SingleThreadedBlasScope const&) = delete;
 
 private:
 #ifdef DLAF_WITH_OPENMP

@@ -15,10 +15,10 @@
 #include <mkl_service.h>
 #endif
 
-#include <dlaf/common/single_threaded_omp.h>
+#include <dlaf/common/single_threaded_blas.h>
 
 namespace dlaf::common::internal {
-SingleThreadedOmpScope::SingleThreadedOmpScope() {
+SingleThreadedBlasScope::SingleThreadedBlasScope() {
 #ifdef DLAF_WITH_OPENMP
   omp_num_threads = omp_get_max_threads();
   omp_set_num_threads(1);
@@ -28,7 +28,7 @@ SingleThreadedOmpScope::SingleThreadedOmpScope() {
 #endif
 }
 
-SingleThreadedOmpScope::~SingleThreadedOmpScope() {
+SingleThreadedBlasScope::~SingleThreadedBlasScope() {
 #ifdef DLAF_WITH_OPENMP
   omp_set_num_threads(omp_num_threads);
 #endif

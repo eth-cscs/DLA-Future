@@ -176,7 +176,7 @@ endfunction()
 # Define DLAF's CORE library
 DLAF_addSublibrary(
   core
-  SOURCES common/single_threaded_omp.cpp
+  SOURCES common/single_threaded_blas.cpp
           communication/communicator_impl.cpp
           communication/communicator.cpp
           communication/communicator_grid.cpp

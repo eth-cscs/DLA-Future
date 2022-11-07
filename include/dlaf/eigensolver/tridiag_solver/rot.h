@@ -79,8 +79,9 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
 // Note: a column index may be paired to more than one other index, this may lead to a race condition if
 //       parallelized trivially. Current implementation is serial.
 template <class T, Device D, class GRSender>
-void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i_begin, SizeType i_last,
-                                         GRSender&& rots_fut, Matrix<T, D>& mat) {
+void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::IndexT_MPI tag,
+                                         SizeType i_begin, SizeType i_last, GRSender&& rots_fut,
+                                         Matrix<T, D>& mat) {
   namespace ex = pika::execution::experimental;
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
@@ -118,9 +119,9 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
   const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  auto givens_rots_fn = [comm_row, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
-                                                          std::vector<matrix::Tile<T, D>> tiles,
-                                                          std::vector<matrix::Tile<T, D>> all_ws) {
+  auto givens_rots_fn = [comm_row, tag, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
+                                                               std::vector<matrix::Tile<T, D>> tiles,
+                                                               std::vector<matrix::Tile<T, D>> all_ws) {
     // Note:
     // It would have been enough to just get the first tile from the beginning, and it would have
     // worked anyway (thanks to the fact that panel has its own memorychunk and the first tile would
@@ -177,8 +178,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
       std::vector<ex::unique_any_sender<>> comm_checkpoints;
       if (!hasBothXY) {
-        // TODO compute TAG
-
         const comm::IndexT_MPI rank_partner = hasX ? rankColY : rankColX;
 
         const T* col_send = hasX ? col_x : col_y;
@@ -188,9 +187,9 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
         // These communications use raw pointers, so correct lifetime management of related tiles
         // is up to the caller.
         comm_checkpoints.emplace_back(
-            wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, 0, col_send, m));
+            wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, tag, col_send, m));
         comm_checkpoints.emplace_back(
-            wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, 0, col_recv, m));
+            wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, tag, col_recv, m));
       }
 
       // Note:

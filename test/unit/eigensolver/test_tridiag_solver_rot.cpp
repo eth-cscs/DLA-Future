@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/matrix.h"
@@ -72,6 +73,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
                              std::vector<di::GivensRotation<T>> rots) {
   using dlaf::eigensolver::internal::applyGivensRotationsToMatrixColumns;
 
+  constexpr comm::IndexT_MPI tag = 0;
   matrix::Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
 
   matrix::Matrix<T, Device::CPU> mat_h(dist);
@@ -81,7 +83,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), idx_begin, idx_last, ex::just(rots),
+    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, idx_begin, idx_last, ex::just(rots),
                                         mat.get());
   }
 

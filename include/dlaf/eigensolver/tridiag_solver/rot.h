@@ -181,8 +181,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, SizeType i
 
         const comm::IndexT_MPI rank_partner = hasX ? rankColY : rankColX;
 
-        // TODO possible optimization, check if it is zero or not
-
         const T* col_send = hasX ? col_x : col_y;
         T* col_recv = hasX ? col_y : col_x;
 

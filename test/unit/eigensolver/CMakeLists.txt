@@ -42,7 +42,8 @@ DLAF_addTest(
   test_eigensolver
   SOURCES test_eigensolver.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
-  USE_MAIN PIKA
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
 )
 
 DLAF_addTest(

@@ -39,7 +39,7 @@ using EigensolverTestMC = EigensolverTest<T>;
 
 TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_GPU
+#ifdef DLAF_WITH_CUDA
 template <class T>
 using EigensolverTestGPU = EigensolverTest<T>;
 
@@ -125,7 +125,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
   }
 }
 
-#ifdef DLAF_WITH_GPU
+#ifdef DLAF_WITH_CUDA
 TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {

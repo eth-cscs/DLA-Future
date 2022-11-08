@@ -61,15 +61,20 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
-  // TODO: fix GPU implementation
   if constexpr (D == Device::GPU) {
+    (void) grid;
+    (void) i_begin;
+    (void) i_end;
+    (void) perms;
+    (void) mat_in;
+    (void) mat_out;
+    // TODO: fix GPU implementation
+    // This is a temporary placeholder which avoids diverging the CPU and GPU APIs:
     return;
   }
   else {
     const matrix::Distribution& distr_perms = perms.distribution();
     const matrix::Distribution& distr_in = mat_in.distribution();
-
-    // TODO: check that mat_in and mat_out are in column-major layout
 
     DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
     DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);

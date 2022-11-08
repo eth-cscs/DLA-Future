@@ -29,8 +29,6 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-//#include "dlaf/matrix/print_csv.h"
-
 #include <mpi.h>
 #include "pika/algorithm.hpp"
 
@@ -298,18 +296,6 @@ auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distributio
       }
       offset += count;
     }
-
-    // DEBUG
-    // if (PackBasedOnGlobalIndex)
-    //  std::cout << "send ";
-    // else
-    //  std::cout << "recv ";
-    // for (int i = 0; i < nranks; ++i) {
-    //  std::cout << counts[to_sizet(i)] << " ";
-    //}
-    // std::cout << std::endl;
-    // DEBUG
-
     return counts;
   };
 
@@ -335,7 +321,6 @@ void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribut
 }
 
 // @param index_map a column matrix that represents a map from local `out` to local `in` indices
-// @param in
 template <class T, Device D, Coord C, class IndexMapSender, class InSender, class OutSender>
 void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& index_map, InSender&& in,
                        OutSender&& out) {
@@ -445,13 +430,6 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   LocalElementSize sz_loc{dist.localSizeFromGlobalTileIndexRange<Coord::Row>(i_begin, i_end),
                           dist.localSizeFromGlobalTileIndexRange<Coord::Col>(i_begin, i_end)};
 
-  // comm::Communicator world(MPI_COMM_WORLD);
-  // std::cout << "sz_loc " << sz_loc << std::endl;
-  // std::cout << "i_loc_begin " << i_loc_begin << std::endl;
-  // std::cout << "i_loc_end " << i_loc_end << std::endl;
-  // std::cout << "col/row rank " << comm.rank() << std::endl;
-  // std::cout << "grid col/row rank " << grid.rank() << std::endl;
-
   // if there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.isEmpty()) {
     all2allEmptyData<T>(comm);
@@ -481,18 +459,6 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   Matrix<T, D> mat_send(comm_dist, comm_layout);
   Matrix<T, D> mat_recv(comm_dist, comm_layout);
 
-  // auto debug_barrier = [&, rank = grid.rank()](int i) {
-  //  mat_in.waitLocalTiles();
-  //  mat_out.waitLocalTiles();
-  //  ws_index.waitLocalTiles();
-  //  packing_index.waitLocalTiles();
-  //  unpacking_index.waitLocalTiles();
-  //  mat_send.waitLocalTiles();
-  //  mat_recv.waitLocalTiles();
-  //  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
-  //  std::cout << "MARK " << i << " | RANK " << rank << std::endl;
-  //};
-
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, ws_index);
   auto recv_counts_sender =
@@ -504,8 +470,6 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   auto send_counts_sender =
       initPackingIndex<D, C, true>(comm.size(), i_el_begin, dist, ws_index, packing_index);
 
-  // debug_barrier(3);
-
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
                              whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
@@ -513,35 +477,19 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                                  ? whenAllReadWriteTilesArray(mat_send)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 
-  // debug_barrier(4);
-
   // Note: the local shape may not be square
   if constexpr (C == Coord::Row) {
     transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
   }
-  // else {
-  //   copyFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
-  // }
-
-  // debug_barrier(5);
-  // matrix::print(format::csv{}, "\nMATRIX SEND\n", mat_send);
 
   // Communicate data
   all2allData<T, D, C>(comm, sz_loc, std::move(send_counts_sender), mat_send,
                        std::move(recv_counts_sender), mat_recv);
 
-  // debug_barrier(6);
-  // matrix::print(format::csv{}, "\nMATRIX RECV\n", mat_recv);
-
   // Note: the local shape may not be square
   if constexpr (C == Coord::Row) {
     transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
   }
-  // else {
-  //   copyFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
-  // }
-
-  // debug_barrier(7);
 
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),
@@ -549,19 +497,5 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                                  ? whenAllReadWriteTilesArray(mat_recv)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
                              whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
-
-  // DEBUG
-  // namespace ex = pika::execution::experimental;
-  // Matrix<T, D> locmat(dist.localSize(), dist.blockSize());
-  // for (auto tile_wrt_local : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
-  //  ex::start_detached(
-  //      ex::when_all(mat_out.read_sender(tile_wrt_local), locmat.readwrite_sender(tile_wrt_local)) |
-  //      dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
-  //}
-  // DEBUG
-  // matrix::print(format::csv{}, "\nFIN RECV\n", locmat);
-  // DEBUG
-
-  // debug_barrier(8);
 }
 }

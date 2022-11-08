@@ -59,39 +59,22 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
 
-template <class T, Backend B, Device D>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  const LocalElementSize size(m, m);
-  const TileElementSize block_size(mb, mb);
+template <class T, Device D, class... GridIfDistributed>
+void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
+                                eigensolver::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
+  const SizeType m = reference.size().rows();
 
-  Matrix<const T, Device::CPU> reference = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian(reference);
-    return reference;
-  }();
-
-  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
-  copy(reference, mat_a_h);
-
-  auto ret = [&]() {
-    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::eigensolver<B>(uplo, mat_a.get());
-  }();
-
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  auto mat_a_local = allGather(blas::Uplo::General, reference);
+  auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
-    return allGather(blas::Uplo::General, mat_evals.get());
+    return allGather(blas::Uplo::General, mat_evals.get(), grid...);
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get());
+    return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
 
-  MatrixLocal<T> workspace({m, m}, block_size);
+  MatrixLocal<T> workspace({m, m}, reference.blockSize());
 
   // Check eigenvectors orthogonality (E^H E == Id)
   blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
@@ -122,6 +105,31 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
 }
 
 template <class T, Backend B, Device D>
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
+  copy(reference, mat_a_h);
+
+  auto ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::eigensolver<B>(uplo, mat_a.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testEigensolverCorrectness(uplo, reference, ret);
+}
+
+template <class T, Backend B, Device D>
 void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                      const SizeType mb) {
   const GlobalElementSize size(m, m);
@@ -144,44 +152,7 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   if (mat_a_h.size().isEmpty())
     return;
 
-  auto mat_a_local = allGather(blas::Uplo::General, reference, grid);
-  auto mat_evalues_local = [&]() {
-    MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
-    return allGather(blas::Uplo::General, mat_evals.get(), grid);
-  }();
-  auto mat_e_local = [&]() {
-    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get(), grid);
-  }();
-
-  MatrixLocal<T> workspace({m, m}, block_size);
-
-  // Check eigenvectors orthogonality (E^H E == Id)
-  blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
-             mat_e_local.ptr(), mat_e_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0},
-             workspace.ptr(), workspace.ld());
-
-  auto id = [](GlobalElementIndex index) {
-    if (index.row() == index.col())
-      return T{1};
-    return T{0};
-  };
-  CHECK_MATRIX_NEAR(id, workspace, m * TypeUtilities<T>::error, 10 * m * TypeUtilities<T>::error);
-
-  // Check Ax = lambda x
-  // Compute A E
-  blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, m, T{1}, mat_a_local.ptr(),
-             mat_a_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, workspace.ptr(),
-             workspace.ld());
-
-  // Compute Lambda E (in place in mat_e_local)
-  for (SizeType j = 0; j < m; ++j) {
-    blas::scal(m, mat_evalues_local({j, 0}), mat_e_local.ptr({0, j}), 1);
-  }
-
-  // Check A E == Lambda E
-  auto res = [&mat_e_local](GlobalElementIndex index) { return mat_e_local(index); };
-  CHECK_MATRIX_NEAR(res, workspace, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
+  testEigensolverCorrectness(uplo, reference, ret, grid);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

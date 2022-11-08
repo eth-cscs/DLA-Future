@@ -144,7 +144,7 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  auto ret = [&]() {
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     return eigensolver::eigensolver<B>(grid, uplo, mat_a.get());
   }();

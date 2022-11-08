@@ -41,8 +41,7 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 }
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, Device::CPU> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                              Matrix<T, D>& mat) {
+EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
   DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);

@@ -58,6 +58,11 @@ option(DLAF_ASSERT_ENABLE "Enable low impact assertions" ${DLAF_ASSERT_DEFAULT})
 option(DLAF_ASSERT_MODERATE_ENABLE "Enable medium impact assertions" ${DLAF_ASSERT_MODERATE_DEFAULT})
 option(DLAF_ASSERT_HEAVY_ENABLE "Enable high impact assertions" ${DLAF_ASSERT_HEAVY_DEFAULT})
 
+# Define DLAF's PRIVATE properties
+add_library(dlaf.prop_private INTERFACE)
+target_compile_options(dlaf.prop_private INTERFACE -gz)
+target_link_options(dlaf.prop_private INTERFACE -gz)
+
 # Define DLAF's PUBLIC properties
 add_library(dlaf.prop INTERFACE)
 target_include_directories(
@@ -101,11 +106,11 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
   # for libraries and one for executables. Separate targets are needed because
   # the compilation flags for executables and libraries may differ.
   add_library(dlaf.pch_lib OBJECT dummy.cpp)
-  target_link_libraries(dlaf.pch_lib PRIVATE dlaf.prop)
+  target_link_libraries(dlaf.pch_lib PRIVATE dlaf.prop dlaf.prop_private)
   target_add_warnings(dlaf.pch_lib)
 
   add_executable(dlaf.pch_exe dummy.cpp)
-  target_link_libraries(dlaf.pch_exe PRIVATE dlaf.prop)
+  target_link_libraries(dlaf.pch_exe PRIVATE dlaf.prop dlaf.prop_private)
   target_add_warnings(dlaf.pch_exe)
 
   set(precompiled_headers
@@ -157,12 +162,13 @@ function(DLAF_addSublibrary name)
   endif()
 
   target_compile_options(${object_lib_name} PRIVATE ${DLAF_ASL_COMPILE_OPTIONS})
-  target_link_libraries(${object_lib_name} PRIVATE dlaf.prop)
+  target_link_libraries(${object_lib_name} PRIVATE dlaf.prop dlaf.prop_private)
   target_add_warnings(${object_lib_name})
   DLAF_addPrecompiledHeaders(${object_lib_name})
   add_library(${lib_name} $<TARGET_OBJECTS:${object_lib_name}>)
   target_link_libraries(${lib_name} PUBLIC dlaf.prop)
   target_link_libraries(${lib_name} PUBLIC ${DLAF_ASL_LIBRARIES})
+  target_link_libraries(${lib_name} PRIVATE dlaf.prop_private)
 endfunction()
 
 # Define DLAF's CORE library
@@ -265,13 +271,14 @@ add_library(
   $<TARGET_OBJECTS:dlaf.solver_object>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
+target_link_libraries(DLAF PRIVATE dlaf.prop_private)
 target_add_warnings(DLAF)
 
 # ----- DEPLOY
 include(GNUInstallDirs)
 
 install(
-  TARGETS DLAF dlaf.prop
+  TARGETS DLAF dlaf.prop dlaf.prop_private
   EXPORT DLAF-Targets
   INCLUDES
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}

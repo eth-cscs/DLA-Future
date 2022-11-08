@@ -47,7 +47,9 @@ function(DLAF_addMiniapp miniapp_target_name)
 
   ### Miniapp executable target
   add_executable(${miniapp_target_name} ${DLAF_AM_SOURCES})
-  target_link_libraries(${miniapp_target_name} PRIVATE DLAF_miniapp ${DLAF_AM_LIBRARIES})
+  target_link_libraries(
+    ${miniapp_target_name} PRIVATE DLAF_miniapp ${DLAF_AM_LIBRARIES} dlaf.prop_private
+  )
   target_compile_definitions(${miniapp_target_name} PRIVATE ${DLAF_AM_COMPILE_DEFINITIONS})
   target_include_directories(${miniapp_target_name} PRIVATE ${DLAF_AM_INCLUDE_DIRS})
   target_add_warnings(${miniapp_target_name})

@@ -18,7 +18,7 @@
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/util_types.h"
 
-#include "dlaf/matrix/print_csv.h"
+//#include "dlaf/matrix/print_csv.h"
 
 using namespace dlaf;
 using namespace dlaf::comm;
@@ -33,24 +33,25 @@ using namespace testing;
 template <class T>
 struct PermutationsDistTestMC : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
+TYPED_TEST_SUITE(PermutationsDistTestMC, MatrixElementTypes);
 
+// clang-format off
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {
     // n, nb, i_begin, i_end
-    //{6, 2, 0, 2},
-    //{10, 3, 0, 3},
-    //{17, 5, 0, 3},
-    //{17, 5, 1, 2},
+    {6, 2, 0, 2},
+    {10, 3, 0, 3},
+    {17, 5, 0, 3},
     {10, 3, 1, 2},
 };
+// clang-format on
 
 template <class T, Device D, Coord C>
 void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, SizeType i_begin,
                           SizeType i_end) {
   const GlobalElementSize size(n, n);
   const TileElementSize block_size(nb, nb);
-  // Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  Index2D src_rank_index(0, 0);
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  // Index2D src_rank_index(0, 0);
 
   Distribution dist(size, block_size, grid.size(), grid.rank(), src_rank_index);
 
@@ -73,12 +74,12 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
   dlaf::matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, mat_out_h);
 
   // DEBUG
-  Matrix<T, Device::CPU> mat_print_in(LocalElementSize(n, n), TileElementSize(nb, nb));
-  dlaf::matrix::util::set(mat_print_in, [](GlobalElementIndex i) {
-    return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
-  });
-  matrix::print(format::csv{}, "INPUT", mat_print_in);
-  matrix::print(format::csv{}, "INDEX", perms_h);
+  // Matrix<T, Device::CPU> mat_print_in(LocalElementSize(n, n), TileElementSize(nb, nb));
+  // dlaf::matrix::util::set(mat_print_in, [](GlobalElementIndex i) {
+  //  return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
+  //});
+  // matrix::print(format::csv{}, "INPUT", mat_print_in);
+  // matrix::print(format::csv{}, "INDEX", perms_h);
   // DEBUG
 
   {
@@ -105,21 +106,31 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
   };
 
   // DEBUG
-  Matrix<T, Device::CPU> mat_exp_out(LocalElementSize(n, n), TileElementSize(nb, nb));
-  dlaf::matrix::util::set(mat_exp_out, expected_out);
-  matrix::print(format::csv{}, "RESULT", mat_exp_out);
+  // Matrix<T, Device::CPU> mat_exp_out(LocalElementSize(n, n), TileElementSize(nb, nb));
+  // dlaf::matrix::util::set(mat_exp_out, expected_out);
+  // matrix::print(format::csv{}, "RESULT", mat_exp_out);
   // DEBUG
 
   CHECK_MATRIX_EQ(expected_out, mat_out_h);
 }
 
-TEST(PermutationsDistTestMC, Columns) {
-  using TypeParam = float;
-  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::RowMajor);
-  // for (const auto& comm_grid : this->commGrids()) {
-  for (const auto& [n, nb, i_begin, i_end] : params) {
-    testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
-    pika::threads::get_thread_manager().wait();
+TYPED_TEST(PermutationsDistTestMC, Columns) {
+  //using TypeParam = float;
+  // CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::RowMajor);
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params) {
+      // testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      testDistPermutaitons<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end);
+      pika::threads::get_thread_manager().wait();
+    }
   }
-  //}
+}
+
+TYPED_TEST(PermutationsDistTestMC, Rows) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [n, nb, i_begin, i_end] : params) {
+      testDistPermutaitons<TypeParam, Device::CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
 }

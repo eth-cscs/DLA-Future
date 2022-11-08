@@ -62,14 +62,9 @@ template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
   if constexpr (D == Device::GPU) {
-    (void) grid;
-    (void) i_begin;
-    (void) i_end;
-    (void) perms;
-    (void) mat_in;
-    (void) mat_out;
-    // TODO: fix GPU implementation
     // This is a temporary placeholder which avoids diverging the CPU and GPU APIs:
+    DLAF_UNIMPLEMENTED("GPU implementation not available yet");
+    dlaf::internal::silenceUnusedWarningFor(grid, i_begin, i_end, perms, mat_in, mat_out);
     return;
   }
   else {

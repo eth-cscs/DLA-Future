@@ -22,7 +22,7 @@ __global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* 
   out[in[i]] = i;
 }
 
-void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream) {
+void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream) {
   dim3 nr_threads(invert_index_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);

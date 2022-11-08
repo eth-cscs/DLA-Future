@@ -12,8 +12,9 @@
 
 #ifdef DLAF_WITH_GPU
 #include <cuda.h>
+#include <whip.hpp>
 #include "dlaf/types.h"
 
-void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream);
+void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream);
 
 #endif

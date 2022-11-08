@@ -206,7 +206,7 @@ void all2allEmptyData(const comm::Communicator& comm) {
                                            ex::just(std::vector<int>(to_sizet(comm.size()), 0)));
 }
 
-// Note: matrices are assumed to be in column-major layout!
+// Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!
 //
 template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
 void all2allData(const comm::Communicator& comm, LocalElementSize sz_loc,

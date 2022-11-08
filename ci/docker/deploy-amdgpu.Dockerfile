@@ -19,9 +19,6 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
-# Disable error on warning (HIPBLAS deprecation warning)
-RUN sed -i '/Werror/d' ${SOURCE}/spack/packages/dla-future/package.py
-
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \

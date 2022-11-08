@@ -46,7 +46,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("umpire@6:")
 
     depends_on("pika +mpi")
-    depends_on("pika@0.8:")
+    depends_on("pika@0.9:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
@@ -63,10 +63,27 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("whip +rocm", when="+rocm")
 
     depends_on("rocblas", when="+rocm")
-    depends_on("hipblas", when="+rocm")
     depends_on("rocsolver", when="+rocm")
 
     conflicts("+cuda", when="+rocm")
+
+    with when("+rocm"):
+        for val in ROCmPackage.amdgpu_targets:
+            depends_on("pika amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocsolver amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocblas amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("umpire amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+
+    with when("+cuda"):
+        for val in CudaPackage.cuda_arch_values:
+            depends_on("pika cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
+            depends_on("umpire cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
 
     def cmake_args(self):
         spec = self.spec
@@ -92,6 +109,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
+        if "+cuda" in spec:
+            archs = self.spec.variants["cuda_arch"].value
+            if "none" not in archs:
+                arch_str = ";".join(archs)
+                args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

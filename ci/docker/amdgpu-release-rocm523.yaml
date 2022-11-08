@@ -57,11 +57,6 @@ spack:
     hip:
       externals:
       - spec: hip@5.2.3
-        prefix: /opt/rocm-5.2.3/hip
-        buildable: false
-    hipblas:
-      externals:
-      - spec: hipblas@5.2.3
         prefix: /opt/rocm-5.2.3
         buildable: false
     rocblas:

@@ -28,7 +28,7 @@ do
       # Check if tab are present.
       egrep -Hn $'\t' $FILE && TAB_FOUND=1 || true
       ;;
-    *.cmake|CMakeList.txt|*.cmake.in)
+    *.cmake|*CMakeLists.txt|*.cmake.in)
       cmake-format -i $FILE
       # Check if tab are present.
       egrep -Hn $'\t' $FILE && TAB_FOUND=1 || true

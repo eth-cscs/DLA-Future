@@ -504,13 +504,13 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
                                  matrix::Tile<const T, D>(std::move(tile_w)));
         };
 
-    auto tup2 = ex::when_all(ex::keep_future(std::move(tile_v_h)), ex::keep_future(std::move(tile_t_h)),
-                             splitTile(mat_v(ij), helper.specHH()), splitTile(mat_t(ij_t), t_spec),
-                             splitTile(mat_w(ij), helper.specHH())) |
-                dlaf::internal::transform<
-                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(),
-                                                                 copyVTandComputeW) |
-                ex::make_future();
+    auto tup2 =
+        ex::when_all(std::move(tile_v_h), std::move(tile_t_h), splitTile(mat_v(ij), helper.specHH()),
+                     splitTile(mat_t(ij_t), t_spec), splitTile(mat_w(ij), helper.specHH())) |
+        dlaf::internal::transform<
+            dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(),
+                                                         copyVTandComputeW) |
+        ex::make_future();
 
     return pika::split_future(std::move(tup2));
   }

@@ -56,12 +56,13 @@ enable_language(C)
 enable_language(CXX)
 
 # ---- CUDA/HIP
-if (DLAF_WITH_CUDA AND DLAF_WITH_HIP)
+if(DLAF_WITH_CUDA AND DLAF_WITH_HIP)
   message(FATAL_ERROR "DLAF_WITH_CUDA=ON and DLAF_WITH_HIP=ON. Only one of "
-    "them can be enabled at the same time.")
+                      "them can be enabled at the same time."
+  )
 endif()
-if (DLAF_WITH_CUDA)
-  if (NOT CMAKE_CUDA_ARCHITECTURES)
+if(DLAF_WITH_CUDA)
+  if(NOT CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
@@ -70,7 +71,7 @@ if (DLAF_WITH_CUDA)
 elseif(DLAF_WITH_HIP)
   set(CMAKE_HIP_EXTENSIONS OFF)
   enable_language(HIP)
-  find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
+  find_package(rocblas HINTS $ENV{ROCBLAS_ROOT} REQUIRED)
   find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
   set(DLAF_WITH_GPU ON)
 endif()
@@ -120,7 +121,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.8.0 REQUIRED)
+find_package(pika 0.9.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

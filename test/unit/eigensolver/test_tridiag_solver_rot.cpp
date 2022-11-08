@@ -35,6 +35,10 @@ namespace di = dlaf::eigensolver::internal;
 
 template <typename T>
 struct TridiagEigensolverRotTest : public TestWithCommGrids {
+  static constexpr T angle = static_cast<T>(2.6);
+  static constexpr T rot_c = std::cos(angle);
+  static constexpr T rot_s = std::sin(angle);
+
   using GRot = di::GivensRotation<T>;
 
   struct config_t {
@@ -47,19 +51,19 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
 
   const std::vector<config_t> configs{
       // range with one-sided margin
-      {9, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}}},
-      {9, 3, 0, 1, {GRot{2, 4, cos(2.6f), sin(2.6f)}}},
+      {9, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}}},
+      {9, 3, 0, 1, {GRot{2, 4, rot_c, rot_s}}},
       // range fully in-bound
-      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}}},
+      {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}}},
       // incomplete tile
-      {8, 3, 1, 2, {GRot{3, 7, cos(2.6f), sin(2.6f)}}},
+      {8, 3, 1, 2, {GRot{3, 7, rot_c, rot_s}}},
       // full-range, multiple rotations
-      {9, 3, 0, 2, {GRot{0, 8, cos(2.6f), sin(2.6f)}, GRot{0, 2, cos(2.6f), sin(2.6f)}}},
+      {9, 3, 0, 2, {GRot{0, 8, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},
       // range fully in-bound, independent rotations from same tiles
-      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{4, 7, cos(2.6f), sin(2.6f)}}},
+      {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}, GRot{4, 7, rot_c, rot_s}}},
       // range fully in-bound, non-independent rotations, between same pair of tiles
-      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{3, 7, cos(2.6f), sin(2.6f)}}},
-      {12, 3, 1, 2, {GRot{3, 8, cos(2.6f), sin(2.6f)}, GRot{4, 8, cos(2.6f), sin(2.6f)}}},
+      {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}, GRot{3, 7, rot_c, rot_s}}},
+      {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}, GRot{4, 8, rot_c, rot_s}}},
   };
 };
 

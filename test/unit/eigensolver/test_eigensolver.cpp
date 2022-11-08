@@ -118,7 +118,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  auto ret = [&]() {
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     return eigensolver::eigensolver<B>(uplo, mat_a.get());
   }();
@@ -188,4 +188,20 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     }
   }
 }
+
+TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+    // TODO not all algorithms ready for a real distributed
+    if (grid.size() != comm::Size2D(1, 1))
+      continue;
+
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU>(grid, uplo, m, mb);
+      }
+    }
+  }
+}
+
 #endif

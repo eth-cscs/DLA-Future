@@ -17,6 +17,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -29,8 +30,11 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
 template <typename Type>
-class GenEigensolverTest : public ::testing::Test {};
+class GenEigensolverTest : public TestWithCommGrids {};
 
 template <class T>
 using GenEigensolverTestMC = GenEigensolverTest<T>;
@@ -139,11 +143,61 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret);
 }
 
+template <class T, Backend B, Device D>
+void testGenEigensolver(CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+                        const SizeType mb) {
+  const GlobalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference_a = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size, grid);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<const T, Device::CPU> reference_b = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size, grid);
+    matrix::util::set_random_hermitian_positive_definite(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
+  copy(reference_a, mat_a_h);
+  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
+  copy(reference_b, mat_b_h);
+
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
+    return eigensolver::genEigensolver<B>(grid, uplo, mat_a.get(), mat_b.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
+}
+
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
       const auto& [m, mb] = sz;
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+    // TODO not all algorithms ready for a real distributed
+    if (grid.size() != comm::Size2D(1, 1))
+      continue;
+
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(grid, uplo, m, mb);
+      }
     }
   }
 }
@@ -154,6 +208,21 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
     for (auto sz : sizes) {
       const auto& [m, mb] = sz;
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+    // TODO not all algorithms ready for a real distributed
+    if (grid.size() != comm::Size2D(1, 1))
+      continue;
+
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(grid, uplo, m, mb);
+      }
     }
   }
 }

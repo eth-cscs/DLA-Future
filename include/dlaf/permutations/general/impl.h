@@ -425,10 +425,10 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   TileElementSize blk = dist.blockSize();
   LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                              dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  LocalTileIndex i_loc_end{dist.prevLocalTileFromGlobalTile<Coord::Row>(i_end),
-                           dist.prevLocalTileFromGlobalTile<Coord::Col>(i_end)};
-  LocalElementSize sz_loc{dist.localSizeFromGlobalTileIndexRange<Coord::Row>(i_begin, i_end),
-                          dist.localSizeFromGlobalTileIndexRange<Coord::Col>(i_begin, i_end)};
+  LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
+                           dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
+  LocalElementSize sz_loc{dist.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
+                          dist.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
   // if there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.isEmpty()) {

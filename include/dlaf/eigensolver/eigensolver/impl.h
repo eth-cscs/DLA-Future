@@ -88,8 +88,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
     DLAF_UNIMPLEMENTED(uplo);
 
   // TODO band_size
-  // TODO distributred
-  auto taus = reductionToBand<B>(mat_a, band_size);
+  auto taus = reductionToBand<B>(grid, mat_a);
   auto ret = bandToTridiag<Backend::MC>(uplo, band_size, mat_a);  // TODO distributed
 
   // Note:

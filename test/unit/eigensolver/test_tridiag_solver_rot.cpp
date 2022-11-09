@@ -36,8 +36,8 @@ namespace di = dlaf::eigensolver::internal;
 template <typename T>
 struct TridiagEigensolverRotTest : public TestWithCommGrids {
   static constexpr T angle = static_cast<T>(2.6);
-  static constexpr T rot_c = std::cos(angle);
-  static constexpr T rot_s = std::sin(angle);
+  const T rot_c = std::cos(angle);
+  const T rot_s = std::sin(angle);
 
   using GRot = di::GivensRotation<T>;
 

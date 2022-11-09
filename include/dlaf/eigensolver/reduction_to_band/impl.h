@@ -28,6 +28,7 @@
 #include "dlaf/communication/functions_sync.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
+#include "dlaf/communication/rdma.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -45,28 +46,10 @@
 namespace dlaf::eigensolver::internal {
 
 namespace red2band {
-using matrix::Matrix;
-using matrix::SubMatrixView;
-using matrix::SubPanelView;
-using matrix::Tile;
-
-template <class Type>
-using MatrixT = Matrix<Type, Device::CPU>;
-template <class Type>
-using ConstMatrixT = MatrixT<const Type>;
-template <class Type>
-using TileT = Tile<Type, Device::CPU>;
-template <class Type>
-using ConstTileT = TileT<const Type>;
-
-template <Coord panel_type, class T>
-using PanelT = matrix::Panel<panel_type, T, Device::CPU>;
-template <Coord panel_type, class T>
-using ConstPanelT = PanelT<panel_type, const T>;
 
 // Extract x0 and compute local cumulative sum of squares of the reflector column
-template <class T>
-std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<TileT<T>>& panel,
+template <Device D, class T>
+std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                                      SizeType j) {
   std::array<T, 2> x0_and_squares{0, 0};
   auto it_begin = panel.begin();
@@ -92,9 +75,9 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<Tile
   return x0_and_squares;
 }
 
-template <class T>
-T computeReflectorAndTau(const bool has_head, const std::vector<TileT<T>>& panel, const SizeType j,
-                         std::array<T, 2> x0_and_squares) {
+template <Device D, class T>
+T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
+                         const SizeType j, std::array<T, 2> x0_and_squares) {
   const T norm = std::sqrt(x0_and_squares[1]);
   const T x0 = x0_and_squares[0];
   const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
@@ -124,9 +107,9 @@ T computeReflectorAndTau(const bool has_head, const std::vector<TileT<T>>& panel
   return tau;
 }
 
-template <class T>
-std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel, SizeType j,
-                                     const SizeType pt_cols) {
+template <Device D, class T>
+std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
+                                     SizeType j, const SizeType pt_cols) {
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
   if (!(pt_cols > 0))
@@ -138,7 +121,7 @@ std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<Tile
   bool has_first_component = has_head;
 
   // W = Pt * V
-  for (const TileT<const T>& tile_a : panel) {
+  for (const matrix::Tile<const T, D>& tile_a : panel) {
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -169,15 +152,15 @@ std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<Tile
   return w;
 }
 
-template <class T>
-void updateTrailingPanel(const bool has_head, const std::vector<TileT<T>>& panel, SizeType j,
+template <Device D, class T>
+void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
                          const std::vector<T>& w, const T tau) {
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
 
   // GER Pt = Pt - tau . v . w*
-  for (const TileT<T>& tile_a : panel) {
+  for (const matrix::Tile<T, D>& tile_a : panel) {
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -255,8 +238,8 @@ void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, B
 
 namespace local {
 
-template <class T>
-T computeReflector(const std::vector<TileT<T>>& panel, SizeType j) {
+template <Device D, class T>
+T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   constexpr bool has_head = true;
 
   std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
@@ -266,8 +249,8 @@ T computeReflector(const std::vector<TileT<T>>& panel, SizeType j) {
   return tau;
 }
 
-template <class T>
-void updateTrailingPanelWithReflector(const std::vector<TileT<T>>& panel, const SizeType j,
+template <Device D, class T>
+void updateTrailingPanelWithReflector(const std::vector<matrix::Tile<T, D>>& panel, const SizeType j,
                                       const SizeType pt_cols, const T tau) {
   constexpr bool has_head = true;
   std::vector<T> w = computeWTrailingPanel(has_head, panel, j, pt_cols);
@@ -279,11 +262,13 @@ void updateTrailingPanelWithReflector(const std::vector<TileT<T>>& panel, const 
 }
 
 template <class MatrixLike>
-auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, const SizeType nrefls) {
+auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel_view,
+                            const SizeType nrefls) {
+  static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<TileT<T>>&& panel_tiles) {
+  auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<matrix::Tile<T, D>>&& panel_tiles) {
     common::internal::vector<T> taus;
     taus.reserve(nrefls);
     for (SizeType j = 0; j < nrefls; ++j) {
@@ -294,7 +279,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
     return taus;
   };
 
-  std::vector<pika::future<TileT<T>>> panel_tiles;
+  std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
@@ -310,7 +295,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const SubPanelView& panel_view, c
 }
 
 template <Backend B, Device D, class T, bool force_copy = false>
-void setupReflectorPanelV(bool has_head, const SubPanelView& panel_view, const SizeType nrefls,
+void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view, const SizeType nrefls,
                           matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
   namespace ex = pika::execution::experimental;
 
@@ -403,7 +388,7 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 }
 
 template <Backend B, Device D, class T>
-void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const SubMatrixView& view,
+void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixView& view,
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
   using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
@@ -481,7 +466,7 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
 }
 
 template <Backend B, Device D, class T>
-void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& a,
+void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix<T, D>& a,
                                matrix::Panel<Coord::Col, const T, D>& x,
                                matrix::Panel<Coord::Col, const T, D>& v) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
@@ -524,74 +509,12 @@ void her2kUpdateTrailingMatrix(const SubMatrixView& view, matrix::Matrix<T, D>& 
   }
 }
 
-template <Backend B, Device D, class T>
-struct ComputePanelHelper;
-
-template <class T>
-struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
-  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
-
-  auto call(Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
-            const SizeType nrefls_block) {
-    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    return computePanelReflectors(mat_a, panel_view, nrefls_block);
-  }
-};
-
-#ifdef DLAF_WITH_GPU
-template <class T>
-struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
-  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
-      : panels_v(n_workspaces, dist_a) {}
-
-  auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
-            const SizeType nrefls_block) {
-    using dlaf::eigensolver::internal::red2band::local::computePanelReflectors;
-    using pika::execution::thread_priority;
-
-    namespace ex = pika::execution::experimental;
-
-    // Note:
-    // - copy panel_view from GPU to CPU
-    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
-    // - copy back matrix "panel" from CPU to GPU
-
-    auto& v = panels_v.nextResource();
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tmp_tile = v.readwrite_sender(i);
-      ex::start_detached(
-          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
-          matrix::copy(
-              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>(
-                  thread_priority::high)));
-    }
-
-    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
-
-    for (const auto& i : panel_view.iteratorLocal()) {
-      auto spec = panel_view(i);
-      auto tile_a = mat_a.readwrite_sender(i);
-      ex::start_detached(
-          ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
-          matrix::copy(
-              dlaf::internal::Policy<dlaf::matrix::internal::CopyBackend_v<Device::CPU, Device::GPU>>(
-                  thread_priority::high)));
-    }
-
-    return taus;
-  }
-
-protected:
-  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
-};
-#endif
 }
 
 namespace distributed {
-template <class T>
+template <Device D, class T>
 T computeReflector(const bool has_head, comm::Communicator& communicator,
-                   const std::vector<TileT<T>>& panel, SizeType j) {
+                   const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   std::array<T, 2> x0_and_squares = computeX0AndSquares(has_head, panel, j);
 
   // Note:
@@ -615,9 +538,9 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   return tau;
 }
 
-template <class T>
+template <Device D, class T>
 void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& communicator,
-                                      const std::vector<TileT<T>>& panel, SizeType j,
+                                      const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
                                       const SizeType pt_cols, const T tau) {
   std::vector<T> w = computeWTrailingPanel(has_head, panel, j, pt_cols);
 
@@ -629,31 +552,30 @@ void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& c
   updateTrailingPanel(has_head, panel, j, w, tau);
 }
 
-template <class TriggerSender, class CommSender, class T>
-pika::shared_future<common::internal::vector<T>> computePanelReflectors(
-    TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-    MatrixT<T>& mat_a, const common::IterableRange2D<SizeType, matrix::LocalTile_TAG> ai_panel_range,
-    SizeType nrefls) {
+template <class MatrixLike, class TriggerSender, class CommSender>
+auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
+                            CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
+                            const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+  using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task =
-      [rank_v0, nrefls,
-       cols = mat_a.blockSize().cols()](std::vector<typename MatrixT<T>::TileType>&& panel_tiles,
-                                        common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
-        auto communicator = comm_wrapper.ref();
-        const bool has_head = communicator.rank() == rank_v0;
+  auto panel_task = [rank_v0, nrefls,
+                     cols = panel_view.cols()](auto&& panel_tiles,
+                                               common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
+    auto communicator = comm_wrapper.ref();
+    const bool has_head = communicator.rank() == rank_v0;
 
-        common::internal::vector<T> taus;
-        taus.reserve(nrefls);
-        for (SizeType j = 0; j < nrefls; ++j) {
-          taus.emplace_back(computeReflector(has_head, communicator, panel_tiles, j));
-          updateTrailingPanelWithReflector(has_head, communicator, panel_tiles, j, cols - (j + 1),
-                                           taus.back());
-        }
-        return taus;
-      };
+    common::internal::vector<T> taus;
+    taus.reserve(nrefls);
+    for (SizeType j = 0; j < nrefls; ++j) {
+      taus.emplace_back(computeReflector(has_head, communicator, panel_tiles, j));
+      updateTrailingPanelWithReflector(has_head, communicator, panel_tiles, j, cols - (j + 1),
+                                       taus.back());
+    }
+    return taus;
+  };
 
-  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, ai_panel_range)),
+  return ex::when_all(ex::when_all_vector(matrix::select(mat_a, panel_view.iteratorLocal())),
                       std::forward<CommSender>(mpi_col_chain_panel),
                       std::forward<TriggerSender>(trigger)) |
          dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
@@ -662,15 +584,15 @@ pika::shared_future<common::internal::vector<T>> computePanelReflectors(
          ex::make_future();
 }
 
-template <class T>
-void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT<Coord::Row, T>& xt,
-                  const LocalTileSize at_offset, ConstMatrixT<T>& a, ConstPanelT<Coord::Col, T>& w,
-                  ConstPanelT<Coord::Row, T>& wt, common::Pipeline<comm::Communicator>& mpi_row_chain,
+template <Backend B, Device D, class T>
+void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>& x,
+                  matrix::Panel<Coord::Row, T, D>& xt, const LocalTileSize at_offset,
+                  matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w,
+                  matrix::Panel<Coord::Row, const T, D>& wt,
+                  common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
   using pika::execution::thread_priority;
-
-  constexpr auto B = Backend::MC;
 
   const auto dist = a.distribution();
   const auto rank = dist.rankIndex();
@@ -772,15 +694,15 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, PanelT<Coord::Col, T>& x, PanelT
   }
 }
 
-template <class T>
-void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
-                               ConstPanelT<Coord::Col, T>& x, ConstPanelT<Coord::Row, T>& vt,
-                               ConstPanelT<Coord::Col, T>& v, ConstPanelT<Coord::Row, T>& xt) {
+template <Backend B, Device D, class T>
+void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, Matrix<T, D>& a,
+                               matrix::Panel<Coord::Col, const T, D>& x,
+                               matrix::Panel<Coord::Row, const T, D>& vt,
+                               matrix::Panel<Coord::Col, const T, D>& v,
+                               matrix::Panel<Coord::Row, const T, D>& xt) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
-
-  constexpr auto B = Backend::MC;
 
   const auto dist = a.distribution();
 
@@ -814,6 +736,115 @@ void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, MatrixT<T>& a,
   }
 }
 }
+
+template <Backend B, Device D, class T>
+struct ComputePanelHelper;
+
+template <class T>
+struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
+  ComputePanelHelper(const std::size_t, matrix::Distribution) {}
+
+  auto call(Matrix<T, Device::CPU>& mat_a, const matrix::SubPanelView& panel_view,
+            const SizeType nrefls_block) {
+    using red2band::local::computePanelReflectors;
+    return computePanelReflectors(mat_a, panel_view, nrefls_block);
+  }
+
+  template <Device D, class CommSender, class TriggerSender>
+  auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
+            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view, SizeType nrefls) {
+    using red2band::distributed::computePanelReflectors;
+    return computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                                  std::forward<CommSender>(mpi_col_chain_panel), mat_a, panel_view,
+                                  nrefls);
+  }
+};
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
+  ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
+      : panels_v(n_workspaces, dist_a) {}
+
+  auto call(Matrix<T, Device::GPU>& mat_a, const matrix::SubPanelView& panel_view,
+            const SizeType nrefls_block) {
+    using red2band::local::computePanelReflectors;
+
+    namespace ex = pika::execution::experimental;
+
+    // Note:
+    // - copy panel_view from GPU to CPU
+    // - computePanelReflectors on CPU (on a matrix like, with just a panel)
+    // - copy back matrix "panel" from CPU to GPU
+
+    auto& v = panels_v.nextResource();
+
+    copyToCPU(panel_view, mat_a, v);
+    auto taus = computePanelReflectors(v, panel_view, nrefls_block);
+    copyFromCPU(panel_view, v, mat_a);
+
+    return taus;
+  }
+
+  template <Device D, class CommSender, class TriggerSender>
+  auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
+            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+    auto& v = panels_v.nextResource();
+
+    // copy to CPU
+    copyToCPU(panel_view, mat_a, v);
+
+    // compute on CPU
+    using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
+    auto taus =
+        computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                               std::forward<CommSender>(mpi_col_chain_panel), v, panel_view, nrefls);
+
+    // copy back to GPU
+    copyFromCPU(panel_view, v, mat_a);
+
+    return taus;
+  }
+
+protected:
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> panels_v;
+
+  void copyToCPU(const matrix::SubPanelView panel_view, matrix::Matrix<T, Device::GPU>& mat_a,
+                 matrix::Panel<Coord::Col, T, Device::CPU>& v) {
+    namespace ex = pika::execution::experimental;
+
+    using dlaf::internal::Policy;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tmp_tile = v.readwrite_sender(i);
+      ex::start_detached(
+          ex::when_all(ex::keep_future(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
+    }
+  }
+
+  void copyFromCPU(const matrix::SubPanelView panel_view, matrix::Panel<Coord::Col, T, Device::CPU>& v,
+                   matrix::Matrix<T, Device::GPU>& mat_a) {
+    namespace ex = pika::execution::experimental;
+
+    using dlaf::internal::Policy;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+
+    for (const auto& i : panel_view.iteratorLocal()) {
+      auto spec = panel_view(i);
+      auto tile_a = mat_a.readwrite_sender(i);
+      ex::start_detached(
+          ex::when_all(ex::keep_future(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
+          matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
+    }
+  }
+};
+#endif
+
 }
 
 /// Local implementation of reduction to band
@@ -831,8 +862,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   const auto dist_a = mat_a.distribution();
   const matrix::Distribution dist({mat_a.size().rows(), band_size},
-                                  {dist_a.blockSize().rows(), band_size}, dist_a.commGridSize(),
-                                  dist_a.rankIndex(), dist_a.sourceRankIndex());
+                                  {dist_a.blockSize().rows(), band_size});
 
   // Note:
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
@@ -858,7 +888,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   //
   // It is a bit hacky usage, because SubPanelView is not meant to be used with Panel, but just with
   // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
-  ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
 
   for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
     const auto i_sub = j_sub + 1;
@@ -960,8 +990,6 @@ template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> ReductionToBand<B, D, T>::call(
     comm::CommunicatorGrid grid, Matrix<T, D>& mat_a) {
   using namespace red2band::distributed;
-  using red2band::MatrixT;
-  using red2band::PanelT;
 
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
@@ -984,14 +1012,16 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   taus.reserve(nblocks);
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_v(n_workspaces, dist);
-  common::RoundRobin<PanelT<Coord::Row, T>> panels_vt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_vt(n_workspaces, dist);
 
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_w(n_workspaces, dist);
-  common::RoundRobin<PanelT<Coord::Row, T>> panels_wt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_wt(n_workspaces, dist);
 
-  common::RoundRobin<PanelT<Coord::Col, T>> panels_x(n_workspaces, dist);
-  common::RoundRobin<PanelT<Coord::Row, T>> panels_xt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_xt(n_workspaces, dist);
+
+  red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
   for (SizeType j_block = 0; j_block < nblocks; ++j_block) {
@@ -1012,10 +1042,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
         dist.template nextLocalTileFromGlobalTile<Coord::Col>(at_start.col()),
     };
 
-    const auto ai_panel =
-        iterate_range2d(indexFromOrigin(ai_offset),
-                        LocalTileSize(dist.localNrTiles().rows() - ai_offset.rows(), 1));
-
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
     const auto v0_size = mat_a.tileSize(ai_start);
@@ -1029,8 +1055,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (nrefls == 0)
       break;
 
-    PanelT<Coord::Col, T>& v = panels_v.nextResource();
-    PanelT<Coord::Row, T>& vt = panels_vt.nextResource();
+    auto& v = panels_v.nextResource();
+    auto& vt = panels_vt.nextResource();
 
     v.setRangeStart(ai_start);
     vt.setRangeStart(at_start);
@@ -1041,14 +1067,16 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO or we can keep just the sh_future and allocate just inside if (is_panel_rank_col)
-    MatrixT<T> t({nrefls, nrefls}, dist.blockSize());
+    matrix::Matrix<T, D> t({nrefls, nrefls}, dist.blockSize());
 
     // PANEL
-    const matrix::SubPanelView panel_view(dist, ij_offset, nrefls);
+    const SizeType band_size = dist.blockSize().cols();
+    const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     if (is_panel_rank_col) {
-      taus.emplace_back(computePanelReflectors(std::move(trigger_panel), rank_v0.row(),
-                                               mpi_col_chain_panel(), mat_a, ai_panel, nrefls));
+      taus.emplace_back(compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(),
+                                                  mpi_col_chain_panel(), mat_a, panel_view, nrefls));
+
       red2band::local::setupReflectorPanelV<B, D>(rank.row() == rank_v0.row(), panel_view, nrefls, v,
                                                   mat_a);
       computeTFactor<B>(v, taus.back(), t(t_idx), mpi_col_chain);
@@ -1058,8 +1086,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     comm::broadcast(rank_v0.col(), v, vt, mpi_row_chain, mpi_col_chain);
 
     // W = V . T
-    PanelT<Coord::Col, T>& w = panels_w.nextResource();
-    PanelT<Coord::Row, T>& wt = panels_wt.nextResource();
+    auto& w = panels_w.nextResource();
+    auto& wt = panels_wt.nextResource();
 
     w.setRangeStart(at_start);
     wt.setRangeStart(at_start);
@@ -1073,8 +1101,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     comm::broadcast(rank_v0.col(), w, wt, mpi_row_chain, mpi_col_chain);
 
     // X = At . W
-    PanelT<Coord::Col, T>& x = panels_x.nextResource();
-    PanelT<Coord::Row, T>& xt = panels_xt.nextResource();
+    auto& x = panels_x.nextResource();
+    auto& xt = panels_xt.nextResource();
 
     x.setRangeStart(at_start);
     xt.setRangeStart(at_start);
@@ -1090,7 +1118,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     //
     // On exit, x will contain a valid result just on ranks belonging to the column panel.
     // For what concerns xt, it is just used as support and it contains junk data on all ranks.
-    hemmComputeX(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_chain, mpi_col_chain);
+    hemmComputeX<B, D>(rank_v0.col(), x, xt, at_offset, mat_a, w, wt, mpi_row_chain, mpi_col_chain);
 
     // In the next section the next two operations are performed
     // A) W2 = W* . X
@@ -1102,7 +1130,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     if (is_panel_rank_col) {
       // Note:
       // T can be re-used because it is not needed anymore in this step and it has the same shape
-      MatrixT<T> w2 = std::move(t);
+      matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
       ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
@@ -1123,23 +1151,89 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // TRAILING MATRIX UPDATE
 
     // Note:
-    // This is a checkpoint that it is used to trigger the computation of the next iteration.
+    // This trigger mechanism allows to control when the next iteration of compute panel will start.
     //
-    // It is a checkpoint to ensure advancements in specific edge cases, due to the usage of
-    // blocking MPI calls inside the panel computation.
-    // If there is just a single worker thread (MPI excluded) per rank, and one of the ranks ends up
-    // having an empty panel, it does not have any dependency so it is ready to start the computation
-    // of this empty panel, but at the same time, since it has to partecipate to the collective blocking
-    // calls, it may start and block the only worker thread available. If it starts before this point of
-    // the previous iteration is reached, then a deadlock is created. Indeed, the offending rank is
-    // blocked waiting to do nothing on the next iteration (computePanel), while other ranks would be
-    // stuck waiting for it for completing steps of the previous iteration, needed for the update of the
-    // trailing matrix that will unlock the next iteration.
-    trigger_panel = pika::future<void>(
-        pika::when_all(selectRead(x, x.iteratorLocal()), selectRead(xt, xt.iteratorLocal())));
+    // * What?
+    // Compute panel uses MPI blocking communication that might block the only computing thread
+    // available (since blocking communication are scheduled on normal queues and not on the MPI
+    // dedicated one).
+    //
+    // * How?
+    // If pika runtime has only 2 threads, one is dedicated to MPI and there is just one for
+    // computation, that might get blocked by blocking MPI communication, without the chance to do
+    // anything else. (TODO this might happen even with more reductions happening in parallel)
+    //
+    // * Why?
+    // Panel computation at step i is done on the first column of the trailing matrix computed
+    // at step i-1.
+    // The rank owning the top-left tile of the trailing matrix, can update it as soon as it
+    // receives X[0], which due to the pivot position is also the Xt[0]. Once it can go to the next
+    // iteration, it ends up stucked in an MPI blocking communication, waiting for the others joining
+    // before being able to advance.
+    //
+    // But at the same time, other ranks in the same column (needed for the next panel update), cannot
+    // complete the trailing matrix update. Indeed, they are waiting for the pivot rank to communicate
+    // column-wise Xt[0] (during x -> xt panel transpose broadcast), but he is not going to schedule
+    // anything because the only normal thread which can do that is stuck in an MPI blocking
+    // communication that is not going to advance... and so it's a DEADLOCK!
+    //
+    // * Solution:
+    // The idea is to make the next panel depending not only on tiles stored locally, but also to
+    // ensure that others have received Xt[0], which is needed to advance the computation and let
+    // others arrive at the next iteration where the pivot will wait for them to complete the MPI
+    // blocking communication.
+    //
+    // * Why is it different between MC and GPU?
+    // As said above, the problem is related to the communication. But the communication is not said
+    // to be an atomic operation happening in a single task. It might have to create a copy to
+    // a buffer more suitable for the communication (e.g. GPU -> CPU if RDMA is not available).
+    //
+    // And in order to not be blocked, it must be ensured that the actual communication task has
+    // been scheduled.
+    const comm::IndexT_MPI rank_next_col = (rank_v0.col() + 1) % dist.commGridSize().cols();
+    if (rank.col() == rank_next_col) {
+      const LocalTileIndex at(indexFromOrigin(at_offset));
+
+      if constexpr (dlaf::comm::CommunicationDevice_v<D> == D) {
+        // Note:
+        // if there is no need for additional buffers, we can just wait that xt[0] is ready for
+        // reading.
+        if (rank.row() == rank_v0.row()) {
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+        else {
+          // Note:
+          // Conservatively ensure that xt[0] needed for updating the first column has been
+          // received. Just wait for xt because communication of x happens over rows, while the
+          // pivot rank can just block rank in the same column.
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+      }
+      else {
+        const LocalTileIndex at(indexFromOrigin(at_offset));
+        if (rank.row() == rank_v0.row()) {
+          // Note:
+          // on the pivot rank, i.e. the one that would quickly go to the next panel and block, from
+          // implementation we know that xt[0] is set as an external tile pointing to x[0].
+          // We cannot wait on xt readwrite (because it is an external tile in a panel, that constraints
+          // it to be just readable), but we can wait on its source x[0]. This has a subtle implication,
+          // since we will wait not just for the communication to be complete (which is already more
+          // than what needed), but we will also wait till xt[0] will be released, so after all local
+          // communication and computation on the first column of the trailing matrix will be completed.
+          trigger_panel = x.readwrite_sender(at) | ex::drop_value();
+        }
+        else {
+          // Note:
+          // Conservatively ensure that xt[0] needed for updating the first column has been
+          // received. Just wait for xt because communication of x happens over rows, while the
+          // pivot rank can just block rank in the same column.
+          trigger_panel = xt.read_sender(at) | ex::drop_value();
+        }
+      }
+    }
 
     // At -= X . V* + V . X*
-    her2kUpdateTrailingMatrix(at_offset, mat_a, x, vt, v, xt);
+    her2kUpdateTrailingMatrix<B>(at_offset, mat_a, x, vt, v, xt);
 
     xt.reset();
     x.reset();

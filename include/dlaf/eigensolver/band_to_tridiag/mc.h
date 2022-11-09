@@ -94,8 +94,8 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
   blas::ger(ColMaj, m, n, -tau, w, 1, v, 1, a, lda);
 }
 
-// As the compact band matrix is stored in a rotating buffer it might happen that the operations
-// have to act on a matrix which layes on the last columns and first columns of the buffer.
+// As the compact band matrix is stored in a circular buffer it might happen that the operations
+// have to act on a matrix which lays on the last columns and first columns of the buffer.
 // The following versions take care of this case.
 template <class T>
 void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1, T* a2,
@@ -538,8 +538,6 @@ public:
   void recv(SizeType sweep, SizeType step, const comm::Communicator& comm, comm::IndexT_MPI src,
             comm::IndexT_MPI tag, MPI_Request* req) noexcept {
     SweepWorker<T>::setId(sweep, step);
-    *data_(0) = T{9};
-    *data_(1) = T{9};
     DLAF_MPI_CHECK_ERROR(
         MPI_Irecv(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, src, tag, comm, req));
   }
@@ -928,7 +926,7 @@ private:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  // Note on the algorithm, data distribution and dependency tracking:tiles_per_block
+  // Note on the algorithm, data distribution and dependency tracking:
   // The band matrix is redistribuited in 1D block cyclic. The new block size is a multiple of the
   // block_size of mat_a. As sweeps are performed the matrix is shifted one column to the left (The
   // computed diagonal and off diagonal elements of the resulting tridiagonal matrix are copied into the

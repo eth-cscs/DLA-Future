@@ -25,6 +25,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             description='Use the specified C++ standard when building')
     conflicts('cxxstd=20', when='+cuda')
 
+    variant("shared", default=True, description="Build shared libraries.")
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -87,19 +89,20 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     def cmake_args(self):
         spec = self.spec
+        args = []
+
+        args.append(self.define_from_variant("BUILD_SHARED_LIBS", "shared"))
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-            args = [self.define("DLAF_WITH_MKL", True)]
+            args.append(self.define("DLAF_WITH_MKL", True))
         else:
-            args = [
-                self.define("DLAF_WITH_MKL", False),
-                self.define("LAPACK_TYPE", "Custom"),
-                self.define(
+            args.append(self.define("DLAF_WITH_MKL", False))
+            args.append(self.define("LAPACK_TYPE", "Custom"))
+            args.append(self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
-                ),
-            ]
+                ))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

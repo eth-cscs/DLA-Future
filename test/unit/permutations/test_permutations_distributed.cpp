@@ -31,7 +31,7 @@ using namespace testing;
 template <class T>
 struct PermutationsDistTestMC : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(PermutationsDistTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {

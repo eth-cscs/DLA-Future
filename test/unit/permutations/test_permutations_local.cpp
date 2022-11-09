@@ -24,12 +24,12 @@ using namespace dlaf::test;
 
 template <typename Type>
 class PermutationsTestCPU : public ::testing::Test {};
-TYPED_TEST_SUITE(PermutationsTestCPU, MatrixElementTypes);
+TYPED_TEST_SUITE(PermutationsTestCPU, RealMatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <typename Type>
 class PermutationsTestGPU : public ::testing::Test {};
-TYPED_TEST_SUITE(PermutationsTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(PermutationsTestGPU, RealMatrixElementTypes);
 #endif
 
 // The portion of the input matrices rows/columns specified by `i_begin` and `i_end` are placed in

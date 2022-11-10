@@ -33,15 +33,22 @@ struct PermutationsDistTestMC : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(PermutationsDistTestMC, RealMatrixElementTypes);
 
-// clang-format off
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> params = {
     // n, nb, i_begin, i_end
+
+    // simple setup for a (3, 2) process grid,
     {6, 2, 0, 2},
+    // entire range of tiles is inculded
     {10, 3, 0, 3},
     {17, 5, 0, 3},
+    // only a subset of processes participate
     {10, 3, 1, 2},
+    // a single tile matrix
+    {10, 10, 0, 0},
+    // each process has multiple tiles
+    {31, 6, 1, 3},
+    {50, 4, 1, 8},
 };
-// clang-format on
 
 template <class T, Device D, Coord C>
 void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, SizeType i_begin,

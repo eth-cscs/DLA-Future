@@ -79,6 +79,8 @@ void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
   const matrix::Distribution& distr_perms = perms.distribution();
   const matrix::Distribution& distr_in = mat_in.distribution();
 
+  DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
+
   DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);

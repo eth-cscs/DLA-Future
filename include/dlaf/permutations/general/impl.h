@@ -262,9 +262,10 @@ void all2allData(const comm::Communicator& comm, LocalElementSize sz_loc,
 //
 // Note: the order of the packed rows or columns on the send side must match the expected order at
 // unpacking on the receive side
-template <Device D, Coord C, bool PackBasedOnGlobalIndex>
+template <Coord C, bool PackBasedOnGlobalIndex>
 auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distribution& dist,
-                      Matrix<const SizeType, D>& loc2gl_index, Matrix<SizeType, D>& packing_index) {
+                      Matrix<const SizeType, Device::CPU>& loc2gl_index,
+                      Matrix<SizeType, Device::CPU>& packing_index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -302,7 +303,7 @@ auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distributio
   auto sender =
       ex::when_all(whenAllReadOnlyTilesArray(loc2gl_index), whenAllReadWriteTilesArray(packing_index));
   return ex::ensure_started(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>{},
+      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>{},
                                                              std::move(counts_fn), std::move(sender)));
 }
 
@@ -341,7 +342,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                                                              std::move(permute_fn), std::move(sender)));
 }
 
-template <Device D, class InTileSender, class OutTileSender>
+template <class InTileSender, class OutTileSender>
 void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -355,26 +356,28 @@ void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
   };
 
   ex::start_detached(
-      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(transpose_fn), std::move(sender)));
+      di::transform(di::Policy<Backend::MC>(), std::move(transpose_fn), std::move(sender)));
 }
 
 // Transposes a local matrix @p mat_in into the local part of the distributed matrix @p mat_out.
-template <class T, Device D>
-void transposeFromLocalToDistributedMatrix(LocalTileIndex i_loc_begin, Matrix<const T, D>& mat_in,
-                                           Matrix<T, D>& mat_out) {
+template <class T>
+void transposeFromLocalToDistributedMatrix(LocalTileIndex i_loc_begin,
+                                           Matrix<const T, Device::CPU>& mat_in,
+                                           Matrix<T, Device::CPU>& mat_out) {
   for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
     LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(), i_loc_begin.col() + i_in_tile.row());
-    transposeTileSenders<D>(mat_in.read_sender(i_in_tile), mat_out.readwrite_sender(i_out_tile));
+    transposeTileSenders(mat_in.read_sender(i_in_tile), mat_out.readwrite_sender(i_out_tile));
   }
 }
 
 // Transposes the local part of the distributed matrix @p mat_in into the local matrix @p mat_out.
-template <class T, Device D>
-void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin, Matrix<const T, D>& mat_in,
-                                           Matrix<T, D>& mat_out) {
+template <class T>
+void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
+                                           Matrix<const T, Device::CPU>& mat_in,
+                                           Matrix<T, Device::CPU>& mat_out) {
   for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
     LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(), i_loc_begin.col() + i_out_tile.row());
-    transposeTileSenders<D>(mat_in.read_sender(i_in_tile), mat_out.readwrite_sender(i_out_tile));
+    transposeTileSenders(mat_in.read_sender(i_in_tile), mat_out.readwrite_sender(i_out_tile));
   }
 }
 
@@ -455,13 +458,13 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, ws_index);
   auto recv_counts_sender =
-      initPackingIndex<D, C, false>(comm.size(), i_el_begin, dist, ws_index, unpacking_index);
+      initPackingIndex<C, false>(comm.size(), i_el_begin, dist, ws_index, unpacking_index);
 
-  // Initiaze the packing index
+  // Initialize the packing index
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, inverse_perms, ws_index);
   auto send_counts_sender =
-      initPackingIndex<D, C, true>(comm.size(), i_el_begin, dist, ws_index, packing_index);
+      initPackingIndex<C, true>(comm.size(), i_el_begin, dist, ws_index, packing_index);
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),

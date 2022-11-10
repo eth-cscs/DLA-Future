@@ -90,7 +90,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
 
   const SizeType mb = dist.blockSize().rows();
   const SizeType i_end = i_last + 1;
-  const SizeType range_size = std::min(dist.size().rows(), i_end * mb) - i_begin * mb;
+  const SizeType range_size_limit = std::min(dist.size().rows(), i_end * mb);
+  const SizeType range_size = range_size_limit - i_begin * mb;
 
   // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which
@@ -228,7 +229,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
   // Note:
   // Using a combination of shrinked distribution and an offset given to the panel, the workspace
   // is allocated just for the part strictly needed by the range [i_begin, i_last]
-  const matrix::Distribution dist_ws({i_end * mb, 1}, dist.blockSize(), dist.commGridSize(),
+  const matrix::Distribution dist_ws({range_size_limit, 1}, dist.blockSize(), dist.commGridSize(),
                                      dist.rankIndex(), dist.sourceRankIndex());
   matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
 

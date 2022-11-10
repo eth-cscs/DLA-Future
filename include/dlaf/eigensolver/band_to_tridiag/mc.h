@@ -158,7 +158,31 @@ public:
         mem_size_col_(n), mem_(mem_size_col_ * (ld_ + 1)) {}
 
   // Distributed constructor
-  // TODO document size of allocated memory
+  // Note on size of the buffers:
+  // Due to the algorithm structure each block needs maximum two extra columns of space:
+  // one for the extra column that the dependecies allow (see Fig 1), and one to safely schedule
+  // the next receive.
+  // However, block 0 needs extra block_size rows to store the diagonal and offdiagonal elements of the
+  // tridiagonal matrix before they are copied by copy_tridiag.
+  // (The copy is performed in chunks of block_size columns.)
+  //
+  // Fig 1: From the following schema it is clear block(i) cannot receive the sweep j+1 column from block(i+1)
+  //        before that block(i) send the column of sweep j to block(i-1).
+  //
+  //           block (i-1) |       block(i)      |    block (i+1)
+  // ...
+  // sweep j:   ... -> CS -SW-> CS -> ... -> CS -SW-> CS -> ...
+  //                           /                      /
+  //                     /-SC--                 /-SC--
+  //                    v                      v
+  // sweep j+1: ... -> CS -SW-> CS -> ... -> CS -SW-> CS -> ...
+  //                           /                      /
+  //                     /-SC--                 /-SC--
+  //                    v                      v
+  // sweep j+2: ... -> CS -SW-> CS -> ... -> CS -SW-> CS -> ...
+  // ...
+  // where CS is a continue sweep task, SW is a Worker communication and SC is a column communication.
+  // Note: Only the dependencies relevant to the analysis are depicted here.
   template <bool dist2 = dist, std::enable_if_t<dist2 && dist == dist2, int> = 0>
   BandBlock(SizeType n, SizeType band_size, SizeType id, SizeType block_size)
       : size_(n), band_size_(band_size), ld_(2 * band_size_ - 1), id_(id), block_size_(block_size),

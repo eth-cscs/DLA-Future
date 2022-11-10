@@ -258,7 +258,7 @@ void all2allData(const comm::Communicator& comm, LocalElementSize sz_loc,
 // @param nranks number of ranks
 // @param loc2gl_index  a column matrix that represents a map from local to global indices
 // @param packing_index a column matrix that represents a map from packed indices to local indices
-//        that is used for packing columns or rows to each rank
+//        that is used for packing columns or rows on each rank
 //
 // Note: the order of the packed rows or columns on the send side must match the expected order at
 // unpacking on the receive side
@@ -307,6 +307,8 @@ auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distributio
                                                              std::move(counts_fn), std::move(sender)));
 }
 
+// Copies index tiles belonging to the current process from the complete index @p global_index into the
+// partial index containing only the local parts @p local_index.
 template <Device D, Coord C>
 void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribution& dist,
                                    Matrix<const SizeType, D>& global_index,
@@ -342,6 +344,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                                                              std::move(permute_fn), std::move(sender)));
 }
 
+// Tranposes two tiles of compatible dimensions
 template <class InTileSender, class OutTileSender>
 void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
   namespace ex = pika::execution::experimental;
@@ -381,6 +384,8 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
   }
 }
 
+// Inverts the the subset of tiles [ @p i_begin, @p i_end (including)] of the index map @p in and saves
+// the result into @p out.
 inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
                         Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
@@ -423,10 +428,12 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                              dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
   LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
                            dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
+  // Note: the local shape of the permutation region may not be square even if the global shape defined
+  // by [i_begin, i_end (including)] is. That is a consequence of the 2D block-cyclic distribution.
   LocalElementSize sz_loc{dist.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
                           dist.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
-  // if there are no tiles in this rank, participate in the all2all call and return
+  // If there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.isEmpty()) {
     all2allEmptyData<T>(comm);
     return;
@@ -473,7 +480,7 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                                  ? whenAllReadWriteTilesArray(mat_send)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 
-  // Note: the local shape may not be square
+  // Pack data into the contiguous column-major send buffer by transposing
   if constexpr (C == Coord::Row) {
     transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
   }
@@ -482,7 +489,7 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
   all2allData<T, D, C>(comm, sz_loc, std::move(send_counts_sender), mat_send,
                        std::move(recv_counts_sender), mat_recv);
 
-  // Note: the local shape may not be square
+  // Unpack data from the contiguous column-major receive buffer by transposing
   if constexpr (C == Coord::Row) {
     transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
   }

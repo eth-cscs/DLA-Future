@@ -12,9 +12,9 @@
 
 namespace dlaf::eigensolver::internal {
 
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_LOCAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::GPU, Device::GPU, float)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::GPU, Device::GPU, double)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
 
 }

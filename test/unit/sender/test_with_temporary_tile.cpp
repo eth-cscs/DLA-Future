@@ -21,24 +21,24 @@ using namespace dlaf;
 namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
 
-template <class T, Device device>
+template <class T, Device D>
 auto newBlockMatrixContiguous() {
   auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 13);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
-  auto matrix = matrix::Matrix<T, device>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, layout);
 
   EXPECT_TRUE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
 
   return matrix;
 }
 
-template <class T, Device device>
+template <class T, Device D>
 auto newBlockMatrixStrided() {
   auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 26);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
-  auto matrix = matrix::Matrix<T, device>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, layout);
 
   EXPECT_FALSE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
 

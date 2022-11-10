@@ -36,14 +36,14 @@ namespace test {
 template <class MatrixType>
 struct matrix_traits;
 
-template <template <class, Device> class MatrixLike, class T, Device device>
-struct matrix_traits<MatrixLike<T, device>> {
+template <template <class, Device> class MatrixLike, class T, Device D>
+struct matrix_traits<MatrixLike<T, D>> {
   using ElementT = std::remove_cv_t<T>;
   using has_distribution = std::true_type;
 };
 
-template <class T, Device device>
-struct matrix_traits<Tile<T, device>> {
+template <class T, Device D>
+struct matrix_traits<Tile<T, D>> {
   using ElementT = std::remove_cv_t<T>;
   using has_distribution = std::false_type;
 };

@@ -25,6 +25,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             description='Use the specified C++ standard when building')
     conflicts('cxxstd=20', when='+cuda')
 
+    variant("shared", default=True, description="Build shared libraries.")
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -32,7 +34,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
-    depends_on("cmake@3.16:", type="build")
+    depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
@@ -46,7 +48,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("umpire@6:")
 
     depends_on("pika +mpi")
-    depends_on("pika@0.8:")
+    depends_on("pika@0.9:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
@@ -59,37 +61,62 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pika build_type=Release", when="build_type=Release")
     depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
 
+    depends_on("whip +cuda", when="+cuda")
+    depends_on("whip +rocm", when="+rocm")
+
     depends_on("rocblas", when="+rocm")
-    depends_on("hipblas", when="+rocm")
     depends_on("rocsolver", when="+rocm")
 
     conflicts("+cuda", when="+rocm")
 
+    with when("+rocm"):
+        for val in ROCmPackage.amdgpu_targets:
+            depends_on("pika amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocsolver amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocblas amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("umpire amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+
+    with when("+cuda"):
+        for val in CudaPackage.cuda_arch_values:
+            depends_on("pika cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
+            depends_on("umpire cuda_arch={0}".format(val),
+                when="cuda_arch={0}".format(val))
+
     def cmake_args(self):
         spec = self.spec
+        args = []
+
+        args.append(self.define_from_variant("BUILD_SHARED_LIBS", "shared"))
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-            args = [self.define("DLAF_WITH_MKL", True)]
+            args.append(self.define("DLAF_WITH_MKL", True))
         else:
-            args = [
-                self.define("DLAF_WITH_MKL", False),
-                self.define("LAPACK_TYPE", "Custom"),
-                self.define(
+            args.append(self.define("DLAF_WITH_MKL", False))
+            args.append(self.define("LAPACK_TYPE", "Custom"))
+            args.append(self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
-                ),
-            ]
+                ))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))
         args.append(self.define_from_variant("DLAF_WITH_HIP", "rocm"))
-
-        # HIP support requires compiling with hipcc
-        if '+rocm' in self.spec:
-            args += [self.define('CMAKE_CXX_COMPILER', self.spec['hip'].hipcc)]
-            if self.spec.satisfies('^cmake@3.21.0:3.21.2'):
-                args += [self.define('__skip_rocmclang', True)]
+        if "+rocm" in spec:
+            archs = self.spec.variants["amdgpu_target"].value
+            if "none" not in archs:
+                arch_str = ";".join(archs)
+                args.append(self.define("CMAKE_HIP_ARCHITECTURES", arch_str))
+        if "+cuda" in spec:
+            archs = self.spec.variants["cuda_arch"].value
+            if "none" not in archs:
+                arch_str = ";".join(archs)
+                args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

@@ -23,6 +23,8 @@
 #include "dlaf/util_blas.h"
 
 #ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/blas/error.h"
 #include "dlaf/util_cublas.h"
@@ -34,7 +36,7 @@
     std::size_t workspace_size;                                                                       \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
-    DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+    DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));             \
     DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
         rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
     return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \
@@ -43,9 +45,9 @@
 namespace dlaf::tile::internal {
 inline void extendROCBlasWorkspace(cublasHandle_t handle,
                                    ::dlaf::memory::MemoryView<std::byte, Device::GPU>&& workspace) {
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
-  auto f = [workspace = std::move(workspace)](cudaError_t status) { DLAF_GPU_CHECK_ERROR(status); };
+  auto f = [workspace = std::move(workspace)](whip::error_t status) { whip::check_error(status); };
   pika::cuda::experimental::detail::add_event_callback(std::move(f), stream);
 }
 }
@@ -58,7 +60,7 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
       auto workspace = DLAF_GET_ROCBLAS_WORKSPACE(f);                                                   \
       DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), workspace(),  \
                                                      to_sizet(workspace.size())));                      \
-      DLAF_GPUBLAS_CHECK_ERROR(hipblas##f(handle, std::forward<Args>(args)...));                        \
+      DLAF_GPUBLAS_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));                       \
       DLAF_GPUBLAS_CHECK_ERROR(rocblas_set_workspace(static_cast<rocblas_handle>(handle), nullptr, 0)); \
       ::dlaf::tile::internal::extendROCBlasWorkspace(handle, std::move(workspace));                     \
     }                                                                                                   \
@@ -81,6 +83,22 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   template <typename T>               \
   struct Name
 
+#ifdef DLAF_WITH_HIP
+#define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
+  DLAF_DECLARE_GPUBLAS_OP(Name);                           \
+  DLAF_DEFINE_GPUBLAS_OP(Name, float, s##f);               \
+  DLAF_DEFINE_GPUBLAS_OP(Name, double, d##f);              \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, c##f); \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, z##f)
+
+#define DLAF_MAKE_GPUBLAS_SYHE_OP(Name, f)                   \
+  DLAF_DECLARE_GPUBLAS_OP(Name);                             \
+  DLAF_DEFINE_GPUBLAS_OP(Name, float, ssy##f);               \
+  DLAF_DEFINE_GPUBLAS_OP(Name, double, dsy##f);              \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, che##f); \
+  DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, zhe##f)
+
+#elif defined(DLAF_WITH_CUDA)
 #define DLAF_MAKE_GPUBLAS_OP(Name, f)                      \
   DLAF_DECLARE_GPUBLAS_OP(Name);                           \
   DLAF_DEFINE_GPUBLAS_OP(Name, float, S##f);               \
@@ -94,6 +112,7 @@ inline void extendROCBlasWorkspace(cublasHandle_t handle,
   DLAF_DEFINE_GPUBLAS_OP(Name, double, Dsy##f);              \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<float>, Che##f); \
   DLAF_DEFINE_GPUBLAS_OP(Name, std::complex<double>, Zhe##f)
+#endif
 
 namespace dlaf::gpublas::internal {
 
@@ -114,17 +133,25 @@ DLAF_MAKE_GPUBLAS_SYHE_OP(Her2k, r2k);
 
 DLAF_MAKE_GPUBLAS_SYHE_OP(Herk, rk);
 
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #endif
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
-#ifdef DLAF_WITH_HIP
+#if defined(DLAF_WITH_HIP)
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 DLAF_MAKE_GPUBLAS_OP(Trsm, trsm);
-
 }
 #endif
 
@@ -451,7 +478,7 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
 #ifdef DLAF_WITH_HIP
-  cudaStream_t stream;
+  whip::stream_t stream;
   DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
   matrix::internal::copy(b, c, stream);
 #endif
@@ -471,13 +498,7 @@ void trsm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   using util::blasToCublas;
   using util::blasToCublasCast;
   auto s = getTrsmSizes(side, a, b);
-  auto a_ptr =
-#ifdef DLAF_WITH_CUDA
-      blasToCublasCast(a.ptr());
-#elif defined(DLAF_WITH_HIP)
-      // The hipblas API requires a non-const argument
-      blasToCublasCast(const_cast<T*>(a.ptr()));
-#endif
+  auto a_ptr = blasToCublasCast(a.ptr());
   gpublas::internal::Trsm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                                    blasToCublas(diag), to_int(s.m), to_int(s.n),
                                    blasToCublasCast(&alpha), a_ptr, to_int(a.ld()),

@@ -41,7 +41,7 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '40:00'
+    SLURM_TIMELIMIT: '1:00:00'
 
 {{JOBS}}
 
@@ -67,7 +67,7 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '10:00'
+    SLURM_TIMELIMIT: '15:00'
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
@@ -100,7 +100,7 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '15:00'
+    SLURM_TIMELIMIT: '40:00'
 
 {{JOBS}}
 
@@ -116,7 +116,7 @@ JOB_TEMPLATE="
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
-    SLURM_TIMELIMIT: '5:00'
+    SLURM_TIMELIMIT: '10:00'
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'

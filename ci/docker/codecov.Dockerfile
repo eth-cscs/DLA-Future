@@ -29,7 +29,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci install --keep-stage
+    spack -e ci install --keep-stage --verbose
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \

@@ -11,35 +11,34 @@
 namespace dlaf {
 namespace matrix {
 
-template <class T, Device device>
-Matrix<const T, device>::Matrix(const LayoutInfo& layout, ElementType* ptr)
+template <class T, Device D>
+Matrix<const T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr)
     : MatrixBase({layout.size(), layout.blockSize()}) {
-  memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
+  memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
 
-template <class T, Device device>
-Matrix<const T, device>::Matrix(Distribution distribution, const matrix::LayoutInfo& layout,
-                                ElementType* ptr) noexcept
+template <class T, Device D>
+Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& layout,
+                           ElementType* ptr) noexcept
     : MatrixBase(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(), distribution.localSize(),
               layout.size());
   DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
-  memory::MemoryView<ElementType, device> mem(ptr, layout.minMemSize());
+  memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
 }
 
-template <class T, Device device>
-pika::shared_future<Tile<const T, device>> Matrix<const T, device>::read(
-    const LocalTileIndex& index) noexcept {
+template <class T, Device D>
+pika::shared_future<Tile<const T, D>> Matrix<const T, D>::read(const LocalTileIndex& index) noexcept {
   const auto i = tileLinearIndex(index);
   return tile_managers_[i].getReadTileSharedFuture();
 }
 
-template <class T, Device device>
-void Matrix<const T, device>::waitLocalTiles() noexcept {
+template <class T, Device D>
+void Matrix<const T, D>::waitLocalTiles() noexcept {
   // Note:
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared
   // among multiple tasks.
@@ -53,15 +52,15 @@ void Matrix<const T, device>::waitLocalTiles() noexcept {
   pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
 }
 
-template <class T, Device device>
-void Matrix<const T, device>::setUpTiles(const memory::MemoryView<ElementType, device>& mem,
-                                         const LayoutInfo& layout) noexcept {
+template <class T, Device D>
+void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& mem,
+                                    const LayoutInfo& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
 
   tile_managers_.clear();
   tile_managers_.reserve(futureVectorSize(nr_tiles));
 
-  using MemView = memory::MemoryView<T, device>;
+  using MemView = memory::MemoryView<T, D>;
 
   for (SizeType j = 0; j < nr_tiles.cols(); ++j) {
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {

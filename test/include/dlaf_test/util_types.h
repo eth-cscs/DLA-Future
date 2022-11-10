@@ -53,6 +53,7 @@ struct TypeUtilities<std::complex<T>> {
   ///
   /// @pre r > 0.
   static constexpr std::complex<T> polar(double r, double theta) {
+    assert(r >= 0 && "Magnitude must be a positive value.");
     return std::polar<T>(static_cast<T>(r), static_cast<T>(theta));
   }
 

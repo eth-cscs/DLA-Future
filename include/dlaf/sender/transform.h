@@ -20,20 +20,19 @@
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/lapack/api.h"
 
 #include <pika/cuda.hpp>
 #endif
 
+#include <type_traits>
+
 namespace dlaf {
 namespace internal {
 
-// hipBLAS functions take a handle of type hipblasHandle_t which is a typedef
-// for a void pointer. Those functions can be therefore called with a
-// rocblas_handle (handle used for rocsolver functions). This tag is here to
-// disambiguate the call.
+// Both rocblas and rocsolver functions are called with a rocblas_handle. This
+// tag is here to disambiguate the call.
 enum class TransformDispatchType { Plain, Blas, Lapack };
 
 // The following are DLA-Future-specific transforms, with some helper variations
@@ -86,7 +85,16 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, bool Unwrap 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
   auto f_unwrapping = [&]() {
-    if constexpr (Unwrap) {
+    // pika::unwrapping does not compile with a nullary callable. Since nothing
+    // needs to be unwrapped for a nullary callable we can simply not use
+    // pika::unwrapping as a workaround (this is checked with is_invocable).
+    // This is not 100% correct since a sender may have multiple completion
+    // signatures, with one of them being nullary and others requiring
+    // unwrapping. However, since:
+    //   1. unwrapping/futures are due to be removed, and
+    //   2. this works for all current use cases in DLA-Future
+    // this suffices as a workaround.
+    if constexpr (Unwrap && !std::is_invocable_v<F>) {
       return pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
     }
     else {

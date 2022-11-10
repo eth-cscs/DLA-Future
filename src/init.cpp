@@ -197,6 +197,17 @@ void initialize(pika::program_options::variables_map const& vm, configuration co
     std::exit(0);
   }
 
+  int mpi_initialized;
+  DLAF_MPI_CHECK_ERROR(MPI_Initialized(&mpi_initialized));
+  if (mpi_initialized) {
+    int provided;
+    DLAF_MPI_CHECK_ERROR(MPI_Query_thread(&provided));
+    if (provided < MPI_THREAD_MULTIPLE) {
+      std::cerr << "MPI must be initialized to `MPI_THREAD_MULTIPLE` for DLA-Future!\n";
+      MPI_Abort(MPI_COMM_WORLD, 1);
+    }
+  }
+
   DLAF_ASSERT(!internal::initialized(), "");
   internal::Init<Backend::MC>::initialize(cfg);
 #ifdef DLAF_WITH_GPU

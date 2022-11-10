@@ -8,10 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/gpu/api.h"
 #include "dlaf/permutations/general/perms.h"
 #include "dlaf/types.h"
 #include "dlaf/util_cuda.h"
+
+#include <whip.hpp>
 
 namespace dlaf::permutations::internal {
 
@@ -87,7 +88,7 @@ void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize s
                                const matrix::Distribution& distr, const SizeType* perms,
                                const std::vector<matrix::Tile<T, Device::GPU>>& in_tiles,
                                const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles,
-                               cudaStream_t stream) {
+                               whip::stream_t stream) {
   MatrixLayout in_layout = getMatrixLayout(distr, in_tiles);
   MatrixLayout out_layout = getMatrixLayout(distr, out_tiles);
   const T* in = in_tiles[0].ptr();

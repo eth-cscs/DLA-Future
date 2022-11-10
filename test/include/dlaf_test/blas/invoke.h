@@ -10,13 +10,15 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/blas/error.h"
-#include "dlaf/gpu/error.h"
 #endif
 
 namespace dlaf::test {
@@ -39,7 +41,7 @@ struct Invoke<Device::GPU> {
   template <class F, class... Args>
   static void call(F&& f, Args&&... args) {
     f(std::forward<Args>(args)..., nullptr);
-    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
+    whip::device_synchronize();
   }
 };
 #endif
@@ -63,7 +65,7 @@ struct InvokeBlas<Device::GPU> {
     cublasHandle_t handle;
     DLAF_GPUBLAS_CHECK_ERROR(cublasCreate(&handle));
     f(handle, std::forward<Args>(args)...);
-    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
+    whip::device_synchronize();
     DLAF_GPUBLAS_CHECK_ERROR(cublasDestroy(handle));
   }
 };

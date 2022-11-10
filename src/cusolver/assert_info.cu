@@ -9,12 +9,15 @@
 //
 
 #include <stdio.h>
+
+#include <whip.hpp>
+
 #include "dlaf/gpu/lapack/assert_info.h"
 
 #ifdef DLAF_ASSERT_ENABLE
 
 #define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func)                                                      \
-  void assertInfo##func(cudaStream_t stream, int* info) {                                           \
+  void assertInfo##func(whip::stream_t stream, int* info) {                                         \
     dlaf::gpulapack::internal::assert_info<<<1, 1, 0, stream>>>(info,                               \
                                                                 [] __device__() { return #func; }); \
   }
@@ -22,7 +25,7 @@
 #else
 
 #define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func) \
-  void assertInfo##func(cudaStream_t stream, int* info) {}
+  void assertInfo##func(whip::stream_t stream, int* info) {}
 
 #endif
 

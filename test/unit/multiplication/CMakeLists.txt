@@ -12,7 +12,8 @@ DLAF_addTest(
   test_multiplication_general
   SOURCES test_multiplication_general.cpp
   LIBRARIES dlaf.multiplication dlaf.core
-  USE_MAIN PIKA
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
 )
 
 DLAF_addTest(

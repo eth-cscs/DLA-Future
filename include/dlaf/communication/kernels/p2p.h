@@ -74,7 +74,7 @@ template <class CommSender, class Sender>
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
@@ -96,7 +96,7 @@ template <class CommSender, class Sender>
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,

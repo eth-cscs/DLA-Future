@@ -23,10 +23,10 @@ namespace dlaf::miniapp {
 /// Creates a set of tiles that can be used to benchmark kernels.
 ///
 /// It helps removing the cache effect when the same tile is used multiple times.
-template <class T, Device device>
+template <class T, Device D>
 class WorkTiles {
 public:
-  using TileType = matrix::Tile<T, device>;
+  using TileType = matrix::Tile<T, D>;
 
   WorkTiles(SizeType count, SizeType m, SizeType n, SizeType ld) noexcept {
     DLAF_ASSERT(count > 0, count);
@@ -37,12 +37,11 @@ public:
     const SizeType chunk_size = ld * n;
     const SizeType chunks = util::ceilDiv(count, tiles_in_chunk);
 
-    memory::MemoryView<T, device> mem(chunks * chunk_size);
+    memory::MemoryView<T, D> mem(chunks * chunk_size);
 
     for (SizeType i = 0; i < count; ++i) {
-      memory::MemoryView<T, device> sub_mem(mem,
-                                            i % tiles_in_chunk * m + i / tiles_in_chunk * chunk_size,
-                                            ld * (n - 1) + m);
+      memory::MemoryView<T, D> sub_mem(mem, i % tiles_in_chunk * m + i / tiles_in_chunk * chunk_size,
+                                       ld * (n - 1) + m);
       tiles_.emplace_back(TileElementSize(m, n), std::move(sub_mem), ld);
     }
   }

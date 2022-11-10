@@ -24,7 +24,7 @@ if [ -z "$IMAGE" ]; then
 fi
 
 if [ "$PULL" != "OFF" ]; then
-  echo "Note: credentials can be found in user settings on art.cscs.ch. Passwords are not accepted, only the token can be used."
+  echo "Note: credentials can be found in user settings on jfrog.svc.cscs.ch. Passwords are not accepted, only the token can be used."
   sarus pull --login $IMAGE
 fi
 

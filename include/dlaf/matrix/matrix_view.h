@@ -25,19 +25,19 @@
 namespace dlaf {
 namespace matrix {
 
-template <class T, Device device>
+template <class T, Device D>
 class MatrixView;
 
-template <class T, Device device>
-class MatrixView<const T, device> : public internal::MatrixBase {
+template <class T, Device D>
+class MatrixView<const T, D> : public internal::MatrixBase {
 public:
   using ElementType = T;
-  using TileType = Tile<ElementType, device>;
-  using ConstTileType = Tile<const ElementType, device>;
+  using TileType = Tile<ElementType, D>;
+  using ConstTileType = Tile<const ElementType, D>;
 
   template <template <class, Device> class MatrixType, class T2,
             std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
-  MatrixView(blas::Uplo uplo, MatrixType<T2, device>& matrix);
+  MatrixView(blas::Uplo uplo, MatrixType<T2, D>& matrix);
 
   MatrixView(const MatrixView& rhs) = delete;
   MatrixView(MatrixView&& rhs) = default;
@@ -82,18 +82,18 @@ public:
 private:
   template <template <class, Device> class MatrixType, class T2,
             std::enable_if_t<std::is_same_v<T, std::remove_const_t<T2>>, int> = 0>
-  void setUpTiles(MatrixType<T2, device>& matrix) noexcept;
+  void setUpTiles(MatrixType<T2, D>& matrix) noexcept;
 
   std::vector<pika::shared_future<ConstTileType>> tile_shared_futures_;
 };
 
-template <template <class, Device> class MatrixType, class T, Device device>
-MatrixView<std::add_const_t<T>, device> getConstView(blas::Uplo uplo, MatrixType<T, device>& matrix) {
-  return MatrixView<std::add_const_t<T>, device>(uplo, matrix);
+template <template <class, Device> class MatrixType, class T, Device D>
+MatrixView<std::add_const_t<T>, D> getConstView(blas::Uplo uplo, MatrixType<T, D>& matrix) {
+  return MatrixView<std::add_const_t<T>, D>(uplo, matrix);
 }
 
-template <template <class, Device> class MatrixType, class T, Device device>
-MatrixView<std::add_const_t<T>, device> getConstView(MatrixType<T, device>& matrix) {
+template <template <class, Device> class MatrixType, class T, Device D>
+MatrixView<std::add_const_t<T>, D> getConstView(MatrixType<T, D>& matrix) {
   return getConstView(blas::Uplo::General, matrix);
 }
 

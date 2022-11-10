@@ -42,6 +42,7 @@ struct Panel<axis, const T, D> {
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
   constexpr static Coord coord = orthogonal(axis);
+  constexpr static Device device = D;
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
@@ -440,14 +441,17 @@ protected:
   std::set<SizeType> internal_;
 };
 
-template <Coord axis, class T, Device device>
-struct Panel : public Panel<axis, const T, device> {
-  using TileType = Tile<T, device>;
-  using ConstTileType = Tile<const T, device>;
+template <Coord axis, class T, Device D>
+struct Panel : public Panel<axis, const T, D> {
+  constexpr static Coord coord = orthogonal(axis);
+  constexpr static Device device = D;
+
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
   using ElementType = T;
 
   explicit Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
-      : Panel<axis, const T, device>(std::move(distribution), std::move(start)) {}
+      : Panel<axis, const T, D>(std::move(distribution), std::move(start)) {}
 
   /// Access tile at specified index in readwrite mode
   ///
@@ -474,7 +478,7 @@ struct Panel : public Panel<axis, const T, device> {
   }
 
 protected:
-  using BaseT = Panel<axis, const T, device>;
+  using BaseT = Panel<axis, const T, D>;
   using BaseT::dim_;
   using BaseT::has_been_used_;
   using BaseT::isFirstGlobalTile;

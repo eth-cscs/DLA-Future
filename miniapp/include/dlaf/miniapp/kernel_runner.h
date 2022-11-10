@@ -10,14 +10,16 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/common/timer.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/blas/error.h"
-#include "dlaf/gpu/error.h"
 #endif
 namespace dlaf::miniapp {
 
@@ -65,7 +67,7 @@ struct KernelRunner<Backend::GPU> {
   KernelRunner(SizeType count, SizeType nstreams) noexcept
       : count_(count), streams_(nstreams), handles_(nstreams) {
     for (SizeType i = 0; i < nstreams; ++i) {
-      DLAF_GPU_CHECK_ERROR(cudaStreamCreate(&streams_[i]));
+      whip::stream_create(&streams_[i]);
       DLAF_GPUBLAS_CHECK_ERROR(cublasCreate(&handles_[i]));
       DLAF_GPUBLAS_CHECK_ERROR(cublasSetStream(handles_[i], streams_[i]));
     }
@@ -75,11 +77,11 @@ struct KernelRunner<Backend::GPU> {
     for (auto& handle : handles_)
       DLAF_GPUBLAS_CHECK_ERROR(cublasDestroy(handle));
     for (auto& stream : streams_)
-      DLAF_GPU_CHECK_ERROR(cudaStreamDestroy(stream));
+      whip::stream_destroy(stream);
   }
 
   // @pre kernel_task should accept exactly two arguments. First argument of type SizeType,
-  // the second of type cudaStream_t.
+  // the second of type whip::stream_t.
   template <class F>
   double runStream(F&& kernel_task) noexcept {
     return runInternal(std::forward<F>(kernel_task), streams_);
@@ -102,13 +104,13 @@ private:
     }
 
     for (auto& stream : streams_)
-      DLAF_GPU_CHECK_ERROR(cudaStreamSynchronize(stream));
+      whip::stream_synchronize(stream);
 
     return timeit.elapsed() / count_;
   }
 
   SizeType count_;
-  dlaf::common::internal::vector<cudaStream_t> streams_;
+  dlaf::common::internal::vector<whip::stream_t> streams_;
   dlaf::common::internal::vector<cublasHandle_t> handles_;
 };
 

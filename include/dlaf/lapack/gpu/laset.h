@@ -12,21 +12,21 @@
 
 #ifdef DLAF_WITH_GPU
 
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/types.h"
 
 #include <blas.hh>
+#include <whip.hpp>
 
 namespace dlaf::gpulapack {
 
 template <class T>
 void laset(blas::Uplo uplo, SizeType m, SizeType n, T alpha, T beta, T* a, SizeType lda,
-           cudaStream_t stream);
+           whip::stream_t stream);
 
 #define DLAF_CUBLAS_LASET_ETI(kword, Type)                                                           \
   kword template void laset(blas::Uplo uplo, SizeType m, SizeType n, Type alpha, Type beta, Type* a, \
-                            SizeType lda, cudaStream_t stream)
+                            SizeType lda, whip::stream_t stream)
 
 DLAF_CUBLAS_LASET_ETI(extern, float);
 DLAF_CUBLAS_LASET_ETI(extern, double);

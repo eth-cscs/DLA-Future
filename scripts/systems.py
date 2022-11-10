@@ -116,6 +116,67 @@ printenv > env_{bs_name}.txt
 """,
 }
 
+csc = {}
+
+csc["lumi-cpu"] = {
+    "Cores": 128,
+    "Threads per core": 2,
+    "Allowed rpns": [1, 2, 4, 8],
+    "Multiple rpn in same job": True,
+    "GPU": False,
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Batch preamble": """
+#!/bin/bash -l
+#SBATCH --job-name={run_name}_{nodes}
+#SBATCH --time={time_min}
+#SBATCH --nodes={nodes}
+#SBATCH --account=project_465000151
+#SBATCH --partition=standard
+#SBATCH --hint=multithread
+#SBATCH --output=output.txt
+#SBATCH --error=error.txt
+
+# Env
+export MPICH_MAX_THREAD_SAFETY=multiple
+
+# Debug
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# Commands
+""",
+}
+
+csc["lumi-gpu"] = {
+    "Cores": 64,
+    "Threads per core": 2,
+    "Allowed rpns": [8],
+    "Multiple rpn in same job": True,
+    "GPU": True,
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Batch preamble": """
+#!/bin/bash -l
+#SBATCH --job-name={run_name}_{nodes}
+#SBATCH --time={time_min}
+#SBATCH --nodes={nodes}
+#SBATCH --account=project_465000151
+#SBATCH --partition=pilot
+#SBATCH --hint=multithread
+#SBATCH --gpus-per-task=1
+#SBATCH --output=output.txt
+#SBATCH --error=error.txt
+
+# Env
+export MPICH_MAX_THREAD_SAFETY=multiple
+
+# Debug
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# Commands
+""",
+}
+
 cineca = {}
 
 

@@ -10,11 +10,13 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/types.h"
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/api.h"
-#include "dlaf/gpu/error.h"
 #include "dlaf/gpu/lapack/api.h"
 #include "dlaf/gpu/lapack/error.h"
 #endif
@@ -46,7 +48,7 @@ struct InvokeLapack<Device::GPU> {
     cusolverDnHandle_t handle;
     DLAF_GPULAPACK_CHECK_ERROR(cusolverDnCreate(&handle));
     f(handle, std::forward<Args>(args)...);
-    DLAF_GPU_CHECK_ERROR(cudaDeviceSynchronize());
+    whip::device_synchronize();
     DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroy(handle));
   }
 
@@ -59,7 +61,7 @@ struct InvokeLapack<Device::GPU> {
     // The copy will happen on the same (default) stream as the call to f, and
     // since this is a blocking call, we can access info_host without further
     // synchronization.
-    DLAF_GPU_CHECK_ERROR(cudaMemcpy(&info_host, result.info(), sizeof(int), cudaMemcpyDeviceToHost));
+    whip::memcpy(&info_host, result.info(), sizeof(int), whip::memcpy_device_to_host);
     DLAF_GPULAPACK_CHECK_ERROR(cusolverDnDestroy(handle));
 
     return info_host;

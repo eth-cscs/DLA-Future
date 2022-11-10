@@ -23,7 +23,7 @@ template <typename Type>
 class TridiagEigensolverTestCPU : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverTestCPU, MatrixElementTypes);
 
-#ifdef DLAF_WITH_GPU
+#ifdef DLAF_WITH_CUDA
 template <typename Type>
 class TridiagEigensolverTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverTestGPU, MatrixElementTypes);
@@ -254,7 +254,7 @@ TYPED_TEST(TridiagEigensolverTestCPU, Random) {
   }
 }
 
-#ifdef DLAF_WITH_GPU
+#ifdef DLAF_WITH_CUDA
 TYPED_TEST(TridiagEigensolverTestGPU, Laplace1D) {
   for (auto [n, nb] : tested_problems) {
     solveLaplace1D<Backend::GPU, Device::GPU, TypeParam>(n, nb);

@@ -15,8 +15,6 @@
 
 #include <umpire/Allocator.hpp>
 
-#include "dlaf/gpu/api.h"
-#include "dlaf/gpu/error.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -35,7 +33,7 @@ umpire::Allocator& getUmpireDeviceAllocator();
 }
 
 /// The class @c MemoryChunk represents a layer of abstraction over the underlying device memory.
-template <class T, Device device>
+template <class T, Device D>
 class MemoryChunk {
 public:
   using ElementType = T;
@@ -56,14 +54,14 @@ public:
 
     std::size_t mem_size = static_cast<std::size_t>(size_) * sizeof(T);
 #ifdef DLAF_WITH_GPU
-    if (device == Device::CPU) {
+    if (D == Device::CPU) {
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
     else {
       ptr_ = static_cast<T*>(internal::getUmpireDeviceAllocator().allocate(mem_size));
     }
 #else
-    if (device == Device::CPU) {
+    if (D == Device::CPU) {
       ptr_ = static_cast<T*>(internal::getUmpireHostAllocator().allocate(mem_size));
     }
     else {
@@ -145,14 +143,14 @@ private:
   void deallocate() {
     if (allocated_) {
 #ifdef DLAF_WITH_GPU
-      if (device == Device::CPU) {
+      if (D == Device::CPU) {
         internal::getUmpireHostAllocator().deallocate(ptr_);
       }
       else {
         internal::getUmpireDeviceAllocator().deallocate(ptr_);
       }
 #else
-      if (device == Device::CPU) {
+      if (D == Device::CPU) {
         internal::getUmpireHostAllocator().deallocate(ptr_);
       }
 #endif

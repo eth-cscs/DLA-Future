@@ -36,7 +36,7 @@
   template <Backend B, typename Sender,                                                            \
             typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>       \
   auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                      \
-    return dlaf::internal::transform<B, tag>(p, callable, std::forward<Sender>(s));                \
+    return dlaf::internal::transform<tag>(p, callable, std::forward<Sender>(s));                   \
   }                                                                                                \
                                                                                                    \
   template <Backend B>                                                                             \

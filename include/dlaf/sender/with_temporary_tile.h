@@ -99,7 +99,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
          // Start a new asynchronous scope for keeping the input tile alive
          // until all asynchronous operations are done.
          ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
-           constexpr Device in_device_type = std::decay_t<decltype(in)>::D;
+           constexpr Device in_device_type = std::decay_t<decltype(in)>::device;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
            // In cases that we cannot use the input tile as the temporary tile we need to:

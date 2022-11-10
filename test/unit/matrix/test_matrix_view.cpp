@@ -92,8 +92,8 @@ TYPED_TEST(MatrixLocalViewTest, StaticAPIConst) {
 //}
 
 // TODO (Upper and Lower cases NOT yet implemented)
-template <template <class, Device> class MatrixType, class T, Device device, class ElementGetter>
-void checkConstructorConst(MatrixType<T, device>& matrix, ElementGetter el) {
+template <template <class, Device> class MatrixType, class T, Device D, class ElementGetter>
+void checkConstructorConst(MatrixType<T, D>& matrix, ElementGetter el) {
   const auto& distribution = matrix.distribution();
 
   for (const auto& uplo : blas_uplos) {

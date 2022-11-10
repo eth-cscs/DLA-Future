@@ -10,7 +10,6 @@
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 
-#include "dlaf/gpu/api.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
 #include "dlaf/memory/memory_view.h"
@@ -26,6 +25,7 @@
 #include <thrust/partition.h>
 #include <cub/cub.cuh>
 #include <pika/cuda.hpp>
+#include <whip.hpp>
 
 namespace dlaf::eigensolver::internal {
 
@@ -51,7 +51,7 @@ __global__ void castToComplex(const unsigned m, const unsigned n, SizeType ld, c
 
 template <class T>
 void castToComplex(const matrix::Tile<const T, Device::GPU>& in,
-                   const matrix::Tile<std::complex<T>, Device::GPU>& out, cudaStream_t stream) {
+                   const matrix::Tile<std::complex<T>, Device::GPU>& out, whip::stream_t stream) {
   SizeType m = in.size().rows();
   SizeType n = in.size().cols();
   SizeType ld = in.ld();
@@ -90,7 +90,7 @@ __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* 
 //
 template <class T>
 T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                cudaStream_t stream) {
+                whip::stream_t stream) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};
   TileElementIndex bottom_idx{0, 0};
@@ -102,8 +102,7 @@ T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, D
 
   // TODO: this is a peformance pessimization, the value is on device
   T h_offdiag_val;
-  DLAF_GPU_CHECK_ERROR(
-      cudaMemcpyAsync(&h_offdiag_val, d_offdiag_val, sizeof(T), cudaMemcpyDeviceToHost, stream));
+  whip::memcpy_async(&h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
 
   return h_offdiag_val;
 }
@@ -114,13 +113,13 @@ DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
 template <class T>
 void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
-                                        cudaStream_t stream) {
+                                        whip::stream_t stream) {
   SizeType len = tridiag_tile.size().rows();
   const T* tridiag_ptr = tridiag_tile.ptr();
   T* diag_ptr = diag_tile.ptr();
 
-  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len),
-                                       cudaMemcpyDeviceToDevice, stream));
+  whip::memcpy_async(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len), whip::memcpy_device_to_device,
+                     stream);
 }
 
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
@@ -146,7 +145,8 @@ __global__ void assembleRank1UpdateVectorTile(int sign, SizeType len, SizeType t
 template <class T>
 void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                                   const matrix::Tile<T, Device::GPU>& rank1_tile, cudaStream_t stream) {
+                                   const matrix::Tile<T, Device::GPU>& rank1_tile,
+                                   whip::stream_t stream) {
   // Copy the bottom row of the top tile or the top row of the bottom tile
   SizeType row = (is_top_tile) ? rank1_tile.size().rows() - 1 : 0;
 
@@ -169,14 +169,14 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, cudaStream_t stream) {
+T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
   auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
   T max_el;
   // TODO: this is a peformance pessimization, the value is on device
-  DLAF_GPU_CHECK_ERROR(cudaMemcpyAsync(&max_el, d_max_ptr, sizeof(T), cudaMemcpyDeviceToHost, stream));
+  whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
   return max_el;
 }
 
@@ -184,10 +184,10 @@ DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
 
 void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::GPU>& tile,
-                    cudaStream_t stream) {
+                    whip::stream_t stream) {
   std::size_t len = to_sizet(tile.size().rows()) * sizeof(ColType);
   ColType* arr = tile.ptr();
-  DLAF_GPU_CHECK_ERROR(cudaMemsetAsync(arr, static_cast<int>(ct), len, stream));
+  whip::memset_async(arr, static_cast<int>(ct), len, stream);
 }
 
 constexpr unsigned init_index_tile_kernel_sz = 256;
@@ -201,7 +201,7 @@ __global__ void initIndexTile(SizeType offset, SizeType len, SizeType* index_arr
 }
 
 void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& tile,
-                   cudaStream_t stream) {
+                   whip::stream_t stream) {
   SizeType len = tile.size().rows();
   SizeType* index_arr = tile.ptr();
 
@@ -255,7 +255,7 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
-                           const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream) {
+                           const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
   if (i_subm_el >= k || j_subm_el >= k)
     return;
 
@@ -291,16 +291,16 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   OffsetIterator end_offsets = begin_offsets + 1;                // last column
   InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
 
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
-                                                          begin_offsets, end_offsets, mult_op, T(1),
-                                                          stream));
+  whip::check_error(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
+                                                       begin_offsets, end_offsets, mult_op, T(1),
+                                                       stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  DLAF_GPU_CHECK_ERROR(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter,
-                                                          ws, nrows, begin_offsets, end_offsets, mult_op,
-                                                          T(1), stream));
+  whip::check_error(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter, ws,
+                                                       nrows, begin_offsets, end_offsets, mult_op, T(1),
+                                                       stream));
   // Deallocate memory
-  auto extend_info = [d_temp_storage](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
+  auto extend_info = [d_temp_storage](whip::error_t status) {
+    whip::check_error(status);
     memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
   };
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
@@ -323,7 +323,7 @@ __global__ void multiplyColumns(SizeType len, const T* in, T* out) {
 template <class T>
 void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
                           const matrix::Tile<const T, Device::GPU>& in,
-                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+                          const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
   if (row >= k || col >= k)
     return;
 
@@ -367,7 +367,7 @@ template <class T>
 void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
                             const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
-                            const matrix::Tile<T, Device::GPU>& evecs_tile, cudaStream_t stream) {
+                            const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream) {
   if (row >= k || col >= k)
     return;
 
@@ -408,7 +408,7 @@ __global__ void sqTile(SizeType nrows, SizeType ncols, SizeType ld, const T* in,
 template <class T>
 void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
-               const matrix::Tile<T, Device::GPU>& ws_tile, cudaStream_t stream) {
+               const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
   if (row >= k || col >= k)
     return;
 
@@ -430,18 +430,17 @@ void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
   // Note: the output of the reduction is saved in the first row.
   // TODO: use a segmented reduce sum with fancy iterators
   size_t temp_storage_bytes;
-  DLAF_GPU_CHECK_ERROR(
-      cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
+  whip::check_error(cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
 
   for (SizeType j = 0; j < ncols; ++j) {
-    DLAF_GPU_CHECK_ERROR(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                                &out[j * ld], nrows, stream));
+    whip::check_error(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                             &out[j * ld], nrows, stream));
   }
 
   // Deallocate memory
-  auto extend_info = [d_temp_storage](cudaError_t status) {
-    DLAF_GPU_CHECK_ERROR(status);
+  auto extend_info = [d_temp_storage](whip::error_t status) {
+    whip::check_error(status);
     memory::internal::getUmpireDeviceAllocator().deallocate(d_temp_storage);
   };
   pika::cuda::experimental::detail::add_event_callback(std::move(extend_info), stream);
@@ -464,7 +463,7 @@ __global__ void addFirstRows(SizeType len, SizeType ld, const T* in, T* out) {
 template <class T>
 void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& in, const matrix::Tile<T, Device::GPU>& out,
-                  cudaStream_t stream) {
+                  whip::stream_t stream) {
   if (row >= k || col >= k)
     return;
 
@@ -507,7 +506,7 @@ __global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld,
 template <class T>
 void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
                           const matrix::Tile<const T, Device::GPU>& in,
-                          const matrix::Tile<T, Device::GPU>& out, cudaStream_t stream) {
+                          const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
   if (row >= k || col >= k)
     return;
 
@@ -532,7 +531,7 @@ DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, cudaStream_t stream) {
+                                      SizeType* out_ptr, whip::stream_t stream) {
   // The number of non-deflated values
   SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
 
@@ -547,7 +546,7 @@ SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const Si
 //
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
-                          SizeType* out_ptr, const T* v_ptr, cudaStream_t stream) {
+                          SizeType* out_ptr, const T* v_ptr, whip::stream_t stream) {
   auto cmp = [v_ptr] __device__(const SizeType& i1, const SizeType& i2) {
     return v_ptr[i1] < v_ptr[i2];
   };
@@ -575,7 +574,8 @@ __global__ void applyIndexOnDevice(SizeType len, const SizeType* index_arr, cons
 }
 
 template <class T>
-void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out, cudaStream_t stream) {
+void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out,
+                        whip::stream_t stream) {
   dim3 nr_threads(apply_index_sz);
   dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(apply_index_sz)));
   applyIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, index, util::cppToCudaCast(in),
@@ -595,7 +595,7 @@ __global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* 
   out[in[i]] = i;
 }
 
-void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, cudaStream_t stream) {
+void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream) {
   dim3 nr_threads(invert_index_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
@@ -615,7 +615,7 @@ __global__ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s) {
 }
 
 template <class T>
-void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, cudaStream_t stream) {
+void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t stream) {
   dim3 nr_threads(givens_rot_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_uint(len), givens_rot_kernel_sz));
   givensRotationOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, x, y, c, s);
@@ -636,7 +636,7 @@ __global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
 }
 
 template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, cudaStream_t stream) {
+void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream) {
   dim3 nr_threads(set_diag_kernel_sz);
   dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
   setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile);

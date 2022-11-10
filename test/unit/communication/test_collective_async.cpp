@@ -33,38 +33,37 @@ class CollectiveTest : public ::testing::Test {
 
 protected:
   using T = int;
-  static constexpr auto device = Device::CPU;
+  static constexpr Device device = Device::CPU;
 
   comm::Communicator world = MPI_COMM_WORLD;
 };
 
-template <class T, Device device>
+template <class T, Device D>
 auto newBlockMatrixContiguous() {
   auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 13);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
-  auto matrix = matrix::Matrix<T, device>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, layout);
 
   EXPECT_TRUE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
 
   return matrix;
 }
 
-template <class T, Device device>
+template <class T, Device D>
 auto newBlockMatrixStrided() {
   auto layout = matrix::colMajorLayout({13, 13}, {13, 13}, 26);
   auto dist = matrix::Distribution({13, 13}, {13, 13});
 
-  auto matrix = matrix::Matrix<T, device>(dist, layout);
+  auto matrix = matrix::Matrix<T, D>(dist, layout);
 
   EXPECT_FALSE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
 
   return matrix;
 }
 
-template <class T, Device device>
-void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix,
-                       std::string test_name) {
+template <class T, Device D>
+void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
@@ -105,9 +104,8 @@ TEST_F(CollectiveTest, ReduceInPlace) {
   testReduceInPlace(world, newBlockMatrixStrided<T, device>(), "Strided");
 }
 
-template <class T, Device device>
-void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, device> matrix,
-                          std::string test_name) {
+template <class T, Device D>
+void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const LocalTileIndex idx(0, 0);
@@ -140,16 +138,16 @@ TEST_F(CollectiveTest, AllReduceInPlace) {
   testAllReduceInPlace(world, newBlockMatrixStrided<T, device>(), "Strided");
 }
 
-template <class T, Device device>
-void testAllReduce(comm::Communicator world, matrix::Matrix<T, device> matA,
-                   matrix::Matrix<T, device> matB, std::string test_name) {
+template <class T, Device D>
+void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::Matrix<T, D> matB,
+                   std::string test_name) {
   common::Pipeline<comm::Communicator> chain(world);
 
   const auto root_rank = world.size() - 1;
 
   const LocalTileIndex idx(0, 0);
-  matrix::Matrix<T, device>& mat_in = root_rank % 2 == 0 ? matA : matB;
-  matrix::Matrix<T, device>& mat_out = root_rank % 2 == 0 ? matB : matA;
+  matrix::Matrix<T, D>& mat_in = root_rank % 2 == 0 ? matA : matB;
+  matrix::Matrix<T, D>& mat_out = root_rank % 2 == 0 ? matB : matA;
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);

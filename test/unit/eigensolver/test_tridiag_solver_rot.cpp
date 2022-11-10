@@ -52,13 +52,14 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
   const std::vector<config_t> configs{
       // range with one-sided margin
       {9, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}}},
+      {8, 3, 1, 2, {GRot{3, 7, rot_c, rot_s}}},  // incomplete tile
       {9, 3, 0, 1, {GRot{2, 4, rot_c, rot_s}}},
       // range fully in-bound
       {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}}},
-      // incomplete tile
-      {8, 3, 1, 2, {GRot{3, 7, rot_c, rot_s}}},
+      {11, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}}},  // incomplete tile
       // full-range, multiple rotations
       {9, 3, 0, 2, {GRot{0, 8, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},
+      {8, 3, 0, 2, {GRot{0, 7, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},  // incomplete tile
       // range fully in-bound, independent rotations from same tiles
       {12, 3, 1, 2, {GRot{3, 8, rot_c, rot_s}, GRot{4, 7, rot_c, rot_s}}},
       // range fully in-bound, non-independent rotations, between same pair of tiles

@@ -90,8 +90,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
 
   const SizeType mb = dist.blockSize().rows();
   const SizeType i_end = i_last + 1;
-  const SizeType range_tile_size = i_end - i_begin;
-  const SizeType range_size = range_tile_size * mb;
+  const SizeType range_size = std::min(dist.size().rows(), i_end * mb) - i_begin * mb;
 
   // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which

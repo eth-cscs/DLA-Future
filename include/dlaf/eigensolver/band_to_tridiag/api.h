@@ -41,13 +41,6 @@ struct BandToTridiag;
 template <Device D, class T>
 struct BandToTridiag<Backend::MC, D, T> {
   static TridiagResult<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
-};
-
-template <Backend B, Device D, class T>
-struct BandToTridiagDistr;
-
-template <Device D, class T>
-struct BandToTridiagDistr<Backend::MC, D, T> {
   static TridiagResult<T, Device::CPU> call_L(comm::CommunicatorGrid grid, const SizeType b,
                                               Matrix<const T, D>& mat_a) noexcept;
 };
@@ -62,11 +55,6 @@ DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-DLAF_EIGENSOLVER_B2T_DISTR_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_EIGENSOLVER_B2T_DISTR_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_EIGENSOLVER_B2T_DISTR_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_EIGENSOLVER_B2T_DISTR_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_GPU
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, float)

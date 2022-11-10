@@ -178,3 +178,15 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributedFromGPU) {
+  const blas::Uplo uplo = blas::Uplo::Lower;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, mb, b] : sizes) {
+      testBandToTridiag<Device::GPU, TypeParam>(comm_grid, uplo, b, m, mb);
+    }
+  }
+}
+#endif

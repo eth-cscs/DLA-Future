@@ -414,10 +414,12 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
                                                                             std::move(sender)));
 }
 
-template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
-                                    Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
-                                    Matrix<T, D>& mat_out) {
+template <class T, Coord C>
+void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                  Matrix<const SizeType, Device::CPU>& perms, Matrix<T, Device::CPU>& mat_in,
+                  Matrix<T, Device::CPU>& mat_out) {
+  constexpr Device D = Device::CPU;
+
   comm::Communicator comm = grid.subCommunicator(orthogonal(C));
   const matrix::Distribution& dist = mat_in.distribution();
 
@@ -428,8 +430,7 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                              dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
   LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
                            dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
-  // Note: the local shape of the permutation region may not be square even if the global shape defined
-  // by [i_begin, i_end (including)] is. That is a consequence of the 2D block-cyclic distribution.
+  // Note: the local shape of the permutation region may not be square if the process grid is not square
   LocalElementSize sz_loc{dist.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
                           dist.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
@@ -501,4 +502,20 @@ void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begi
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
                              whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
+
+template <Backend B, Device D, class T, Coord C>
+void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                                    Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+                                    Matrix<T, D>& mat_out) {
+  if constexpr (D == Device::GPU) {
+    // This is a temporary placeholder which avoids diverging GPU API:
+    DLAF_UNIMPLEMENTED("GPU implementation not available yet");
+    dlaf::internal::silenceUnusedWarningFor(grid, i_begin, i_end, perms, mat_in, mat_out);
+    return;
+  }
+  else {
+    permuteOnCPU<T, C>(grid, i_begin, i_end, perms, mat_in, mat_out);
+  }
+}
+
 }

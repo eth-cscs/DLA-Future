@@ -76,29 +76,21 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
-  if constexpr (D == Device::GPU) {
-    // This is a temporary placeholder which avoids diverging the CPU and GPU APIs:
-    DLAF_UNIMPLEMENTED("GPU implementation not available yet");
-    dlaf::internal::silenceUnusedWarningFor(grid, i_begin, i_end, perms, mat_in, mat_out);
-    return;
-  }
-  else {
-    const matrix::Distribution& distr_perms = perms.distribution();
-    const matrix::Distribution& distr_in = mat_in.distribution();
+  const matrix::Distribution& distr_perms = perms.distribution();
+  const matrix::Distribution& distr_in = mat_in.distribution();
 
-    DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
-    DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);
-    DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
-    DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in, mat_out);
-    DLAF_ASSERT(matrix::equal_process_grid(mat_in, grid), mat_in, grid);
-    DLAF_ASSERT(matrix::equal_process_grid(mat_out, grid), mat_out, grid);
+  DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
+  DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);
+  DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
+  DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in, mat_out);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_in, grid), mat_in, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_out, grid), mat_out, grid);
 
-    DLAF_ASSERT(matrix::local_matrix(perms), perms);
-    DLAF_ASSERT(distr_perms.size().cols() == 1, perms);
-    DLAF_ASSERT(distr_in.blockSize().rows() == distr_perms.blockSize().rows(), mat_in, perms);
+  DLAF_ASSERT(matrix::local_matrix(perms), perms);
+  DLAF_ASSERT(distr_perms.size().cols() == 1, perms);
+  DLAF_ASSERT(distr_in.blockSize().rows() == distr_perms.blockSize().rows(), mat_in, perms);
 
-    internal::Permutations<B, D, T, coord>::call(grid, i_begin, i_end, perms, mat_in, mat_out);
-  }
+  internal::Permutations<B, D, T, coord>::call(grid, i_begin, i_end, perms, mat_in, mat_out);
 }
 
 }

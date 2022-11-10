@@ -14,7 +14,5 @@ namespace dlaf::permutations::internal {
 
 DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::GPU, Device::GPU, float)
 DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::GPU, Device::GPU, double)
-// DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
-// DLAF_PERMUTATIONS_GENERAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
 
 }

@@ -236,7 +236,7 @@ DLAF_addSublibrary(
 DLAF_addSublibrary(
   permutations
   SOURCES permutations/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:permutations/general/gpu.cpp>
-  GPU_SOURCES permutations/general/perms.cu permutations/general/invert.cu
+  GPU_SOURCES permutations/general/perms.cu
   LIBRARIES dlaf.core
 )
 

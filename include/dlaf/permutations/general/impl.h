@@ -378,9 +378,8 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin, Matrix<co
   }
 }
 
-template <Device D>
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& in,
-                        Matrix<SizeType, D>& out) {
+inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
+                        Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   namespace ut = matrix::util;
@@ -389,18 +388,12 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   SizeType nb = dist.blockSize().rows();
   SizeType nbr = dist.tileSize(GlobalTileIndex(i_end, 0)).rows();
   SizeType n = (i_end - i_begin) * nb + nbr;
-  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles, [[maybe_unused]] auto&&... ts) {
+  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
     TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
     SizeType* out_ptr = out_tiles[0].ptr(zero);
-
-    if constexpr (D == Device::CPU) {
-      for (SizeType i = 0; i < n; ++i) {
-        out_ptr[in_ptr[i]] = i;
-      }
-    }
-    else {
-      invertIndexOnDevice(n, in_ptr, out_ptr, ts...);
+    for (SizeType i = 0; i < n; ++i) {
+      out_ptr[in_ptr[i]] = i;
     }
   };
 
@@ -408,9 +401,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   LocalTileSize sz{i_end - i_begin + 1, 1};
   auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
                              ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
-  ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(inv_fn), std::move(sender)));
+  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                            std::move(inv_fn),
+                                                                            std::move(sender)));
 }
 
 template <Backend B, Device D, class T, Coord C>

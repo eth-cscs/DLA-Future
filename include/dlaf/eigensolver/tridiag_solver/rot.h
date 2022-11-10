@@ -235,8 +235,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
 
   const TileCollector tc(i_begin, i_last);
 
-  di::whenAllLift(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
-                  select(workspace, workspace.iteratorLocal())) |
+  ex::when_all(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
+               ex::when_all_vector(select(workspace, workspace.iteratorLocal()))) |
       di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
 }
 }

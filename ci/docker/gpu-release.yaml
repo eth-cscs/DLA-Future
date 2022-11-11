@@ -33,6 +33,10 @@ spack:
         - 3.4.2
       variants:
         - '~fortran'
+        - '~libxml2'
+    hwloc:
+      variants:
+        - '~libxml2'
     git:
       # Force git as non-buildable to allow deprecated versions in environments
       # https://github.com/spack/spack/pull/30040

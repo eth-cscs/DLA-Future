@@ -1091,12 +1091,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                              TileElementSize{nb, nb});
 
     auto copy_diag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
-      constexpr Device device = dlaf::internal::SenderElementDevice<decltype(source)>;
+      constexpr Device device = dlaf::internal::SenderDevice<decltype(source)>;
       return a_block->template copyDiag<device>(j, std::move(source));
     };
 
     auto copy_offdiag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
-      constexpr Device device = dlaf::internal::SenderElementDevice<decltype(source)>;
+      constexpr Device device = dlaf::internal::SenderDevice<decltype(source)>;
       return a_block->template copyOffDiag<device>(j, std::move(source));
     };
 

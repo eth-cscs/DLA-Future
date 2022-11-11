@@ -132,14 +132,14 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(GlobalTileIndex(i_begin, 0),
-                                                                      GlobalTileSize(ntiles, 1), perms)),
-                             ex::when_all_vector(
-                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                           GlobalTileSize(ntiles, ntiles), mat_in)),
-                             ex::when_all_vector(
-                                 ut::collectReadWriteTiles(GlobalTileIndex(i_begin, i_begin),
-                                                           GlobalTileSize(ntiles, ntiles), mat_out)));
+  auto sender =
+      ex::when_all(ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, 0),
+                                                            LocalTileSize(ntiles, 1), perms)),
+                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
+                                                                 LocalTileSize(ntiles, ntiles), mat_in)),
+                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
+                                                                 LocalTileSize(ntiles, ntiles),
+                                                                 mat_out)));
 
   auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
                                  const auto& mat_out_tiles, auto&&... ts) {

@@ -316,6 +316,11 @@ public:
     return tileSizeFromGlobalElement<rc>(i_gl) - tileElementFromGlobalElement<rc>(i_gl);
   }
 
+  /// Returns a local linear column-major index of the tile that contains @p ij
+  SizeType localTileLinearIndex(LocalTileIndex ij) const noexcept {
+    return ij.row() + ij.col() * local_nr_tiles_.rows();
+  }
+
   /// Returns a global linear column-major index of the tile that contains @p i_gl
   SizeType globalTileLinearIndex(GlobalElementIndex i_gl) const noexcept {
     GlobalTileIndex i_tile = globalTileIndex(i_gl);

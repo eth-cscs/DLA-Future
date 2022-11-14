@@ -21,6 +21,8 @@ template <Backend B, Device D, class T, Coord coord>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out);
+  static void call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+                   Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out);
 };
 
 /// ---- ETI
@@ -30,13 +32,9 @@ struct Permutations {
 
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
 
 #ifdef DLAF_WITH_GPU
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, float)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
 }

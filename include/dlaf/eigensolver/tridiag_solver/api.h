@@ -19,6 +19,10 @@ struct TridiagSolver {
   static void call(Matrix<T, device>& mat_trd, Matrix<T, device>& d, Matrix<T, device>& mat_ev);
   static void call(Matrix<T, device>& mat_trd, Matrix<T, device>& d,
                    Matrix<std::complex<T>, device>& mat_ev);
+  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& mat_trd, Matrix<T, device>& d,
+                   Matrix<T, device>& mat_ev);
+  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& mat_trd, Matrix<T, device>& d,
+                   Matrix<std::complex<T>, device>& mat_ev);
 };
 
 /// ---- ETI

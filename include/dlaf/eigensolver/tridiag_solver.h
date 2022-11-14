@@ -63,9 +63,9 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
 #endif
 }
 
-template <Backend backend, Device device, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& tridiag,
-                   Matrix<BaseType<T>, device>& evals, Matrix<T, device>& evecs) {
+template <Backend B, Device D, class T>
+void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, D>& tridiag,
+                   Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
 
@@ -74,6 +74,7 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& tri
 
   DLAF_ASSERT(matrix::square_size(evecs), evecs);
   DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
+  DLAF_ASSERT(matrix::equal_process_grid(evecs, grid), evecs, grid);
 
   DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
               evecs, tridiag);
@@ -84,7 +85,11 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, device>& tri
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,
               evals);
 
-  internal::TridiagSolver<backend, device, BaseType<T>>::call(grid, tridiag, evals, evecs);
+#if defined(DLAF_WITH_HIP)
+  DLAF_UNIMPLEMENTED("Tridiagonal solver is not yet implemented for HIP");
+#else
+  internal::TridiagSolver<B, D, BaseType<T>>::call(grid, tridiag, evals, evecs);
+#endif
 }
 
 }

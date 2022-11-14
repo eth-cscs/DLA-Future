@@ -19,6 +19,7 @@
 #endif
 
 #include "dlaf/common/callable_object.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
@@ -214,4 +215,44 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
                                evecs.readwrite_sender(tile_wrt_local));
   }
 }
+
+// Distributed tridiagonal solver on CPUs
+template <class T>
+void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
+                        Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+  // TODO
+  // constexpr Device D = Device::CPU;
+  dlaf::internal::silenceUnusedWarningFor(grid, tridiag, evals, evecs);
+}
+
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
+                                  Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+  if constexpr (D == Device::GPU) {
+    // This is a temporary placeholder which avoids diverging GPU API:
+    DLAF_UNIMPLEMENTED("GPU implementation not available yet");
+    dlaf::internal::silenceUnusedWarningFor(grid, tridiag, evals, evecs);
+    return;
+  }
+  else {
+    tridiagSolverOnCPU(grid, tridiag, evals, evecs);
+  }
+}
+
+// Overload of the distributed tridiagonal version of the algorithm which provides the eigenvector matrix
+// as complex values where the imaginery part is set to zero.
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
+                                  Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
+  Matrix<T, D> real_evecs(evecs.distribution());
+  TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);
+
+  // Convert real to complex numbers
+  const matrix::Distribution& dist = evecs.distribution();
+  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
+    castToComplexAsync<D>(real_evecs.read_sender(tile_wrt_local),
+                          evecs.readwrite_sender(tile_wrt_local));
+  }
+}
+
 }

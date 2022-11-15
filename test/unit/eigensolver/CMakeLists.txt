@@ -24,8 +24,8 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
-  test_tridiag_solver_full
-  SOURCES test_tridiag_solver.cpp
+  test_tridiag_solver_local
+  SOURCES test_tridiag_solver_local.cpp
   LIBRARIES dlaf.tridiagonal_eigensolver dlaf.core
   USE_MAIN PIKA
 )
@@ -78,6 +78,14 @@ DLAF_addTest(
 DLAF_addTest(
   test_tridiag_solver_rot
   SOURCES test_tridiag_solver_rot.cpp
+  LIBRARIES dlaf.core dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
+DLAF_addTest(
+  test_tridiag_solver_distributed
+  SOURCES test_tridiag_solver_distributed.cpp
   LIBRARIES dlaf.core dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
   USE_MAIN MPIPIKA
   MPIRANKS 6

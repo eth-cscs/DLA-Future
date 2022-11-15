@@ -104,16 +104,14 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, int grid_size,
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
 
-  // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
   SizeType owner_to_src = global_tile % grid_size;
-
   SizeType local_tile = global_tile / grid_size;
 
   if (rank_to_src < owner_to_src)
-    return local_tile + 1;
-  else
-    return local_tile;
+    ++local_tile;
+
+  return local_tile;
 }
 
 /// Returns the global tile index of the tile that has index @p local_tile

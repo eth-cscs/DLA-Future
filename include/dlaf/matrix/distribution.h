@@ -270,7 +270,8 @@ public:
 
   /// Returns the local index in current process of the global tile
   /// whose index is the smallest index larger or equal @p global_tile
-  /// and which is stored in current process.
+  /// and which is stored in current process. If there is no such tile
+  /// index, the local tile grid size along @rc is returned.
   ///
   /// @pre 0 <= global_tile <= nrTiles().get<rc>().
   template <Coord rc>
@@ -330,9 +331,25 @@ public:
   /// Returns the global element distance between tiles along the @p rc coordinate
   template <Coord rc>
   SizeType globalTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
-    DLAF_ASSERT(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
     return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) -
            globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+  }
+
+  /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
+  /// along the @p rc coordinate
+  template <Coord rc>
+  SizeType localTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
+    DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
+    // Note the second assert is already done by the following calls.
+    SizeType i_loc_begin = nextLocalTileFromGlobalTile<rc>(i_begin);
+    SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_end) - 1;
+    if (i_loc_begin > i_loc_last)
+      return 0;
+    SizeType l = local_size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, l - i_loc_last * nb);  // size of last local tile along `rc`
+    return (i_loc_last - i_loc_begin) * nb + nbr;
   }
 
 private:

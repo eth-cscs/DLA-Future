@@ -216,6 +216,25 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   }
 }
 
+// Solve for each tridiagonal tile of @p mat_trd with stedc and save the result in the corresponding
+// diagonal tile of @p mat_ev
+//
+// @p mat_trd is a local matrix of size (n, 2)
+// @p mat_ev is a distributed matrix of size (n, n)
+template <class T, Device D>
+void solveDistLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
+  const matrix::Distribution& dist = mat_ev.distribution();
+  comm::Index2D this_rank = dist.rankIndex();
+  SizeType ntiles = dist.nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    GlobalTileIndex ii_tile(i, i);
+    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    if (ii_rank == this_rank) {
+      stedcAsync<D>(mat_trd.readwrite_sender(LocalTileIndex(i, 0)), mat_ev.readwrite_sender(ii_tile));
+    }
+  }
+}
+
 // Distributed tridiagonal solver on CPUs
 template <class T>
 void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
@@ -254,7 +273,7 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  // TODO: solveLeaf(tridiag, evecs);
+  solveDistLeaf(tridiag, evecs);
 
   debug_barrier(1);
 

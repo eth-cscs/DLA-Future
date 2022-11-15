@@ -910,6 +910,22 @@ template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
                           SizeType i_end, pika::shared_future<T> rho_fut, WorkSpace<T, Device::CPU>& ws,
                           Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+  auto debug_barrier = [&](int i) {
+    ws.mat1.waitLocalTiles();
+    ws.mat2.waitLocalTiles();
+    ws.dtmp.waitLocalTiles();
+    ws.z.waitLocalTiles();
+    ws.ztmp.waitLocalTiles();
+    ws.i1.waitLocalTiles();
+    ws.i2.waitLocalTiles();
+    ws.i3.waitLocalTiles();
+    ws.c.waitLocalTiles();
+    evecs.waitLocalTiles();
+    evals.waitLocalTiles();
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
+    std::cout << "\n\n MERGE() MARK #" << i << "\n\n";
+  };
+
   constexpr Backend B = Backend::MC;
   constexpr Device D = Device::CPU;
 
@@ -928,12 +944,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   LocalElementSize sz_loc{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
                           dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
-  // If there are no tiles in this rank, return
-  if (sz_loc.isEmpty())
-    return;
-
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   // TODO: assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
+
+  debug_barrier(0);
 
   // Calculate the tolerance used for deflation
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
@@ -978,6 +992,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   // TODO: setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
+  debug_barrier(1);
+
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
   //    i3 (in)  : initial <--- deflated
@@ -991,6 +1007,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
                                                   ws.mat1);
 
+  debug_barrier(2);
+
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
@@ -1003,6 +1021,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
+
+  debug_barrier(3);
 }
 
 }

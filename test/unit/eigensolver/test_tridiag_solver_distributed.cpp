@@ -37,13 +37,13 @@ TYPED_TEST_SUITE(TridiagSolverDistTestMC, MatrixElementTypes);
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-    {0, 8},
-    {16, 16},
+//    {0, 8},
+//    {16, 16},
     {16, 8},
-    {16, 4},
-    {16, 5},
-    {100, 10},
-    {93, 7},
+ //   {16, 4},
+ //   {16, 5},
+ //   {100, 10},
+ //   {93, 7},
 };
 // clang-format on
 

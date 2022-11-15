@@ -220,9 +220,55 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 template <class T>
 void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                         Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
-  // TODO
-  // constexpr Device D = Device::CPU;
-  dlaf::internal::silenceUnusedWarningFor(grid, tridiag, evals, evecs);
+  auto debug_barrier = [&](int i) {
+    evecs.waitLocalTiles();
+    tridiag.waitLocalTiles();
+    evals.waitLocalTiles();
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
+    std::cout << "\n\nMARK #" << i << "\n\n";
+  };
+
+  constexpr Device D = Device::CPU;
+
+  // Auxiliary matrix used for the D&C algorithm
+  const matrix::Distribution& dist_evecs = evecs.distribution();
+  const matrix::Distribution& dist_evals = evals.distribution();
+
+  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),         // mat1
+                     Matrix<T, D>(dist_evecs),         // mat2
+                     Matrix<T, D>(dist_evals),         // dtmp
+                     Matrix<T, D>(dist_evals),         // z
+                     Matrix<T, D>(dist_evals),         // ztmp
+                     Matrix<SizeType, D>(dist_evals),  // i1
+                     Matrix<SizeType, D>(dist_evals),  // i2
+                     Matrix<SizeType, D>(dist_evals),  // i3
+                     Matrix<ColType, D>(dist_evals)};  // c
+
+  // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
+  matrix::util::set0<Backend::MC, T, D>(pika::execution::thread_priority::normal, evecs);
+
+  // Cuppen's decomposition
+  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
+
+  debug_barrier(0);
+
+  // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
+  // `evecs` (nb x nb)
+  // TODO: solveLeaf(tridiag, evecs);
+
+  debug_barrier(1);
+
+  // Offload the diagonal from `mat_trd` to `evals`
+  offloadDiagonal(tridiag, evals);
+
+  debug_barrier(2);
+
+  // Each triad represents two subproblems to be merged
+  SizeType nrtiles = dist_evecs.nrTiles().rows();
+  for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
+    mergeDistSubproblems(grid, i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, evals,
+                         evecs);
+  }
 }
 
 template <Backend B, Device D, class T>

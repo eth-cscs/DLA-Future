@@ -904,4 +904,105 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
 }
+
+// Distributed version of the tridiagonal solver on CPUs
+template <class T>
+void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
+                          SizeType i_end, pika::shared_future<T> rho_fut, WorkSpace<T, Device::CPU>& ws,
+                          Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+  constexpr Backend B = Backend::MC;
+  constexpr Device D = Device::CPU;
+
+  const matrix::Distribution& dist_evecs = evecs.distribution();
+
+  // Calculate the size of the upper subproblem
+  SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
+
+  // The local size of the subproblem
+  LocalTileIndex i_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
+                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
+  LocalTileIndex i_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
+                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
+  LocalTileIndex i_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
+                           dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
+  LocalElementSize sz_loc{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
+                          dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
+
+  // If there are no tiles in this rank, return
+  if (sz_loc.isEmpty())
+    return;
+
+  // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
+  // TODO: assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
+
+  // Calculate the tolerance used for deflation
+  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
+
+  // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
+  rho_fut = scaleRho(std::move(rho_fut));
+
+  // Initialize the column types vector `c`
+  initColTypes(i_begin, i_split, i_end, ws.c);
+
+  // Step #1
+  //
+  //    i1 (out) : initial <--- initial (identity map)
+  //    i2 (out) : initial <--- pre_sorted
+  //
+  // - deflate `d`, `z` and `c`
+  // - apply Givens rotations to `Q` - `mat_ev`
+  //
+  initIndex(i_begin, i_end, ws.i1);
+  sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
+
+  pika::future<std::vector<GivensRotation<T>>> rots_fut =
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
+
+  // Step #2
+  //
+  //    i2 (in)  : initial <--- pre_sorted
+  //    i3 (out) : initial <--- deflated
+  //
+  // - reorder `d -> dtmp`, `z -> ztmp`, using `i3` such that deflated entries are at the bottom.
+  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
+  // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
+  //
+  pika::shared_future<SizeType> k_fut =
+      stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
+  applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);
+  applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
+  copy(i_begin, i_end, ws.dtmp, evals);
+
+  // TODO: resetSubMatrix(i_begin, i_end, ws_h.mat1);
+  // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
+  // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
+  // TODO: setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
+
+  // Step #3: Eigenvectors of the tridiagonal system: Q * U
+  //
+  //    i3 (in)  : initial <--- deflated
+  //    i2 (out) : initial ---> deflated
+  //
+  // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
+  // prepared for the deflated system.
+  //
+  invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  dlaf::permutations::permute<B, D, T, Coord::Row>(grid, i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
+  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
+                                                  ws.mat1);
+
+  // Step #4: Final sorting of eigenvalues and eigenvectors
+  //
+  //    i1 (in)  : deflated <--- deflated  (identity map)
+  //    i2 (out) : deflated <--- post_sorted
+  //
+  // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
+  //   ascending order
+  // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
+  //
+  sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
+  applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
+  dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
+}
+
 }

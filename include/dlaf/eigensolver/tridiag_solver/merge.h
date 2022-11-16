@@ -15,8 +15,11 @@
 #include <pika/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
+#include "dlaf/eigensolver/tridiag_solver/rot.h"
+#include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -36,14 +39,6 @@
 #include "dlaf/matrix/print_csv.h"
 
 namespace dlaf::eigensolver::internal {
-
-template <class T>
-struct GivensRotation {
-  SizeType i;  // the first column index
-  SizeType j;  // the second column index
-  T c;         // cosine
-  T s;         // sine
-};
 
 // Auxiliary matrix and vectors used for the D&C algorithm
 template <class T, Device device>
@@ -225,51 +220,6 @@ pika::future<T> calcTolerance(SizeType i_begin, SizeType i_end, Matrix<const T, 
   return ex::when_all(std::move(dmax_fut), std::move(zmax_fut)) |
          di::transform(di::Policy<Backend::MC>(), std::move(tol_fn)) | ex::make_future();
 }
-
-/// TileCollector is an helper that, given included boundaries of a range [idx_begin, idx_last],
-/// allows to obtain access to all tiles in that range for a matrix.
-///
-/// The range specified is generally considered a square, i.e. the range is applied to both rows and
-/// columns.
-/// Instead, if the matrix has a single column of tiles, the range is considered linear over rows.
-class TileCollector {
-  SizeType idx_begin;
-  SizeType idx_last;
-
-  auto iteratorLocal(const matrix::Distribution& dist) const {
-    const bool is_col_matrix = dist.nrTiles().cols() == 1;
-
-    const GlobalTileIndex g_begin(idx_begin, is_col_matrix ? 0 : idx_begin);
-    const GlobalTileIndex g_end(idx_last + 1, is_col_matrix ? 1 : idx_last + 1);
-
-    const LocalTileIndex begin{
-        dist.template nextLocalTileFromGlobalTile<Coord::Row>(g_begin.row()),
-        dist.template nextLocalTileFromGlobalTile<Coord::Col>(g_begin.col()),
-    };
-    const LocalTileIndex end{
-        dist.template nextLocalTileFromGlobalTile<Coord::Row>(g_end.row()),
-        dist.template nextLocalTileFromGlobalTile<Coord::Col>(g_end.col()),
-    };
-    const LocalTileSize size = end - begin;
-
-    return std::make_pair(begin, size);
-  }
-
-public:
-  TileCollector(SizeType i_begin, SizeType i_last) : idx_begin(i_begin), idx_last(i_last) {}
-
-  template <class T, Device D>
-  auto read(Matrix<const T, D>& mat) const {
-    auto [begin, size] = iteratorLocal(mat.distribution());
-    return matrix::util::collectReadTiles(begin, size, mat);
-  }
-
-  template <class T, Device D>
-  auto readwrite(Matrix<T, D>& mat) const {
-    auto [begin, size] = iteratorLocal(mat.distribution());
-    return matrix::util::collectReadWriteTiles(begin, size, mat);
-  }
-};
 
 // Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index
 // `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that
@@ -911,64 +861,37 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D>
-void assembleDistZVec(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split, SizeType i_end,
-                      pika::shared_future<T> rho_fut, Matrix<const T, D>& mat_ev, Matrix<T, D>& ztmp,
-                      Matrix<T, D>& z) {
+void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
+                      SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
+                      Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
-  namespace ut = matrix::util;
 
   const matrix::Distribution& dist = mat_ev.distribution();
   comm::Index2D this_rank = dist.rankIndex();
 
-  auto comm = grid.fullCommunicator();
-
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
-  SizeType i_z_packing = 0;                           // packing index for local `z` data
-  std::vector<int> counts(to_sizet(comm.size()), 0);  // local length of `z` on each rank
   for (SizeType i = i_begin; i <= i_end; ++i) {
     // True if tile is in Q1
     bool top_tile = i <= i_split;
     // Move to the row below `i_middle` for `Q2`
     SizeType mat_ev_row = i_split + ((top_tile) ? 0 : 1);
     GlobalTileIndex mat_ev_idx(mat_ev_row, i);
-    GlobalTileIndex z_idx(i_z_packing, 0);
+    GlobalTileIndex z_idx(i, 0);
 
     // Copy the last row of a `Q1` tile or the first row of a `Q2` tile into a column vector `z` tile
     comm::Index2D evecs_tile_rank = dist.rankGlobalTile(mat_ev_idx);
-    int evecs_tile_linearized_rank = grid.rankFullCommunicator(evecs_tile_rank);
-    counts[evecs_tile_linearized_rank] += dist.tileSize<Coord::Col>(i);
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx),
                                                z.readwrite_sender(z_idx));
-      ++i_z_packing;
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), z.read_sender(z_idx)));
+    }
+    else {
+      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
+      ex::start_detached(
+          comm::scheduleRecvBcast(full_task_chain(), root_rank, z.readwrite_sender(z_idx)));
     }
   }
-
-  // Gather column vector `z` on all processes
-  auto allgather_f = [comm, recv_counts = counts](const auto& send_tiles, const auto& recv_tiles,
-                                                  MPI_Request* req) {
-    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    T* send_ptr = send_tiles[0].get().ptr();
-    T* recv_ptr = recv_tiles[0].ptr();
-
-    int send_count = recv_counts[to_sizet(comm.rank())];
-
-    std::vector<int> recv_displs(recv_counts.size());
-    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
-
-    DLAF_MPI_CHECK_ERROR(MPI_Iallgatherv(send_ptr, send_count, dtype, recv_ptr, recv_counts.data(),
-                                         recv_displs.data(), dtype, comm, req));
-  };
-
-  // Collect all tiles of the column vector `z`
-  LocalTileIndex begin(0, 0);
-  LocalTileSize sz = z.distribution().localNrTiles();
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, z)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, ztmp)));
-  dlaf::comm::internal::transformMPIDetach(std::move(allgather_f), std::move(sender));
-
-  // TODO: unpack `ztmp` data into `z`
 }
 
 // Distributed version of the tridiagonal solver on CPUs
@@ -995,6 +918,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   constexpr Backend B = Backend::MC;
   constexpr Device D = Device::CPU;
 
+  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
+
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
   // Calculate the size of the upper subproblem
@@ -1011,7 +936,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
                           dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleDistZVec(grid, i_begin, i_split, i_end, rho_fut, evecs, ws.ztmp, ws.z);
+  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
 
   debug_barrier(0);
 
@@ -1037,7 +962,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
 
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
-  // TODO: apply Given's rotation
+  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), 0, i_begin, i_end, std::move(rots_fut),
+                                      evecs);
 
   // Step #2
   //
@@ -1070,6 +996,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
+  // TODO: these clone communicators internally which block
   dlaf::permutations::permute<B, D, T, Coord::Row>(grid, i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
                                                   ws.mat1);
@@ -1087,6 +1014,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
+  // TODO: this clones a communicator internally which blocks
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
 
   debug_barrier(3);

@@ -420,7 +420,7 @@ void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
                   Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
-  comm::Communicator comm = grid.subCommunicator(orthogonal(C));
+  comm::Communicator comm = grid.subCommunicator(orthogonal(C)).clone();  // TODO: temporary
   const matrix::Distribution& dist = mat_in.distribution();
 
   // Local size and index of subproblem [i_begin, i_end]

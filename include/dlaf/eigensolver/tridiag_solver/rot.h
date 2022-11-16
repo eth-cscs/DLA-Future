@@ -16,7 +16,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/eigensolver/tridiag_solver/merge.h"
+#include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
@@ -69,6 +69,14 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
 }
 
 }
+
+template <class T>
+struct GivensRotation {
+  SizeType i;  // the first column index
+  SizeType j;  // the second column index
+  T c;         // cosine
+  T s;         // sine
+};
 
 // @param tiles The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)`
 // that are potentially affected by the Givens rotations.

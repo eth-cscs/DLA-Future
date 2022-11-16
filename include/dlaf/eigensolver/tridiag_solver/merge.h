@@ -28,6 +28,7 @@
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
+#include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -905,6 +906,71 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
 }
 
+// The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
+//
+// Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
+// to normalize `z` we have to divide by sqrt(2).
+template <class T, Device D>
+void assembleDistZVec(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split, SizeType i_end,
+                      pika::shared_future<T> rho_fut, Matrix<const T, D>& mat_ev, Matrix<T, D>& ztmp,
+                      Matrix<T, D>& z) {
+  namespace ex = pika::execution::experimental;
+  namespace ut = matrix::util;
+
+  const matrix::Distribution& dist = mat_ev.distribution();
+  comm::Index2D this_rank = dist.rankIndex();
+
+  auto comm = grid.fullCommunicator();
+
+  // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
+  SizeType i_z_packing = 0;                           // packing index for local `z` data
+  std::vector<int> counts(to_sizet(comm.size()), 0);  // local length of `z` on each rank
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    // True if tile is in Q1
+    bool top_tile = i <= i_split;
+    // Move to the row below `i_middle` for `Q2`
+    SizeType mat_ev_row = i_split + ((top_tile) ? 0 : 1);
+    GlobalTileIndex mat_ev_idx(mat_ev_row, i);
+    GlobalTileIndex z_idx(i_z_packing, 0);
+
+    // Copy the last row of a `Q1` tile or the first row of a `Q2` tile into a column vector `z` tile
+    comm::Index2D evecs_tile_rank = dist.rankGlobalTile(mat_ev_idx);
+    int evecs_tile_linearized_rank = grid.rankFullCommunicator(evecs_tile_rank);
+    counts[evecs_tile_linearized_rank] += dist.tileSize<Coord::Col>(i);
+    if (evecs_tile_rank == this_rank) {
+      // Copy the row into the column vector `z`
+      assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx),
+                                               z.readwrite_sender(z_idx));
+      ++i_z_packing;
+    }
+  }
+
+  // Gather column vector `z` on all processes
+  auto allgather_f = [comm, recv_counts = counts](const auto& send_tiles, const auto& recv_tiles,
+                                                  MPI_Request* req) {
+    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+    T* send_ptr = send_tiles[0].get().ptr();
+    T* recv_ptr = recv_tiles[0].ptr();
+
+    int send_count = recv_counts[to_sizet(comm.rank())];
+
+    std::vector<int> recv_displs(recv_counts.size());
+    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+
+    DLAF_MPI_CHECK_ERROR(MPI_Iallgatherv(send_ptr, send_count, dtype, recv_ptr, recv_counts.data(),
+                                         recv_displs.data(), dtype, comm, req));
+  };
+
+  // Collect all tiles of the column vector `z`
+  LocalTileIndex begin(0, 0);
+  LocalTileSize sz = z.distribution().localNrTiles();
+  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, z)),
+                             ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, ztmp)));
+  dlaf::comm::internal::transformMPIDetach(std::move(allgather_f), std::move(sender));
+
+  // TODO: unpack `ztmp` data into `z`
+}
+
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
@@ -945,7 +1011,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
                           dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  // TODO: assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
+  assembleDistZVec(grid, i_begin, i_split, i_end, rho_fut, evecs, ws.ztmp, ws.z);
 
   debug_barrier(0);
 
@@ -971,6 +1037,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
 
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
+  // TODO: apply Given's rotation
 
   // Step #2
   //

@@ -685,8 +685,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
   // Iterate over diagonal tiles
   const matrix::Distribution& distr = mat.distribution();
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType tile_begin = distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_tile, 0) -
-                          distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0);
+    SizeType tile_begin = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
 
     setUnitDiagonalAsync<D>(k_fut, tile_begin, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
   }
@@ -869,6 +868,23 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   }
 }
 
+template <class T, Device D>
+void setUnitDiagDist(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+                     Matrix<T, D>& mat) {
+  // Iterate over diagonal tiles
+  const matrix::Distribution& dist = mat.distribution();
+  comm::Index2D this_rank = dist.rankIndex();
+  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+    GlobalTileIndex ii_tile(i_tile, i_tile);
+    comm::Index2D diag_tile_rank = dist.rankGlobalTile(ii_tile);
+    if (diag_tile_rank == this_rank) {
+      SizeType tile_begin = dist.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+
+      setUnitDiagonalAsync<D>(k_fut, tile_begin, mat.readwrite_sender(ii_tile));
+    }
+  }
+}
+
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
@@ -957,7 +973,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   resetSubMatrix(idx_loc_begin, idx_loc_end, ws.mat1);
   // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
   // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
-  // TODO: setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
+  setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   debug_barrier(1);
 

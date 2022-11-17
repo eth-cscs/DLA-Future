@@ -529,6 +529,40 @@ void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
+constexpr unsigned set_diag_kernel_sz = 256;
+
+template <class T>
+__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
+  const SizeType i = blockIdx.x * set_diag_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  tile[i + i * ld] = T(1);
+}
+
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream) {
+  SizeType tile_offset = k - tile_begin;
+  if (tile_offset < 0)
+    tile_offset = 0;
+  else if (tile_offset >= tile.size().rows())
+    return;
+
+  SizeType len = tile.size().rows() - tile_offset;
+  SizeType ld = tile.ld();
+  T* tile_ptr = tile.ptr(TileElementIndex(tile_offset, tile_offset));
+
+  dim3 nr_threads(set_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
+  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile_ptr);
+}
+
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, float);
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
+
+// -----------------------------------------
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, whip::stream_t stream) {
@@ -623,28 +657,5 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t s
 
 DLAF_GIVENS_ROT_ETI(, float);
 DLAF_GIVENS_ROT_ETI(, double);
-
-constexpr unsigned set_diag_kernel_sz = 256;
-
-template <class T>
-__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
-  const SizeType i = blockIdx.x * givens_rot_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  tile[i + i * ld] = T(1);
-}
-
-template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream) {
-  dim3 nr_threads(set_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
-  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile);
-}
-
-DLAF_SET_UNIT_DIAG_ETI(, float);
-DLAF_SET_UNIT_DIAG_ETI(, double);
-
-// --- Eigenvector formation kernels ---
 
 }

@@ -532,6 +532,41 @@ void divideColsByFirstRowAsync(pika::shared_future<SizeType> k_fut, SizeType row
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideColsByFirstRow_o, std::move(sender));
 }
 
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::CPU>& tile);
+
+#define DLAF_CPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
+  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
+                                      const matrix::Tile<Type, Device::CPU>& tile)
+
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, float);
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream);
+
+#define DLAF_GPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
+  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
+                                      const matrix::Tile<Type, Device::GPU>& tile,   \
+                                      whip::stream_t stream)
+
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, float);
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(setUnitDiagonal);
+
+template <Device D, class TileSender>
+void setUnitDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType tile_begin, TileSender&& tile) {
+  namespace di = dlaf::internal;
+  auto sender = di::whenAllLift(std::move(k_fut), tile_begin, std::forward<TileSender>(tile));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setUnitDiagonal_o, std::move(sender));
+}
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU
@@ -573,16 +608,6 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t s
 
 DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
-
-template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream);
-
-#define DLAF_SET_UNIT_DIAG_ETI(kword, Type)                                          \
-  kword template void setUnitDiagTileOnDevice(SizeType len, SizeType ld, Type* tile, \
-                                              whip::stream_t stream)
-
-DLAF_SET_UNIT_DIAG_ETI(extern, float);
-DLAF_SET_UNIT_DIAG_ETI(extern, double);
 
 #endif
 

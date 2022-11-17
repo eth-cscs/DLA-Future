@@ -682,52 +682,27 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 template <class T, Device D>
 void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
                  Matrix<T, D>& mat) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
   // Iterate over diagonal tiles
   const matrix::Distribution& distr = mat.distribution();
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType tile_begin = distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_tile, 0) -
                           distr.globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0);
 
-    auto diag_fn = [tile_begin](const auto& k, const auto& tile, [[maybe_unused]] auto&&... ts) {
-      // If all elements of the tile are after the `k` index reset the offset
-      SizeType tile_offset = k - tile_begin;
-      if (tile_offset < 0)
-        tile_offset = 0;
-
-      // Set all diagonal elements of the tile to 1.
-      if constexpr (D == Device::CPU) {
-        for (SizeType i = tile_offset; i < tile.size().rows(); ++i) {
-          tile(TileElementIndex(i, i)) = 1;
-        }
-      }
-      else {
-        if (tile_offset < tile.size().rows()) {
-          setUnitDiagTileOnDevice(tile.size().rows() - tile_offset, tile.ld(),
-                                  tile.ptr(TileElementIndex(tile_offset, tile_offset)), ts...);
-        }
-      }
-    };
-
-    auto sender = ex::when_all(k_fut, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
-    di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(diag_fn), std::move(sender));
+    setUnitDiagonalAsync<D>(k_fut, tile_begin, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
   }
 }
 
 // Set submatrix to zero
 template <class T>
-void resetSubMatrix(SizeType i_begin, SizeType i_end, Matrix<T, Device::CPU>& mat) {
+void resetSubMatrix(LocalTileIndex begin, LocalTileIndex end, Matrix<T, Device::CPU>& mat) {
   using dlaf::internal::Policy;
   using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
 
-  for (SizeType j = i_begin; j <= i_end; ++j) {
-    for (SizeType i = i_begin; i <= i_end; ++i) {
-      start_detached(mat.readwrite_sender(GlobalTileIndex(i, j)) |
-                     tile::set0(Policy<Backend::MC>(thread_priority::normal)));
-    }
+  LocalTileSize sz(end.row() - begin.row() + 1, end.col() - begin.col() + 1);
+
+  for (auto idx : common::iterate_range2d(begin, sz)) {
+    start_detached(mat.readwrite_sender(idx) | tile::set0(Policy<Backend::MC>(thread_priority::normal)));
   }
 }
 
@@ -821,7 +796,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, evals, ws_h.evals);
   copy(i_begin, i_end, ws.dtmp, ws_h.dtmp);
   copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
-  resetSubMatrix(i_begin, i_end, ws_h.mat1);
+  resetSubMatrix(LocalTileIndex(i_begin, i_begin), LocalTileIndex(i_end, i_end), ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
   copy(i_begin, i_end, ws_h.mat1, ws.mat1);
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
@@ -926,12 +901,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
 
   // The local size of the subproblem
-  LocalTileIndex i_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
-                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  LocalTileIndex i_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
-                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
-  LocalTileIndex i_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
-                           dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
+  LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
+                               dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
+  LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
+                               dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
+  LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
+                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
   LocalElementSize sz_loc{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
                           dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
@@ -959,7 +934,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   //
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
-
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), 0, i_begin, i_end, std::move(rots_fut),
@@ -980,7 +954,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(i_begin, i_end, ws.dtmp, evals);
 
-  // TODO: resetSubMatrix(i_begin, i_end, ws_h.mat1);
+  resetSubMatrix(idx_loc_begin, idx_loc_end, ws.mat1);
   // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
   // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   // TODO: setUnitDiag(i_begin, i_end, k_fut, ws.mat1);

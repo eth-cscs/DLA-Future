@@ -664,31 +664,48 @@ void formEvecsUsingWeightVec(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_
   }
 }
 
+// Sum of squares of columns of @p evecs into the first row of @p ws
 template <class T, Device D>
-void sumsqEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-                Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
-  const matrix::Distribution& distr = evecs.distribution();
+void sumsqEvecs(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                pika::shared_future<SizeType> k_fut, Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
+  const matrix::Distribution& dist = evecs.distribution();
+
+  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+    auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
+    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    sumsqColsAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(), evecs.read_sender(idx_loc_tile),
+                      ws.readwrite_sender(idx_loc_tile));
+
+    // skip the first row
+    if (idx_gl_tile.row() == idx_gl_begin.row())
+      continue;
+
+    LocalTileIndex idx_ws_first_row_tile(idx_loc_begin.row(), idx_loc_tile.col());
+    addFirstRowsAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(), ws.read_sender(idx_loc_tile),
+                         ws.readwrite_sender(idx_ws_first_row_tile));
+  }
 
   // Calculate the sum of square for each column in each tile
-  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
-      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      GlobalTileIndex mat_idx(i_tile, j_tile);
-      sumsqColsAsync<D>(k_fut, i_subm_el, j_subm_el, evecs.read_sender(mat_idx),
-                        ws.readwrite_sender(mat_idx));
-    }
-  }
+  // for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+  //  SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+  //  for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+  //    SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+  //    GlobalTileIndex mat_idx(i_tile, j_tile);
+  //    sumsqColsAsync<D>(k_fut, i_subm_el, j_subm_el, evecs.read_sender(mat_idx),
+  //                      ws.readwrite_sender(mat_idx));
+  //  }
+  //}
 
   // Sum the sum of squares into the first row of `ws` submatrix
-  for (SizeType i_tile = i_begin + 1; i_tile <= i_end; ++i_tile) {
-    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
-      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      addFirstRowsAsync<D>(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                           ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
-    }
-  }
+  // for (SizeType i_tile = i_begin + 1; i_tile <= i_end; ++i_tile) {
+  //  SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+  //  for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
+  //    SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
+  //    addFirstRowsAsync<D>(k_fut, i_subm_el, j_subm_el, ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
+  //                         ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
+  //  }
+  //}
 }
 
 template <class T, Device D>
@@ -834,7 +851,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
   formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
-  sumsqEvecs(i_begin, i_end, k_fut, ws.mat1, ws.mat2);
+  sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   normalizeEvecs(i_begin, i_end, k_fut, ws.mat2, ws.mat1);
 
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);

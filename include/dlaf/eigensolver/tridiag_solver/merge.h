@@ -601,50 +601,73 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
                                                                             std::move(sender)));
 }
 
+// Initializes a weight vector in the first local column of the local or distributed workspace matrix @p `ws`.
+//
+// @p diag local matrix of size (n x 1)
+// @p evecs local or distributed matrix of size (n x n)
+// @p ws local or distributed matrix of size (n x n)
+//
+// Assumption: @p evecs and @p ws have equal distributions
+//
 // References:
 // - lapack 3.10.0, dlaed3.f, line 293
 // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
 //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
 template <class T, Device D>
-void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
-               Matrix<const T, D>& diag, Matrix<const T, D>& z, Matrix<T, D>& ws, Matrix<T, D>& evecs) {
+void initWeightVector(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                      pika::shared_future<SizeType> k_fut, Matrix<const T, D>& diag,
+                      Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
+  const matrix::Distribution& dist = evecs.distribution();
+  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
+
+  // Reduce by multiplication into the first local column of each tile of the workspace matrix `ws`
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+    auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
+    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    // Divide the eigenvectors of the rank1 update problem `evecs` by it's diagonal matrix `diag` and
+    // reduce multiply into the first column of each tile of the workspace matrix `ws`
+    divideEvecsByDiagonalAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(),
+                                  diag.read_sender(GlobalTileIndex(idx_gl_tile.row(), 0)),
+                                  diag.read_sender(GlobalTileIndex(idx_gl_tile.col(), 0)),
+                                  evecs.read_sender(idx_loc_tile), ws.readwrite_sender(idx_loc_tile));
+
+    // skip the first local column
+    if (idx_gl_tile.col() != idx_gl_begin.col()) {
+      // reduce-multiply the first column of each local tile of the workspace matrix into the first local
+      // column of the matrix
+      LocalTileIndex idx_ws_first_col_tile(idx_loc_tile.row(), idx_loc_begin.col());
+      multiplyFirstColumnsAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(), ws.read_sender(idx_loc_tile),
+                                   ws.readwrite_sender(idx_ws_first_col_tile));
+    }
+  }
+}
+
+// References:
+// - lapack 3.10.0, dlaed3.f, line 293
+// - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
+//   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
+template <class T, Device D>
+void formEvecsUsingWeightVec(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                             pika::shared_future<SizeType> k_fut, Matrix<const T, D>& z,
+                             Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
+  const matrix::Distribution& dist = evecs.distribution();
+
+  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+    auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
+    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    LocalTileIndex idx_ws_first_local_tile(idx_loc_tile.row(), idx_loc_begin.col());
+    calcEvecsFromWeightVecAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(),
+                                   z.read_sender(GlobalTileIndex(idx_gl_tile.row(), 0)),
+                                   ws.read_sender(idx_ws_first_local_tile),
+                                   evecs.readwrite_sender(idx_loc_tile));
+  }
+}
+
+template <class T, Device D>
+void sumsqEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+                Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
   const matrix::Distribution& distr = evecs.distribution();
-
-  // Reduce by multiplication into the first column of each tile of ws
-  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
-      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      divideEvecsByDiagonalAsync<D>(k_fut, i_subm_el, j_subm_el,
-                                    diag.read_sender(GlobalTileIndex(i_tile, 0)),
-                                    diag.read_sender(GlobalTileIndex(j_tile, 0)),
-                                    evecs.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                                    ws.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-    }
-  }
-
-  // Reduce by multiplication into the first column of ws
-  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-    for (SizeType j_tile = i_begin + 1; j_tile <= i_end; ++j_tile) {
-      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      multiplyFirstColumnsAsync<D>(k_fut, i_subm_el, j_subm_el,
-                                   ws.read_sender(GlobalTileIndex(i_tile, j_tile)),
-                                   ws.readwrite_sender(GlobalTileIndex(i_tile, i_begin)));
-    }
-  }
-
-  // Use the first column of `ws` matrix to compute the eigenvectors
-  for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType i_subm_el = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-    for (SizeType j_tile = i_begin; j_tile <= i_end; ++j_tile) {
-      SizeType j_subm_el = distr.globalTileElementDistance<Coord::Col>(i_begin, j_tile);
-      calcEvecsFromWeightVecAsync<D>(k_fut, i_subm_el, j_subm_el,
-                                     z.read_sender(GlobalTileIndex(i_tile, 0)),
-                                     ws.read_sender(GlobalTileIndex(i_tile, i_begin)),
-                                     evecs.readwrite_sender(GlobalTileIndex(i_tile, j_tile)));
-    }
-  }
 
   // Calculate the sum of square for each column in each tile
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
@@ -666,6 +689,12 @@ void formEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
                            ws.readwrite_sender(GlobalTileIndex(i_begin, j_tile)));
     }
   }
+}
+
+template <class T, Device D>
+void normalizeEvecs(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k_fut,
+                    Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
+  const matrix::Distribution& distr = evecs.distribution();
 
   // Normalize column vectors
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
@@ -693,12 +722,10 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
 
 // Set submatrix to zero
 template <class T>
-void resetSubMatrix(LocalTileIndex begin, LocalTileIndex end, Matrix<T, Device::CPU>& mat) {
+void resetSubMatrix(LocalTileIndex begin, LocalTileSize sz, Matrix<T, Device::CPU>& mat) {
   using dlaf::internal::Policy;
   using pika::execution::thread_priority;
   using pika::execution::experimental::start_detached;
-
-  LocalTileSize sz(end.row() - begin.row() + 1, end.col() - begin.col() + 1);
 
   for (auto idx : common::iterate_range2d(begin, sz)) {
     start_detached(mat.readwrite_sender(idx) | tile::set0(Policy<Backend::MC>(thread_priority::normal)));
@@ -735,6 +762,10 @@ template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
+  LocalTileIndex idx_loc_begin(i_begin, i_begin);
+  SizeType nrtiles = i_end - i_begin + 1;
+  LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
+
   // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
 
@@ -795,11 +826,17 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, evals, ws_h.evals);
   copy(i_begin, i_end, ws.dtmp, ws_h.dtmp);
   copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
-  resetSubMatrix(LocalTileIndex(i_begin, i_begin), LocalTileIndex(i_end, i_end), ws_h.mat1);
+  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
   copy(i_begin, i_end, ws_h.mat1, ws.mat1);
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
-  formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
+
+  // formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
+  initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+  formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
+  sumsqEvecs(i_begin, i_end, k_fut, ws.mat1, ws.mat2);
+  normalizeEvecs(i_begin, i_end, k_fut, ws.mat2, ws.mat1);
+
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
@@ -923,8 +960,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
                                dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
-  LocalElementSize sz_loc{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
-                          dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
+  LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
+                             idx_loc_end.col() - idx_loc_begin.col() + 1};
+  // LocalElementSize sz_loc_el{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
+  //                            dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
@@ -970,7 +1009,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(i_begin, i_end, ws.dtmp, evals);
 
-  resetSubMatrix(idx_loc_begin, idx_loc_end, ws.mat1);
+  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
   // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
   // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);

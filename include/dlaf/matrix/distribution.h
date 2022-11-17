@@ -344,6 +344,14 @@ public:
            globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
   }
 
+  GlobalElementSize globalTileElementDistance(GlobalTileIndex begin,
+                                              GlobalTileIndex end) const noexcept {
+    return GlobalElementSize{globalTileElementDistance<Coord::Row>(begin.row(), end.row()),
+                             globalTileElementDistance<Coord::Col>(begin.col(), end.col())
+
+    };
+  }
+
   /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
   /// along the @p rc coordinate
   template <Coord rc>

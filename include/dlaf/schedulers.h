@@ -12,6 +12,7 @@
 #include <pika/execution.hpp>
 #include <pika/runtime.hpp>
 #include <pika/thread.hpp>
+#include <pika/mpi.hpp>
 
 #ifdef DLAF_WITH_GPU
 #include <pika/cuda.hpp>
@@ -41,6 +42,6 @@ auto getBackendScheduler(const pika::execution::thread_priority priority) {
 
 inline auto getMPIScheduler() {
   return pika::execution::experimental::thread_pool_scheduler{
-      &pika::resource::get_thread_pool(getConfiguration().mpi_pool)};
+      &pika::resource::get_thread_pool(pika::mpi::experimental::get_pool_name())};
 }
 }

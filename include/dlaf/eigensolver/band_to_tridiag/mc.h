@@ -421,7 +421,7 @@ template <class CommSender, class T, class DepSender>
                                    dest, tag, comm, req));
   };
   return whenAllLift(std::forward<CommSender>(pcomm), std::move(a_block), std::forward<DepSender>(dep)) |
-         transformMPI(send);
+         transformMPI(send, pika::mpi::experimental::stream_type::send_1);
 }
 
 template <class CommSender, class T, class DepSender>
@@ -438,7 +438,7 @@ template <class CommSender, class T, class DepSender>
   };
 
   return whenAllLift(std::forward<CommSender>(pcomm), std::move(a_block), std::forward<DepSender>(dep)) |
-         transformMPI(recv);
+         transformMPI(recv, pika::mpi::experimental::stream_type::receive_1);
 }
 
 template <class T>
@@ -611,7 +611,7 @@ template <class CommSender, class PromiseSender>
   };
 
   return whenAllLift(std::forward<CommSender>(pcomm), std::forward<PromiseSender>(worker)) |
-         transformMPI(send);
+         transformMPI(send, pika::mpi::experimental::stream_type::send_1);
 }
 
 template <class CommSender, class PromiseSender>
@@ -626,7 +626,7 @@ template <class CommSender, class PromiseSender>
   };
 
   return whenAllLift(std::forward<CommSender>(pcomm), std::forward<PromiseSender>(worker)) |
-         transformMPI(recv);
+         transformMPI(recv, pika::mpi::experimental::stream_type::receive_1);
 }
 
 template <Device D, class T>

@@ -8,7 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+// TODO: Remove. This is only temporary to fix the missing includes in transform_mpi.hpp.
+#include <pika/datastructures/variant.hpp>
+#include <pika/functional/invoke_fused.hpp>
+#include <pika/mpi.hpp>
 #include <pika/runtime.hpp>
+#include <pika/mpi.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/error.h>
@@ -20,6 +25,8 @@
 #include <iostream>
 #include <memory>
 
+#define DLAF_USE_SEPARATE_MPI_POOL 1
+
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
@@ -28,7 +35,7 @@ std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
      << std::endl;
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
      << std::endl;
-  os << "  mpi_pool = " << cfg.mpi_pool << std::endl;
+  os << "  mpi_pool = " << pika::mpi::experimental::get_pool_name() << std::endl;
   return os;
 }
 
@@ -50,6 +57,17 @@ template <>
 struct Init<Backend::MC> {
   static void initialize(configuration const& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
+    namespace mpi=pika::mpi::experimental;
+    if (mpi::get_completion_mode()==0) {
+        // if there is no mpi pool setup, make sure mpi uses the default pool
+        if (!pika::resource::pool_exists(mpi::get_pool_name()))
+            mpi::set_pool_name("default");
+    }
+    else
+    {
+        // install polling loop on requested thread pool
+        mpi::init(false, mpi::get_pool_name());
+    }
   }
 
   static void finalize() {
@@ -155,7 +173,7 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
   updateConfigurationValue(vm, cfg.umpire_device_memory_pool_initial_bytes,
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
-  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
+//  cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // update tune parameters
   auto& param = getTuneParameters();
@@ -276,9 +294,11 @@ ScopedInitializer::~ScopedInitializer() {
 void initResourcePartitionerHandler(pika::resource::partitioner& rp,
                                     pika::program_options::variables_map const& vm) {
   // Don't create the MPI pool if the user disabled it
+  namespace mpi = pika::mpi::experimental;
   if (vm["dlaf:no-mpi-pool"].as<bool>())
     return;
 
+#if DLAF_USE_SEPARATE_MPI_POOL
   // Don't create the MPI pool if there is a single process
   int ntasks;
   DLAF_MPI_CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &ntasks));
@@ -292,7 +312,8 @@ void initResourcePartitionerHandler(pika::resource::partitioner& rp,
 
   // Create a thread pool with a single core that we will use for all
   // communication related tasks
-  rp.create_thread_pool("mpi", pika::resource::scheduling_policy::local_priority_fifo, mode);
-  rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], "mpi");
+  rp.create_thread_pool(mpi::get_pool_name(), pika::resource::scheduling_policy::local_priority_fifo, mode);
+  rp.add_resource(rp.numa_domains()[0].cores()[0].pus()[0], mpi::get_pool_name());
+#endif
 }
 }

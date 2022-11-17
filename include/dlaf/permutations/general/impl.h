@@ -204,7 +204,8 @@ void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int 
   };
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f),
                                            ex::when_all(sub_task_chain(),
-                                                        ex::just(std::vector<int>(to_sizet(nranks), 0))));
+                                                        ex::just(std::vector<int>(to_sizet(nranks), 0)),
+                           pika::mpi::experimental::stream_type::collective_1);
 }
 
 // Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!

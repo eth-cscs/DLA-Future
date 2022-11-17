@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <pika/mpi.hpp>
 #include <type_traits>
 
 #include "dlaf/common/pipeline.h"
@@ -27,6 +28,8 @@ inline void consumePromiseGuardCommunicator(dlaf::common::PromiseGuard<Communica
 }
 
 /// \overload consumePromiseGuardCommunicator
+/// This helper "consumes" a PromiseGuard<Communicator> ensuring that after this call the one
+/// passed as argument gets destroyed.
 template <typename T>
 void consumePromiseGuardCommunicator(T&) {}
 
@@ -41,7 +44,7 @@ void consumePromiseGuardCommunicator(T&) {}
 /// least until version 12 fails with an internal compiler error with a trailing
 /// decltype for SFINAE. GCC has no problems with a lambda.
 template <typename F>
-struct MPICallHelper {
+struct MPIYieldWhileCallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts)
@@ -78,47 +81,83 @@ struct MPICallHelper {
   }
 };
 
+/// Helper type for wrapping MPI calls.
 template <typename F>
-MPICallHelper(F &&) -> MPICallHelper<std::decay_t<F>>;
+struct MPICallHelper {
+  std::decay_t<F> f;
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
+      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...)) {
+    using result_type = decltype(pika::unwrapping(std::move(f))(
+        unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...));
+    if constexpr (std::is_void_v<result_type>) {
+      pika::unwrapping(std::move(f))(
+          unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...);
+      (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
+    }
+    else {
+      auto r = pika::unwrapping(std::move(f))(
+          unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...);
+      (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
+      return r;
+    }
+  }
+};
+
+template <typename F>
+MPIYieldWhileCallHelper(F&&) -> MPIYieldWhileCallHelper<std::decay_t<F>>;
+
+template <typename F>
+MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 
 /// Lazy transformMPI. This does not submit the work and returns a sender.
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
-[[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender) {
+[[nodiscard]] decltype(auto) transformMPI(F&& f, Sender&& sender, pika::mpi::experimental::stream_type s) {
   namespace ex = pika::execution::experimental;
+  namespace mpi = pika::mpi::experimental;
 
-  return ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
-         ex::then(MPICallHelper{std::forward<F>(f)});
+  if (mpi::get_completion_mode()==0) {
+      auto snd1 = ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
+         ex::then(MPIYieldWhileCallHelper{std::forward<F>(f)});
+    return ex::make_unique_any_sender(std::move(snd1));
+
+  }
+  else {
+    return std::forward<Sender>(sender)
+          | mpi::transform_mpi(MPICallHelper{std::forward<F>(f)}, s);
+  }
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void.
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
-void transformMPIDetach(F&& f, Sender&& sender) {
+void transformMPIDetach(F&& f, Sender&& sender, pika::mpi::experimental::stream_type s) {
   pika::execution::experimental::start_detached(
-      transformMPI(std::forward<F>(f), std::forward<Sender>(sender)));
+      transformMPI(std::forward<F>(f), std::forward<Sender>(sender), s));
 }
 
 /// Lazy transformMPI. This does not submit the work and returns a sender. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.
 template <typename F, typename... Ts>
-[[nodiscard]] decltype(auto) transformMPILift(F&& f, Ts&&... ts) {
-  return transformMPI(std::forward<F>(f), dlaf::internal::whenAllLift(std::forward<Ts>(ts)...));
+[[nodiscard]] decltype(auto) transformMPILift(F&& f, pika::mpi::experimental::stream_type s, Ts&&... ts) {
+  return transformMPI(std::forward<F>(f), dlaf::internal::whenAllLift(std::forward<Ts>(ts)...), s);
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void. First
 /// lifts non-senders into senders using just, and then calls transform with a
 /// when_all sender of the lifted senders.
 template <typename F, typename... Ts>
-void transformMPILiftDetach(F&& f, Ts&&... ts) {
+void transformMPILiftDetach(F&& f, pika::mpi::experimental::stream_type s, Ts&&... ts) {
   pika::execution::experimental::start_detached(
-      transformLift(std::forward<F>(f), std::forward<Ts>(ts)...));
+      transformLift(std::forward<F>(f), s, std::forward<Ts>(ts)...));
 }
 
 template <typename F>
 struct PartialTransformMPIBase {
   std::decay_t<F> f_;
+  pika::mpi::experimental::stream_type s_;
 };
 
 /// A partially applied transformMPI, with the callable object given, but the
@@ -128,7 +167,8 @@ template <typename F>
 class PartialTransformMPI : private PartialTransformMPIBase<F> {
 public:
   template <typename F_>
-  PartialTransformMPI(F_&& f) : PartialTransformMPIBase<F>{std::forward<F_>(f)} {}
+  PartialTransformMPI(F_&& f, pika::mpi::experimental::stream_type s) :
+      PartialTransformMPIBase<F>{std::forward<F_>(f), s} {}
   PartialTransformMPI(PartialTransformMPI&&) = default;
   PartialTransformMPI(PartialTransformMPI const&) = default;
   PartialTransformMPI& operator=(PartialTransformMPI&&) = default;
@@ -136,12 +176,12 @@ public:
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformMPI pa) {
-    return transformMPI(std::move(pa.f_), std::forward<Sender>(sender));
+    return transformMPI(std::move(pa.f_), std::forward<Sender>(sender), pa.s_);
   }
 };
 
 template <typename F>
-PartialTransformMPI(F&& f) -> PartialTransformMPI<std::decay_t<F>>;
+PartialTransformMPI(F&& f, pika::mpi::experimental::stream_type) -> PartialTransformMPI<std::decay_t<F>>;
 
 /// A partially applied transformMPIDetach, with the callable object given, but
 /// the predecessor sender missing. The predecessor sender is applied when
@@ -159,7 +199,7 @@ public:
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformMPIDetach pa) {
     return pika::execution::experimental::start_detached(
-        transformMPI(std::move(pa.f_), std::forward<Sender>(sender)));
+        transformMPI(std::move(pa.f_), std::forward<Sender>(sender), pa.s_));
   }
 };
 
@@ -171,8 +211,8 @@ PartialTransformMPIDetach(F&& f) -> PartialTransformMPIDetach<std::decay_t<F>>;
 /// This overload partially applies the MPI transform for later use with
 /// operator| with a sender on the left-hand side.
 template <typename F>
-[[nodiscard]] decltype(auto) transformMPI(F&& f) {
-  return PartialTransformMPI{std::forward<F>(f)};
+[[nodiscard]] decltype(auto) transformMPI(F&& f, pika::mpi::experimental::stream_type s) {
+  return PartialTransformMPI{std::forward<F>(f), s};
 }
 
 /// \overload transformMPIDetach
@@ -180,7 +220,7 @@ template <typename F>
 /// This overload partially applies transformMPIDetach for later use with
 /// operator| with a sender on the left-hand side.
 template <typename F>
-[[nodiscard]] decltype(auto) transformMPIDetach(F&& f) {
-  return PartialTransformMPIDetach{std::forward<F>(f)};
+[[nodiscard]] decltype(auto) transformMPIDetach(F&& f, pika::mpi::experimental::stream_type s) {
+  return PartialTransformMPIDetach{std::forward<F>(f), s};
 }
 }

@@ -66,20 +66,21 @@ target_include_directories(
 )
 target_link_libraries(
   dlaf.prop
-  INTERFACE MPI::MPI_CXX
-            DLAF::LAPACK
-            pika::pika
-            lapackpp
-            blaspp
-            umpire
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
-            $<$<LINK_LANGUAGE:HIP>:roc::rocthrust>  # hip adds offload-arch globally for the CXX language in hip-config
-            $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
+  INTERFACE
+    MPI::MPI_CXX
+    DLAF::LAPACK
+    pika::pika
+    lapackpp
+    blaspp
+    umpire
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
+    $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
+    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
 target_compile_definitions(
   dlaf.prop
@@ -208,8 +209,7 @@ DLAF_addSublibrary(
 # Define DLAF's tridiagonal eigensolver library
 DLAF_addSublibrary(
   tridiagonal_eigensolver
-  SOURCES eigensolver/tridiag_solver/mc.cpp
-          eigensolver/tridiag_solver/kernels.cpp
+  SOURCES eigensolver/tridiag_solver/mc.cpp eigensolver/tridiag_solver/kernels.cpp
           $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
   GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core

@@ -40,178 +40,107 @@
 
 #if defined(DLAF_WITH_HIP)
 
-#include "rocprim/rocprim.hpp"
 #include <whip.hpp>
+#include "rocprim/rocprim.hpp"
 
 namespace cub {
 
-    template<
-        typename ValueType,
-        typename ConversionOp,
-        typename InputIteratorT,
-        typename OffsetT = std::ptrdiff_t // ignored
-    >
-    using TransformInputIterator = ::rocprim::transform_iterator<InputIteratorT, ConversionOp, ValueType>;
+template <typename ValueType, typename ConversionOp, typename InputIteratorT,
+          typename OffsetT = std::ptrdiff_t  // ignored
+          >
+using TransformInputIterator = ::rocprim::transform_iterator<InputIteratorT, ConversionOp, ValueType>;
 
-    template<
-        typename ValueType,
-        typename OffsetT = std::ptrdiff_t
-    >
-    using CountingInputIterator = ::rocprim::counting_iterator<ValueType, OffsetT>;
+template <typename ValueType, typename OffsetT = std::ptrdiff_t>
+using CountingInputIterator = ::rocprim::counting_iterator<ValueType, OffsetT>;
 
-    namespace detail
-    {
+namespace detail {
 
-    	// CUB uses value_type of OutputIteratorT (if not void) as a type of intermediate results in reduce,
-    	// for example:
-    	//
-    	// rocPRIM (as well as Thrust) uses result type of BinaryFunction instead (if not void):
-	//
-	// using input_type = typename std::iterator_traits<InputIterator>::value_type;
-	// using result_type = typename ::rocprim::detail::match_result_type<
-	//     input_type, BinaryFunction
-	// >::type;
-	//
-	// For short -> float using Sum()
-	// CUB:     float Sum(float, float)
-	// rocPRIM: short Sum(short, short)
-	//
-	// This wrapper allows to have compatibility with CUB in hipCUB.
-	template<
-	    class InputIteratorT,
-	    class OutputIteratorT,
-	    class BinaryFunction
-	>
-	struct convert_result_type_wrapper
-	{
-	    using input_type = typename std::iterator_traits<InputIteratorT>::value_type;
-	    using output_type = typename std::iterator_traits<OutputIteratorT>::value_type;
-	    using result_type =
-	        typename std::conditional<
-	            std::is_void<output_type>::value, input_type, output_type
-	        >::type;
+// CUB uses value_type of OutputIteratorT (if not void) as a type of intermediate results in reduce,
+// for example:
+//
+// rocPRIM (as well as Thrust) uses result type of BinaryFunction instead (if not void):
+//
+// using input_type = typename std::iterator_traits<InputIterator>::value_type;
+// using result_type = typename ::rocprim::detail::match_result_type<
+//     input_type, BinaryFunction
+// >::type;
+//
+// For short -> float using Sum()
+// CUB:     float Sum(float, float)
+// rocPRIM: short Sum(short, short)
+//
+// This wrapper allows to have compatibility with CUB in hipCUB.
+template <class InputIteratorT, class OutputIteratorT, class BinaryFunction>
+struct convert_result_type_wrapper {
+  using input_type = typename std::iterator_traits<InputIteratorT>::value_type;
+  using output_type = typename std::iterator_traits<OutputIteratorT>::value_type;
+  using result_type =
+      typename std::conditional<std::is_void<output_type>::value, input_type, output_type>::type;
 
-	    convert_result_type_wrapper(BinaryFunction op) : op(op) {}
+  convert_result_type_wrapper(BinaryFunction op) : op(op) {}
 
-	    template<class T>
-	    __host__ __device__ inline
-	    constexpr result_type operator()(const T &a, const T &b) const
-	    {
-	        return static_cast<result_type>(op(a, b));
-	    }
+  template <class T>
+  __host__ __device__ inline constexpr result_type operator()(const T& a, const T& b) const {
+    return static_cast<result_type>(op(a, b));
+  }
 
-	    BinaryFunction op;
-	};
+  BinaryFunction op;
+};
 
-	template<
-	    class InputIteratorT,
-	    class OutputIteratorT,
-	    class BinaryFunction
-	>
-	inline
-	convert_result_type_wrapper<InputIteratorT, OutputIteratorT, BinaryFunction>
-	convert_result_type(BinaryFunction op)
-	{
-	    return convert_result_type_wrapper<InputIteratorT, OutputIteratorT, BinaryFunction>(op);
-	}
+template <class InputIteratorT, class OutputIteratorT, class BinaryFunction>
+inline convert_result_type_wrapper<InputIteratorT, OutputIteratorT, BinaryFunction> convert_result_type(
+    BinaryFunction op) {
+  return convert_result_type_wrapper<InputIteratorT, OutputIteratorT, BinaryFunction>(op);
+}
 
-    } // end detail namespace
+}  // end detail namespace
 
-    struct Sum
-    {
-        template<class T>
-        __host__ __device__ inline
-        constexpr T operator()(const T &a, const T &b) const
-        {
-            return a + b;
-        }
-    };
+struct Sum {
+  template <class T>
+  __host__ __device__ inline constexpr T operator()(const T& a, const T& b) const {
+    return a + b;
+  }
+};
 
-    class DeviceReduce
-    {
-    public:
-    	template <
-    	    typename InputIteratorT,
-    	    typename OutputIteratorT,
-    	    typename ReduceOpT,
-    	    typename T,
-    	    typename NumItemsType
-    	>
-    	__host__ static
-    	whip::error_t Reduce(void *d_temp_storage,
-    	                  std::size_t &temp_storage_bytes,
-    	                  InputIteratorT d_in,
-    	                  OutputIteratorT d_out,
-    	                  NumItemsType num_items,
-    	                  ReduceOpT reduction_op,
-    	                  T init,
-    	                  whip::stream_t stream = 0,
-    	                  bool debug_synchronous = false)
-    	{
-    	    return ::rocprim::reduce(
-    	        d_temp_storage, temp_storage_bytes,
-    	        d_in, d_out, init, num_items,
-    	        ::cub::detail::convert_result_type<InputIteratorT, OutputIteratorT>(reduction_op),
-    	        stream, debug_synchronous
-    	    );
-    	}
-        template <
-            typename InputIteratorT,
-            typename OutputIteratorT,
-            typename NumItemsType
-        >
-        __host__ static
-        whip::error_t Sum(void *d_temp_storage,
-                       std::size_t &temp_storage_bytes,
-                       InputIteratorT d_in,
-                       OutputIteratorT d_out,
-                       NumItemsType num_items,
-                       whip::stream_t stream = 0,
-                       bool debug_synchronous = false)
-        {
-            using T = typename std::iterator_traits<InputIteratorT>::value_type;
-            return Reduce(
-                d_temp_storage, temp_storage_bytes,
-                d_in, d_out, num_items, ::cub::Sum(), T(0),
-                stream, debug_synchronous
-            );
-        }
+class DeviceReduce {
+public:
+  template <typename InputIteratorT, typename OutputIteratorT, typename ReduceOpT, typename T,
+            typename NumItemsType>
+  __host__ static whip::error_t Reduce(void* d_temp_storage, std::size_t& temp_storage_bytes,
+                                       InputIteratorT d_in, OutputIteratorT d_out,
+                                       NumItemsType num_items, ReduceOpT reduction_op, T init,
+                                       whip::stream_t stream = 0, bool debug_synchronous = false) {
+    return ::rocprim::reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, init, num_items,
+                             ::cub::detail::convert_result_type<InputIteratorT, OutputIteratorT>(
+                                 reduction_op),
+                             stream, debug_synchronous);
+  }
+  template <typename InputIteratorT, typename OutputIteratorT, typename NumItemsType>
+  __host__ static whip::error_t Sum(void* d_temp_storage, std::size_t& temp_storage_bytes,
+                                    InputIteratorT d_in, OutputIteratorT d_out, NumItemsType num_items,
+                                    whip::stream_t stream = 0, bool debug_synchronous = false) {
+    using T = typename std::iterator_traits<InputIteratorT>::value_type;
+    return Reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items, ::cub::Sum(), T(0), stream,
+                  debug_synchronous);
+  }
+};
 
-    };
-
-    struct DeviceSegmentedReduce
-    {
-        template<
-            typename InputIteratorT,
-            typename OutputIteratorT,
-            typename OffsetIteratorT,
-            typename ReductionOp,
-            typename T,
-            typename NumSegmentType
-        >
-        __host__ static
-        hipError_t Reduce(void * d_temp_storage,
-                          std::size_t& temp_storage_bytes,
-                          InputIteratorT d_in,
-                          OutputIteratorT d_out,
-                          NumSegmentType num_segments,
-                          OffsetIteratorT d_begin_offsets,
-                          OffsetIteratorT d_end_offsets,
-                          ReductionOp reduction_op,
-                          T initial_value,
-                          whip::stream_t stream = 0,
-                          bool debug_synchronous = false)
-        {
-            return ::rocprim::segmented_reduce(
-                d_temp_storage, temp_storage_bytes,
-                d_in, d_out,
-                num_segments, d_begin_offsets, d_end_offsets,
-                ::cub::detail::convert_result_type<InputIteratorT, OutputIteratorT>(reduction_op),
-                initial_value,
-                stream, debug_synchronous
-            );
-        }
-    };
+struct DeviceSegmentedReduce {
+  template <typename InputIteratorT, typename OutputIteratorT, typename OffsetIteratorT,
+            typename ReductionOp, typename T, typename NumSegmentType>
+  __host__ static hipError_t Reduce(void* d_temp_storage, std::size_t& temp_storage_bytes,
+                                    InputIteratorT d_in, OutputIteratorT d_out,
+                                    NumSegmentType num_segments, OffsetIteratorT d_begin_offsets,
+                                    OffsetIteratorT d_end_offsets, ReductionOp reduction_op,
+                                    T initial_value, whip::stream_t stream = 0,
+                                    bool debug_synchronous = false) {
+    return ::rocprim::segmented_reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_segments,
+                                       d_begin_offsets, d_end_offsets,
+                                       ::cub::detail::convert_result_type<InputIteratorT,
+                                                                          OutputIteratorT>(reduction_op),
+                                       initial_value, stream, debug_synchronous);
+  }
+};
 
 }
 

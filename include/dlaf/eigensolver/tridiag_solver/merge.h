@@ -970,7 +970,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
     for (SizeType j = 0; j < k; ++j) {
       // If this rank doesn't have parts of the current global column, move to the next column
       SizeType j_gl = i_begin + j;
-      int j_rank_col = dist.rankGlobalTile<Coord::Col>(j_gl);
+      int j_rank_col = dist.rankGlobalElement<Coord::Col>(j_gl);
       if (this_rank_col != j_rank_col)
         continue;
 
@@ -1027,7 +1027,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
     evecs.waitLocalTiles();
     evals.waitLocalTiles();
     DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
-    std::cout << "\n\n MERGE() MARK #" << i << "\n\n";
+    std::cout << "\n\nMERGE() MARK #" << i << "\n\n";
   };
 
   constexpr Backend B = Backend::MC;
@@ -1061,11 +1061,15 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Calculate the tolerance used for deflation
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
 
+  debug_barrier(1);
+
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(std::move(rho_fut));
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
+
+  debug_barrier(2);
 
   // Step #1
   //
@@ -1082,6 +1086,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), 0, i_begin, i_end, std::move(rots_fut),
                                       evecs);
 
+  debug_barrier(3);
+
   // Step #2
   //
   //    i2 (in)  : initial <--- pre_sorted
@@ -1097,10 +1103,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(i_begin, i_end, ws.dtmp, evals);
 
+  debug_barrier(4);
+
   // Note: here ws.z is used as a contiguous buffer for the laed4 call
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
                         ws.dtmp, ws.z, ws.mat1);
+
+  debug_barrier(5);
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
@@ -1111,7 +1121,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
-  debug_barrier(1);
+  debug_barrier(6);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
@@ -1127,7 +1137,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
                                                   ws.mat1);
 
-  debug_barrier(2);
+  debug_barrier(7);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
@@ -1143,7 +1153,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // TODO: `permute()` clones a communicator internally which blocks
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
 
-  debug_barrier(3);
+  debug_barrier(8);
 }
 
 }

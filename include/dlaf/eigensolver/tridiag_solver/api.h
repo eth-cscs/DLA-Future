@@ -30,7 +30,7 @@ struct TridiagSolver {
   KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
+// DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::MC, Device::CPU, double)
 
 #ifdef DLAF_WITH_GPU
 DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(extern, Backend::GPU, Device::GPU, float)

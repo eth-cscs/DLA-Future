@@ -39,6 +39,7 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
                    Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
+  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
@@ -68,6 +69,7 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, D>& tridiag,
                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
+  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);

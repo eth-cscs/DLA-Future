@@ -68,7 +68,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
 
-  Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 1));
+  Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 2));
   Distribution dist_evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
   Distribution dist_evecs(GlobalElementSize(n, n), TileElementSize(nb, nb), grid.size(), grid.rank(),
                           src_rank_index);
@@ -138,7 +138,6 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     }
   }
   else {
-    std::cout << src_rank_index << " : " << grid.rank() << " : " << dist_sign.localNrTiles();
     for (auto idx_tile : common::iterate_range2d(dist_sign.localNrTiles())) {
       sync::broadcast::receive_from(0, col_comm, sign_mat(idx_tile).get());
     }

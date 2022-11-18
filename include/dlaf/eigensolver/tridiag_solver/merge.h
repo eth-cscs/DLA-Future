@@ -924,9 +924,15 @@ template <class T, Device D>
 void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain,
                                 LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
                                 Matrix<T, D>& mat) {
+  // TODO: this is wrong, the process should still participate in the call
+  // TODO: not all tiles have the same shape, hence the counts are different - offload the matrix into a 1D buffer
+  if (sz_loc_tiles.isEmpty())
+    return;
+
   namespace ex = pika::execution::experimental;
   LocalTileSize sz_first_local_column(sz_loc_tiles.rows(), 1);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_column)) {
+    std::cout << idx_loc_tile << std::endl;
     ex::start_detached(
         comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, mat.readwrite_sender(idx_loc_tile)));
   }
@@ -937,6 +943,11 @@ template <class T, Device D>
 void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain,
                             LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
                             Matrix<T, D>& mat) {
+  // TODO: this is wrong, the process should still participate in the call
+  // TODO: not all tiles have the same shape, hence the counts are different - offload the matrix into a 1D buffer
+  if (sz_loc_tiles.isEmpty())
+    return;
+
   namespace ex = pika::execution::experimental;
   LocalTileSize sz_first_local_row(1, sz_loc_tiles.cols());
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_row)) {
@@ -1048,6 +1059,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
   LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
                              idx_loc_end.col() - idx_loc_begin.col() + 1};
+
+  std::cout << "idx_loc_begin" << idx_loc_begin << std::endl;
+  std::cout << "idx_loc_end" << idx_loc_end << std::endl;
+  std::cout << "sz_loc_tiles" << sz_loc_tiles << std::endl;
   // LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
   //                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   // LocalElementSize sz_loc_el{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
@@ -1114,11 +1129,17 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+  debug_barrier(501);
   reduceMultiplyWeightVector(row_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
+  debug_barrier(502);
   formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
+  debug_barrier(503);
   sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
+  debug_barrier(504);
   reduceSumScalingVector(col_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
   normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
+  debug_barrier(505);
+
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   debug_barrier(6);

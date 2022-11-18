@@ -769,6 +769,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
 
+  matrix::print(format::csv{}, "LOCAL Z", ws.z);
+
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(std::move(rho_fut));
 
@@ -1070,6 +1072,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
+  matrix::print(format::csv{}, "DIST Z", ws.z);
 
   debug_barrier(0);
 

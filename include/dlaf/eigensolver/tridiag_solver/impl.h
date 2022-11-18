@@ -222,8 +222,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 // @p mat_trd is a local matrix of size (n, 2)
 // @p mat_ev is a distributed matrix of size (n, n)
 template <class T, Device D>
-void solveDistLeaf(common::Pipeline<comm::Communicator>& full_task_chain, Matrix<T, D>& mat_trd,
-                   Matrix<T, D>& mat_ev) {
+void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
+                   Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
   const matrix::Distribution& dist = mat_ev.distribution();
   namespace ex = pika::execution::experimental;
 
@@ -238,7 +238,9 @@ void solveDistLeaf(common::Pipeline<comm::Communicator>& full_task_chain, Matrix
       ex::start_detached(comm::scheduleSendBcast(full_task_chain(), mat_trd.read_sender(idx_trd)));
     }
     else {
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), mat_trd.readwrite_sender(idx_trd)));
+      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      ex::start_detached(
+          comm::scheduleRecvBcast(full_task_chain(), root_rank, mat_trd.readwrite_sender(idx_trd)));
     }
   }
 }
@@ -283,7 +285,7 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveDistLeaf(full_task_chain, tridiag, evecs);
+  solveDistLeaf(grid, full_task_chain, tridiag, evecs);
 
   debug_barrier(1);
 

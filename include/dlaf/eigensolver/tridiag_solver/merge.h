@@ -945,6 +945,68 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
   }
 }
 
+template <class T>
+void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_loc_begin,
+                           LocalTileSize sz_loc_tiles, pika::shared_future<SizeType> k_fut,
+                           pika::shared_future<T> rho_fut, Matrix<const T, Device::CPU>& d,
+                           Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
+                           Matrix<T, Device::CPU>& delta, Matrix<T, Device::CPU>& evecs) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  auto rank1_fn = [i_begin, idx_loc_begin, sz_loc_tiles,
+                   dist = evecs.distribution()](const auto& k, const auto& rho,
+                                                const auto& d_sfut_tile_arr, const auto& z_sfut_tile_arr,
+                                                const auto& eval_tiles, const auto& delta_tile_arr,
+                                                const auto& evec_tile_arr) {
+    const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
+    const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
+    T* eval_ptr = eval_tiles[0].ptr();
+    T* delta_ptr = delta_tile_arr[0].ptr();
+
+    comm::IndexT_MPI this_rank_col = dist.rankIndex().col();
+
+    // Iterate over columns of the submatrix
+    for (SizeType j = 0; j < k; ++j) {
+      // If this rank doesn't have parts of the current global column, move to the next column
+      SizeType j_gl = i_begin + j;
+      int j_rank_col = dist.rankGlobalTile<Coord::Col>(j_gl);
+      if (this_rank_col != j_rank_col)
+        continue;
+
+      T& eigenval = eval_ptr[to_sizet(j)];
+      lapack::laed4(static_cast<int>(k), static_cast<int>(j), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
+
+      // Iterate over the submatrix tile column of `evec_tiles` that contains the `i` column and copy
+      // the local parts of the distributed eigenvector matrix from the `delta` buffer initialized by laed4().
+      SizeType nrows_subm_tile = sz_loc_tiles.rows();
+      SizeType j_subm_tile = dist.localTileFromGlobalElement<Coord::Col>(j_gl) - idx_loc_begin.col();
+      SizeType j_evec_el = dist.tileElementFromGlobalElement<Coord::Col>(j_gl);
+      for (SizeType i_subm_tile = 0; i_subm_tile < nrows_subm_tile; ++i_subm_tile) {
+        SizeType index_evec_tile_arr = i_subm_tile + j_subm_tile * nrows_subm_tile;
+        auto evec_tile = evec_tile_arr[to_sizet(index_evec_tile_arr)];
+
+        SizeType index_delta_tile_arr =
+            dist.globalTileFromLocalTile<Coord::Row>(idx_loc_begin.row() + i_subm_tile);
+        auto delta_tile = delta_tile_arr[to_sizet(index_delta_tile_arr)];
+        tile::lacpy(delta_tile.size(), TileElementIndex(0, 0), delta_tile,
+                    TileElementIndex(0, j_evec_el), evec_tile);
+      }
+    };
+  };
+
+  TileCollector tc{i_begin, i_end};
+
+  auto sender =
+      ex::when_all(std::move(k_fut), std::move(rho_fut), ex::when_all_vector(tc.read(d)),
+                   ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
+                   ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(evecs)));
+
+  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
+                                                                            std::move(rank1_fn),
+                                                                            std::move(sender)));
+}
+
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
@@ -1034,17 +1096,17 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(i_begin, i_end, ws.dtmp, evals);
 
+  // Note: here ws.z is used as a contiguous buffer for the laed4 call
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
-  // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
+  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
+                        ws.dtmp, ws.z, ws.mat1);
+
+  // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
-
   reduceMultiplyWeightVector(row_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
-
   formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
-
   reduceSumScalingVector(col_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
-
   normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 

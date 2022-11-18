@@ -87,6 +87,7 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
 // Solve leaf eigensystem with stedc
 template <class T, Device D>
 void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
+  // TODO: this has to be fixed to work for distribtued @p mat_ev
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     stedcAsync<D>(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
@@ -190,6 +191,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
   solveLeaf(tridiag, evecs);
+
+  // TODO: communicate `tridiag` across processes
 
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);

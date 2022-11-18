@@ -919,6 +919,32 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, pika::shared_future<SizeT
   }
 }
 
+// (All)Reduce-multiply row-wise the first local columns of the distributed matrix @p mat
+template <class T, Device D>
+void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain,
+                                LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                                Matrix<T, D>& mat) {
+  namespace ex = pika::execution::experimental;
+  LocalTileSize sz_first_local_column(sz_loc_tiles.rows(), 1);
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_column)) {
+    ex::start_detached(
+        comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, mat.readwrite_sender(idx_loc_tile)));
+  }
+}
+
+// (All)Reduce-sum column-wise the first local rows of the distributed matrix @p mat
+template <class T, Device D>
+void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain,
+                            LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                            Matrix<T, D>& mat) {
+  namespace ex = pika::execution::experimental;
+  LocalTileSize sz_first_local_row(1, sz_loc_tiles.cols());
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_row)) {
+    ex::start_detached(
+        comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, mat.readwrite_sender(idx_loc_tile)));
+  }
+}
+
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
@@ -944,6 +970,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   constexpr Device D = Device::CPU;
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
+  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
 
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
@@ -1008,7 +1036,16 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
 
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
   // TODO: solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
-  // TODO: formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
+  initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+
+  reduceMultiplyWeightVector(row_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
+
+  formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
+  sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
+
+  reduceSumScalingVector(col_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
+
+  normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   debug_barrier(1);

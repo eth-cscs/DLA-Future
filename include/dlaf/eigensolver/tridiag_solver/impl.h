@@ -87,7 +87,6 @@ std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& mat_trd) 
 // Solve leaf eigensystem with stedc
 template <class T, Device D>
 void solveLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
-  // TODO: this has to be fixed to work for distribtued @p mat_ev
   SizeType ntiles = mat_trd.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     stedcAsync<D>(mat_trd.readwrite_sender(LocalTileIndex(i, 0)),
@@ -192,8 +191,6 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // `evecs` (nb x nb)
   solveLeaf(tridiag, evecs);
 
-  // TODO: communicate `tridiag` across processes
-
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
@@ -225,15 +222,23 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 // @p mat_trd is a local matrix of size (n, 2)
 // @p mat_ev is a distributed matrix of size (n, n)
 template <class T, Device D>
-void solveDistLeaf(Matrix<T, D>& mat_trd, Matrix<T, D>& mat_ev) {
+void solveDistLeaf(common::Pipeline<comm::Communicator>& full_task_chain, Matrix<T, D>& mat_trd,
+                   Matrix<T, D>& mat_ev) {
   const matrix::Distribution& dist = mat_ev.distribution();
+  namespace ex = pika::execution::experimental;
+
   comm::Index2D this_rank = dist.rankIndex();
   SizeType ntiles = dist.nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     GlobalTileIndex ii_tile(i, i);
     comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    GlobalTileIndex idx_trd(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<D>(mat_trd.readwrite_sender(LocalTileIndex(i, 0)), mat_ev.readwrite_sender(ii_tile));
+      stedcAsync<D>(mat_trd.readwrite_sender(idx_trd), mat_ev.readwrite_sender(ii_tile));
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), mat_trd.read_sender(idx_trd)));
+    }
+    else {
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), mat_trd.readwrite_sender(idx_trd)));
     }
   }
 }
@@ -274,9 +279,11 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
 
   debug_barrier(0);
 
+  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
+
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveDistLeaf(tridiag, evecs);
+  solveDistLeaf(full_task_chain, tridiag, evecs);
 
   debug_barrier(1);
 
@@ -288,8 +295,8 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems(grid, i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, evals,
-                         evecs);
+    mergeDistSubproblems(grid, full_task_chain, i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)],
+                         ws, evals, evecs);
   }
 }
 

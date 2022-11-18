@@ -954,11 +954,11 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
+  const matrix::Distribution& dist = evecs.distribution();
   auto rank1_fn = [i_begin, idx_loc_begin, sz_loc_tiles,
-                   dist = evecs.distribution()](const auto& k, const auto& rho,
-                                                const auto& d_sfut_tile_arr, const auto& z_sfut_tile_arr,
-                                                const auto& eval_tiles, const auto& delta_tile_arr,
-                                                const auto& evec_tile_arr) {
+                   dist](const auto& k, const auto& rho, const auto& d_sfut_tile_arr,
+                         const auto& z_sfut_tile_arr, const auto& eval_tiles, const auto& delta_tile_arr,
+                         const auto& evec_tile_arr) {
     const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
     const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
     T* eval_ptr = eval_tiles[0].ptr();
@@ -984,11 +984,11 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
       SizeType j_evec_el = dist.tileElementFromGlobalElement<Coord::Col>(j_gl);
       for (SizeType i_subm_tile = 0; i_subm_tile < nrows_subm_tile; ++i_subm_tile) {
         SizeType index_evec_tile_arr = i_subm_tile + j_subm_tile * nrows_subm_tile;
-        auto evec_tile = evec_tile_arr[to_sizet(index_evec_tile_arr)];
+        auto& evec_tile = evec_tile_arr[to_sizet(index_evec_tile_arr)];
 
         SizeType index_delta_tile_arr =
             dist.globalTileFromLocalTile<Coord::Row>(idx_loc_begin.row() + i_subm_tile);
-        auto delta_tile = delta_tile_arr[to_sizet(index_delta_tile_arr)];
+        auto& delta_tile = delta_tile_arr[to_sizet(index_delta_tile_arr)];
         tile::lacpy(delta_tile.size(), TileElementIndex(0, 0), delta_tile,
                     TileElementIndex(0, j_evec_el), evec_tile);
       }
@@ -1009,9 +1009,11 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
 
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
-void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_split,
-                          SizeType i_end, pika::shared_future<T> rho_fut, WorkSpace<T, Device::CPU>& ws,
-                          Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+void mergeDistSubproblems(comm::CommunicatorGrid grid,
+                          common::Pipeline<comm::Communicator>& full_task_chain, SizeType i_begin,
+                          SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
+                          WorkSpace<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evals,
+                          Matrix<T, Device::CPU>& evecs) {
   auto debug_barrier = [&](int i) {
     ws.mat1.waitLocalTiles();
     ws.mat2.waitLocalTiles();
@@ -1031,7 +1033,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   constexpr Backend B = Backend::MC;
   constexpr Device D = Device::CPU;
 
-  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
 
@@ -1043,12 +1044,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   // The local size of the subproblem
   LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
-                               dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
   LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
                              idx_loc_end.col() - idx_loc_begin.col() + 1};
+  // LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
+  //                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   // LocalElementSize sz_loc_el{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
   //                            dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
@@ -1121,7 +1122,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  // TODO: these clone communicators internally which block
+  // TODO: `permute()` and `generalSubMatrix()` clone communicators internally which block
   dlaf::permutations::permute<B, D, T, Coord::Row>(grid, i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
                                                   ws.mat1);
@@ -1139,7 +1140,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid, SizeType i_begin, SizeTyp
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
-  // TODO: this clones a communicator internally which blocks
+  // TODO: `permute()` clones a communicator internally which blocks
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
 
   debug_barrier(3);

@@ -161,7 +161,8 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
 TEST(TridiagSolverDistTestMC, Laplace1D) {
   using TypeParam = float;
-  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
+  //CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
+  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::ColumnMajor);
   // for (const auto& comm_grid : this->commGrids()) {
   for (auto [n, nb] : tested_problems) {
     solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);

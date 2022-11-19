@@ -922,7 +922,7 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, pika::shared_future<SizeT
 }
 
 // (All)Reduce-multiply row-wise the first local columns of the distributed matrix @p mat of size (n, n).
-// the column is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
+// The local column on each rank is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
 template <class T, Device D>
 void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain, SizeType i_begin,
                                 SizeType i_end, LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
@@ -973,21 +973,58 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
   }
 }
 
-// (All)Reduce-sum column-wise the first local rows of the distributed matrix @p mat
+// (All)Reduce-sum column-wise the first local rows of the distributed matrix @p mat of size (n, n).
+// The local row on each rank is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
 template <class T, Device D>
-void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain,
-                            LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                            Matrix<T, D>& mat) {
-  // TODO: this is wrong, the process should still participate in the call
-  // TODO: not all tiles have the same shape, hence the counts are different - offload the matrix into a 1D buffer
-  if (sz_loc_tiles.isEmpty())
-    return;
-
+void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain, SizeType i_begin,
+                            SizeType i_end, LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                            Matrix<T, D>& mat, Matrix<T, D>& comm_vec) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  const matrix::Distribution& dist = mat.distribution();
+
+  // If the rank doesn't have local matrix tiles, participate in the AllReduce() call by sending tiles
+  // from the communication buffer filled with `0`.
+  if (sz_loc_tiles.isEmpty()) {
+    comm::Index2D this_rank = dist.rankIndex();
+    for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+      if (this_rank.col() == dist.rankGlobalTile<Coord::Col>(i_tile)) {
+        GlobalTileIndex idx_gl_comm(i_tile, 0);
+        ex::start_detached(
+            tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite_sender(idx_gl_comm)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
+                                                          comm_vec.readwrite_sender(idx_gl_comm)));
+      }
+    }
+    return;
+  }
+
   LocalTileSize sz_first_local_row(1, sz_loc_tiles.cols());
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_row)) {
-    ex::start_detached(
-        comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, mat.readwrite_sender(idx_loc_tile)));
+    GlobalTileIndex idx_gl_comm_vec(dist.globalTileFromLocalTile<Coord::Col>(idx_loc_tile.col()), 0);
+    auto copy_to_buffer_sender =
+        ex::when_all(mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm_vec));
+    auto copy_to_buffer_fn = [](const auto& ws_tile, const auto& comm_tile) {
+      for (auto i_el : common::iterate_range2d(comm_tile.size())) {
+        comm_tile(i_el) = ws_tile(TileElementIndex(0, i_el.row()));
+      }
+    };
+    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
+                                     std::move(copy_to_buffer_sender)));
+
+    ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
+                                                      comm_vec.readwrite_sender(idx_gl_comm_vec)));
+
+    auto copy_from_buffer_sender =
+        ex::when_all(comm_vec.read_sender(idx_gl_comm_vec), mat.readwrite_sender(idx_loc_tile));
+    auto copy_from_buffer_fn = [](const auto& comm_tile, const auto& ws_tile) {
+      for (auto i_el : common::iterate_range2d(comm_tile.size())) {
+        ws_tile(TileElementIndex(0, i_el.row())) = comm_tile(i_el);
+      }
+    };
+    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_from_buffer_fn),
+                                     std::move(copy_from_buffer_sender)));
   }
 }
 
@@ -1172,7 +1209,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   debug_barrier(503);
   sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   debug_barrier(504);
-  reduceSumScalingVector(col_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
+  reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
   normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   debug_barrier(505);
 

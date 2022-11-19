@@ -921,22 +921,55 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, pika::shared_future<SizeT
   }
 }
 
-// (All)Reduce-multiply row-wise the first local columns of the distributed matrix @p mat
+// (All)Reduce-multiply row-wise the first local columns of the distributed matrix @p mat of size (n, n).
+// the column is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
 template <class T, Device D>
-void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain,
-                                LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                                Matrix<T, D>& mat) {
-  // TODO: this is wrong, the process should still participate in the call
-  // TODO: not all tiles have the same shape, hence the counts are different - offload the matrix into a 1D buffer
-  if (sz_loc_tiles.isEmpty())
-    return;
-
+void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain, SizeType i_begin,
+                                SizeType i_end, LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+                                Matrix<T, D>& mat, Matrix<T, D>& comm_vec) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  const matrix::Distribution& dist = mat.distribution();
+
+  // If the rank doesn't have local matrix tiles, participate in the AllReduce() call by sending tiles
+  // from the communication buffer filled with `1`.
+  if (sz_loc_tiles.isEmpty()) {
+    comm::Index2D this_rank = dist.rankIndex();
+    for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
+      if (this_rank.row() == dist.rankGlobalTile<Coord::Row>(i_tile)) {
+        GlobalTileIndex idx_gl_comm(i_tile, 0);
+        auto laset_sender =
+            di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm));
+        ex::start_detached(tile::laset(di::Policy<DefaultBackend_v<D>>(), std::move(laset_sender)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
+                                                          comm_vec.readwrite_sender(idx_gl_comm)));
+      }
+    }
+    return;
+  }
+
   LocalTileSize sz_first_local_column(sz_loc_tiles.rows(), 1);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_column)) {
-    std::cout << idx_loc_tile << std::endl;
-    ex::start_detached(
-        comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, mat.readwrite_sender(idx_loc_tile)));
+    GlobalTileIndex idx_gl_comm_vec(dist.globalTileFromLocalTile<Coord::Row>(idx_loc_tile.row()), 0);
+    auto copy_to_buffer_sender =
+        ex::when_all(mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm_vec));
+    auto copy_to_buffer_fn = [](const auto& ws_tile, const auto& comm_tile) {
+      tile::lacpy(comm_tile.size(), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0), comm_tile);
+    };
+    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
+                                     std::move(copy_to_buffer_sender)));
+
+    ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
+                                                      comm_vec.readwrite_sender(idx_gl_comm_vec)));
+
+    auto copy_from_buffer_sender =
+        ex::when_all(comm_vec.read_sender(idx_gl_comm_vec), mat.readwrite_sender(idx_loc_tile));
+    auto copy_from_buffer_fn = [](const auto& comm_tile, const auto& ws_tile) {
+      tile::lacpy(comm_tile.size(), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0), ws_tile);
+    };
+    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_from_buffer_fn),
+                                     std::move(copy_from_buffer_sender)));
   }
 }
 
@@ -1133,7 +1166,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
   debug_barrier(501);
-  reduceMultiplyWeightVector(row_task_chain, idx_loc_begin, sz_loc_tiles, ws.mat2);
+  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
   debug_barrier(502);
   formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   debug_barrier(503);

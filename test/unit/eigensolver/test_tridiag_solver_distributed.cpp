@@ -111,6 +111,16 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     return TypeUtilities<T>::element(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * M_PI / (n + 1)), 0);
   };
 
+  // -------- DEBUG
+  //{
+  //  Matrix<T, D> debug_matrix(dist_evecs.localSize(), TileElementSize(nb, nb));
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    dlaf::matrix::internal::copy(evecs(idx_loc_evecs).get(), debug_matrix(idx_loc_evecs).get());
+  //  }
+  //  matrix::print(format::csv{}, "EVECS (RANK LOCAL)", debug_matrix);
+  //}
+  // -------- DEBUG
+
   // Eigenvectors are unique up to a sign, match signs of expected and actual eigenvectors
   auto col_comm = grid.colCommunicator();
   SizeType gl_row = dist_evecs.globalElementFromLocalTileAndTileElement<Coord::Row>(0, 0);
@@ -161,7 +171,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
 TEST(TridiagSolverDistTestMC, Laplace1D) {
   using TypeParam = float;
-  //CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
+  // CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
   CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
   // for (const auto& comm_grid : this->commGrids()) {
   for (auto [n, nb] : tested_problems) {

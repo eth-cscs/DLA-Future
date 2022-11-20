@@ -1050,10 +1050,12 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
 
     comm::IndexT_MPI this_rank_col = dist.rankIndex().col();
 
+    SizeType j_gl_begin = dist.globalElementFromGlobalTileAndTileElement<Coord::Col>(i_begin, 0);
+
     // Iterate over columns of the submatrix
     for (SizeType j = 0; j < k; ++j) {
       // If this rank doesn't have parts of the current global column, move to the next column
-      SizeType j_gl = i_begin + j;
+      SizeType j_gl = j_gl_begin + j;
       int j_rank_col = dist.rankGlobalElement<Coord::Col>(j_gl);
       if (this_rank_col != j_rank_col)
         continue;
@@ -1164,7 +1166,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
-  matrix::print(format::csv{}, "\nDIST Z\n", ws.z);
+  // matrix::print(format::csv{}, "\nDIST Z\n", ws.z);
 
   debug_barrier(0);
 
@@ -1220,26 +1222,86 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
                         ws.dtmp, ws.z, ws.mat1);
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
-  matrix::print(format::csv{}, "\nDIST EVALS\n", ws.dtmp);
 
   debug_barrier(5);
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
   debug_barrier(501);
+
   reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
+
+  // -------- DEBUG
+
+  matrix::print(format::csv{}, "\nWIEGHT VEC\n", ws.z);
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n501. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
+
   debug_barrier(502);
+
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n502. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
+
   formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   debug_barrier(503);
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n503. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
+
   sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   debug_barrier(504);
+
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n504. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
+
   reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
   normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   debug_barrier(505);
 
+  matrix::print(format::csv{}, "\nSUM SQ VEC\n", ws.z);
+
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n505. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
+
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   debug_barrier(6);
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "6. EVECS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+    }
+  }
+  // -------- DEBUG
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //

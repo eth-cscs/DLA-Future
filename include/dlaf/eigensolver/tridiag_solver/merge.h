@@ -827,6 +827,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
+  matrix::print(format::csv{}, "\nLOCAL EVALS\n", ws_h.dtmp);
   copy(i_begin, i_end, ws_h.mat1, ws.mat1);
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
 
@@ -1090,6 +1091,27 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
                                                                             std::move(sender)));
 }
 
+// Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.
+template <class T, Device D>
+void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, SizeType i_begin,
+                          SizeType i_end, const matrix::Distribution& dist_evecs, Matrix<T, D>& evals) {
+  namespace ex = pika::execution::experimental;
+
+  comm::Index2D this_rank = dist_evecs.rankIndex();
+  for (SizeType i = i_begin; i <= i_end; ++i) {
+    GlobalTileIndex evals_idx(i, 0);
+
+    comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
+    if (evecs_tile_rank == this_rank.col()) {
+      ex::start_detached(comm::scheduleSendBcast(row_task_chain(), evals.read_sender(evals_idx)));
+    }
+    else {
+      ex::start_detached(
+          comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank, evals.readwrite_sender(evals_idx)));
+    }
+  }
+}
+
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid,
@@ -1142,7 +1164,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
-  matrix::print(format::csv{}, "DIST Z", ws.z);
+  matrix::print(format::csv{}, "\nDIST Z\n", ws.z);
 
   debug_barrier(0);
 
@@ -1197,6 +1219,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
                         ws.dtmp, ws.z, ws.mat1);
+  assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
+  matrix::print(format::csv{}, "\nDIST EVALS\n", ws.dtmp);
 
   debug_barrier(5);
 

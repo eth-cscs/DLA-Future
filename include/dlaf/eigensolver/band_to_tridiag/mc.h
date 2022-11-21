@@ -555,8 +555,8 @@ public:
 
   void send(const comm::Communicator& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
             MPI_Request* req) const noexcept {
-    DLAF_MPI_CHECK_ERROR(MPI_Isend(const_cast<T*>(data_()), to_int(band_size_ + 1),
-                                   comm::mpi_datatype<T>::type, dest, tag, comm, req));
+    DLAF_MPI_CHECK_ERROR(
+        MPI_Isend(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, dest, tag, comm, req));
   }
 
   void recv(SizeType sweep, SizeType step, const comm::Communicator& comm, comm::IndexT_MPI src,

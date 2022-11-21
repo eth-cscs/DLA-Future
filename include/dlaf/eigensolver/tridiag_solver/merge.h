@@ -614,11 +614,10 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
 // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
 //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
 template <class T, Device D>
-void initWeightVector(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                      pika::shared_future<SizeType> k_fut, Matrix<const T, D>& diag,
-                      Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
+void initWeightVector(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
+                      LocalTileSize sz_loc_tiles, pika::shared_future<SizeType> k_fut,
+                      Matrix<const T, D>& diag, Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
   const matrix::Distribution& dist = evecs.distribution();
-  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
 
   // Reduce by multiplication into the first local column of each tile of the workspace matrix `ws`
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
@@ -632,7 +631,7 @@ void initWeightVector(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
                                   evecs.read_sender(idx_loc_tile), ws.readwrite_sender(idx_loc_tile));
 
     // skip the first local column
-    if (idx_gl_tile.col() == idx_gl_begin.col())
+    if (idx_loc_tile.col() == idx_loc_begin.col())
       continue;
 
     // reduce-multiply the first column of each local tile of the workspace matrix into the first local
@@ -648,16 +647,16 @@ void initWeightVector(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
 // - LAPACK Working Notes: lawn132, Parallelizing the Divide and Conquer Algorithm for the Symmetric
 //   Tridiagonal Eigenvalue Problem on Distributed Memory Architectures, 4.2 Orthogonality
 template <class T, Device D>
-void formEvecsUsingWeightVec(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                             pika::shared_future<SizeType> k_fut, Matrix<const T, D>& z,
-                             Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
+void formEvecsUsingWeightVec(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
+                             LocalTileSize sz_loc_tiles, pika::shared_future<SizeType> k_fut,
+                             Matrix<const T, D>& z, Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
 
-  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     LocalTileIndex idx_ws_first_local_column(idx_loc_tile.row(), idx_loc_begin.col());
+
     calcEvecsFromWeightVecAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(),
                                    z.read_sender(GlobalTileIndex(idx_gl_tile.row(), 0)),
                                    ws.read_sender(idx_ws_first_local_column),
@@ -667,19 +666,18 @@ void formEvecsUsingWeightVec(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_
 
 // Sum of squares of columns of @p evecs into the first row of @p ws
 template <class T, Device D>
-void sumsqEvecs(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+void sumsqEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
                 pika::shared_future<SizeType> k_fut, Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
   const matrix::Distribution& dist = evecs.distribution();
 
-  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     sumsqColsAsync<D>(k_fut, sz_gl_el.rows(), sz_gl_el.cols(), evecs.read_sender(idx_loc_tile),
                       ws.readwrite_sender(idx_loc_tile));
 
-    // skip the first row
-    if (idx_gl_tile.row() == idx_gl_begin.row())
+    // skip the first local row
+    if (idx_loc_tile.row() == idx_loc_begin.row())
       continue;
 
     LocalTileIndex idx_ws_first_row_tile(idx_loc_begin.row(), idx_loc_tile.col());
@@ -690,11 +688,11 @@ void sumsqEvecs(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
 
 // Normalize column vectors
 template <class T, Device D>
-void normalizeEvecs(LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                    pika::shared_future<SizeType> k_fut, Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
+void normalizeEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
+                    LocalTileSize sz_loc_tiles, pika::shared_future<SizeType> k_fut,
+                    Matrix<const T, D>& ws, Matrix<T, D>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
 
-  GlobalTileIndex idx_gl_begin = dist.globalTileIndex(idx_loc_begin);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
@@ -759,6 +757,7 @@ template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
+  GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   LocalTileIndex idx_loc_begin(i_begin, i_begin);
   SizeType nrtiles = i_end - i_begin + 1;
   LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
@@ -832,10 +831,11 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
 
   // formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
-  initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
-  formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
-  sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
-  normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
+  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+  matrix::print(format::csv{}, "\nLOCAL WEIGHT VEC\n", ws.mat2);
+  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
+  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
+  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
 
   setUnitDiag(i_begin, i_end, k_fut, ws.mat1);
 
@@ -927,9 +927,12 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, pika::shared_future<SizeT
 template <class T, Device D>
 void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain, SizeType i_begin,
                                 SizeType i_end, LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                                Matrix<T, D>& mat, Matrix<T, D>& comm_vec) {
+                                pika::shared_future<SizeType> k_fut, Matrix<T, D>& mat,
+                                Matrix<T, D>& comm_vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+
+  // TODO: Tiles after index `k` should be handled separately
 
   const matrix::Distribution& dist = mat.distribution();
 
@@ -950,24 +953,61 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     return;
   }
 
+  SizeType j_gl = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(idx_loc_begin.col(), 0);
+
+  // SizeType i_gl = dist.globalElementFromGlobalTileAndTileElement<Coord::Row>(idx_gl_comm.row(), 0);
   LocalTileSize sz_first_local_column(sz_loc_tiles.rows(), 1);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_column)) {
-    GlobalTileIndex idx_gl_comm_vec(dist.globalTileFromLocalTile<Coord::Row>(idx_loc_tile.row()), 0);
+    SizeType i_gl = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(idx_loc_tile.row(), 0);
+    GlobalTileIndex idx_gl_comm(dist.globalTileFromLocalTile<Coord::Row>(idx_loc_tile.row()), 0);
     auto copy_to_buffer_sender =
-        ex::when_all(mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm_vec));
-    auto copy_to_buffer_fn = [](const auto& ws_tile, const auto& comm_tile) {
-      tile::lacpy(comm_tile.size(), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0), comm_tile);
+        ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
+    auto copy_to_buffer_fn = [i_gl, j_gl](const auto& k, const auto& ws_tile, const auto& comm_tile) {
+      if (j_gl >= k) {
+        tile::internal::laset(blas::Uplo::General, T(1), T(1), comm_tile);
+        return;
+      }
+
+      SizeType nrows = std::min(comm_tile.size().rows(), k - i_gl);
+      tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0),
+                  comm_tile);
     };
     ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
                                      std::move(copy_to_buffer_sender)));
 
+    // auto laset_comm_fn = [j_gl](const auto& k, const auto& comm_tile) {
+    //   if (j_gl >= k)
+    // };
+    // auto laset_comm_sender = ex::when_all(k_fut, comm_vec.readwrite_sender(idx_gl_comm));
+    // ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(laset_comm_fn),
+    //                                  std::move(laset_comm_sender)));
+
     ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
-                                                      comm_vec.readwrite_sender(idx_gl_comm_vec)));
+                                                      comm_vec.readwrite_sender(idx_gl_comm)));
+
+    // ex::start_detached(
+    //     ex::let_value(ex::when_all(k_fut, row_task_chain(), comm_vec.readwrite_sender(idx_gl_comm)),
+    //                   [i_gl](auto& k, auto& comm, auto& tile) {
+    //                     if (i_gl < k) {
+    //                       return ex::make_unique_any_sender(
+    //                           comm::scheduleAllReduceInPlace(ex::just(std::move(comm)), MPI_PROD,
+    //                                                          ex::just(std::move(tile))) |
+    //                           ex::drop_value());
+    //                     }
+    //                     else {
+    //                       return ex::make_unique_any_sender(ex::just());
+    //                     }
+    //                   }));
 
     auto copy_from_buffer_sender =
-        ex::when_all(comm_vec.read_sender(idx_gl_comm_vec), mat.readwrite_sender(idx_loc_tile));
-    auto copy_from_buffer_fn = [](const auto& comm_tile, const auto& ws_tile) {
-      tile::lacpy(comm_tile.size(), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0), ws_tile);
+        ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
+    auto copy_from_buffer_fn = [j_gl](const auto& k, const auto& comm_tile, const auto& ws_tile) {
+      if (j_gl >= k)
+        return;
+
+      SizeType nrows = std::min(comm_tile.size().rows(), k - j_gl);
+      tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0),
+                  ws_tile);
     };
     ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_from_buffer_fn),
                                      std::move(copy_from_buffer_sender)));
@@ -1149,6 +1189,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
 
   // The local size of the subproblem
+  GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
   LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
@@ -1226,10 +1267,19 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   debug_barrier(5);
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
-  initWeightVector(idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
   debug_barrier(501);
 
-  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
+  // -------- DEBUG
+  {
+    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+      std::cout << "\n5. WS TILES " << idx_loc_evecs << std::endl;
+      matrix::print(format::csv{}, ws.mat2(idx_loc_evecs).get());
+    }
+  }
+
+  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
+                             ws.z);
 
   // -------- DEBUG
 
@@ -1253,7 +1303,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   }
   // -------- DEBUG
 
-  formEvecsUsingWeightVec(idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
+  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   debug_barrier(503);
   // -------- DEBUG
   {
@@ -1264,7 +1314,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   }
   // -------- DEBUG
 
-  sumsqEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
+  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   debug_barrier(504);
 
   // -------- DEBUG
@@ -1277,7 +1327,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // -------- DEBUG
 
   reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
-  normalizeEvecs(idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
+  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   debug_barrier(505);
 
   matrix::print(format::csv{}, "\nSUM SQ VEC\n", ws.z);

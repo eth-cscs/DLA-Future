@@ -66,7 +66,8 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   constexpr RealParam complex_error = TypeUtilities<T>::error;
   constexpr RealParam real_error = TypeUtilities<RealParam>::error;
 
-  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  // Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  Index2D src_rank_index(0, 0);
 
   Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 2));
   Distribution dist_evals(LocalElementSize(n, 1), TileElementSize(nb, 1));

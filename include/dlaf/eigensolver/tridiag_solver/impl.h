@@ -194,6 +194,8 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
+  matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
+
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
@@ -291,6 +293,8 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
 
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
+
+  matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
 
   debug_barrier(2);
 

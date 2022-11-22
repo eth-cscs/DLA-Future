@@ -767,8 +767,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_split, i_end, rho_fut, evecs, ws.z);
-
-  matrix::print(format::csv{}, "LOCAL Z", ws.z);
+  matrix::print(format::csv{}, "\n RANK1 UPDATE VEC \n", ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(std::move(rho_fut));
@@ -826,14 +825,14 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
-  std::cout << "\n\nk : " << k_fut.get() << "\n\n";
-  matrix::print(format::csv{}, "\nLOCAL EVALS\n", ws_h.dtmp);
+  matrix::print(format::csv{}, "\n EVALS \n", ws_h.dtmp);
+  matrix::print(format::csv{}, "\n DELTA \n", ws_h.mat1);
   copy(i_begin, i_end, ws_h.mat1, ws.mat1);
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
 
   // formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
-  matrix::print(format::csv{}, "\nLOCAL WEIGHT VEC\n", ws.mat2);
+  matrix::print(format::csv{}, "\n WEIGHT VEC \n", ws.mat2);
   formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
@@ -1102,7 +1101,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
           auto& delta_tile = delta_tile_arr[to_sizet(i_subm_delta_arr)];
 
           tile::lacpy(delta_tile.size(), TileElementIndex(0, 0), delta_tile,
-                      TileElementIndex(0, j_gl_el), evec_tile);
+                      TileElementIndex(0, j_tile_el), evec_tile);
         }
       }
     }
@@ -1184,9 +1183,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
                              idx_loc_end.col() - idx_loc_begin.col() + 1};
 
-  std::cout << "idx_loc_begin" << idx_loc_begin << std::endl;
-  std::cout << "idx_loc_end" << idx_loc_end << std::endl;
-  std::cout << "sz_loc_tiles" << sz_loc_tiles << std::endl;
+  std::cout << "\nidx_loc_begin : " << idx_loc_begin << std::endl;
+  std::cout << "idx_loc_end : " << idx_loc_end << std::endl;
+  std::cout << "sz_loc_tiles : " << sz_loc_tiles << std::endl;
   // LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
   //                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   // LocalElementSize sz_loc_el{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
@@ -1194,7 +1193,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
-  // matrix::print(format::csv{}, "\nDIST Z\n", ws.z);
+  matrix::print(format::csv{}, "\n RANK1 VEC \n", ws.z);
 
   debug_barrier(0);
 
@@ -1250,6 +1249,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
                         ws.dtmp, ws.z, ws.mat1);
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
+  matrix::print(format::csv{}, "\n EVALS \n", ws.dtmp);
 
   debug_barrier(5);
 
@@ -1258,19 +1258,27 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   debug_barrier(501);
 
   // -------- DEBUG
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n5. WS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat2(idx_loc_evecs).get());
-  //  }
-  //}
+  {
+    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+      std::cout << "\n5. DELTA TILE : " << idx_loc_tile << std::endl;
+      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
+    }
+  }
+
+  // -------- DEBUG
+  {
+    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+      std::cout << "\n5. WS TILE : " << idx_loc_tile << std::endl;
+      matrix::print(format::csv{}, ws.mat2(idx_loc_tile).get());
+    }
+  }
 
   reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                              ws.z);
 
   // -------- DEBUG
 
-  matrix::print(format::csv{}, "\nWIEGHT VEC\n", ws.z);
+  matrix::print(format::csv{}, "\n WIEGHT \n", ws.z);
   //{
   //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
   //    std::cout << "\n501. EVECS TILES " << idx_loc_evecs << std::endl;

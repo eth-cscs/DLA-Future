@@ -826,6 +826,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
+  std::cout << "\n\nk : " << k_fut.get() << "\n\n";
   matrix::print(format::csv{}, "\nLOCAL EVALS\n", ws_h.dtmp);
   copy(i_begin, i_end, ws_h.mat1, ws.mat1);
   copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
@@ -1065,37 +1066,46 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
     T* eval_ptr = eval_tiles[0].ptr();
     T* delta_ptr = delta_tile_arr[0].ptr();
 
-    comm::IndexT_MPI this_rank_col = dist.rankIndex().col();
+    // Iterate over the columns of the local submatrix tile grid
+    for (SizeType j_loc_subm_tile = 0; j_loc_subm_tile < sz_loc_tiles.cols(); ++j_loc_subm_tile) {
+      // The tile column in the local matrix tile grid
+      SizeType j_loc_tile = idx_loc_begin.col() + j_loc_subm_tile;
+      // The tile column in the global matrix tile grid
+      SizeType j_gl_tile = dist.globalTileFromLocalTile<Coord::Col>(j_loc_tile);
+      // The element distance between the current tile column and the initial tile column in the global
+      // matrix tile grid
+      SizeType j_gl_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j_gl_tile);
 
-    SizeType j_gl_begin = dist.globalElementFromGlobalTileAndTileElement<Coord::Col>(i_begin, 0);
+      // If the tile column contains deflated values return
+      if (j_gl_subm_el >= k)
+        return;
 
-    // Iterate over columns of the submatrix
-    for (SizeType j = 0; j < k; ++j) {
-      // If this rank doesn't have parts of the current global column, move to the next column
-      SizeType j_gl = j_gl_begin + j;
-      int j_rank_col = dist.rankGlobalElement<Coord::Col>(j_gl);
-      if (this_rank_col != j_rank_col)
-        continue;
+      // Iterate over the elements of the column tile
+      SizeType ncols = std::min(dist.tileSize<Coord::Col>(j_gl_tile), k - j_gl_subm_el);
+      for (SizeType j_tile_el = 0; j_tile_el < ncols; ++j_tile_el) {
+        // The global matrix column
+        SizeType j_gl_el = j_gl_subm_el + j_tile_el;
 
-      T& eigenval = eval_ptr[to_sizet(j)];
-      lapack::laed4(static_cast<int>(k), static_cast<int>(j), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
+        // Solve the deflated rank-1 problem
+        T& eigenval = eval_ptr[to_sizet(j_gl_el)];
+        lapack::laed4(static_cast<int>(k), static_cast<int>(j_gl_el), d_ptr, z_ptr, delta_ptr, rho,
+                      &eigenval);
 
-      // Iterate over the submatrix tile column of `evec_tiles` that contains the `i` column and copy
-      // the local parts of the distributed eigenvector matrix from the `delta` buffer initialized by laed4().
-      SizeType nrows_subm_tile = sz_loc_tiles.rows();
-      SizeType j_subm_tile = dist.localTileFromGlobalElement<Coord::Col>(j_gl) - idx_loc_begin.col();
-      SizeType j_evec_el = dist.tileElementFromGlobalElement<Coord::Col>(j_gl);
-      for (SizeType i_subm_tile = 0; i_subm_tile < nrows_subm_tile; ++i_subm_tile) {
-        SizeType index_evec_tile_arr = i_subm_tile + j_subm_tile * nrows_subm_tile;
-        auto& evec_tile = evec_tile_arr[to_sizet(index_evec_tile_arr)];
+        // Iterate over the rows of the local submatrix tile grid and copy the parts from delta stored on this rank.
+        for (SizeType i_loc_subm_tile = 0; i_loc_subm_tile < sz_loc_tiles.rows(); ++i_loc_subm_tile) {
+          SizeType i_subm_evec_arr = i_loc_subm_tile + j_loc_subm_tile * sz_loc_tiles.rows();
+          auto& evec_tile = evec_tile_arr[to_sizet(i_subm_evec_arr)];
+          // The tile row in the local matrix tile grid
+          SizeType i_loc_tile = idx_loc_begin.row() + i_loc_subm_tile;
+          // The tile row in the global submatrix tile grid
+          SizeType i_subm_delta_arr = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile) - i_begin;
+          auto& delta_tile = delta_tile_arr[to_sizet(i_subm_delta_arr)];
 
-        SizeType index_delta_tile_arr =
-            dist.globalTileFromLocalTile<Coord::Row>(idx_loc_begin.row() + i_subm_tile);
-        auto& delta_tile = delta_tile_arr[to_sizet(index_delta_tile_arr)];
-        tile::lacpy(delta_tile.size(), TileElementIndex(0, 0), delta_tile,
-                    TileElementIndex(0, j_evec_el), evec_tile);
+          tile::lacpy(delta_tile.size(), TileElementIndex(0, 0), delta_tile,
+                      TileElementIndex(0, j_gl_el), evec_tile);
+        }
       }
-    };
+    }
   };
 
   TileCollector tc{i_begin, i_end};

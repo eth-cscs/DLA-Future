@@ -297,6 +297,8 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
+    std::cout << "\n\n!!!!!!!!!!!!!!    " << i_begin << " | " << i_split << " | " << i_end
+              << "    !!!!!!!!!!!!!!\n\n";
     mergeDistSubproblems(grid, full_task_chain, i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)],
                          ws, evals, evecs);
   }

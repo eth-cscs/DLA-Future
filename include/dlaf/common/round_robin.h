@@ -23,6 +23,10 @@ struct RoundRobin {
       pool_.emplace_back(args...);
   }
 
+  T& currentResource() {
+    return pool_[curr_index_];
+  }
+
   T& nextResource() {
     curr_index_ = (curr_index_ + 1) % pool_.size();
     return pool_[curr_index_];

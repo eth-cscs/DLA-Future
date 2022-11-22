@@ -932,8 +932,6 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  // TODO: Tiles after index `k` should be handled separately
-
   const matrix::Distribution& dist = mat.distribution();
 
   // If the rank doesn't have local matrix tiles, participate in the AllReduce() call by sending tiles
@@ -953,59 +951,38 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     return;
   }
 
-  SizeType j_gl = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(idx_loc_begin.col(), 0);
+  GlobalTileIndex idx_gl_begin(i_begin, i_begin);
+  LocalTileSize sz_loc_first_column(sz_loc_tiles.rows(), 1);
+  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_first_column)) {
+    GlobalTileIndex idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
+    GlobalElementSize sz_subm = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);
 
-  // SizeType i_gl = dist.globalElementFromGlobalTileAndTileElement<Coord::Row>(idx_gl_comm.row(), 0);
-  LocalTileSize sz_first_local_column(sz_loc_tiles.rows(), 1);
-  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_column)) {
-    SizeType i_gl = dist.globalElementFromLocalTileAndTileElement<Coord::Row>(idx_loc_tile.row(), 0);
-    GlobalTileIndex idx_gl_comm(dist.globalTileFromLocalTile<Coord::Row>(idx_loc_tile.row()), 0);
     auto copy_to_buffer_sender =
         ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
-    auto copy_to_buffer_fn = [i_gl, j_gl](const auto& k, const auto& ws_tile, const auto& comm_tile) {
-      if (j_gl >= k) {
+    auto copy_to_buffer_fn = [sz_subm](const auto& k, const auto& ws_tile, const auto& comm_tile) {
+      if (sz_subm.cols() >= k) {
         tile::internal::laset(blas::Uplo::General, T(1), T(1), comm_tile);
         return;
       }
 
-      SizeType nrows = std::min(comm_tile.size().rows(), k - i_gl);
+      SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
       tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0),
                   comm_tile);
     };
     ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
                                      std::move(copy_to_buffer_sender)));
 
-    // auto laset_comm_fn = [j_gl](const auto& k, const auto& comm_tile) {
-    //   if (j_gl >= k)
-    // };
-    // auto laset_comm_sender = ex::when_all(k_fut, comm_vec.readwrite_sender(idx_gl_comm));
-    // ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(laset_comm_fn),
-    //                                  std::move(laset_comm_sender)));
-
     ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
                                                       comm_vec.readwrite_sender(idx_gl_comm)));
 
-    // ex::start_detached(
-    //     ex::let_value(ex::when_all(k_fut, row_task_chain(), comm_vec.readwrite_sender(idx_gl_comm)),
-    //                   [i_gl](auto& k, auto& comm, auto& tile) {
-    //                     if (i_gl < k) {
-    //                       return ex::make_unique_any_sender(
-    //                           comm::scheduleAllReduceInPlace(ex::just(std::move(comm)), MPI_PROD,
-    //                                                          ex::just(std::move(tile))) |
-    //                           ex::drop_value());
-    //                     }
-    //                     else {
-    //                       return ex::make_unique_any_sender(ex::just());
-    //                     }
-    //                   }));
-
     auto copy_from_buffer_sender =
         ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
-    auto copy_from_buffer_fn = [j_gl](const auto& k, const auto& comm_tile, const auto& ws_tile) {
-      if (j_gl >= k)
+    auto copy_from_buffer_fn = [sz_subm](const auto& k, const auto& comm_tile, const auto& ws_tile) {
+      if (sz_subm.cols() >= k)
         return;
 
-      SizeType nrows = std::min(comm_tile.size().rows(), k - j_gl);
+      SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
       tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0),
                   ws_tile);
     };
@@ -1271,12 +1248,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   debug_barrier(501);
 
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n5. WS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat2(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n5. WS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat2(idx_loc_evecs).get());
+  //  }
+  //}
 
   reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                              ws.z);
@@ -1284,73 +1261,73 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // -------- DEBUG
 
   matrix::print(format::csv{}, "\nWIEGHT VEC\n", ws.z);
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n501. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n501. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   debug_barrier(502);
 
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n502. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n502. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   debug_barrier(503);
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n503. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n503. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
   debug_barrier(504);
 
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n504. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n504. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, ws.mat2, ws.z);
   normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   debug_barrier(505);
 
-  matrix::print(format::csv{}, "\nSUM SQ VEC\n", ws.z);
+  // matrix::print(format::csv{}, "\nSUM SQ VEC\n", ws.z);
 
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n505. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n505. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   debug_barrier(6);
   // -------- DEBUG
-  {
-    for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "6. EVECS TILES " << idx_loc_evecs << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-    }
-  }
+  //{
+  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "6. EVECS TILES " << idx_loc_evecs << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
+  //  }
+  //}
   // -------- DEBUG
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U

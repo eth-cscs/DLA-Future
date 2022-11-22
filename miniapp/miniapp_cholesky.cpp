@@ -37,6 +37,16 @@
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
+//
+#define CSV_OUTPUT
+//
+#ifdef CSV_OUTPUT
+# include <fmt/format.h>
+# include <fmt/ostream.h>
+template <> struct fmt::formatter<blas::Uplo> : ostream_formatter {};
+template <> struct fmt::formatter<dlaf::miniapp::ElementType> : ostream_formatter {};
+template <> struct fmt::formatter<dlaf::Backend> : ostream_formatter {};
+#endif
 
 namespace {
 
@@ -154,7 +164,7 @@ struct choleskyMiniapp {
       }
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
@@ -162,7 +172,39 @@ struct choleskyMiniapp {
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-
+#ifdef CSV_OUTPUT
+        namespace pd = pika::threads::detail;
+        auto scheduler =
+            pd::get_self_id_data()->get_scheduler_base()->get_description();
+        namespace mpi = pika::mpi::experimental;
+        // clang-format off
+        char const* msg = "CSVData, "
+                          "{}, run, "            "{}, time, "
+                          "{}, GFlops, "         "{}, type, "
+                          "{}, UpLo, "           "{}, matrixsize, "
+                          "{}, blocksize, "      "{}, comm_rows, "
+                          "{}, comm_cols, "      "{}, threads, "
+                          "{}, backend, "        "{}, mpi_completion, "
+                          "{}, mpi_throttle, "   "{}, mpi_poll, "
+                          "{}, mpi_pool, "       "{}, scheduler, ";
+        fmt::print(std::cout, msg,
+                   run_index, elapsed_time, gigaflops,
+                   dlaf::internal::FormatShort{opts.type}.value,
+                   dlaf::internal::FormatShort{opts.uplo}.value,
+                   matrix_host.size().rows(),
+                   matrix_host.blockSize().rows(),
+                   comm_grid.size().rows(), comm_grid.size().cols(),
+                   pika::get_os_thread_count(),
+                   backend,
+                   mpi::get_completion_mode(),
+                   mpi::get_max_requests_in_flight(),
+                   mpi::get_max_polling_size(),
+                   int(mpi::get_pool_name()!="default"),
+                   scheduler);
+        std::cout << std::endl;
+        // clang-format on
+#endif
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {

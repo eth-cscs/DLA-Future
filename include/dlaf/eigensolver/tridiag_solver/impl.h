@@ -194,8 +194,6 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
-  matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
-
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
@@ -251,14 +249,6 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
 template <class T>
 void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                         Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
-  auto debug_barrier = [&](int i) {
-    evecs.waitLocalTiles();
-    tridiag.waitLocalTiles();
-    evals.waitLocalTiles();
-    DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
-    std::cout << "\n\nMARK #" << i << "\n\n";
-  };
-
   constexpr Device D = Device::CPU;
 
   // Auxiliary matrix used for the D&C algorithm
@@ -281,8 +271,6 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
 
-  // debug_barrier(0);
-
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
@@ -291,20 +279,12 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // `evecs` (nb x nb)
   solveDistLeaf(grid, full_task_chain, tridiag, evecs);
 
-  // debug_barrier(1);
-
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
-
-  //matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
-
-  // debug_barrier(2);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    std::cout << "\n\n!!!!!!!!!!!!!!    " << i_begin << " | " << i_split << " | " << i_end
-              << "    !!!!!!!!!!!!!!\n\n";
     mergeDistSubproblems(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split, i_end,
                          offdiag_vals[to_sizet(i_split)], ws, evals, evecs);
   }

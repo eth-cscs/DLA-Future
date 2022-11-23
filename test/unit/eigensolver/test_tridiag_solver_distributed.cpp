@@ -156,14 +156,11 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, complex_error * n, complex_error * n);
 }
 
-TEST(TridiagSolverDistTestMC, Laplace1D) {
-  using TypeParam = float;
-  // CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
-  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::ColumnMajor);
-  // for (const auto& comm_grid : this->commGrids()) {
-  for (auto [n, nb] : tested_problems) {
-    solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
-    pika::threads::get_thread_manager().wait();
+TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
   }
-  //}
 }

@@ -232,39 +232,38 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-//    {0, 8},
+    {0, 8},
     {16, 16},
-//    {16, 8},
-  //  {16, 4},
-//    {16, 5},
-//    {100, 10},
-//    {93, 7},
+    {16, 8},
+    {16, 4},
+    {16, 5},
+    {100, 10},
+    {93, 7},
 };
 // clang-format on
 
-TEST(TridiagEigensolverTestCPU, Laplace1D) {
-  using TypeParam = float;
+TYPED_TEST(TridiagEigensolverTestCPU, Laplace1D) {
   for (auto [n, nb] : tested_problems) {
     solveLaplace1D<Backend::MC, Device::CPU, TypeParam>(n, nb);
   }
 }
 
-// TYPED_TEST(TridiagEigensolverTestCPU, Random) {
-//   for (auto [n, nb] : tested_problems) {
-//     solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(n, nb);
-//   }
-// }
-//
-//#ifdef DLAF_WITH_CUDA
-// TYPED_TEST(TridiagEigensolverTestGPU, Laplace1D) {
-//   for (auto [n, nb] : tested_problems) {
-//     solveLaplace1D<Backend::GPU, Device::GPU, TypeParam>(n, nb);
-//   }
-// }
-//
-// TYPED_TEST(TridiagEigensolverTestGPU, Random) {
-//   for (auto [n, nb] : tested_problems) {
-//     solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(n, nb);
-//   }
-// }
-//#endif
+TYPED_TEST(TridiagEigensolverTestCPU, Random) {
+  for (auto [n, nb] : tested_problems) {
+    solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(n, nb);
+  }
+}
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TridiagEigensolverTestGPU, Laplace1D) {
+  for (auto [n, nb] : tested_problems) {
+    solveLaplace1D<Backend::GPU, Device::GPU, TypeParam>(n, nb);
+  }
+}
+
+TYPED_TEST(TridiagEigensolverTestGPU, Random) {
+  for (auto [n, nb] : tested_problems) {
+    solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(n, nb);
+  }
+}
+#endif

@@ -281,30 +281,32 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
 
-  //debug_barrier(0);
+  // debug_barrier(0);
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
+  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
   solveDistLeaf(grid, full_task_chain, tridiag, evecs);
 
-  //debug_barrier(1);
+  // debug_barrier(1);
 
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
-  //matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
+  // matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
 
-  //debug_barrier(2);
+  // debug_barrier(2);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
     std::cout << "\n\n!!!!!!!!!!!!!!    " << i_begin << " | " << i_split << " | " << i_end
               << "    !!!!!!!!!!!!!!\n\n";
-    mergeDistSubproblems(grid, full_task_chain, i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)],
-                         ws, evals, evecs);
+    mergeDistSubproblems(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split, i_end,
+                         offdiag_vals[to_sizet(i_split)], ws, evals, evecs);
   }
 }
 

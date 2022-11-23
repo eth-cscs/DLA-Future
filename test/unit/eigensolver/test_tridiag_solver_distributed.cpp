@@ -96,7 +96,15 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
     eigensolver::tridiagSolver<B>(grid, tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+
+    //DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
+    //std::cout << "\n\n\nALIVE\n\n\n";
   }
+
+  evecs.waitLocalTiles();
+  // tridiag.waitLocalTiles();
+  evals.waitLocalTiles();
+
   if (n == 0)
     return;
 

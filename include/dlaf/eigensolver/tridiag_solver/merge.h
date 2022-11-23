@@ -1177,7 +1177,9 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
 // Distributed version of the tridiagonal solver on CPUs
 template <class T>
 void mergeDistSubproblems(comm::CommunicatorGrid grid,
-                          common::Pipeline<comm::Communicator>& full_task_chain, SizeType i_begin,
+                          common::Pipeline<comm::Communicator>& full_task_chain,
+                          common::Pipeline<comm::Communicator>& row_task_chain,
+                          common::Pipeline<comm::Communicator>& col_task_chain, SizeType i_begin,
                           SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                           WorkSpace<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evals,
                           Matrix<T, Device::CPU>& evecs) {
@@ -1199,9 +1201,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   constexpr Backend B = Backend::MC;
   constexpr Device D = Device::CPU;
-
-  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
 
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
@@ -1246,7 +1245,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
 
-  debug_barrier(2);
+  // debug_barrier(2);
 
   // Step #1
   //
@@ -1266,7 +1265,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   comm::IndexT_MPI tag = to_int(i_begin + i_split * nrtiles + i_end * nrtiles * nrtiles);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots_fut),
                                       evecs);
-  debug_barrier(3);
+  // debug_barrier(3);
 
   // Step #2
   //
@@ -1284,7 +1283,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(i_begin, i_end, ws.dtmp, evals);
 
   // -------- DEBUG
-  debug_barrier(4);
+  // debug_barrier(4);
   //{
   //  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
   //    std::cout << "\n\n PRE SOLVE MAT 1 : " << idx_loc_tile << std::endl;
@@ -1299,7 +1298,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
 
   // -------- DEBUG
-  debug_barrier(5);
+  // debug_barrier(5);
   //{
   //  matrix::print(format::csv{}, "\n EVALS \n", ws.dtmp);
   //  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
@@ -1325,7 +1324,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
   // -------- DEBUG
-  debug_barrier(6);
+  // debug_barrier(6);
   //{
   //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
   //    std::cout << "6. EVECS TILES " << idx_loc_evecs << std::endl;
@@ -1348,7 +1347,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                                                   ws.mat1);
 
   // -------- DEBUG
-  debug_barrier(7);
+  // debug_barrier(7);
   //{
   //  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
   //    std::cout << "\n 7. FIN EVEC : " << idx_loc_tile << std::endl;
@@ -1371,7 +1370,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
 
   // -------- DEBUG
-  debug_barrier(8);
+  // debug_barrier(8);
   //{
   //  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
   //    std::cout << "\n 8. FIN EVEC : " << idx_loc_tile << std::endl;

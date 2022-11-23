@@ -1207,6 +1207,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Calculate the size of the upper subproblem
   SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
+  SizeType nrtiles = dist_evecs.nrTiles().rows();
 
   // The local size of the subproblem
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -1217,24 +1218,27 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
                              idx_loc_end.col() - idx_loc_begin.col() + 1};
 
-  std::cout << "\nidx_loc_begin : " << idx_loc_begin << std::endl;
-  std::cout << "idx_loc_end : " << idx_loc_end << std::endl;
-  std::cout << "sz_loc_tiles : " << sz_loc_tiles << std::endl;
   // LocalTileIndex idx_loc_split{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_split + 1) - 1,
   //                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_split + 1) - 1};
   // LocalElementSize sz_loc_el{dist_evecs.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
   //                            dist_evecs.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
 
+  // -------- DEBUG
+  // std::cout << "\nidx_loc_begin : " << idx_loc_begin << std::endl;
+  // std::cout << "idx_loc_end : " << idx_loc_end << std::endl;
+  // std::cout << "sz_loc_tiles : " << sz_loc_tiles << std::endl;
+
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
-  matrix::print(format::csv{}, "\n RANK1 VEC \n", ws.z);
 
-  debug_barrier(0);
+  // -------- DEBUG
+  // debug_barrier(0);
+  // matrix::print(format::csv{}, "\n RANK1 VEC \n", ws.z);
 
   // Calculate the tolerance used for deflation
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
 
-  debug_barrier(1);
+  // debug_barrier(1);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   rho_fut = scaleRho(std::move(rho_fut));
@@ -1256,9 +1260,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
-  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), 0, i_begin, i_end, std::move(rots_fut),
+  // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
+  //
+  // Note: this is unique because i_[begin|split|end] < nrtiles
+  comm::IndexT_MPI tag = to_int(i_begin + i_split * nrtiles + i_end * nrtiles * nrtiles);
+  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots_fut),
                                       evecs);
-
   debug_barrier(3);
 
   // Step #2
@@ -1276,136 +1283,55 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(i_begin, i_end, ws.dtmp, evals);
 
-  debug_barrier(4);
-
   // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n\n PRE SOLVE MAT 1 : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
+  debug_barrier(4);
+  //{
+  //  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n\n PRE SOLVE MAT 1 : " << idx_loc_tile << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
+  //  }
+  //}
 
   // Note: here ws.z is used as a contiguous buffer for the laed4 call
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
                         ws.dtmp, ws.z, ws.mat1);
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
-  matrix::print(format::csv{}, "\n EVALS \n", ws.dtmp);
 
   // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
-      std::cout << "\n\n POST SOLVE MAT 1 : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
-
   debug_barrier(5);
+  //{
+  //  matrix::print(format::csv{}, "\n EVALS \n", ws.dtmp);
+  //  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
+  //    std::cout << "\n\n POST SOLVE MAT 1 : " << idx_loc_tile << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
+  //  }
+  //}
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
-  debug_barrier(501);
-
-  // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
-      std::cout << "\n5. DELTA TILE : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
-
-  // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
-      std::cout << "\n5. WS TILE : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat2(idx_loc_tile).get());
-    }
-  }
-
+  // debug_barrier(501);
   reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                              ws.z);
-
-  // -------- DEBUG
-
-  matrix::print(format::csv{}, "\n WIEGHT \n", ws.z);
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n501. EVECS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-  //  }
-  //}
-  // -------- DEBUG
-
-  debug_barrier(502);
-
-  // -------- DEBUG
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n502. EVECS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-  //  }
-  //}
-  // -------- DEBUG
-
+  // debug_barrier(502);
   formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
-  debug_barrier(503);
-  // -------- DEBUG
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n503. EVECS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-  //  }
-  //}
-  // -------- DEBUG
-
+  // debug_barrier(503);
   sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
-  debug_barrier(504);
-
-  // -------- DEBUG
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n504. EVECS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-  //  }
-  //}
-  // -------- DEBUG
-
+  // debug_barrier(504);
   reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                          ws.z);
   normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
-  debug_barrier(505);
-
-  // matrix::print(format::csv{}, "\nSUM SQ VEC\n", ws.z);
-
-  // -------- DEBUG
-  //{
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    std::cout << "\n505. EVECS TILES " << idx_loc_evecs << std::endl;
-  //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
-  //  }
-  //}
-  // -------- DEBUG
-
+  // debug_barrier(505);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
 
+  // -------- DEBUG
   debug_barrier(6);
-  // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
-      std::cout << "\n 6. FIN EVEC : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
-
-  // -------- DEBUG
   //{
   //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
   //    std::cout << "6. EVECS TILES " << idx_loc_evecs << std::endl;
   //    matrix::print(format::csv{}, ws.mat1(idx_loc_evecs).get());
   //  }
   //}
-  // -------- DEBUG
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
@@ -1421,15 +1347,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
                                                   ws.mat1);
 
-  debug_barrier(7);
-
   // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
-      std::cout << "\n 7. FIN EVEC : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
+  debug_barrier(7);
+  //{
+  //  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+  //    std::cout << "\n 7. FIN EVEC : " << idx_loc_tile << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
+  //  }
+  //}
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
@@ -1445,15 +1370,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // TODO: `permute()` clones a communicator internally which blocks
   dlaf::permutations::permute<B, D, T, Coord::Col>(grid, i_begin, i_end, ws.i2, ws.mat1, evecs);
 
-  debug_barrier(8);
-
   // -------- DEBUG
-  {
-    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
-      std::cout << "\n 8. FIN EVEC : " << idx_loc_tile << std::endl;
-      matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
-    }
-  }
+  debug_barrier(8);
+  //{
+  //  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+  //    std::cout << "\n 8. FIN EVEC : " << idx_loc_tile << std::endl;
+  //    matrix::print(format::csv{}, ws.mat1(idx_loc_tile).get());
+  //  }
+  //}
 }
 
 }

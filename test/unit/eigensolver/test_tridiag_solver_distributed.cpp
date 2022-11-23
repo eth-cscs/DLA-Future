@@ -40,10 +40,16 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
 //    {0, 8},
 //    {16, 16},
 //   {16, 8},
-    {16, 4},
+//    {16, 4}, // hangs if no barrier
  //   {16, 5},
- //   {100, 10},
- //   {93, 7},
+
+  // Note: hangs or segfaults with >= 6 tiles
+  //
+  {21, 4}, // this segfaults
+
+  //{100, 21} // unit test fails
+ //   {100, 10}, // this segfaults
+ //   {93, 7}, // this hangs
 };
 // clang-format on
 

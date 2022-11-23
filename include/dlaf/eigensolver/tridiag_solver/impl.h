@@ -281,7 +281,7 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
 
-  debug_barrier(0);
+  //debug_barrier(0);
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
 
@@ -289,14 +289,14 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // `evecs` (nb x nb)
   solveDistLeaf(grid, full_task_chain, tridiag, evecs);
 
-  debug_barrier(1);
+  //debug_barrier(1);
 
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
-  matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
+  //matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
 
-  debug_barrier(2);
+  //debug_barrier(2);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();

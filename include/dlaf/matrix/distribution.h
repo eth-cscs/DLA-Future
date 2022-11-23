@@ -368,6 +368,11 @@ public:
     return (i_loc_last - i_loc_begin) * nb + nbr;
   }
 
+  LocalElementSize localTileElementDistance(GlobalTileIndex begin, GlobalTileIndex end) const noexcept {
+    return {localTileElementDistance<Coord::Row>(begin.row(), end.row()),
+            localTileElementDistance<Coord::Col>(begin.col(), end.col())};
+  }
+
 private:
   /// Computes and sets @p size_.
   ///

@@ -95,37 +95,26 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
   namespace di = dlaf::internal;
 
   const matrix::Distribution& dist = mat.distribution();
-
-  const SizeType mb = dist.blockSize().rows();
   const SizeType i_end = i_last + 1;
-  const SizeType range_size_limit = std::min(dist.size().rows(), i_end * mb);
-  const SizeType range_size = range_size_limit - i_begin * mb;
+  const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
+  const GlobalTileIndex idx_gl_end(i_end, i_end);
 
   // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which
   // ranks are involved in order to operate in the range [i_begin, i_last].
-  const bool isInRangeRow = [&]() {
-    const SizeType begin = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin);
-    const SizeType end = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end);
-    return end - begin != 0;
-  }();
-
-  const bool isInRangeCol = [&]() {
-    const SizeType begin = dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin);
-    const SizeType end = dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end);
-    return end - begin != 0;
-  }();
-
-  const bool isInRange = isInRangeRow && isInRangeCol;
-  if (!isInRange)
+  if (dist.localTileElementDistance(idx_gl_begin, idx_gl_end).isEmpty())
     return;
+
+  const SizeType mb = dist.blockSize().rows();
+  const SizeType range_size_limit = std::min(dist.size().rows(), i_end * mb);
 
   // Note:
   // This is the distribution that will be used inside the task. Differently from the original one,
   // this targets just the range defined by [i_begin, i_last], but keeping the same distribution over
   // ranks.
-  const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
-                                      dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
+  const matrix::Distribution dist_sub(dist.globalTileElementDistance(idx_gl_begin, idx_gl_end),
+                                      dist.blockSize(), dist.commGridSize(), dist.rankIndex(),
+                                      dist.rankGlobalTile(idx_gl_begin));
 
   auto givens_rots_fn = [comm_row, tag, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
                                                                std::vector<matrix::Tile<T, D>> tiles,

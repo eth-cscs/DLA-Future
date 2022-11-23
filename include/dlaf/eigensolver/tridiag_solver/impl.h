@@ -296,7 +296,7 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Offload the diagonal from `mat_trd` to `evals`
   offloadDiagonal(tridiag, evals);
 
-  // matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
+  //matrix::print(format::csv{}, "\n INIT DIAG \n", evals);
 
   // debug_barrier(2);
 

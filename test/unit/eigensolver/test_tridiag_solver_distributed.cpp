@@ -37,14 +37,12 @@ TYPED_TEST_SUITE(TridiagSolverDistTestMC, MatrixElementTypes);
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-//    {0, 8},
-//    {16, 16},
-//    {16, 8},
-//    {16, 4}, // hangs if no barrier?
-//    {16, 5},
-      {21, 4},
-//    {100, 10},
-//    {93, 7},
+    {0, 8},
+    {16, 16},
+    {16, 8},
+    {16, 4},
+    {21, 4},
+    {93, 7},
 };
 // clang-format on
 
@@ -60,15 +58,11 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
 //
 template <Backend B, Device D, class T>
 void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
-  // namespace ex = pika::execution::experimental;
-  // namespace tt = pika::this_thread::experimental;
-
   using RealParam = BaseType<T>;
   constexpr RealParam complex_error = TypeUtilities<T>::error;
   constexpr RealParam real_error = TypeUtilities<RealParam>::error;
 
-  // Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  Index2D src_rank_index(0, 0);
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
 
   Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 2));
   Distribution dist_evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
@@ -96,15 +90,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
     eigensolver::tridiagSolver<B>(grid, tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
-
-    //DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
-    //std::cout << "\n\n\nALIVE\n\n\n";
   }
-
-  evecs.waitLocalTiles();
-  // tridiag.waitLocalTiles();
-  evals.waitLocalTiles();
-
   if (n == 0)
     return;
 
@@ -121,16 +107,6 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     return TypeUtilities<T>::element(std::sqrt(2.0 / (n + 1)) * std::sin(j * k * M_PI / (n + 1)), 0);
   };
 
-  // -------- DEBUG
-  //{
-  //  Matrix<T, D> debug_matrix(dist_evecs.localSize(), TileElementSize(nb, nb));
-  //  for (auto idx_loc_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-  //    dlaf::matrix::internal::copy(evecs(idx_loc_evecs).get(), debug_matrix(idx_loc_evecs).get());
-  //  }
-  //  matrix::print(format::csv{}, "EVECS (RANK LOCAL)", debug_matrix);
-  //}
-  // -------- DEBUG
-
   // Eigenvectors are unique up to a sign, match signs of expected and actual eigenvectors
   auto col_comm = grid.colCommunicator();
   SizeType gl_row = dist_evecs.globalElementFromLocalTileAndTileElement<Coord::Row>(0, 0);
@@ -138,7 +114,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   Distribution dist_sign(LocalElementSize(dist_evecs.localSize().cols(), 1), TileElementSize(nb, 1));
   Matrix<SizeType, Device::CPU> sign_mat(dist_sign);
 
-  // if global row is zero
+  // if the first global row
   if (gl_row == 0) {
     for (SizeType i_tile = 0; i_tile < dist_evecs.localNrTiles().cols(); ++i_tile) {
       SizeType i_gl_el = dist_evecs.globalElementFromLocalTileAndTileElement<Coord::Col>(i_tile, 0);
@@ -158,8 +134,9 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     }
   }
   else {
-    for (auto idx_tile : common::iterate_range2d(dist_sign.localNrTiles())) {
-      sync::broadcast::receive_from(0, col_comm, sign_mat(idx_tile).get());
+    for (auto idx_sign_tile : common::iterate_range2d(dist_sign.localNrTiles())) {
+      comm::IndexT_MPI root_rank = dist_evecs.rankGlobalTile<Coord::Row>(0);
+      sync::broadcast::receive_from(root_rank, col_comm, sign_mat(idx_sign_tile).get());
     }
   }
 
@@ -182,7 +159,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 TEST(TridiagSolverDistTestMC, Laplace1D) {
   using TypeParam = float;
   // CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
-  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
+  CommunicatorGrid comm_grid(MPI_COMM_WORLD, 3, 2, common::Ordering::ColumnMajor);
   // for (const auto& comm_grid : this->commGrids()) {
   for (auto [n, nb] : tested_problems) {
     solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);

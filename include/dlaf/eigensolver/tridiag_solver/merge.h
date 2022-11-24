@@ -1262,10 +1262,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  // TODO: `permute()` and `generalSubMatrix()` clone communicators internally which block
+  // TODO: `permute()` clones a communicator internally which blocks
   dlaf::permutations::permute<B, D, T, Coord::Row>(grid, i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
-  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, i_begin, i_end, T(1), evecs, ws.mat2, T(0),
-                                                  ws.mat1);
+  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
+                                                  T(1), evecs, ws.mat2, T(0), ws.mat1);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //

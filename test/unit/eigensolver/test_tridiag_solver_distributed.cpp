@@ -236,9 +236,15 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
   });
   tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
+  // To prevent creating new pipeline objects on existing communicators inside `generalSubMatrix()` which
+  // my hang the unit test, clone the communicators first and then create new pipeline objects
+  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
+
   // Compute A * E
   matrix::Matrix<T, Device::CPU> AE_gemm(dist_evecs);
-  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(grid, 0,
+  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(grid, row_task_chain,
+                                                                      col_task_chain, 0,
                                                                       dist_evecs.nrTiles().rows() - 1,
                                                                       T(1), tridiag_full, evecs, T(0),
                                                                       AE_gemm);

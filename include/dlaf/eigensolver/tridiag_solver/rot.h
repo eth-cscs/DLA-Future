@@ -70,21 +70,35 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
 
 }
 
-// @param tiles The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)`
-// that are potentially affected by the Givens rotations.
-// @param n column size
-//
-// @pre the memory layout of the matrix from which the tiles are coming is column major.
-//
-// Note: a column index may be paired to more than one other index, this may lead to a race condition if
-//       parallelized trivially. Current implementation is serial.
+/// Apply GivenRotations to tiles of the distributed square sub-matrix identified by tile in range
+/// [i_begin, i_last].
+///
+/// @param comm_row row communicator
+/// @param tag is used for all communications happening over @p comm_row
+/// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
+/// @param i_last global tile index for both row and column identifying the end of the sub-matrix
+/// (inclusive)
+/// @param rots_fut GivenRotations to apply (element column indices of rotations are relative to the
+/// sub-matrix)
+/// @param mat distributed matrix where the sub-matrix is located
+///
+/// @pre mat is distributed along rows the same way as comm_row
+/// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
 void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::IndexT_MPI tag,
                                          SizeType i_begin, SizeType i_last, GRSender&& rots_fut,
                                          Matrix<T, D>& mat) {
+  // Note:
+  // a column index may be paired to more than one other index, this may lead to a race
+  // condition if parallelized trivially. Current implementation is serial.
+
   namespace ex = pika::execution::experimental;
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
+
+  DLAF_ASSERT_HEAVY(comm_row.size() == mat.commGridSize().cols(), comm_row.size(),
+                    mat.commGridSize().cols());
+  DLAF_ASSERT_HEAVY(comm_row.rank() == mat.rankIndex().col(), comm_row.rank(), mat.rankIndex().col());
 
   const matrix::Distribution& dist = mat.distribution();
 

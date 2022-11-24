@@ -78,14 +78,17 @@ struct GivensRotation {
   T s;         // sine
 };
 
-// @param tiles The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)`
-// that are potentially affected by the Givens rotations.
-// @param n column size
-//
-// @pre the memory layout of the matrix from which the tiles are coming is column major.
-//
-// Note: a column index may be paired to more than one other index, this may lead to a race condition if
-//       parallelized trivially. Current implementation is serial.
+/// Apply GivenRotation to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].
+///
+/// Note: a column index may be paired to more than one other index, this may lead to a race
+/// condition if parallelized trivially. Current implementation is serial.
+///
+/// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
+/// @param i_last global tile index for both row and column identifying the end of the sub-matrix (inclusive)
+/// @param rots_fut GivenRotation to apply (element column indices of rotations are relative to the sub-matrix)
+/// @param mat matrix where the sub-matrix is located
+///
+/// @pre the memory layout of the matrix from which the tiles are coming is column major.
 template <class T, Device D, class GRSender>
 void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::IndexT_MPI tag,
                                          SizeType i_begin, SizeType i_last, GRSender&& rots_fut,

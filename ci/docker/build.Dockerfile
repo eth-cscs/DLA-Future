@@ -15,7 +15,7 @@ RUN apt-get -yqq update && \
     apt-get -yqq install --no-install-recommends \
     software-properties-common \
     build-essential gfortran \
-    autoconf automake \
+    autoconf automake ninja-build pkg-config \
     ${EXTRA_APTGET} \
     gawk \
     python3 python3-distutils \
@@ -68,10 +68,12 @@ RUN spack external find \
     diffutils \
     findutils \
     git \
+    ninja \
     m4 \
     ncurses \
     openssl \
     perl \
+    pkg-config \
     python \
     xz && \
     if [ "$USE_MKL" = "ON" ]; then \

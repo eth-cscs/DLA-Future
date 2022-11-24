@@ -150,12 +150,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
       return tile_ws.ptr({0, 0});
     };
 
-    // Change SoR for the rotations to just the range, by removing the offset
-    std::transform(rots.begin(), rots.end(), rots.begin(),
-                   [offset = i_begin * mb](const GivensRotation<T>& rot) {
-                     return GivensRotation<T>{rot.i - offset, rot.j - offset, rot.c, rot.s};
-                   });
-
     const SizeType m = dist_sub.localSize().rows();
 
     for (const GivensRotation<T>& rot : rots) {

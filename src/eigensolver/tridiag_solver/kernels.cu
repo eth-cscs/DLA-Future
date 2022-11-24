@@ -176,12 +176,13 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::s
   const T* arr = tile.ptr();
 
 #ifdef DLAF_WITH_CUDA
-  auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
+  constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
-  auto d_max_ptr = thrust::max_element(thrust::hip::par.on(stream), arr, arr + len);
+  constexpr auto par = ::thrust::hip::par;
 #endif
+  auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
   T max_el;
-  // TODO: this is a peformance pessimization, the value is on device
+  // TODO: this is a performance pessimization, the value is on device
   whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
   return max_el;
 }
@@ -288,22 +289,24 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   size_t temp_storage_bytes;
 
   using OffsetIterator =
-      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
+      dlaf::gpucub::TransformInputIterator<SizeType, StrideOp,
+                                           dlaf::gpucub::CountingInputIterator<SizeType>>;
   using InputIterator =
-      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
+      dlaf::gpucub::TransformInputIterator<T, Row2ColMajor<T>,
+                                           dlaf::gpucub::CountingInputIterator<SizeType>>;
 
-  cub::CountingInputIterator<SizeType> count_iter(0);
+  dlaf::gpucub::CountingInputIterator<SizeType> count_iter(0);
   OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
   OffsetIterator end_offsets = begin_offsets + 1;                // last column
   InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
 
-  whip::check_error(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
-                                                       begin_offsets, end_offsets, mult_op, T(1),
-                                                       stream));
+  whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws,
+                                                                nrows, begin_offsets, end_offsets,
+                                                                mult_op, T(1), stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  whip::check_error(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter, ws,
-                                                       nrows, begin_offsets, end_offsets, mult_op, T(1),
-                                                       stream));
+  whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes,
+                                                                in_iter, ws, nrows, begin_offsets,
+                                                                end_offsets, mult_op, T(1), stream));
   // Deallocate memory
   auto extend_info = [d_temp_storage](whip::error_t status) {
     whip::check_error(status);
@@ -437,19 +440,21 @@ void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
   // TODO: use a segmented reduce sum with fancy iterators
   size_t temp_storage_bytes;
 #ifdef DLAF_WITH_CUDA
-  whip::check_error(cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
+  whip::check_error(
+      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
 #elif defined(DLAF_WITH_HIP)
-  whip::check_error(cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], unrows, stream));
+  whip::check_error(
+      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], unrows, stream));
 #endif
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
 
   for (SizeType j = 0; j < ncols; ++j) {
 #ifdef DLAF_WITH_CUDA
-    whip::check_error(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                             &out[j * ld], nrows, stream));
+    whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                      &out[j * ld], nrows, stream));
 #elif defined(DLAF_WITH_HIP)
-    whip::check_error(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                             &out[j * ld], unrows, stream));
+    whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                      &out[j * ld], unrows, stream));
 #endif
   }
 
@@ -617,18 +622,15 @@ SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const Si
                                       SizeType* out_ptr, whip::stream_t stream) {
   // The number of non-deflated values
 #ifdef DLAF_WITH_CUDA
-  SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+  constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
-  SizeType k = n - thrust::count(thrust::hip::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+  constexpr auto par = thrust::hip::par;
 #endif
+  SizeType k = n - thrust::count(par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
   auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
-#ifdef DLAF_WITH_CUDA
-  thrust::stable_partition_copy(thrust::cuda::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-#elif defined(DLAF_WITH_HIP)
-  thrust::stable_partition_copy(thrust::hip::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-#endif
+  thrust::stable_partition_copy(par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
                                 std::move(cmp));
   return k;
 }
@@ -646,11 +648,11 @@ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, 
   // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
   //
 #ifdef DLAF_WITH_CUDA
-  thrust::merge(thrust::cuda::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
+  constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
-  thrust::merge(thrust::hip::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
+  constexpr auto par = thrust::hip::par;
 #endif
-                std::move(cmp));
+  thrust::merge(par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);

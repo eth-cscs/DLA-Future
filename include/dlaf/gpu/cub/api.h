@@ -43,7 +43,7 @@
 #include <whip.hpp>
 #include "rocprim/rocprim.hpp"
 
-namespace cub {
+namespace dlaf::gpucub {
 
 template <typename ValueType, typename ConversionOp, typename InputIteratorT,
           typename OffsetT = std::ptrdiff_t  // ignored
@@ -111,8 +111,7 @@ public:
                                        NumItemsType num_items, ReduceOpT reduction_op, T init,
                                        whip::stream_t stream = 0, bool debug_synchronous = false) {
     return ::rocprim::reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, init, num_items,
-                             ::cub::detail::convert_result_type<InputIteratorT, OutputIteratorT>(
-                                 reduction_op),
+                             detail::convert_result_type<InputIteratorT, OutputIteratorT>(reduction_op),
                              stream, debug_synchronous);
   }
   template <typename InputIteratorT, typename OutputIteratorT, typename NumItemsType>
@@ -120,8 +119,8 @@ public:
                                     InputIteratorT d_in, OutputIteratorT d_out, NumItemsType num_items,
                                     whip::stream_t stream = 0, bool debug_synchronous = false) {
     using T = typename std::iterator_traits<InputIteratorT>::value_type;
-    return Reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items, ::cub::Sum(), T(0), stream,
-                  debug_synchronous);
+    return Reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items, ::dlaf::gpucub::Sum(),
+                  T(0), stream, debug_synchronous);
   }
 };
 
@@ -136,8 +135,8 @@ struct DeviceSegmentedReduce {
                                     bool debug_synchronous = false) {
     return ::rocprim::segmented_reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_segments,
                                        d_begin_offsets, d_end_offsets,
-                                       ::cub::detail::convert_result_type<InputIteratorT,
-                                                                          OutputIteratorT>(reduction_op),
+                                       detail::convert_result_type<InputIteratorT, OutputIteratorT>(
+                                           reduction_op),
                                        initial_value, stream, debug_synchronous);
   }
 };
@@ -147,5 +146,9 @@ struct DeviceSegmentedReduce {
 #else
 
 #include <cub/cub.cuh>
+
+namespace dlaf::gpucub {
+using namespace ::cub;
+}
 
 #endif

@@ -72,10 +72,10 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 /// @param mat_out is the distributed output matrix. Only tiles whose both row and col tile coords are in
 ///        the closed range [i_begin,i_end] are accessed in write-only mode.
 ///
-
 template <Backend B, Device D, class T, Coord coord>
-void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
-             Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& sub_task_chain,
+             SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+             Matrix<T, D>& mat_out) {
   const matrix::Distribution& distr_perms = perms.distribution();
   const matrix::Distribution& distr_in = mat_in.distribution();
 
@@ -92,7 +92,13 @@ void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
   DLAF_ASSERT(distr_perms.size().cols() == 1, perms);
   DLAF_ASSERT(distr_in.blockSize().rows() == distr_perms.blockSize().rows(), mat_in, perms);
 
-  internal::Permutations<B, D, T, coord>::call(grid, i_begin, i_end, perms, mat_in, mat_out);
+  internal::Permutations<B, D, T, coord>::call(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }
 
+template <Backend B, Device D, class T, Coord coord>
+void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+             Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+  common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)));
+  permute<B, D, T, coord>(grid, sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+}
 }

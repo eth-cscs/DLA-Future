@@ -156,10 +156,129 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   CHECK_MATRIX_NEAR(expected_evecs_fn, evecs, complex_error * n, complex_error * n);
 }
 
+template <Backend B, Device D, class T>
+void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
+  using RealParam = BaseType<T>;
+
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+
+  Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 2));
+  Distribution dist_evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
+  Distribution dist_evecs(GlobalElementSize(n, n), TileElementSize(nb, nb), grid.size(), grid.rank(),
+                          src_rank_index);
+
+  // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+  Matrix<RealParam, Device::CPU> tridiag(dist_trd);
+  Matrix<RealParam, Device::CPU> evals(dist_evals);
+  Matrix<T, Device::CPU> evecs(dist_evecs);
+
+  // Initialize a random symmetric tridiagonal matrix using two arrays for the diagonal and the
+  // off-diagonal. The random numbers are in the range [-1, 1].
+  //
+  // Note: set_random() is not used here because the two arrays can be more easily reused to initialize
+  //       the same tridiagonal matrix but with explicit zeros for correctness checking further down.
+  std::vector<RealParam> diag_arr(to_sizet(n));
+  std::vector<RealParam> offdiag_arr(to_sizet(n));
+  SizeType diag_seed = n;
+  SizeType offdiag_seed = n + 1;
+  dlaf::matrix::util::internal::getter_random<RealParam> diag_rand_gen(diag_seed);
+  dlaf::matrix::util::internal::getter_random<RealParam> offdiag_rand_gen(offdiag_seed);
+  std::generate(std::begin(diag_arr), std::end(diag_arr), diag_rand_gen);
+  std::generate(std::begin(offdiag_arr), std::end(offdiag_arr), offdiag_rand_gen);
+
+  dlaf::matrix::util::set(tridiag, [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
+    if (i.col() == 0) {
+      return diag_arr[to_sizet(i.row())];
+    }
+    else {
+      return offdiag_arr[to_sizet(i.row())];
+    }
+  });
+  tridiag.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
+
+  {
+    matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
+    matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
+    matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
+
+    // Find eigenvalues and eigenvectors of the tridiagonal matrix.
+    //
+    // Note: this modifies `tridiag`
+    eigensolver::tridiagSolver<B>(grid, tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+  }
+
+  if (n == 0)
+    return;
+
+  // Check correctness with the following equation:
+  //
+  // A * E = E * D, where
+  //
+  // A - the tridiagonal matrix
+  // E - the eigenvector matrix
+  // D - the diagonal matrix of eigenvalues
+
+  // Make a copy of the tridiagonal matrix but with explicit zeroes.
+  matrix::Matrix<T, Device::CPU> tridiag_full(dist_evecs);
+  dlaf::matrix::util::set(tridiag_full, [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
+    if (i.row() == i.col()) {
+      return T(diag_arr[to_sizet(i.row())]);
+    }
+    else if (i.row() == i.col() - 1) {
+      return T(offdiag_arr[to_sizet(i.row())]);
+    }
+    else if (i.row() == i.col() + 1) {
+      return T(offdiag_arr[to_sizet(i.col())]);
+    }
+    else {
+      return T(0);
+    }
+  });
+  tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
+
+  // Compute A * E
+  matrix::Matrix<T, Device::CPU> AE_gemm(dist_evecs);
+  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(grid, 0,
+                                                                      dist_evecs.nrTiles().rows() - 1,
+                                                                      T(1), tridiag_full, evecs, T(0),
+                                                                      AE_gemm);
+
+  // Scale the columns of E by the corresponding eigenvalue of D to get E * D
+  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
+    auto scale_f = [](const matrix::Tile<const RealParam, Device::CPU>& evals_tile,
+                      const matrix::Tile<T, Device::CPU>& evecs_tile) {
+      for (auto el_idx_l : common::iterate_range2d(evecs_tile.size())) {
+        evecs_tile(el_idx_l) *= evals_tile(TileElementIndex(el_idx_l.col(), 0));
+      }
+    };
+
+    GlobalTileIndex idx_gl_evals(dist_evecs.globalTileFromLocalTile<Coord::Col>(idx_loc_tile.col()), 0);
+    dlaf::internal::whenAllLift(evals.read_sender(idx_gl_evals), evecs.readwrite_sender(idx_loc_tile)) |
+        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(scale_f));
+  }
+
+  // Check that A * E is equal to E * D
+  constexpr RealParam error = TypeUtilities<T>::error;
+  for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
+    auto& ae_tile = AE_gemm.read(idx_loc_tile).get();
+    auto& evecs_tile = evecs.read(idx_loc_tile).get();
+    CHECK_TILE_NEAR(ae_tile, evecs_tile, error * n, error * n);
+  }
+}
+
 TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
+
+TYPED_TEST(TridiagSolverDistTestMC, Random) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
       pika::threads::get_thread_manager().wait();
     }
   }

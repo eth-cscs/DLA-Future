@@ -108,23 +108,26 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   };
 
   // Eigenvectors are unique up to a sign, match signs of expected and actual eigenvectors
-  auto col_comm = grid.colCommunicator();
-  SizeType gl_row = dist_evecs.globalElementFromLocalTileAndTileElement<Coord::Row>(0, 0);
-  // local tile elements that are to be negated
-  Distribution dist_sign(LocalElementSize(dist_evecs.localSize().cols(), 1), TileElementSize(nb, 1));
-  Matrix<SizeType, Device::CPU> sign_mat(dist_sign);
 
-  // if the first global row
-  if (gl_row == 0) {
-    for (SizeType i_tile = 0; i_tile < dist_evecs.localNrTiles().cols(); ++i_tile) {
-      SizeType i_gl_el = dist_evecs.globalElementFromLocalTileAndTileElement<Coord::Col>(i_tile, 0);
-      LocalTileIndex idx_tile(0, i_tile);
-      auto evecs_tile = evecs(idx_tile).get();
-      auto sign_tile = sign_mat(transposed(idx_tile)).get();
+  auto col_comm = grid.colCommunicator();
+  Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
+  comm::Index2D this_rank = dist_evecs.rankIndex();
+
+  // Iterate over the first tiles row
+  for (SizeType j_tile = 0; j_tile < dist_evecs.nrTiles().cols(); ++j_tile) {
+    GlobalTileIndex idx_evecs_0row_tile(0, j_tile);
+    GlobalTileIndex idx_sign_tile(j_tile, 0);
+    comm::Index2D rank_evecs_0row = dist_evecs.rankGlobalTile(idx_evecs_0row_tile);
+    if (rank_evecs_0row == this_rank) {
+      // If the tile is in this rank, check if signs are matching and broadcast them along the column
+      SizeType j_gl_el = dist_evecs.globalElementFromGlobalTileAndTileElement<Coord::Col>(j_tile, 0);
+      auto evecs_tile = evecs(idx_evecs_0row_tile).get();
+      auto sign_tile = sign_mat(idx_sign_tile).get();
+
       // Iterate over the first column of the tile
-      for (SizeType i_el = 0; i_el < evecs_tile.size().cols(); ++i_el) {
-        GlobalElementIndex idx_gl_el(0, i_gl_el + i_el);
-        TileElementIndex idx_el(0, i_el);
+      for (SizeType j_el = 0; j_el < evecs_tile.size().cols(); ++j_el) {
+        GlobalElementIndex idx_gl_el(0, j_gl_el + j_el);
+        TileElementIndex idx_el(0, j_el);
         auto act_val = std::real(evecs_tile(idx_el));
         auto exp_val = std::real(expected_evecs_fn(idx_gl_el));
         // If the signs of expected and actual don't match, mark the corresponding column for negation
@@ -132,16 +135,15 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
       }
       sync::broadcast::send(col_comm, sign_tile);
     }
-  }
-  else {
-    for (auto idx_sign_tile : common::iterate_range2d(dist_sign.localNrTiles())) {
-      comm::IndexT_MPI root_rank = dist_evecs.rankGlobalTile<Coord::Row>(0);
-      sync::broadcast::receive_from(root_rank, col_comm, sign_mat(idx_sign_tile).get());
+    else if (rank_evecs_0row.col() == this_rank.col()) {
+      // Receive signs from top column rank
+      sync::broadcast::receive_from(rank_evecs_0row.row(), col_comm, sign_mat(idx_sign_tile).get());
     }
   }
 
   for (auto idx_tile_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
-    LocalTileIndex idx_tile_sign(idx_tile_evecs.col(), 0);
+    GlobalTileIndex idx_tile_sign(dist_evecs.globalTileFromLocalTile<Coord::Col>(idx_tile_evecs.col()),
+                                  0);
     auto evecs_tile = evecs(idx_tile_evecs).get();
     auto sign_tile = sign_mat(idx_tile_sign).get();
 

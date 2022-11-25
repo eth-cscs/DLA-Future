@@ -132,7 +132,7 @@ struct reductionToBandMiniapp {
           if constexpr (Backend::GPU == backend)
             return dlaf::eigensolver::reductionToBand<backend>(matrix, opts.b);
           else
-            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix);
+            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix, opts.b);
         }();
 
         // wait and barrier for all ranks

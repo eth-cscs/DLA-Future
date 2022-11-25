@@ -125,11 +125,15 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 /// @pre mat_a is distributed according to @p grid
 template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
-    comm::CommunicatorGrid grid, Matrix<T, D>& mat_a) {
+    comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
-  return internal::ReductionToBand<B, D, T>::call(grid, mat_a);
+  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
+
+  return internal::groupTausFromBandsToTiles(internal::ReductionToBand<B, D, T>::call(grid, mat_a,
+                                                                                      band_size),
+                                             band_size, mat_a.blockSize().rows());
 }
 }

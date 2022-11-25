@@ -19,7 +19,7 @@ struct ReductionToBand {
   static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
       Matrix<T, D>& mat_a, const SizeType band_size);
   static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
-      comm::CommunicatorGrid grid, Matrix<T, D>& mat_a);
+      comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size);
 };
 
 /// ---- ETI

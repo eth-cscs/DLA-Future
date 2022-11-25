@@ -1050,18 +1050,20 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
   // The offset is set to the first unused tag by compute_v_tag.
   const comm::IndexT_MPI offset_col_tag = compute_v_tag(nrtile);
 
-  auto compute_col_tag = [offset_col_tag, ranks](SizeType block_id) {
+  auto compute_col_tag = [offset_col_tag, ranks](SizeType block_id, bool last_col) {
     // By construction the communication from block j+1 to block j are dependent, therefore a tag per
     // block is enough. Moreover block_id is divided by the number of ranks as only the local index is
     // needed.
+    // When the last column ((size-1)-th column) is communicated the tag is incremented by 1 as in
+    // some case it can mix with the (size-2)-th columnn.
     // Note: Passing the local_block_id is not an option as the sender local index might be different
     //       from the receiver index.
-    return offset_col_tag + static_cast<comm::IndexT_MPI>(block_id / ranks);
+    return offset_col_tag + static_cast<comm::IndexT_MPI>(block_id / ranks) + (last_col ? 1 : 0);
   };
 
   // Same offset if ranks > 2, otherwise add the first unused tag of compute_col_tag.
   const comm::IndexT_MPI offset_worker_tag =
-      offset_col_tag + (ranks == 2 ? compute_col_tag(dist.nrTiles().cols() - 1) + 1 : 0);
+      offset_col_tag + (ranks == 2 ? compute_col_tag(dist.nrTiles().cols() - 1, true) + 1 : 0);
   ;
 
   auto compute_worker_tag = [offset_worker_tag, workers_per_block, ranks](SizeType sweep,
@@ -1249,7 +1251,8 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
           const auto block_local_id = dist.localTileIndex(block_id + GlobalTileSize{0, 1}).col();
           auto a_block = a_ws[block_local_id];
           auto& deps_block = deps[block_local_id];
-          ex::start_detached(scheduleSendCol(comm, prev_rank, compute_col_tag(block_id.col()), b,
+          ex::start_detached(scheduleSendCol(comm, prev_rank,
+                                             compute_col_tag(block_id.col(), next_j == size - 1), b,
                                              a_block, next_j, deps_block[0]));
         }
       }
@@ -1278,7 +1281,8 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
           // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
           // column before is sent here.
-          deps_block.push_back(scheduleRecvCol(comm, next_rank, compute_col_tag(block_id.col()), b,
+          deps_block.push_back(scheduleRecvCol(comm, next_rank,
+                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
                                                a_block, next_j, deps_block.back()) |
                                ex::split());
         }

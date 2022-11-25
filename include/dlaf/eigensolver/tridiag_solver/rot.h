@@ -70,21 +70,35 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
 
 }
 
-// @param tiles The tiles of the matrix between tile indices `(i_begin, i_begin)` and `(i_end, i_end)`
-// that are potentially affected by the Givens rotations.
-// @param n column size
-//
-// @pre the memory layout of the matrix from which the tiles are coming is column major.
-//
-// Note: a column index may be paired to more than one other index, this may lead to a race condition if
-//       parallelized trivially. Current implementation is serial.
+/// Apply GivenRotations to tiles of the distributed square sub-matrix identified by tile in range
+/// [i_begin, i_last].
+///
+/// @param comm_row row communicator
+/// @param tag is used for all communications happening over @p comm_row
+/// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
+/// @param i_last global tile index for both row and column identifying the end of the sub-matrix
+/// (inclusive)
+/// @param rots_fut GivenRotations to apply (element column indices of rotations are relative to the
+/// sub-matrix)
+/// @param mat distributed matrix where the sub-matrix is located
+///
+/// @pre mat is distributed along rows the same way as comm_row
+/// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
 void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::IndexT_MPI tag,
                                          SizeType i_begin, SizeType i_last, GRSender&& rots_fut,
                                          Matrix<T, D>& mat) {
+  // Note:
+  // a column index may be paired to more than one other index, this may lead to a race
+  // condition if parallelized trivially. Current implementation is serial.
+
   namespace ex = pika::execution::experimental;
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
+
+  DLAF_ASSERT_HEAVY(comm_row.size() == mat.commGridSize().cols(), comm_row.size(),
+                    mat.commGridSize().cols());
+  DLAF_ASSERT_HEAVY(comm_row.rank() == mat.rankIndex().col(), comm_row.rank(), mat.rankIndex().col());
 
   const matrix::Distribution& dist = mat.distribution();
 
@@ -119,9 +133,9 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
   const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  auto givens_rots_fn = [comm_row, tag, dist_sub, i_begin, mb](std::vector<GivensRotation<T>> rots,
-                                                               std::vector<matrix::Tile<T, D>> tiles,
-                                                               std::vector<matrix::Tile<T, D>> all_ws) {
+  auto givens_rots_fn = [comm_row, tag, dist_sub, mb](std::vector<GivensRotation<T>> rots,
+                                                      std::vector<matrix::Tile<T, D>> tiles,
+                                                      std::vector<matrix::Tile<T, D>> all_ws) {
     // Note:
     // It would have been enough to just get the first tile from the beginning, and it would have
     // worked anyway (thanks to the fact that panel has its own memorychunk and the first tile would
@@ -149,12 +163,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
       }
       return tile_ws.ptr({0, 0});
     };
-
-    // Change SoR for the rotations to just the range, by removing the offset
-    std::transform(rots.begin(), rots.end(), rots.begin(),
-                   [offset = i_begin * mb](const GivensRotation<T>& rot) {
-                     return GivensRotation<T>{rot.i - offset, rot.j - offset, rot.c, rot.s};
-                   });
 
     const SizeType m = dist_sub.localSize().rows();
 

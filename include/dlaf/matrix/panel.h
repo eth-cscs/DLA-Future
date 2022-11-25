@@ -15,6 +15,7 @@
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/range2d.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -28,15 +29,17 @@
 namespace dlaf {
 namespace matrix {
 
+enum class StoreTransposed : bool { Yes = true, No = false };
+
 /// Panel (1D array of tiles)
 ///
 /// 1D array of tiles, i.e. a Row or Column panel strictly related to a given dlaf::Matrix (from the
 /// coords point of view)
-template <Coord axis, class T, Device D>
+template <Coord axis, class T, Device D, StoreTransposed isStoredTranposed = StoreTransposed::No>
 struct Panel;
 
 template <Coord axis, class T, Device D>
-struct Panel<axis, const T, D> {
+struct Panel<axis, const T, D, StoreTransposed::No> {
   // Note:
   // This specialization acts as base for the RW version of the panel,
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
@@ -62,11 +65,6 @@ struct Panel<axis, const T, D> {
   auto iteratorLocal() const noexcept {
     return common::iterate_range2d(LocalTileIndex(coord, rangeStartLocal()),
                                    LocalTileIndex(coord, rangeEndLocal(), 1));
-  }
-
-  /// Return the rank which this (local) panel belongs to
-  auto rankIndex() const noexcept {
-    return dist_matrix_.rankIndex();
   }
 
   /// Return Distribution used for construction
@@ -282,7 +280,7 @@ struct Panel<axis, const T, D> {
 
   /// Get the current height of the row panel.
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
-  SizeType getHeight() noexcept {
+  SizeType getHeight() const noexcept {
     return dim_ < 0 ? dist_matrix_.blockSize().template get<axis>() : dim_;
   }
 
@@ -442,7 +440,18 @@ protected:
 };
 
 template <Coord axis, class T, Device D>
-struct Panel : public Panel<axis, const T, D> {
+struct Panel<axis, const T, D, StoreTransposed::Yes>
+    : protected Panel<orthogonal(axis), const T, D, StoreTransposed::No> {
+private:
+  using BaseT = Panel<orthogonal(axis), const T, D, StoreTransposed::No>;
+
+  static matrix::Distribution transposeDist(const matrix::Distribution& dist) {
+    return {common::transposed(dist.size()), common::transposed(dist.blockSize()),
+            common::transposed(dist.commGridSize()), common::transposed(dist.rankIndex()),
+            common::transposed(dist.sourceRankIndex())};
+  }
+
+public:
   constexpr static Coord coord = orthogonal(axis);
   constexpr static Device device = D;
 
@@ -450,15 +459,120 @@ struct Panel : public Panel<axis, const T, D> {
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
 
-  explicit Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
-      : Panel<axis, const T, D>(std::move(distribution), std::move(start)) {}
+  Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
+      : BaseT(transposeDist(distribution), common::transposed(start)),
+        dist_parent_(std::move(distribution)) {}
+
+  Distribution parentDistribution() const {
+    return dist_parent_;
+  }
+
+  auto iteratorLocal() const {
+    return common::iterate_range2d(LocalTileIndex(coord, BaseT::rangeStartLocal()),
+                                   LocalTileIndex(coord, BaseT::rangeEndLocal(), 1));
+  }
+
+  void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) {
+    start_idx.transpose();
+    end_idx.transpose();
+    BaseT::setRange(start_idx, end_idx);
+  }
+
+  void setRangeStart(GlobalElementIndex index) {
+    index.transpose();
+    BaseT::setRangeStart(index);
+  }
+
+  void setRangeStart(GlobalTileIndex index) {
+    index.transpose();
+    BaseT::setRangeStart(index);
+  }
+
+  void setRangeEnd(GlobalTileIndex end_idx) {
+    end_idx.transpose();
+    BaseT::setRangeStart(end_idx);
+  }
+
+  using BaseT::rangeStart;
+  using BaseT::rangeStartLocal;
+
+  using BaseT::rangeEnd;
+  using BaseT::rangeEndLocal;
+
+  // TODO fix setHeight (and setWidth accordingly)
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  void setHeight(const SizeType height) {
+    BaseT::setWidth(height);
+  }
+
+  // TODO fix setHeight (and setWidth accordingly)
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
+  void setWidth(const SizeType width) {
+    BaseT::setHeight(width);
+  }
+
+  // TODO fix setHeight (and setWidth accordingly)
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  SizeType getHeight() const noexcept {
+    return BaseT::getWidth();
+  }
+
+  // TODO fix setHeight (and setWidth accordingly)
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
+  SizeType getWidth() const noexcept {
+    return BaseT::getHeight();
+  }
+
+  using BaseT::offsetElement;
+
+  void setTile(LocalTileIndex index, pika::shared_future<ConstTileType> new_tile_fut) {
+    index.transpose();
+    BaseT::setTile(index, std::move(new_tile_fut));
+  }
+
+  pika::shared_future<ConstTileType> read(LocalTileIndex index) {
+    index.transpose();
+    return BaseT::read(index);
+  }
+
+  auto read_sender(LocalTileIndex index) {
+    index.transpose();
+    return pika::execution::experimental::keep_future(BaseT::read(index));
+  }
+
+  using BaseT::reset;
+
+protected:
+  using BaseT::dim_;
+  using BaseT::hasBeenUsed;
+
+  Distribution dist_parent_;
+};
+
+// Note:
+// RW Panel variant for both storage types
+template <Coord axis, class T, Device D, matrix::StoreTransposed Storage>
+struct Panel : public Panel<axis, const T, D, Storage> {
+private:
+  using BaseT = Panel<axis, const T, D, Storage>;
+
+public:
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using ElementType = T;
+
+  Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
+      : Panel<axis, const T, D, Storage>(distribution, start) {}
 
   /// Access tile at specified index in readwrite mode
   ///
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  pika::future<TileType> operator()(const LocalTileIndex& index) {
+  pika::future<TileType> operator()(LocalTileIndex index) {
+    if constexpr (StoreTransposed::Yes == Storage)
+      index.transpose();
+
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
 
@@ -477,13 +591,13 @@ struct Panel : public Panel<axis, const T, D> {
     return this->operator()(index);
   }
 
-protected:
-  using BaseT = Panel<axis, const T, D>;
+private:
   using BaseT::dim_;
   using BaseT::has_been_used_;
   using BaseT::isFirstGlobalTile;
   using BaseT::isFirstGlobalTileFull;
   using BaseT::tileSize;
 };
+
 }
 }

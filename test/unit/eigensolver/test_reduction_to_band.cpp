@@ -147,9 +147,9 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
       lapack::laset(blas::Uplo::Lower, tile_l.size().rows() - 1, band_size, T(0), T(0),
                     tile_l.ptr({1, tile_l.size().cols() - band_size}), tile_l.ld());
 
-    if (band_size < tile_l.size().rows())
-      lapack::laset(blas::Uplo::General, tile_l.size().rows(), band_size, T(0), T(0), tile_l.ptr({0, 0}),
-                    tile_l.ld());
+    if (band_size < tile_l.size().cols())
+      lapack::laset(blas::Uplo::General, tile_l.size().rows(), tile_l.size().cols() - band_size, T(0),
+                    T(0), tile_l.ptr({0, 0}), tile_l.ld());
 
     copyConjTrans(matrix.tile(ij), matrix.tile(common::transposed(ij)));
   }
@@ -216,7 +216,16 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size,
   pika::wait_all(fut_local_taus);
   auto local_taus = pika::unwrap(fut_local_taus);
 
-  const auto n_chunks = std::ceil(float(k) / chunk_size);
+  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
+
+  // Note:
+  // this is just an early exit
+  const SizeType n_local_chunks =
+      n_chunks / comm_grid.size().cols() +
+      (comm_grid.rank().col() < (n_chunks % comm_grid.size().cols()) ? 1 : 0);
+
+  if (local_taus.size() != to_sizet(n_local_chunks))
+    return taus;
 
   for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
     const auto owner = index_chunk % comm_grid.size().cols();
@@ -338,8 +347,10 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  auto taus = allGatherTaus(k_reflectors, mat_a_h.blockSize().rows(), local_taus);
-  EXPECT_EQ(taus.size(), k_reflectors);
+  // Note:
+  // chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by band)
+  auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus);
+  ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
 }
@@ -409,8 +420,10 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   auto mat_b = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
+  // Note:
+  // chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by band)
   auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus, grid);
-  DLAF_ASSERT(to_SizeType(taus.size()) == k_reflectors, taus.size(), k_reflectors);
+  ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
 }

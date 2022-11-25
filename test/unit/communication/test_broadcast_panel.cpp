@@ -15,6 +15,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/matrix/panel.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -105,18 +106,18 @@ std::vector<config_t> test_params_bcast_transpose{
     {{25, 25}, {5, 5}, {1, 1}},
 };
 
-template <class TypeParam, Coord PANEL_SRC_AXIS>
+template <class TypeParam, Coord AxisSrc, StoreTransposed storageT = StoreTransposed::No>
 void testBrodcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using pika::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-  const auto rank = dist.rankIndex().get(PANEL_SRC_AXIS);
+  const auto rank = dist.rankIndex().get(AxisSrc);
 
   // It is important to keep the order of initialization to avoid deadlocks!
-  constexpr Coord PANEL_DST_AXIS = orthogonal(PANEL_SRC_AXIS);
-  Panel<PANEL_SRC_AXIS, TypeParam, dlaf::Device::CPU> panel_src(dist, cfg.offset);
-  Panel<PANEL_DST_AXIS, TypeParam, dlaf::Device::CPU> panel_dst(dist, cfg.offset);
+  constexpr Coord AxisDst = orthogonal(AxisSrc);
+  Panel<AxisSrc, TypeParam, dlaf::Device::CPU> panel_src(dist, cfg.offset);
+  Panel<AxisDst, TypeParam, dlaf::Device::CPU, storageT> panel_dst(dist, cfg.offset);
 
   for (const auto i_w : panel_src.iteratorLocal())
     pika::dataflow(unwrapping(
@@ -128,7 +129,7 @@ void testBrodcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid
   common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
 
   // select a "random" source rank which will be the source for the data
-  const comm::IndexT_MPI owner = comm_grid.size().get(PANEL_SRC_AXIS) / 2;
+  const comm::IndexT_MPI owner = comm_grid.size().get(AxisSrc) / 2;
 
   broadcast(owner, panel_src, panel_dst, row_task_chain, col_task_chain);
 
@@ -158,4 +159,16 @@ TYPED_TEST(PanelBcastTest, BroadcastRow2Col) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
       testBrodcastTranspose<TypeParam, Coord::Row>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelBcastTest, BroadcastCol2RowStoreTransposed) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params_bcast_transpose)
+      testBrodcastTranspose<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelBcastTest, BroadcastRow2ColStoreTransposed) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params_bcast_transpose)
+      testBrodcastTranspose<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }

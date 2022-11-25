@@ -152,7 +152,7 @@ TridiagResult<T, Device::CPU> bandToTridiag(comm::CommunicatorGrid grid, blas::U
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      return internal::BandToTridiagDistr<backend, device, T>::call_L(grid, band_size, mat_a);
+      return internal::BandToTridiag<backend, device, T>::call_L(grid, band_size, mat_a);
       break;
     case blas::Uplo::Upper:
       DLAF_UNIMPLEMENTED(uplo);

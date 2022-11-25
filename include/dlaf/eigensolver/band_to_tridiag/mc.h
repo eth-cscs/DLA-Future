@@ -34,6 +34,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/traits.h"
 #include "dlaf/traits.h"
 
 namespace dlaf::eigensolver::internal {
@@ -948,7 +949,7 @@ private:
 
 // Distributed implementation of bandToTridiag.
 template <Device D, class T>
-TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
+TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   // Note on the algorithm, data distribution and dependency tracking:
   // The band matrix is redistribuited in 1D block cyclic. The new block size is a multiple of the
@@ -990,8 +991,6 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
   using pika::resource::get_num_threads;
 
   namespace ex = pika::execution::experimental;
-
-  static_assert(D == Device::CPU);
 
   // Should be dispatched to local implementation if (1x1) grid.
   DLAF_ASSERT(grid.size() != comm::Size2D(1, 1), grid);
@@ -1090,14 +1089,17 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
 
   {
     constexpr std::size_t n_workspaces = 4;
-    RoundRobin<Matrix<T, D>> temps(n_workspaces, LocalElementSize{nb, nb}, TileElementSize{nb, nb});
+    RoundRobin<Matrix<T, Device::CPU>> temps(n_workspaces, LocalElementSize{nb, nb},
+                                             TileElementSize{nb, nb});
 
     auto copy_diag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
-      return a_block->template copyDiag<D>(j, std::move(source));
+      constexpr Device device = dlaf::internal::sender_device<decltype(source)>;
+      return a_block->template copyDiag<device>(j, std::move(source));
     };
 
     auto copy_offdiag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
-      return a_block->template copyOffDiag<D>(j, std::move(source));
+      constexpr Device device = dlaf::internal::sender_device<decltype(source)>;
+      return a_block->template copyOffDiag<device>(j, std::move(source));
     };
 
     // Copy the band matrix
@@ -1173,7 +1175,7 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
   // of nb * tiles_per_block, we use a local distribution and we manage the computation of the
   // local panel index with VAccessHelper.
   matrix::Distribution dist_panel({dist.localSize().cols(), b}, {nb, b});
-  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> v_panels(n_workspaces, dist_panel);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> v_panels(n_workspaces, dist_panel);
 
   auto init_sweep = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType sweep,
                        PromiseGuard<SweepWorkerDist<T>> worker) {
@@ -1339,7 +1341,7 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
                   if (rank == rank_v) {
                     auto tile_v = splitTile(mat_v(index_v), spec_v);
                     ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
-                                       copy(Policy<CopyBackend_v<Device::CPU, D>>{}));
+                                       copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
                   }
                   else {
                     ex::start_detached(comm::scheduleSend(comm, rank_v, compute_v_tag(index_v.row()),

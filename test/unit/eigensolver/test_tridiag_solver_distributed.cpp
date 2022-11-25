@@ -10,7 +10,6 @@
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
-#include "dlaf/communication/sync/broadcast.h"
 #include "dlaf/eigensolver/tridiag_solver.h"
 #include "dlaf/matrix/matrix_mirror.h"
 
@@ -108,8 +107,11 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   };
 
   // Eigenvectors are unique up to a sign, match signs of expected and actual eigenvectors
+  namespace ex = pika::execution::experimental;
 
-  auto col_comm = grid.colCommunicator();
+  // Clone communicator to make sure non-blocking broadcasts used below don't interleave with collective
+  // communication inside the tridiagonal solver.
+  auto col_comm = grid.colCommunicator().clone();
   Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
   comm::Index2D this_rank = dist_evecs.rankIndex();
 
@@ -133,11 +135,13 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
         // If the signs of expected and actual don't match, mark the corresponding column for negation
         sign_tile(transposed(idx_el)) = (dlaf::util::sameSign(act_val, exp_val)) ? 1 : -1;
       }
-      sync::broadcast::send(col_comm, sign_tile);
+
+      ex::start_detached(comm::scheduleSendBcast(col_comm, ex::just(std::move(sign_tile))));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank
-      sync::broadcast::receive_from(rank_evecs_0row.row(), col_comm, sign_mat(idx_sign_tile).get());
+      ex::start_detached(
+          comm::scheduleRecvBcast(col_comm, rank_evecs_0row.row(), sign_mat(idx_sign_tile)));
     }
   }
 

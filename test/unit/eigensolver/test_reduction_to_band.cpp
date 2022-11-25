@@ -81,13 +81,18 @@ std::vector<config_t> configs{
 };
 
 std::vector<config_t> configs_subband{
-    {{0, 0}, {6, 6}, 2},
-    // sub-tile band
-    {{4, 4}, {4, 4}, 2},    // single tile
-    {{12, 12}, {4, 4}, 2},  // tile always full size (less room for distribution over ranks)
-    {{13, 13}, {3, 3}, 3},  // tile incomplete
-    {{24, 24}, {3, 3}, 3},  // tile always full size (more room for distribution)
-    {{40, 40}, {5, 5}, 5},
+    {{0, 0}, {6, 6}, 2},  // empty matrix
+
+    // half-tile band
+    {{4, 4}, {4, 4}, 2},  // single tile
+    {{12, 12}, {4, 4}, 2},
+    {{42, 42}, {6, 6}, 3},
+    {{13, 13}, {6, 6}, 3},  // tile incomplete
+
+    // multi-band
+    {{27, 27}, {9, 9}, 3},
+    {{42, 42}, {12, 12}, 4},
+    {{29, 29}, {9, 9}, 3},  // tile incomplete
 };
 
 template <class T>
@@ -161,7 +166,8 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
 }
 
 template <class T>
-void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const SizeType band_size) {
+void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
+                            const SizeType band_size) {
   DLAF_ASSERT_HEAVY(square_size(mat_v), mat_v.size());
   DLAF_ASSERT_HEAVY(square_size(mat_b), mat_b.size());
 
@@ -170,7 +176,7 @@ void splitReflectorsAndBand(MatrixLocal<T>& mat_v, MatrixLocal<T>& mat_b, const 
   for (SizeType diag = 0; diag <= 1; ++diag) {
     for (SizeType i = diag; i < mat_v.nrTiles().rows(); ++i) {
       const GlobalTileIndex idx(i, i - diag);
-      matrix::internal::copy(mat_v.tile(idx), mat_b.tile(idx));
+      matrix::internal::copy(mat_v.tile_read(idx), mat_b.tile(idx));
     }
   }
 
@@ -393,7 +399,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
   {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get());
+    local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
     pika::threads::get_thread_manager().wait();
   }
 
@@ -417,10 +423,26 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   }
 }
 
+TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs_subband) {
+      testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
+
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs) {
+      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
+
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs_subband) {
       testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
     }
   }

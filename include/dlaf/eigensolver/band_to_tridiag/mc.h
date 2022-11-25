@@ -1251,7 +1251,8 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
           const auto block_local_id = dist.localTileIndex(block_id + GlobalTileSize{0, 1}).col();
           auto a_block = a_ws[block_local_id];
           auto& deps_block = deps[block_local_id];
-          ex::start_detached(scheduleSendCol(comm, prev_rank, compute_col_tag(block_id.col(), next_j == size - 1), b,
+          ex::start_detached(scheduleSendCol(comm, prev_rank,
+                                             compute_col_tag(block_id.col(), next_j == size - 1), b,
                                              a_block, next_j, deps_block[0]));
         }
       }
@@ -1280,7 +1281,8 @@ TridiagResult<T, Device::CPU> BandToTridiagDistr<Backend::MC, D, T>::call_L(
           // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
           // column before is sent here.
-          deps_block.push_back(scheduleRecvCol(comm, next_rank, compute_col_tag(block_id.col(), next_j == size - 1), b,
+          deps_block.push_back(scheduleRecvCol(comm, next_rank,
+                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
                                                a_block, next_j, deps_block.back()) |
                                ex::split());
         }

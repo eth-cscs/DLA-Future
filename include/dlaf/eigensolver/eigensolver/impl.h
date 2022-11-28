@@ -89,7 +89,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
 
   // TODO band_size
   auto taus = reductionToBand<B>(grid, mat_a);
-  auto ret = bandToTridiag<Backend::MC>(uplo, band_size, mat_a);  // TODO distributed
+  auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
   // Note:
   // Since reduction from band to tridiagonal happens on MC for all backends, but eigensolver

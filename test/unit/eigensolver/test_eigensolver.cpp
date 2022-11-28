@@ -67,7 +67,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
-    return allGather(blas::Uplo::General, mat_evals.get(), grid...);
+    return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
@@ -166,10 +166,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid grid : this->commGrids()) {
-    // TODO not all algorithms ready for a real distributed
-    if (grid.size() != comm::Size2D(1, 1))
-      continue;
-
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
         const auto& [m, mb] = sz;

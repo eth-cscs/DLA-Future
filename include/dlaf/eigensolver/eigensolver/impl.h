@@ -75,10 +75,6 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                                    Matrix<T, D>& mat_a) {
-  if constexpr (B == Backend::GPU) {
-    DLAF_ASSERT(grid.size() == comm::Size2D(1, 1), grid.size());
-  }
-
   using common::internal::vector;
 
   const SizeType size = mat_a.size().rows();
@@ -88,7 +84,6 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
-  // TODO band_size
   auto taus = reductionToBand<B>(grid, mat_a);
   auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
@@ -112,7 +107,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   matrix::Matrix<T, D> mat_e(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
   if constexpr (B == Backend::GPU) {
-    // TODO GPU does not yet support distributed
+    DLAF_ASSERT(grid.size() == comm::Size2D(1, 1), grid.size());
     eigensolver::tridiagSolver<B>(tridiagonal, evals, mat_e);
   }
   else {
@@ -120,7 +115,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   }
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
-  backTransformationReductionToBand<B>(grid, mat_e, mat_a, taus);  // TODO band_size
+  backTransformationReductionToBand<B>(grid, mat_e, mat_a, taus);
 
   return {std::move(evals), std::move(mat_e)};
 }

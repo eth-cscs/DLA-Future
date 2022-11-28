@@ -56,10 +56,6 @@ struct Options
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
-    DLAF_ASSERT(grid_rows * grid_cols == 1,
-                "Error! Distributed eigensolver is not avilable yet. "
-                "Please rerun with both --grid-rows and --grid-cols set to 1");
-
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
       do_check = dlaf::miniapp::CheckIterFreq::None;
@@ -79,9 +75,6 @@ struct EigensolverMiniapp {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
-
-    if (opts.grid_rows * opts.grid_cols != 1)
-      DLAF_UNIMPLEMENTED("Distributed eigensolver not available yet.");
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -116,7 +109,7 @@ struct EigensolverMiniapp {
 
         dlaf::common::Timer<> timeit;
         auto [eigenvalues, eigenvectors] =
-            dlaf::eigensolver::eigensolver<backend>(opts.uplo, matrix.get());
+            dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix.get());
 
         // wait and barrier for all ranks
         eigenvectors.waitLocalTiles();

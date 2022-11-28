@@ -152,6 +152,7 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   if (mat_a_h.size().isEmpty())
     return;
 
+  pika::threads::get_thread_manager().wait();
   testEigensolverCorrectness(uplo, reference, ret, grid);
 }
 

@@ -152,6 +152,9 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   if (mat_a_h.size().isEmpty())
     return;
 
+  // Note:
+  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
+  // calls that might lead to deadlocks.
   pika::threads::get_thread_manager().wait();
   testEigensolverCorrectness(uplo, reference, ret, grid);
 }
@@ -188,7 +191,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
 
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid grid : this->commGrids()) {
-    // TODO not all algorithms ready for a real distributed
+    // Note: solver not yet ready for GPU distributed, fallback to local GPU
     if (grid.size() != comm::Size2D(1, 1))
       continue;
 

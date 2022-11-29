@@ -111,7 +111,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
   // Clone communicator to make sure non-blocking broadcasts used below don't interleave with collective
   // communication inside the tridiagonal solver.
-  auto col_comm = grid.colCommunicator().clone();
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
   Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
   comm::Index2D this_rank = dist_evecs.rankIndex();
 
@@ -136,12 +136,12 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
         sign_tile(transposed(idx_el)) = (dlaf::util::sameSign(act_val, exp_val)) ? 1 : -1;
       }
 
-      ex::start_detached(comm::scheduleSendBcast(col_comm, ex::just(std::move(sign_tile))));
+      ex::start_detached(comm::scheduleSendBcast(col_task_chain(), ex::just(std::move(sign_tile))));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank
       ex::start_detached(
-          comm::scheduleRecvBcast(col_comm, rank_evecs_0row.row(), sign_mat(idx_sign_tile)));
+          comm::scheduleRecvBcast(col_task_chain(), rank_evecs_0row.row(), sign_mat(idx_sign_tile)));
     }
   }
 

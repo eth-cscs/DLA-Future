@@ -160,31 +160,34 @@ void offloadDiagonal(Matrix<const T, D>& tridiag, Matrix<T, D>& evals) {
 // 3. The overlap region is due to deflation via Givens rotations of a column vector from Q1 with a
 //    column vector of Q2.
 //
-template <Backend backend, Device device, class T>
-void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
-                                             Matrix<T, device>& evecs) {
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
   LocalElementSize vec_size(distr.size().rows(), 1);
   TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  WorkSpace<T, device> ws{Matrix<T, device>(distr),                           // mat1
-                          Matrix<T, device>(distr),                           // mat2
-                          Matrix<T, device>(vec_size, vec_tile_size),         // dtmp
-                          Matrix<T, device>(vec_size, vec_tile_size),         // z
-                          Matrix<T, device>(vec_size, vec_tile_size),         // ztmp
-                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i1
-                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i2
-                          Matrix<SizeType, device>(vec_size, vec_tile_size),  // i3
-                          Matrix<ColType, device>(vec_size, vec_tile_size)};  // c
+  WorkSpace<T, D> ws{Matrix<T, D>(distr),                           // mat1
+                     Matrix<T, D>(distr),                           // mat2
+                     Matrix<T, D>(vec_size, vec_tile_size),         // dtmp
+                     Matrix<T, D>(vec_size, vec_tile_size),         // z
+                     Matrix<T, D>(vec_size, vec_tile_size),         // ztmp
+                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i1
+                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i2
+                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i3
+                     Matrix<ColType, D>(vec_size, vec_tile_size)};  // c
 
   // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, device> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
-                                      initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
-                                      initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
-                                      initMirrorMatrix(ws.c)};
+  WorkSpaceHostMirror<T, D> ws_h{initMirrorMatrix(evals), initMirrorMatrix(ws.mat1),
+                                 initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
+                                 initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
+                                 initMirrorMatrix(ws.c),
+                                 // TODO: Not needed: for local version (appease warning)
+                                 initMirrorMatrix(evecs), initMirrorMatrix(ws.mat2)
+
+  };
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<backend, T, device>(pika::execution::thread_priority::normal, evecs);
+  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
@@ -198,23 +201,23 @@ void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<backend>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
-                              evecs);
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
+                        evecs);
   }
 }
 
 // Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
-template <Backend backend, Device device, class T>
-void TridiagSolver<backend, device, T>::call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
-                                             Matrix<std::complex<T>, device>& evecs) {
-  Matrix<T, device> real_evecs(evecs.distribution());
-  TridiagSolver<backend, device, T>::call(tridiag, evals, real_evecs);
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals,
+                                  Matrix<std::complex<T>, D>& evecs) {
+  Matrix<T, D> real_evecs(evecs.distribution());
+  TridiagSolver<B, D, T>::call(tridiag, evals, real_evecs);
 
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<device>(real_evecs.read_sender(tile_wrt_local),
-                               evecs.readwrite_sender(tile_wrt_local));
+    castToComplexAsync<D>(real_evecs.read_sender(tile_wrt_local),
+                          evecs.readwrite_sender(tile_wrt_local));
   }
 }
 
@@ -248,13 +251,11 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   }
 }
 
-// Distributed tridiagonal solver on CPUs
+// Distributed tridiagonal eigensolver
 //
-template <class T>
-void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
-                        Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
-  constexpr Device D = Device::CPU;
-
+template <Backend B, Device D, class T>
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
+                                  Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
@@ -269,8 +270,15 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
                      Matrix<SizeType, D>(dist_evals),  // i3
                      Matrix<ColType, D>(dist_evals)};  // c
 
+  // Mirror workspace on host memory for CPU-only kernels
+  WorkSpaceHostMirror<T, D> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
+                                 initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
+                                 initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
+                                 initMirrorMatrix(ws.c),    initMirrorMatrix(evecs),
+                                 initMirrorMatrix(ws.mat2)};
+
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<Backend::MC, T, D>(pika::execution::thread_priority::normal, evecs);
+  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
@@ -289,22 +297,8 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split, i_end,
-                         offdiag_vals[to_sizet(i_split)], ws, evals, evecs);
-  }
-}
-
-template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
-                                  Matrix<T, D>& evals, Matrix<T, D>& evecs) {
-  if constexpr (D == Device::GPU) {
-    // This is a temporary placeholder which avoids diverging GPU API:
-    DLAF_UNIMPLEMENTED("GPU implementation not available yet");
-    dlaf::internal::silenceUnusedWarningFor(grid, tridiag, evals, evecs);
-    return;
-  }
-  else {
-    tridiagSolverOnCPU(grid, tridiag, evals, evecs);
+    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
+                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals, evecs);
   }
 }
 

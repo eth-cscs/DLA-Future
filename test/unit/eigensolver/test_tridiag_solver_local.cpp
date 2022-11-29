@@ -62,7 +62,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   matrix::Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));
 
   // Tridiagonal matrix : 1D Laplacian
-  auto mat_trd_fn = [](GlobalElementIndex el) {
+  auto tridiag_fn = [](GlobalElementIndex el) {
     if (el.col() == 0)
       // diagonal
       return RealParam(2);
@@ -70,7 +70,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
       // off-diagonal
       return RealParam(-1);
   };
-  matrix::util::set(tridiag, std::move(mat_trd_fn));
+  matrix::util::set(tridiag, std::move(tridiag_fn));
 
   {
     matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);

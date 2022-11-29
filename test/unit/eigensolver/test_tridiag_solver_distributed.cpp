@@ -45,6 +45,8 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
 };
 // clang-format on
 
+// To reproduce in python:
+//
 // import numpy as np
 // from scipy.sparse import diags
 // from scipy.linalg import eigh
@@ -73,7 +75,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   Matrix<T, Device::CPU> evecs(dist_evecs);
 
   // Tridiagonal matrix : 1D Laplacian
-  auto mat_trd_fn = [](GlobalElementIndex el) {
+  auto tridiag_fn = [](GlobalElementIndex el) {
     if (el.col() == 0)
       // diagonal
       return RealParam(2);
@@ -81,7 +83,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
       // off-diagonal
       return RealParam(-1);
   };
-  matrix::util::set(tridiag, std::move(mat_trd_fn));
+  matrix::util::set(tridiag, std::move(tridiag_fn));
 
   {
     matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);

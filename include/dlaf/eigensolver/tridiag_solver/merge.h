@@ -151,19 +151,19 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& ind
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D>
 void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
-                  Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
+                  Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
   for (SizeType i = i_begin; i <= i_end; ++i) {
     // True if tile is in Q1
     bool top_tile = i <= i_split;
     // Move to the row below `i_middle` for `Q2`
-    SizeType mat_ev_row = i_split + ((top_tile) ? 0 : 1);
-    GlobalTileIndex mat_ev_idx(mat_ev_row, i);
+    SizeType evecs_row = i_split + ((top_tile) ? 0 : 1);
+    GlobalTileIndex idx_evecs(evecs_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
     GlobalTileIndex z_idx(i, 0);
 
     // Copy the row into the column vector `z`
-    assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx),
+    assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, evecs.read_sender(idx_evecs),
                                              z.readwrite_sender(z_idx));
   }
 }
@@ -508,15 +508,15 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
                                                              std::move(deflate_fn), std::move(sender)));
 }
 
-/// Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].
-///
-/// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
-/// @param i_last global tile index for both row and column identifying the end of the sub-matrix (inclusive)
-/// @param rots_fut GivenRotations to apply (element column indices of rotations are relative to the sub-matrix)
-/// @param mat matrix where the sub-matrix is located
-///
-/// @pre mat is not distributed
-/// @pre memory layout of @p mat is column major.
+// Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].
+//
+// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
+// @param i_last global tile index for both row and column identifying the end of the sub-matrix (inclusive)
+// @param rots_fut GivenRotations to apply (element column indices of rotations are relative to the sub-matrix)
+// @param mat matrix where the sub-matrix is located
+//
+// @pre mat is not distributed
+// @pre memory layout of @p mat is column major.
 template <class T, Device D>
 void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end,
                                          pika::future<std::vector<GivensRotation<T>>> rots_fut,
@@ -788,7 +788,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //    i2 (out) : initial <--- pre_sorted
   //
   // - deflate `d`, `z` and `c`
-  // - apply Givens rotations to `Q` - `mat_ev`
+  // - apply Givens rotations to `Q` - `evecs`
   //
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
@@ -860,7 +860,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   //
   // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
   //   ascending order
-  // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
+  // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
@@ -874,10 +874,10 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
 template <class T, Device D>
 void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
                       SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
-                      Matrix<const T, D>& mat_ev, Matrix<T, D>& z) {
+                      Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
 
-  const matrix::Distribution& dist = mat_ev.distribution();
+  const matrix::Distribution& dist = evecs.distribution();
   comm::Index2D this_rank = dist.rankIndex();
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
@@ -885,15 +885,15 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
     // True if tile is in Q1
     bool top_tile = i <= i_split;
     // Move to the row below `i_middle` for `Q2`
-    SizeType mat_ev_row = i_split + ((top_tile) ? 0 : 1);
-    GlobalTileIndex mat_ev_idx(mat_ev_row, i);
+    SizeType evecs_row = i_split + ((top_tile) ? 0 : 1);
+    GlobalTileIndex idx_evecs(evecs_row, i);
     GlobalTileIndex z_idx(i, 0);
 
     // Copy the last row of a `Q1` tile or the first row of a `Q2` tile into a column vector `z` tile
-    comm::Index2D evecs_tile_rank = dist.rankGlobalTile(mat_ev_idx);
+    comm::Index2D evecs_tile_rank = dist.rankGlobalTile(idx_evecs);
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
-      assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, mat_ev.read_sender(mat_ev_idx),
+      assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, evecs.read_sender(idx_evecs),
                                                z.readwrite_sender(z_idx));
       ex::start_detached(comm::scheduleSendBcast(full_task_chain(), z.read_sender(z_idx)));
     }
@@ -1213,7 +1213,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //    i2 (out) : initial <--- pre_sorted
   //
   // - deflate `d`, `z` and `c`
-  // - apply Givens rotations to `Q` - `mat_ev`
+  // - apply Givens rotations to `Q` - `evecs`
   //
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
@@ -1279,7 +1279,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
   //   ascending order
-  // - reorder columns in `mat_ev` using `i2` such that eigenvectors match eigenvalues
+  // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);

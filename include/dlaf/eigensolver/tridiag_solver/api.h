@@ -16,13 +16,13 @@ namespace dlaf::eigensolver::internal {
 
 template <Backend backend, Device device, class T>
 struct TridiagSolver {
-  static void call(Matrix<T, device>& mat_trd, Matrix<T, device>& d, Matrix<T, device>& mat_ev);
-  static void call(Matrix<T, device>& mat_trd, Matrix<T, device>& d,
-                   Matrix<std::complex<T>, device>& mat_ev);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& mat_trd, Matrix<T, device>& d,
-                   Matrix<T, device>& mat_ev);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& mat_trd, Matrix<T, device>& d,
-                   Matrix<std::complex<T>, device>& mat_ev);
+  static void call(Matrix<T, device>& tridiag, Matrix<T, device>& evals, Matrix<T, device>& evecs);
+  static void call(Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                   Matrix<std::complex<T>, device>& evecs);
+  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                   Matrix<T, device>& evecs);
+  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& tridiag, Matrix<T, device>& evals,
+                   Matrix<std::complex<T>, device>& evecs);
 };
 
 /// ---- ETI

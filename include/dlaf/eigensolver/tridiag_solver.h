@@ -19,21 +19,20 @@
 namespace dlaf {
 namespace eigensolver {
 
-/// Finds the eigenvalues and eigenvectors of a symmetric tridiagonal matrix.
+/// Finds the eigenvalues and eigenvectors of the local symmetric tridiagonal matrix @p tridiag.
 ///
-/// @param mat_trd  [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
-/// tridiagonal matrix in the first column and second columns respectively. The last entry of the second
-/// column is not used. On exit the eigenvalues are saved in the first column.
-//
-/// @param d [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal mat_trd
-//
-/// @param mat_ev [out]    (n x n) local matrix holding the eigenvectors of the the symmetric tridiagonal
-/// matrix on exit.
+/// @param tridiag [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
+///                tridiagonal matrix in the first column and second columns respectively. The last entry
+///                of the second column is not used.
+/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal
+///              matrix
+/// @param evecs [out] (n x n) local matrix holding the eigenvectors of the the symmetric tridiagonal
+///              matrix on exit.
 ///
-/// @pre mat_trd and mat_ev are local matrices
-/// @pre mat_trd has 2 columns
-/// @pre mat_ev is a square matrix
-/// @pre mat_ev has a square block size
+/// @pre tridiag and @p evals and @p evecs are local matrices
+/// @pre tridiag has 2 columns and column block size of 2
+/// @pre evecs is a square matrix with number of rows equal to the number of rows of @p tridiag and @p evals
+/// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
 template <Backend backend, Device device, class T>
 void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, device>& evals,
                    Matrix<T, device>& evecs) {
@@ -64,6 +63,22 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
 #endif
 }
 
+/// Finds the eigenvalues and eigenvectors of the symmetric tridiagonal matrix @p tridiag stored locally
+/// on each rank. The resulting eigenvalues @p evals are stored locally on each rank while the resulting
+/// eigenvectors @p evecs are distributed across ranks in 2D block-cyclic manner.
+///
+/// @param tridiag [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
+///                tridiagonal matrix in the first column and second columns respectively. The last entry
+///                of the second column is not used.
+/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal
+///              matrix
+/// @param evecs [out] (n x n) distributed matrix holding the eigenvectors of the the symmetric tridiagonal
+///              matrix on exit.
+///
+/// @pre tridiag and @p evals are local matrices and are the same on all ranks
+/// @pre tridiag has 2 columns and column block size of 2
+/// @pre evecs is a square matrix with global number of rows equal to the number of rows of @p tridiag and @p evals
+/// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
 template <Backend B, Device D, class T>
 void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, D>& tridiag,
                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {

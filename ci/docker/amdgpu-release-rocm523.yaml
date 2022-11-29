@@ -10,17 +10,17 @@
 
 spack:
   specs:
-  - dla-future@develop +rocm +miniapps +ci-test amdgpu_target=gfx906:xnack- ^openblas ^mpich
+  - dla-future@develop +rocm +miniapps +ci-test ^openblas ^mpich
   view: false
   concretizer:
     unify: true
-
   packages:
     all:
       target: [x86_64]
       variants:
       - build_type=Release
       - cxxstd=17
+      - amdgpu_target=gfx906:xnack-
     blaspp:
       variants:
       - ~cuda
@@ -29,7 +29,6 @@ spack:
     pika:
       variants:
       - malloc=mimalloc
-      - amdgpu_target=gfx906:xnack-
     mpich:
       variants:
       - ~fortran
@@ -48,8 +47,6 @@ spack:
     umpire:
       version:
       - 4.1.2
-      variants:
-      - amdgpu_target=gfx906:xnack-
     blt:
       version:
       - 0.4.1

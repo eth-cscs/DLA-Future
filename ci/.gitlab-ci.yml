@@ -202,7 +202,7 @@ amdgpu release build clang10+rocm-5.2.3:
     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
     BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
     DEPLOY_BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
-    EXTRA_APTGET: "clang rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
+    EXTRA_APTGET: "clang rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
     CXXSTD: 17

@@ -15,6 +15,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
+#include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
@@ -192,10 +193,10 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
 
 // No data is sent or received but the processes participates in the collective call
 template <class T>
-void all2allEmptyData(const comm::Communicator& comm) {
+void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks) {
   namespace ex = pika::execution::experimental;
 
-  auto all2all_f = [comm](const std::vector<int>& arr, MPI_Request* req) {
+  auto all2all_f = [](const comm::Communicator& comm, const std::vector<int>& arr, MPI_Request* req) {
     MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
     // Avoid buffer aliasing error reported when send_ptr and recv_ptr are the same.
     int irrelevant = 42;
@@ -203,55 +204,54 @@ void all2allEmptyData(const comm::Communicator& comm) {
                                         arr.data(), dtype, comm, req));
   };
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f),
-                                           ex::just(std::vector<int>(to_sizet(comm.size()), 0)));
+                                           ex::when_all(sub_task_chain(),
+                                                        ex::just(std::vector<int>(to_sizet(nranks), 0))));
 }
 
 // Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!
 //
 template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
-void all2allData(const comm::Communicator& comm, LocalElementSize sz_loc,
-                 SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
+void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
+                 LocalElementSize sz_loc, SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
                  RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
   namespace ex = pika::execution::experimental;
 
-  auto all2all_f = [comm,
-                    len = sz_loc.get<orthogonal(C)>()](std::vector<int>& send_counts,
-                                                       const std::vector<matrix::Tile<T, D>>& send_tiles,
-                                                       std::vector<int>& recv_counts,
-                                                       const std::vector<matrix::Tile<T, D>>& recv_tiles,
-                                                       MPI_Request* req) {
-    std::size_t nranks = to_sizet(comm.size());
+  auto all2all_f =
+      [len = sz_loc.get<orthogonal(C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
+                                          std::vector<int>& send_displs,
+                                          const std::vector<matrix::Tile<T, D>>& send_tiles,
+                                          std::vector<int>& recv_counts, std::vector<int>& recv_displs,
+                                          const std::vector<matrix::Tile<T, D>>& recv_tiles,
+                                          MPI_Request* req) {
+        // datatype to be sent to each rank
+        MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
 
-    // datatype to be sent to each rank
-    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+        // scale by the length of the row or column vectors to get the number of elements sent to each process
+        auto mul_const = [len](int num) { return to_int(len) * num; };
+        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
+        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
 
-    // scale by the length of the row or column vectors to get the number of elements sent to each process
-    auto mul_const = [len](int num) { return to_int(len) * num; };
-    std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
-    std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
+        // Note: that was guaranteed to be contiguous on allocation
+        T* send_ptr = send_tiles[0].ptr();
+        T* recv_ptr = recv_tiles[0].ptr();
 
-    // Note: that was guaranteed to be contiguous on allocation
-    T* send_ptr = send_tiles[0].ptr();
-    T* recv_ptr = recv_tiles[0].ptr();
+        // send displacements
+        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
 
-    // send displacements
-    std::vector<int> send_displs(nranks);
-    std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+        // recv displacements
+        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
 
-    // recv displacements
-    std::vector<int> recv_displs(nranks);
-    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+        // All-to-All communication
+        DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
+                                            recv_ptr, recv_counts.data(), recv_displs.data(), dtype,
+                                            comm, req));
+      };
 
-    // All-to-All communication
-    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
-                                        recv_ptr, recv_counts.data(), recv_displs.data(), dtype, comm,
-                                        req));
-  };
-
-  auto sender = ex::when_all(std::forward<SendCountsSender>(send_counts_sender),
-                             whenAllReadWriteTilesArray(send_mat),
-                             std::forward<RecvCountsSender>(recv_counts_sender),
-                             whenAllReadWriteTilesArray(recv_mat));
+  auto sender =
+      ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
+                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
+                   std::forward<RecvCountsSender>(recv_counts_sender),
+                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
 }
 
@@ -415,13 +415,13 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 }
 
 template <class T, Coord C>
-void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<T, Device::CPU>& mat_in,
                   Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
-  comm::Communicator comm = grid.subCommunicator(orthogonal(C));
   const matrix::Distribution& dist = mat_in.distribution();
+  int nranks = to_int(dist.commGridSize().get<C>());
 
   // Local size and index of subproblem [i_begin, i_end]
   SizeType i_el_begin = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
@@ -436,7 +436,7 @@ void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
 
   // If there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.isEmpty()) {
-    all2allEmptyData<T>(comm);
+    all2allEmptyData<T>(sub_task_chain, nranks);
     return;
   }
 
@@ -466,13 +466,12 @@ void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, ws_index);
   auto recv_counts_sender =
-      initPackingIndex<C, false>(comm.size(), i_el_begin, dist, ws_index, unpacking_index);
+      initPackingIndex<C, false>(nranks, i_el_begin, dist, ws_index, unpacking_index);
 
   // Initialize the packing index
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, inverse_perms, ws_index);
-  auto send_counts_sender =
-      initPackingIndex<C, true>(comm.size(), i_el_begin, dist, ws_index, packing_index);
+  auto send_counts_sender = initPackingIndex<C, true>(nranks, i_el_begin, dist, ws_index, packing_index);
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
@@ -487,7 +486,7 @@ void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
   }
 
   // Communicate data
-  all2allData<T, D, C>(comm, sz_loc, std::move(send_counts_sender), mat_send,
+  all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, std::move(send_counts_sender), mat_send,
                        std::move(recv_counts_sender), mat_recv);
 
   // Unpack data from the contiguous column-major receive buffer by transposing
@@ -504,17 +503,17 @@ void permuteOnCPU(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
-                                    Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
-                                    Matrix<T, D>& mat_out) {
+void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_task_chain,
+                                    SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
   if constexpr (D == Device::GPU) {
     // This is a temporary placeholder which avoids diverging GPU API:
     DLAF_UNIMPLEMENTED("GPU implementation not available yet");
-    dlaf::internal::silenceUnusedWarningFor(grid, i_begin, i_end, perms, mat_in, mat_out);
+    dlaf::internal::silenceUnusedWarningFor(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
     return;
   }
   else {
-    permuteOnCPU<T, C>(grid, i_begin, i_end, perms, mat_in, mat_out);
+    permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
   }
 }
 

@@ -85,8 +85,6 @@ void testDistPermutaitons(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
                                                         mat_out.get());
   }
 
-  DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
-
   auto expected_out = [i_begin, i_end, index_start, index_finish, &dist](const GlobalElementIndex i) {
     GlobalTileIndex i_tile = dist.globalTileIndex(i);
     if (i_begin <= i_tile.row() && i_tile.row() <= i_end && i_begin <= i_tile.col() &&

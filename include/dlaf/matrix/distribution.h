@@ -293,11 +293,19 @@ public:
     return util::matrix::tileElementFromElement(global_element, block_size_.get<rc>());
   }
 
+  template <Coord rc>
+  SizeType tileSize(SizeType global_tile) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
+                      global_nr_tiles_.get<rc>());
+    SizeType n = size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    return std::min(nb, n - global_tile * nb);
+  }
+
   /// Returns the size of the Tile with global index @p index.
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(nrTiles()), index, nrTiles());
-    return {std::min(block_size_.rows(), size_.rows() - index.row() * block_size_.rows()),
-            std::min(block_size_.cols(), size_.cols() - index.col() * block_size_.cols())};
+    return {tileSize<Coord::Row>(index.row()), tileSize<Coord::Col>(index.col())};
   }
 
   /// Returns the size of the tile that contains @p i_gl along the @p rc coordinate.
@@ -336,6 +344,14 @@ public:
            globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
   }
 
+  GlobalElementSize globalTileElementDistance(GlobalTileIndex begin,
+                                              GlobalTileIndex end) const noexcept {
+    return GlobalElementSize{globalTileElementDistance<Coord::Row>(begin.row(), end.row()),
+                             globalTileElementDistance<Coord::Col>(begin.col(), end.col())
+
+    };
+  }
+
   /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
   /// along the @p rc coordinate
   template <Coord rc>
@@ -350,6 +366,11 @@ public:
     SizeType nb = block_size_.get<rc>();
     SizeType nbr = std::min(nb, l - i_loc_last * nb);  // size of last local tile along `rc`
     return (i_loc_last - i_loc_begin) * nb + nbr;
+  }
+
+  LocalElementSize localTileElementDistance(GlobalTileIndex begin, GlobalTileIndex end) const noexcept {
+    return {localTileElementDistance<Coord::Row>(begin.row(), end.row()),
+            localTileElementDistance<Coord::Col>(begin.col(), end.col())};
   }
 
 private:

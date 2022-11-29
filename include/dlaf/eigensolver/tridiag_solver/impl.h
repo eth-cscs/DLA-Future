@@ -271,9 +271,9 @@ void tridiagSolverOnCPU(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tri
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
 
-  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator());
-  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
+  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
 
   // Solve with stedc for each tile of `mat_trd` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)

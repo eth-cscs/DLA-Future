@@ -125,8 +125,8 @@ template <Backend B, Device D, class T>
 void generalSubMatrix(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c) {
-  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
+  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
+  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
   generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta,
                             mat_c);
 }

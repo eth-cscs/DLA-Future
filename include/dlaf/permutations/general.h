@@ -98,7 +98,7 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
-  common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)));
+  common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)).clone());
   permute<B, D, T, coord>(grid, sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }
 }

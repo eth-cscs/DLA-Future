@@ -1256,6 +1256,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
 
+  // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
+  //
+  // Note: this is unique because i_[begin|split|end] < nrtiles
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   comm::IndexT_MPI tag = to_int(i_begin + i_split * nrtiles + i_end * nrtiles * nrtiles);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots_fut),
@@ -1266,10 +1269,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
   // ---
-
-  // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
-  //
-  // Note: this is unique because i_[begin|split|end] < nrtiles
 
   // Step #2
   //

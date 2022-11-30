@@ -114,7 +114,6 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
       <pika/program_options.hpp>
       <pika/runtime.hpp>
       <pika/thread.hpp>
-      <pika/unwrap.hpp>
       <blas.hh>
       # We exclude lapack.hh because it pulls in complex.h and defines I as a
       # macro. I is a commonly used e.g. as template parameter names and defining

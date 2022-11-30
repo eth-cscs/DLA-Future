@@ -267,10 +267,6 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
 }
 
 // Applies `index` to `in` to get `out`
-//
-// Note: `pika::unwrapping()` can't be used on this function because std::vector<Tile<const >> is
-// copied internally which requires that Tile<const > is copiable which it isn't. As a consequence the
-// API can't be simplified unless const is dropped.
 template <class T, Device D>
 void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& index,
                 Matrix<const T, D>& in, Matrix<T, D>& out) {

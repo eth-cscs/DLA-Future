@@ -172,7 +172,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
         const auto& [m, mb] = sz;
@@ -193,7 +193,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     // Note: solver not yet ready for GPU distributed, fallback to local GPU
     if (grid.size() != comm::Size2D(1, 1))
       continue;

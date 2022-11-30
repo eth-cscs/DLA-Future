@@ -195,7 +195,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
         const auto& [m, mb] = sz;
@@ -216,7 +216,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid grid : this->commGrids()) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     // TODO not all algorithms ready for a real distributed
     if (grid.size() != comm::Size2D(1, 1))
       continue;

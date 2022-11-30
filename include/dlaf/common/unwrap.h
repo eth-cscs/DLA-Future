@@ -30,7 +30,9 @@ template <typename T>
 struct Unwrapper<pika::future<T>> {
   template <typename U>
   static decltype(auto) unwrap(U&& u) {
-    return u.get();
+    static_assert(
+        sizeof(T) == 0,
+        "pika::futures should not be unwrapped automatically. You are most likely using keep_future on a future, in which case you should remove keep_future.");
   }
 };
 

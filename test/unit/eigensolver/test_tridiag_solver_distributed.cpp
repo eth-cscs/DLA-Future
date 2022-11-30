@@ -41,12 +41,12 @@ TYPED_TEST_SUITE(TridiagSolverDistTestGPU, MatrixElementTypes);
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
-//    {0, 8},
-//    {16, 16},
+    {0, 8},
+    {16, 16},
     {16, 8},
     {16, 4},
     {21, 4},
-//    {93, 7},
+    {93, 7},
 };
 // clang-format on
 
@@ -69,7 +69,6 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
   constexpr RealParam real_error = TypeUtilities<RealParam>::error;
 
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  //Index2D src_rank_index(0, 0);
 
   Distribution dist_trd(LocalElementSize(n, 2), TileElementSize(nb, 2));
   Distribution dist_evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
@@ -286,42 +285,40 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
   }
 }
 
-//TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
-//  for (const auto& comm_grid : this->commGrids()) {
-//    for (auto [n, nb] : tested_problems) {
-//      solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
-//      pika::threads::get_thread_manager().wait();
-//    }
-//  }
-//}
-//
-//TYPED_TEST(TridiagSolverDistTestMC, Random) {
-//  for (const auto& comm_grid : this->commGrids()) {
-//    for (auto [n, nb] : tested_problems) {
-//      solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
-//      pika::threads::get_thread_manager().wait();
-//    }
-//  }
-//}
+TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
+
+TYPED_TEST(TridiagSolverDistTestMC, Random) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
 
 #ifdef DLAF_WITH_CUDA
-TEST(TridiagSolverDistTestGPU, Laplace1D) {
-  using TypeParam = float;
-    comm::CommunicatorGrid comm_grid (MPI_COMM_WORLD, 2, 3, common::Ordering::ColumnMajor);
-  //for (const auto& comm_grid : this->commGrids()) {
+TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
+  for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
       pika::threads::get_thread_manager().wait();
     }
-  //}
+  }
 }
 
-//TYPED_TEST(TridiagSolverDistTestGPU, Random) {
-//  for (const auto& comm_grid : this->commGrids()) {
-//    for (auto [n, nb] : tested_problems) {
-//      solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
-//      pika::threads::get_thread_manager().wait();
-//    }
-//  }
-//}
+TYPED_TEST(TridiagSolverDistTestGPU, Random) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
 #endif

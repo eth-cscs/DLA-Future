@@ -277,21 +277,11 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
                                  initMirrorMatrix(ws.c),    initMirrorMatrix(evecs),
                                  initMirrorMatrix(ws.mat2)};
 
-  auto debug_barrier = [&](int i) {
-    evecs.waitLocalTiles();
-    evals.waitLocalTiles();
-    tridiag.waitLocalTiles();
-    DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
-    std::cout << "IMPL MARK " << i << " | RANK " << dist_evecs.rankIndex() << std::endl;
-  };
-
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
   std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
-
-debug_barrier(1);
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
@@ -301,12 +291,8 @@ debug_barrier(1);
   // `evecs` (nb x nb)
   solveDistLeaf(grid, full_task_chain, tridiag, evecs);
 
-debug_barrier(2);
-
   // Offload the diagonal from `tridiag` to `evals`
   offloadDiagonal(tridiag, evals);
-
-debug_barrier(3);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
@@ -314,8 +300,6 @@ debug_barrier(3);
     mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
                             i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals, evecs);
   }
-
-debug_barrier(4);
 }
 
 // \overload TridiagSolver<B, D, T>::call()

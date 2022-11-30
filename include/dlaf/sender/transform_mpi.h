@@ -58,7 +58,7 @@ struct MPICallHelper {
     // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
     // whereas we are only looking to guard the submission of the MPI operation. We therefore
     // explicitly release PromiseGuard<Communicator> after submitting the MPI operation with
-    // consumePromiseGuardCommunicator. 
+    // consumePromiseGuardCommunicator.
     //
     // We also use unwrap various types passed to the MPI operation, including PromiseGuards of
     // any type, to allow the MPI operation not to care whether a Communicator was wrapped in a
@@ -79,7 +79,7 @@ struct MPICallHelper {
 };
 
 template <typename F>
-MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
+MPICallHelper(F &&) -> MPICallHelper<std::decay_t<F>>;
 
 /// Lazy transformMPI. This does not submit the work and returns a sender.
 template <typename F, typename Sender,

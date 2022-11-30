@@ -1151,6 +1151,18 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           Matrix<T, D>& evecs) {
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
+  auto debug_barrier = [&](int i) {
+    evecs.waitLocalTiles();
+    evals.waitLocalTiles();
+    ws.z.waitLocalTiles();
+    ws.dtmp.waitLocalTiles();
+    ws.c.waitLocalTiles();
+    ws.i1.waitLocalTiles();
+    ws.i2.waitLocalTiles();
+    DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
+    std::cout << "MERGE MARK " << i << " | RANK " << dist_evecs.rankIndex() << std::endl;
+  };
+
   // Calculate the size of the upper subproblem
   SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
 
@@ -1168,6 +1180,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
 
+  // -- DEBUG
+  //{
+  //  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_h.z);
+  //  matrix::print(format::csv{}, "Z VEC", ws_h.z);
+  //}
+
   // Calculate the tolerance used for deflation
   pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
 
@@ -1176,6 +1194,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws.c);
+
+  debug_barrier(1);
 
   // Step #1
   //
@@ -1189,6 +1209,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
 
   // --- copy from GPU to CPU if on GPU
+  copy(idx_loc_begin, sz_loc_tiles, evecs, ws_h.evecs);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_h.z);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.c, ws_h.c);
@@ -1211,6 +1232,13 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
   // ---
 
+  debug_barrier(2);
+
+  // -- DEBUG
+  //{
+  //  matrix::print(format::csv{}, "EVALS POST DEFL", ws_h.evals);
+  //}
+
   // Step #2
   //
   //    i2 (in)  : initial <--- pre_sorted
@@ -1226,6 +1254,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, evals);
 
+  debug_barrier(3);
+
   // --- copy from GPU to CPU if on GPU
   copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
@@ -1239,19 +1269,40 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_loc_begin, sz_loc_tiles, ws_h.mat1, ws.mat1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws.dtmp);
   // ---
+  debug_barrier(4);
 
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
 
+  debug_barrier(5);
+
+  // -- DEBUG
+  //{
+  // copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
+  //  matrix::print(format::csv{}, "EVALS POST DEFL", ws_h.dtmp);
+  //}
+
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
+  debug_barrier(6);
   reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                              ws.z);
   formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.ztmp, ws.mat2, ws.mat1);
   sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat1, ws.mat2);
+  debug_barrier(7);
   reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2,
                          ws.z);
   normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, ws.mat2, ws.mat1);
   setUnitDiagDist(i_begin, i_end, k_fut, ws.mat1);
+  debug_barrier(8);
+
+  // -- DEBUG
+  //{
+  //  copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
+  //  for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+  //    std::cout << "\n 7. FIN EVEC : " << idx_loc_tile << std::endl;
+  //    matrix::print(format::csv{}, ws_h.mat1(idx_loc_tile).get());
+  //  }
+  //}
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
@@ -1263,6 +1314,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
 
+  debug_barrier(9);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
   copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Row>(grid, col_task_chain, i_begin,
@@ -1270,8 +1322,38 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                                                                        ws_h.mat2);
   copy(idx_loc_begin, sz_loc_tiles, ws_h.mat2, ws.mat2);
 
+  // -- DEBUG
+  {
+    copy(idx_loc_begin, sz_loc_tiles, ws.mat2, ws_h.mat2);
+    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+      std::cout << "\n PRE MULT MAT2 : " << idx_loc_tile << std::endl;
+      matrix::print(format::csv{}, ws_h.mat2(idx_loc_tile).get());
+    }
+  }
+
+// -- DEBUG
+  {
+    copy(idx_loc_begin, sz_loc_tiles, evecs, ws_h.evecs);
+    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+      std::cout << "\n PRE MULT EVECS : " << idx_loc_tile << std::endl;
+      matrix::print(format::csv{}, ws_h.evecs(idx_loc_tile).get());
+    }
+  }
+
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
                                                   T(1), evecs, ws.mat2, T(0), ws.mat1);
+
+
+  debug_barrier(10);
+
+  // -- DEBUG
+  {
+    copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
+    for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
+      std::cout << "\n POST MULT : " << idx_loc_tile << std::endl;
+      matrix::print(format::csv{}, ws_h.mat1(idx_loc_tile).get());
+    }
+  }
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
@@ -1285,12 +1367,16 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
 
+  debug_barrier(11);
+
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
   copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, i_begin,
                                                                        i_end, ws_h.i2, ws_h.mat1,
                                                                        ws_h.evecs);
   copy(idx_loc_begin, sz_loc_tiles, ws_h.evecs, evecs);
+
+  debug_barrier(12);
 }
 
 }

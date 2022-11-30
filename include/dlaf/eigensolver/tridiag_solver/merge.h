@@ -1133,9 +1133,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
                    ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(evecs)));
 
-  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                            std::move(rank1_fn),
-                                                                            std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
 }
 
 // Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.

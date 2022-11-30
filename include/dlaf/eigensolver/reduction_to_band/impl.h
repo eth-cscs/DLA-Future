@@ -558,9 +558,8 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task = [rank_v0, nrefls,
-                     cols = mat_a.blockSize().cols()](auto&& panel_tiles,
-                                                      comm::Communicator& communicator) {
+  auto panel_task = [rank_v0, nrefls, cols = panel_view.cols()](auto&& panel_tiles,
+                                                                comm::Communicator& communicator) {
     const bool has_head = communicator.rank() == rank_v0;
 
     common::internal::vector<T> taus;

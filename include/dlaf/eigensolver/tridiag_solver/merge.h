@@ -964,27 +964,6 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     GlobalElementSize sz_subm = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);
 
-    //    auto copy_to_buffer_sender =
-    //        ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
-    //    auto copy_to_buffer_fn = [sz_subm](const auto& k, const auto& ws_tile, const auto& comm_tile,
-    //                                       [[maybe_unused]] auto&&... ts) {
-    //      if constexpr (D == Device::CPU) {
-    //        if (sz_subm.cols() >= k) {
-    //          tile::internal::laset(blas::Uplo::General, T(1), T(1), comm_tile);
-    //          return;
-    //        }
-    //
-    //        SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
-    //        tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0),
-    //                    comm_tile);
-    //      }
-    //      else {
-    //        // TODO
-    //      }
-    //    };
-    //    ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(copy_to_buffer_fn),
-    //                                     std::move(copy_to_buffer_sender)));
-
     // set buffer to 1
     ex::start_detached(
         di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm)) |
@@ -996,25 +975,6 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
 
     ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
                                                       comm_vec.readwrite_sender(idx_gl_comm)));
-
-    //    auto copy_from_buffer_sender =
-    //        ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
-    //    auto copy_from_buffer_fn = [sz_subm](const auto& k, const auto& comm_tile, const auto& ws_tile,
-    //                                         [[maybe_unused]] auto&&... ts) {
-    //      if constexpr (D == Device::CPU) {
-    //        if (sz_subm.cols() >= k)
-    //          return;
-    //
-    //        SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
-    //        tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0),
-    //                    ws_tile);
-    //      }
-    //      else {
-    //        // TODO
-    //      }
-    //    };
-    //    ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(copy_from_buffer_fn),
-    //                                     std::move(copy_from_buffer_sender)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),
@@ -1061,83 +1021,12 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     ex::start_detached(comm_vec.readwrite_sender(idx_gl_comm) |
                        tile::set0(di::Policy<DefaultBackend_v<D>>()));
 
-    auto reduce_sum_fn = [sz_subm](const auto& k, auto& comm, const auto& ws_tile,
-                                   const auto& comm_tile) {
-      if (sz_subm.rows() >= k || sz_subm.cols() >= k)
-        return ex::make_unique_any_sender(ex::just());
-
-      SizeType ncols = std::min(ws_tile.size().cols(), k - sz_subm.cols());
-
-      auto copy_sender =
-          di::whenAllLift(k, sz_subm.rows(), sz_subm.cols(), Coord::Row, ex::just(std::cref(ws_tile)),
-                          Coord::Col, ex::just(std::cref(comm_tile))) |
-          di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(), copy1D_o);
-      auto comm_sender = comm::scheduleAllReduceInPlace(std::move(comm), MPI_SUM,
-                                                        ex::when_all(std::move(copy_sender),
-                                                                     ex::just(std::cref(comm_tile)))) |
-                         ex::drop_value();
-
-      //      auto sender =
-      //          di::whenAllLift(k, sz_subm.rows(), sz_subm.cols(), Coord::Row,
-      //          ex::just(std::cref(ws_tile)),
-      //                          Coord::Col, ex::just(std::cref(comm_tile))) |
-      //          di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(),
-      //          copy1D_o) | comm::scheduleAllReduceInPlace(std::move(comm), MPI_SUM,
-      //          ex::just(std::cref(comm_tile))) | ex::drop_value();
-
-      return ex::make_unique_any_sender(std::move(comm_sender));
-    };
-
-    ex::start_detached(ex::when_all(k_fut, col_task_chain(), mat.readwrite_sender(idx_loc_tile),
-                                    comm_vec.readwrite_sender(idx_gl_comm)) |
-                       ex::let_value(std::move(reduce_sum_fn)));
-
-    //    auto copy_to_buffer_sender =
-    //        ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
-    //    auto copy_to_buffer_fn = [sz_subm](const auto& k, const auto& ws_tile, const auto& comm_tile,
-    //                                       [[maybe_unused]] auto&&... ts) {
-    //      if constexpr (D == Device::CPU) {
-    //        if (sz_subm.rows() >= k || sz_subm.cols() >= k)
-    //          return;
-    //
-    //        SizeType ncols = std::min(comm_tile.size().rows(), k - sz_subm.cols());
-    //        for (SizeType j = 0; j < ncols; ++j) {
-    //          comm_tile(TileElementIndex(j, 0)) = ws_tile(TileElementIndex(0, j));
-    //        }
-    //      }
-    //      else {
-    //        // TODO
-    //      }
-    //    };
-    //    ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(copy_to_buffer_fn),
-    //                                     std::move(copy_to_buffer_sender)));
-
     // copy the first row of the matrix tile into the column tile of the buffer
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read_sender(idx_loc_tile),
                    Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
                                                       comm_vec.readwrite_sender(idx_gl_comm)));
-
-    //    auto copy_from_buffer_sender =
-    //        ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
-    //    auto copy_from_buffer_fn = [sz_subm](const auto& k, const auto& comm_tile, const auto& ws_tile,
-    //                                         [[maybe_unused]] auto&&... ts) {
-    //      if constexpr (D == Device::CPU) {
-    //        if (sz_subm.rows() >= k || sz_subm.cols() >= k)
-    //          return;
-    //
-    //        SizeType ncols = std::min(comm_tile.size().rows(), k - sz_subm.cols());
-    //        for (SizeType j = 0; j < ncols; ++j) {
-    //          ws_tile(TileElementIndex(0, j)) = comm_tile(TileElementIndex(j, 0));
-    //        }
-    //      }
-    //      else {
-    //        // TODO
-    //      }
-    //    };
-    //    ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(copy_from_buffer_fn),
-    //                                     std::move(copy_from_buffer_sender)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),

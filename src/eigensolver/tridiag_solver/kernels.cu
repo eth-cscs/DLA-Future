@@ -10,6 +10,7 @@
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
 #include "dlaf/memory/memory_view.h"
@@ -574,14 +575,21 @@ void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const
 
   int in_ld = (in_coord == Coord::Col) ? 1 : to_int(in_tile.ld());
   int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
-  int len = (in_coord == Coord::Col) ? to_int(std::min(in_tile.size().rows(), k - row))
-                                     : to_int(std::min(in_tile.size().cols(), k - col));
+
+  // if `in_tile` is the column buffer
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
 
   if constexpr (std::is_same<T, float>::value) {
-    DLAF_GPULAPACK_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
   }
   else {
-    DLAF_GPULAPACK_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
   }
 }
 

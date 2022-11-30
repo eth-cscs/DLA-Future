@@ -253,8 +253,15 @@ void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const C
 
   SizeType in_ld = (in_coord == Coord::Col) ? 1 : in_tile.ld();
   SizeType out_ld = (out_coord == Coord::Col) ? 1 : out_tile.ld();
+
+  // if `in_tile` is the column buffer
   SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
-                                          : std::min(out_tile.size().cols(), k - col);
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
 
   blas::copy(len, in_ptr, in_ld, out_ptr, out_ld);
 }

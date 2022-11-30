@@ -24,18 +24,8 @@ struct Unwrapper {
   }
 };
 
-// The external types future, shared_future, and reference_wrapper are
-// unwrapped by calling their get methods.
-template <typename T>
-struct Unwrapper<pika::future<T>> {
-  template <typename U>
-  static decltype(auto) unwrap(U&& u) {
-    static_assert(
-        sizeof(T) == 0,
-        "pika::futures should not be unwrapped automatically. You are most likely using keep_future on a future, in which case you should remove keep_future.");
-  }
-};
-
+// The external types shared_future, and reference_wrapper are unwrapped by
+// calling their get methods.
 template <typename T>
 struct Unwrapper<pika::shared_future<T>> {
   template <typename U>

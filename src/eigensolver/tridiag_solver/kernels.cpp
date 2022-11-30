@@ -241,4 +241,25 @@ void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
 DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, float);
 DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, double);
 
+template <class T>
+void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::CPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::CPU>& out_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  const T* in_ptr = in_tile.ptr();
+  T* out_ptr = out_tile.ptr();
+
+  SizeType in_ld = (in_coord == Coord::Col) ? 1 : in_tile.ld();
+  SizeType out_ld = (out_coord == Coord::Col) ? 1 : out_tile.ld();
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                          : std::min(out_tile.size().cols(), k - col);
+
+  blas::copy(len, in_ptr, in_ld, out_ptr, out_ld);
+}
+
+DLAF_CPU_COPY_1D_ETI(, float);
+DLAF_CPU_COPY_1D_ETI(, double);
+
 }

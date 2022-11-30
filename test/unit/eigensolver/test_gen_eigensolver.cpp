@@ -61,13 +61,20 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
                                    Matrix<const T, Device::CPU>& reference_b,
                                    eigensolver::EigensolverResult<T, D>& ret,
                                    GridIfDistributed... grid) {
+  // Note:
+  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
+  // calls that might lead to deadlocks.
+  constexpr bool isDistributed = (sizeof...(grid) == 1);
+  if constexpr (isDistributed)
+    pika::threads::get_thread_manager().wait();
+
   const SizeType m = reference_a.size().rows();
 
-  auto mat_a_local = allGather(blas::Uplo::General, reference_a);
-  auto mat_b_local = allGather(blas::Uplo::General, reference_b);
+  auto mat_a_local = allGather(blas::Uplo::General, reference_a, grid...);
+  auto mat_b_local = allGather(blas::Uplo::General, reference_b, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
-    return allGather(blas::Uplo::General, mat_evals.get(), grid...);
+    return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
@@ -189,10 +196,6 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid grid : this->commGrids()) {
-    // TODO not all algorithms ready for a real distributed
-    if (grid.size() != comm::Size2D(1, 1))
-      continue;
-
     for (auto uplo : blas_uplos) {
       for (auto sz : sizes) {
         const auto& [m, mb] = sz;

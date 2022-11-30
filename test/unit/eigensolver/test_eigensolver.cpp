@@ -62,6 +62,13 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 template <class T, Device D, class... GridIfDistributed>
 void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
                                 eigensolver::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
+  // Note:
+  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
+  // calls that might lead to deadlocks.
+  constexpr bool isDistributed = (sizeof...(grid) == 1);
+  if constexpr (isDistributed)
+    pika::threads::get_thread_manager().wait();
+
   const SizeType m = reference.size().rows();
 
   auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
@@ -152,10 +159,6 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   if (mat_a_h.size().isEmpty())
     return;
 
-  // Note:
-  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
-  // calls that might lead to deadlocks.
-  pika::threads::get_thread_manager().wait();
   testEigensolverCorrectness(uplo, reference, ret, grid);
 }
 

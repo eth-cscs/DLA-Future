@@ -47,7 +47,7 @@ stages:
            --build-arg CXXSTD
            --build-arg SPACK_ENVIRONMENT
            --build-arg SPACK_DLAF_REPO --build-arg USE_MKL
-           --build-arg NUM_PROCS=$(echo "$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us) $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us) $(nproc)" | awk ''{ print ($1/$2 > 0) ? int($1/$2+0.5) : $3; }'')
+           --build-arg NUM_PROCS=16
            -f $BUILD_DOCKER_FILE .'
 
     - podman push $BUILD_IMAGE:$TAG
@@ -60,7 +60,7 @@ stages:
       --build-arg EXTRA_APTGET_DEPLOY
       --build-arg USE_MKL
       --build-arg USE_ROCBLAS
-      --build-arg NUM_PROCS=$(echo "$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us) $(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us) $(nproc)" | awk ''{ print ($1/$2 > 0) ? int($1/$2+0.5) : $3; }'')
+      --build-arg NUM_PROCS=16
       -f $DEPLOY_DOCKER_FILE .'
     - podman push $DEPLOY_IMAGE
     - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml

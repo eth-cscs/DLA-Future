@@ -46,6 +46,22 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
   return internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b);
 }
 
+/// Generalized Eigensolver.
+///
+/// It solves the generalized eigenvalue problem A * x = lambda * B * x.
+///
+/// On exit:
+/// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
+/// including the diagonal, is destroyed.
+/// - @p mat_b contains the Cholesky decomposition of B
+///
+/// Implementation on distributed memory.
+///
+/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
+/// @param grid is the communicator grid on which the matrices @p mat_a and @p mat_b have been distributed,
+/// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
+/// @param mat_a contains the Hermitian matrix A
+/// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                        Matrix<T, D>& mat_b) {

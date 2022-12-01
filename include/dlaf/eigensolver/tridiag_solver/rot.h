@@ -287,9 +287,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
       // will drop, it is relevant to highlight that there is nothing that would stop to schedule and,
       // more importantly, allocate all of them together.
       tt::sync_wait(
-          ex::when_all(ex::just(1),  // workaround for problem with unwrapping
-                       ex::when_all_vector(std::move(comm_checkpoints))) |
-          di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](int, auto&&... ts) {
+          ex::when_all_vector(std::move(comm_checkpoints)) |
+          di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             // Note:
             // each one computes his own, but just stores either x or y (or both if on the same rank)
             if constexpr (D == Device::CPU) {

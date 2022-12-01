@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/execution.hpp>
+#include <pika/thread.hpp>
+
 namespace dlaf {
 namespace matrix {
 
@@ -50,6 +53,16 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
 
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
   pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
+
+  // TODO: This is temporary. Eventually only the below should be used and the
+  // above should be deleted.
+  auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
+               [this](const LocalTileIndex& index) {
+                 return this->tile_managers_senders_[tileLinearIndex(index)].readwrite();
+               },
+               range_local)) |
+           pika::execution::experimental::drop_value();
+  pika::this_thread::experimental::sync_wait(std::move(s));
 }
 
 template <class T, Device D>

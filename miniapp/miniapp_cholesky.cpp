@@ -124,10 +124,13 @@ struct choleskyMiniapp {
         std::cout << "[" << run_index << "]" << std::endl;
 
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
+      matrix_ref.waitLocalTiles();
       copy(matrix_ref, matrix_host);
 
       double elapsed_time;
       {
+        matrix_ref.waitLocalTiles();
+        matrix_host.waitLocalTiles();
         MatrixMirrorType matrix(matrix_host);
 
         // Wait for matrix to be copied to GPU (if necessary)
@@ -227,13 +230,13 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
     if (distribution.rankIndex() != distribution.rankGlobalTile(diag_tile))
       continue;
 
-    auto tile_set = [](typename Matrix<T, Device::CPU>::TileType&& tile) {
+    auto tile_set = [](const typename Matrix<T, Device::CPU>::TileType& tile) {
       if (tile.size().rows() > 1)
         lapack::laset(blas::Uplo::Upper, tile.size().rows() - 1, tile.size().cols() - 1, T{0}, T{0},
                       tile.ptr({0, 1}), tile.ld());
     };
 
-    matrix.readwrite_sender(diag_tile) |
+    matrix.readwrite_sender2(diag_tile) |
         transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set));
   }
 }
@@ -258,7 +261,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
-  auto tile_abs_diff = [](auto&& a, auto&& b) {
+  auto tile_abs_diff = [](const auto& a, const auto& b) {
     for (const auto el_idx : dlaf::common::iterate_range2d(a.size()))
       a(el_idx) = std::abs(a(el_idx) - b(el_idx));
   };
@@ -331,10 +334,10 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
         start_detached(
             dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                        L.read_sender(tile_wrt_local),
+                                        L.read_sender2(tile_wrt_local),
                                         dlaf::internal::keepFuture(tile_to_transpose),
                                         j_loc == 0 ? T(0.0) : T(1.0),
-                                        partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
+                                        partial_result.readwrite_sender2(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));
       }
     }
@@ -358,7 +361,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       // here the owner of the result performs the last step (difference with original)
 
       if (owner_result == current_rank) {
-        when_all(A.readwrite_sender(tile_result), mul_result.read_sender(tile_result)) |
+        when_all(A.readwrite_sender2(tile_result), mul_result.read_sender2(tile_result)) |
             transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff);
       }
     }

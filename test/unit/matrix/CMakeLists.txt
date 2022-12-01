@@ -8,12 +8,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-DLAF_addTest(
-  test_tile
-  SOURCES test_tile.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN PIKA
-)
+# DLAF_addTest(
+#   test_tile
+#   SOURCES test_tile.cpp
+#   LIBRARIES dlaf.core
+#   USE_MAIN PIKA
+# )
 
 DLAF_addTest(
   test_layout_info
@@ -76,13 +76,13 @@ DLAF_addTest(
   MPIRANKS 6
 )
 
-DLAF_addTest(
-  test_matrix_output
-  SOURCES test_matrix_output.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIPIKA
-  MPIRANKS 6
-)
+# DLAF_addTest(
+#   test_matrix_output
+#   SOURCES test_matrix_output.cpp
+#   LIBRARIES dlaf.core
+#   USE_MAIN MPIPIKA
+#   MPIRANKS 6
+# )
 
 DLAF_addTest(
   test_panel

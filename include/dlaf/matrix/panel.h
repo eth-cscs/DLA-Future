@@ -106,6 +106,43 @@ struct Panel<axis, const T, D> {
     external_[linearIndex(index)] = std::move(new_tile_fut);
   }
 
+  // template <typename Sender>
+  // void setTile2(const LocalTileIndex& index, Sender&& new_tile_sender) {
+  //   // TODO: What is this checking? Once an internal tile has been accessed, do
+  //   // not set an external tile?
+  //   DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
+  //   // TODO: Can't set an external tile twice?
+  //   DLAF_ASSERT(!isExternal(index), "already set to external", index);
+  //   // Note assertion on index done by linearIndex method.
+
+  //   has_been_used_ = true;
+
+  //   // TODO: Keep some assertions here.
+  //   // #if defined DLAF_ASSERT_MODERATE_ENABLE
+  //   //     {
+  //   //       namespace ex = pika::execution::experimental;
+
+  //   //       const auto panel_tile_size = tileSize(index);
+  //   //       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
+  //   //         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
+  //   //       });
+  //   //       ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
+  //   //     }
+  //   // #endif
+
+  //   external_[linearIndex(index)] = std::move(new_tile_fut);
+
+  //   namespace ex = pika::execution::experimental;
+
+  //   ex::start_detached(
+  //       ex::when_all(readwrite(), PIKA_FORWARD(Sender, sender)) |
+  //       ex::then([](auto&& wrapper, auto&& new_value) {
+  //         // TODO: Assert that new_value does _not_ come from another matrix. It
+  //         // should be a plain tile... False! It can come from another matrix
+  //         // (and often does). Must in that case protect access
+  //         wrapper.get() = PIKA_MOVE(new_value); }));
+  // }
+
   /// Access a Tile of the panel in read-only mode
   ///
   /// This method is very similar to the one available in dlaf::Matrix.
@@ -133,6 +170,26 @@ struct Panel<axis, const T, D> {
 
   auto read_sender(const LocalTileIndex& index) {
     return dlaf::internal::keepFuture(read(index));
+  }
+
+  auto read_sender2(const LocalTileIndex& index) {
+    has_been_used_ = true;
+
+    const SizeType internal_linear_idx = linearIndex(index);
+    if (isExternal(index)) {
+      DLAF_UNIMPLEMENTED("Panel does not yet support external tiles with the pure sender interface");
+      return external_[internal_linear_idx];
+    }
+    else {
+      internal_.insert(internal_linear_idx);
+      auto tile = data_.read_sender2(fullIndex(index));
+
+      // TODO: This needs type-erasure, and lots of it...
+      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+        return tile;
+      else
+        return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+    }
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -439,7 +496,12 @@ protected:
 
   ///> Container for references to external tiles
   common::internal::vector<pika::shared_future<ConstTileType>> external_;
+  // TODO: benefit of intrusive dependency management in tiles is that the
+  // type is always Tile. With different sources of tiles they may have
+  // different wrappers and different types.
+  // common::internal::vector<pika::execution::experimental::any_sender<ConstTileType>> external_senders_;
   ///> Keep track of usage status of internal tiles (accessed or not)
+  // TODO: unordered_set (and #include <unordered_set>)
   std::set<SizeType> internal_;
 };
 
@@ -463,6 +525,8 @@ struct Panel : public Panel<axis, const T, D> {
   pika::future<TileType> operator()(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
+    // NOTE: read-write access not allowed because setTile takes shared_future
+    // of const tiles.
 
     has_been_used_ = true;
 
@@ -471,12 +535,30 @@ struct Panel : public Panel<axis, const T, D> {
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
-      return splitTile(tile, {{0, 0}, tileSize(index)});
+      return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
   }
 
   auto readwrite_sender(const LocalTileIndex& index) {
     // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
     return this->operator()(index);
+  }
+
+  auto readwrite_sender2(const LocalTileIndex& index) {
+    // Note assertion on index done by linearIndex method.
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
+    // NOTE: read-write access not allowed because setTile takes shared_future
+    // of const tiles.
+
+    has_been_used_ = true;
+
+    BaseT::internal_.insert(BaseT::linearIndex(index));
+    auto tile = BaseT::data_.readwrite_sender2(BaseT::fullIndex(index));
+    // TODO: This needs type-erasure on the return type. How to solve? Need
+    // "things that can be unwrapped to mdspan/Tile".
+    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+      return tile;
+    else
+      return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
   }
 
 protected:

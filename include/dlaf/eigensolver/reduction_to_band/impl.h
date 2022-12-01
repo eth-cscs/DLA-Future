@@ -492,23 +492,25 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       auto tile_a = a(ij_local);
-      auto getSubA = [&view, ij_local](auto& tile_a) { return splitTile(tile_a, view(ij_local)); };
+      auto getSubA = [&view, ij_local](auto&& tile_a) {
+        return splitTile(std::move(tile_a), view(ij_local));
+      };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
       const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA(tile_a));
+        her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA(a(ij_local)));
       }
       else {
         // A -= X . V*
         her2kOffDiag<B>(priority, x.read_sender(ij_local), v.read_sender(transposed(ij_local)),
-                        getSubA(tile_a));
+                        getSubA(a(ij_local)));
 
         // A -= V . X*
         her2kOffDiag<B>(priority, v.read_sender(ij_local), x.read_sender(transposed(ij_local)),
-                        getSubA(tile_a));
+                        getSubA(a(ij_local)));
       }
     }
   }

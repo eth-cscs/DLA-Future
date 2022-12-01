@@ -29,9 +29,14 @@ using namespace testing;
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <class T>
-struct TridiagSolverDistTestMC : public TestWithCommGrids {};
-
+class TridiagSolverDistTestMC : public TestWithCommGrids {};
 TYPED_TEST_SUITE(TridiagSolverDistTestMC, MatrixElementTypes);
+
+#ifdef DLAF_WITH_CUDA
+template <typename Type>
+class TridiagSolverDistTestGPU : public TestWithCommGrids {};
+TYPED_TEST_SUITE(TridiagSolverDistTestGPU, MatrixElementTypes);
+#endif
 
 // clang-format off
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
@@ -297,3 +302,23 @@ TYPED_TEST(TridiagSolverDistTestMC, Random) {
     }
   }
 }
+
+#ifdef DLAF_WITH_CUDA
+TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveDistributedLaplace1D<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
+
+TYPED_TEST(TridiagSolverDistTestGPU, Random) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto [n, nb] : tested_problems) {
+      solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
+      pika::threads::get_thread_manager().wait();
+    }
+  }
+}
+#endif

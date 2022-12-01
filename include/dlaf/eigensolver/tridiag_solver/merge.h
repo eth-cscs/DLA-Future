@@ -94,7 +94,7 @@ struct WorkSpace {
   Matrix<ColType, device> c;
 };
 
-// Device::GPU
+// forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct WorkSpaceHostMirror {
   matrix::Matrix<T, Device::CPU> evals;
@@ -104,6 +104,10 @@ struct WorkSpaceHostMirror {
   matrix::Matrix<T, Device::CPU> ztmp;
   matrix::Matrix<SizeType, Device::CPU> i2;
   matrix::Matrix<ColType, Device::CPU> c;
+
+  // only needed for the distributed tridiagonal solver
+  matrix::Matrix<T, Device::CPU> evecs;
+  matrix::Matrix<T, Device::CPU> mat2;
 };
 
 template <class T>
@@ -115,6 +119,10 @@ struct WorkSpaceHostMirror<T, Device::CPU> {
   matrix::Matrix<T, Device::CPU>& ztmp;
   matrix::Matrix<SizeType, Device::CPU>& i2;
   matrix::Matrix<ColType, Device::CPU>& c;
+
+  // only needed for the distributed tridiagonal solver
+  matrix::Matrix<T, Device::CPU>& evecs;
+  matrix::Matrix<T, Device::CPU>& mat2;
 };
 
 template <class T>
@@ -733,7 +741,7 @@ void resetSubMatrix(LocalTileIndex begin, LocalTileSize sz, Matrix<T, Device::CP
 }
 
 template <class T, Device Source, Device Destination>
-void copy(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
+void copy(LocalTileIndex begin, LocalTileSize sz, Matrix<const T, Source>& source,
           Matrix<T, Destination>& dest) {
   if constexpr (Source == Destination) {
     if (&source == &dest)
@@ -741,20 +749,11 @@ void copy(SizeType i_begin, SizeType i_end, Matrix<const T, Source>& source,
   }
 
   namespace ex = pika::execution::experimental;
-  const auto& distribution = source.distribution();
-
-  bool is_col_matrix = distribution.size().cols() == 1;
-  SizeType j_begin = (is_col_matrix) ? 0 : i_begin;
-  SizeType j_end = (is_col_matrix) ? 0 : i_end;
-
-  for (SizeType j = j_begin; j <= j_end; ++j) {
-    for (SizeType i = i_begin; i <= i_end; ++i) {
-      ex::start_detached(
-          ex::when_all(source.read_sender(LocalTileIndex(i, j)),
-                       dest.readwrite_sender(LocalTileIndex(i, j))) |
-          dlaf::matrix::copy(
-              dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
-    }
+  for (auto idx : common::iterate_range2d(begin, sz)) {
+    ex::start_detached(
+        ex::when_all(source.read_sender(idx), dest.readwrite_sender(idx)) |
+        dlaf::matrix::copy(
+            dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
   }
 }
 
@@ -766,6 +765,9 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   LocalTileIndex idx_loc_begin(i_begin, i_begin);
   SizeType nrtiles = i_end - i_begin + 1;
   LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
+
+  LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
+  LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
@@ -793,19 +795,19 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
 
-  // copy from GPU to CPU
-  copy(i_begin, i_end, ws.i2, ws_h.i2);
-  copy(i_begin, i_end, ws.z, ws_h.z);
-  copy(i_begin, i_end, ws.c, ws_h.c);
-  copy(i_begin, i_end, evals, ws_h.evals);
+  // --- copy from GPU to CPU if on GPU
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_h.z);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.c, ws_h.c);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
 
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
 
-  // copy from CPU to GPU
-  copy(i_begin, i_end, ws_h.z, ws.z);
-  copy(i_begin, i_end, ws_h.c, ws.c);
-  copy(i_begin, i_end, ws_h.evals, evals);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.z, ws.z);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
+  // ---
 
   applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots_fut), evecs);
 
@@ -822,15 +824,19 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
   applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copy(i_begin, i_end, ws.dtmp, evals);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, evals);
 
-  copy(i_begin, i_end, evals, ws_h.evals);
-  copy(i_begin, i_end, ws.dtmp, ws_h.dtmp);
-  copy(i_begin, i_end, ws.ztmp, ws_h.ztmp);
+  // --- copy from GPU to CPU if on GPU
+  copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
+
   resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
-  copy(i_begin, i_end, ws_h.mat1, ws.mat1);
-  copy(i_begin, i_end, ws_h.dtmp, ws.dtmp);
+
+  copy(idx_loc_begin, sz_loc_tiles, ws_h.mat1, ws.mat1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws.dtmp);
+  // ---
 
   // formEvecs(i_begin, i_end, k_fut, evals, ws.ztmp, ws.mat2, ws.mat1);
   initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k_fut, evals, ws.mat1, ws.mat2);
@@ -958,36 +964,21 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     GlobalElementSize sz_subm = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);
 
-    auto copy_to_buffer_sender =
-        ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
-    auto copy_to_buffer_fn = [sz_subm](const auto& k, const auto& ws_tile, const auto& comm_tile) {
-      if (sz_subm.cols() >= k) {
-        tile::internal::laset(blas::Uplo::General, T(1), T(1), comm_tile);
-        return;
-      }
+    // set buffer to 1
+    ex::start_detached(
+        di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm)) |
+        tile::laset(di::Policy<DefaultBackend_v<D>>()));
 
-      SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
-      tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), ws_tile, TileElementIndex(0, 0),
-                  comm_tile);
-    };
-    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
-                                     std::move(copy_to_buffer_sender)));
+    // copy the first column of the matrix tile into the column tile of the buffer
+    copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, mat.read_sender(idx_loc_tile),
+                   Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
                                                       comm_vec.readwrite_sender(idx_gl_comm)));
 
-    auto copy_from_buffer_sender =
-        ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
-    auto copy_from_buffer_fn = [sz_subm](const auto& k, const auto& comm_tile, const auto& ws_tile) {
-      if (sz_subm.cols() >= k)
-        return;
-
-      SizeType nrows = std::min(comm_tile.size().rows(), k - sz_subm.rows());
-      tile::lacpy(TileElementSize(nrows, 1), TileElementIndex(0, 0), comm_tile, TileElementIndex(0, 0),
-                  ws_tile);
-    };
-    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_from_buffer_fn),
-                                     std::move(copy_from_buffer_sender)));
+    // copy the column tile of the buffer into the first column of the matrix tile
+    copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),
+                   Coord::Col, mat.readwrite_sender(idx_loc_tile));
   }
 }
 
@@ -1027,38 +1018,19 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     GlobalTileIndex idx_gl_comm(idx_gl_tile.col(), 0);
 
     // set buffer to zero
-    ex::start_detached(comm_vec.readwrite_sender(idx_gl_comm) | tile::set0(di::Policy<Backend::MC>()));
+    ex::start_detached(comm_vec.readwrite_sender(idx_gl_comm) |
+                       tile::set0(di::Policy<DefaultBackend_v<D>>()));
 
-    auto copy_to_buffer_sender =
-        ex::when_all(k_fut, mat.read_sender(idx_loc_tile), comm_vec.readwrite_sender(idx_gl_comm));
-    auto copy_to_buffer_fn = [sz_subm](const auto& k, const auto& ws_tile, const auto& comm_tile) {
-      if (sz_subm.rows() >= k || sz_subm.cols() >= k)
-        return;
-
-      SizeType ncols = std::min(comm_tile.size().rows(), k - sz_subm.cols());
-      for (SizeType j = 0; j < ncols; ++j) {
-        comm_tile(TileElementIndex(j, 0)) = ws_tile(TileElementIndex(0, j));
-      }
-    };
-    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_to_buffer_fn),
-                                     std::move(copy_to_buffer_sender)));
+    // copy the first row of the matrix tile into the column tile of the buffer
+    copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read_sender(idx_loc_tile),
+                   Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
                                                       comm_vec.readwrite_sender(idx_gl_comm)));
 
-    auto copy_from_buffer_sender =
-        ex::when_all(k_fut, comm_vec.read_sender(idx_gl_comm), mat.readwrite_sender(idx_loc_tile));
-    auto copy_from_buffer_fn = [sz_subm](const auto& k, const auto& comm_tile, const auto& ws_tile) {
-      if (sz_subm.rows() >= k || sz_subm.cols() >= k)
-        return;
-
-      SizeType ncols = std::min(comm_tile.size().rows(), k - sz_subm.cols());
-      for (SizeType j = 0; j < ncols; ++j) {
-        ws_tile(TileElementIndex(0, j)) = comm_tile(TileElementIndex(j, 0));
-      }
-    };
-    ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(copy_from_buffer_fn),
-                                     std::move(copy_from_buffer_sender)));
+    // copy the column tile of the buffer into the first column of the matrix tile
+    copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),
+                   Coord::Row, mat.readwrite_sender(idx_loc_tile));
   }
 }
 
@@ -1169,22 +1141,18 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
 }
 
 // Distributed version of the tridiagonal solver on CPUs
-template <class T>
+template <Backend B, class T, Device D>
 void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& full_task_chain,
                           common::Pipeline<comm::Communicator>& row_task_chain,
                           common::Pipeline<comm::Communicator>& col_task_chain, SizeType i_begin,
                           SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
-                          WorkSpace<T, Device::CPU>& ws, Matrix<T, Device::CPU>& evals,
-                          Matrix<T, Device::CPU>& evecs) {
-  constexpr Backend B = Backend::MC;
-  constexpr Device D = Device::CPU;
-
+                          WorkSpace<T, D>& ws, WorkSpaceHostMirror<T, D>& ws_h, Matrix<T, D>& evals,
+                          Matrix<T, D>& evecs) {
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
   // Calculate the size of the upper subproblem
   SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
-  SizeType nrtiles = dist_evecs.nrTiles().rows();
 
   // The local size of the subproblem
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -1194,6 +1162,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                              dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
   LocalTileSize sz_loc_tiles{idx_loc_end.row() - idx_loc_begin.row() + 1,
                              idx_loc_end.col() - idx_loc_begin.col() + 1};
+  LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
+  LocalTileSize sz_tiles_vec(i_end - i_begin + 1, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho_fut, evecs, ws.z);
@@ -1217,14 +1187,30 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   initIndex(i_begin, i_end, ws.i1);
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
+
+  // --- copy from GPU to CPU if on GPU
+  copy(idx_loc_begin, sz_loc_tiles, evecs, ws_h.evecs);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_h.z);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.c, ws_h.c);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
+
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
-      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws.i2, evals, ws.z, ws.c);
+      applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
+
   // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
   //
   // Note: this is unique because i_[begin|split|end] < nrtiles
+  SizeType nrtiles = dist_evecs.nrTiles().rows();
   comm::IndexT_MPI tag = to_int(i_begin + i_split * nrtiles + i_end * nrtiles * nrtiles);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots_fut),
-                                      evecs);
+                                      ws_h.evecs);
+
+  copy(idx_loc_begin, sz_loc_tiles, ws_h.evecs, evecs);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.z, ws.z);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
+  // ---
 
   // Step #2
   //
@@ -1239,12 +1225,22 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
       stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
   applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
-  copy(i_begin, i_end, ws.dtmp, evals);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, evals);
 
-  // Note: here ws.z is used as a contiguous buffer for the laed4 call
-  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws.mat1);
-  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, evals, ws.ztmp,
-                        ws.dtmp, ws.z, ws.mat1);
+  // --- copy from GPU to CPU if on GPU
+  copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
+
+  // Note: here ws_h.z is used as a contiguous buffer for the laed4 call
+  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
+  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, ws_h.evals,
+                        ws_h.ztmp, ws_h.dtmp, ws_h.z, ws_h.mat1);
+
+  copy(idx_loc_begin, sz_loc_tiles, ws_h.mat1, ws.mat1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws.dtmp);
+  // ---
+
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws.dtmp);
 
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
@@ -1267,8 +1263,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // prepared for the deflated system.
   //
   invertIndex(i_begin, i_end, ws.i3, ws.i2);
-  dlaf::permutations::permute<B, D, T, Coord::Row>(grid, col_task_chain, i_begin, i_end, ws.i2, ws.mat1,
-                                                   ws.mat2);
+
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
+  copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Row>(grid, col_task_chain, i_begin,
+                                                                       i_end, ws_h.i2, ws_h.mat1,
+                                                                       ws_h.mat2);
+  copy(idx_loc_begin, sz_loc_tiles, ws_h.mat2, ws.mat2);
+
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
                                                   T(1), evecs, ws.mat2, T(0), ws.mat1);
 
@@ -1283,8 +1285,13 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   sortIndex(i_begin, i_end, k_fut, ws.dtmp, ws.i1, ws.i2);
   applyIndex(i_begin, i_end, ws.i2, ws.dtmp, evals);
-  dlaf::permutations::permute<B, D, T, Coord::Col>(grid, row_task_chain, i_begin, i_end, ws.i2, ws.mat1,
-                                                   evecs);
+
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
+  copy(idx_loc_begin, sz_loc_tiles, ws.mat1, ws_h.mat1);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, i_begin,
+                                                                       i_end, ws_h.i2, ws_h.mat1,
+                                                                       ws_h.evecs);
+  copy(idx_loc_begin, sz_loc_tiles, ws_h.evecs, evecs);
 }
 
 }

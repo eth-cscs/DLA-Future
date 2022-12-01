@@ -10,6 +10,7 @@
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
 #include "dlaf/memory/memory_view.h"
@@ -560,6 +561,40 @@ void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
 
 DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, float);
 DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
+
+// Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
+template <class T>
+void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
+            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
+            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  const T* in_ptr = in_tile.ptr();
+  T* out_ptr = out_tile.ptr();
+
+  int in_ld = (in_coord == Coord::Col) ? 1 : to_int(in_tile.ld());
+  int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
+
+  // if `in_tile` is the column buffer
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
+
+  if constexpr (std::is_same<T, float>::value) {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+  else {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+}
+
+DLAF_GPU_COPY_1D_ETI(, float);
+DLAF_GPU_COPY_1D_ETI(, double);
 
 // -----------------------------------------
 

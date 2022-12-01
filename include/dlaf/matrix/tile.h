@@ -18,7 +18,6 @@
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"

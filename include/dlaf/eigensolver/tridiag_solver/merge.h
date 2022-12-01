@@ -12,7 +12,6 @@
 #include <pika/algorithm.hpp>
 #include <pika/future.hpp>
 #include <pika/parallel/algorithms/for_each.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/kernels.h"
@@ -272,15 +271,10 @@ void sortIndex(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType> k
                              ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
 
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(sort_fn), std::move(sender)));
+      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(sort_fn), std::move(sender)));
 }
 
 // Applies `index` to `in` to get `out`
-//
-// Note: `pika::unwrapping()` can't be used on this function because std::vector<Tile<const >> is
-// copied internally which requires that Tile<const > is copiable which it isn't. As a consequence the
-// API can't be simplified unless const is dropped.
 template <class T, Device D>
 void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& index,
                 Matrix<const T, D>& in, Matrix<T, D>& out) {
@@ -312,9 +306,7 @@ void applyIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& ind
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(applyIndex_fn),
-                                                             std::move(sender)));
+      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(applyIndex_fn), std::move(sender)));
 }
 
 template <Device D>
@@ -342,8 +334,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(inv_fn), std::move(sender)));
+      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(inv_fn), std::move(sender)));
 }
 
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that
@@ -399,8 +390,7 @@ inline pika::future<SizeType> stablePartitionIndexForDeflation(SizeType i_begin,
                              ex::when_all_vector(tc.readwrite(out)));
 
   return ex::make_future(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(part_fn), std::move(sender)));
+      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(part_fn), std::move(sender)));
 }
 
 template <Device D>
@@ -512,8 +502,7 @@ pika::future<std::vector<GivensRotation<T>>> applyDeflation(
                              ex::when_all_vector(tc.readwrite(c)));
 
   return ex::make_future(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                             std::move(deflate_fn), std::move(sender)));
+      di::transform(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender)));
 }
 
 // Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].
@@ -609,9 +598,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, pika::shared_future<Siz
                              ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
                              ex::when_all_vector(tc.readwrite(evecs)));
 
-  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                            std::move(rank1_fn),
-                                                                            std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
 }
 
 // Initializes a weight vector in the first local column of the local or distributed workspace matrix @p `ws`.
@@ -1114,9 +1101,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
                    ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(evecs)));
 
-  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                            std::move(rank1_fn),
-                                                                            std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
 }
 
 // Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.

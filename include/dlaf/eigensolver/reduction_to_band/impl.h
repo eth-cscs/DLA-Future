@@ -13,7 +13,6 @@
 #include <vector>
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/data.h"
@@ -559,10 +558,8 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task = [rank_v0, nrefls,
-                     cols = panel_view.cols()](auto&& panel_tiles,
-                                               common::PromiseGuard<comm::Communicator>&& comm_wrapper) {
-    auto communicator = comm_wrapper.ref();
+  auto panel_task = [rank_v0, nrefls, cols = panel_view.cols()](auto&& panel_tiles,
+                                                                comm::Communicator& communicator) {
     const bool has_head = communicator.rank() == rank_v0;
 
     common::internal::vector<T> taus;

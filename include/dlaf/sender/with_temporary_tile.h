@@ -12,6 +12,7 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/common/unwrap.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/types.h>
@@ -98,7 +99,7 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
   return std::forward<InSender>(in_sender) |
          // Start a new asynchronous scope for keeping the input tile alive
          // until all asynchronous operations are done.
-         ex::let_value(pika::unwrapping([f = std::forward<F>(f)](auto& in) mutable {
+         ex::let_value(dlaf::common::internal::Unwrapping{[f = std::forward<F>(f)](auto& in) mutable {
            constexpr Device in_device_type = std::decay_t<decltype(in)>::device;
            constexpr Backend copy_backend = CopyBackend_v<in_device_type, destination_device>;
 
@@ -195,6 +196,6 @@ auto withTemporaryTile(InSender&& in_sender, F&& f) {
            else {
              return helper_withtemp();
            }
-         }));
+         }});
 }
 }

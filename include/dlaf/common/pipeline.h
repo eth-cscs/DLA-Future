@@ -11,7 +11,8 @@
 #pragma once
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
+
+#include <dlaf/common/unwrap.h>
 
 namespace dlaf::common {
 
@@ -92,5 +93,15 @@ public:
 private:
   pika::execution::experimental::unique_any_sender<T>
       sender_;  ///< This contains always the "tail" of the queue of senders.
+};
+}
+
+namespace dlaf::common::internal {
+template <typename T>
+struct Unwrapper<dlaf::common::PromiseGuard<T>> {
+  template <typename U>
+  static decltype(auto) unwrap(U&& u) {
+    return u.ref();
+  }
 };
 }

@@ -154,9 +154,8 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
     applyPermutations<T, D, C>(GlobalElementIndex(0, 0), subm_distr.size(), 0, subm_distr, i_ptr,
                                mat_in_tiles, mat_out_tiles, std::forward<decltype(ts)>(ts)...);
   };
-  ex::start_detached(dlaf::internal::transform<dlaf::internal::TransformDispatchType::Plain,
-                                               false>(dlaf::internal::Policy<B>(), std::move(permute_fn),
-                                                      std::move(sender)));
+  ex::start_detached(
+      dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn), std::move(sender)));
 }
 
 template <class T, Device D>
@@ -303,8 +302,7 @@ auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distributio
   auto sender =
       ex::when_all(whenAllReadOnlyTilesArray(loc2gl_index), whenAllReadWriteTilesArray(packing_index));
   return ex::ensure_started(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>{},
-                                                             std::move(counts_fn), std::move(sender)));
+      di::transform(di::Policy<Backend::MC>{}, std::move(counts_fn), std::move(sender)));
 }
 
 // Copies index tiles belonging to the current process from the complete index @p global_index into the
@@ -340,8 +338,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                                mat_in_tiles, mat_out_tiles, std::forward<decltype(ts)>(ts)...);
   };
   ex::start_detached(
-      di::transform<di::TransformDispatchType::Plain, false>(di::Policy<DefaultBackend_v<D>>(),
-                                                             std::move(permute_fn), std::move(sender)));
+      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(permute_fn), std::move(sender)));
 }
 
 // Tranposes two tiles of compatible dimensions
@@ -409,9 +406,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   LocalTileSize sz{i_end - i_begin + 1, 1};
   auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
                              ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
-  ex::start_detached(di::transform<di::TransformDispatchType::Plain, false>(di::Policy<Backend::MC>(),
-                                                                            std::move(inv_fn),
-                                                                            std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 
 template <class T, Coord C>

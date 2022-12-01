@@ -15,7 +15,6 @@
 #include <mpi.h>
 
 #include <pika/execution.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/callable_object.h"
 #include "dlaf/common/pipeline.h"

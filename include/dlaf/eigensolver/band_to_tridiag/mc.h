@@ -13,7 +13,6 @@
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
@@ -652,7 +651,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   //       deps[j] as well.
 
   using common::Pipeline;
-  using common::PromiseGuard;
   using common::internal::vector;
   using util::ceilDiv;
 
@@ -712,14 +710,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   for (SizeType i = 0; i < max_workers; ++i)
     workers.emplace_back(SweepWorker<T>(size, b));
 
-  auto init_sweep = [a_ws](SizeType sweep, PromiseGuard<SweepWorker<T>> worker) {
-    worker.ref().startSweep(sweep, *a_ws);
-  };
-  auto cont_sweep = [a_ws, b](SizeType nr_steps, PromiseGuard<SweepWorker<T>> worker,
+  auto init_sweep = [a_ws](SizeType sweep, SweepWorker<T>& worker) { worker.startSweep(sweep, *a_ws); };
+  auto cont_sweep = [a_ws, b](SizeType nr_steps, SweepWorker<T>& worker,
                               matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
     for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.ref().compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
-      worker.ref().doStep(*a_ws);
+      worker.compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
+      worker.doStep(*a_ws);
     }
   };
 
@@ -980,7 +976,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   //       deps[*][j] as well.
   using common::iterate_range2d;
   using common::Pipeline;
-  using common::PromiseGuard;
   using common::RoundRobin;
   using common::internal::vector;
   using dlaf::internal::Policy;
@@ -1178,15 +1173,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> v_panels(n_workspaces, dist_panel);
 
   auto init_sweep = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType sweep,
-                       PromiseGuard<SweepWorkerDist<T>> worker) {
-    worker.ref().startSweep(sweep, *a_block);
-  };
+                       SweepWorkerDist<T>& worker) { worker.startSweep(sweep, *a_block); };
   auto cont_sweep = [b](std::shared_ptr<BandBlock<T, true>> a_block, SizeType nr_steps,
-                        PromiseGuard<SweepWorkerDist<T>> worker, matrix::Tile<T, Device::CPU>&& tile_v,
+                        SweepWorkerDist<T>& worker, matrix::Tile<T, Device::CPU>&& tile_v,
                         TileElementIndex index) {
     for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.ref().compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
-      worker.ref().doStep(*a_block);
+      worker.compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
+      worker.doStep(*a_block);
     }
   };
 

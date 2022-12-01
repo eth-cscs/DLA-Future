@@ -281,6 +281,11 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
       // Moreover, even if rotations are independent, scheduling all communications all together
       // would require a tag ad hoc ensuring that communication between same ranks do not get mixed
       // (in addition to having a tag ensuring that other calls to this algorithm do not get mixed too).
+      //
+      // Current serialization of the algorithm ensures that communications cannot be scheduled all
+      // together beforehand, and with them, also temporary buffers for the GPU case. If this assumption
+      // will drop, it is relevant to highlight that there is nothing that would stop to schedule and,
+      // more importantly, allocate all of them together.
       tt::sync_wait(
           ex::when_all(ex::just(1),  // workaround for problem with unwrapping
                        ex::when_all_vector(std::move(comm_checkpoints))) |

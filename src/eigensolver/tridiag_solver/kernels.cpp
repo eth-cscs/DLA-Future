@@ -224,4 +224,49 @@ void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType
 DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
 DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::CPU>& tile) {
+  // If all elements of the tile are after the `k` index reset the offset
+  SizeType tile_offset = k - tile_begin;
+  if (tile_offset < 0)
+    tile_offset = 0;
+
+  // Set all diagonal elements of the tile to 1.
+  for (SizeType i = tile_offset; i < tile.size().rows(); ++i) {
+    tile(TileElementIndex(i, i)) = 1;
+  }
+}
+
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, float);
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, double);
+
+template <class T>
+void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::CPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::CPU>& out_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  const T* in_ptr = in_tile.ptr();
+  T* out_ptr = out_tile.ptr();
+
+  SizeType in_ld = (in_coord == Coord::Col) ? 1 : in_tile.ld();
+  SizeType out_ld = (out_coord == Coord::Col) ? 1 : out_tile.ld();
+
+  // if `in_tile` is the column buffer
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
+
+  blas::copy(len, in_ptr, in_ld, out_ptr, out_ld);
+}
+
+DLAF_CPU_COPY_1D_ETI(, float);
+DLAF_CPU_COPY_1D_ETI(, double);
+
 }

@@ -75,7 +75,6 @@ std::vector<config_t> test_params{
 
 TYPED_TEST(PanelTest, AssignToConstRef) {
   using namespace dlaf;
-  using pika::unwrapping;
 
   for (auto& comm_grid : this->commGrids()) {
     for (const auto& cfg : test_params) {
@@ -254,7 +253,6 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   using TypeUtil = TypeUtilities<TypeParam>;
   using dlaf::internal::Policy;
   using dlaf::internal::transformDetach;
-  using pika::unwrapping;
   using pika::this_thread::experimental::sync_wait;
 
   constexpr Coord coord1D = orthogonal(panel_axis);

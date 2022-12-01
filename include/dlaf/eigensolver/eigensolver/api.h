@@ -12,6 +12,7 @@
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/vector.h"
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
@@ -28,6 +29,7 @@ namespace internal {
 template <Backend B, Device D, class T>
 struct Eigensolver {
   static EigensolverResult<T, D> call(blas::Uplo uplo, Matrix<T, D>& mat_a);
+  static EigensolverResult<T, D> call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a);
 };
 
 /// ---- ETI

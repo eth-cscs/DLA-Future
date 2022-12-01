@@ -11,7 +11,6 @@
 #pragma once
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include <blas.hh>
 
@@ -291,9 +290,6 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
-  if constexpr (backend != Backend::MC) {
-    DLAF_STATIC_UNIMPLEMENTED(T);
-  }
 
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)

@@ -28,11 +28,11 @@ namespace test {
 ///
 /// The futures are created using the matrix method operator()(const LocalTileIndex&).
 /// Note: This function is interchangeable with getFuturesUsingGlobalIndex.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<pika::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device D>
+std::vector<pika::future<Tile<T, D>>> getFuturesUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::future<Tile<T, device>>> result;
+  std::vector<pika::future<Tile<T, D>>> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
@@ -48,11 +48,11 @@ std::vector<pika::future<Tile<T, device>>> getFuturesUsingLocalIndex(MatrixType<
 ///
 /// The futures are created using the matrix method operator()(const GlobalTileIndex&).
 /// Note: This function is interchangeable with getFuturesUsingLocalIndex.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<pika::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device D>
+std::vector<pika::future<Tile<T, D>>> getFuturesUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::future<Tile<T, device>>> result;
+  std::vector<pika::future<Tile<T, D>>> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -73,12 +73,12 @@ std::vector<pika::future<Tile<T, device>>> getFuturesUsingGlobalIndex(MatrixType
 ///
 /// The futures are created using the matrix method read(const LocalTileIndex&).
 /// Note: This function is interchangeable with getSharedFuturesUsingGlobalIndex.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<pika::shared_future<Tile<const T, device>>> getSharedFuturesUsingLocalIndex(
-    MatrixType<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device D>
+std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingLocalIndex(
+    MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::shared_future<Tile<const T, device>>> result;
+  std::vector<pika::shared_future<Tile<const T, D>>> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
@@ -95,12 +95,12 @@ std::vector<pika::shared_future<Tile<const T, device>>> getSharedFuturesUsingLoc
 ///
 /// The futures are created using the matrix method read(const GlobalTileIndex&).
 /// Note: This function is interchangeable with getSharedFuturesUsingLocalIndex.
-template <template <class, Device> class MatrixType, class T, Device device>
-std::vector<pika::shared_future<Tile<const T, device>>> getSharedFuturesUsingGlobalIndex(
-    MatrixType<T, device>& mat) {
+template <template <class, Device> class MatrixType, class T, Device D>
+std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingGlobalIndex(
+    MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::shared_future<Tile<const T, device>>> result;
+  std::vector<pika::shared_future<Tile<const T, D>>> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {

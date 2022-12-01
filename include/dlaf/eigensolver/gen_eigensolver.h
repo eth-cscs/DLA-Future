@@ -45,4 +45,19 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 
   return internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b);
 }
+
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
+                                       Matrix<T, D>& mat_b) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
+  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
+  DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
+  DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
+  DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+
+  return internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b);
+}
 }

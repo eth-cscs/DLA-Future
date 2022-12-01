@@ -10,6 +10,7 @@
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
 #include "dlaf/memory/memory_view.h"
@@ -529,6 +530,74 @@ void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
+constexpr unsigned set_diag_kernel_sz = 256;
+
+template <class T>
+__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
+  const SizeType i = blockIdx.x * set_diag_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  tile[i + i * ld] = T(1);
+}
+
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream) {
+  SizeType tile_offset = k - tile_begin;
+  if (tile_offset < 0)
+    tile_offset = 0;
+  else if (tile_offset >= tile.size().rows())
+    return;
+
+  SizeType len = tile.size().rows() - tile_offset;
+  SizeType ld = tile.ld();
+  T* tile_ptr = tile.ptr(TileElementIndex(tile_offset, tile_offset));
+
+  dim3 nr_threads(set_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
+  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile_ptr);
+}
+
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, float);
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
+
+// Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
+template <class T>
+void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
+            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
+            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  const T* in_ptr = in_tile.ptr();
+  T* out_ptr = out_tile.ptr();
+
+  int in_ld = (in_coord == Coord::Col) ? 1 : to_int(in_tile.ld());
+  int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
+
+  // if `in_tile` is the column buffer
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
+
+  if constexpr (std::is_same<T, float>::value) {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+  else {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+}
+
+DLAF_GPU_COPY_1D_ETI(, float);
+DLAF_GPU_COPY_1D_ETI(, double);
+
+// -----------------------------------------
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, whip::stream_t stream) {
@@ -623,28 +692,5 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t s
 
 DLAF_GIVENS_ROT_ETI(, float);
 DLAF_GIVENS_ROT_ETI(, double);
-
-constexpr unsigned set_diag_kernel_sz = 256;
-
-template <class T>
-__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
-  const SizeType i = blockIdx.x * givens_rot_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  tile[i + i * ld] = T(1);
-}
-
-template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream) {
-  dim3 nr_threads(set_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
-  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile);
-}
-
-DLAF_SET_UNIT_DIAG_ETI(, float);
-DLAF_SET_UNIT_DIAG_ETI(, double);
-
-// --- Eigenvector formation kernels ---
 
 }

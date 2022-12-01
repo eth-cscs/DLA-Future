@@ -414,4 +414,13 @@ TYPED_TEST(ComputeTFactorTestGPU, CorrectnessLocal) {
     testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(m, k, mb, nb, v_start);
   }
 }
+
+TYPED_TEST(ComputeTFactorTestGPU, CorrectnessDistributed) {
+  for (auto comm_grid : this->commGrids()) {
+    for (const auto& [m, k, mb, nb, v_start] : configs) {
+      testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, k, mb, nb, v_start);
+    }
+  }
+}
+
 #endif

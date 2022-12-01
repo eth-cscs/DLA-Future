@@ -53,16 +53,15 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 // SUMMA: Scalable universal matrix multiplication algorithm.
 // Concurrency: Practice and Experience 9.4 (1997): 255-274
 template <Backend B, Device D, class T>
-void GeneralSub<B, D, T>::callNN(comm::CommunicatorGrid grid, const SizeType idx_begin,
-                                 const SizeType idx_last, const T alpha, Matrix<const T, D>& mat_a,
-                                 Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_chain,
+                                 common::Pipeline<comm::Communicator>& col_task_chain,
+                                 const SizeType idx_begin, const SizeType idx_last, const T alpha,
+                                 Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
+                                 Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   const auto& dist_a = mat_a.distribution();
   const auto rank = dist_a.rankIndex();
-
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
 
   // which rank has the last tile involved
   const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
@@ -138,8 +137,8 @@ void GeneralSub<B, D, T>::callNN(comm::CommunicatorGrid grid, const SizeType idx
     }
 
     // Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)
-    broadcast(rank_k.col(), panelA, mpi_row_task_chain);
-    broadcast(rank_k.row(), panelB, mpi_col_task_chain);
+    broadcast(rank_k.col(), panelA, row_task_chain);
+    broadcast(rank_k.row(), panelB, col_task_chain);
 
     // This is the core loop where the k step performs the update over the entire local matrix using
     // the col and row workspaces.

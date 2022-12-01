@@ -15,12 +15,12 @@ RUN apt-get -yqq update && \
     apt-get -yqq install --no-install-recommends \
     software-properties-common \
     build-essential gfortran \
-    autoconf automake \
+    autoconf automake ninja-build pkg-config \
     ${EXTRA_APTGET} \
     gawk \
     python3 python3-distutils \
     git tar wget curl ca-certificates gpg-agent jq tzdata \
-    patchelf unzip file gnupg2 && \
+    patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Install cmake
@@ -68,9 +68,12 @@ RUN spack external find \
     diffutils \
     findutils \
     git \
+    ninja \
     m4 \
+    ncurses \
     openssl \
     perl \
+    pkg-config \
     python \
     xz && \
     if [ "$USE_MKL" = "ON" ]; then \

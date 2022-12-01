@@ -79,8 +79,8 @@ void print(format::numpy, const Tile<const T, Device::CPU>& tile, std::ostream& 
      << ".reshape" << transposed(tile.size()) << ".T\n";
 }
 
-template <class T, Device device, template <class, Device> class MatrixLikeT>
-void print(format::numpy, std::string sym, MatrixLikeT<const T, device>& matrix,
+template <class T, Device D, template <class, Device> class MatrixLikeT>
+void print(format::numpy, std::string sym, MatrixLikeT<const T, D>& matrix,
            std::ostream& os = std::cout) {
   using common::iterate_range2d;
 

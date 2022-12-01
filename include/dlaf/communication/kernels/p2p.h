@@ -38,8 +38,7 @@ void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Isend(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), dest, tag, comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Isend(msg.data(), msg.count(), msg.mpi_type(), dest, tag, comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(send);
@@ -70,15 +69,15 @@ template <class CommSender, class Sender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto recv = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   return withTemporaryTile<comm_device_type, CopyToDestination::Yes, CopyFromDestination::No,
-                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(recv));
+                           RequireContiguous::No>(std::forward<Sender>(tile), std::move(send));
 }
 
 template <class CommSender, class Sender>
@@ -96,7 +95,7 @@ template <class CommSender, class Sender>
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 
-  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::D;
+  constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;
 
   return withTemporaryTile<comm_device_type, CopyToDestination::No, CopyFromDestination::Yes,

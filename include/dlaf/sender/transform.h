@@ -10,8 +10,8 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/unwrap.hpp>
 
+#include "dlaf/common/unwrap.h"
 #include "dlaf/init.h"
 #include "dlaf/schedulers.h"
 #include "dlaf/sender/policy.h"
@@ -26,13 +26,13 @@
 #include <pika/cuda.hpp>
 #endif
 
+#include <type_traits>
+
 namespace dlaf {
 namespace internal {
 
-// hipBLAS functions take a handle of type hipblasHandle_t which is a typedef
-// for a void pointer. Those functions can be therefore called with a
-// rocblas_handle (handle used for rocsolver functions). This tag is here to
-// disambiguate the call.
+// Both rocblas and rocsolver functions are called with a rocblas_handle. This
+// tag is here to disambiguate the call.
 enum class TransformDispatchType { Plain, Blas, Lapack };
 
 // The following are DLA-Future-specific transforms, with some helper variations
@@ -45,56 +45,19 @@ enum class TransformDispatchType { Plain, Blas, Lapack };
 // At its core, transform is a convenience wrapper around
 // sender | transfer(with_priority(scheduler, priority)) | then(unwrapping(f)).
 
-template <typename T>
-struct IsReferenceWrapper : std::false_type {};
-
-template <typename U>
-struct IsReferenceWrapper<std::reference_wrapper<U>> : std::true_type {};
-
-template <typename T>
-decltype(auto) getReferenceWrapper(T&& t) {
-  if constexpr (IsReferenceWrapper<std::decay_t<T>>::value) {
-    return t.get();
-  }
-  else {
-    return std::forward<T>(t);
-  }
-}
-
-template <typename F>
-struct TransformCallHelper {
-  std::decay_t<F> f;
-  template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(std::move(f)(getReferenceWrapper(std::forward<Ts>(ts))...)) {
-    return std::move(f)(getReferenceWrapper(std::forward<Ts>(ts))...);
-  }
-};
-
-template <typename F>
-TransformCallHelper(F &&) -> TransformCallHelper<std::decay_t<F>>;
-
 /// Lazy transform. This does not submit the work and returns a sender.
-template <TransformDispatchType Tag = TransformDispatchType::Plain, bool Unwrap = true,
-          Backend B = Backend::MC, typename F = void, typename Sender = void,
+template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
+          typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
-  using pika::unwrapping;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
-  auto f_unwrapping = [&]() {
-    if constexpr (Unwrap) {
-      return pika::unwrapping(TransformCallHelper{std::forward<F>(f)});
-    }
-    else {
-      return TransformCallHelper{std::forward<F>(f)};
-    }
-  }();
 
   if constexpr (B == Backend::MC) {
-    return then(std::move(transfer_sender), std::move(f_unwrapping));
+    return then(std::move(transfer_sender), dlaf::common::internal::Unwrapping{std::forward<F>(f)});
   }
   else if constexpr (B == Backend::GPU) {
 #if defined(DLAF_WITH_GPU)
@@ -103,14 +66,17 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, bool Unwrap 
     using pika::cuda::experimental::then_with_stream;
 
     if constexpr (Tag == TransformDispatchType::Plain) {
-      return then_with_stream(std::move(transfer_sender), std::move(f_unwrapping));
+      return then_with_stream(std::move(transfer_sender),
+                              dlaf::common::internal::Unwrapping{std::forward<F>(f)});
     }
     else if constexpr (Tag == TransformDispatchType::Blas) {
-      return then_with_cublas(std::move(transfer_sender), std::move(f_unwrapping),
+      return then_with_cublas(std::move(transfer_sender),
+                              dlaf::common::internal::Unwrapping{std::forward<F>(f)},
                               CUBLAS_POINTER_MODE_HOST);
     }
     else if constexpr (Tag == TransformDispatchType::Lapack) {
-      return then_with_cusolver(std::move(transfer_sender), std::move(f_unwrapping));
+      return then_with_cusolver(std::move(transfer_sender),
+                                dlaf::common::internal::Unwrapping{std::forward<F>(f)});
     }
     else {
       DLAF_STATIC_FAIL(
@@ -175,7 +141,7 @@ public:
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransform pa) {
-    return transform<Tag, true, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
+    return transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
 
@@ -201,7 +167,7 @@ public:
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {
     return pika::execution::experimental::start_detached(
-        transform<Tag, true, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
+        transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
   }
 };
 

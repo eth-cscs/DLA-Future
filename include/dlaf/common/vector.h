@@ -45,6 +45,14 @@ struct vector : public std::vector<T> {
   SizeType size() const noexcept {
     return static_cast<SizeType>(std::vector<T>::size());
   }
+
+  T& at(SizeType index) {
+    return std::vector<T>::at(to_sizet(index));
+  }
+
+  const T& at(SizeType index) const {
+    return std::vector<T>::at(to_sizet(index));
+  }
 };
 
 }

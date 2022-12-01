@@ -15,7 +15,6 @@
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
@@ -44,8 +43,8 @@ SizeType elIndex(TileElementIndex index, SizeType ld) {
 
 using TileSizes = std::tuple<TileElementSize, SizeType>;
 
-template <class T, Device device>
-TileSizes getSizes(const Tile<T, device>& tile) {
+template <class T, Device D>
+TileSizes getSizes(const Tile<T, D>& tile) {
   return TileSizes(tile.size(), tile.ld());
 }
 

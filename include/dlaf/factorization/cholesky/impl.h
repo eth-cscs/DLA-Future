@@ -10,7 +10,6 @@
 #pragma once
 
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"

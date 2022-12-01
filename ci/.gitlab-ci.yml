@@ -22,7 +22,7 @@ stages:
     SPACK_SHA: 770d71dff6428876f2cc996f8a0551df36a59e4f
     SPACK_DLAF_REPO: ./spack
   before_script:
-    - podman login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
     # Note: a tag can contain 0-9 A-Z a-z -_.
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
@@ -84,8 +84,8 @@ cpu release build gcc11:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-gcc11/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -105,8 +105,8 @@ cpu release build clang12:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-clang12/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-clang12/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -126,8 +126,8 @@ cpu release build clang13 cxx20:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-clang13-20/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
@@ -147,8 +147,8 @@ cpu codecov build gcc11:
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu-gcc11/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
@@ -168,8 +168,8 @@ cuda release build gcc11:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-cuda-gcc11/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
@@ -189,8 +189,8 @@ cuda codecov build gcc11:
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/codecov-cuda-gcc11/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
@@ -209,8 +209,8 @@ amdgpu release build clang10+rocm-5.2.3:
     USE_MKL: "OFF"
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm523.yaml
-    BUILD_IMAGE: $CI_REGISTRY_IMAGE/release-amdgpu-clang10/build
-    DEPLOY_IMAGE: $CI_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 64
     USE_CODECOV: "false"

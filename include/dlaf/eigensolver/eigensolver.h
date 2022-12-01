@@ -10,6 +10,8 @@
 #pragma once
 
 #include <blas.hh>
+
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/eigensolver/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -36,5 +38,14 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   DLAF_ASSERT(square_blocksize(mat), mat);
 
   return internal::Eigensolver<B, D, T>::call(uplo, mat);
+}
+
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
+  DLAF_ASSERT(square_size(mat), mat);
+  DLAF_ASSERT(square_blocksize(mat), mat);
+
+  return internal::Eigensolver<B, D, T>::call(grid, uplo, mat);
 }
 }

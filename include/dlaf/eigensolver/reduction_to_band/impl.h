@@ -993,6 +993,11 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   namespace ex = pika::execution::experimental;
 
+  // Note:
+  // This is a temporary workaround.
+  // See issue https://github.com/eth-cscs/DLA-Future/issues/729
+  pika::threads::get_thread_manager().wait();
+
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());

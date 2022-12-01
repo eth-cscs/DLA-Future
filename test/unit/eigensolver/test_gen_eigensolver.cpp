@@ -17,6 +17,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -29,8 +30,11 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
 template <typename Type>
-class GenEigensolverTest : public ::testing::Test {};
+class GenEigensolverTest : public TestWithCommGrids {};
 
 template <class T>
 using GenEigensolverTestMC = GenEigensolverTest<T>;
@@ -52,55 +56,38 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
 
-template <class T, Backend B, Device D>
-void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  const LocalElementSize size(m, m);
-  const TileElementSize block_size(mb, mb);
+template <class T, Device D, class... GridIfDistributed>
+void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
+                                   Matrix<const T, Device::CPU>& reference_b,
+                                   eigensolver::EigensolverResult<T, D>& ret,
+                                   GridIfDistributed... grid) {
+  // Note:
+  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
+  // calls that might lead to deadlocks.
+  constexpr bool isDistributed = (sizeof...(grid) == 1);
+  if constexpr (isDistributed)
+    pika::threads::get_thread_manager().wait();
 
-  Matrix<const T, Device::CPU> reference_a = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian(reference);
-    return reference;
-  }();
+  const SizeType m = reference_a.size().rows();
 
-  Matrix<const T, Device::CPU> reference_b = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian_positive_definite(reference);
-    return reference;
-  }();
-
-  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
-  copy(reference_a, mat_a_h);
-  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
-  copy(reference_b, mat_b_h);
-
-  auto ret = [&]() {
-    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
-    return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
-  }();
-
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  auto mat_a_local = allGather(blas::Uplo::General, reference_a);
-  auto mat_b_local = allGather(blas::Uplo::General, reference_b);
+  auto mat_a_local = allGather(blas::Uplo::General, reference_a, grid...);
+  auto mat_b_local = allGather(blas::Uplo::General, reference_b, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
     return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get());
+    return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
 
-  MatrixLocal<T> mat_be_local({m, m}, block_size);
+  MatrixLocal<T> mat_be_local({m, m}, reference_a.blockSize());
   // Compute B E which is needed for both checks.
   blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, m, T{1}, mat_b_local.ptr(),
              mat_b_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, mat_be_local.ptr(),
              mat_be_local.ld());
 
-  MatrixLocal<T> workspace({m, m}, block_size);
+  MatrixLocal<T> workspace({m, m}, reference_a.blockSize());
 
   // Check eigenvectors orthogonality (E^H B E == Id)
   blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
@@ -129,11 +116,91 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   CHECK_MATRIX_NEAR(mat_be_local, workspace, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
+template <class T, Backend B, Device D>
+void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference_a = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<const T, Device::CPU> reference_b = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
+    matrix::util::set_random_hermitian_positive_definite(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
+  copy(reference_a, mat_a_h);
+  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
+  copy(reference_b, mat_b_h);
+
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
+    return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret);
+}
+
+template <class T, Backend B, Device D>
+void testGenEigensolver(CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+                        const SizeType mb) {
+  const GlobalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference_a = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size, grid);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<const T, Device::CPU> reference_b = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size, grid);
+    matrix::util::set_random_hermitian_positive_definite(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
+  copy(reference_a, mat_a_h);
+  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
+  copy(reference_b, mat_b_h);
+
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
+    return eigensolver::genEigensolver<B>(grid, uplo, mat_a.get(), mat_b.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
+}
+
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
       const auto& [m, mb] = sz;
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(grid, uplo, m, mb);
+      }
     }
   }
 }
@@ -144,6 +211,21 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
     for (auto sz : sizes) {
       const auto& [m, mb] = sz;
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // TODO not all algorithms ready for a real distributed
+    if (grid.size() != comm::Size2D(1, 1))
+      continue;
+
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(grid, uplo, m, mb);
+      }
     }
   }
 }

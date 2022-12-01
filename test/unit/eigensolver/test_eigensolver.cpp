@@ -15,10 +15,12 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -31,8 +33,11 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
 template <typename Type>
-class EigensolverTest : public ::testing::Test {};
+class EigensolverTest : public TestWithCommGrids {};
 
 template <class T>
 using EigensolverTestMC = EigensolverTest<T>;
@@ -54,39 +59,29 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
 
-template <class T, Backend B, Device D>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  const LocalElementSize size(m, m);
-  const TileElementSize block_size(mb, mb);
+template <class T, Device D, class... GridIfDistributed>
+void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
+                                eigensolver::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
+  // Note:
+  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
+  // calls that might lead to deadlocks.
+  constexpr bool isDistributed = (sizeof...(grid) == 1);
+  if constexpr (isDistributed)
+    pika::threads::get_thread_manager().wait();
 
-  Matrix<const T, Device::CPU> reference = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian(reference);
-    return reference;
-  }();
+  const SizeType m = reference.size().rows();
 
-  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
-  copy(reference, mat_a_h);
-
-  auto ret = [&]() {
-    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::eigensolver<B>(uplo, mat_a.get());
-  }();
-
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  auto mat_a_local = allGather(blas::Uplo::General, reference);
+  auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
     MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
     return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get());
+    return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
 
-  MatrixLocal<T> workspace({m, m}, block_size);
+  MatrixLocal<T> workspace({m, m}, reference.blockSize());
 
   // Check eigenvectors orthogonality (E^H E == Id)
   blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
@@ -116,11 +111,73 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   CHECK_MATRIX_NEAR(res, workspace, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
 }
 
+template <class T, Backend B, Device D>
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
+  copy(reference, mat_a_h);
+
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::eigensolver<B>(uplo, mat_a.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testEigensolverCorrectness(uplo, reference, ret);
+}
+
+template <class T, Backend B, Device D>
+void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+                     const SizeType mb) {
+  const GlobalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(size, block_size, grid);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
+
+  Matrix<T, Device::CPU> mat_a_h(reference.distribution());
+  copy(reference, mat_a_h);
+
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::eigensolver<B>(grid, uplo, mat_a.get());
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testEigensolverCorrectness(uplo, reference, ret, grid);
+}
+
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto sz : sizes) {
       const auto& [m, mb] = sz;
       testEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
+    }
+  }
+}
+
+TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testEigensolver<TypeParam, Backend::MC, Device::CPU>(grid, uplo, m, mb);
+      }
     }
   }
 }
@@ -134,4 +191,20 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
     }
   }
 }
+
+TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // Note: solver not yet ready for GPU distributed, fallback to local GPU
+    if (grid.size() != comm::Size2D(1, 1))
+      continue;
+
+    for (auto uplo : blas_uplos) {
+      for (auto sz : sizes) {
+        const auto& [m, mb] = sz;
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU>(grid, uplo, m, mb);
+      }
+    }
+  }
+}
+
 #endif

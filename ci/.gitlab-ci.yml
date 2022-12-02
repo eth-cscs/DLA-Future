@@ -35,7 +35,7 @@ stages:
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
     - mount -t tmpfs none /var/tmp
     - mount -t tmpfs none /var/lib/containers
-    - echo "INFO: Using NUM_CORES_BUILD_DEPS=$NUM_CORES_BUILD_DEPS and NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"
+    - 'echo "INFO: Using NUM_CORES_BUILD_DEPS=$NUM_CORES_BUILD_DEPS and NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
     - '(podman pull $BUILD_IMAGE:$TAG)
        ||  podman build
            -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest

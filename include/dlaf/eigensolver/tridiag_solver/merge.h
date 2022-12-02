@@ -716,18 +716,6 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
   }
 }
 
-// Set submatrix to zero
-template <class T>
-void resetSubMatrix(LocalTileIndex begin, LocalTileSize sz, Matrix<T, Device::CPU>& mat) {
-  using dlaf::internal::Policy;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
-
-  for (auto idx : common::iterate_range2d(begin, sz)) {
-    start_detached(mat.readwrite_sender(idx) | tile::set0(Policy<Backend::MC>(thread_priority::normal)));
-  }
-}
-
 template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
@@ -802,7 +790,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
 
-  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
+  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
+                                  ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_h.mat1, ws.mat1);
@@ -1202,7 +1191,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
 
   // Note: here ws_h.z is used as a contiguous buffer for the laed4 call
-  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
+  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
+                                  ws_h.mat1);
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, ws_h.evals,
                         ws_h.ztmp, ws_h.dtmp, ws_h.z, ws_h.mat1);
 

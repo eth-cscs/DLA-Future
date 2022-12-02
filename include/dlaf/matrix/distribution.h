@@ -357,6 +357,9 @@ public:
   template <Coord rc>
   SizeType localTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(0 <= i_begin && i_end <= global_nr_tiles_.get<rc>(), i_begin, i_end,
+                      global_nr_tiles_.get<rc>());
+
     // Note the second assert is already done by the following calls.
     SizeType i_loc_begin = nextLocalTileFromGlobalTile<rc>(i_begin);
     SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_end) - 1;
@@ -371,6 +374,25 @@ public:
   LocalElementSize localTileElementDistance(GlobalTileIndex begin, GlobalTileIndex end) const noexcept {
     return {localTileElementDistance<Coord::Row>(begin.row(), end.row()),
             localTileElementDistance<Coord::Col>(begin.col(), end.col())};
+  }
+
+  template <Coord rc>
+  SizeType localTileElementDistanceFromLocalTile(SizeType i_loc_begin,
+                                                 SizeType i_loc_end) const noexcept {
+    DLAF_ASSERT_HEAVY(i_loc_begin <= i_loc_end, i_loc_begin, i_loc_end);
+    DLAF_ASSERT_HEAVY(0 <= i_loc_begin && i_loc_end <= local_nr_tiles_.get<rc>(), i_loc_begin, i_loc_end,
+                      local_nr_tiles_.get<rc>());
+
+    SizeType lsz = local_size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, lsz - (i_loc_end - 1) * nb);  // size of last local tile along `rc`
+    return (i_loc_end - i_loc_begin - 1) * nb + nbr;
+  }
+
+  LocalElementSize localTileElementDistanceFromLocalTile(LocalTileIndex begin,
+                                                         LocalTileIndex end) const noexcept {
+    return {localTileElementDistanceFromLocalTile<Coord::Row>(begin.row(), end.row()),
+            localTileElementDistanceFromLocalTile<Coord::Col>(begin.col(), end.col())};
   }
 
 private:

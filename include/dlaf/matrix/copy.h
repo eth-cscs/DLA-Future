@@ -13,37 +13,55 @@
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
 
+#include "dlaf/common/range2d.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace matrix {
+namespace dlaf::matrix {
 
-/// Copy values from another matrix.
+/// Copy subset of local tiles from @p source in the range @p idx_source_begin, @p sz to local subset of
+/// tiles in @p dest in the range @p idx_dest_begin, @p sz.
 ///
-/// Given a matrix with the same geometries and distribution, this function submits tasks that will
-/// perform the copy of each tile.
 template <class T, Device Source, Device Destination>
-void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
-  const auto& distribution = source.distribution();
+void copy(LocalTileSize sz, LocalTileIndex idx_source_begin, Matrix<const T, Source>& source,
+          LocalTileIndex idx_dest_begin, Matrix<T, Destination>& dest) {
+  if (idx_source_begin == idx_dest_begin && &source == &dest)
+    return;
 
-  DLAF_ASSERT(matrix::equal_size(source, dest), source, dest);
-  DLAF_ASSERT(matrix::equal_blocksize(source, dest), source, dest);
-  DLAF_ASSERT(matrix::equal_distributions(source, dest), source, dest);
-
-  const SizeType local_tile_rows = distribution.localNrTiles().rows();
-  const SizeType local_tile_cols = distribution.localNrTiles().cols();
+  // Given that `sz` is the same for both `source` and `dest` it is sufficient to only check if the local
+  // length of the copied region is the same
+  DLAF_ASSERT(source.distribution().localTileElementDistanceFromLocalTile(idx_source_begin,
+                                                                          idx_source_begin + sz) ==
+                  dest.distribution().localTileElementDistanceFromLocalTile(idx_dest_begin,
+                                                                            idx_dest_begin + sz),
+              source, dest);
 
   namespace ex = pika::execution::experimental;
-
-  for (SizeType j = 0; j < local_tile_cols; ++j) {
-    for (SizeType i = 0; i < local_tile_rows; ++i) {
-      ex::start_detached(ex::when_all(source.read_sender(LocalTileIndex(i, j)),
-                                      dest.readwrite_sender(LocalTileIndex(i, j))) |
-                         copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>{}));
-    }
+  for (auto idx_dest : common::iterate_range2d(idx_dest_begin, sz)) {
+    LocalTileIndex idx_source = idx_source_begin + (idx_dest - idx_dest_begin);
+    ex::start_detached(ex::when_all(source.read_sender(idx_source), dest.readwrite_sender(idx_dest)) |
+                       copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>{}));
   }
 }
+
+/// \overload copy()
+///
+/// This overload makes sure that both @p source and @p dest local tiles start @p idx_begin.
+///
+template <class T, Device Source, Device Destination>
+void copy(LocalTileIndex idx_begin, LocalTileSize sz, Matrix<const T, Source>& source,
+          Matrix<T, Destination>& dest) {
+  copy(sz, idx_begin, source, idx_begin, dest);
 }
+
+/// \overload copy()
+///
+/// This overload makes sure that all local tiles of @p source are copied to @p dest starting at tile (0, 0).
+///
+template <class T, Device Source, Device Destination>
+void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
+  copy(source.distribution().localNrTiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0), dest);
+}
+
 }

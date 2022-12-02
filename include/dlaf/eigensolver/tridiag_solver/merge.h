@@ -20,6 +20,7 @@
 #include "dlaf/eigensolver/tridiag_solver/rot.h"
 #include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
@@ -724,23 +725,6 @@ void resetSubMatrix(LocalTileIndex begin, LocalTileSize sz, Matrix<T, Device::CP
 
   for (auto idx : common::iterate_range2d(begin, sz)) {
     start_detached(mat.readwrite_sender(idx) | tile::set0(Policy<Backend::MC>(thread_priority::normal)));
-  }
-}
-
-template <class T, Device Source, Device Destination>
-void copy(LocalTileIndex begin, LocalTileSize sz, Matrix<const T, Source>& source,
-          Matrix<T, Destination>& dest) {
-  if constexpr (Source == Destination) {
-    if (&source == &dest)
-      return;
-  }
-
-  namespace ex = pika::execution::experimental;
-  for (auto idx : common::iterate_range2d(begin, sz)) {
-    ex::start_detached(
-        ex::when_all(source.read_sender(idx), dest.readwrite_sender(idx)) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
   }
 }
 

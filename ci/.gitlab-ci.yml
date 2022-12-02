@@ -35,7 +35,7 @@ stages:
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
     - mount -t tmpfs none /var/tmp
     - mount -t tmpfs none /var/lib/containers
-    - '(podman pull $BUILD_IMAGE:$TAG && podman tag $BUILD_IMAGE:$TAG $BUILD_IMAGE:latest)
+    - '(podman pull $BUILD_IMAGE:$TAG)
        ||  podman build
            -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest
            --format docker --layers --isolation chroot
@@ -51,7 +51,6 @@ stages:
            -f $BUILD_DOCKER_FILE .'
 
     - podman push $BUILD_IMAGE:$TAG
-    - podman push $BUILD_IMAGE:latest
     - 'podman build
       -t $DEPLOY_IMAGE
       --format docker --layers --isolation chroot

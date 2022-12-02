@@ -66,18 +66,21 @@ target_include_directories(
 )
 target_link_libraries(
   dlaf.prop
-  INTERFACE MPI::MPI_CXX
-            DLAF::LAPACK
-            pika::pika
-            lapackpp
-            blaspp
-            umpire
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
-            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
-            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
-            $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
+  INTERFACE
+    MPI::MPI_CXX
+    DLAF::LAPACK
+    pika::pika
+    lapackpp
+    blaspp
+    umpire
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
+    $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
+    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
 target_compile_definitions(
   dlaf.prop
@@ -149,7 +152,7 @@ function(DLAF_addSublibrary name)
   if(DLAF_WITH_GPU)
     target_sources(${object_lib_name} PRIVATE ${DLAF_ASL_GPU_SOURCES})
     if(DLAF_WITH_HIP)
-      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP)
+      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP LINKER_LANGUAGE HIP)
     endif()
   endif()
 
@@ -206,14 +209,18 @@ DLAF_addSublibrary(
 # Define DLAF's tridiagonal eigensolver library
 DLAF_addSublibrary(
   tridiagonal_eigensolver
-  SOURCES eigensolver/tridiag_solver/mc.cpp
-          eigensolver/tridiag_solver/kernels.cpp
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
-          # TODO: This should be moved to GPU_SOURCES once HIP is supported for the
-          # tridiagonal solver.
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
+  SOURCES eigensolver/tridiag_solver/mc.cpp eigensolver/tridiag_solver/kernels.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
+  GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
 )
+# Tmp! hip adds --offload-arch compile flag globally for the CXX language in
+# hip-config. We would like therefore to only link to rocthrust when compiling
+# with the HIP language. However COMPILE_LANGUAGE generator expression is not
+# accepted in a target_link_libraries call. The LINK_LANGUAGE generator
+# expression is therefore used but it doesn't add the include directories to the
+# target it's linked to. This is a workaround for that.
+target_include_directories(dlaf.tridiagonal_eigensolver_object SYSTEM PUBLIC ${rocthrust_INCLUDE_DIR})
 
 # Define DLAF's factorization library
 DLAF_addSublibrary(

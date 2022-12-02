@@ -81,7 +81,7 @@ DLAF_addTest(
 DLAF_addTest(
   test_tridiag_solver_rot
   SOURCES test_tridiag_solver_rot.cpp
-  LIBRARIES dlaf.core
+  LIBRARIES dlaf.tridiagonal_eigensolver dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )

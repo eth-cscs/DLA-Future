@@ -9,6 +9,10 @@
 //
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+#include <whip.hpp>
+#endif
+
 #include "dlaf/common/assert.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
@@ -16,11 +20,16 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels/p2p.h"
+#include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/when_all_lift.h"
 
@@ -31,43 +40,89 @@ namespace wrapper {
 template <Device D, class T>
 void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
              const T* col_data, const SizeType n, MPI_Request* req) {
-  if constexpr (D == Device::CPU) {
-    DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
-                                   rank_dest, tag, comm, req));
-  }
-  else {
-    dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
-    DLAF_STATIC_UNIMPLEMENTED(T);
-  }
+  static_assert(D == Device::CPU, "This function works just with CPU memory.");
+
+  DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                 rank_dest, tag, comm, req));
 }
 
 template <Device D, class T>
 void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag, T* col_data,
              const SizeType n, MPI_Request* req) {
-  if constexpr (D == Device::CPU) {
-    DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
-                                   rank_dest, tag, comm, req));
-  }
-  else {
-    dlaf::internal::silenceUnusedWarningFor(comm, rank_dest, tag, col_data, n, req);
-    DLAF_STATIC_UNIMPLEMENTED(T);
-  }
+  static_assert(D == Device::CPU, "This function works just with CPU memory.");
+
+  DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
+                                 rank_dest, tag, comm, req));
 }
 
 template <Device D, class T, class CommSender>
 auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, const T* col_data,
                      const SizeType n) {
-  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), dest, tag, col_data, n) |
-         dlaf::comm::internal::transformMPI(sendCol<D, T>);
+  namespace di = dlaf::internal;
+
+  if constexpr (D == Device::CPU) {
+    return di::whenAllLift(std::forward<CommSender>(comm), dest, tag, col_data, n) |
+           dlaf::comm::internal::transformMPI(sendCol<D, T>);
+  }
+#ifdef DLAF_WITH_GPU
+  else if constexpr (D == Device::GPU) {
+    namespace ex = pika::execution::experimental;
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+
+    return ex::just(memory::MemoryView<T, Device::CPU>{n}) |
+           ex::let_value([comm = std::forward<CommSender>(comm), dest, tag, col_data,
+                          n](memory::MemoryView<T, Device::CPU>& mem_view) mutable {
+             auto copy =
+                 ex::just(mem_view(), col_data, to_sizet(n) * sizeof(T), whip::memcpy_device_to_host) |
+                 di::transform(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>{thread_priority::high},
+                               whip::memcpy_async);
+
+             return di::whenAllLift(std::move(copy), std::forward<CommSender>(comm), dest, tag,
+                                    mem_view(), n) |
+                    dlaf::comm::internal::transformMPI(sendCol<Device::CPU, T>);
+           });
+  }
+#endif
+  else {
+    DLAF_STATIC_UNIMPLEMENTED(T);
+  }
 }
 
 template <Device D, class T, class CommSender>
 auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, T* col_data,
                      SizeType n) {
-  return dlaf::internal::whenAllLift(std::forward<CommSender>(comm), source, tag, col_data, n) |
-         dlaf::comm::internal::transformMPI(recvCol<D, T>);
-}
+  namespace di = dlaf::internal;
 
+  if constexpr (D == Device::CPU) {
+    return di::whenAllLift(std::forward<CommSender>(comm), source, tag, col_data, n) |
+           dlaf::comm::internal::transformMPI(recvCol<D, T>);
+  }
+#ifdef DLAF_WITH_GPU
+  else if constexpr (D == Device::GPU) {
+    using dlaf::matrix::internal::CopyBackend_v;
+    using pika::execution::thread_priority;
+
+    namespace ex = pika::execution::experimental;
+
+    return ex::just(memory::MemoryView<T, Device::CPU>{n}) |
+           ex::let_value([comm = std::forward<CommSender>(comm), source, tag, col_data,
+                          n](memory::MemoryView<T, Device::CPU>& mem_view) mutable {
+             auto recv = di::whenAllLift(std::forward<CommSender>(comm), source, tag, mem_view(), n) |
+                         dlaf::comm::internal::transformMPI(recvCol<Device::CPU, T>);
+
+             return di::whenAllLift(std::move(recv), col_data, mem_view(), to_sizet(n) * sizeof(T),
+                                    whip::memcpy_host_to_device) |
+                    di::transform(di::Policy<
+                                      CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high},
+                                  whip::memcpy_async);
+           });
+  }
+#endif
+  else {
+    DLAF_STATIC_UNIMPLEMENTED(T);
+  }
+}
 }
 
 template <class T>
@@ -226,8 +281,13 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
       // Moreover, even if rotations are independent, scheduling all communications all together
       // would require a tag ad hoc ensuring that communication between same ranks do not get mixed
       // (in addition to having a tag ensuring that other calls to this algorithm do not get mixed too).
+      //
+      // Current serialization of the algorithm ensures that communications cannot be scheduled all
+      // together beforehand, and with them, also temporary buffers for the GPU case. If this assumption
+      // will drop, it is relevant to highlight that there is nothing that would stop to schedule and,
+      // more importantly, allocate all of them together.
       tt::sync_wait(
-          di::whenAllLift(ex::when_all_vector(std::move(comm_checkpoints))) |
+          ex::when_all_vector(std::move(comm_checkpoints)) |
           di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
             // Note:
             // each one computes his own, but just stores either x or y (or both if on the same rank)
@@ -235,8 +295,13 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
               static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
               blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
             }
-            else {
+#ifdef DLAF_WITH_GPU
+            else if constexpr (D == Device::GPU) {
               givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
+            }
+#endif
+            else {
+              DLAF_STATIC_UNIMPLEMENTED(T);
             }
           }));
     }

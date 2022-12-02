@@ -53,7 +53,9 @@ endif()
 
 if(DLAF_WITH_HIP)
   find_dependency(rocblas)
+  find_dependency(rocprim)
   find_dependency(rocsolver)
+  find_dependency(rocthrust)
 endif()
 
 find_dependency(blaspp PATHS @blaspp_DIR@)

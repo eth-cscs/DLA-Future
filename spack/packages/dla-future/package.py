@@ -65,7 +65,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("whip +rocm", when="+rocm")
 
     depends_on("rocblas", when="+rocm")
+    depends_on("rocprim", when="+rocm")
     depends_on("rocsolver", when="+rocm")
+    depends_on("rocthrust", when="+rocm")
 
     conflicts("+cuda", when="+rocm")
 

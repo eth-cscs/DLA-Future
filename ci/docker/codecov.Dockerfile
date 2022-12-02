@@ -22,6 +22,7 @@ SHELL ["/bin/bash", "-c"]
 # Inject the coverage option in the spack package
 RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
 
+ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
@@ -29,7 +30,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci install --keep-stage --verbose
+    spack -e ci install --jobs ${NUM_PROC} --keep-stage --verbose
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \

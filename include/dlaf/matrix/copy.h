@@ -26,8 +26,11 @@ namespace dlaf::matrix {
 template <class T, Device Source, Device Destination>
 void copy(LocalTileSize sz, LocalTileIndex idx_source_begin, Matrix<const T, Source>& source,
           LocalTileIndex idx_dest_begin, Matrix<T, Destination>& dest) {
-  if (idx_source_begin == idx_dest_begin && &source == &dest)
-    return;
+  // Note: the constexpr check is ncessary to avoid compiler errors for comparison of distinct pointer types
+  if constexpr (Source == Destination) {
+    if (idx_source_begin == idx_dest_begin && &source == &dest)
+      return;
+  }
 
   // Given that `sz` is the same for both `source` and `dest` it is sufficient to only check if the local
   // length of the copied region is the same

@@ -212,7 +212,7 @@ DLAF_addSublibrary(
           # TODO: This should be moved to GPU_SOURCES once HIP is supported for the
           # tridiagonal solver.
           $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
-  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
+  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
 
 # Define DLAF's factorization library

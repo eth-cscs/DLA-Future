@@ -136,7 +136,7 @@ public:
 
 }
 
-/// Sets the subset of local tiles of @p matrix in the 2D range @p begin @p sz to zero.
+/// Sets to zero the subset of local tiles of @p matrix in the 2D range starting at @p begin with size @p sz.
 ///
 template <Backend backend, class T, Device D>
 void set0(pika::execution::thread_priority priority, LocalTileIndex begin, LocalTileSize sz,

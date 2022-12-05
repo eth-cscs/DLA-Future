@@ -20,6 +20,7 @@
 #include "dlaf/communication/sync/basic.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/sender/keep_future.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -32,7 +33,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 
 using pika::execution::thread_priority;
-using pika::execution::experimental::keep_future;
 using pika::execution::experimental::start_detached;
 using pika::this_thread::experimental::sync_wait;
 
@@ -162,7 +162,8 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(keep_future(tile_transposed)).get(),
+        CHECK_TILE_NEAR(transposed_conj_tile,
+                        sync_wait(dlaf::internal::keepFuture(tile_transposed)).get(),
                         TypeUtilities<T>::error, TypeUtilities<T>::error);
       }
       else if (current_rank == owner_transposed) {

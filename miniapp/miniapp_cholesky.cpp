@@ -33,12 +33,12 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
 namespace {
 
-using pika::execution::experimental::keep_future;
 using pika::execution::experimental::start_detached;
 using pika::execution::experimental::when_all;
 
@@ -331,7 +331,8 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
         start_detached(
             dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                        L.read_sender(tile_wrt_local), keep_future(tile_to_transpose),
+                                        L.read_sender(tile_wrt_local),
+                                        dlaf::internal::keepFuture(tile_to_transpose),
                                         j_loc == 0 ? T(0.0) : T(1.0),
                                         partial_result.readwrite_sender(LocalTileIndex{i_loc, 0})) |
             dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));

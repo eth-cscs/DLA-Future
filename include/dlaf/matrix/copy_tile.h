@@ -19,7 +19,6 @@
 #include "dlaf/common/callable_object.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_if_shared_future.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"

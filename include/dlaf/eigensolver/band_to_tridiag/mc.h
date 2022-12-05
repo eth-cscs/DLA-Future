@@ -33,6 +33,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/traits.h"
 
@@ -978,6 +979,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using common::Pipeline;
   using common::RoundRobin;
   using common::internal::vector;
+  using dlaf::internal::keepFuture;
   using dlaf::internal::Policy;
   using matrix::copy;
   using matrix::internal::CopyBackend_v;
@@ -1330,7 +1332,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                  &compute_v_tag](const LocalTileIndex index_panel, const matrix::SubTileSpec spec_panel,
                                  const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
                                  const matrix::SubTileSpec spec_v) {
-                  auto tile_v_panel = ex::keep_future(splitTile(v_panel.read(index_panel), spec_panel));
+                  auto tile_v_panel = keepFuture(splitTile(v_panel.read(index_panel), spec_panel));
                   if (rank == rank_v) {
                     auto tile_v = splitTile(mat_v(index_v), spec_v);
                     ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |

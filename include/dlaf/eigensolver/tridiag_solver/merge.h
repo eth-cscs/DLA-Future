@@ -20,6 +20,7 @@
 #include "dlaf/eigensolver/tridiag_solver/rot.h"
 #include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
@@ -715,35 +716,6 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, pika::shared_future<SizeType>
   }
 }
 
-// Set submatrix to zero
-template <class T>
-void resetSubMatrix(LocalTileIndex begin, LocalTileSize sz, Matrix<T, Device::CPU>& mat) {
-  using dlaf::internal::Policy;
-  using pika::execution::thread_priority;
-  using pika::execution::experimental::start_detached;
-
-  for (auto idx : common::iterate_range2d(begin, sz)) {
-    start_detached(mat.readwrite_sender(idx) | tile::set0(Policy<Backend::MC>(thread_priority::normal)));
-  }
-}
-
-template <class T, Device Source, Device Destination>
-void copy(LocalTileIndex begin, LocalTileSize sz, Matrix<const T, Source>& source,
-          Matrix<T, Destination>& dest) {
-  if constexpr (Source == Destination) {
-    if (&source == &dest)
-      return;
-  }
-
-  namespace ex = pika::execution::experimental;
-  for (auto idx : common::iterate_range2d(begin, sz)) {
-    ex::start_detached(
-        ex::when_all(source.read_sender(idx), dest.readwrite_sender(idx)) |
-        dlaf::matrix::copy(
-            dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>>{}));
-  }
-}
-
 template <Backend backend, Device device, class T>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::shared_future<T> rho_fut,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
@@ -818,7 +790,8 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, pika::
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, ws_h.dtmp);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
 
-  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
+  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
+                                  ws_h.mat1);
   solveRank1Problem(i_begin, i_end, k_fut, rho_fut, ws_h.evals, ws_h.ztmp, ws_h.dtmp, ws_h.mat1);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_h.mat1, ws.mat1);
@@ -1174,7 +1147,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
 
   // --- copy from GPU to CPU if on GPU
-  copy(idx_loc_begin, sz_loc_tiles, evecs, ws_h.evecs);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_h.z);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.c, ws_h.c);
@@ -1183,19 +1155,18 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   pika::future<std::vector<GivensRotation<T>>> rots_fut =
       applyDeflation(i_begin, i_end, rho_fut, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
 
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.z, ws.z);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
+  // ---
+
   // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
   //
   // Note: this is unique because i_[begin|split|end] < nrtiles
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   comm::IndexT_MPI tag = to_int(i_begin + i_split * nrtiles + i_end * nrtiles * nrtiles);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots_fut),
-                                      ws_h.evecs);
-
-  copy(idx_loc_begin, sz_loc_tiles, ws_h.evecs, evecs);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.z, ws.z);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.evals, evals);
-  // ---
+                                      evecs);
 
   // Step #2
   //
@@ -1218,7 +1189,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.ztmp, ws_h.ztmp);
 
   // Note: here ws_h.z is used as a contiguous buffer for the laed4 call
-  resetSubMatrix(idx_loc_begin, sz_loc_tiles, ws_h.mat1);
+  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
+                                  ws_h.mat1);
   solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k_fut, rho_fut, ws_h.evals,
                         ws_h.ztmp, ws_h.dtmp, ws_h.z, ws_h.mat1);
 

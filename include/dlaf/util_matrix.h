@@ -136,14 +136,25 @@ public:
 
 }
 
-/// Sets all the elements of all the tiles to zero
+/// Sets to zero the subset of local tiles of @p matrix in the 2D range starting at @p begin with size @p sz.
+///
 template <Backend backend, class T, Device D>
-void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
+void set0(pika::execution::thread_priority priority, LocalTileIndex begin, LocalTileSize sz,
+          Matrix<T, D>& matrix) {
   using dlaf::internal::Policy;
   using pika::execution::experimental::start_detached;
 
-  for (const auto& idx : iterate_range2d(matrix.distribution().localNrTiles()))
+  for (const auto& idx : iterate_range2d(begin, sz))
     start_detached(matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)));
+}
+
+/// \overload set0
+///
+/// This overload sets all tiles @p matrix to zero.
+///
+template <Backend backend, class T, Device D>
+void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
+  set0<backend>(priority, LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix);
 }
 
 /// Sets all the elements of all the tiles in the active range to zero

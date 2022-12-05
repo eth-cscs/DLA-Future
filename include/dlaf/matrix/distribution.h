@@ -355,8 +355,11 @@ public:
   /// Returns the local element size of the region between global tile indices @p i_begin and @p i_end
   /// along the @p rc coordinate
   template <Coord rc>
-  SizeType localTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
+  SizeType localElementDistanceFromGlobalTile(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
+    DLAF_ASSERT_HEAVY(0 <= i_begin && i_end <= global_nr_tiles_.get<rc>(), i_begin, i_end,
+                      global_nr_tiles_.get<rc>());
+
     // Note the second assert is already done by the following calls.
     SizeType i_loc_begin = nextLocalTileFromGlobalTile<rc>(i_begin);
     SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_end) - 1;
@@ -368,9 +371,36 @@ public:
     return (i_loc_last - i_loc_begin) * nb + nbr;
   }
 
-  LocalElementSize localTileElementDistance(GlobalTileIndex begin, GlobalTileIndex end) const noexcept {
-    return {localTileElementDistance<Coord::Row>(begin.row(), end.row()),
-            localTileElementDistance<Coord::Col>(begin.col(), end.col())};
+  /// \overlap localElementDistanceFromGlobalTile
+  ///
+  /// This overlap implements the 2D version of the function.
+  LocalElementSize localElementDistanceFromGlobalTile(GlobalTileIndex begin,
+                                                      GlobalTileIndex end) const noexcept {
+    return {localElementDistanceFromGlobalTile<Coord::Row>(begin.row(), end.row()),
+            localElementDistanceFromGlobalTile<Coord::Col>(begin.col(), end.col())};
+  }
+
+  /// Returns the local element size of the region between the local tile indices @p i_loc_begin and @p
+  /// i_loc_end along the @p rc coordinate
+  template <Coord rc>
+  SizeType localElementDistanceFromLocalTile(SizeType i_loc_begin, SizeType i_loc_end) const noexcept {
+    DLAF_ASSERT_HEAVY(i_loc_begin <= i_loc_end, i_loc_begin, i_loc_end);
+    DLAF_ASSERT_HEAVY(0 <= i_loc_begin && i_loc_end <= local_nr_tiles_.get<rc>(), i_loc_begin, i_loc_end,
+                      local_nr_tiles_.get<rc>());
+
+    SizeType lsz = local_size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, lsz - (i_loc_end - 1) * nb);  // size of last local tile along `rc`
+    return (i_loc_end - i_loc_begin - 1) * nb + nbr;
+  }
+
+  /// \overlap localElementDistanceFromLocalTile
+  ///
+  /// This overlap implements the 2D version of he function.
+  LocalElementSize localElementDistanceFromLocalTile(LocalTileIndex begin,
+                                                     LocalTileIndex end) const noexcept {
+    return {localElementDistanceFromLocalTile<Coord::Row>(begin.row(), end.row()),
+            localElementDistanceFromLocalTile<Coord::Col>(begin.col(), end.col())};
   }
 
 private:

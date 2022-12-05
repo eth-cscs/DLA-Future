@@ -426,8 +426,8 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
                            dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
   // Note: the local shape of the permutation region may not be square if the process grid is not square
-  LocalElementSize sz_loc{dist.localTileElementDistance<Coord::Row>(i_begin, i_end + 1),
-                          dist.localTileElementDistance<Coord::Col>(i_begin, i_end + 1)};
+  LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end + 1),
+                          dist.localElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end + 1)};
 
   // If there are no tiles in this rank, participate in the all2all call and return
   if (sz_loc.isEmpty()) {

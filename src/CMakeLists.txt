@@ -212,7 +212,7 @@ DLAF_addSublibrary(
   SOURCES eigensolver/tridiag_solver/mc.cpp eigensolver/tridiag_solver/kernels.cpp
           $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
   GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
-  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
+  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
 # Tmp! hip adds --offload-arch compile flag globally for the CXX language in
 # hip-config. We would like therefore to only link to rocthrust when compiling

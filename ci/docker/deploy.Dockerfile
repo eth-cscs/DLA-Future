@@ -19,6 +19,7 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
+ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
@@ -26,7 +27,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci install --keep-stage --verbose
+    spack -e ci install --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \

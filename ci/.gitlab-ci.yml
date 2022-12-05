@@ -1,22 +1,20 @@
 include:
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
 
 stages:
   - build
   - test
-  - notify
 
 ##
 ## BUILDS
 ##
 
 .build_spack_common:
-  extends: .dind
+  tags: [rosa-k8s]
+  image: quay.io/podman/stable:latest
   stage: build
-  only:
-    - master
-    - staging
-    - trying
+  timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
     # Custom spack sha used to make an umpire fix available
@@ -24,7 +22,7 @@ stages:
     SPACK_SHA: 770d71dff6428876f2cc996f8a0551df36a59e4f
     SPACK_DLAF_REPO: ./spack
   before_script:
-    - docker login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
+    - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
   script:
     # Note: a tag can contain 0-9 A-Z a-z -_.
     - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
@@ -35,12 +33,37 @@ stages:
     - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
     - TAG_ENVIRONMENT=`sha256sum $SPACK_ENVIRONMENT | head -c 16`
     - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
-    - (docker pull $BUILD_IMAGE:$TAG && docker tag $BUILD_IMAGE:$TAG $BUILD_IMAGE:latest) || docker build -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest --cache-from $BUILD_IMAGE:latest --build-arg BASE_IMAGE --build-arg BUILDKIT_INLINE_CACHE=1 --build-arg SPACK_SHA --build-arg EXTRA_APTGET --build-arg COMPILER --build-arg CXXSTD --build-arg SPACK_ENVIRONMENT --build-arg SPACK_DLAF_REPO --build-arg USE_MKL -f $BUILD_DOCKER_FILE --network=host .
-    - docker push $BUILD_IMAGE:$TAG
-    - docker push $BUILD_IMAGE:latest
-    - docker build -t $DEPLOY_IMAGE --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG --build-arg DEPLOY_BASE_IMAGE --build-arg EXTRA_APTGET_DEPLOY --build-arg USE_MKL --build-arg USE_ROCBLAS -f $DEPLOY_DOCKER_FILE --network=host .
-    - docker push $DEPLOY_IMAGE
-    - docker run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
+    - mount -t tmpfs none /var/tmp
+    - mount -t tmpfs none /var/lib/containers
+    - 'echo "INFO: Using NUM_CORES_BUILD_DEPS=$NUM_CORES_BUILD_DEPS and NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
+    - '(podman pull $BUILD_IMAGE:$TAG)
+       ||  podman build
+           -t $BUILD_IMAGE:$TAG -t $BUILD_IMAGE:latest
+           --format docker --layers --isolation chroot
+           --build-arg BASE_IMAGE
+           --build-arg BUILDKIT_INLINE_CACHE=1
+           --build-arg SPACK_SHA
+           --build-arg EXTRA_APTGET
+           --build-arg COMPILER
+           --build-arg CXXSTD
+           --build-arg SPACK_ENVIRONMENT
+           --build-arg SPACK_DLAF_REPO --build-arg USE_MKL
+           --build-arg NUM_PROCS=$NUM_CORES_BUILD_DEPS
+           -f $BUILD_DOCKER_FILE .'
+
+    - podman push $BUILD_IMAGE:$TAG
+    - 'podman build
+      -t $DEPLOY_IMAGE
+      --format docker --layers --isolation chroot
+      --build-arg BUILD_IMAGE=$BUILD_IMAGE:$TAG
+      --build-arg DEPLOY_BASE_IMAGE
+      --build-arg EXTRA_APTGET_DEPLOY
+      --build-arg USE_MKL
+      --build-arg USE_ROCBLAS
+      --build-arg NUM_PROCS=$NUM_CORES_BUILD_DLAF
+      -f $DEPLOY_DOCKER_FILE .'
+    - podman push $DEPLOY_IMAGE
+    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
   artifacts:
     paths:
       - pipeline.yml
@@ -51,8 +74,8 @@ cpu release build gcc11:
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: ubuntu:22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -61,21 +84,19 @@ cpu release build gcc11:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
 
 cpu release build clang12:
   extends: .build_spack_common
-  needs:
-    - cpu release build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: ubuntu:22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: clang-12
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -84,21 +105,19 @@ cpu release build clang12:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang12/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
 
 cpu release build clang13 cxx20:
   extends: .build_spack_common
-  needs:
-    - cpu release build clang12
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: ubuntu:22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: clang-13
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -107,21 +126,19 @@ cpu release build clang13 cxx20:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang13-20/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
 
 cpu codecov build gcc11:
   extends: .build_spack_common
-  needs:
-    - cpu release build clang13 cxx20
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: ubuntu:22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -130,8 +147,8 @@ cpu codecov build gcc11:
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
     USE_CODECOV: "true"
@@ -141,8 +158,8 @@ cuda release build gcc11:
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.0-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -151,21 +168,19 @@ cuda release build gcc11:
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
 cuda codecov build gcc11:
   extends: .build_spack_common
-  needs:
-    - cuda release build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: nvidia/cuda:11.7.0-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: ubuntu:22.04
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.0-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
@@ -174,21 +189,19 @@ cuda codecov build gcc11:
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cuda-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
 amdgpu release build clang10+rocm-5.2.3:
   extends: .build_spack_common
-  needs:
-    - cuda codecov build gcc11
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy-amdgpu.Dockerfile
-    BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
-    DEPLOY_BASE_IMAGE: rocm/dev-ubuntu-20.04:5.2.3
+    BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
+    DEPLOY_BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
     EXTRA_APTGET: "clang rocblas rocblas-dev rocsolver rocsolver-dev llvm-amdgpu rocm-device-libs"
     EXTRA_APTGET_DEPLOY: ""
     COMPILER: clang@10.0.0
@@ -196,19 +209,12 @@ amdgpu release build clang10+rocm-5.2.3:
     USE_MKL: "OFF"
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm523.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_IMAGE/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 64
     USE_CODECOV: "false"
 
-notify_github_start:
-  stage: build
-  allow_failure: true
-  only: ['master', 'staging', 'trying']
-  tags: ['kubernetes']
-  image: stabbles/git-curl
-  script: ./ci/set_github_status.sh pending
 
 ##
 ## RUNS
@@ -216,10 +222,6 @@ notify_github_start:
 
 .run_common:
   stage: test
-  only:
-    - master
-    - staging
-    - trying
   trigger:
     strategy: depend
 
@@ -278,19 +280,3 @@ cuda codecov test gcc11:
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11
-
-notify_github_success:
-  stage: notify
-  when: on_success
-  only: ['master', 'staging', 'trying']
-  tags: ['kubernetes']
-  image: stabbles/git-curl
-  script: ./ci/set_github_status.sh success
-
-notify_github_failure:
-  stage: notify
-  when: on_failure
-  only: ['master', 'staging', 'trying']
-  tags: ['kubernetes']
-  image: stabbles/git-curl
-  script: ./ci/set_github_status.sh failure

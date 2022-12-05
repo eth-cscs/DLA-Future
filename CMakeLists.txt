@@ -15,7 +15,7 @@ project(DLAF VERSION 0.1.0)
 # ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(CTest)
 include(DLAF)

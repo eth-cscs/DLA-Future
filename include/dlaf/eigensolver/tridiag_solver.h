@@ -56,11 +56,7 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),
               tridiag.distribution().size().rows(), evals.distribution().size().rows());
 
-#if defined(DLAF_WITH_HIP)
-  DLAF_UNIMPLEMENTED("Tridiagonal solver is not yet implemented for HIP");
-#else
   internal::TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
-#endif
 }
 
 /// Finds the eigenvalues and eigenvectors of the symmetric tridiagonal matrix @p tridiag stored locally
@@ -102,11 +98,7 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, D>& tridiag,
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,
               evals);
 
-#if defined(DLAF_WITH_HIP)
-  DLAF_UNIMPLEMENTED("Tridiagonal solver is not yet implemented for HIP");
-#else
   internal::TridiagSolver<B, D, BaseType<T>>::call(grid, tridiag, evals, evecs);
-#endif
 }
 
 }

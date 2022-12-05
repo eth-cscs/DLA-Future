@@ -21,6 +21,7 @@
 #define cublasCtrmm          rocblas_ctrmm
 #define cublasCtrsm          rocblas_ctrsm
 #define cublasDaxpy          rocblas_daxpy
+#define cublasDcopy          rocblas_dcopy
 #define cublasDestroy        rocblas_destroy_handle
 #define cublasDgemm          rocblas_dgemm
 #define cublasDiagType_t     rocblas_diagonal
@@ -31,6 +32,7 @@
 #define cublasHandle_t       rocblas_handle
 #define cublasOperation_t    rocblas_operation
 #define cublasPointerMode_t  rocblas_pointer_mode
+#define cublasScopy          rocblas_scopy
 #define cublasSetPointerMode rocblas_set_pointer_mode
 #define cublasSetStream      rocblas_set_stream
 #define cublasSgemm          rocblas_sgemm

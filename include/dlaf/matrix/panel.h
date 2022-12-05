@@ -428,7 +428,6 @@ protected:
 
   ///> It represents the offset to use in first global tile
   SizeType start_offset_ = 0;
-
   SizeType offset_element_ = 0;
 
   bool has_been_used_ = false;

@@ -23,17 +23,20 @@ namespace dlaf::matrix {
 /// Copy subset of local tiles from @p source in the range @p idx_source_begin, @p sz to local subset of
 /// tiles in @p dest in the range @p idx_dest_begin, @p sz.
 ///
+/// Note: If @p source and @p dest are the same matrix and iteration ranges overlap partially, the result
+///       of the copy will be incorrect.
+///
 template <class T, Device Source, Device Destination>
 void copy(LocalTileSize sz, LocalTileIndex idx_source_begin, Matrix<const T, Source>& source,
           LocalTileIndex idx_dest_begin, Matrix<T, Destination>& dest) {
-  // Note: the constexpr check is ncessary to avoid compiler errors for comparison of distinct pointer types
+  // If @p source and @p dest is the same matrix and the iteration range fully overlaps, return.
   if constexpr (Source == Destination) {
     if (idx_source_begin == idx_dest_begin && &source == &dest)
       return;
   }
 
   // Given that `sz` is the same for both `source` and `dest` it is sufficient to only check if the local
-  // length of the copied region is the same
+  // length of the copied region is the same.
   DLAF_ASSERT(source.distribution().localTileElementDistanceFromLocalTile(idx_source_begin,
                                                                           idx_source_begin + sz) ==
                   dest.distribution().localTileElementDistanceFromLocalTile(idx_dest_begin,

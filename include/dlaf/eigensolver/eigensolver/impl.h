@@ -106,13 +106,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
                                        TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> mat_e(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
-  if constexpr (B == Backend::GPU) {
-    DLAF_ASSERT(grid.size() == comm::Size2D(1, 1), grid.size());
-    eigensolver::tridiagSolver<B>(tridiagonal, evals, mat_e);
-  }
-  else {
-    eigensolver::tridiagSolver<B>(grid, tridiagonal, evals, mat_e);
-  }
+  eigensolver::tridiagSolver<B>(grid, tridiagonal, evals, mat_e);
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(grid, mat_e, mat_a, taus);

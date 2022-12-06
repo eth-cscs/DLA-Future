@@ -83,7 +83,7 @@ cpu release build gcc11:
     CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
@@ -104,7 +104,7 @@ cpu release build clang12:
     CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
@@ -125,7 +125,7 @@ cpu release build clang13 cxx20:
     CXXSTD: 20
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/cpu-release.yaml
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
@@ -146,7 +146,7 @@ cpu codecov build gcc11:
     CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/cpu-debug.yaml
+    SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
@@ -167,7 +167,7 @@ cuda release build gcc11:
     CXXSTD: 17
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/gpu-release.yaml
+    SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
@@ -188,14 +188,14 @@ cuda codecov build gcc11:
     CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/gpu-debug.yaml
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: gpu
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
-amdgpu release build clang10+rocm-5.2.3:
+rocm release build clang10+rocm-5.2.3:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
@@ -208,9 +208,9 @@ amdgpu release build clang10+rocm-5.2.3:
     CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "ON"
-    SPACK_ENVIRONMENT: ci/docker/amdgpu-release-rocm523.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-amdgpu-clang10/deploy:$CI_COMMIT_SHA
+    SPACK_ENVIRONMENT: ci/docker/release-rocm523.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang10/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang10/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 64
     USE_CODECOV: "false"

@@ -35,6 +35,7 @@
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/sender/transform_mpi.h"
 #include "dlaf/traits.h"
 
 namespace dlaf::eigensolver::internal {
@@ -1120,9 +1121,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         }
         else {
           auto& temp = temps.nextResource();
-          auto diag_tile = comm::scheduleRecv(comm, rank_diag, tag_diag,
-                                              splitTile(temp(LocalTileIndex{0, 0}),
-                                                        {{0, 0}, dist_a.tileSize(index_diag)}));
+          auto diag_tile = comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_diag, tag_diag,
+                                              ex::make_unique_any_sender(
+                                                  splitTile(temp(LocalTileIndex{0, 0}),
+                                                            {{0, 0}, dist_a.tileSize(index_diag)})));
           dep = copy_diag(a_ws[id_block_local], k * nb, std::move(diag_tile)) | ex::split();
         }
 
@@ -1134,9 +1136,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
           else {
             auto& temp = temps.nextResource();
-            auto offdiag_tile = comm::scheduleRecv(comm, rank_offdiag, tag_offdiag,
-                                                   splitTile(temp(LocalTileIndex{0, 0}),
-                                                             {{0, 0}, dist_a.tileSize(index_offdiag)}));
+            auto offdiag_tile =
+                comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_offdiag, tag_offdiag,
+                                   ex::make_unique_any_sender(
+                                       splitTile(temp(LocalTileIndex{0, 0}),
+                                                 {{0, 0}, dist_a.tileSize(index_offdiag)})));
             dep = copy_offdiag(a_ws[id_block_local], k * nb,
                                ex::when_all(std::move(dep), std::move(offdiag_tile))) |
                   ex::split();
@@ -1148,12 +1152,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       else {
         if (rank == rank_diag) {
           ex::start_detached(
-              comm::scheduleSend(comm, rank_block, tag_diag, mat_a.read_sender(index_diag)));
+              comm::scheduleSend(ex::make_unique_any_sender(comm), rank_block, tag_diag,
+                                 ex::make_unique_any_sender(mat_a.read_sender(index_diag))));
         }
         if (k < nrtile - 1) {
           if (rank == rank_offdiag) {
             ex::start_detached(
-                comm::scheduleSend(comm, rank_block, tag_offdiag, mat_a.read_sender(index_offdiag)));
+                comm::scheduleSend(ex::make_unique_any_sender(comm), rank_block, tag_offdiag,
+                                   ex::make_unique_any_sender(mat_a.read_sender(index_offdiag))));
           }
         }
       }
@@ -1339,8 +1345,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                        copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
                   }
                   else {
-                    ex::start_detached(comm::scheduleSend(comm, rank_v, compute_v_tag(index_v.row()),
-                                                          std::move(tile_v_panel)));
+                    ex::start_detached(
+                        comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
+                                           compute_v_tag(index_v.row()),
+                                           ex::make_unique_any_sender(std::move(tile_v_panel))));
                   }
                 };
 
@@ -1366,8 +1374,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 else
                   dep = ex::drop_value(mat_v.read_sender(local_index_v - LocalTileSize{0, 1}));
 
-                ex::start_detached(comm::scheduleRecv(comm, rank_panel, compute_v_tag(index_v.row()),
-                                                      ex::when_all(std::move(tile_v), std::move(dep))));
+                ex::start_detached(
+                    comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_panel,
+                                       compute_v_tag(index_v.row()),
+                                       ex::make_unique_any_sender(
+                                           ex::when_all(std::move(tile_v), std::move(dep)))));
               }
             };
 
@@ -1395,9 +1406,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only rank0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(comm::scheduleSendBcast(comm_bcast(), mat_trid.read_sender(index)));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(comm_bcast()),
+                                  ex::make_unique_any_sender(mat_trid.read_sender(index))));
     else
-      ex::start_detached(comm::scheduleRecvBcast(comm_bcast(), 0, mat_trid.readwrite_sender(index)));
+      ex::start_detached(
+          comm::scheduleRecvBcast(ex::make_unique_any_sender(comm_bcast()), 0,
+                                  ex::make_unique_any_sender(mat_trid.readwrite_sender(index))));
   }
 
   return {std::move(mat_trid), std::move(mat_v)};

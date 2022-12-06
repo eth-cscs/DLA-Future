@@ -24,6 +24,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/types.h"
 
 namespace dlaf::comm {
 namespace internal {
@@ -71,6 +72,8 @@ template <class T, Device D, class Comm>
                         pika::shared_future<matrix::Tile<const Type, Device>>>    \
                         tile)
 
+DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::CPU,
+                                    dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::CPU,
                                     dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::CPU,
@@ -81,6 +84,8 @@ DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::CPU,
                                     dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::GPU,
+                                    dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::GPU,
                                     dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::GPU,
@@ -107,6 +112,7 @@ template <class T, Device D, class Comm>
                     comm::IndexT_MPI root_rank,                                               \
                     pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
 
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, std::complex<float>, Device::CPU,
@@ -115,6 +121,7 @@ DLAF_SCHEDULE_RECV_BCAST_ETI(extern, std::complex<double>, Device::CPU,
                              dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, std::complex<float>, Device::GPU,

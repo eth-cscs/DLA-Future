@@ -60,6 +60,7 @@ template <class T, Device D, class Comm>
   return internal::scheduleSendBcast(std::move(pcomm), std::move(tile));
 }
 
+DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, std::complex<float>, Device::CPU,
@@ -68,6 +69,7 @@ DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, std::complex<double>, Device::CPU,
                                     dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(, std::complex<float>, Device::GPU,
@@ -104,6 +106,7 @@ template <class T, Device D, class Comm>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::CPU,
@@ -112,6 +115,7 @@ DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::CPU,
                              dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::GPU,

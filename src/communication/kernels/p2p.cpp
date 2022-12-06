@@ -36,8 +36,7 @@ void send(const Communicator& comm, IndexT_MPI dest, IndexT_MPI tag,
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Isend(msg.data(), msg.count(), msg.mpi_type(), dest, tag, comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Isend(msg.data(), msg.count(), msg.mpi_type(), dest, tag, comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(send);

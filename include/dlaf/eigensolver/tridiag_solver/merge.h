@@ -861,12 +861,14 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho_fut, evecs.read_sender(idx_evecs),
                                                z.readwrite_sender(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), z.read_sender(z_idx)));
+      ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 ex::make_unique_any_sender(z.read_sender(z_idx))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
-      ex::start_detached(
-          comm::scheduleRecvBcast(full_task_chain(), root_rank, z.readwrite_sender(z_idx)));
+      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 root_rank,
+                                                 ex::make_unique_any_sender(z.readwrite_sender(z_idx))));
     }
   }
 }
@@ -910,8 +912,10 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
         auto laset_sender =
             di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm));
         ex::start_detached(tile::laset(di::Policy<DefaultBackend_v<D>>(), std::move(laset_sender)));
-        ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
-                                                          comm_vec.readwrite_sender(idx_gl_comm)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()),
+                                                          MPI_PROD,
+                                                          ex::make_unique_any_sender(
+                                                              comm_vec.readwrite_sender(idx_gl_comm))));
       }
     }
     return;
@@ -933,8 +937,10 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, mat.read_sender(idx_loc_tile),
                    Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
 
-    ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
-                                                      comm_vec.readwrite_sender(idx_gl_comm)));
+    ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()),
+                                                      MPI_PROD,
+                                                      ex::make_unique_any_sender(
+                                                          comm_vec.readwrite_sender(idx_gl_comm))));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),
@@ -963,8 +969,10 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
         GlobalTileIndex idx_gl_comm(i_tile, 0);
         ex::start_detached(
             tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite_sender(idx_gl_comm)));
-        ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
-                                                          comm_vec.readwrite_sender(idx_gl_comm)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()),
+                                                          MPI_SUM,
+                                                          ex::make_unique_any_sender(
+                                                              comm_vec.readwrite_sender(idx_gl_comm))));
       }
     }
     return;
@@ -985,8 +993,10 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read_sender(idx_loc_tile),
                    Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
 
-    ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
-                                                      comm_vec.readwrite_sender(idx_gl_comm)));
+    ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()),
+                                                      MPI_SUM,
+                                                      ex::make_unique_any_sender(
+                                                          comm_vec.readwrite_sender(idx_gl_comm))));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_fut, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender(idx_gl_comm),
@@ -1089,11 +1099,14 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
 
     comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
     if (evecs_tile_rank == this_rank.col()) {
-      ex::start_detached(comm::scheduleSendBcast(row_task_chain(), evals.read_sender(evals_idx)));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(row_task_chain()),
+                                  ex::make_unique_any_sender(evals.read_sender(evals_idx))));
     }
     else {
       ex::start_detached(
-          comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank, evals.readwrite_sender(evals_idx)));
+          comm::scheduleRecvBcast(ex::make_unique_any_sender(row_task_chain()), evecs_tile_rank,
+                                  ex::make_unique_any_sender(evals.readwrite_sender(evals_idx))));
     }
   }
 }

@@ -60,13 +60,12 @@ option(DLAF_ASSERT_HEAVY_ENABLE "Enable high impact assertions" ${DLAF_ASSERT_HE
 
 # Define DLAF's PUBLIC properties
 add_library(dlaf.prop INTERFACE)
-target_include_directories(dlaf.prop
-  INTERFACE
-    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+target_include_directories(
+  dlaf.prop INTERFACE $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+                      $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include> $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(dlaf.prop
+target_link_libraries(
+  dlaf.prop
   INTERFACE
     MPI::MPI_CXX
     DLAF::LAPACK
@@ -77,22 +76,23 @@ target_link_libraries(dlaf.prop
     $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
     $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
     $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::hipblas>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
+    $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
     $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
 )
-target_compile_definitions(dlaf.prop
-  INTERFACE
-    $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
-    $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
-    $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
-    DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
-    $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
-    $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
-    $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
-    $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
+target_compile_definitions(
+  dlaf.prop
+  INTERFACE $<$<BOOL:${DLAF_ASSERT_ENABLE}>:DLAF_ASSERT_ENABLE>
+            $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
+            $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
+            DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+            $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
+            $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
+            $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
+            $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
 )
 
 # Precompiled headers
@@ -117,7 +117,6 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
       <pika/program_options.hpp>
       <pika/runtime.hpp>
       <pika/thread.hpp>
-      <pika/unwrap.hpp>
       <blas.hh>
       # We exclude lapack.hh because it pulls in complex.h and defines I as a
       # macro. I is a commonly used e.g. as template parameter names and defining
@@ -153,7 +152,7 @@ function(DLAF_addSublibrary name)
   if(DLAF_WITH_GPU)
     target_sources(${object_lib_name} PRIVATE ${DLAF_ASL_GPU_SOURCES})
     if(DLAF_WITH_HIP)
-      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP)
+      set_source_files_properties(${DLAF_ASL_GPU_SOURCES} PROPERTIES LANGUAGE HIP LINKER_LANGUAGE HIP)
     endif()
   endif()
 
@@ -214,14 +213,18 @@ DLAF_addSublibrary(
 # Define DLAF's tridiagonal eigensolver library
 DLAF_addSublibrary(
   tridiagonal_eigensolver
-  SOURCES eigensolver/tridiag_solver/mc.cpp
-          eigensolver/tridiag_solver/kernels.cpp
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/gpu.cpp>
-          # TODO: This should be moved to GPU_SOURCES once HIP is supported for the
-          # tridiagonal solver.
-          $<$<BOOL:${DLAF_WITH_CUDA}>:eigensolver/tridiag_solver/kernels.cu>
-  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.solver dlaf.core
+  SOURCES eigensolver/tridiag_solver/mc.cpp eigensolver/tridiag_solver/kernels.cpp
+          $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
+  GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
+  LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
+# Tmp! hip adds --offload-arch compile flag globally for the CXX language in
+# hip-config. We would like therefore to only link to rocthrust when compiling
+# with the HIP language. However COMPILE_LANGUAGE generator expression is not
+# accepted in a target_link_libraries call. The LINK_LANGUAGE generator
+# expression is therefore used but it doesn't add the include directories to the
+# target it's linked to. This is a workaround for that.
+target_include_directories(dlaf.tridiagonal_eigensolver_object SYSTEM PUBLIC ${rocthrust_INCLUDE_DIR})
 
 # Define DLAF's factorization library
 DLAF_addSublibrary(

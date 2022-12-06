@@ -18,6 +18,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/traits.h"
+#include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -31,8 +32,11 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-template <typename Type>
-class EigensolverBandToTridiagTest : public ::testing::Test {};
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
+template <class T>
+struct EigensolverBandToTridiagTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
@@ -44,23 +48,12 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {4, 6, 3}, {8, 4, 2}, {18, 4, 4}, {34, 6, 6}, {37, 9, 3}  // m != mb
 };
 
-template <Device D, class T>
-void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const SizeType m,
-                       const SizeType mb) {
-  const LocalElementSize size(m, m);
-  const TileElementSize block_size(mb, mb);
-
-  Matrix<T, Device::CPU> mat_a_h(size, block_size);
-  matrix::util::set_random_hermitian(mat_a_h);
-
-  auto [mat_trid, mat_v] = [&]() {
-    MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
-  }();
-
-  if (m == 0)
-    return;
-
+template <class T, class... GridIfDistributed>
+void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType band_size,
+                                        const SizeType m, const SizeType mb,
+                                        Matrix<const T, Device::CPU>& mat_a_h,
+                                        Matrix<BaseType<T>, Device::CPU>& mat_trid,
+                                        Matrix<T, Device::CPU>& mat_v, GridIfDistributed... grid) {
   auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a_h.size(), mat_a_h.blockSize());
   const auto ld = mat_local.ld();
@@ -73,7 +66,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   }
   mat_local({m - 1, m - 1}) = mat_trid_local({m - 1, 0});
 
-  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v);
+  auto mat_v_local = matrix::test::allGather(blas::Uplo::General, mat_v, grid...);
 
   auto apply_left_right = [&mat_local, m, ld](SizeType size_hhr, T* v, SizeType first_index) {
     T tau = v[0];
@@ -114,6 +107,52 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
   CHECK_MATRIX_NEAR(res, mat_a_h, mb * m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
+template <Device D, class T>
+void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const SizeType m,
+                       const SizeType mb) {
+  const LocalElementSize size(m, m);
+  const TileElementSize block_size(mb, mb);
+
+  Matrix<T, Device::CPU> mat_a_h(size, block_size);
+  matrix::util::set_random_hermitian(mat_a_h);
+
+  auto [mat_trid, mat_v] = [&]() {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
+  }();
+
+  if (m == 0)
+    return;
+
+  testBandToTridiagOutputCorrectness(uplo, band_size, m, mb, mat_a_h, mat_trid, mat_v);
+}
+
+template <Device D, class T>
+void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType band_size,
+                       const SizeType m, const SizeType mb) {
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
+  Distribution distr({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
+
+  Matrix<T, Device::CPU> mat_a_h(std::move(distr));
+  matrix::util::set_random_hermitian(mat_a_h);
+
+  auto [mat_trid, mat_v] = [&]() {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
+    return eigensolver::bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a.get());
+  }();
+
+  if (m == 0)
+    return;
+
+  // SCOPED_TRACE cannot yield.
+  mat_trid.waitLocalTiles();
+  mat_v.waitLocalTiles();
+  SCOPED_TRACE(::testing::Message() << "size " << m << ", block " << mb << ", band " << band_size
+                                    << ", grid " << grid.size());
+
+  testBandToTridiagOutputCorrectness(uplo, band_size, m, mb, mat_a_h, mat_trid, mat_v, grid);
+}
+
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
@@ -127,5 +166,27 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
 
   for (const auto& [m, mb, b] : sizes)
     testBandToTridiag<Device::GPU, TypeParam>(uplo, b, m, mb);
+}
+#endif
+
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
+  const blas::Uplo uplo = blas::Uplo::Lower;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, mb, b] : sizes) {
+      testBandToTridiag<Device::CPU, TypeParam>(comm_grid, uplo, b, m, mb);
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributedFromGPU) {
+  const blas::Uplo uplo = blas::Uplo::Lower;
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& [m, mb, b] : sizes) {
+      testBandToTridiag<Device::GPU, TypeParam>(comm_grid, uplo, b, m, mb);
+    }
+  }
 }
 #endif

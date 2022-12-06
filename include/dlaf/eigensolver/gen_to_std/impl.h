@@ -11,7 +11,6 @@
 
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -27,6 +26,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/util_matrix.h"
 
@@ -458,7 +458,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        hemmPanelTile<backend>(thread_priority::high, pika::execution::experimental::keep_future(a_diag),
+        hemmPanelTile<backend>(thread_priority::high, dlaf::internal::keepFuture(a_diag),
                                mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
       }
     }
@@ -728,7 +728,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j_local);
         const LocalTileIndex ki(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        hemmPanelTile<backend>(thread_priority::high, pika::execution::experimental::keep_future(a_diag),
+        hemmPanelTile<backend>(thread_priority::high, dlaf::internal::keepFuture(a_diag),
                                mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
       }
     }

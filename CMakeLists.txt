@@ -15,13 +15,17 @@ project(DLAF VERSION 0.1.0)
 # ---------------------------------------------------------------------------
 # CMake configurations
 # ---------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 include(CTest)
 include(DLAF)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
+endif()
+
+if(BUILD_SHARED_LIBS)
+  set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
 endif()
 
 include(CMakeDependentOption)
@@ -56,12 +60,13 @@ enable_language(C)
 enable_language(CXX)
 
 # ---- CUDA/HIP
-if (DLAF_WITH_CUDA AND DLAF_WITH_HIP)
+if(DLAF_WITH_CUDA AND DLAF_WITH_HIP)
   message(FATAL_ERROR "DLAF_WITH_CUDA=ON and DLAF_WITH_HIP=ON. Only one of "
-    "them can be enabled at the same time.")
+                      "them can be enabled at the same time."
+  )
 endif()
-if (DLAF_WITH_CUDA)
-  if (NOT CMAKE_CUDA_ARCHITECTURES)
+if(DLAF_WITH_CUDA)
+  if(NOT CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES "60;70;80" CACHE STRING "Cuda architectures" FORCE)
   endif()
   enable_language(CUDA)
@@ -70,8 +75,10 @@ if (DLAF_WITH_CUDA)
 elseif(DLAF_WITH_HIP)
   set(CMAKE_HIP_EXTENSIONS OFF)
   enable_language(HIP)
-  find_package(hipblas HINTS $ENV{HIPBLAS_ROOT} REQUIRED)
-  find_package(rocsolver HINTS $ENV{ROCSOLVER_ROOT} REQUIRED)
+  find_package(rocblas REQUIRED)
+  find_package(rocprim REQUIRED)
+  find_package(rocsolver REQUIRED)
+  find_package(rocthrust REQUIRED)
   set(DLAF_WITH_GPU ON)
 endif()
 
@@ -120,7 +127,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.8.0 REQUIRED)
+find_package(pika 0.9.0 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)

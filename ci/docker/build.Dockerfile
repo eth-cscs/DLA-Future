@@ -15,7 +15,7 @@ RUN apt-get -yqq update && \
     apt-get -yqq install --no-install-recommends \
     software-properties-common \
     build-essential gfortran \
-    autoconf automake \
+    autoconf automake ninja-build pkg-config \
     ${EXTRA_APTGET} \
     gawk \
     python3 python3-distutils \
@@ -68,10 +68,12 @@ RUN spack external find \
     diffutils \
     findutils \
     git \
+    ninja \
     m4 \
     ncurses \
     openssl \
     perl \
+    pkg-config \
     python \
     xz && \
     if [ "$USE_MKL" = "ON" ]; then \
@@ -100,4 +102,5 @@ RUN spack env create --without-view ci /spack_environment/spack.yaml
 ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 3. Install only the dependencies of this (top level is our package)
-RUN spack -e ci install --fail-fast --only=dependencies
+ARG NUM_PROCS
+RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies

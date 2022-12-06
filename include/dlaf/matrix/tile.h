@@ -18,11 +18,11 @@
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 #include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
@@ -370,7 +370,7 @@ pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& ti
                                        const SubTileSpec& spec) {
   namespace ex = pika::execution::experimental;
   auto f = [spec](pika::shared_future<Tile<T, D>>&& tile) { return Tile<T, D>(std::move(tile), spec); };
-  return ex::keep_future(tile) | ex::then(std::move(f)) | ex::make_future();
+  return dlaf::internal::keepFuture(tile) | ex::then(std::move(f)) | ex::make_future();
 }
 
 template <class T, Device D>

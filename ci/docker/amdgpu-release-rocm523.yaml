@@ -10,17 +10,17 @@
 
 spack:
   specs:
-  - dla-future@develop +rocm +miniapps +ci-test amdgpu_target=gfx906:xnack- ^openblas ^mpich
+  - dla-future@develop +rocm +miniapps +ci-test ^openblas ^mpich
   view: false
   concretizer:
     unify: true
-
   packages:
     all:
       target: [x86_64]
       variants:
       - build_type=Release
       - cxxstd=17
+      - amdgpu_target=gfx906:xnack-
     blaspp:
       variants:
       - ~cuda
@@ -29,7 +29,6 @@ spack:
     pika:
       variants:
       - malloc=mimalloc
-      - amdgpu_target=gfx906:xnack-
     mpich:
       variants:
       - ~fortran
@@ -37,6 +36,10 @@ spack:
       - ~hwloc
       - device=ch3
       - netmod=tcp
+      - ~libxml2
+    hwloc:
+      variants:
+      - ~libxml2
     git:
       # Force git as non-buildable to allow deprecated versions in environments
       # https://github.com/spack/spack/pull/30040
@@ -44,38 +47,36 @@ spack:
     umpire:
       version:
       - 4.1.2
-      variants:
-      - amdgpu_target=gfx906:xnack-
     blt:
       version:
       - 0.4.1
     llvm-amdgpu:
       externals:
-      - spec: llvm-amdgpu@5.2.3
+      - spec: llvm-amdgpu@5.2.3 ~rocm-device-libs
         prefix: /opt/rocm-5.2.3/llvm
-        buildable: false
+      buildable: false
     hip:
       externals:
       - spec: hip@5.2.3
-        prefix: /opt/rocm-5.2.3/hip
-        buildable: false
-    hipblas:
-      externals:
-      - spec: hipblas@5.2.3
         prefix: /opt/rocm-5.2.3
-        buildable: false
+      buildable: false
     rocblas:
       externals:
       - spec: rocblas@5.2.3
         prefix: /opt/rocm-5.2.3
-        buildable: false
+      buildable: false
     rocsolver:
       externals:
       - spec: rocsolver@5.2.3
         prefix: /opt/rocm-5.2.3
-        buildable: false
+      buildable: false
+    rocm-device-libs:
+      externals:
+      - spec: rocm-device-libs@5.2.3
+        prefix: /opt/rocm-5.2.3
+      buildable: false
     hsa-rocr-dev:
       externals:
       - spec: hsa-rocr-dev@5.2.3
         prefix: /opt/rocm-5.2.3
-        buildable: false
+      buildable: false

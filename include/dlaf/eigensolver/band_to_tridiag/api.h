@@ -41,11 +41,15 @@ struct BandToTridiag;
 template <Device D, class T>
 struct BandToTridiag<Backend::MC, D, T> {
   static TridiagResult<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
+  static TridiagResult<T, Device::CPU> call_L(comm::CommunicatorGrid grid, const SizeType b,
+                                              Matrix<const T, D>& mat_a) noexcept;
 };
 
 /// ---- ETI
 #define DLAF_EIGENSOLVER_B2T_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct BandToTridiag<BACKEND, DEVICE, DATATYPE>;
+#define DLAF_EIGENSOLVER_B2T_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct BandToTridiagDistr<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::CPU, double)

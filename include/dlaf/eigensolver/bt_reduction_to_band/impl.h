@@ -34,6 +34,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/views.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {
@@ -124,7 +125,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   using namespace bt_red_band;
-  using pika::execution::experimental::keep_future;
+
+  using dlaf::internal::keepFuture;
+
   auto hp = pika::execution::thread_priority::high;
   auto np = pika::execution::thread_priority::normal;
 
@@ -185,7 +188,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
       if (j_diag < mb) {
         auto tile_v = splitTile(mat_v.read(i), panel_view(i));
-        copyAndSetHHUpperTiles<backend>(j_diag, keep_future(tile_v), panelV.readwrite_sender(i));
+        copyAndSetHHUpperTiles<backend>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(i));
       }
       else {
         panelV.setTile(i, mat_v.read(i));
@@ -208,7 +211,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       auto kj = LocalTileIndex{k, ij.col()};
       auto ik = LocalTileIndex{ij.row(), k};
       gemmUpdateW2<backend>(np, panelW.read_sender(ik),
-                            keep_future(splitTile(mat_c.read(ij), mat_c_view(ij))),
+                            keepFuture(splitTile(mat_c.read(ij), mat_c_view(ij))),
                             panelW2.readwrite_sender(kj));
     }
 
@@ -233,7 +236,9 @@ void BackTransformationReductionToBand<B, D, T>::call(
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
-  using pika::execution::experimental::keep_future;
+
+  using dlaf::internal::keepFuture;
+
   auto hp = pika::execution::thread_priority::high;
   auto np = pika::execution::thread_priority::normal;
 
@@ -303,7 +308,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
             tile_v = splitTile(tile_v,
                                {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
           }
-          copyAndSetHHUpperTiles<B>(0, keep_future(tile_v), panelV.readwrite_sender(ik_panel));
+          copyAndSetHHUpperTiles<B>(0, keepFuture(tile_v), panelV.readwrite_sender(ik_panel));
         }
         else {
           panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));

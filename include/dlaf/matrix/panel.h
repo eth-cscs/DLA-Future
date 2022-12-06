@@ -23,6 +23,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -42,6 +43,7 @@ struct Panel<axis, const T, D> {
   // moreover allows the casting between references (i.e. Panel<const T>& = Panel<T>)
 
   constexpr static Coord coord = orthogonal(axis);
+  constexpr static Device device = D;
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
@@ -96,7 +98,8 @@ struct Panel<axis, const T, D> {
       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
       });
-      ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
+      ex::start_detached(dlaf::internal::keepFuture(new_tile_fut) |
+                         ex::then(std::move(assert_tile_size)));
     }
 #endif
 
@@ -129,7 +132,7 @@ struct Panel<axis, const T, D> {
   }
 
   auto read_sender(const LocalTileIndex& index) {
-    return pika::execution::experimental::keep_future(read(index));
+    return dlaf::internal::keepFuture(read(index));
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -442,6 +445,9 @@ protected:
 
 template <Coord axis, class T, Device D>
 struct Panel : public Panel<axis, const T, D> {
+  constexpr static Coord coord = orthogonal(axis);
+  constexpr static Device device = D;
+
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;

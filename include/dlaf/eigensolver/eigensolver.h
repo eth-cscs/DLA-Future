@@ -10,6 +10,8 @@
 #pragma once
 
 #include <blas.hh>
+
+#include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/eigensolver/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -36,5 +38,27 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   DLAF_ASSERT(square_blocksize(mat), mat);
 
   return internal::Eigensolver<B, D, T>::call(uplo, mat);
+}
+
+/// Standard Eigensolver.
+///
+/// It solves the standard eigenvalue problem A * x = lambda * x.
+///
+/// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
+/// including the diagonal, is destroyed.
+///
+/// Implementation on distributed memory.
+///
+/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
+/// @param grid is the communicator grid on which the matrix @p mat has been distributed,
+/// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
+/// @param mat contains the Hermitian matrix A
+template <Backend B, Device D, class T>
+EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
+  DLAF_ASSERT(square_size(mat), mat);
+  DLAF_ASSERT(square_blocksize(mat), mat);
+
+  return internal::Eigensolver<B, D, T>::call(grid, uplo, mat);
 }
 }

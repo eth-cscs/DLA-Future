@@ -10,22 +10,24 @@
 
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 
+#include "dlaf/gpu/blas/error.h"
 #include "dlaf/gpu/lapack/error.h"
 #include "dlaf/memory/memory_chunk.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf/util_cuda.h"
 #include "dlaf/util_math.h"
 
-#include <cuComplex.h>
-#include <cusolverDn.h>
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/extrema.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
-#include <cub/cub.cuh>
 #include <pika/cuda.hpp>
 #include <whip.hpp>
+#include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/cub/api.h"
+#include "dlaf/gpu/lapack/api.h"
+#include "dlaf/gpu/lapack/error.h"
 
 namespace dlaf::eigensolver::internal {
 
@@ -173,9 +175,14 @@ T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::s
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
-  auto d_max_ptr = thrust::max_element(thrust::cuda::par.on(stream), arr, arr + len);
+#ifdef DLAF_WITH_CUDA
+  constexpr auto par = ::thrust::cuda::par;
+#elif defined(DLAF_WITH_HIP)
+  constexpr auto par = ::thrust::hip::par;
+#endif
+  auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
   T max_el;
-  // TODO: this is a peformance pessimization, the value is on device
+  // TODO: this is a performance pessimization, the value is on device
   whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
   return max_el;
 }
@@ -282,22 +289,24 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   size_t temp_storage_bytes;
 
   using OffsetIterator =
-      cub::TransformInputIterator<SizeType, StrideOp, cub::CountingInputIterator<SizeType>>;
+      dlaf::gpucub::TransformInputIterator<SizeType, StrideOp,
+                                           dlaf::gpucub::CountingInputIterator<SizeType>>;
   using InputIterator =
-      cub::TransformInputIterator<T, Row2ColMajor<T>, cub::CountingInputIterator<SizeType>>;
+      dlaf::gpucub::TransformInputIterator<T, Row2ColMajor<T>,
+                                           dlaf::gpucub::CountingInputIterator<SizeType>>;
 
-  cub::CountingInputIterator<SizeType> count_iter(0);
+  dlaf::gpucub::CountingInputIterator<SizeType> count_iter(0);
   OffsetIterator begin_offsets(count_iter, StrideOp{ncols, 0});  // first column
   OffsetIterator end_offsets = begin_offsets + 1;                // last column
   InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
 
-  whip::check_error(cub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws, nrows,
-                                                       begin_offsets, end_offsets, mult_op, T(1),
-                                                       stream));
+  whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws,
+                                                                nrows, begin_offsets, end_offsets,
+                                                                mult_op, T(1), stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
-  whip::check_error(cub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes, in_iter, ws,
-                                                       nrows, begin_offsets, end_offsets, mult_op, T(1),
-                                                       stream));
+  whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes,
+                                                                in_iter, ws, nrows, begin_offsets,
+                                                                end_offsets, mult_op, T(1), stream));
   // Deallocate memory
   auto extend_info = [d_temp_storage](whip::error_t status) {
     whip::check_error(status);
@@ -430,12 +439,23 @@ void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
   // Note: the output of the reduction is saved in the first row.
   // TODO: use a segmented reduce sum with fancy iterators
   size_t temp_storage_bytes;
-  whip::check_error(cub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
+#ifdef DLAF_WITH_CUDA
+  whip::check_error(
+      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
+#elif defined(DLAF_WITH_HIP)
+  whip::check_error(
+      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], unrows, stream));
+#endif
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
 
   for (SizeType j = 0; j < ncols; ++j) {
-    whip::check_error(cub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                             &out[j * ld], nrows, stream));
+#ifdef DLAF_WITH_CUDA
+    whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                      &out[j * ld], nrows, stream));
+#elif defined(DLAF_WITH_HIP)
+    whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
+                                                      &out[j * ld], unrows, stream));
+#endif
   }
 
   // Deallocate memory
@@ -529,15 +549,88 @@ void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, float);
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(, double);
 
+constexpr unsigned set_diag_kernel_sz = 256;
+
+template <class T>
+__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
+  const SizeType i = blockIdx.x * set_diag_kernel_sz + threadIdx.x;
+  if (i >= len)
+    return;
+
+  tile[i + i * ld] = T(1);
+}
+
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream) {
+  SizeType tile_offset = k - tile_begin;
+  if (tile_offset < 0)
+    tile_offset = 0;
+  else if (tile_offset >= tile.size().rows())
+    return;
+
+  SizeType len = tile.size().rows() - tile_offset;
+  SizeType ld = tile.ld();
+  T* tile_ptr = tile.ptr(TileElementIndex(tile_offset, tile_offset));
+
+  dim3 nr_threads(set_diag_kernel_sz);
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
+  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile_ptr);
+}
+
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, float);
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
+
+// Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
+template <class T>
+void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
+            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
+            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
+  if (row >= k || col >= k)
+    return;
+
+  const T* in_ptr = in_tile.ptr();
+  T* out_ptr = out_tile.ptr();
+
+  int in_ld = (in_coord == Coord::Col) ? 1 : to_int(in_tile.ld());
+  int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
+
+  // if `in_tile` is the column buffer
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
+                                           : std::min(out_tile.size().cols(), k - col);
+  // if out_tile is the column buffer
+  if (out_tile.size().cols() == 1) {
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
+                                   : std::min(in_tile.size().cols(), k - col);
+  }
+
+  if constexpr (std::is_same<T, float>::value) {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+  else {
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+  }
+}
+
+DLAF_GPU_COPY_1D_ETI(, float);
+DLAF_GPU_COPY_1D_ETI(, double);
+
+// -----------------------------------------
+
 // Note: that this blocks the thread until the kernels complete
 SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
                                       SizeType* out_ptr, whip::stream_t stream) {
   // The number of non-deflated values
-  SizeType k = n - thrust::count(thrust::cuda::par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+#ifdef DLAF_WITH_CUDA
+  constexpr auto par = thrust::cuda::par;
+#elif defined(DLAF_WITH_HIP)
+  constexpr auto par = thrust::hip::par;
+#endif
+  SizeType k = n - thrust::count(par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
   auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
-  thrust::stable_partition_copy(thrust::cuda::par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+  thrust::stable_partition_copy(par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
                                 std::move(cmp));
   return k;
 }
@@ -554,8 +647,12 @@ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, 
   // thrust's `examples/cuda/async_reduce.cu` or use the policy `thrust::cuda::par_nosync.on(stream)` in
   // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
   //
-  thrust::merge(thrust::cuda::par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr,
-                std::move(cmp));
+#ifdef DLAF_WITH_CUDA
+  constexpr auto par = thrust::cuda::par;
+#elif defined(DLAF_WITH_HIP)
+  constexpr auto par = thrust::hip::par;
+#endif
+  thrust::merge(par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);
@@ -623,28 +720,5 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t s
 
 DLAF_GIVENS_ROT_ETI(, float);
 DLAF_GIVENS_ROT_ETI(, double);
-
-constexpr unsigned set_diag_kernel_sz = 256;
-
-template <class T>
-__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
-  const SizeType i = blockIdx.x * givens_rot_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  tile[i + i * ld] = T(1);
-}
-
-template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream) {
-  dim3 nr_threads(set_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
-  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile);
-}
-
-DLAF_SET_UNIT_DIAG_ETI(, float);
-DLAF_SET_UNIT_DIAG_ETI(, double);
-
-// --- Eigenvector formation kernels ---
 
 }

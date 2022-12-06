@@ -61,6 +61,11 @@ using SenderSingleValueType =
 template <typename Sender>
 using SenderElementType = typename SenderSingleValueType<Sender>::ElementType;
 
+// The value of an embedded device in the value_types of Sender, if it
+// exists and Sender sends exactly one type.
+template <typename Sender>
+inline constexpr Device sender_device = SenderSingleValueType<Sender>::device;
+
 template <typename T>
 struct IsSharedFuture : std::false_type {};
 

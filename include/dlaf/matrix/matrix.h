@@ -21,6 +21,7 @@
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 #include "dlaf/common/range2d.h"
@@ -56,6 +57,8 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
 template <class T, Device D>
 class Matrix : public Matrix<const T, D> {
 public:
+  static constexpr Device device = D;
+
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
@@ -149,6 +152,8 @@ private:
 template <class T, Device D>
 class Matrix<const T, D> : public internal::MatrixBase {
 public:
+  static constexpr Device device = D;
+
   using ElementType = T;
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
@@ -189,7 +194,7 @@ public:
   auto read_sender(const LocalTileIndex& index) noexcept {
     // We want to explicitly deal with the shared_future, not the const& to the
     // value.
-    return pika::execution::experimental::keep_future(read(index));
+    return dlaf::internal::keepFuture(read(index));
   }
 
   auto read_sender(const GlobalTileIndex& index) {

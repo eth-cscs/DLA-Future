@@ -532,6 +532,89 @@ void divideColsByFirstRowAsync(pika::shared_future<SizeType> k_fut, SizeType row
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideColsByFirstRow_o, std::move(sender));
 }
 
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::CPU>& tile);
+
+#define DLAF_CPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
+  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
+                                      const matrix::Tile<Type, Device::CPU>& tile)
+
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, float);
+DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
+                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream);
+
+#define DLAF_GPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
+  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
+                                      const matrix::Tile<Type, Device::GPU>& tile,   \
+                                      whip::stream_t stream)
+
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, float);
+DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(setUnitDiagonal);
+
+template <Device D, class TileSender>
+void setUnitDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType tile_begin, TileSender&& tile) {
+  namespace di = dlaf::internal;
+  auto sender = di::whenAllLift(std::move(k_fut), tile_begin, std::forward<TileSender>(tile));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setUnitDiagonal_o, std::move(sender));
+}
+
+// Copy the part of the first row/column (@p in_coord) of @p in_tile into the first row/column (@p
+// out_coord) of @p out_tile that is inside a sqaure defined by the global element index @p k where both
+// tiles begin at global element index (@p row, @p col).
+template <class T>
+void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::CPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::CPU>& out_tile);
+
+#define DLAF_CPU_COPY_1D_ETI(kword, Type)                                                 \
+  kword template void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, \
+                             const Coord& in_coord,                                       \
+                             const matrix::Tile<const Type, Device::CPU>& in_tile,        \
+                             const Coord& out_coord, const matrix::Tile<Type, Device::CPU>& out_tile)
+
+DLAF_CPU_COPY_1D_ETI(extern, float);
+DLAF_CPU_COPY_1D_ETI(extern, double);
+
+#ifdef DLAF_WITH_GPU
+
+template <class T>
+void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
+            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
+            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile);
+
+#define DLAF_GPU_COPY_1D_ETI(kword, Type)                                                   \
+  kword template void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, \
+                             const SizeType& col, const Coord& in_coord,                    \
+                             const matrix::Tile<const Type, Device::GPU>& in_tile,          \
+                             const Coord& out_coord, const matrix::Tile<Type, Device::GPU>& out_tile)
+
+DLAF_GPU_COPY_1D_ETI(extern, float);
+DLAF_GPU_COPY_1D_ETI(extern, double);
+
+#endif
+
+DLAF_MAKE_CALLABLE_OBJECT(copy1D);
+
+template <Device D, class InTileSender, class OutTileSender>
+void copy1DAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col, Coord in_coord,
+                 InTileSender&& in, Coord out_coord, OutTileSender&& out) {
+  namespace di = dlaf::internal;
+  namespace ex = pika::execution::experimental;
+  auto sender = di::whenAllLift(std::move(k_fut), row, col, in_coord, std::forward<InTileSender>(in),
+                                out_coord, std::forward<OutTileSender>(out));
+  ex::start_detached(di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(),
+                                                                    copy1D_o, std::move(sender)));
+}
+
 // ---------------------------
 
 #ifdef DLAF_WITH_GPU
@@ -573,16 +656,6 @@ void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t s
 
 DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
-
-template <class T>
-void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile, whip::stream_t stream);
-
-#define DLAF_SET_UNIT_DIAG_ETI(kword, Type)                                          \
-  kword template void setUnitDiagTileOnDevice(SizeType len, SizeType ld, Type* tile, \
-                                              whip::stream_t stream)
-
-DLAF_SET_UNIT_DIAG_ETI(extern, float);
-DLAF_SET_UNIT_DIAG_ETI(extern, double);
 
 #endif
 

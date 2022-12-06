@@ -50,8 +50,10 @@ if(NOT DLAF_MPI_PRESET STREQUAL _DLAF_MPI_PRESET)
 
   elseif(DLAF_MPI_PRESET STREQUAL "slurm")
     if(NOT DLAF_TEST_THREAD_BINDING_ENABLED)
-      message(WARNING "When using DLAF_MPI_PRESET=slurm this option should be enabled. "
-                      "You may incur in performance drop. Do it at your own risk."
+      message(
+        WARNING "When using DLAF_MPI_PRESET=slurm DLAF_TEST_THREAD_BINDING_ENABLED should be enabled. "
+                "It is currently disabled and you may incur in performance drop. "
+                "Leave it disabled at your own risk."
       )
     endif()
 

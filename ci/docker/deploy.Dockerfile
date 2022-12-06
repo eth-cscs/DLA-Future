@@ -63,6 +63,13 @@ RUN if [ "$USE_MKL" = "ON" ]; then \
       ${MKL_LIB}/libmkl_vml_mc3.so ; \
     fi
 
+# Deploy Extra RocBlas files separately.
+ARG USE_ROCBLAS=OFF
+RUN mkdir ${DEPLOY}/usr/lib/rocblas; \
+    if [ "$USE_ROCBLAS" = "ON" ]; then \
+      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib/rocblas ; \
+    fi
+
 # Multistage build, this is the final small image
 FROM $DEPLOY_BASE_IMAGE
 

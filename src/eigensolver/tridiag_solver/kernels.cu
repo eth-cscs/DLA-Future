@@ -605,10 +605,10 @@ void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const
   }
 
   if constexpr (std::is_same<T, float>::value) {
-    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, to_int(len), in_ptr, in_ld, out_ptr, out_ld));
   }
   else {
-    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, to_int(len), in_ptr, in_ld, out_ptr, out_ld));
   }
 }
 
@@ -674,7 +674,7 @@ template <class T>
 void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out,
                         whip::stream_t stream) {
   dim3 nr_threads(apply_index_sz);
-  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(apply_index_sz)));
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), apply_index_sz));
   applyIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, index, util::cppToCudaCast(in),
                                                            util::cppToCudaCast(out));
 }
@@ -694,7 +694,7 @@ __global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* 
 
 void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream) {
   dim3 nr_threads(invert_index_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), invert_index_kernel_sz));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
 }
 

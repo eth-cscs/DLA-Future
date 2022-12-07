@@ -9,10 +9,8 @@
 # Please, refer to the LICENSE file in the root directory.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# This script is used to manually run tests on ault.
-# It implies that an allocation is already set up
-# and that the correct GPUs are visible.
-# E.g. for ault08: export HIP_VISIBLE_DEVICES=1
+# This script is used to manually run tests on hohgant.
+# It implies that an allocation is already set up.
 
 IMAGE="$1"
 PULL="$2"
@@ -28,17 +26,19 @@ if [ "$PULL" != "OFF" ]; then
   sarus pull --login $IMAGE
 fi
 
+DEVICES="--device=/dev/kfd:rw --device=/dev/dri/card0:rw --device=/dev/dri/card1:rw --device=/dev/dri/card2:rw --device=/dev/dri/card3:rw --device=/dev/dri/card4:rw --device=/dev/dri/card5:rw --device=/dev/dri/card6:rw --device=/dev/dri/card7:rw --device=/dev/dri/renderD128:rw --device=/dev/dri/renderD129:rw --device=/dev/dri/renderD130:rw --device=/dev/dri/renderD131:rw --device=/dev/dri/renderD132:rw --device=/dev/dri/renderD133:rw --device=/dev/dri/renderD134:rw --device=/dev/dri/renderD135:rw"
+
 failed=0
 for label in `sarus run $IMAGE ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
   var=`sarus run $IMAGE ctest -N -V -L $label | egrep -o "Test command:.*$" | sed 's/^Test command: //'`
-  while IFS= read -r test_cmd; do
+  for test_cmd in `echo "$var"`; do
     echo "Running: $label $test_cmd"
-    srun -n `echo $label | egrep -o "[0-9]+"` -c 10 -i none sarus run --mount=type=bind,src=/dev/kfd,dst=/dev/kfd --mount=type=bind,src=/dev/dri,dst=/dev/dri $IMAGE `eval echo $test_cmd`
+    srun -n `echo $label | egrep -o "[0-9]+"` -c 16 --mpi=pmi2 --cpu-bind=core sarus run $DEVICES $IMAGE `eval echo $test_cmd`
     if [ $? != 0 ]; then
       failed=$(( failed + 1 ))
     fi
     sleep 1
-  done <<< $"$var"
+  done
 done
 
 echo "-----------------------"

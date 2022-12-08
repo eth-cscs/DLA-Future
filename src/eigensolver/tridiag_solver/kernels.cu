@@ -301,12 +301,13 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   InputIterator in_iter(count_iter, Row2ColMajor<T>{ld, ncols, ws});
 
   whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(NULL, temp_storage_bytes, in_iter, ws,
-                                                                nrows, begin_offsets, end_offsets,
-                                                                mult_op, T(1), stream));
+                                                                to_int(nrows), begin_offsets,
+                                                                end_offsets, mult_op, T(1), stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
   whip::check_error(dlaf::gpucub::DeviceSegmentedReduce::Reduce(d_temp_storage, temp_storage_bytes,
-                                                                in_iter, ws, nrows, begin_offsets,
-                                                                end_offsets, mult_op, T(1), stream));
+                                                                in_iter, ws, to_int(nrows),
+                                                                begin_offsets, end_offsets, mult_op,
+                                                                T(1), stream));
   // Deallocate memory
   auto extend_info = [d_temp_storage](whip::error_t status) {
     whip::check_error(status);
@@ -439,23 +440,13 @@ void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
   // Note: the output of the reduction is saved in the first row.
   // TODO: use a segmented reduce sum with fancy iterators
   size_t temp_storage_bytes;
-#ifdef DLAF_WITH_CUDA
-  whip::check_error(
-      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], nrows, stream));
-#elif defined(DLAF_WITH_HIP)
-  whip::check_error(
-      dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0], unrows, stream));
-#endif
+  whip::check_error(dlaf::gpucub::DeviceReduce::Sum(NULL, temp_storage_bytes, &out[0], &out[0],
+                                                    to_int(nrows), stream));
   void* d_temp_storage = memory::internal::getUmpireDeviceAllocator().allocate(temp_storage_bytes);
 
   for (SizeType j = 0; j < ncols; ++j) {
-#ifdef DLAF_WITH_CUDA
     whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                                      &out[j * ld], nrows, stream));
-#elif defined(DLAF_WITH_HIP)
-    whip::check_error(dlaf::gpucub::DeviceReduce::Sum(d_temp_storage, temp_storage_bytes, &out[j * ld],
-                                                      &out[j * ld], unrows, stream));
-#endif
+                                                      &out[j * ld], to_int(nrows), stream));
   }
 
   // Deallocate memory
@@ -605,10 +596,10 @@ void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const
   }
 
   if constexpr (std::is_same<T, float>::value) {
-    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasScopy(handle, to_int(len), in_ptr, in_ld, out_ptr, out_ld));
   }
   else {
-    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, len, in_ptr, in_ld, out_ptr, out_ld));
+    DLAF_GPUBLAS_CHECK_ERROR(cublasDcopy(handle, to_int(len), in_ptr, in_ld, out_ptr, out_ld));
   }
 }
 
@@ -674,7 +665,7 @@ template <class T>
 void applyIndexOnDevice(SizeType len, const SizeType* index, const T* in, T* out,
                         whip::stream_t stream) {
   dim3 nr_threads(apply_index_sz);
-  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(apply_index_sz)));
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), apply_index_sz));
   applyIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, index, util::cppToCudaCast(in),
                                                            util::cppToCudaCast(out));
 }
@@ -694,7 +685,7 @@ __global__ void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* 
 
 void invertIndexOnDevice(SizeType len, const SizeType* in, SizeType* out, whip::stream_t stream) {
   dim3 nr_threads(invert_index_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_sizet(len), to_sizet(invert_index_kernel_sz)));
+  dim3 nr_blocks(util::ceilDiv(to_uint(len), invert_index_kernel_sz));
   invertIndexOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, in, out);
 }
 

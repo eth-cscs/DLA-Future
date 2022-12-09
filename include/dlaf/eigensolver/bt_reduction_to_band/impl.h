@@ -208,18 +208,14 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     // W2 = W C
     matrix::util::set0<backend>(hp, panelW2);
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      auto kj = LocalTileIndex{k, ij.col()};
-      auto ik = LocalTileIndex{ij.row(), k};
-      gemmUpdateW2<backend>(np, panelW.read_sender(ik),
+      gemmUpdateW2<backend>(np, panelW.read_sender(ij),
                             keepFuture(splitTile(mat_c.read(ij), mat_c_view(ij))),
-                            panelW2.readwrite_sender(kj));
+                            panelW2.readwrite_sender(ij));
     }
 
     // Update trailing matrix: C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      auto ik = LocalTileIndex{ij.row(), k};
-      auto kj = LocalTileIndex{k, ij.col()};
-      gemmTrailingMatrix<backend>(np, panelV.read_sender(ik), panelW2.read_sender(kj),
+      gemmTrailingMatrix<backend>(np, panelV.read_sender(ij), panelW2.read_sender(ij),
                                   splitTile(mat_c(ij), mat_c_view(ij)));
     }
 

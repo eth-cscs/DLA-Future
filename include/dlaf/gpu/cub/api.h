@@ -104,19 +104,18 @@ struct Sum {
 
 class DeviceReduce {
 public:
-  template <typename InputIteratorT, typename OutputIteratorT, typename ReduceOpT, typename T,
-            typename NumItemsType>
+  template <typename InputIteratorT, typename OutputIteratorT, typename ReduceOpT, typename T>
   __host__ static whip::error_t Reduce(void* d_temp_storage, std::size_t& temp_storage_bytes,
-                                       InputIteratorT d_in, OutputIteratorT d_out,
-                                       NumItemsType num_items, ReduceOpT reduction_op, T init,
-                                       whip::stream_t stream = 0, bool debug_synchronous = false) {
-    return ::rocprim::reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, init, num_items,
+                                       InputIteratorT d_in, OutputIteratorT d_out, int num_items,
+                                       ReduceOpT reduction_op, T init, whip::stream_t stream = 0,
+                                       bool debug_synchronous = false) {
+    return ::rocprim::reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, init, to_uint(num_items),
                              detail::convert_result_type<InputIteratorT, OutputIteratorT>(reduction_op),
                              stream, debug_synchronous);
   }
-  template <typename InputIteratorT, typename OutputIteratorT, typename NumItemsType>
+  template <typename InputIteratorT, typename OutputIteratorT>
   __host__ static whip::error_t Sum(void* d_temp_storage, std::size_t& temp_storage_bytes,
-                                    InputIteratorT d_in, OutputIteratorT d_out, NumItemsType num_items,
+                                    InputIteratorT d_in, OutputIteratorT d_out, int num_items,
                                     whip::stream_t stream = 0, bool debug_synchronous = false) {
     using T = typename std::iterator_traits<InputIteratorT>::value_type;
     return Reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_items, ::dlaf::gpucub::Sum(),
@@ -126,15 +125,14 @@ public:
 
 struct DeviceSegmentedReduce {
   template <typename InputIteratorT, typename OutputIteratorT, typename OffsetIteratorT,
-            typename ReductionOp, typename T, typename NumSegmentType>
+            typename ReductionOp, typename T>
   __host__ static hipError_t Reduce(void* d_temp_storage, std::size_t& temp_storage_bytes,
-                                    InputIteratorT d_in, OutputIteratorT d_out,
-                                    NumSegmentType num_segments, OffsetIteratorT d_begin_offsets,
-                                    OffsetIteratorT d_end_offsets, ReductionOp reduction_op,
-                                    T initial_value, whip::stream_t stream = 0,
+                                    InputIteratorT d_in, OutputIteratorT d_out, int num_segments,
+                                    OffsetIteratorT d_begin_offsets, OffsetIteratorT d_end_offsets,
+                                    ReductionOp reduction_op, T initial_value, whip::stream_t stream = 0,
                                     bool debug_synchronous = false) {
-    return ::rocprim::segmented_reduce(d_temp_storage, temp_storage_bytes, d_in, d_out, num_segments,
-                                       d_begin_offsets, d_end_offsets,
+    return ::rocprim::segmented_reduce(d_temp_storage, temp_storage_bytes, d_in, d_out,
+                                       to_uint(num_segments), d_begin_offsets, d_end_offsets,
                                        detail::convert_result_type<InputIteratorT, OutputIteratorT>(
                                            reduction_op),
                                        initial_value, stream, debug_synchronous);

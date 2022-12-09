@@ -109,7 +109,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   eigensolver::tridiagSolver<B>(grid, tridiagonal, evals, mat_e);
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
-  backTransformationReductionToBand<B>(grid, mat_e, mat_a, taus);
+  backTransformationReductionToBand<B>(band_size, grid, mat_e, mat_a, taus);
 
   return {std::move(evals), std::move(mat_e)};
 }

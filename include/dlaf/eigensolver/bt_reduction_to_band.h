@@ -69,7 +69,8 @@ void backTransformationReductionToBand(
 /// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(
-    comm::CommunicatorGrid grid, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+    const SizeType b, comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
+    Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
@@ -78,15 +79,15 @@ void backTransformationReductionToBand(
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
 
-  [[maybe_unused]] auto nr_reflectors_blocks = [&mat_v]() {
+  [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();
     const SizeType mb = mat_v.blockSize().rows();
     return mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
-        std::max<SizeType>(0, util::ceilDiv(m - mb - 1, mb)));
+        std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb)));
   };
-  DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v);
+  DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(grid, mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(b, grid, mat_c, mat_v, taus);
 }
 
 /// ---- ETI
@@ -96,11 +97,12 @@ void backTransformationReductionToBand(
                           common::internal::vector<pika::shared_future<common::internal::vector<T>>>  \
                               taus);
 
-#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                \
-  KWORD template void backTransformationReductionToBand<                                          \
-      BACKEND, DEVICE,                                                                            \
-      T>(comm::CommunicatorGrid grid, Matrix<T, DEVICE> & mat_c, Matrix<const T, DEVICE> & mat_v, \
-         common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
+#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                   \
+  KWORD template void backTransformationReductionToBand<                                             \
+      BACKEND, DEVICE, T>(const SizeType b, comm::CommunicatorGrid grid, Matrix<T, DEVICE>& mat_c,   \
+                          Matrix<const T, DEVICE>& mat_v,                                            \
+                          common::internal::vector<pika::shared_future<common::internal::vector<T>>> \
+                              taus);
 
 #define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \

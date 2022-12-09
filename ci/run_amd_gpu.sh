@@ -11,6 +11,16 @@
 #
 # This script is used to manually run tests on hohgant.
 # It implies that an allocation is already set up.
+#
+# usage:
+# > ssh hohgant
+# > salloc -N 1 -p amdgpu
+# > ./run_amd_gpu.sh <image name>
+#
+# note:
+# if the image has already been downloaded with sarus the last line can be replaced with
+# > ./run_amd_gpu.sh <image name> OFF
+#
 
 IMAGE="$1"
 PULL="$2"
@@ -33,7 +43,7 @@ for label in `sarus run $IMAGE ctest --print-labels | egrep -o "RANK_[1-9][0-9]?
   var=`sarus run $IMAGE ctest -N -V -L $label | egrep -o "Test command:.*$" | sed 's/^Test command: //'`
   for test_cmd in `echo "$var"`; do
     echo "Running: $label $test_cmd"
-    srun -n `echo $label | egrep -o "[0-9]+"` -c 16 --mpi=pmi2 --cpu-bind=core sarus run $DEVICES $IMAGE `eval echo $test_cmd`
+    srun -n `echo $label | egrep -o "[0-9]+"` -c 16 --mpi=pmi2 --cpu-bind=core sarus run $DEVICES $IMAGE bash -c "ROCR_VISIBLE_DEVICES=\$SLURM_LOCALID `eval echo $test_cmd`"
     if [ $? != 0 ]; then
       failed=$(( failed + 1 ))
     fi

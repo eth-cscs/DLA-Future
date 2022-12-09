@@ -182,7 +182,9 @@ function(DLAF_addTest test_target_name)
 
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})
-  target_link_libraries(${test_target_name} PRIVATE ${_gtest_tgt} DLAF_test ${DLAF_AT_LIBRARIES})
+  target_link_libraries(
+    ${test_target_name} PRIVATE ${_gtest_tgt} DLAF_test ${DLAF_AT_LIBRARIES} dlaf.prop_private
+  )
   target_compile_definitions(
     ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
                                 NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>

@@ -20,7 +20,7 @@ spack:
       variants:
       - build_type=Release
       - cxxstd=17
-      - amdgpu_target=gfx906:xnack-
+      - amdgpu_target=gfx90a:xnack-
       providers:
         mpi: [mpich]
         blas: [openblas]
@@ -37,7 +37,6 @@ spack:
       variants:
       - ~fortran
       - ~rocm
-      - ~hwloc
       - device=ch3
       - netmod=tcp
       - ~libxml2

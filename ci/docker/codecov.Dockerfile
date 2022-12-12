@@ -45,6 +45,13 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD} && \
     rm -rf ${SOURCE}/.git
 
+# Deploy Extra RocBlas files separately.
+ARG USE_ROCBLAS=OFF
+RUN mkdir ${DEPLOY}/usr/lib/rocblas; \
+    if [ "$USE_ROCBLAS" = "ON" ]; then \
+      cp -r `spack -e ci location -i rocblas`/lib/rocblas/library ${DEPLOY}/usr/lib/rocblas ; \
+    fi
+
 # Multistage build, this is the final small image
 FROM $DEPLOY_BASE_IMAGE
 

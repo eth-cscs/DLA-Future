@@ -19,6 +19,7 @@
 #include "dlaf/common/round_robin.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/datatypes.h"
 #include "dlaf/communication/kernels/p2p.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/tile_collector.h"

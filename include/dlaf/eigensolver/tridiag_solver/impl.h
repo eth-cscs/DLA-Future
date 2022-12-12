@@ -240,12 +240,15 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     GlobalTileIndex idx_trd(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<D>(tridiag.readwrite_sender(idx_trd), evecs.readwrite_sender(ii_tile));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), tridiag.read_sender(idx_trd)));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                  ex::make_unique_any_sender(tridiag.read_sender(idx_trd))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
-          comm::scheduleRecvBcast(full_task_chain(), root_rank, tridiag.readwrite_sender(idx_trd)));
+          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
+                                  ex::make_unique_any_sender(tridiag.readwrite_sender(idx_trd))));
     }
   }
 }

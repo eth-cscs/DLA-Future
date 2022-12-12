@@ -12,7 +12,8 @@
 
 /// @file
 
-#include <functional>
+#include <type_traits>
+#include <utility>
 
 #include <mpi.h>
 #include <pika/execution.hpp>
@@ -33,7 +34,7 @@ namespace dlaf::comm {
 /// A P2P AllReduce Sum operation, i.e. an all-reduce involving just two ranks with MPI_SUM as op,
 /// is performed between the rank where this function is called and `rank_mate`.
 ///
-/// `in` is a sender of a read-only tile that, togheter with the one received from `rank_mate`, will be
+/// `in` is a sender of a read-only tile that, together with the one received from `rank_mate`, will be
 /// summed in `out` (on both ranks)
 template <Backend B, class CommSender, class SenderIn, class SenderOut>
 [[nodiscard]] auto scheduleAllSumP2P(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,
@@ -49,10 +50,12 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
   // Each rank in order to locally complete the operation just need to receive the other rank
   // data and then do the reduce operation. For this reason, the send operation is scheduled
   // independently from the rest of the allreduce operation.
-  ex::start_detached(comm::scheduleSend(comm, rank_mate, tag, in));
+  ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_mate, tag,
+                                        ex::make_unique_any_sender(in)));
 
   auto tile_out =
-      comm::scheduleRecv(std::forward<CommSender>(comm), rank_mate, tag, std::forward<SenderOut>(out));
+      comm::scheduleRecv(ex::make_unique_any_sender(std::forward<CommSender>(comm)), rank_mate, tag,
+                         ex::make_unique_any_sender(std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());
 }

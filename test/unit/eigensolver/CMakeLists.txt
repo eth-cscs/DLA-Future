@@ -62,12 +62,21 @@ DLAF_addTest(
   MPIRANKS 6
 )
 
+target_compile_options(
+  test_reduction_to_band PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=stringop-overflow
+                                 -Wno-error=array-bounds>
+)
+
 DLAF_addTest(
   test_bt_reduction_to_band
   SOURCES test_bt_reduction_to_band.cpp
   LIBRARIES dlaf.eigensolver dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
+)
+
+target_compile_options(
+  test_bt_reduction_to_band PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
 )
 
 DLAF_addTest(
@@ -92,4 +101,9 @@ DLAF_addTest(
   LIBRARIES dlaf.core dlaf.tridiagonal_eigensolver dlaf.multiplication dlaf.permutations
   USE_MAIN MPIPIKA
   MPIRANKS 6
+)
+
+target_compile_options(
+  test_tridiag_solver_distributed PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=stringop-overflow
+                                          -Wno-error=array-bounds>
 )

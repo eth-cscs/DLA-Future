@@ -16,6 +16,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/sender/transform_mpi.h"
 
 using pika::execution::experimental::just;
 using pika::execution::experimental::start_detached;

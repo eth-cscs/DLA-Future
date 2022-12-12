@@ -675,11 +675,12 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
       ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite_sender({i, 0})));
+          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM,
+                                          ex::make_unique_any_sender(x.readwrite_sender({i, 0}))));
     }
     else {
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read_sender(index_xt)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
+                                                  ex::make_unique_any_sender(xt.read_sender(index_xt))));
     }
   }
 
@@ -690,10 +691,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
       ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender(index_x)));
+          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
+                                          ex::make_unique_any_sender(x.readwrite_sender(index_x))));
     else
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read_sender(index_x)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
+                                                  ex::make_unique_any_sender(x.read_sender(index_x))));
   }
 }
 
@@ -1144,7 +1146,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
       ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
-                                                        w2.readwrite_sender(LocalTileIndex(0, 0))));
+                                                        ex::make_unique_any_sender(
+                                                            w2.readwrite_sender(LocalTileIndex(0, 0)))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

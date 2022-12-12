@@ -178,6 +178,10 @@ DLAF_addSublibrary(
           communication/communicator.cpp
           communication/communicator_grid.cpp
           communication/datatypes.cpp
+          communication/kernels/all_reduce.cpp
+          communication/kernels/broadcast.cpp
+          communication/kernels/p2p.cpp
+          communication/kernels/reduce.cpp
           init.cpp
           matrix/distribution.cpp
           matrix/layout_info.cpp
@@ -257,6 +261,22 @@ DLAF_addSublibrary(
   solver SOURCES solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>
   LIBRARIES dlaf.core
 )
+
+target_compile_options(
+  dlaf.core_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=stringop-overflow
+                           -Wno-error=array-bounds>
+)
+target_compile_options(dlaf.eigensolver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
+target_compile_options(
+  dlaf.tridiagonal_eigensolver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
+)
+target_compile_options(
+  dlaf.factorization_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
+)
+target_compile_options(
+  dlaf.multiplication_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
+)
+target_compile_options(dlaf.solver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
 
 # Define DLAF's complete library
 add_library(

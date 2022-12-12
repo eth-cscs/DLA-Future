@@ -1145,10 +1145,9 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(
-          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
-                                         pika::execution::experimental::make_unique_any_sender(
-                                             w2.readwrite_sender(LocalTileIndex(0, 0)))));
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+                                                        ex::make_unique_any_sender(
+                                                            w2.readwrite_sender(LocalTileIndex(0, 0)))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

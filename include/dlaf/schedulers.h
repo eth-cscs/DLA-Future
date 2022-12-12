@@ -29,7 +29,7 @@ auto getBackendScheduler() {
   }
 #ifdef DLAF_WITH_GPU
   else if constexpr (backend == Backend::GPU) {
-    return pika::cuda::experimental::cuda_scheduler{internal::getCudaPool()};
+    return pika::cuda::experimental::cuda_scheduler{internal::getGpuPool()};
   }
 #endif
 }

@@ -21,8 +21,8 @@
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
-  os << "  num_np_cuda_streams_per_thread = " << cfg.num_np_cuda_streams_per_thread << std::endl;
-  os << "  num_hp_cuda_streams_per_thread = " << cfg.num_hp_cuda_streams_per_thread << std::endl;
+  os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
+  os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
      << std::endl;
   os << "  umpire_device_memory_pool_initial_bytes = " << cfg.umpire_device_memory_pool_initial_bytes
@@ -57,14 +57,14 @@ struct Init<Backend::MC> {
 };
 
 #ifdef DLAF_WITH_GPU
-static std::unique_ptr<pika::cuda::experimental::cuda_pool> cuda_pool{nullptr};
+static std::unique_ptr<pika::cuda::experimental::cuda_pool> gpu_pool{nullptr};
 
-void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
-  DLAF_ASSERT(!cuda_pool, "");
+void initializeGpuPool(int device, std::size_t num_np_streams, std::size_t num_hp_streams) {
+  DLAF_ASSERT(!gpu_pool, "");
   // HIP currently requires not using hipStreamNonBlocking as some rocSOLVER
   // functions such as potrf are not safe to use with it (see
   // https://github.com/ROCmSoftwarePlatform/rocSOLVER/issues/436).
-  cuda_pool =
+  gpu_pool =
       std::make_unique<pika::cuda::experimental::cuda_pool>(device, num_np_streams, num_hp_streams,
 #if defined(DLAF_WITH_CUDA)
                                                             cudaStreamNonBlocking
@@ -74,14 +74,14 @@ void initializeCudaPool(int device, std::size_t num_np_streams, std::size_t num_
       );
 }
 
-void finalizeCudaPool() {
-  DLAF_ASSERT(bool(cuda_pool), "");
-  cuda_pool.reset();
+void finalizeGpuPool() {
+  DLAF_ASSERT(bool(gpu_pool), "");
+  gpu_pool.reset();
 }
 
-pika::cuda::experimental::cuda_pool getCudaPool() {
-  DLAF_ASSERT(bool(cuda_pool), "");
-  return *cuda_pool;
+pika::cuda::experimental::cuda_pool getGpuPool() {
+  DLAF_ASSERT(bool(gpu_pool), "");
+  return *gpu_pool;
 }
 
 template <>
@@ -89,13 +89,13 @@ struct Init<Backend::GPU> {
   static void initialize(configuration const& cfg) {
     const int device = 0;
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
-    initializeCudaPool(device, cfg.num_np_cuda_streams_per_thread, cfg.num_hp_cuda_streams_per_thread);
+    initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread);
     pika::cuda::experimental::detail::register_polling(pika::resource::get_thread_pool("default"));
   }
 
   static void finalize() {
     memory::internal::finalizeUmpireDeviceAllocator();
-    finalizeCudaPool();
+    finalizeGpuPool();
   }
 };
 #endif
@@ -137,10 +137,10 @@ void updateConfigurationValue(pika::program_options::variables_map const& vm, T&
 }
 
 void updateConfiguration(pika::program_options::variables_map const& vm, configuration& cfg) {
-  updateConfigurationValue(vm, cfg.num_np_cuda_streams_per_thread, "NUM_NP_CUDA_STREAMS_PER_THREAD",
-                           "num-np-cuda-streams-per-thread");
-  updateConfigurationValue(vm, cfg.num_hp_cuda_streams_per_thread, "NUM_HP_CUDA_STREAMS_PER_THREAD",
-                           "num-hp-cuda-streams-per-thread");
+  updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD",
+                           "num-np-gpu-streams-per-thread");
+  updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD",
+                           "num-hp-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.umpire_host_memory_pool_initial_bytes,
                            "UMPIRE_HOST_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-host-memory-pool-initial-bytes");
@@ -161,10 +161,10 @@ pika::program_options::options_description getOptionsDescription() {
 
   desc.add_options()("dlaf:help", "Print help message");
   desc.add_options()("dlaf:print-config", "Print the DLA-Future configuration");
-  desc.add_options()("dlaf:num-np-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of normal priority CUDA streams per worker thread");
-  desc.add_options()("dlaf:num-hp-cuda-streams-per-thread", pika::program_options::value<std::size_t>(),
-                     "Number of high priority CUDA streams per worker thread");
+  desc.add_options()("dlaf:num-np-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
+                     "Number of normal priority GPU streams per worker thread");
+  desc.add_options()("dlaf:num-hp-gpu-streams-per-thread", pika::program_options::value<std::size_t>(),
+                     "Number of high priority GPU streams per worker thread");
   desc.add_options()("dlaf:umpire-host-memory-pool-initial-bytes",
                      pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for pinned host memory pool");

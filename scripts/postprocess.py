@@ -35,7 +35,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
-        plt_routine:    chol | trsm | hegst It is used to filter data.
+        plt_routine:    chol | hegst | red2band | band2trid | bt_band2trid | trsm | evp | gevp It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -217,7 +217,14 @@ def _parse_line_based(fout, bench_name, nodes):
         # Note that the optional fields must not have a space in front of them.
         # Otherwise the space is required and parsing the optional field will
         # fail.
-        pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        alg_name = bench_name[0:bench_name.find("_dlaf")]
+
+        if alg_name in ["chol", "hegst", "trsm"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["red2band", "band2trid", "bt_band2trid"]:
+            pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["evp", "gevp"]:
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -272,7 +279,9 @@ def _parse_line_based(fout, bench_name, nodes):
             elif bench_name.startswith("chol_scalapack"):
                 rd["time"] = rd["time_ms"] / 1000
                 rd["matrix_cols"] = rd["matrix_rows"]
-            rd["perf_per_node"] = rd["perf"] / nodes
+
+            if "perf" in rd:
+              rd["perf_per_node"] = rd["perf"] / nodes
 
             # makes _calc_*_metrics work
             #
@@ -361,6 +370,26 @@ def calc_trsm_metrics(df):
 
 
 def calc_gen2std_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+
+
+def calc_red2band_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+
+
+def calc_band2trid_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
+
+
+def calc_bt_band2trid_metrics(df):
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
+
+
+def calc_evp_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+
+
+def calc_gevp_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
 
 
@@ -802,3 +831,439 @@ def gen_gen2std_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
+
+def gen_red2band_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "band", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+            b = x[2]
+
+        title = f"RED2BAND: strong scaling ({m} x {m})"
+        filename_ppn = f"red2band_strong_ppn_{m}"
+        filename_time = f"red2band_strong_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "red2band",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "red2band",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_red2band_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weak_rt=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows", "band"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+            b = x[2]
+
+        title = f"RED2BAND: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"red2band_weak_ppn_{weak_rt}"
+        filename_time = f"red2band_weak_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "red2band",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "red2band",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)
+
+
+def gen_band2trid_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows"])
+    else:
+        it_space = df.groupby(["matrix_rows", "band", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m = x[0]
+            mb = x[1]
+            b = x[2]
+
+        title = f"BAND2TRID: strong scaling ({m} x {m})"
+        filename_ppn = f"band2trid_strong_ppn_{m}"
+        filename_time = f"band2trid_strong_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_band2trid_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weak_rt=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weak_rt"])
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows", "band"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt = x[0]
+            mb = x[1]
+            b = x[2]
+
+        title = f"BAND2TRID: weak scaling ({weak_rt} x {weak_rt})"
+        filename_ppn = f"band2trid_weak_ppn_{weak_rt}"
+        filename_time = f"band2trid_weak_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)
+
+
+def gen_bt_band2trid_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby(["matrix_rows", "matrix_cols"])
+    else:
+        it_space = df.groupby(["matrix_rows", "matrix_cols", "block_rows", "band"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m, n = x
+        else:
+            m, n, mb, b = x
+
+        title = f"BTBAND2TRID: strong scaling ({m} x {n})"
+        filename_ppn = f"bt_band2trid_strong_ppn_{m}_{n}"
+        filename_time = f"bt_band2trid_strong_time_{m}_{n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "bt_band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "bt_band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_bt_band2trid_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weakrt_rows=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ],
+        weakrt_cols=[
+            int(round(x[0] / math.sqrt(x[1]) / weak_rt_approx)) * weak_rt_approx
+            for x in zip(df["matrix_cols"], df["nodes"])
+        ],
+    )
+
+    if combine_mb:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols"])
+    else:
+        it_space = df.groupby(["weakrt_rows", "weakrt_cols", "block_rows", "band"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weakrt_m, weakrt_n = x
+        else:
+            weakrt_m, weakrt_n, mb, b = x
+
+        title = f"BTBAND2TRID: weak scaling ({weakrt_m} x {weakrt_n})"
+        filename_ppn = f"bt_band2trid_weak_ppn_{weakrt_m}_{weakrt_n}"
+        filename_time = f"bt_band2trid_weak_time_{weakrt_m}_{weakrt_n}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}, band size {b}"
+            filename_ppn += f"_{mb}_{b}"
+            filename_time += f"_{mb}_{b}"
+        if filename_suffix != None:
+            filename_ppn += f"_{filename_suffix}"
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_ppn,
+            "ppn",
+            "bt_band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_ppn:
+                customize_ppn(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "bt_band2trid",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)
+
+

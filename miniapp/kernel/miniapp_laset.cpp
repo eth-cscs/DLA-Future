@@ -16,6 +16,7 @@
 
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/format_short.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/miniapp/dispatch.h"
@@ -75,6 +76,7 @@ struct Test {
     const T beta(-1);
 
     [[maybe_unused]] auto kernel_MC = [uplo, m, n, alpha, beta, &tiles](SizeType i) {
+      dlaf::common::internal::SingleThreadedBlasScope single;
       lapack::laset(uplo, m, n, alpha, beta, tiles(i).ptr(), tiles(i).ld());
     };
 #ifdef DLAF_WITH_GPU

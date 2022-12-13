@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 
 #include <gtest/gtest.h>
@@ -53,6 +54,8 @@ TYPED_TEST(LacpyTestGPU, CorrectnessLocal) {
     else
       return T(ij.row() - ij.col());
   };
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   for (const auto& [m, n, lda, ldb] : configs) {
     for (const auto uplo : {Uplo::Lower, Uplo::Upper, Uplo::General}) {

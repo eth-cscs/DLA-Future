@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include "dlaf/common/vector.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf::eigensolver::internal {
@@ -18,7 +20,8 @@ struct BackTransformationReductionToBand {
   static void call(SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 
-  static void call(comm::CommunicatorGrid grid, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+  static void call(const SizeType b, comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
+                   Matrix<const T, device>& mat_v,
                    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 };
 

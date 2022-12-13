@@ -167,7 +167,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
 
 template <class T, Backend B, Device D>
 void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType m, SizeType n,
-                                           SizeType mb, SizeType nb) {
+                                           SizeType mb, SizeType nb, SizeType b) {
   const GlobalElementSize size_c(m, n);
   const GlobalElementSize size_v(m, m);
   const TileElementSize block_size_c(mb, nb);
@@ -186,11 +186,11 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c_h, grid);
   auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v_h, grid);
 
-  auto taus_loc = setUpTest(mb, c_loc, v_loc);
+  auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
   common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
-  SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - mb - 1, mb));
+  SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - b - 1, mb));
   taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, grid.size().cols()));
 
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
@@ -207,7 +207,7 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(grid, mat_c.get(), mat_v.get(), taus);
+    eigensolver::backTransformationReductionToBand<B, D, T>(b, grid, mat_c.get(), mat_v.get(), taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
@@ -233,11 +233,8 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessLocal
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : sizes) {
-      // b != mb is currently not supported by the implementation yet.
-      dlaf::internal::silenceUnusedWarningFor(b);
-
-      testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, mb,
-                                                                                 nb);
+      testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, mb, nb,
+                                                                                 b);
       pika::threads::get_thread_manager().wait();
     }
   }
@@ -247,11 +244,8 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : sizes) {
-      // b != mb is currently not supported by the implementation yet.
-      dlaf::internal::silenceUnusedWarningFor(b);
-
       testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, n, mb,
-                                                                                  nb);
+                                                                                  nb, b);
       pika::threads::get_thread_manager().wait();
     }
   }

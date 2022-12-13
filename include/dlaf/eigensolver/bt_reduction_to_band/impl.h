@@ -208,18 +208,14 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     // W2 = W C
     matrix::util::set0<backend>(hp, panelW2);
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      auto kj = LocalTileIndex{k, ij.col()};
-      auto ik = LocalTileIndex{ij.row(), k};
-      gemmUpdateW2<backend>(np, panelW.read_sender(ik),
+      gemmUpdateW2<backend>(np, panelW.read_sender(ij),
                             keepFuture(splitTile(mat_c.read(ij), mat_c_view(ij))),
-                            panelW2.readwrite_sender(kj));
+                            panelW2.readwrite_sender(ij));
     }
 
     // Update trailing matrix: C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      auto ik = LocalTileIndex{ij.row(), k};
-      auto kj = LocalTileIndex{k, ij.col()};
-      gemmTrailingMatrix<backend>(np, panelV.read_sender(ik), panelW2.read_sender(kj),
+      gemmTrailingMatrix<backend>(np, panelV.read_sender(ij), panelW2.read_sender(ij),
                                   splitTile(mat_c(ij), mat_c_view(ij)));
     }
 
@@ -232,7 +228,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(
-    comm::CommunicatorGrid grid, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
+    const SizeType b, comm::CommunicatorGrid grid, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
@@ -259,9 +255,9 @@ void BackTransformationReductionToBand<B, D, T>::call(
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
-  const SizeType total_nr_reflector = mat_v.size().cols() - mb - 1;
+  const SizeType total_nr_reflector = mat_v.size().cols() - b - 1;
 
-  if (total_nr_reflector == 0)
+  if (total_nr_reflector <= 0)
     return;
 
   constexpr std::size_t n_workspaces = 2;
@@ -277,17 +273,22 @@ void BackTransformationReductionToBand<B, D, T>::call(
 
   for (SizeType k = nr_reflector_blocks - 1; k >= 0; --k) {
     const bool is_last = (k == nr_reflector_blocks - 1);
-    const GlobalTileIndex v_start{k + 1, k};
+    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
+
+    const GlobalElementIndex v_offset(k * mb + b, k * mb);
+    const GlobalElementIndex c_offset(k * mb + b, 0);
+
+    const matrix::SubPanelView panel_view(dist_v, v_offset, nr_reflectors);
+    const matrix::SubMatrixView mat_c_view(dist_c, c_offset);
 
     auto& panelV = panelsV.nextResource();
     auto& panelW = panelsW.nextResource();
     auto& panelW2 = panelsW2.nextResource();
 
-    panelV.setRangeStart(v_start);
-    panelW.setRangeStart(v_start);
+    panelV.setRangeStart(v_offset);
+    panelW.setRangeStart(v_offset);
     panelT.setRange(GlobalTileIndex(Coord::Col, k), GlobalTileIndex(Coord::Col, k + 1));
 
-    const SizeType nr_reflectors = dist_t.tileSize({0, k}).cols();
     if (is_last) {
       panelT.setHeight(nr_reflectors);
       panelW2.setHeight(nr_reflectors);
@@ -298,20 +299,19 @@ void BackTransformationReductionToBand<B, D, T>::call(
     const comm::IndexT_MPI k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
 
     if (this_rank.col() == k_rank_col) {
-      for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < dist_c.localNrTiles().rows(); ++i_local) {
-        const SizeType i = dist_v.template globalTileFromLocalTile<Coord::Row>(i_local);
-        const LocalTileIndex ik_panel(Coord::Row, i_local);
-        if (i == v_start.row()) {
-          pika::shared_future<matrix::Tile<const T, D>> tile_v = mat_v.read(GlobalTileIndex(i, k));
-          if (is_last) {
-            tile_v = splitTile(tile_v,
-                               {{0, 0}, {dist_v.tileSize(GlobalTileIndex(i, k)).rows(), nr_reflectors}});
-          }
-          copyAndSetHHUpperTiles<B>(0, keepFuture(tile_v), panelV.readwrite_sender(ik_panel));
+      for (const auto& ik : panel_view.iteratorLocal()) {
+        const SizeType i_row_g = dist_v.template globalTileFromLocalTile<Coord::Row>(ik.row());
+
+        // Column index of the HH reflector which starts in the first row of this tile.
+        const SizeType j_diag =
+            std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
+
+        if (j_diag < mb) {
+          auto tile_v = splitTile(mat_v.read(ik), panel_view(ik));
+          copyAndSetHHUpperTiles<B>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(ik));
         }
         else {
-          panelV.setTile(ik_panel, mat_v.read(GlobalTileIndex(i, k)));
+          panelV.setTile(ik, mat_v.read(ik));
         }
       }
 
@@ -323,11 +323,9 @@ void BackTransformationReductionToBand<B, D, T>::call(
       computeTFactor<B>(panelV, taus_panel, panelT(t_index), mpi_col_task_chain);
 
       // WH = V T
-      for (SizeType i_local = dist_v.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-           i_local < dist_v.localNrTiles().rows(); ++i_local) {
-        const LocalTileIndex ik_panel{Coord::Row, i_local};
-        trmmPanel<B>(np, panelT.read_sender(t_index), panelV.read_sender(ik_panel),
-                     panelW.readwrite_sender(ik_panel));
+      for (const auto& idx : panel_view.iteratorLocal()) {
+        trmmPanel<B>(np, panelT.read_sender(t_index), panelV.read_sender(idx),
+                     panelW.readwrite_sender(idx));
       }
     }
 
@@ -336,13 +334,10 @@ void BackTransformationReductionToBand<B, D, T>::call(
     broadcast(k_rank_col, panelW, mpi_row_task_chain);
 
     // W2 = W C
-    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < dist_c.localNrTiles().rows(); ++i_local) {
-      for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
-        const LocalTileIndex ij{i_local, j_local};
-        gemmUpdateW2<B>(np, panelW.readwrite_sender(ij), mat_c.read_sender(ij),
-                        panelW2.readwrite_sender(ij));
-      }
+    for (const auto& ij : mat_c_view.iteratorLocal()) {
+      gemmUpdateW2<B>(np, panelW.readwrite_sender(ij),
+                      keepFuture(splitTile(mat_c.read(ij), mat_c_view(ij))),
+                      panelW2.readwrite_sender(ij));
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
@@ -353,13 +348,9 @@ void BackTransformationReductionToBand<B, D, T>::call(
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 
     // C = C - V W2
-    for (SizeType i_local = dist_c.template nextLocalTileFromGlobalTile<Coord::Row>(k + 1);
-         i_local < dist_c.localNrTiles().rows(); ++i_local) {
-      for (SizeType j_local = 0; j_local < dist_c.localNrTiles().cols(); ++j_local) {
-        const LocalTileIndex ij(i_local, j_local);
-        gemmTrailingMatrix<B>(np, panelV.read_sender(ij), panelW2.read_sender(ij),
-                              mat_c.readwrite_sender(ij));
-      }
+    for (const auto& ij : mat_c_view.iteratorLocal()) {
+      gemmTrailingMatrix<B>(np, panelV.read_sender(ij), panelW2.read_sender(ij),
+                            splitTile(mat_c(ij), mat_c_view(ij)));
     }
 
     panelV.reset();

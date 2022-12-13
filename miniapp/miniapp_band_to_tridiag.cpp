@@ -58,10 +58,6 @@ struct Options
     DLAF_ASSERT(mb > 0, mb);
     DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
 
-    DLAF_ASSERT(grid_rows * grid_cols == 1,
-                "Error! Distributed is not avilable yet. "
-                "Please rerun with both --grid-rows and --grid-cols set to 1");
-
     if (backend == Backend::GPU) {
       std::cerr << "Warning! Backend GPU is not implemented, Using MC backend starting from GPU memory."
                 << std::endl;
@@ -86,9 +82,6 @@ struct BandToTridiagMiniapp {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
-
-    if (opts.grid_rows * opts.grid_cols != 1)
-      DLAF_UNIMPLEMENTED("Distributed implementation not available yet.");
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
@@ -123,7 +116,7 @@ struct BandToTridiagMiniapp {
 
         dlaf::common::Timer<> timeit;
         auto [trid, hhr] =
-            dlaf::eigensolver::bandToTridiag<Backend::MC>(opts.uplo, opts.b, matrix.get());
+            dlaf::eigensolver::bandToTridiag<Backend::MC>(comm_grid, opts.uplo, opts.b, matrix.get());
 
         // wait and barrier for all ranks
         trid.waitLocalTiles();

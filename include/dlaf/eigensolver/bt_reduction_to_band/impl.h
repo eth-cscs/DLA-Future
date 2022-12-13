@@ -299,18 +299,19 @@ void BackTransformationReductionToBand<B, D, T>::call(
     const comm::IndexT_MPI k_rank_col = dist_v.template rankGlobalTile<Coord::Col>(k);
 
     if (this_rank.col() == k_rank_col) {
-      for (const auto& i : panel_view.iteratorLocal()) {
+      for (const auto& ik : panel_view.iteratorLocal()) {
+        const SizeType i_row_g = dist_v.template globalTileFromLocalTile<Coord::Row>(ik.row());
+
         // Column index of the HH reflector which starts in the first row of this tile.
-        const SizeType i_row_g = dist_v.template globalTileFromLocalTile<Coord::Row>(i.row());
         const SizeType j_diag =
             std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
         if (j_diag < mb) {
-          auto tile_v = splitTile(mat_v.read(i), panel_view(i));
-          copyAndSetHHUpperTiles<B>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(i));
+          auto tile_v = splitTile(mat_v.read(ik), panel_view(ik));
+          copyAndSetHHUpperTiles<B>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(ik));
         }
         else {
-          panelV.setTile(i, mat_v.read(i));
+          panelV.setTile(ik, mat_v.read(ik));
         }
       }
 

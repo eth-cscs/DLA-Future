@@ -32,7 +32,7 @@ template <class T>
 class TridiagSolverDistTestMC : public TestWithCommGrids {};
 TYPED_TEST_SUITE(TridiagSolverDistTestMC, MatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <typename Type>
 class TridiagSolverDistTestGPU : public TestWithCommGrids {};
 TYPED_TEST_SUITE(TridiagSolverDistTestGPU, MatrixElementTypes);
@@ -306,7 +306,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Random) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {

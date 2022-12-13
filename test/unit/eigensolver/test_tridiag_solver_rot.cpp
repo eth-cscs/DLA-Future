@@ -76,7 +76,7 @@ using TridiagEigensolverRotMCTest = TridiagEigensolverRotTest<T>;
 
 TYPED_TEST_SUITE(TridiagEigensolverRotMCTest, RealMatrixElementTypes);
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 template <typename T>
 using TridiagEigensolverRotGPUTest = TridiagEigensolverRotTest<T>;
 
@@ -130,7 +130,7 @@ TYPED_TEST(TridiagEigensolverRotMCTest, ApplyGivenRotations) {
   }
 }
 
-#ifdef DLAF_WITH_CUDA
+#ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagEigensolverRotGPUTest, ApplyGivenRotations) {
   for (const auto& grid : this->commGrids()) {
     for (const auto& [m, mb, idx_begin, idx_last, rots] : this->configs) {

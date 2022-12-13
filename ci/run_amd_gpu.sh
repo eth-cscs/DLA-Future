@@ -29,6 +29,13 @@ if [ -z "$IMAGE" ]; then
   echo "Usage: run_test_ault.sh <IMAGE> [OFF]"
   echo "       IMAGE: deploy image name for amd gpu tests"
   echo "       OFF:   disable image pulling (useful when the image has already been pulled)"
+  exit 1
+fi
+
+if [ -z "$SLURM_JOB_ID" ]; then
+  echo "SLURM allocation not available please run"
+  echo "> salloc -N 1 -p amdgpu"
+  exit 1
 fi
 
 if [ "$PULL" != "OFF" ]; then

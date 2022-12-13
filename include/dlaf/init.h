@@ -26,8 +26,8 @@ namespace dlaf {
 /// Holds configuration values that can be used to customize DLA-Future through
 /// dlaf::initialize.
 struct configuration {
-  std::size_t num_np_cuda_streams_per_thread = 3;
-  std::size_t num_hp_cuda_streams_per_thread = 3;
+  std::size_t num_np_gpu_streams_per_thread = 3;
+  std::size_t num_hp_gpu_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;
   std::size_t umpire_device_memory_pool_initial_bytes = 1 << 30;
   std::string mpi_pool = "mpi";
@@ -39,7 +39,7 @@ namespace internal {
 configuration& getConfiguration();
 
 #ifdef DLAF_WITH_GPU
-pika::cuda::experimental::cuda_pool getCudaPool();
+pika::cuda::experimental::cuda_pool getGpuPool();
 #endif
 }
 

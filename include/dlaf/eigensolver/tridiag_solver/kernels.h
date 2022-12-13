@@ -557,10 +557,10 @@ DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(setUnitDiagonal);
 
-template <Device D, class TileSender>
-void setUnitDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType tile_begin, TileSender&& tile) {
+template <Device D, class KSender, class TileSender>
+void setUnitDiagonalAsync(KSender&& k, SizeType tile_begin, TileSender&& tile) {
   namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(std::move(k_fut), tile_begin, std::forward<TileSender>(tile));
+  auto sender = di::whenAllLift(std::forward<KSender>(k), tile_begin, std::forward<TileSender>(tile));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setUnitDiagonal_o, std::move(sender));
 }
 
@@ -601,13 +601,14 @@ DLAF_GPU_COPY_1D_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(copy1D);
 
-template <Device D, class InTileSender, class OutTileSender>
-void copy1DAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col, Coord in_coord,
-                 InTileSender&& in, Coord out_coord, OutTileSender&& out) {
+template <Device D, class KSender, class InTileSender, class OutTileSender>
+void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTileSender&& in,
+                 Coord out_coord, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, in_coord, std::forward<InTileSender>(in),
-                                out_coord, std::forward<OutTileSender>(out));
+  auto sender =
+      di::whenAllLift(std::forward<KSender>(k), row, col, in_coord, std::forward<InTileSender>(in),
+                      out_coord, std::forward<OutTileSender>(out));
   ex::start_detached(di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(),
                                                                     copy1D_o, std::move(sender)));
 }

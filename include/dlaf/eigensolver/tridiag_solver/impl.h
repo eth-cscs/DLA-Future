@@ -290,7 +290,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
+  auto offdiag_vals = cuppensDecomposition(tridiag);
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());

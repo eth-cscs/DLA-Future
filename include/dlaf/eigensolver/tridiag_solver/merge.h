@@ -683,7 +683,7 @@ void sumsqEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin, Loca
 }
 
 // Normalize column vectors
-template <class T, Device D>
+template <class T, Device D, class KSender>
 void normalizeEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
                     LocalTileSize sz_loc_tiles, KSender&& k, Matrix<const T, D>& ws,
                     Matrix<T, D>& evecs) {
@@ -714,6 +714,8 @@ template <Backend backend, Device device, class T, class RhoSender>
 void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, RhoSender&& rho,
                       WorkSpace<T, device>& ws, WorkSpaceHostMirror<T, device>& ws_h,
                       Matrix<T, device>& evals, Matrix<T, device>& evecs) {
+  namespace ex = pika::execution::experimental;
+
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   LocalTileIndex idx_loc_begin(i_begin, i_begin);
   SizeType nrtiles = i_end - i_begin + 1;
@@ -721,8 +723,6 @@ void mergeSubproblems(SizeType i_begin, SizeType i_split, SizeType i_end, RhoSen
 
   LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
   LocalTileSize sz_tiles_vec(nrtiles, 1);
-
-  namespace ex = pika::execution::experimental;
 
   // Calculate the size of the upper subproblem
   SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
@@ -1112,6 +1112,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& col_task_chain, SizeType i_begin,
                           SizeType i_split, SizeType i_end, RhoSender&& rho, WorkSpace<T, D>& ws,
                           WorkSpaceHostMirror<T, D>& ws_h, Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+  namespace ex = pika::execution::experimental;
+
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
   // Calculate the size of the upper subproblem
@@ -1132,7 +1134,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, evecs, ws.z);
 
   // Calculate the tolerance used for deflation
-  pika::shared_future<T> tol_fut = calcTolerance(i_begin, i_end, evals, ws.z);
+  auto tol = calcTolerance(i_begin, i_end, evals, ws.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   auto scaled_rho = scaleRho(std::move(rho)) | ex::split();
@@ -1149,7 +1151,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // - apply Givens rotations to `Q` - `evecs`
   //
   initIndex(i_begin, i_end, ws.i1);
-  sortIndex(i_begin, i_end, pika::make_ready_future(n1), evals, ws.i1, ws.i2);
+  sortIndex(i_begin, i_end, ex::just(n1), evals, ws.i1, ws.i2);
 
   // --- copy from GPU to CPU if on GPU
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.i2, ws_h.i2);
@@ -1157,7 +1159,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.c, ws_h.c);
   copy(idx_begin_tiles_vec, sz_tiles_vec, evals, ws_h.evals);
 
-  auto rots = applyDeflation(i_begin, i_end, scaled_rho, tol_fut, ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
+  auto rots =
+      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_h.i2, ws_h.evals, ws_h.z, ws_h.c);
 
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.z, ws.z);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.c, ws.c);
@@ -1181,7 +1184,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3);
+  auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws.c, ws.i2, ws.i3) | ex::split();
   applyIndex(i_begin, i_end, ws.i3, evals, ws.dtmp);
   applyIndex(i_begin, i_end, ws.i3, ws.z, ws.ztmp);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.dtmp, evals);

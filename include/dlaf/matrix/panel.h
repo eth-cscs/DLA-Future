@@ -12,7 +12,6 @@
 #include <pika/future.hpp>
 #include <pika/unwrap.hpp>
 
-#include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
@@ -489,7 +488,7 @@ public:
 
   void setRangeEnd(GlobalTileIndex end_idx) {
     end_idx.transpose();
-    BaseT::setRangeStart(end_idx);
+    BaseT::setRangeEnd(end_idx);
   }
 
   using BaseT::rangeStart;

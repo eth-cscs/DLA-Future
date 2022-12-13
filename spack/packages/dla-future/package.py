@@ -47,19 +47,27 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     # https://github.com/eth-cscs/DLA-Future/issues/420
     conflicts("umpire@6:")
 
+    depends_on("pika@0.11:")
+    depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
-    depends_on("pika@0.9:")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
+        depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
         depends_on(
-            "pika cxxstd={0}".format(cxxstd),
-            when="cxxstd={0}".format(cxxstd)
+            "pika-algorithms cxxstd={0}".format(cxxstd),
+            when="cxxstd={0}".format(cxxstd),
         )
 
-    depends_on("pika build_type=Debug", when="build_type=Debug")
-    depends_on("pika build_type=Release", when="build_type=Release")
-    depends_on("pika build_type=RelWithDebInfo", when="build_type=RelWithDebInfo")
+    for build_type in ("Debug", "RelWithDebInfo", "Release"):
+        depends_on(
+            "pika build_type={0}".format(build_type),
+            when="build_type={0}".format(build_type),
+        )
+        depends_on(
+            "pika-algorithms build_type={0}".format(build_type),
+            when="build_type={0}".format(build_type),
+        )
 
     depends_on("whip +cuda", when="+cuda")
     depends_on("whip +rocm", when="+rocm")

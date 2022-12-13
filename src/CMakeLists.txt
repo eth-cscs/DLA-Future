@@ -75,6 +75,7 @@ target_link_libraries(
     MPI::MPI_CXX
     DLAF::LAPACK
     pika::pika
+    pika-algorithms::pika_algorithms
     lapackpp
     blaspp
     umpire

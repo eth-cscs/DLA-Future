@@ -52,7 +52,7 @@ def _gen_nodes_plot(
     if combine_mb:
         it_space = df.groupby(["block_rows", "bench_name"])
     else:
-        it_space = df.groupby(["bench_name"])
+        it_space = df.groupby("bench_name")
 
     plotted = False
 
@@ -419,7 +419,7 @@ def gen_chol_plots_strong(
         Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
-        it_space = df.groupby(["matrix_rows"])
+        it_space = df.groupby("matrix_rows")
     else:
         it_space = df.groupby(["matrix_rows", "block_rows"])
 
@@ -494,7 +494,7 @@ def gen_chol_plots_weak(
     )
 
     if combine_mb:
-        it_space = df.groupby(["weak_rt"])
+        it_space = df.groupby("weak_rt")
     else:
         it_space = df.groupby(["weak_rt", "block_rows"])
 
@@ -706,7 +706,7 @@ def gen_gen2std_plots_strong(
         Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
-        it_space = df.groupby(["matrix_rows"])
+        it_space = df.groupby("matrix_rows")
     else:
         it_space = df.groupby(["matrix_rows", "block_rows"])
 
@@ -781,7 +781,7 @@ def gen_gen2std_plots_weak(
     )
 
     if combine_mb:
-        it_space = df.groupby(["weak_rt"])
+        it_space = df.groupby("weak_rt")
     else:
         it_space = df.groupby(["weak_rt", "block_rows"])
 
@@ -848,7 +848,7 @@ def gen_red2band_plots_strong(
         Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
-        it_space = df.groupby(["matrix_rows"])
+        it_space = df.groupby("matrix_rows")
     else:
         it_space = df.groupby(["matrix_rows", "band", "block_rows"])
 
@@ -924,7 +924,7 @@ def gen_red2band_plots_weak(
     )
 
     if combine_mb:
-        it_space = df.groupby(["weak_rt"])
+        it_space = df.groupby("weak_rt")
     else:
         it_space = df.groupby(["weak_rt", "block_rows", "band"])
 
@@ -993,7 +993,7 @@ def gen_band2trid_plots_strong(
         Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
     """
     if combine_mb:
-        it_space = df.groupby(["matrix_rows"])
+        it_space = df.groupby("matrix_rows")
     else:
         it_space = df.groupby(["matrix_rows", "band", "block_rows"])
 
@@ -1069,7 +1069,7 @@ def gen_band2trid_plots_weak(
     )
 
     if combine_mb:
-        it_space = df.groupby(["weak_rt"])
+        it_space = df.groupby("weak_rt")
     else:
         it_space = df.groupby(["weak_rt", "block_rows", "band"])
 

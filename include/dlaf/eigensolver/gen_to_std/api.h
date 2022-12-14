@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

@@ -1255,3 +1255,215 @@ def gen_bt_band2trid_plots_weak(
             ax.set_yscale("log", base=10)
 
 
+def gen_evp_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby("matrix_rows")
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m, mb = x
+
+        title = f"EVP: strong scaling ({m} x {m})"
+        filename_time = f"evp_strong_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "evp",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_evp_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weak_rt=[
+            round(x[0] / math.sqrt(x[1]) / weak_rt_approx) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby("weak_rt")
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt, mb = x
+
+        title = f"EVP: weak scaling ({weak_rt} x {weak_rt})"
+        filename_time = f"evp_weak_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "evp",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)
+
+
+def gen_gevp_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    if combine_mb:
+        it_space = df.groupby("matrix_rows")
+    else:
+        it_space = df.groupby(["matrix_rows", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            m = x
+        else:
+            m, mb = x
+
+        title = f"GEVP: strong scaling ({m} x {m})"
+        filename_time = f"gevp_strong_time_{m}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "gevp",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+
+
+def gen_gevp_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    df = df.assign(
+        weak_rt=[
+            round(x[0] / math.sqrt(x[1]) / weak_rt_approx) * weak_rt_approx
+            for x in zip(df["matrix_rows"], df["nodes"])
+        ]
+    )
+
+    if combine_mb:
+        it_space = df.groupby("weak_rt")
+    else:
+        it_space = df.groupby(["weak_rt", "block_rows"])
+
+    for x, grp_data in it_space:
+        if combine_mb:
+            weak_rt = x
+        else:
+            weak_rt, mb = x
+
+        title = f"GEVP: weak scaling ({weak_rt} x {weak_rt})"
+        filename_time = f"gevp_weak_time_{weak_rt}"
+        if not combine_mb:
+            title += f", block_size = {mb} x {mb}"
+            filename_time += f"_{mb}"
+        if filename_suffix != None:
+            filename_time += f"_{filename_suffix}"
+
+        with NodePlotWriter(
+            filename_time,
+            "time",
+            "gevp",
+            title,
+            grp_data,
+            combine_mb=combine_mb,
+            **proxy_args,
+        ) as (fig, ax):
+            if customize_time:
+                customize_time(fig, ax)
+            if logx:
+                ax.set_xscale("log", base=2)
+            ax.set_yscale("log", base=10)

@@ -12,7 +12,7 @@
 #include <blas.hh>
 
 #include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/bt_reduction_to_band/impl.h"
+#include "dlaf/eigensolver/bt_reduction_to_band/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
@@ -89,35 +89,5 @@ void backTransformationReductionToBand(
 
   internal::BackTransformationReductionToBand<backend, device, T>::call(b, grid, mat_c, mat_v, taus);
 }
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                    \
-  KWORD template void backTransformationReductionToBand<                                              \
-      BACKEND, DEVICE, T>(const SizeType b, Matrix<T, DEVICE>& mat_c, Matrix<const T, DEVICE>& mat_v, \
-                          common::internal::vector<pika::shared_future<common::internal::vector<T>>>  \
-                              taus);
-
-#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                   \
-  KWORD template void backTransformationReductionToBand<                                             \
-      BACKEND, DEVICE, T>(const SizeType b, comm::CommunicatorGrid grid, Matrix<T, DEVICE>& mat_c,   \
-                          Matrix<const T, DEVICE>& mat_v,                                            \
-                          common::internal::vector<pika::shared_future<common::internal::vector<T>>> \
-                              taus);
-
-#define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE)
-
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_GPU
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-#endif
 }
 }

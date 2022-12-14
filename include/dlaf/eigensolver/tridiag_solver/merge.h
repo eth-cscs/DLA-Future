@@ -499,7 +499,12 @@ auto applyDeflation(SizeType i_begin, SizeType i_end, RhoSender&& rho, TolSender
                              ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
                              ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
 
-  return di::transform(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender));
+  return di::transform(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender)) |
+         // TODO: This releases the tiles that are kept in the operation state.
+         // This is a temporary fix and needs to be replaced by a different
+         // adaptor or different lifetime guarantees. This is tracked in
+         // https://github.com/pika-org/pika/issues/479.
+         ex::ensure_started();
 }
 
 // Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].

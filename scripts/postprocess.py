@@ -427,8 +427,7 @@ def gen_chol_plots_strong(
         if combine_mb:
             m = x
         else:
-            m = x[0]
-            mb = x[1]
+            m, mb = x
 
         title = f"Cholesky: strong scaling ({m} x {m})"
         filename_ppn = f"chol_strong_ppn_{m}"
@@ -502,8 +501,7 @@ def gen_chol_plots_weak(
         if combine_mb:
             weak_rt = x
         else:
-            weak_rt = x[0]
-            mb = x[1]
+            weak_rt, mb = x
 
         title = f"Cholesky: weak scaling ({weak_rt} x {weak_rt})"
         filename_ppn = f"chol_weak_ppn_{weak_rt}"
@@ -714,8 +712,7 @@ def gen_gen2std_plots_strong(
         if combine_mb:
             m = x
         else:
-            m = x[0]
-            mb = x[1]
+            m, mb = x
 
         title = f"HEGST: strong scaling ({m} x {m})"
         filename_ppn = f"gen2std_strong_ppn_{m}"
@@ -789,8 +786,7 @@ def gen_gen2std_plots_weak(
         if combine_mb:
             weak_rt = x
         else:
-            weak_rt = x[0]
-            mb = x[1]
+            weak_rt, mb = x
 
         title = f"HEGST: weak scaling ({weak_rt} x {weak_rt})"
         filename_ppn = f"gen2std_weak_ppn_{weak_rt}"
@@ -856,9 +852,7 @@ def gen_red2band_plots_strong(
         if combine_mb:
             m = x
         else:
-            m = x[0]
-            mb = x[1]
-            b = x[2]
+            m, mb, b = x
 
         title = f"RED2BAND: strong scaling ({m} x {m})"
         filename_ppn = f"red2band_strong_ppn_{m}"
@@ -932,9 +926,7 @@ def gen_red2band_plots_weak(
         if combine_mb:
             weak_rt = x
         else:
-            weak_rt = x[0]
-            mb = x[1]
-            b = x[2]
+            weak_rt, mb, b = x
 
         title = f"RED2BAND: weak scaling ({weak_rt} x {weak_rt})"
         filename_ppn = f"red2band_weak_ppn_{weak_rt}"
@@ -1001,9 +993,7 @@ def gen_band2trid_plots_strong(
         if combine_mb:
             m = x
         else:
-            m = x[0]
-            mb = x[1]
-            b = x[2]
+            m, mb, b = x
 
         title = f"BAND2TRID: strong scaling ({m} x {m})"
         filename_ppn = f"band2trid_strong_ppn_{m}"
@@ -1077,9 +1067,7 @@ def gen_band2trid_plots_weak(
         if combine_mb:
             weak_rt = x
         else:
-            weak_rt = x[0]
-            mb = x[1]
-            b = x[2]
+            weak_rt, mb, b = x
 
         title = f"BAND2TRID: weak scaling ({weak_rt} x {weak_rt})"
         filename_ppn = f"band2trid_weak_ppn_{weak_rt}"

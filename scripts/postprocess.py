@@ -217,7 +217,7 @@ def _parse_line_based(fout, bench_name, nodes):
         # Note that the optional fields must not have a space in front of them.
         # Otherwise the space is required and parsing the optional field will
         # fail.
-        alg_name = bench_name[0:bench_name.find("_dlaf")]
+        alg_name = bench_name[0 : bench_name.find("_dlaf")]
 
         if alg_name in ["chol", "hegst", "trsm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
@@ -281,7 +281,7 @@ def _parse_line_based(fout, bench_name, nodes):
                 rd["matrix_cols"] = rd["matrix_rows"]
 
             if "perf" in rd:
-              rd["perf_per_node"] = rd["perf"] / nodes
+                rd["perf_per_node"] = rd["perf"] / nodes
 
             # makes _calc_*_metrics work
             #
@@ -827,6 +827,7 @@ def gen_gen2std_plots_weak(
             if logx:
                 ax.set_xscale("log", base=2)
             ax.set_yscale("log", base=10)
+
 
 def gen_red2band_plots_strong(
     df,

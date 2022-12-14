@@ -145,9 +145,11 @@ def _checkAppExec(fname):
     if not isfile(fname):
         raise RuntimeError(f"Executable {fname} doesn't exist")
 
+
 def _checkBand(mb_sz, band):
     if mb_sz % band != 0:
         raise RuntimeError(f"Invalid band {band} for block size {mb_sz}")
+
 
 # lib: allowed libraries are dlaf|slate|dplasma|scalapack
 # rpn: ranks per node
@@ -285,6 +287,7 @@ def gen2std(
     cmd = f"{app} {opts}".strip() + f" >> hegst_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
+
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
 # band: the band size. Pre: mb_sz % band == 0 or band == None (i.e. band = mb_sz)
@@ -324,6 +327,7 @@ def red2band(
     cmd = f"{app} {opts}".strip() + f" >> red2band_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
+
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
 # band: the band size. Pre: mb_sz % band == 0 or band == None (i.e. band = mb_sz)
@@ -362,6 +366,7 @@ def band2trid(
     _checkAppExec(app)
     cmd = f"{app} {opts}".strip() + f" >> band2trid_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
+
 
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
@@ -407,6 +412,7 @@ def bt_band2trid(
     cmd = f"{app} {opts}".strip() + f" >> bt_band2trid_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
+
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
 # band: changes the value of the lower bound when looking for the band size. (-1: means default)
@@ -449,6 +455,7 @@ def evp(
     cmd = f"{app} {opts}".strip() + f" >> evp_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
+
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
 # band: changes the value of the lower bound when looking for the band size. (-1: means default)
@@ -490,6 +497,7 @@ def gevp(
     _checkAppExec(app)
     cmd = f"{app} {opts}".strip() + f" >> gevp_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
+
 
 def _dictProduct(d):
     p = [dict(zip(d.keys(), items)) for items in product(*d.values())]

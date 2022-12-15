@@ -48,7 +48,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
-  using ElementType = const T;
+  using ElementType = T;
   using BaseT = Matrix<T, D>;
 
   Panel(Panel&&) = default;

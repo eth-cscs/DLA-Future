@@ -15,6 +15,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/panel.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -47,20 +48,14 @@ std::vector<config_t> test_params{
     {{26, 13}, {3, 3}, {1, 2}},
 };
 
-template <class TypeParam, Coord panel_axis>
+template <class TypeParam, Coord panel_axis, StoreTransposed Storage = StoreTransposed::No>
 void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using pika::unwrapping;
 
-  constexpr Coord coord1D = orthogonal(panel_axis);
+  const matrix::Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  Matrix<TypeParam, dlaf::Device::CPU> matrix(cfg.sz, cfg.blocksz, comm_grid);
-  const auto& dist = matrix.distribution();
-
-  matrix::test::set(matrix, [](const auto& index) { return TypeUtil::element(index.get(coord1D), 26); });
-
-  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
-  static_assert(coord1D == decltype(panel)::coord, "coord types mismatch");
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU, Storage> panel(dist, cfg.offset);
 
   // select the last available rank as root rank, i.e. it owns the panel to be broadcasted
   const comm::IndexT_MPI root = std::max(0, comm_grid.size().get(panel_axis) - 1);
@@ -97,6 +92,18 @@ TYPED_TEST(PanelBcastTest, BroadcastRow) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Row>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelBcastTest, BroadcastColStoreTransposed) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
+      testBroadcast<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
+}
+
+TYPED_TEST(PanelBcastTest, BroadcastRowStoreTransposed) {
+  for (auto comm_grid : this->commGrids())
+    for (const auto& cfg : test_params)
+      testBroadcast<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }
 
 std::vector<config_t> test_params_bcast_transpose{

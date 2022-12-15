@@ -36,6 +36,7 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
 
 template <class T, Device D>
 pika::shared_future<Tile<const T, D>> Matrix<const T, D>::read(const LocalTileIndex& index) noexcept {
+  DLAF_UNREACHABLE_PLAIN;
   const auto i = tileLinearIndex(index);
   return tile_managers_[i].getReadTileSharedFuture();
 }

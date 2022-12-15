@@ -164,7 +164,7 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D>& panel) {
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    start_detached(panel.readwrite_sender(tile_idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(panel.readwrite_sender2(tile_idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// Set the elements of the matrix.
@@ -189,7 +189,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
-                                    matrix.readwrite_sender(tile_wrt_local));
+                                    matrix.readwrite_sender2(tile_wrt_local));
   }
 }
 
@@ -249,14 +249,14 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
-                                    matrix.readwrite_sender(tile_wrt_local));
+                                    matrix.readwrite_sender2(tile_wrt_local));
   }
 }
 
 namespace internal {
 
 template <class T>
-void set_diagonal_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
+void set_diagonal_tile(const Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
                        SizeType offset_value) {
   // DIAGONAL
   // for diagonal tiles get just lower matrix values and set value for both
@@ -273,7 +273,7 @@ void set_diagonal_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& r
 }
 
 template <class T>
-void set_lower_and_upper_tile(Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
+void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
                               TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global) {
   // LOWER or UPPER (except DIAGONAL)
   // random values are requested in the same order for both original and transposed
@@ -343,7 +343,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
       seed = tl_index.row() + tl_index.col() * matrix.size().rows();
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
-    auto set_hp_f = [=](TileType&& tile) {
+    auto set_hp_f = [=](const TileType& tile) {
       internal::getter_random<T> random_value(seed);
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
@@ -352,7 +352,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
-                                    matrix.readwrite_sender(tile_wrt_local));
+                                    matrix.readwrite_sender2(tile_wrt_local));
   }
 }
 

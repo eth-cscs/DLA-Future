@@ -29,7 +29,7 @@ namespace internal {
 template <class T>
 struct Norm<Backend::MC, Device::CPU, T> {
   static dlaf::BaseType<T> max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
-                                 Matrix<const T, Device::CPU>& matrix);
+                                 Matrix<T, Device::CPU>& matrix);
 };
 
 // Compute max norm of the lower triangular part of the distributed matrix
@@ -43,7 +43,7 @@ struct Norm<Backend::MC, Device::CPU, T> {
 template <class T>
 dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid comm_grid,
                                                            comm::Index2D rank,
-                                                           Matrix<const T, Device::CPU>& matrix) {
+                                                           Matrix<T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
   namespace ex = pika::execution::experimental;
   using pika::this_thread::experimental::sync_wait;
@@ -73,14 +73,16 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
       continue;
 
     bool is_diag = tile_wrt_global.row() == tile_wrt_global.col();
-    auto norm_max_f = unwrapping([is_diag](auto&& tile) noexcept -> NormT {
+    auto norm_max_f = [is_diag](const auto& tile) noexcept -> NormT {
       if (is_diag)
         return lantr(lapack::Norm::Max, blas::Uplo::Lower, blas::Diag::NonUnit, tile);
       else
         return lange(lapack::Norm::Max, tile);
-    });
+    };
+    // TODO: read access after readwrite access may deadlock because of the way
+    // async_rw_mutex is implemented.
     auto current_tile_max =
-        matrix.read_sender(tile_wrt_local) |
+        matrix.readwrite_sender2(tile_wrt_local) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f));
 
     tiles_max.push_back(std::move(current_tile_max));

@@ -84,10 +84,10 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
   const TileElementIndex index_wrt_local = distribution.tileElementIndex(index);
   dlaf::internal::transformDetach(
       dlaf::internal::Policy<dlaf::Backend::MC>(),
-      [value, index_wrt_local](typename Matrix<T, Device::CPU>::TileType&& tile) {
+      [value, index_wrt_local](const typename Matrix<T, Device::CPU>::TileType& tile) {
         tile(index_wrt_local) = value;
       },
-      matrix.readwrite_sender(tile_index));
+      matrix.readwrite_sender2(tile_index));
 }
 
 // Change the specified value of the matrix, re-compute the norm with given parameters and check if the

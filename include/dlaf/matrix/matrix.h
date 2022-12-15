@@ -130,15 +130,18 @@ public:
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   pika::future<TileType> operator()(const GlobalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return operator()(this->distribution().localTileIndex(index));
   }
 
   auto readwrite_sender(const LocalTileIndex& index) noexcept {
     // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
+    DLAF_UNREACHABLE_PLAIN;
     return this->operator()(index);
   }
 
   auto readwrite_sender(const GlobalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return readwrite_sender(this->distribution().localTileIndex(index));
   }
 
@@ -199,16 +202,19 @@ public:
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   pika::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return read(distribution().localTileIndex(index));
   }
 
   auto read_sender(const LocalTileIndex& index) noexcept {
     // We want to explicitly deal with the shared_future, not the const& to the
     // value.
+    DLAF_UNREACHABLE_PLAIN;
     return dlaf::internal::keepFuture(read(index));
   }
 
   auto read_sender(const GlobalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return read_sender(distribution().localTileIndex(index));
   }
 

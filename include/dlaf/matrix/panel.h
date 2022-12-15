@@ -178,17 +178,18 @@ struct Panel<axis, const T, D> {
     const SizeType internal_linear_idx = linearIndex(index);
     if (isExternal(index)) {
       DLAF_UNIMPLEMENTED("Panel does not yet support external tiles with the pure sender interface");
-      return external_[internal_linear_idx];
+      __builtin_unreachable();
+      // return external_[internal_linear_idx];
     }
     else {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read_sender2(fullIndex(index));
 
       // TODO: This needs type-erasure, and lots of it...
-      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+      // if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
         return tile;
-      else
-        return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+      // else
+      //   return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
     }
   }
 

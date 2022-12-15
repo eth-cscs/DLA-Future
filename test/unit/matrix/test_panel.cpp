@@ -46,7 +46,11 @@ using namespace dlaf::comm;
 template <typename Type>
 struct PanelTest : public TestWithCommGrids {};
 
+template <class T>
+using PanelStoreTransposedTest = PanelTest<T>;
+
 TYPED_TEST_SUITE(PanelTest, MatrixElementTypes);
+TYPED_TEST_SUITE(PanelStoreTransposedTest, MatrixElementTypes);
 
 // Helper for checking if current rank, along specific Axis, locally stores just an incomplete tile,
 // i.e. a tile with a size < blocksize
@@ -97,25 +101,33 @@ void testStaticAPI() {
 
 TYPED_TEST(PanelTest, StaticAPI) {
   testStaticAPI<Coord::Row, TypeParam, Device::CPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Row, TypeParam, Device::CPU, StoreTransposed::Yes>();
   testStaticAPI<Coord::Col, TypeParam, Device::CPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Col, TypeParam, Device::CPU, StoreTransposed::Yes>();
 
   testStaticAPI<Coord::Row, TypeParam, Device::GPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Row, TypeParam, Device::GPU, StoreTransposed::Yes>();
   testStaticAPI<Coord::Col, TypeParam, Device::GPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Col, TypeParam, Device::GPU, StoreTransposed::Yes>();
 }
 
 TYPED_TEST(PanelTest, StaticAPIConst) {
   testStaticAPI<Coord::Row, const TypeParam, Device::CPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Row, const TypeParam, Device::CPU, StoreTransposed::Yes>();
   testStaticAPI<Coord::Col, const TypeParam, Device::CPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Col, const TypeParam, Device::CPU, StoreTransposed::Yes>();
 
   testStaticAPI<Coord::Row, const TypeParam, Device::GPU, StoreTransposed::No>();
-  testStaticAPI<Coord::Row, const TypeParam, Device::GPU, StoreTransposed::Yes>();
   testStaticAPI<Coord::Col, const TypeParam, Device::GPU, StoreTransposed::No>();
+}
+
+TYPED_TEST(PanelStoreTransposedTest, StaticAPI) {
+  testStaticAPI<Coord::Row, TypeParam, Device::CPU, StoreTransposed::Yes>();
+  testStaticAPI<Coord::Col, TypeParam, Device::CPU, StoreTransposed::Yes>();
+
+  testStaticAPI<Coord::Row, TypeParam, Device::GPU, StoreTransposed::Yes>();
+  testStaticAPI<Coord::Col, TypeParam, Device::GPU, StoreTransposed::Yes>();
+}
+
+TYPED_TEST(PanelStoreTransposedTest, StaticAPIConst) {
+  testStaticAPI<Coord::Row, const TypeParam, Device::CPU, StoreTransposed::Yes>();
+  testStaticAPI<Coord::Col, const TypeParam, Device::CPU, StoreTransposed::Yes>();
+
+  testStaticAPI<Coord::Row, const TypeParam, Device::GPU, StoreTransposed::Yes>();
   testStaticAPI<Coord::Col, const TypeParam, Device::GPU, StoreTransposed::Yes>();
 }
 
@@ -143,23 +155,33 @@ void testAssignToConstRef(const GlobalElementSize size, const TileElementSize bl
 TYPED_TEST(PanelTest, AssignToConstRefCol) {
   using namespace dlaf;
 
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, _] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
       testAssignToConstRef<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, comm_grid);
-      testAssignToConstRef<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
-    }
-  }
 }
 
 TYPED_TEST(PanelTest, AssignToConstRefRow) {
   using namespace dlaf;
 
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, _] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
       testAssignToConstRef<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, AssignToConstRefCol) {
+  using namespace dlaf;
+
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
+      testAssignToConstRef<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, AssignToConstRefRow) {
+  using namespace dlaf;
+
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
       testAssignToConstRef<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
-    }
-  }
 }
 
 template <Coord Axis, class T, StoreTransposed Storage>
@@ -185,18 +207,26 @@ void testIterator(const GlobalElementSize size, const TileElementSize blocksize,
 
 TYPED_TEST(PanelTest, IteratorCol) {
   for (auto& comm_grid : this->commGrids())
-    for (const auto& [size, blocksize, offset] : test_params) {
+    for (const auto& [size, blocksize, offset] : test_params)
       testIterator<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-      testIterator<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
 }
 
 TYPED_TEST(PanelTest, IteratorRow) {
   for (auto& comm_grid : this->commGrids())
-    for (const auto& [size, blocksize, offset] : test_params) {
+    for (const auto& [size, blocksize, offset] : test_params)
       testIterator<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, IteratorCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testIterator<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, IteratorRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testIterator<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
 }
 
 template <Coord Axis, class T, StoreTransposed Storage>
@@ -239,18 +269,26 @@ void testAccess(const GlobalElementSize size, const TileElementSize blocksize,
 
 TYPED_TEST(PanelTest, AccessTileCol) {
   for (auto& comm_grid : this->commGrids())
-    for (const auto& [size, blocksize, offset] : test_params) {
+    for (const auto& [size, blocksize, offset] : test_params)
       testAccess<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-      testAccess<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
 }
 
 TYPED_TEST(PanelTest, AccessTileRow) {
   for (auto& comm_grid : this->commGrids())
-    for (const auto& [size, blocksize, offset] : test_params) {
+    for (const auto& [size, blocksize, offset] : test_params)
       testAccess<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, AccessTileCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testAccess<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, AccessTileRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testAccess<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
 }
 
 template <Coord Axis, class T, StoreTransposed Storage>
@@ -348,21 +386,27 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
 }
 
 TYPED_TEST(PanelTest, ExternalTilesCol) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, offset] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testExternalTile<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-      testExternalTile<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
-  }
 }
 
 TYPED_TEST(PanelTest, ExternalTilesRow) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, offset] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testExternalTile<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, ExternalTilesCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testExternalTile<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, ExternalTilesRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testExternalTile<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
-  }
 }
 
 template <Coord Axis, class T, StoreTransposed Storage>
@@ -491,21 +535,27 @@ void testShrink(const GlobalElementSize size, const TileElementSize blocksize,
 }
 
 TYPED_TEST(PanelTest, ShrinkCol) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, offset] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testShrink<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-      testShrink<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
-  }
 }
 
 TYPED_TEST(PanelTest, ShrinkRow) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, offset] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testShrink<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, ShrinkCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testShrink<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, ShrinkRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testShrink<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-    }
-  }
 }
 
 template <Coord CoordMutable, Coord Axis, class T, Device D, StoreTransposed Storage>
@@ -588,7 +638,6 @@ TYPED_TEST(PanelTest, SetWidth) {
   for (auto& comm_grid : this->commGrids()) {
     const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-    testSetMutable<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
   }
 }
 
@@ -596,6 +645,19 @@ TYPED_TEST(PanelTest, SetHeight) {
   for (auto& comm_grid : this->commGrids()) {
     const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
+  }
+}
+
+TYPED_TEST(PanelStoreTransposedTest, SetWidth) {
+  for (auto& comm_grid : this->commGrids()) {
+    const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
+    testSetMutable<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
+  }
+}
+
+TYPED_TEST(PanelStoreTransposedTest, SetHeight) {
+  for (auto& comm_grid : this->commGrids()) {
+    const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
   }
 }
@@ -649,19 +711,25 @@ void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize
 }
 
 TYPED_TEST(PanelTest, OffsetTileUnalignedRow) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, offset] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
       testOffsetTileUnaligned<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, comm_grid);
-      testOffsetTileUnaligned<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
-    }
-  }
 }
 
 TYPED_TEST(PanelTest, OffsetTileUnalignedCol) {
-  for (auto& comm_grid : this->commGrids()) {
-    for (const auto& [size, blocksize, _] : test_params) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
       testOffsetTileUnaligned<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, OffsetTileUnalignedRow) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, offset] : test_params)
+      testOffsetTileUnaligned<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
+}
+
+TYPED_TEST(PanelStoreTransposedTest, OffsetTileUnalignedCol) {
+  for (auto& comm_grid : this->commGrids())
+    for (const auto& [size, blocksize, _] : test_params)
       testOffsetTileUnaligned<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
-    }
-  }
 }

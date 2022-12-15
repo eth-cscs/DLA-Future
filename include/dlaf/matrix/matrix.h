@@ -233,7 +233,7 @@ protected:
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
   std::vector<internal::TileFutureManager<T, D>> tile_managers_;
-  std::vector<pika::experimental::async_rw_mutex<Tile<ElementType, D>, Tile<const ElementType, device>>>
+  std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>, Tile<const ElementType, device>>>
       tile_managers_senders_;
 };
 

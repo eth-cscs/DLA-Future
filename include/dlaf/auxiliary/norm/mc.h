@@ -80,7 +80,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
         return lange(lapack::Norm::Max, tile);
     });
     auto current_tile_max =
-        matrix.read_sender2(tile_wrt_local) |
+        matrix.read_sender(tile_wrt_local) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), std::move(norm_max_f));
 
     tiles_max.push_back(std::move(current_tile_max));

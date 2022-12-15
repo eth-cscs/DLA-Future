@@ -543,23 +543,24 @@ struct Panel : public Panel<axis, const T, D> {
     return this->operator()(index);
   }
 
-  auto readwrite_sender2(const LocalTileIndex& index) {
-    // Note assertion on index done by linearIndex method.
-    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
-    // NOTE: read-write access not allowed because setTile takes shared_future
-    // of const tiles.
+  // pika::execution::experimental::unique_any_sender<TileType> readwrite_sender2(
+  //     const LocalTileIndex& index) {
+  //   // Note assertion on index done by linearIndex method.
+  //   DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
+  //   // NOTE: read-write access not allowed because setTile takes shared_future
+  //   // of const tiles.
 
-    has_been_used_ = true;
+  //   has_been_used_ = true;
 
-    BaseT::internal_.insert(BaseT::linearIndex(index));
-    auto tile = BaseT::data_.readwrite_sender2(BaseT::fullIndex(index));
-    // TODO: This needs type-erasure on the return type. How to solve? Need
-    // "things that can be unwrapped to mdspan/Tile".
-    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
-      return tile;
-    else
-      return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
-  }
+  //   BaseT::internal_.insert(BaseT::linearIndex(index));
+  //   auto tile = BaseT::data_.readwrite_sender2(BaseT::fullIndex(index));
+  //   // TODO: This needs type-erasure on the return type. How to solve? Need
+  //   // "things that can be unwrapped to mdspan/Tile".
+  //   if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+  //     return tile;
+  //   else
+  //     return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+  // }
 
 protected:
   using BaseT = Panel<axis, const T, D>;

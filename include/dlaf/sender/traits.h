@@ -46,15 +46,15 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<std::reference_wrapper<T>>>> 
 
 template <typename RWType, typename RType>
 struct SenderSingleValueTypeImpl<
-    TypeList<TypeList<pika::experimental::detail::async_rw_mutex_access_wrapper<
-        RWType, RType, pika::experimental::detail::async_rw_mutex_access_type::readwrite>>>> {
+    TypeList<TypeList<pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
+        RWType, RType, pika::execution::experimental::detail::async_rw_mutex_access_type::readwrite>>>> {
   using type = RWType;
 };
 
 template <typename RWType, typename RType>
 struct SenderSingleValueTypeImpl<
-    TypeList<TypeList<pika::experimental::detail::async_rw_mutex_access_wrapper<
-        RWType, RType, pika::experimental::detail::async_rw_mutex_access_type::read>>>> {
+    TypeList<TypeList<pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
+        RWType, RType, pika::execution::experimental::detail::async_rw_mutex_access_type::read>>>> {
   using type = RType;
 };
 

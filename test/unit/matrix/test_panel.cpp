@@ -634,30 +634,18 @@ void testSetMutable(const GlobalElementSize size, const TileElementSize blocksiz
   checkPanelTileSize<CoordMutable>(default_dim, panel);
 }
 
-TYPED_TEST(PanelTest, SetWidth) {
+TYPED_TEST(PanelTest, SetMutableDim) {
   for (auto& comm_grid : this->commGrids()) {
     const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Col, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
-  }
-}
-
-TYPED_TEST(PanelTest, SetHeight) {
-  for (auto& comm_grid : this->commGrids()) {
-    const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Row, TypeParam, StoreTransposed::No>(size, blocksize, offset, comm_grid);
   }
 }
 
-TYPED_TEST(PanelStoreTransposedTest, SetWidth) {
+TYPED_TEST(PanelStoreTransposedTest, SetMutableDim) {
   for (auto& comm_grid : this->commGrids()) {
     const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
-  }
-}
-
-TYPED_TEST(PanelStoreTransposedTest, SetHeight) {
-  for (auto& comm_grid : this->commGrids()) {
-    const auto [size, blocksize, offset] = config_t{{26, 13}, {4, 5}, {0, 0}};
     testSetMutable<Coord::Row, TypeParam, StoreTransposed::Yes>(size, blocksize, offset, comm_grid);
   }
 }

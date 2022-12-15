@@ -10,8 +10,10 @@
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
+#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/multiplication/general.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"

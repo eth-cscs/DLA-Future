@@ -109,8 +109,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), cuppensDecomp_o, std::move(sender)) |
-         ex::make_future();
+  return di::transform(di::Policy<DefaultBackend_v<D>>(), cuppensDecomp_o, std::move(sender));
 }
 
 template <class T>
@@ -191,12 +190,13 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(assembleRank1UpdateVectorTile);
 
-template <class T, Device D, class EvecsTileSender, class Rank1TileSender>
-void assembleRank1UpdateVectorTileAsync(bool top_tile, pika::shared_future<T> rho_fut,
-                                        EvecsTileSender&& evecs, Rank1TileSender&& rank1) {
+template <class T, Device D, class RhoSender, class EvecsTileSender, class Rank1TileSender>
+void assembleRank1UpdateVectorTileAsync(bool top_tile, RhoSender&& rho, EvecsTileSender&& evecs,
+                                        Rank1TileSender&& rank1) {
   namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(top_tile, rho_fut, std::forward<EvecsTileSender>(evecs),
-                                std::forward<Rank1TileSender>(rank1));
+  auto sender =
+      di::whenAllLift(top_tile, std::forward<RhoSender>(rho), std::forward<EvecsTileSender>(evecs),
+                      std::forward<Rank1TileSender>(rank1));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), assembleRank1UpdateVectorTile_o,
                       std::move(sender));
 }
@@ -308,15 +308,14 @@ DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(divideEvecsByDiagonal);
 
-template <Device D, class DiagRowsTileSender, class DiagColsTileSender, class EvecsTileSender,
-          class TempTileSender>
-void divideEvecsByDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType i_subm_el,
-                                SizeType j_subm_el, DiagRowsTileSender&& diag_rows,
-                                DiagColsTileSender&& diag_cols, EvecsTileSender&& evecs,
-                                TempTileSender&& temp) {
+template <Device D, class KSender, class DiagRowsTileSender, class DiagColsTileSender,
+          class EvecsTileSender, class TempTileSender>
+void divideEvecsByDiagonalAsync(KSender&& k, SizeType i_subm_el, SizeType j_subm_el,
+                                DiagRowsTileSender&& diag_rows, DiagColsTileSender&& diag_cols,
+                                EvecsTileSender&& evecs, TempTileSender&& temp) {
   namespace di = dlaf::internal;
   auto sender =
-      di::whenAllLift(std::move(k_fut), i_subm_el, j_subm_el,
+      di::whenAllLift(std::forward<KSender>(k), i_subm_el, j_subm_el,
                       std::forward<DiagRowsTileSender>(diag_rows),
                       std::forward<DiagColsTileSender>(diag_cols), std::forward<EvecsTileSender>(evecs),
                       std::forward<TempTileSender>(temp));
@@ -354,11 +353,11 @@ DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(multiplyFirstColumns);
 
-template <Device D, class InTileSender, class OutTileSender>
-void multiplyFirstColumnsAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col,
-                               InTileSender&& in, OutTileSender&& out) {
+template <Device D, class KSender, class InTileSender, class OutTileSender>
+void multiplyFirstColumnsAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in,
+                               OutTileSender&& out) {
   namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
+  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), multiplyFirstColumns_o, std::move(sender));
 }
@@ -400,14 +399,13 @@ DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(calcEvecsFromWeightVec);
 
-template <Device D, class Rank1TileSender, class TempTileSender, class EvecsTileSender>
-void calcEvecsFromWeightVecAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col,
-                                 Rank1TileSender&& rank1, TempTileSender&& temp,
-                                 EvecsTileSender&& evecs) {
+template <Device D, class KSender, class Rank1TileSender, class TempTileSender, class EvecsTileSender>
+void calcEvecsFromWeightVecAsync(KSender&& k, SizeType row, SizeType col, Rank1TileSender&& rank1,
+                                 TempTileSender&& temp, EvecsTileSender&& evecs) {
   namespace di = dlaf::internal;
 
   auto sender =
-      di::whenAllLift(std::move(k_fut), row, col, std::forward<Rank1TileSender>(rank1),
+      di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<Rank1TileSender>(rank1),
                       std::forward<TempTileSender>(temp), std::forward<EvecsTileSender>(evecs));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), calcEvecsFromWeightVec_o, std::move(sender));
 }
@@ -442,12 +440,12 @@ DLAF_GPU_SUMSQ_COLS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(sumsqCols);
 
-template <Device D, class EvecsTileSender, class TempTileSender>
-void sumsqColsAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col,
-                    EvecsTileSender&& evecs, TempTileSender&& temp) {
+template <Device D, class KSender, class EvecsTileSender, class TempTileSender>
+void sumsqColsAsync(KSender&& k, SizeType row, SizeType col, EvecsTileSender&& evecs,
+                    TempTileSender&& temp) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<EvecsTileSender>(evecs),
+  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<EvecsTileSender>(evecs),
                                 std::forward<TempTileSender>(temp));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), sumsqCols_o, std::move(sender));
 }
@@ -481,12 +479,11 @@ DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(addFirstRows);
 
-template <Device D, class InTileSender, class OutTileSender>
-void addFirstRowsAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col,
-                       InTileSender&& in, OutTileSender&& out) {
+template <Device D, class KSender, class InTileSender, class OutTileSender>
+void addFirstRowsAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
+  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), addFirstRows_o, std::move(sender));
 }
@@ -522,12 +519,12 @@ DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(divideColsByFirstRow);
 
-template <Device D, class InTileSender, class OutTileSender>
-void divideColsByFirstRowAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col,
-                               InTileSender&& in, OutTileSender&& out) {
+template <Device D, class KSender, class InTileSender, class OutTileSender>
+void divideColsByFirstRowAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in,
+                               OutTileSender&& out) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, std::forward<InTileSender>(in),
+  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideColsByFirstRow_o, std::move(sender));
 }
@@ -560,10 +557,10 @@ DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(setUnitDiagonal);
 
-template <Device D, class TileSender>
-void setUnitDiagonalAsync(pika::shared_future<SizeType> k_fut, SizeType tile_begin, TileSender&& tile) {
+template <Device D, class KSender, class TileSender>
+void setUnitDiagonalAsync(KSender&& k, SizeType tile_begin, TileSender&& tile) {
   namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(std::move(k_fut), tile_begin, std::forward<TileSender>(tile));
+  auto sender = di::whenAllLift(std::forward<KSender>(k), tile_begin, std::forward<TileSender>(tile));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setUnitDiagonal_o, std::move(sender));
 }
 
@@ -604,13 +601,14 @@ DLAF_GPU_COPY_1D_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(copy1D);
 
-template <Device D, class InTileSender, class OutTileSender>
-void copy1DAsync(pika::shared_future<SizeType> k_fut, SizeType row, SizeType col, Coord in_coord,
-                 InTileSender&& in, Coord out_coord, OutTileSender&& out) {
+template <Device D, class KSender, class InTileSender, class OutTileSender>
+void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTileSender&& in,
+                 Coord out_coord, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
-  auto sender = di::whenAllLift(std::move(k_fut), row, col, in_coord, std::forward<InTileSender>(in),
-                                out_coord, std::forward<OutTileSender>(out));
+  auto sender =
+      di::whenAllLift(std::forward<KSender>(k), row, col, in_coord, std::forward<InTileSender>(in),
+                      out_coord, std::forward<OutTileSender>(out));
   ex::start_detached(di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(),
                                                                     copy1D_o, std::move(sender)));
 }

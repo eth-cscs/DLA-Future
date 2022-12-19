@@ -497,28 +497,24 @@ public:
   using BaseT::rangeEnd;
   using BaseT::rangeEndLocal;
 
-  // TODO fix setHeight (and setWidth accordingly)
-  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
-  void setHeight(const SizeType height) {
-    BaseT::setWidth(height);
-  }
-
-  // TODO fix setHeight (and setWidth accordingly)
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   void setWidth(const SizeType width) {
     BaseT::setHeight(width);
   }
 
-  // TODO fix setHeight (and setWidth accordingly)
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
-  SizeType getHeight() const noexcept {
-    return BaseT::getWidth();
+  void setHeight(const SizeType height) {
+    BaseT::setWidth(height);
   }
 
-  // TODO fix setHeight (and setWidth accordingly)
   template <Coord A = axis, std::enable_if_t<A == axis && Coord::Col == axis, int> = 0>
   SizeType getWidth() const noexcept {
     return BaseT::getHeight();
+  }
+
+  template <Coord A = axis, std::enable_if_t<A == axis && Coord::Row == axis, int> = 0>
+  SizeType getHeight() const noexcept {
+    return BaseT::getWidth();
   }
 
   using BaseT::offsetElement;

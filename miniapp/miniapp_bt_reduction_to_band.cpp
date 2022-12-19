@@ -113,15 +113,18 @@ struct BacktransformBandToTridiagMiniapp {
 
     vector<pika::shared_future<vector<T>>> taus;
     SizeType nr_reflectors_blocks = dlaf::util::ceilDiv(nr_reflectors, opts.mb);
-    taus.reserve(nr_reflectors_blocks);
+    taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, comm_grid.size().cols()));
 
     for (SizeType k = 0; k < nr_reflectors; k += opts.mb) {
       vector<T> tau_tile;
       tau_tile.reserve(opts.mb);
-      for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
-        tau_tile.push_back(T(2));
+      if (comm_grid.rank().col() ==
+          mat_hh_ref.distribution().template rankGlobalTile<dlaf::Coord::Col>(k / opts.mb)) {
+        for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
+          tau_tile.push_back(T(2));
+        }
+        taus.push_back(pika::make_ready_future(tau_tile));
       }
-      taus.push_back(pika::make_ready_future(tau_tile));
     }
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
@@ -146,7 +149,8 @@ struct BacktransformBandToTridiagMiniapp {
 
         dlaf::common::Timer<> timeit;
         dlaf::eigensolver::backTransformationReductionToBand<backend, DefaultDevice_v<backend>,
-                                                             T>(opts.b, mat_e.get(), mat_hh.get(), taus);
+                                                             T>(opts.b, comm_grid, mat_e.get(),
+                                                                mat_hh.get(), taus);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

@@ -27,6 +27,8 @@ DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp 
 
 DLAF_addMiniapp(miniapp_band_to_tridiag SOURCES miniapp_band_to_tridiag.cpp LIBRARIES DLAF)
 
+DLAF_addMiniapp(miniapp_trisolver SOURCES miniapp_trisolver.cpp LIBRARIES DLAF)
+
 DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp LIBRARIES DLAF)
 
 DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp LIBRARIES DLAF)

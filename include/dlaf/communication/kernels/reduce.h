@@ -116,4 +116,35 @@ DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, double, Device::GPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<float>, Device::GPU);
 DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::GPU);
 #endif
+
+/// \overload scheduleReduceSend
+template <class T, Device D>
+[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
+    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    comm::IndexT_MPI rank_root, MPI_Op reduce_op,
+    pika::execution::experimental::unique_any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
+        tile);
+
+#define DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(kword, Type, Device)               \
+  kword template pika::execution::experimental::unique_any_sender<>              \
+  scheduleReduceSend(pika::execution::experimental::unique_any_sender<           \
+                         dlaf::common::PromiseGuard<Communicator>>               \
+                         pcomm,                                                  \
+                     comm::IndexT_MPI rank_root, MPI_Op reduce_op,               \
+                     pika::execution::experimental::unique_any_sender<           \
+                         matrix::tile_async_ro_mutex_wrapper_type<Type, Device>> \
+                         tile)
+
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, int, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, float, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, double, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, std::complex<double>, Device::CPU);
+
+#ifdef DLAF_WITH_GPU
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, float, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, double, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(extern, std::complex<double>, Device::GPU);
+#endif
 }

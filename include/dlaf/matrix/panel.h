@@ -149,6 +149,7 @@ struct Panel<axis, const T, D> {
   ///
   /// @pre @p index must be a valid index for the current panel size
   pika::shared_future<ConstTileType> read(const LocalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     // Note assertion on index done by linearIndex method.
 
     has_been_used_ = true;
@@ -169,6 +170,7 @@ struct Panel<axis, const T, D> {
   }
 
   auto read_sender(const LocalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return dlaf::internal::keepFuture(read(index));
   }
 
@@ -524,6 +526,7 @@ struct Panel : public Panel<axis, const T, D> {
   ///
   /// @pre index must point to a tile which is internally managed by the panel
   pika::future<TileType> operator()(const LocalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
     // NOTE: read-write access not allowed because setTile takes shared_future

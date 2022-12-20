@@ -154,6 +154,19 @@ public:
     return readwrite_sender2(this->distribution().localTileIndex(index));
   }
 
+  auto readwrite_sender_tile(const LocalTileIndex& index) noexcept {
+    const auto i = tileLinearIndex(index);
+    return tile_managers_senders_[i].readwrite() |
+           pika::execution::experimental::then([](auto tile_wrapper) {
+             internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
+             return std::move(tile_wrapper.get());
+           });
+  }
+
+  auto readwrite_sender_tile(const GlobalTileIndex& index) {
+    return readwrite_sender_tile(this->distribution().localTileIndex(index));
+  }
+
 protected:
   using Matrix<const T, D>::tileLinearIndex;
 
@@ -239,7 +252,8 @@ protected:
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
   std::vector<internal::TileFutureManager<T, D>> tile_managers_;
-  std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>, Tile<const ElementType, device>>>
+  std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>,
+                                                            Tile<const ElementType, device>>>
       tile_managers_senders_;
 };
 

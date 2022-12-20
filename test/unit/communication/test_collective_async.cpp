@@ -45,7 +45,8 @@ auto newBlockMatrixContiguous() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_TRUE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+  auto tile = tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0)));
+  EXPECT_TRUE(data_iscontiguous(common::make_data(tile.get())));
 
   return matrix;
 }
@@ -57,7 +58,8 @@ auto newBlockMatrixStrided() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_FALSE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+  auto tile = tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0)));
+  EXPECT_FALSE(data_iscontiguous(common::make_data(tile.get())));
 
   return matrix;
 }
@@ -75,9 +77,9 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    ex::start_detached(
-        dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM,
-                                              ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
+    ex::start_detached(dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM,
+                                                             ex::make_unique_any_sender(
+                                                                 matrix.readwrite_sender_tile(idx))));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
@@ -85,9 +87,10 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
     // use -> read -> set -> read
     ex::start_detached(
         dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM,
-                                       ex::make_unique_any_sender(matrix.read_sender(idx))));
+                                       ex::make_unique_any_sender(matrix.read_sender2(idx))));
 
-    CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
+    auto tile = tt::sync_wait(matrix.read_sender2(idx));
+    CHECK_TILE_EQ(input_tile, tile.get());
 
     auto new_tile = fixedValueTile(26);
     matrix::test::set(matrix(idx).get(), new_tile);
@@ -116,9 +119,9 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(matrix(idx).get(), input_tile);
 
-  auto after =
-      dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
-                                           ex::make_unique_any_sender(matrix.readwrite_sender(idx)));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
+                                                    ex::make_unique_any_sender(
+                                                        matrix.readwrite_sender_tile(idx)));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
@@ -159,8 +162,8 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
 
   ex::start_detached(
       dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
-                                    ex::make_unique_any_sender(mat_in.read_sender(idx)),
-                                    ex::make_unique_any_sender(mat_out.readwrite_sender(idx))));
+                                    ex::make_unique_any_sender(mat_in.read_sender2(idx)),
+                                    ex::make_unique_any_sender(mat_out.readwrite_sender_tile(idx))));
 
   const auto& tile_in = mat_in.read(idx).get();
   const auto& tile_out = mat_out.read(idx).get();

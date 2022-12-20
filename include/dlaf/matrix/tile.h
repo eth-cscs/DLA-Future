@@ -128,13 +128,13 @@ class Tile<const T, D>;
 template <class T, Device D>
 using tile_async_rw_mutex_wrapper_type =
     pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
-        Tile<T, D>, Tile<const T, D>,
+        Tile<T, D>, const Tile<const T, D>,
         pika::execution::experimental::detail::async_rw_mutex_access_type::readwrite>;
 
 template <class T, Device D>
 using tile_async_ro_mutex_wrapper_type =
     pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
-        Tile<T, D>, Tile<const T, D>,
+        Tile<T, D>, const Tile<const T, D>,
         pika::execution::experimental::detail::async_rw_mutex_access_type::read>;
 
 namespace internal {
@@ -148,6 +148,9 @@ pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& ti
 template <class T, Device D>
 Tile<const T, D> createSubTileAsyncRwMutex(tile_async_ro_mutex_wrapper_type<T, D> tile_wrapper,
                                            const SubTileSpec& spec);
+
+template <class T, Device D>
+Tile<T, D> createTileAsyncRwMutex(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper);
 
 template <class T, Device D>
 Tile<T, D> createSubTileAsyncRwMutex(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper,
@@ -175,7 +178,6 @@ public:
   friend TileType;
   friend pika::future<Tile<const T, D>> internal::createSubTile<>(
       const pika::shared_future<Tile<const T, D>>& tile, const SubTileSpec& spec);
-
   friend Tile<const T, D> internal::createSubTileAsyncRwMutex<>(
       tile_async_ro_mutex_wrapper_type<T, D> tile_wrapper, const SubTileSpec& spec);
   using ElementType = T;
@@ -288,11 +290,7 @@ private:
   TileDataType data_;
   std::variant<std::monostate, TilePromise, pika::shared_future<TileType>,
                pika::shared_future<ConstTileType>, tile_async_ro_mutex_wrapper_type<T, D>,
-               tile_async_rw_mutex_wrapper_type<T, D>  //,
-               // pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
-               //     Tile<T, D>, Tile<const T, D>,
-               //     pika::execution::experimental::detail::async_rw_mutex_access_type::readwrite>
-               >
+               tile_async_rw_mutex_wrapper_type<T, D>>
       dep_tracker_;
 };
 
@@ -322,6 +320,8 @@ public:
   friend ConstTileType;
   friend pika::future<Tile<T, D>> internal::createSubTile<>(const pika::shared_future<Tile<T, D>>& tile,
                                                             const SubTileSpec& spec);
+  friend Tile<T, D> internal::createTileAsyncRwMutex<>(
+      tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper);
   friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(
       tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper, const SubTileSpec& spec);
   friend pika::shared_future<Tile<T, D>> internal::splitTileInsertFutureInChain<>(
@@ -389,6 +389,10 @@ private:
     dep_tracker_ = std::move(tile);
   }
 
+  Tile(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper) : Tile(std::move(tile_wrapper.get())) {
+    dep_tracker_ = std::move(tile_wrapper);
+  }
+
   Tile(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper, const SubTileSpec& spec)
       : ConstTileType(tile_wrapper.get(), spec) {
     dep_tracker_ = std::move(tile_wrapper);
@@ -417,6 +421,11 @@ template <class T, Device D>
 Tile<T, D> createSubTileAsyncRwMutex(tile_async_ro_mutex_wrapper_type<T, D> tile_wrapper,
                                      const SubTileSpec& spec) {
   return Tile<T, D>(std::move(tile_wrapper), spec);
+}
+
+template <class T, Device D>
+Tile<T, D> createTileAsyncRwMutex(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper) {
+  return Tile<T, D>(std::move(tile_wrapper));
 }
 
 template <class T, Device D>

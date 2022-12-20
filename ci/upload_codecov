@@ -7,5 +7,4 @@ fastcov -C ${TRACE_FILES} --lcov -o "$SHARED_REPORTS/combined.info"
 
 pushd /DLA-Future > /dev/null
 codecov.sh -f "$SHARED_REPORTS/combined.info" -t $CODECOV_TOKEN_GITHUB
-codecov.sh -f "$SHARED_REPORTS/combined.info" -t $CODECOV_TOKEN_GITLAB
 popd > /dev/null

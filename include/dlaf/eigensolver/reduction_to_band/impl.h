@@ -294,9 +294,10 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
          ex::make_future();
 }
 
-template <Backend B, Device D, class T, bool force_copy = false>
+template <Backend B, Device D, class T>
 void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view, const SizeType nrefls,
-                          matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a) {
+                          matrix::Panel<Coord::Col, T, D>& v, matrix::Matrix<const T, D>& mat_a,
+                          bool force_copy = false) {
   namespace ex = pika::execution::experimental;
 
   using dlaf::internal::keepFuture;
@@ -347,7 +348,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        matrix). This would result in a deadlock, so instead of linking the panel to an external
     //        tile, memory provided internally by the panel is used as support. In this way, the two
     //        subtiles used in the operation belong to different tiles.
-    if constexpr (force_copy)
+    if (force_copy)
       ex::start_detached(
           ex::when_all(keepFuture(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
           matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
@@ -899,6 +900,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
   taus.reserve(nblocks);
 
+  const bool is_full_band = (band_size == dist_a.blockSize().cols());
+
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
   common::RoundRobin<Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
@@ -944,8 +947,12 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // PANEL
     taus.emplace_back(compute_panel_helper.call(mat_a, panel_view, nrefls_block));
 
+    // Note:
+    // - has_reflector_head tells if this rank owns the first tile of the panel (being local, always true)
+    // - if !is_full_band it has to force copy as a workaround, otherwise in update matrix it would deadlock
+    // due to tile shared between panel and trailing matrix
     constexpr bool has_reflector_head = true;
-    setupReflectorPanelV<B, D, T, true>(has_reflector_head, panel_view, nrefls_block, v, mat_a);
+    setupReflectorPanelV<B, D, T>(has_reflector_head, panel_view, nrefls_block, v, mat_a, !is_full_band);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
@@ -1043,6 +1050,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
   taus.reserve(nblocks);
 
+  const bool is_full_band = (band_size == dist.blockSize().cols());
+
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
   common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
@@ -1106,8 +1115,12 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
                                                   mpi_col_chain_panel(), mat_a, panel_view,
                                                   nrefls_block));
 
-      red2band::local::setupReflectorPanelV<B, D, T, true>(rank.row() == rank_v0.row(), panel_view,
-                                                           nrefls_block, v, mat_a);
+      // Note:
+      // - has_reflector_head tells if this rank owns the first tile of the panel
+      // - if !is_full_band it has to force copy as a workaround, otherwise in update matrix it would
+      // deadlock due to tile shared between panel and trailing matrix
+      red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
+                                                     nrefls_block, v, mat_a, !is_full_band);
       computeTFactor<B>(v, taus.back(), t.readwrite_sender(t_idx), mpi_col_chain);
     }
 

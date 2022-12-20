@@ -23,7 +23,7 @@
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag.h"
+#include "dlaf/eigensolver/bt_reduction_to_band.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
@@ -43,6 +43,7 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::common::internal::vector;
 using dlaf::matrix::MatrixMirror;
 
 struct Options
@@ -58,7 +59,6 @@ struct Options
         mb(vm["mb"].as<SizeType>()), nb(vm["nb"].as<SizeType>()), b(vm["b"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
-    DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -109,6 +109,24 @@ struct BacktransformBandToTridiagMiniapp {
       return random;
     }();
 
+    auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
+
+    vector<pika::shared_future<vector<T>>> taus;
+    SizeType nr_reflectors_blocks = dlaf::util::ceilDiv(nr_reflectors, opts.mb);
+    taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, comm_grid.size().cols()));
+
+    for (SizeType k = 0; k < nr_reflectors; k += opts.mb) {
+      vector<T> tau_tile;
+      tau_tile.reserve(opts.mb);
+      if (comm_grid.rank().col() ==
+          mat_hh_ref.distribution().template rankGlobalTile<dlaf::Coord::Col>(k / opts.mb)) {
+        for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
+          tau_tile.push_back(T(2));
+        }
+        taus.push_back(pika::make_ready_future(tau_tile));
+      }
+    }
+
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
@@ -116,21 +134,23 @@ struct BacktransformBandToTridiagMiniapp {
       HostMatrixType mat_e_host(mat_e_size, mat_e_block_size, comm_grid);
       copy(mat_e_ref, mat_e_host);
 
-      HostMatrixType mat_hh(mat_hh_size, mat_hh_block_size, comm_grid);
-      copy(mat_hh_ref, mat_hh);
+      HostMatrixType mat_hh_host(mat_hh_size, mat_hh_block_size, comm_grid);
+      copy(mat_hh_ref, mat_hh_host);
 
       double elapsed_time;
       {
         MatrixMirrorType mat_e(mat_e_host);
+        MatrixMirrorType mat_hh(mat_hh_host);
 
         // Wait for matrices to be copied
         mat_e.get().waitLocalTiles();
-        mat_hh.waitLocalTiles();
+        mat_hh.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
-                                                           T>(comm_grid, opts.b, mat_e.get(), mat_hh);
+        dlaf::eigensolver::backTransformationReductionToBand<backend, DefaultDevice_v<backend>,
+                                                             T>(opts.b, comm_grid, mat_e.get(),
+                                                                mat_hh.get(), taus);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();
@@ -143,7 +163,7 @@ struct BacktransformBandToTridiagMiniapp {
       {
         const double m = mat_e_host.size().rows();
         const double n = mat_e_host.size().cols();
-        auto add_mul = m * m * n;
+        auto add_mul = (m - opts.b) * (m - opts.b) * n;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
 

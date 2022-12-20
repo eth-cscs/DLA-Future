@@ -75,7 +75,13 @@ run.add(
     {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128, "n_sz": None},
     nruns,
 )
-# TODO bt_red2band
+run.add(
+    mp.bt_red2band,
+    "dlaf",
+    dlafpath,
+    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128, "n_sz": None},
+    nruns,
+)
 run.add(
     mp.trsm,
     "dlaf",

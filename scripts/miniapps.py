@@ -415,6 +415,50 @@ def bt_band2trid(
 
 # lib: allowed libraries are dlaf
 # rpn: ranks per node
+# band: the band size. Pre: band > 0 or band == None (i.e. band = mb_sz)
+# n_sz can be None in which case n_sz is set to the value of m_sz.
+#
+def bt_red2band(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    mb_sz,
+    band,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    if band == None:
+        band = mb_sz
+
+    if n_sz == None:
+        n_sz = m_sz
+
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_bt_reduction_to_band"
+        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> bt_red2band_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
 # band: changes the value of the lower bound when looking for the band size. (-1: means default)
 #
 def evp(

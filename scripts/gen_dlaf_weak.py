@@ -90,7 +90,15 @@ run.add(
     approx,
     nruns,
 )
-# TODO bt_red2band
+run.add(
+    mp.bt_red2band,
+    "dlaf",
+    dlafpath,
+    {"rpn": 2, "mb_sz": 512, "band": 128, "n_sz": None},
+    {"m_sz": 10240},
+    approx,
+    nruns,
+)
 run.add(
     mp.trsm,
     "dlaf",

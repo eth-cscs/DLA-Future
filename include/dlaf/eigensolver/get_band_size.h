@@ -11,6 +11,7 @@
 
 #include "dlaf/eigensolver/eigensolver/api.h"
 
+#include "dlaf/common/assert.h"
 #include "dlaf/tune.h"
 #include "dlaf/types.h"
 
@@ -20,6 +21,10 @@ namespace dlaf::eigensolver::internal {
 // If nb is smaller than b_min returns nb.
 inline SizeType getBandSize(SizeType nb) noexcept {
   SizeType b_min = getTuneParameters().eigensolver_min_band;
+
+  DLAF_ASSERT(nb >= 1, nb);
+  DLAF_ASSERT(b_min >= 2, b_min);
+
   for (SizeType div = nb / b_min; div > 1; --div) {
     if (nb % div == 0)
       return nb / div;

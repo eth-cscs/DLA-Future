@@ -12,7 +12,6 @@ from itertools import product
 from math import sqrt
 from os import makedirs, system
 from os.path import expanduser, isfile
-from re import sub
 from time import sleep
 from pathlib import Path
 

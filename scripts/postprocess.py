@@ -166,20 +166,23 @@ class NodePlotWriter:
 
 # Calculate mean,max,avg perf and time
 def _calc_metrics(cols, df):
+    perf_agg_functions = dict(
+        p_mean=("perf", "mean"),
+        p_min=("perf", "min"),
+        p_max=("perf", "max"),
+        ppn_mean=("perf_per_node", "mean"),
+        ppn_min=("perf_per_node", "min"),
+        ppn_max=("perf_per_node", "max"),
+    )
     return (
         df.loc[df["run_index"] != 0]
         .groupby(cols)
         .agg(
-            p_mean=("perf", "mean"),
-            p_min=("perf", "min"),
-            p_max=("perf", "max"),
-            ppn_mean=("perf_per_node", "mean"),
-            ppn_min=("perf_per_node", "min"),
-            ppn_max=("perf_per_node", "max"),
+            **(perf_agg_functions if "perf" in df.columns else {}),
             time_mean=("time", "mean"),
             time_min=("time", "min"),
             time_max=("time", "max"),
-            measures=("perf", "count"),
+            measures=("time", "count"),
         )
         .reset_index()
     )

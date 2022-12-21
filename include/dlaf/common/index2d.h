@@ -83,13 +83,13 @@ public:
 
   /// Return a copy of the row or the col index as specified by @p rc.
   template <Coord rc>
-  constexpr IndexT get() const noexcept {
-    if (rc == Coord::Row)
+  IndexT get() const noexcept {
+    if constexpr (rc == Coord::Row)
       return row_;
     return col_;
   }
 
-  constexpr IndexT get(const Coord rc) const noexcept {
+  IndexT get(const Coord rc) const noexcept {
     if (rc == Coord::Row)
       return row_;
     return col_;

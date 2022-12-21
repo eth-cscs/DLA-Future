@@ -146,6 +146,11 @@ def _checkAppExec(fname):
         raise RuntimeError(f"Executable {fname} doesn't exist")
 
 
+def _checkBand(mb_sz, band):
+    if mb_sz % band != 0:
+        raise RuntimeError(f"Invalid band {band} for block size {mb_sz}")
+
+
 # lib: allowed libraries are dlaf|slate|dplasma|scalapack
 # rpn: ranks per node
 #
@@ -280,6 +285,261 @@ def gen2std(
 
     _checkAppExec(app)
     cmd = f"{app} {opts}".strip() + f" >> hegst_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: the band size. Pre: mb_sz % band == 0 or band == None (i.e. band = mb_sz)
+#
+def red2band(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    band,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    if band == None:
+        band = mb_sz
+    _checkBand(mb_sz, band)
+
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_reduction_to_band"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> red2band_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: the band size. Pre: mb_sz % band == 0 or band == None (i.e. band = mb_sz)
+#
+def band2trid(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    band,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    if band == None:
+        band = mb_sz
+    _checkBand(mb_sz, band)
+
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_band_to_tridiag"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> band2trid_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: the band size. Pre: mb_sz % band == 0 or band == None (i.e. band = mb_sz)
+# n_sz can be None in which case n_sz is set to the value of m_sz.
+#
+def bt_band2trid(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    mb_sz,
+    band,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    if band == None:
+        band = mb_sz
+    _checkBand(mb_sz, band)
+
+    if n_sz == None:
+        n_sz = m_sz
+
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_bt_band_to_tridiag"
+        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> bt_band2trid_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: the band size. Pre: band > 0 or band == None (i.e. band = mb_sz)
+# n_sz can be None in which case n_sz is set to the value of m_sz.
+#
+def bt_red2band(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    mb_sz,
+    band,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    if band == None:
+        band = mb_sz
+
+    if n_sz == None:
+        n_sz = m_sz
+
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_bt_reduction_to_band"
+        opts = f"--m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> bt_red2band_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: changes the value of the lower bound when looking for the band size. (-1: means default)
+#
+def evp(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+    band=None,
+):
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        # Valid band are >= 2 and None (use default).
+        if band != None and band >= 2:
+            # TODO set band (not available yet)
+            print("Warning: evp band parameter does not have any effect yet.")
+        elif band != None:
+            raise RuntimeError(f"Invalid lower bound for band {band} specified (evp)")
+
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_eigensolver"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> evp_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+# band: changes the value of the lower bound when looking for the band size. (-1: means default)
+#
+def gevp(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+    band=None,
+):
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        # Valid band are >= 2 and -1 (use default).
+        if band != None and band >= 2:
+            # TODO set band (not available yet)
+            print("Warning: gevp band parameter does not have any effect yet.")
+        elif band != None:
+            raise RuntimeError(f"Invalid lower bound for band {band} specified! (gevp)")
+
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_gen_eigensolver"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> gevp_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 

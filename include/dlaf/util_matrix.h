@@ -158,8 +158,8 @@ void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
-template <Backend backend, class T, Coord axis, Device D>
-void set0(pika::execution::thread_priority priority, Panel<axis, T, D>& panel) {
+template <Backend backend, class T, Coord axis, Device D, StoreTransposed storage>
+void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>& panel) {
   using dlaf::internal::Policy;
   using pika::execution::experimental::start_detached;
 
@@ -403,7 +403,7 @@ auto collectReadWriteTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<T, D>&
   std::vector<decltype(mat.readwrite_sender(std::declval<LocalTileIndex>()))> tiles;
   tiles.reserve(to_sizet(sz.linear_size()));
   for (auto idx : iterate_range2d(begin, sz)) {
-    tiles.push_back(mat(idx));
+    tiles.push_back(mat.readwrite_sender(idx));
   }
   return tiles;
 }

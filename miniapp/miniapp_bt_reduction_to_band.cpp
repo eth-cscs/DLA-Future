@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
@@ -22,7 +23,7 @@
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
-#include "dlaf/eigensolver/band_to_tridiag.h"
+#include "dlaf/eigensolver/bt_reduction_to_band.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
@@ -42,26 +43,22 @@ using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
+using dlaf::common::internal::vector;
 using dlaf::matrix::MatrixMirror;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
+  SizeType n;
   SizeType mb;
+  SizeType nb;
   SizeType b;
-  blas::Uplo uplo;
 
   Options(const pika::program_options::variables_map& vm)
-      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        b(vm["band-size"].as<SizeType>()), uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
+      : MiniappOptions(vm), m(vm["m"].as<SizeType>()), n(vm["n"].as<SizeType>()),
+        mb(vm["mb"].as<SizeType>()), nb(vm["nb"].as<SizeType>()), b(vm["b"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
-    DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
-
-    if (backend == Backend::GPU) {
-      std::cerr << "Warning! Backend GPU is not implemented, Using MC backend starting from GPU memory."
-                << std::endl;
-    }
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -76,7 +73,7 @@ struct Options
 };
 }
 
-struct BandToTridiagMiniapp {
+struct BacktransformBandToTridiagMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
@@ -86,50 +83,87 @@ struct BandToTridiagMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    // Allocate memory for the matrix
-    GlobalElementSize matrix_size(opts.m, opts.m);
-    TileElementSize block_size(opts.mb, opts.mb);
+    // Construct reference matrices.
+    GlobalElementSize mat_e_size(opts.m, opts.n);
+    TileElementSize mat_e_block_size(opts.mb, opts.nb);
 
-    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
-      using dlaf::matrix::util::set_random_hermitian;
+    ConstHostMatrixType mat_e_ref = [mat_e_size, mat_e_block_size, comm_grid]() {
+      using dlaf::matrix::util::set_random;
 
-      HostMatrixType hermitian(matrix_size, block_size, comm_grid);
-      set_random_hermitian(hermitian);
+      HostMatrixType random(mat_e_size, mat_e_block_size, comm_grid);
+      set_random(random);
 
-      return hermitian;
+      return random;
     }();
+
+    GlobalElementSize mat_hh_size(opts.m, opts.m);
+    TileElementSize mat_hh_block_size(opts.mb, opts.mb);
+
+    // Note: random HHRs are not correct, but do not influence the benchmark result.
+    ConstHostMatrixType mat_hh_ref = [mat_hh_size, mat_hh_block_size, comm_grid]() {
+      using dlaf::matrix::util::set_random;
+
+      HostMatrixType random(mat_hh_size, mat_hh_block_size, comm_grid);
+      set_random(random);
+
+      return random;
+    }();
+
+    auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
+
+    vector<pika::shared_future<vector<T>>> taus;
+    SizeType nr_reflectors_blocks = dlaf::util::ceilDiv(nr_reflectors, opts.mb);
+    taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, comm_grid.size().cols()));
+
+    for (SizeType k = 0; k < nr_reflectors; k += opts.mb) {
+      vector<T> tau_tile;
+      tau_tile.reserve(opts.mb);
+      if (comm_grid.rank().col() ==
+          mat_hh_ref.distribution().template rankGlobalTile<dlaf::Coord::Col>(k / opts.mb)) {
+        for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
+          tau_tile.push_back(T(2));
+        }
+        taus.push_back(pika::make_ready_future(tau_tile));
+      }
+    }
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
-      copy(matrix_ref, matrix_host);
+      HostMatrixType mat_e_host(mat_e_size, mat_e_block_size, comm_grid);
+      copy(mat_e_ref, mat_e_host);
+
+      HostMatrixType mat_hh_host(mat_hh_size, mat_hh_block_size, comm_grid);
+      copy(mat_hh_ref, mat_hh_host);
 
       double elapsed_time;
       {
-        MatrixMirrorType matrix(matrix_host);
+        MatrixMirrorType mat_e(mat_e_host);
+        MatrixMirrorType mat_hh(mat_hh_host);
 
-        // Wait for matrix to be copied to GPU (if necessary)
-        matrix.get().waitLocalTiles();
+        // Wait for matrices to be copied
+        mat_e.get().waitLocalTiles();
+        mat_hh.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        auto [trid, hhr] =
-            dlaf::eigensolver::bandToTridiag<Backend::MC>(comm_grid, opts.uplo, opts.b, matrix.get());
+        dlaf::eigensolver::backTransformationReductionToBand<backend, DefaultDevice_v<backend>,
+                                                             T>(opts.b, comm_grid, mat_e.get(),
+                                                                mat_hh.get(), taus);
 
         // wait and barrier for all ranks
-        trid.waitLocalTiles();
-        hhr.waitLocalTiles();
+        mat_e.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
         elapsed_time = timeit.elapsed();
       }
 
       double gigaflops;
       {
-        double n = matrix_host.size().rows();
-        double b = opts.b;
-        auto add_mul = 3 * n * n * b;
+        const double m = mat_e_host.size().rows();
+        const double n = mat_e_host.size().cols();
+        auto add_mul = (m - opts.b) * (m - opts.b) * n;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
 
@@ -138,9 +172,8 @@ struct BandToTridiagMiniapp {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
-                  << " " << dlaf::internal::FormatShort{opts.type}
-                  << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
-                  << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
+                  << " " << dlaf::internal::FormatShort{opts.type} << " " << mat_e_host.size() << " "
+                  << mat_e_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
 
       // (optional) run test
@@ -155,9 +188,9 @@ struct BandToTridiagMiniapp {
 int pika_main(pika::program_options::variables_map& vm) {
   pika::scoped_finalize pika_finalizer;
   dlaf::ScopedInitializer init(vm);
-
   const Options opts(vm);
-  dlaf::miniapp::dispatchMiniapp<BandToTridiagMiniapp>(opts);
+
+  dlaf::miniapp::dispatchMiniapp<BacktransformBandToTridiagMiniapp>(opts);
 
   return EXIT_SUCCESS;
 }
@@ -168,15 +201,17 @@ int main(int argc, char** argv) {
 
   // options
   using namespace pika::program_options;
-  options_description desc_commandline("Usage: miniapp_band_to_tridiag [options]");
+  options_description desc_commandline("Usage: miniapp_bt_band_to_tridiag [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
-    ("band-size",    value<SizeType>()   ->default_value(  64), "band size")
+    ("m",   value<SizeType>()   ->default_value(2048), "Matrix E rows")
+    ("n",   value<SizeType>()   ->default_value(4096), "Matrix E columns")
+    ("mb",  value<SizeType>()   ->default_value( 256), "Matrix E block rows")
+    ("nb",  value<SizeType>()   ->default_value( 512), "Matrix E block columns")
+    ("b",   value<SizeType>()   ->default_value(  64), "Band size")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

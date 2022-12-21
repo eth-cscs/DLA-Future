@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/bt_reduction_to_band.h"
+#include "dlaf/eigensolver/bt_reduction_to_band/impl.h"
 
-namespace dlaf::eigensolver {
+namespace dlaf::eigensolver::internal {
 
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_LOCAL_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(, Backend::GPU, Device::GPU, float)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(, Backend::GPU, Device::GPU, double)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
 
 }

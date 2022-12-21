@@ -17,9 +17,7 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    # Custom spack sha used to make an umpire fix available
-    # (https://github.com/msimberg/spack/commit/770d71dff6428876f2cc996f8a0551df36a59e4f)
-    SPACK_SHA: 770d71dff6428876f2cc996f8a0551df36a59e4f
+    SPACK_SHA: 7efcb5ae73bdaa85886079ccfd5ff0f44b838508
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY

@@ -76,6 +76,7 @@ target_link_libraries(
     $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
     pika::pika
+    pika-algorithms::pika_algorithms
     lapackpp
     blaspp
     umpire

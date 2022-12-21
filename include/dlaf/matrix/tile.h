@@ -418,6 +418,7 @@ namespace internal {
 template <class T, Device D>
 pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
                                        const SubTileSpec& spec) {
+  DLAF_UNREACHABLE_PLAIN;
   namespace ex = pika::execution::experimental;
   auto f = [spec](pika::shared_future<Tile<T, D>>&& tile) { return Tile<T, D>(std::move(tile), spec); };
   return dlaf::internal::keepFuture(tile) | ex::then(std::move(f)) | ex::make_future();
@@ -442,6 +443,7 @@ Tile<T, D> createSubTileAsyncRwMutex(tile_async_rw_mutex_wrapper_type<T, D> tile
 
 template <class T, Device D>
 pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile) {
+  DLAF_UNREACHABLE_PLAIN;
   namespace ex = pika::execution::experimental;
 
   // Insert a Tile in the tile dependency chains. 3 different cases are supported:
@@ -495,6 +497,7 @@ pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T
 template <class T, Device D>
 pika::shared_future<Tile<const T, D>> splitTile(const pika::shared_future<Tile<const T, D>>& tile,
                                                 const SubTileSpec& spec) {
+  DLAF_UNREACHABLE_PLAIN;
   return internal::createSubTile(tile, spec);
 }
 
@@ -518,6 +521,7 @@ pika::execution::experimental::unique_any_sender<Tile<const T, D>> subTileSender
 template <class T, Device D>
 std::vector<pika::shared_future<Tile<const T, D>>> splitTile(
     const pika::shared_future<Tile<const T, D>>& tile, const std::vector<SubTileSpec>& specs) {
+  DLAF_UNREACHABLE_PLAIN;
   std::vector<pika::shared_future<Tile<const T, D>>> ret;
   ret.reserve(specs.size());
   for (const auto& spec : specs) {
@@ -553,6 +557,7 @@ auto subTileSenders(
 /// out of scope.
 template <class T, Device D>
 pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>&& tile, const SubTileSpec& spec) {
+  DLAF_UNREACHABLE_PLAIN;
   return internal::createSubTile(tile.share(), spec);
 }
 

@@ -145,7 +145,7 @@ void set0(pika::execution::thread_priority priority, LocalTileIndex begin, Local
   using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(begin, sz))
-    start_detached(matrix.readwrite_sender(idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(matrix.readwrite_sender_tile(idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// \overload set0
@@ -164,7 +164,7 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D>& panel) {
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    start_detached(panel.readwrite_sender2(tile_idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(panel.readwrite_sender_tile(tile_idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// Set the elements of the matrix.
@@ -181,7 +181,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
-    auto set_f = [tl_index, el_f = el_f](TileType&& tile) {
+    auto set_f = [tl_index, el_f = el_f](const TileType& tile) {
       for (auto el_idx_l : iterate_range2d(tile.size())) {
         GlobalElementIndex el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());
         tile(el_idx_l) = el_f(el_idx_g);
@@ -189,7 +189,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
-                                    matrix.readwrite_sender2(tile_wrt_local));
+                                    matrix.readwrite_sender_tile(tile_wrt_local));
   }
 }
 
@@ -249,7 +249,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
-                                    matrix.readwrite_sender2(tile_wrt_local));
+                                    matrix.readwrite_sender_tile(tile_wrt_local));
   }
 }
 
@@ -352,7 +352,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
-                                    matrix.readwrite_sender2(tile_wrt_local));
+                                    matrix.readwrite_sender_tile(tile_wrt_local));
   }
 }
 
@@ -400,10 +400,10 @@ void set_random_hermitian_positive_definite(Matrix<T, Device::CPU>& matrix) {
 /// The tiles are returned in column major order
 template <class T, Device D>
 auto collectReadWriteTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<T, D>& mat) {
-  std::vector<decltype(mat.readwrite_sender(std::declval<LocalTileIndex>()))> tiles;
+  std::vector<decltype(mat.readwrite_sender_tile(std::declval<LocalTileIndex>()))> tiles;
   tiles.reserve(to_sizet(sz.linear_size()));
   for (auto idx : iterate_range2d(begin, sz)) {
-    tiles.push_back(mat(idx));
+    tiles.push_back(mat.readwrite_sender_tile(idx));
   }
   return tiles;
 }
@@ -411,10 +411,10 @@ auto collectReadWriteTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<T, D>&
 /// The tiles are returned in column major order
 template <class T, Device D>
 auto collectReadTiles(LocalTileIndex begin, LocalTileSize sz, Matrix<const T, D>& mat) {
-  std::vector<decltype(mat.read_sender(std::declval<LocalTileIndex>()))> tiles;
+  std::vector<decltype(mat.read_sender2(std::declval<LocalTileIndex>()))> tiles;
   tiles.reserve(to_sizet(sz.linear_size()));
   for (auto idx : iterate_range2d(begin, sz)) {
-    tiles.push_back(mat.read_sender(idx));
+    tiles.push_back(mat.read_sender2(idx));
   }
   return tiles;
 }

@@ -8,12 +8,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# DLAF_addTest(
-#   test_tile
-#   SOURCES test_tile.cpp
-#   LIBRARIES dlaf.core
-#   USE_MAIN PIKA
-# )
+DLAF_addTest(
+  test_tile
+  SOURCES test_tile.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
 
 DLAF_addTest(
   test_layout_info

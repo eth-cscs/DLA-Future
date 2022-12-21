@@ -72,7 +72,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
         return el(GlobalElementIndex(tile_base_index.row() + tile_index.row(),
                                      tile_base_index.col() + tile_index.col()));
       };
-      set(mat(tile_index).get(), el_tile);
+      set(pika::this_thread::experimental::sync_wait(mat.readwrite_sender_tile(tile_index)), el_tile);
     }
   }
 }

@@ -214,7 +214,7 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
 
       // Triangular solve of k-th row Panel of B
       trsmBPanelTile<backend>(thread_priority::high, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(kj));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
@@ -222,9 +222,9 @@ void Triangular<backend, device, T>::call_LLN(blas::Diag diag, T alpha, Matrix<c
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
-                                        mat_b.read_sender(kj),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta,
+                                        mat_a.read_sender2(LocalTileIndex{i, k}), mat_b.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -244,7 +244,7 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
       trsmBPanelTile<backend>(thread_priority::high, op, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(kj));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(kj));
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
@@ -254,8 +254,8 @@ void Triangular<backend, device, T>::call_LLT(blas::Op op, blas::Diag diag, T al
 
         // Update trailing matrix
         gemmTrailingMatrixTile<backend>(trailing_priority, op, beta,
-                                        mat_a.read_sender(LocalTileIndex{k, i}), mat_b.read_sender(kj),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+                                        mat_a.read_sender2(LocalTileIndex{k, i}), mat_b.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -275,16 +275,16 @@ void Triangular<backend, device, T>::call_LUN(blas::Diag diag, T alpha, Matrix<c
       auto kj = LocalTileIndex{k, j};
       // Triangular solve of k-th row Panel of B
       trsmBPanelTile<backend>(thread_priority::high, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(kj));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(kj));
 
       for (SizeType i = k - 1; i >= 0; --i) {
         // Choose queue priority
         const auto trailing_priority = (i == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_a.read_sender(LocalTileIndex{i, k}),
-                                        mat_b.read_sender(kj),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta,
+                                        mat_a.read_sender2(LocalTileIndex{i, k}), mat_b.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -305,7 +305,7 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
 
       // Triangular solve of k-th row Panel of B
       trsmBPanelTile<backend>(thread_priority::high, op, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(kj));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(kj));
 
       for (SizeType i = k + 1; i < m; ++i) {
         // Choose queue priority
@@ -314,8 +314,8 @@ void Triangular<backend, device, T>::call_LUT(blas::Op op, blas::Diag diag, T al
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
         gemmTrailingMatrixTile<backend>(trailing_priority, op, beta,
-                                        mat_a.read_sender(LocalTileIndex{k, i}), mat_b.read_sender(kj),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+                                        mat_a.read_sender2(LocalTileIndex{k, i}), mat_b.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -336,16 +336,16 @@ void Triangular<backend, device, T>::call_RLN(blas::Diag diag, T alpha, Matrix<c
 
       // Triangular solve of k-th col Panel of B
       trsmBPanelTile<backend>(thread_priority::high, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(ik));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(ik));
 
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
         const auto trailing_priority = (j == k - 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender(ik),
-                                        mat_a.read_sender(LocalTileIndex{k, j}),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender2(ik),
+                                        mat_a.read_sender2(LocalTileIndex{k, j}),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -366,7 +366,7 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
 
       // Triangular solve of k-th col Panel of B
       trsmBPanelTile<backend>(thread_priority::high, op, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(ik));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(ik));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
@@ -374,9 +374,9 @@ void Triangular<backend, device, T>::call_RLT(blas::Op op, blas::Diag diag, T al
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender(ik),
-                                        mat_a.read_sender(LocalTileIndex{j, k}),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender2(ik),
+                                        mat_a.read_sender2(LocalTileIndex{j, k}),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -397,16 +397,16 @@ void Triangular<backend, device, T>::call_RUN(blas::Diag diag, T alpha, Matrix<c
 
       // Triangular solve of k-th col Panel of B
       trsmBPanelTile<backend>(thread_priority::high, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(ik));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(ik));
 
       for (SizeType j = k + 1; j < n; ++j) {
         // Choose queue priority
         const auto trailing_priority = (j == k + 1) ? thread_priority::high : thread_priority::normal;
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender(ik),
-                                        mat_a.read_sender(LocalTileIndex{k, j}),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, mat_b.read_sender2(ik),
+                                        mat_a.read_sender2(LocalTileIndex{k, j}),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -427,7 +427,7 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 
       // Triangular solve of k-th col Panel of B
       trsmBPanelTile<backend>(thread_priority::high, op, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(ik));
+                              mat_a.read_sender2(LocalTileIndex{k, k}), mat_b.readwrite_sender_tile(ik));
 
       for (SizeType j = k - 1; j >= 0; --j) {
         // Choose queue priority
@@ -435,9 +435,9 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 
         auto beta = static_cast<T>(-1.0) / alpha;
         // Update trailing matrix
-        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender(ik),
-                                        mat_a.read_sender(LocalTileIndex{j, k}),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
+        gemmTrailingMatrixTile<backend>(trailing_priority, op, beta, mat_b.read_sender2(ik),
+                                        mat_a.read_sender2(LocalTileIndex{j, k}),
+                                        mat_b.readwrite_sender_tile(LocalTileIndex{i, j}));
       }
     }
   }
@@ -504,8 +504,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender(kk_panel),
-                                mat_b.readwrite_sender(kj));
+        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
+                                mat_b.readwrite_sender_tile(kj));
         b_panel.setTile(kj_panel, mat_b.read(kj));
       }
     }
@@ -528,8 +528,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender(ik_panel),
-                                        b_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender2(ik_panel),
+                                        b_panel.read_sender2(kj_panel), mat_b.readwrite_sender_tile(ij));
       }
     }
     a_panel.reset();
@@ -590,20 +590,20 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
       gemmTrailingMatrixTile<backend>(ij.row() == bt_offset.row() ? thread_priority::high
                                                                   : thread_priority::normal,
-                                      op, T(1) / alpha, a_panel.read_sender(ij), mat_b.read_sender(ij),
-                                      b_panel.readwrite_sender(ij));
+                                      op, T(1) / alpha, a_panel.read_sender2(ij), mat_b.read_sender2(ij),
+                                      b_panel.readwrite_sender_tile(ij));
 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
                                                              ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender(idx))));
+                                                                 b_panel.readwrite_sender_tile(idx))));
         }
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender(idx))));
+                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
         }
       }
     }
@@ -614,11 +614,12 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
         const auto& priority = thread_priority::high;
 
         pika::execution::experimental::start_detached(
-            dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
+            dlaf::internal::whenAllLift(T(-1), b_panel.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(kj)) |
             tile::add(dlaf::internal::Policy<backend>(priority)));
 
-        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender(kk_offset),
-                                mat_b.readwrite_sender(kj));
+        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender2(kk_offset),
+                                mat_b.readwrite_sender_tile(kj));
       }
     }
 
@@ -685,8 +686,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender(kk_panel),
-                                mat_b.readwrite_sender(kj));
+        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
+                                mat_b.readwrite_sender_tile(kj));
         b_panel.setTile(kj_panel, mat_b.read(kj));
       }
     }
@@ -709,8 +710,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender(ik_panel),
-                                        b_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, a_panel.read_sender2(ik_panel),
+                                        b_panel.read_sender2(kj_panel), mat_b.readwrite_sender_tile(ij));
       }
     }
     a_panel.reset();
@@ -770,20 +771,20 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
          common::iterate_range2d(LocalTileIndex{bt_offset.row(), distr_b.localNrTiles().cols()}))
       gemmTrailingMatrixTile<backend>(ij.row() == bt_offset.row() ? thread_priority::high
                                                                   : thread_priority::normal,
-                                      op, T(1) / alpha, a_panel.read_sender(ij), mat_b.read_sender(ij),
-                                      b_panel.readwrite_sender(ij));
+                                      op, T(1) / alpha, a_panel.read_sender2(ij), mat_b.read_sender2(ij),
+                                      b_panel.readwrite_sender_tile(ij));
 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
                                                              ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender(idx))));
+                                                                 b_panel.readwrite_sender_tile(idx))));
         }
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender(idx))));
+                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
         }
       }
     }
@@ -794,12 +795,13 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
         const auto& priority = thread_priority::high;
 
         pika::execution::experimental::start_detached(
-            dlaf::internal::whenAllLift(T(-1), b_panel.read_sender(kj), mat_b.readwrite_sender(kj)) |
+            dlaf::internal::whenAllLift(T(-1), b_panel.read_sender2(kj),
+                                        mat_b.readwrite_sender_tile(kj)) |
             tile::add(dlaf::internal::Policy<backend>(priority)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
-                                a_panel.read_sender(LocalTileIndex{bt_offset.row(), kk_offset.col()}),
-                                mat_b.readwrite_sender(kj));
+                                a_panel.read_sender2(LocalTileIndex{bt_offset.row(), kk_offset.col()}),
+                                mat_b.readwrite_sender_tile(kj));
       }
     }
 
@@ -866,8 +868,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender(kk_panel),
-                                mat_b.readwrite_sender(ik));
+        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
+                                mat_b.readwrite_sender_tile(ik));
         b_panel.setTile(ik_panel, mat_b.read(ik));
       }
     }
@@ -890,8 +892,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender(ik_panel),
-                                        a_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender2(ik_panel),
+                                        a_panel.read_sender2(kj_panel), mat_b.readwrite_sender_tile(ij));
       }
     }
     a_panel.reset();
@@ -951,20 +953,20 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
          common::iterate_range2d(LocalTileIndex{distr_b.localNrTiles().rows(), bt_offset.col()}))
       gemmTrailingMatrixTile<backend>(ij.col() == bt_offset.col() ? thread_priority::high
                                                                   : thread_priority::normal,
-                                      op, T(-1) / alpha, mat_b.read_sender(ij), a_panel.read_sender(ij),
-                                      b_panel.readwrite_sender(ij));
+                                      op, T(-1) / alpha, mat_b.read_sender2(ij),
+                                      a_panel.read_sender2(ij), b_panel.readwrite_sender_tile(ij));
 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
                                                              ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender(idx))));
+                                                                 b_panel.readwrite_sender_tile(idx))));
         }
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender(idx))));
+                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
         }
       }
     }
@@ -975,12 +977,13 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
         const auto& priority = thread_priority::high;
 
         pika::execution::experimental::start_detached(
-            dlaf::internal::whenAllLift(T(1), b_panel.read_sender(ik), mat_b.readwrite_sender(ik)) |
+            dlaf::internal::whenAllLift(T(1), b_panel.read_sender2(ik),
+                                        mat_b.readwrite_sender_tile(ik)) |
             tile::add(dlaf::internal::Policy<backend>(priority)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
-                                a_panel.read_sender(LocalTileIndex{kk_offset.row(), bt_offset.col()}),
-                                mat_b.readwrite_sender(ik));
+                                a_panel.read_sender2(LocalTileIndex{kk_offset.row(), bt_offset.col()}),
+                                mat_b.readwrite_sender_tile(ik));
       }
     }
 
@@ -1048,8 +1051,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender(kk_panel),
-                                mat_b.readwrite_sender(ik));
+        trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
+                                mat_b.readwrite_sender_tile(ik));
         b_panel.setTile(ik_panel, mat_b.read(ik));
       }
     }
@@ -1072,8 +1075,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ij(i_local, j_local);
         const T beta = T(-1.0) / alpha;
 
-        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender(ik_panel),
-                                        a_panel.read_sender(kj_panel), mat_b.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_priority, beta, b_panel.read_sender2(ik_panel),
+                                        a_panel.read_sender2(kj_panel), mat_b.readwrite_sender_tile(ij));
       }
     }
     a_panel.reset();
@@ -1133,20 +1136,20 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     for (const auto& ij : common::iterate_range2d(bt_offset, indexFromOrigin(distr_b.localNrTiles())))
       gemmTrailingMatrixTile<backend>(ij.col() == bt_offset.col() ? thread_priority::high
                                                                   : thread_priority::normal,
-                                      op, T(-1) / alpha, mat_b.read_sender(ij), a_panel.read_sender(ij),
-                                      b_panel.readwrite_sender(ij));
+                                      op, T(-1) / alpha, mat_b.read_sender2(ij),
+                                      a_panel.read_sender2(ij), b_panel.readwrite_sender_tile(ij));
 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
                                                              ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender(idx))));
+                                                                 b_panel.readwrite_sender_tile(idx))));
         }
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender(idx))));
+                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
         }
       }
     }
@@ -1157,11 +1160,12 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
         const auto& priority = thread_priority::high;
 
         pika::execution::experimental::start_detached(
-            dlaf::internal::whenAllLift(T(1), b_panel.read_sender(ik), mat_b.readwrite_sender(ik)) |
+            dlaf::internal::whenAllLift(T(1), b_panel.read_sender2(ik),
+                                        mat_b.readwrite_sender_tile(ik)) |
             tile::add(dlaf::internal::Policy<backend>(priority)));
 
-        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender(kk_offset),
-                                mat_b.readwrite_sender(ik));
+        trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read_sender2(kk_offset),
+                                mat_b.readwrite_sender_tile(ik));
       }
     }
 

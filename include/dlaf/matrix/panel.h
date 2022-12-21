@@ -84,6 +84,7 @@ struct Panel<axis, const T, D> {
   ///
   /// @pre @p index must be a valid index for the current panel size
   void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType> new_tile_fut) {
+    DLAF_UNREACHABLE_PLAIN;
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
@@ -106,42 +107,32 @@ struct Panel<axis, const T, D> {
     external_[linearIndex(index)] = std::move(new_tile_fut);
   }
 
-  // template <typename Sender>
-  // void setTile2(const LocalTileIndex& index, Sender&& new_tile_sender) {
-  //   // TODO: What is this checking? Once an internal tile has been accessed, do
-  //   // not set an external tile?
-  //   DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
-  //   // TODO: Can't set an external tile twice?
-  //   DLAF_ASSERT(!isExternal(index), "already set to external", index);
-  //   // Note assertion on index done by linearIndex method.
+  template <typename Sender>
+  void setTileSender(const LocalTileIndex& index, Sender&& new_tile_sender) {
+    // TODO: What is this checking? Once an internal tile has been accessed, do
+    // not set an external tile?
+    DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
+    // TODO: Can't set an external tile twice?
+    DLAF_ASSERT(!isExternal(index), "already set to external", index);
+    // Note assertion on index done by linearIndex method.
 
-  //   has_been_used_ = true;
+    has_been_used_ = true;
 
-  //   // TODO: Keep some assertions here.
-  //   // #if defined DLAF_ASSERT_MODERATE_ENABLE
-  //   //     {
-  //   //       namespace ex = pika::execution::experimental;
+    // TODO: Keep some assertions here.
+    // #if defined DLAF_ASSERT_MODERATE_ENABLE
+    //     {
+    //       namespace ex = pika::execution::experimental;
 
-  //   //       const auto panel_tile_size = tileSize(index);
-  //   //       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
-  //   //         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
-  //   //       });
-  //   //       ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
-  //   //     }
-  //   // #endif
+    //       const auto panel_tile_size = tileSize(index);
+    //       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
+    //         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
+    //       });
+    //       ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
+    //     }
+    // #endif
 
-  //   external_[linearIndex(index)] = std::move(new_tile_fut);
-
-  //   namespace ex = pika::execution::experimental;
-
-  //   ex::start_detached(
-  //       ex::when_all(readwrite(), PIKA_FORWARD(Sender, sender)) |
-  //       ex::then([](auto&& wrapper, auto&& new_value) {
-  //         // TODO: Assert that new_value does _not_ come from another matrix. It
-  //         // should be a plain tile... False! It can come from another matrix
-  //         // (and often does). Must in that case protect access
-  //         wrapper.get() = PIKA_MOVE(new_value); }));
-  // }
+    external_senders_[linearIndex(index)] = std::forward<Sender>(new_tile_sender);
+  }
 
   /// Access a Tile of the panel in read-only mode
   ///
@@ -174,24 +165,27 @@ struct Panel<axis, const T, D> {
     return dlaf::internal::keepFuture(read(index));
   }
 
-  auto read_sender2(const LocalTileIndex& index) {
+  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
+      const LocalTileIndex& index) {
     has_been_used_ = true;
 
     const SizeType internal_linear_idx = linearIndex(index);
     if (isExternal(index)) {
-      DLAF_UNIMPLEMENTED("Panel does not yet support external tiles with the pure sender interface");
-      __builtin_unreachable();
-      // return external_[internal_linear_idx];
+      return external_senders_[internal_linear_idx];
     }
     else {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read_sender2(fullIndex(index));
 
-      // TODO: This needs type-erasure, and lots of it...
-      // if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull())) {
         return tile;
-      // else
-      //   return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+      }
+      else {
+        // TODO: How to handle this case?
+        DLAF_UNREACHABLE_PLAIN;
+        // return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+        return {};
+      }
     }
   }
 
@@ -355,8 +349,15 @@ struct Panel<axis, const T, D> {
   /// - external tiles references are dropped and internal ones are set back
   /// - The width (Col Panel) or the height (Row panel) are reset.
   void reset() noexcept {
-    for (auto& e : external_)
+    for (auto& e : external_) {
       e = {};
+    }
+
+    // TODO: They may have to be start_detached
+    for (auto& e : external_senders_) {
+      e = {};
+    }
+
     internal_.clear();
     dim_ = -1;
     has_been_used_ = false;
@@ -437,10 +438,10 @@ protected:
 
     setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
-    external_.resize(data_.nrTiles().get(coord));
+    external_senders_.resize(data_.nrTiles().get(coord));
 
-    DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_.size(),
-                      data_.distribution().localNrTiles().linear_size(), external_.size());
+    DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_senders_.size(),
+                      data_.distribution().localNrTiles().linear_size(), external_senders_.size());
   }
 
   /// Given a matrix index, compute the internal linear index
@@ -466,7 +467,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_[linearIndex(idx_matrix)].valid();
+    return external_set_.find(linearIndex(idx_matrix)) == external_set_.end();
   }
 
   bool hasBeenUsed() const noexcept {
@@ -499,10 +500,12 @@ protected:
 
   ///> Container for references to external tiles
   common::internal::vector<pika::shared_future<ConstTileType>> external_;
-  // TODO: benefit of intrusive dependency management in tiles is that the
-  // type is always Tile. With different sources of tiles they may have
-  // different wrappers and different types.
-  // common::internal::vector<pika::execution::experimental::any_sender<ConstTileType>> external_senders_;
+  common::internal::vector<
+      pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>>>
+      external_senders_;
+  // TODO: This only works around not having empty/valid on any_senders. Add in
+  // pika.
+  std::set<SizeType> external_set_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   // TODO: unordered_set (and #include <unordered_set>)
   std::set<SizeType> internal_;
@@ -546,25 +549,6 @@ struct Panel : public Panel<axis, const T, D> {
     // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
     return this->operator()(index);
   }
-
-  // pika::execution::experimental::unique_any_sender<TileType> readwrite_sender2(
-  //     const LocalTileIndex& index) {
-  //   // Note assertion on index done by linearIndex method.
-  //   DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
-  //   // NOTE: read-write access not allowed because setTile takes shared_future
-  //   // of const tiles.
-
-  //   has_been_used_ = true;
-
-  //   BaseT::internal_.insert(BaseT::linearIndex(index));
-  //   auto tile = BaseT::data_.readwrite_sender2(BaseT::fullIndex(index));
-  //   // TODO: This needs type-erasure on the return type. How to solve? Need
-  //   // "things that can be unwrapped to mdspan/Tile".
-  //   if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
-  //     return tile;
-  //   else
-  //     return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
-  // }
 
 protected:
   using BaseT = Panel<axis, const T, D>;

@@ -119,9 +119,9 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
     auto& dest_tile = dest.tile(ij_tile);
 
     if (owner == rank) {
-      const auto& source_tile = source.read(ij_tile).get();
-      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile);
-      matrix::internal::copy(source_tile, dest_tile);
+      const auto source_tile = pika::this_thread::experimental::sync_wait(source.read_sender2(ij_tile));
+      comm::sync::broadcast::send(comm_grid.fullCommunicator(), source_tile.get());
+      matrix::internal::copy(source_tile.get(), dest_tile);
     }
     else {
       comm::sync::broadcast::receive_from(comm_grid.rankFullCommunicator(owner),

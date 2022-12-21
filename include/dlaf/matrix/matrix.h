@@ -230,9 +230,12 @@ public:
     return read_sender(distribution().localTileIndex(index));
   }
 
-  auto read_sender2(const LocalTileIndex& index) noexcept {
+  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
+      const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    return tile_managers_senders_[i].read();
+    // TODO: Maybe async_rw_mutex read-only access senders should be copyable?
+    return tile_managers_senders_[i].read() | pika::execution::experimental::split() |
+           pika::execution::experimental::then([](const auto& tile_wrapper) { return tile_wrapper; });
   }
 
   auto read_sender2(const GlobalTileIndex& index) {
@@ -425,18 +428,16 @@ Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileEleme
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<pika::shared_future<typename MatrixLike::ConstTileType>> selectRead(
-    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
+auto selectRead(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  return internal::selectGeneric([&](auto index) { return matrix.read_sender2(index); }, range);
 }
 
 /// Returns a container grouping all the tiles retrieved using Matrix::operator()
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<pika::future<typename MatrixLike::TileType>> select(
-    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
+auto select(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  return internal::selectGeneric([&](auto index) { return matrix.readwrite_sender_tile(index); }, range);
 }
 
 /// ---- ETI

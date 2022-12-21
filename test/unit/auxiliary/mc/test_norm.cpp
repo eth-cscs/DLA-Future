@@ -87,7 +87,7 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
       [value, index_wrt_local](const typename Matrix<T, Device::CPU>::TileType& tile) {
         tile(index_wrt_local) = value;
       },
-      matrix.readwrite_sender2(tile_index));
+      matrix.readwrite_sender_tile(tile_index));
 }
 
 // Change the specified value of the matrix, re-compute the norm with given parameters and check if the

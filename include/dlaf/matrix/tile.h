@@ -43,7 +43,7 @@ namespace internal {
 template <class T, Device D>
 class TileData {
 public:
-  TileData(const TileElementSize& size, memory::MemoryView<T, D>&& memory_view, SizeType ld) noexcept
+  TileData(const TileElementSize& size, memory::MemoryView<T, D> memory_view, SizeType ld) noexcept
       : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
     DLAF_ASSERT(size_.isValid(), size_);
     DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
@@ -269,6 +269,10 @@ private:
                                     tile.data_.linearSize(spec.size, tile.ld()));
   };
 
+  Tile(const TileElementSize& size, const memory::MemoryView<ElementType, D>& memory_view,
+       SizeType ld) noexcept
+      : data_(size, memory_view, ld) {}
+
   // Creates an untracked subtile.
   // Dependencies are not influenced by the new created object therefore race-conditions
   // might happen if used improperly.
@@ -389,7 +393,9 @@ private:
     dep_tracker_ = std::move(tile);
   }
 
-  Tile(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper) : Tile(std::move(tile_wrapper.get())) {
+  Tile(tile_async_rw_mutex_wrapper_type<T, D> tile_wrapper)
+      : ConstTileType(tile_wrapper.get().size(), tile_wrapper.get().data_.memoryView(),
+                      tile_wrapper.get().ld()) {
     dep_tracker_ = std::move(tile_wrapper);
   }
 

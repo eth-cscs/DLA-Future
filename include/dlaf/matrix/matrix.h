@@ -158,12 +158,11 @@ public:
     const auto i = tileLinearIndex(index);
     return tile_managers_senders_[i].readwrite() |
            pika::execution::experimental::then([](auto tile_wrapper) {
-             internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
-             return std::move(tile_wrapper.get());
+             return internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
            });
   }
 
-  auto readwrite_sender_tile(const GlobalTileIndex& index) {
+  auto readwrite_sender_tile(const GlobalTileIndex& index) noexcept {
     return readwrite_sender_tile(this->distribution().localTileIndex(index));
   }
 

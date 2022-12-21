@@ -589,9 +589,10 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
 template <Backend B, Device D, class T>
 void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>& x,
-                  matrix::Panel<Coord::Row, T, D>& xt, const LocalTileSize at_offset,
-                  matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w,
-                  matrix::Panel<Coord::Row, const T, D>& wt,
+                  matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>& xt,
+                  const LocalTileSize at_offset, matrix::Matrix<const T, D>& a,
+                  matrix::Panel<Coord::Col, const T, D>& w,
+                  matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& wt,
                   common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
@@ -702,9 +703,9 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
 template <Backend B, Device D, class T>
 void her2kUpdateTrailingMatrix(const LocalTileSize& at_start, Matrix<T, D>& a,
                                matrix::Panel<Coord::Col, const T, D>& x,
-                               matrix::Panel<Coord::Row, const T, D>& vt,
+                               matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& vt,
                                matrix::Panel<Coord::Col, const T, D>& v,
-                               matrix::Panel<Coord::Row, const T, D>& xt) {
+                               matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& xt) {
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
@@ -1025,13 +1026,16 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_vt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
+      panels_vt(n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_wt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
+      panels_wt(n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panels_xt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
+      panels_xt(n_workspaces, dist);
 
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 

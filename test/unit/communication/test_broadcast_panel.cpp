@@ -114,7 +114,7 @@ std::vector<config_t> test_params_bcast_transpose{
 };
 
 template <class TypeParam, Coord AxisSrc, StoreTransposed storageT = StoreTransposed::No>
-void testBrodcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
+void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
   using pika::unwrapping;
 
@@ -159,23 +159,23 @@ void testBrodcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid
 TYPED_TEST(PanelBcastTest, BroadcastCol2Row) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Col>(cfg, comm_grid);
+      testBroadcastTranspose<TypeParam, Coord::Col>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow2Col) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Row>(cfg, comm_grid);
+      testBroadcastTranspose<TypeParam, Coord::Row>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2RowStoreTransposed) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
+      testBroadcastTranspose<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow2ColStoreTransposed) {
   for (auto comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
-      testBrodcastTranspose<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
+      testBroadcastTranspose<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }

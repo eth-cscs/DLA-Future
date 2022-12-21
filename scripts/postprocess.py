@@ -104,9 +104,9 @@ def _gen_nodes_plot(
 
         if fill_area:
             ax.fill_between(
-                lib_data["nodes"],
-                lib_data[f"{plt_type}_min"],
-                lib_data[f"{plt_type}_max"],
+                lib_data["nodes"].values,
+                lib_data[f"{plt_type}_min"].values,
+                lib_data[f"{plt_type}_max"].values,
                 alpha=0.2,
                 color=line_color,
             )

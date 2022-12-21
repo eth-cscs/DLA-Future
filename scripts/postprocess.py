@@ -226,8 +226,10 @@ def _parse_line_based(fout, bench_name, nodes):
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["trid_evp", "evp", "gevp"]:
+        if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["evp", "gevp"]:
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -1209,6 +1211,7 @@ def gen_gevp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1243,5 +1246,6 @@ def gen_gevp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )

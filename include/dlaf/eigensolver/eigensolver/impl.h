@@ -79,7 +79,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   using common::internal::vector;
 
   const SizeType size = mat_a.size().rows();
-  const SizeType band_size = mat_a.blockSize().rows();
+  const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)

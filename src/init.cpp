@@ -158,8 +158,8 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // update tune parameters
-  auto param = getTuneParameters();
-  updateConfigurationValue(vm, param.eigensolver_min_band, "DLAF_EIGENSOLVER_MIN_BAND",
+  auto& param = getTuneParameters();
+  updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND",
                            "eigensolver-min-band");
 }
 
@@ -188,6 +188,7 @@ pika::program_options::options_description getOptionsDescription() {
 
   // Tune parameters command line options
   desc.add_options()("dlaf:eigensolver-min-band",
+                     pika::program_options::value<SizeType>(),
                      "The minimun value to start looking for a divisor of the block size.");
 
   return desc;

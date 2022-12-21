@@ -507,7 +507,7 @@ def evp(
     suffix="na",
     extra_flags="",
     env="",
-    band=None,
+    min_band=None,
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -516,16 +516,16 @@ def evp(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        # Valid band are >= 2 and None (use default).
-        if band != None and band >= 2:
-            # TODO set band (not available yet)
-            print("Warning: evp band parameter does not have any effect yet.")
-        elif band != None:
-            raise RuntimeError(f"Invalid lower bound for band {band} specified (evp)")
+        # Valid min_band are >= 2 and None (use default).
+        band_flag = ""
+        if min_band != None and min_band >= 2:
+            band_flag = f"--dlaf::eigensolver_min_band={min_band}"
+        elif min_band != None:
+            raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (evp)")
 
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_eigensolver"
-        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -550,7 +550,7 @@ def gevp(
     suffix="na",
     extra_flags="",
     env="",
-    band=None,
+    min_band=None,
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -559,16 +559,16 @@ def gevp(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        # Valid band are >= 2 and -1 (use default).
-        if band != None and band >= 2:
-            # TODO set band (not available yet)
-            print("Warning: gevp band parameter does not have any effect yet.")
-        elif band != None:
-            raise RuntimeError(f"Invalid lower bound for band {band} specified! (gevp)")
+        # Valid min_band are >= 2 and None (use default).
+        band_flag = ""
+        if min_band != None and min_band >= 2:
+            band_flag = f"--dlaf::eigensolver_min_band={min_band}"
+        elif min_band != None:
+            raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (gevp)")
 
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_gen_eigensolver"
-        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 

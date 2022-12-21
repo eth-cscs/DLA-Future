@@ -606,6 +606,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
+
+  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
@@ -632,7 +634,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       const auto& tile_a = splitTile(a.read(ij), view(ij_local));
 
       if (is_diagonal_tile) {
-        hemmDiag<B>(thread_priority::high, ex::keep_future(tile_a), w.read_sender(ij_local),
+        hemmDiag<B>(thread_priority::high, keepFuture(tile_a), w.read_sender(ij_local),
                     x.readwrite_sender(ij_local));
       }
       else {
@@ -642,7 +644,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         // support panel Wt.
         // However, since we are still computing the "straight" part, the result can be stored
         // in the "local" panel X.
-        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, ex::keep_future(tile_a),
+        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, keepFuture(tile_a),
                        wt.read_sender(ij_local), x.readwrite_sender(ij_local));
 
         // Note:
@@ -661,7 +663,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
                                                         : xt.readwrite_sender(index_xt);
 
-        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, ex::keep_future(tile_a),
+        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
                        w.read_sender(ij_local), std::move(tile_x));
       }
     }

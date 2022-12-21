@@ -39,11 +39,11 @@ TEST_F(BroadcastMatrixTest, Matrix2Workspace) {
     Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-    set(tile.get(), message_values<TypeParam>);
+    set(tile, message_values<TypeParam>);
 
-    sync::broadcast::send(splitted_comm, tile.get());
+    sync::broadcast::send(splitted_comm, tile);
   }
   else {
     TypeParam data[4];
@@ -58,29 +58,25 @@ TEST_F(BroadcastMatrixTest, Matrix2Workspace) {
 }
 
 TEST_F(BroadcastMatrixTest, ConstMatrix2Workspace) {
-  // TODO: This test is also prone to the async_rw_mutex bug which can deadlock
-  // with read after readwrite access.
-  // if (splitted_comm.rank() == 0) {
-  //   Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
+  if (splitted_comm.rank() == 0) {
+    Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
 
-  //   LocalTileIndex selected_tile{0, 1};
-  //   auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
-  //   set(tile.get(), message_values<TypeParam>);
+    LocalTileIndex selected_tile{0, 1};
+    set(sync_wait(mat.readwrite_sender_tile(selected_tile)), message_values<TypeParam>);
 
-  //   Matrix<const TypeParam, Device::CPU>& const_mat = mat;
-  //   auto const_tile = sync_wait(const_mat.read_sender2(selected_tile));
-  //   sync::broadcast::send(splitted_comm, const_tile.get());
-  // }
-  // else {
-  //   TypeParam data[4];
-  //   Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
+    Matrix<const TypeParam, Device::CPU>& const_mat = mat;
+    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read_sender2(selected_tile)).get());
+  }
+  else {
+    TypeParam data[4];
+    Tile<TypeParam, Device::CPU> workspace({2, 2}, {data, 4}, 2);
 
-  //   set(workspace, TypeParam{});
+    set(workspace, TypeParam{});
 
-  //   sync::broadcast::receive_from(0, splitted_comm, workspace);
+    sync::broadcast::receive_from(0, splitted_comm, workspace);
 
-  //   CHECK_TILE_EQ(message_values<TypeParam>, workspace);
-  // }
+    CHECK_TILE_EQ(message_values<TypeParam>, workspace);
+  }
 }
 
 TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
@@ -88,53 +84,49 @@ TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({5, 10}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-    set(tile.get(), message_values<TypeParam>);
+    set(tile, message_values<TypeParam>);
 
-    sync::broadcast::send(splitted_comm, tile.get());
+    sync::broadcast::send(splitted_comm, tile);
   }
   else {
     Matrix<TypeParam, Device::CPU> mat({10, 5}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-    set(tile.get(), TypeParam{});
+    set(tile, TypeParam{});
 
-    sync::broadcast::receive_from(0, splitted_comm, tile.get());
+    sync::broadcast::receive_from(0, splitted_comm, tile);
 
-    CHECK_TILE_EQ(message_values<TypeParam>, tile.get());
+    CHECK_TILE_EQ(message_values<TypeParam>, tile);
   }
 }
 
 TEST_F(BroadcastMatrixTest, ConstMatrix2Matrix) {
-  // TODO: This test is also prone to the async_rw_mutex bug which can deadlock
-  // with read after readwrite access.
-  // if (splitted_comm.rank() == 0) {
-  //   Matrix<TypeParam, Device::CPU> mat({5, 10}, {2, 2});
+  if (splitted_comm.rank() == 0) {
+    Matrix<TypeParam, Device::CPU> mat({5, 10}, {2, 2});
 
-  //   LocalTileIndex selected_tile{0, 1};
+    LocalTileIndex selected_tile{0, 1};
 
-  //   auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
-  //   set(tile.get(), message_values<TypeParam>);
+    set(sync_wait(mat.readwrite_sender_tile(selected_tile)), message_values<TypeParam>);
 
-  //   Matrix<const TypeParam, Device::CPU>& const_mat = mat;
-  //   auto const_tile = sync_wait(const_mat.read_sender2(selected_tile));
-  //   sync::broadcast::send(splitted_comm, const_tile.get());
-  // }
-  // else {
-  //   Matrix<TypeParam, Device::CPU> mat({10, 5}, {2, 2});
+    Matrix<const TypeParam, Device::CPU>& const_mat = mat;
+    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read_sender2(selected_tile)).get());
+  }
+  else {
+    Matrix<TypeParam, Device::CPU> mat({10, 5}, {2, 2});
 
-  //   LocalTileIndex selected_tile{0, 1};
-  //   auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    LocalTileIndex selected_tile{0, 1};
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-  //   set(tile.get(), TypeParam{});
+    set(tile, TypeParam{});
 
-  //   sync::broadcast::receive_from(0, splitted_comm, tile.get());
+    sync::broadcast::receive_from(0, splitted_comm, tile);
 
-  //   CHECK_TILE_EQ(message_values<TypeParam>, tile.get());
-  // }
+    CHECK_TILE_EQ(message_values<TypeParam>, tile);
+  }
 }
 
 TEST_F(BroadcastMatrixTest, Workspace2Matrix) {
@@ -150,13 +142,13 @@ TEST_F(BroadcastMatrixTest, Workspace2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({13, 26}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-    set(tile.get(), TypeParam{});
+    set(tile, TypeParam{});
 
-    sync::broadcast::receive_from(0, splitted_comm, tile.get());
+    sync::broadcast::receive_from(0, splitted_comm, tile);
 
-    CHECK_TILE_EQ(message_values<TypeParam>, tile.get());
+    CHECK_TILE_EQ(message_values<TypeParam>, tile);
   }
 }
 
@@ -174,13 +166,13 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({13, 26}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender2(selected_tile));
+    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
 
-    set(tile.get(), TypeParam{});
+    set(tile, TypeParam{});
 
-    sync::broadcast::receive_from(0, splitted_comm, tile.get());
+    sync::broadcast::receive_from(0, splitted_comm, tile);
 
-    CHECK_TILE_EQ(message_values<TypeParam>, tile.get());
+    CHECK_TILE_EQ(message_values<TypeParam>, tile);
   }
 }
 

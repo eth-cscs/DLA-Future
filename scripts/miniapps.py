@@ -14,6 +14,7 @@ from os import makedirs, system
 from os.path import expanduser, isfile
 from re import sub
 from time import sleep
+from pathlib import Path
 
 # Finds two factors of `n` that are as close to each other as possible.
 #
@@ -142,7 +143,7 @@ class JobText:
 
 
 def _checkAppExec(fname):
-    if not isfile(fname):
+    if not isfile(Path(fname).expanduser()):
         raise RuntimeError(f"Executable {fname} doesn't exist")
 
 

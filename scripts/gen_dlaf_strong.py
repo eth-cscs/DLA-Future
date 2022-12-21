@@ -67,7 +67,13 @@ run.add(
     {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128},
     nruns,
 )
-# TODO trid_evp
+run.add(
+    mp.trid_evp,
+    "dlaf",
+    dlafpath,
+    {"rpn": 2, "m_sz": 10240, "mb_sz": 512},
+    nruns,
+)
 run.add(
     mp.bt_band2trid,
     "dlaf",

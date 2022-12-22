@@ -129,7 +129,7 @@ template <Backend B, Device D, class T>
 void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
 
-  // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+  // Allocate the tridiagonal, eigenvalues and eigenvectors matrices
   matrix::Matrix<RealParam, Device::CPU> tridiag(LocalElementSize(n, 2), TileElementSize(nb, 2));
   matrix::Matrix<RealParam, Device::CPU> evals(LocalElementSize(n, 1), TileElementSize(nb, 1));
   matrix::Matrix<T, Device::CPU> evecs(LocalElementSize(n, n), TileElementSize(nb, nb));

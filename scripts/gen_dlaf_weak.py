@@ -80,7 +80,15 @@ run.add(
     approx,
     nruns,
 )
-# TODO trid_evp
+run.add(
+    mp.trid_evp,
+    "dlaf",
+    dlafpath,
+    {"rpn": 2, "mb_sz": 512},
+    {"m_sz": 10240},
+    approx,
+    nruns,
+)
 run.add(
     mp.bt_band2trid,
     "dlaf",

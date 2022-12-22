@@ -12,8 +12,8 @@ from itertools import product
 from math import sqrt
 from os import makedirs, system
 from os.path import expanduser, isfile
-from re import sub
 from time import sleep
+from pathlib import Path
 
 # Finds two factors of `n` that are as close to each other as possible.
 #
@@ -142,7 +142,7 @@ class JobText:
 
 
 def _checkAppExec(fname):
-    if not isfile(fname):
+    if not isfile(Path(fname).expanduser()):
         raise RuntimeError(f"Executable {fname} doesn't exist")
 
 
@@ -365,6 +365,40 @@ def band2trid(
 
     _checkAppExec(app)
     cmd = f"{app} {opts}".strip() + f" >> band2trid_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
+# lib: allowed libraries are dlaf
+# rpn: ranks per node
+#
+def trid_evp(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+):
+    _check_ranks_per_node(system, lib, rpn)
+
+    total_ranks = nodes * rpn
+    cores_per_rank = system["Cores"] // rpn
+    grid_cols, grid_rows = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_tridiag_solver"
+        opts = f"--matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> trid_evp_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 

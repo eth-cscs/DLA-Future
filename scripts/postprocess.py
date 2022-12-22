@@ -35,7 +35,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
-        plt_routine:    chol | hegst | red2band | band2trid | bt_band2trid |bt_red2band | trsm | evp | gevp It is used to filter data.
+        plt_routine:    chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | bt_red2band | trsm | evp | gevp It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -166,20 +166,23 @@ class NodePlotWriter:
 
 # Calculate mean,max,avg perf and time
 def _calc_metrics(cols, df):
+    perf_agg_functions = dict(
+        p_mean=("perf", "mean"),
+        p_min=("perf", "min"),
+        p_max=("perf", "max"),
+        ppn_mean=("perf_per_node", "mean"),
+        ppn_min=("perf_per_node", "min"),
+        ppn_max=("perf_per_node", "max"),
+    )
     return (
         df.loc[df["run_index"] != 0]
         .groupby(cols)
         .agg(
-            p_mean=("perf", "mean"),
-            p_min=("perf", "min"),
-            p_max=("perf", "max"),
-            ppn_mean=("perf_per_node", "mean"),
-            ppn_min=("perf_per_node", "min"),
-            ppn_max=("perf_per_node", "max"),
+            **(perf_agg_functions if "perf" in df.columns else {}),
             time_mean=("time", "mean"),
             time_min=("time", "min"),
             time_max=("time", "max"),
-            measures=("perf", "count"),
+            measures=("time", "count"),
         )
         .reset_index()
     )
@@ -223,7 +226,7 @@ def _parse_line_based(fout, bench_name, nodes):
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["evp", "gevp"]:
+        if alg_name in ["trid_evp", "evp", "gevp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
@@ -381,6 +384,10 @@ def calc_band2trid_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
+def calc_trid_evp_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+
+
 def calc_bt_band2trid_metrics(df):
     return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
 
@@ -429,7 +436,7 @@ def _gen_plot(
     Args:
         scaling         strong | weak
         title:          name of the routine to be included in the title
-        routine:        chol | hegst | red2band | band2trid | bt_band2trid | trsm | evp | gevp
+        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | evp | gevp
         combine_mb:     bool indicates if different mb has to be included in the same plot
         size_type:      m | mn It indicates which sizes are relevant.
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -898,6 +905,72 @@ def gen_band2trid_plots_weak(
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
         has_band=True,
+        **proxy_args,
+    )
+
+
+def gen_trid_evp_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="strong",
+        title="TridiagSolver",
+        routine="trid_evp",
+        filename="trid_evp",
+        size_type="m",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=False,
+        time_plot=True,
+        customize_time=customize_time,
+        **proxy_args,
+    )
+
+
+def gen_trid_evp_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="weak",
+        title="TridiagSolver",
+        routine="trid_evp",
+        filename="trid_evp",
+        size_type="m",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=False,
+        time_plot=True,
+        customize_time=customize_time,
+        weak_rt_approx=weak_rt_approx,
         **proxy_args,
     )
 

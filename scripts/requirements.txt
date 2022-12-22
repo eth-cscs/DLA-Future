@@ -2,4 +2,3 @@ matplotlib
 numpy
 pandas
 parse
-seaborne

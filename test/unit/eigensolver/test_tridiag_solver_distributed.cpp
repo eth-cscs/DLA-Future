@@ -185,7 +185,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
   Distribution dist_evecs(GlobalElementSize(n, n), TileElementSize(nb, nb), grid.size(), grid.rank(),
                           src_rank_index);
 
-  // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+  // Allocate the tridiagonal, eigenvalues and eigenvectors matrices
   Matrix<RealParam, Device::CPU> tridiag(dist_trd);
   Matrix<RealParam, Device::CPU> evals(dist_evals);
   Matrix<T, Device::CPU> evecs(dist_evecs);

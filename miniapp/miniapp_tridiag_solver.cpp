@@ -76,7 +76,7 @@ struct TridiagSolverMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+    // Allocate the tridiagonal, eigenvalues and eigenvectors matrices
     const Distribution dist_trd(LocalElementSize(opts.m, 2), TileElementSize(opts.mb, 2));
     const Distribution dist_evals(LocalElementSize(opts.m, 1), TileElementSize(opts.mb, 1));
     const Distribution dist_evecs(GlobalElementSize(opts.m, opts.m), TileElementSize(opts.mb, opts.mb),
@@ -86,37 +86,17 @@ struct TridiagSolverMiniapp {
     Matrix<T, Device::CPU> evals(dist_evals);
     Matrix<T, Device::CPU> evecs(dist_evecs);
 
-    // Initialize a random symmetric tridiagonal matrix using two arrays for the diagonal and the
-    // off-diagonal. The random numbers are in the range [-1, 1].
-    //
-    // Note: set_random() is not used here because the two arrays can be more easily reused to initialize
-    //       the same tridiagonal matrix but with explicit zeros for correctness checking further down.
-    const auto initRandomArray = [size = dlaf::to_sizet(opts.m)](const SizeType seed) {
-      std::vector<T> diag_arr(size);
-      dlaf::matrix::util::internal::getter_random<T> diag_rand_gen(seed);
-      std::generate(std::begin(diag_arr), std::end(diag_arr), diag_rand_gen);
-      return diag_arr;
-    };
-    const SizeType diag_seed = opts.m;
-    const SizeType offdiag_seed = opts.m + 1;
-    const std::vector<T> diag_arr = initRandomArray(diag_seed);
-    const std::vector<T> offdiag_arr = initRandomArray(offdiag_seed);
-
-    auto tridagReference = [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
-      const size_t row_index = dlaf::to_sizet(i.row());
-      if (i.col() == 0) {
-        return diag_arr[row_index];
-      }
-      else {
-        return offdiag_arr[row_index];
-      }
-    };
+    Matrix<const T, Device::CPU> tridiag_ref = [dist_trd]() {
+      Matrix<T, Device::CPU> tridiag(dist_trd);
+      dlaf::matrix::util::set_random(tridiag);
+      return tridiag;
+    }();
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      dlaf::matrix::util::set(tridiag, tridagReference);
+      copy(tridiag_ref, tridiag);
 
       double elapsed_time;
       {

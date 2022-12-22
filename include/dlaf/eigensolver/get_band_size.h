@@ -19,8 +19,8 @@ namespace dlaf::eigensolver::internal {
 
 // Returns the smallest divisor of nb larger than b_min = getTuneParameters().eigensolver_min_band.
 // If nb is smaller than b_min returns nb.
-inline SizeType getBandSize(SizeType nb) noexcept {
-  SizeType b_min = getTuneParameters().eigensolver_min_band;
+inline SizeType getBandSize(const SizeType nb) noexcept {
+  const SizeType b_min = getTuneParameters().eigensolver_min_band;
 
   DLAF_ASSERT(nb >= 1, nb);
   DLAF_ASSERT(b_min >= 2, b_min);

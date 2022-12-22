@@ -519,7 +519,7 @@ def evp(
         # Valid min_band are >= 2 and None (use default).
         band_flag = ""
         if min_band != None and min_band >= 2:
-            band_flag = f"--dlaf::eigensolver_min_band={min_band}"
+            band_flag = f"--dlaf:eigensolver_min_band={min_band}"
         elif min_band != None:
             raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (evp)")
 
@@ -562,7 +562,7 @@ def gevp(
         # Valid min_band are >= 2 and None (use default).
         band_flag = ""
         if min_band != None and min_band >= 2:
-            band_flag = f"--dlaf::eigensolver_min_band={min_band}"
+            band_flag = f"--dlaf:eigensolver_min_band={min_band}"
         elif min_band != None:
             raise RuntimeError(f"Invalid lower bound for min_band {min_band} specified! (gevp)")
 

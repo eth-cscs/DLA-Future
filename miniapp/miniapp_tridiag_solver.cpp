@@ -48,7 +48,7 @@ using dlaf::matrix::Distribution;
 using dlaf::matrix::MatrixMirror;
 
 struct Options
-    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
   SizeType m;
   SizeType mb;
 
@@ -73,8 +73,6 @@ struct Options
 struct TridiagSolverMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
-    using RealParam = dlaf::BaseType<T>;
-
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -84,8 +82,8 @@ struct TridiagSolverMiniapp {
     const Distribution dist_evecs(GlobalElementSize(opts.m, opts.m), TileElementSize(opts.mb, opts.mb),
                                   comm_grid.size(), comm_grid.rank(), {0, 0});
 
-    Matrix<RealParam, Device::CPU> tridiag(dist_trd);
-    Matrix<RealParam, Device::CPU> evals(dist_evals);
+    Matrix<T, Device::CPU> tridiag(dist_trd);
+    Matrix<T, Device::CPU> evals(dist_evals);
     Matrix<T, Device::CPU> evecs(dist_evecs);
 
     // Initialize a random symmetric tridiagonal matrix using two arrays for the diagonal and the
@@ -94,15 +92,15 @@ struct TridiagSolverMiniapp {
     // Note: set_random() is not used here because the two arrays can be more easily reused to initialize
     //       the same tridiagonal matrix but with explicit zeros for correctness checking further down.
     const auto initRandomArray = [size = dlaf::to_sizet(opts.m)](const SizeType seed) {
-      std::vector<RealParam> diag_arr(size);
-      dlaf::matrix::util::internal::getter_random<RealParam> diag_rand_gen(seed);
+      std::vector<T> diag_arr(size);
+      dlaf::matrix::util::internal::getter_random<T> diag_rand_gen(seed);
       std::generate(std::begin(diag_arr), std::end(diag_arr), diag_rand_gen);
       return diag_arr;
     };
     const SizeType diag_seed = opts.m;
     const SizeType offdiag_seed = opts.m + 1;
-    const std::vector<RealParam> diag_arr = initRandomArray(diag_seed);
-    const std::vector<RealParam> offdiag_arr = initRandomArray(offdiag_seed);
+    const std::vector<T> diag_arr = initRandomArray(diag_seed);
+    const std::vector<T> offdiag_arr = initRandomArray(offdiag_seed);
 
     auto tridagReference = [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
       const size_t row_index = dlaf::to_sizet(i.row());
@@ -122,8 +120,8 @@ struct TridiagSolverMiniapp {
 
       double elapsed_time;
       {
-        MatrixMirror<RealParam, DefaultDevice_v<backend>, Device::CPU> tridiag_mirror(tridiag);
-        MatrixMirror<RealParam, DefaultDevice_v<backend>, Device::CPU> evals_mirror(evals);
+        MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> tridiag_mirror(tridiag);
+        MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evals_mirror(evals);
         MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evecs_mirror(evecs);
 
         // Wait for matrix to be copied to GPU (if necessary)

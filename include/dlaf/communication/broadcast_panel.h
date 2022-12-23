@@ -172,7 +172,14 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 
   auto& chain_step2 = get_taskchain(comm_dir_step2);
 
-  for (const auto& indexT : panelT.iteratorLocal()) {
+  const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
+  const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
+  const auto range = dist.rankIndex().get(coordT) == owner
+                         ? common::iterate_range2d(*panelT.iteratorLocal().begin(),
+                                                   LocalTileIndex(coordT, panelT.rangeEndLocal() - 1, 1))
+                         : panelT.iteratorLocal();
+
+  for (const auto& indexT : range) {
     auto [index_diag, owner_diag] = internal::transposedOwner<coordT>(dist, indexT);
 
     namespace ex = pika::execution::experimental;

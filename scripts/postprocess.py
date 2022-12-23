@@ -399,11 +399,11 @@ def calc_bt_red2band_metrics(df):
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 # Customization that add a simple legend
@@ -1145,6 +1145,7 @@ def gen_evp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1179,6 +1180,7 @@ def gen_evp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )
 

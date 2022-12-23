@@ -533,7 +533,7 @@ public:
 
   auto read_sender(LocalTileIndex index) {
     index.transpose();
-    return pika::execution::experimental::keep_future(BaseT::read(index));
+    return BaseT::read_sender(index);
   }
 
   using BaseT::reset;

@@ -179,7 +179,6 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, RhoSender&
 //
 template <class RhoSender>
 auto scaleRho(RhoSender&& rho) {
-  namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   return std::forward<RhoSender>(rho) |
          di::transform(di::Policy<Backend::MC>(), [](auto rho) { return 2 * std::abs(rho); });
@@ -623,7 +622,7 @@ void initWeightVector(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin
   // Reduce by multiplication into the first local column of each tile of the workspace matrix `ws`
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    auto sz_gl_el = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     // Divide the eigenvectors of the rank1 update problem `evecs` by it's diagonal matrix `diag` and
     // reduce multiply into the first column of each tile of the workspace matrix `ws`
     divideEvecsByDiagonalAsync<D>(k, sz_gl_el.rows(), sz_gl_el.cols(),
@@ -655,7 +654,7 @@ void formEvecsUsingWeightVec(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_lo
 
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    auto sz_gl_el = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     LocalTileIndex idx_ws_first_local_column(idx_loc_tile.row(), idx_loc_begin.col());
 
     calcEvecsFromWeightVecAsync<D>(k, sz_gl_el.rows(), sz_gl_el.cols(),
@@ -673,7 +672,7 @@ void sumsqEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin, Loca
 
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    auto sz_gl_el = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     sumsqColsAsync<D>(k, sz_gl_el.rows(), sz_gl_el.cols(), evecs.read_sender(idx_loc_tile),
                       ws.readwrite_sender(idx_loc_tile));
 
@@ -696,7 +695,7 @@ void normalizeEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
 
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    auto sz_gl_el = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     LocalTileIndex idx_ws_first_local_row(idx_loc_begin.row(), idx_loc_tile.col());
     divideColsByFirstRowAsync<D>(k, sz_gl_el.rows(), sz_gl_el.cols(),
                                  ws.read_sender(idx_ws_first_local_row),
@@ -709,7 +708,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, KSender&& k, Matrix<T, D>& ma
   // Iterate over diagonal tiles
   const matrix::Distribution& distr = mat.distribution();
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
-    SizeType tile_begin = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+    SizeType tile_begin = distr.globalElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_tile);
 
     setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
   }
@@ -882,7 +881,7 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, KSender&& k, Matrix<T, D>
     GlobalTileIndex ii_tile(i_tile, i_tile);
     comm::Index2D diag_tile_rank = dist.rankGlobalTile(ii_tile);
     if (diag_tile_rank == this_rank) {
-      SizeType tile_begin = dist.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
+      SizeType tile_begin = dist.globalElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_tile);
 
       setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite_sender(ii_tile));
     }
@@ -923,7 +922,7 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
   LocalTileSize sz_loc_first_column(sz_loc_tiles.rows(), 1);
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_first_column)) {
     GlobalTileIndex idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    GlobalElementSize sz_subm = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    GlobalElementSize sz_subm = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);
 
     // set buffer to 1
@@ -979,7 +978,7 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
   LocalTileSize sz_first_local_row(1, sz_loc_tiles.cols());
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_first_local_row)) {
     GlobalTileIndex idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
-    GlobalElementSize sz_subm = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
+    GlobalElementSize sz_subm = dist.globalElementDistanceFromGlobalTile(idx_gl_begin, idx_gl_tile);
     GlobalTileIndex idx_gl_comm(idx_gl_tile.col(), 0);
 
     // set buffer to zero
@@ -1028,7 +1027,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
       SizeType j_gl_tile = dist.globalTileFromLocalTile<Coord::Col>(j_loc_tile);
       // The element distance between the current tile column and the initial tile column in the global
       // matrix tile grid
-      SizeType j_gl_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j_gl_tile);
+      SizeType j_gl_subm_el = dist.globalElementDistanceFromGlobalTile<Coord::Col>(i_begin, j_gl_tile);
 
       // Skip columns that are in the deflation zone
       if (j_gl_subm_el >= k)
@@ -1055,7 +1054,8 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
           SizeType i_gl_tile = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile);
           // The element distance between the current tile row and the initial tile row in the
           // global matrix tile grid
-          SizeType i_gl_subm_el = dist.globalTileElementDistance<Coord::Row>(i_begin, i_gl_tile);
+          SizeType i_gl_subm_el =
+              dist.globalElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_gl_tile);
 
           // Skip rows that are in the deflation zone
           if (i_gl_subm_el >= k)
@@ -1122,7 +1122,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
   // Calculate the size of the upper subproblem
-  SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split + 1);
+  SizeType n1 = dist_evecs.globalElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_split + 1);
 
   // The local size of the subproblem
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);

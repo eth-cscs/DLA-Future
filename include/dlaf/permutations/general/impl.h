@@ -133,8 +133,10 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
 
   const matrix::Distribution& distr = mat_in.distribution();
   TileElementSize sz_last_tile = distr.tileSize(GlobalTileIndex(i_end, i_end));
-  SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end) + sz_last_tile.rows();
-  SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end) + sz_last_tile.cols();
+  SizeType m =
+      distr.globalElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end) + sz_last_tile.rows();
+  SizeType n =
+      distr.globalElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end) + sz_last_tile.cols();
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
@@ -383,29 +385,45 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
 
 // Inverts the the subset of tiles [ @p i_begin, @p i_end (including)] of the index map @p in and saves
 // the result into @p out.
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
-                        Matrix<SizeType, Device::CPU>& out) {
+template <Coord C>
+inline void invertIndexAndCopy(SizeType i_begin, SizeType i_end, const matrix::Distribution& dist,
+                               Matrix<const SizeType, Device::CPU>& in,
+                               Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
-  namespace ut = matrix::util;
+  // namespace ut = matrix::util;
 
-  const matrix::Distribution& dist = in.distribution();
-  SizeType nb = dist.blockSize().rows();
-  SizeType nbr = dist.tileSize(GlobalTileIndex(i_end, 0)).rows();
-  SizeType n = (i_end - i_begin) * nb + nbr;
-  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
-    TileElementIndex zero(0, 0);
-    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
-    SizeType* out_ptr = out_tiles[0].ptr(zero);
+  GlobalElementSize subm_sz =
+      dist.globalElementDistanceFromGlobalTile(GlobalTileIndex(i_begin, i_begin),
+                                               GlobalTileIndex(i_end + 1, i_end + 1));
+  const matrix::Distribution dist_subm(subm_sz, dist.blockSize(), dist.commGridSize(), dist.rankIndex(),
+                                       dist.rankGlobalTile({i_begin, i_begin}));
+
+  auto inv_fn = [dist = dist_subm](const auto& in_tiles_futs, const auto& out_tiles) {
+    comm::IndexT_MPI this_rank = dist.rankIndex().get<C>();
+
+    SizeType n = dist.size().get<C>();
+    SizeType nb = dist.blockSize().get<C>();
+
+    const SizeType* in_ptr = in_tiles_futs[0].get().ptr();
+    SizeType* out_ptr = out_tiles[0].ptr();
+
     for (SizeType i = 0; i < n; ++i) {
-      out_ptr[in_ptr[i]] = i;
+      SizeType in_idx = in_ptr[i];
+      if (dist.rankGlobalElement<C>(in_idx) == this_rank) {
+        SizeType i_loc_el = dist.localTileFromGlobalElement<C>(in_idx) * nb +
+                            dist.tileElementFromGlobalElement<C>(in_idx);
+        out_ptr[i_loc_el] = i;
+      }
+      // if (dist.globalElementFromLocalTileAndTileElement<C>(i_loc_tile, i_el) - i_begin == i_subm_el) {
+      //   out_ptr[in_ptr[i]] = i;
+      // }
     }
   };
 
-  LocalTileIndex begin{i_begin, 0};
-  LocalTileSize sz{i_end - i_begin + 1, 1};
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
+  auto sender = ex::when_all(whenAllReadOnlyTilesArray({i_begin, 0}, {i_end, 0}, in),
+                             whenAllReadWriteTilesArray(out));
+
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 
@@ -435,10 +453,6 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
     return;
   }
 
-  // Create a map from send indices to receive indices (inverse of perms)
-  Matrix<SizeType, D> inverse_perms(perms.distribution());
-  invertIndex(i_begin, i_end, perms, inverse_perms);
-
   // Local distribution used for packing and unpacking
   matrix::Distribution subm_dist(sz_loc, blk);
 
@@ -465,7 +479,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Initialize the packing index
   // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
-  copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, inverse_perms, ws_index);
+  invertIndexAndCopy<C>(i_begin, i_end, dist, perms, ws_index);
   auto send_counts_sender = initPackingIndex<C, true>(nranks, i_el_begin, dist, ws_index, packing_index);
 
   // Pack local rows or columns to be sent from this rank

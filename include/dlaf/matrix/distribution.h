@@ -338,16 +338,22 @@ public:
 
   /// Returns the global element distance between tiles along the @p rc coordinate
   template <Coord rc>
-  SizeType globalTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
+  SizeType globalElementDistanceFromGlobalTile(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
-    return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) -
-           globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+    DLAF_ASSERT_HEAVY(0 <= i_begin && i_end <= global_nr_tiles_.get<rc>(), i_begin, i_end,
+                      global_nr_tiles_.get<rc>());
+
+    SizeType i_last = i_end - 1;
+    SizeType n = size_.get<rc>();
+    SizeType nb = block_size_.get<rc>();
+    SizeType nbr = std::min(nb, n - i_last * nb);  // size of last tile along `rc`
+    return (i_last - i_begin) * nb + nbr;
   }
 
-  GlobalElementSize globalTileElementDistance(GlobalTileIndex begin,
-                                              GlobalTileIndex end) const noexcept {
-    return GlobalElementSize{globalTileElementDistance<Coord::Row>(begin.row(), end.row()),
-                             globalTileElementDistance<Coord::Col>(begin.col(), end.col())
+  GlobalElementSize globalElementDistanceFromGlobalTile(GlobalTileIndex begin,
+                                                        GlobalTileIndex end) const noexcept {
+    return {globalElementDistanceFromGlobalTile<Coord::Row>(begin.row(), end.row()),
+            globalElementDistanceFromGlobalTile<Coord::Col>(begin.col(), end.col())
 
     };
   }

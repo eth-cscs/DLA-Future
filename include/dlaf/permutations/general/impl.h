@@ -11,6 +11,7 @@
 #pragma once
 
 #include "dlaf/permutations/general/api.h"
+#include "dlaf/permutations/general/invert_and_copy.h"
 #include "dlaf/permutations/general/perms.h"
 
 #include "dlaf/blas/tile.h"
@@ -400,25 +401,9 @@ inline void invertIndexAndCopy(SizeType i_begin, SizeType i_end, const matrix::D
                                        dist.rankGlobalTile({i_begin, i_begin}));
 
   auto inv_fn = [dist = dist_subm](const auto& in_tiles_futs, const auto& out_tiles) {
-    comm::IndexT_MPI this_rank = dist.rankIndex().get<C>();
-
-    SizeType n = dist.size().get<C>();
-    SizeType nb = dist.blockSize().get<C>();
-
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr();
     SizeType* out_ptr = out_tiles[0].ptr();
-
-    for (SizeType i = 0; i < n; ++i) {
-      SizeType in_idx = in_ptr[i];
-      if (dist.rankGlobalElement<C>(in_idx) == this_rank) {
-        SizeType i_loc_el = dist.localTileFromGlobalElement<C>(in_idx) * nb +
-                            dist.tileElementFromGlobalElement<C>(in_idx);
-        out_ptr[i_loc_el] = i;
-      }
-      // if (dist.globalElementFromLocalTileAndTileElement<C>(i_loc_tile, i_el) - i_begin == i_subm_el) {
-      //   out_ptr[in_ptr[i]] = i;
-      // }
-    }
+    invertAndCopyArr<C>(dist, in_ptr, out_ptr);
   };
 
   auto sender = ex::when_all(whenAllReadOnlyTilesArray({i_begin, 0}, {i_end, 0}, in),

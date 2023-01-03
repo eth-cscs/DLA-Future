@@ -95,80 +95,77 @@ TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
                 "wrong ConstTileType");
 }
 
-// TODO: read after readwrite? can't be, this is MatrixLocal...?
-// TYPED_TEST(MatrixLocalTest, Constructor) {
-//   using Type = TypeParam;
-//   auto el = [](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
-//   };
+TYPED_TEST(MatrixLocalTest, Constructor) {
+  using Type = TypeParam;
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
+  };
 
-//   for (const auto& test : sizes_tests) {
-//     Matrix<Type, Device::CPU> mat(test.size, test.block_size);
+  for (const auto& test : sizes_tests) {
+    Matrix<Type, Device::CPU> mat(test.size, test.block_size);
 
-//     EXPECT_EQ(Distribution(test.size, test.block_size), mat.distribution());
+    EXPECT_EQ(Distribution(test.size, test.block_size), mat.distribution());
 
-//     set(mat, el);
+    set(mat, el);
 
-//     CHECK_MATRIX_EQ(el, mat);
-//   }
-// }
+    CHECK_MATRIX_EQ(el, mat);
+  }
+}
 
-// TODO: read after readwrite?
-// TYPED_TEST(MatrixTest, Constructor) {
-//   using Type = TypeParam;
-//   auto el = [](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
-//   };
+TYPED_TEST(MatrixTest, Constructor) {
+  using Type = TypeParam;
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
+  };
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-//       EXPECT_EQ(Distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0}),
-//                 mat.distribution());
+      EXPECT_EQ(Distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0}),
+                mat.distribution());
 
-//       set(mat, el);
+      set(mat, el);
 
-//       CHECK_MATRIX_EQ(el, mat);
-//     }
-//   }
-// }
+      CHECK_MATRIX_EQ(el, mat);
+    }
+  }
+}
 
-// TODO: read after readwrite?
-// TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
-//   using Type = TypeParam;
-//   auto el = [](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
-//   };
+TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
+  using Type = TypeParam;
+  auto el = [](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<Type>::element(i + j / 1024., j - i / 128.);
+  };
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
-//                                    std::min(1, comm_grid.size().cols() - 1));
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-//                                 src_rank_index);
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
+                                   std::min(1, comm_grid.size().cols() - 1));
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+                                src_rank_index);
 
-//       // Copy distribution for testing purpose.
-//       Distribution distribution_copy(distribution);
+      // Copy distribution for testing purpose.
+      Distribution distribution_copy(distribution);
 
-//       Matrix<Type, Device::CPU> mat(std::move(distribution));
+      Matrix<Type, Device::CPU> mat(std::move(distribution));
 
-//       EXPECT_EQ(distribution_copy, mat.distribution());
+      EXPECT_EQ(distribution_copy, mat.distribution());
 
-//       set(mat, el);
+      set(mat, el);
 
-//       CHECK_MATRIX_EQ(el, mat);
-//     }
-//   }
-// }
+      CHECK_MATRIX_EQ(el, mat);
+    }
+  }
+}
 
 /// Returns the memory index of the @p index element of the matrix.
 ///
@@ -294,33 +291,32 @@ void checkLayoutLocal(T* p, const LayoutInfo& layout, Mat& matrix) {
     checkLayoutLocal(p, layout, mat);         \
   } while (0)
 
-// TODO: Read after readwrite?
-// TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
-//   using Type = TypeParam;
+TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
+  using Type = TypeParam;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
-//                                    std::max(0, comm_grid.size().cols() - 1));
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-//                                 src_rank_index);
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      comm::Index2D src_rank_index(std::min(1, comm_grid.size().rows() - 1),
+                                   std::max(0, comm_grid.size().cols() - 1));
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+                                src_rank_index);
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-//       // Copy distribution for testing purpose.
-//       Distribution distribution_copy(distribution);
+      // Copy distribution for testing purpose.
+      Distribution distribution_copy(distribution);
 
-//       Matrix<Type, Device::CPU> mat(std::move(distribution), layout);
-//       Type* ptr = nullptr;
-//       if (!mat.distribution().localSize().isEmpty()) {
-//         ptr = tt::sync_wait(mat.readwrite_sender_tile(LocalTileIndex(0, 0))).ptr();
-//       }
+      Matrix<Type, Device::CPU> mat(std::move(distribution), layout);
+      Type* ptr = nullptr;
+      if (!mat.distribution().localSize().isEmpty()) {
+        ptr = tt::sync_wait(mat.readwrite_sender_tile(LocalTileIndex(0, 0))).ptr();
+      }
 
-//       CHECK_DISTRIBUTION_LAYOUT(ptr, distribution_copy, layout, mat);
-//     }
-//   }
-// }
+      CHECK_DISTRIBUTION_LAYOUT(ptr, distribution_copy, layout, mat);
+    }
+  }
+}
 
 TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
   for (const auto& comm_grid : this->commGrids()) {
@@ -1041,44 +1037,43 @@ TYPED_TEST(MatrixTest, FromTileConst) {
   }
 }
 
-// TODO: read after readwrite?
-// TYPED_TEST(MatrixTest, CopyFrom) {
-//   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-//   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
-//   using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
+TYPED_TEST(MatrixTest, CopyFrom) {
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-//       auto input_matrix = [](const GlobalElementIndex& index) {
-//         SizeType i = index.row();
-//         SizeType j = index.col();
-//         return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
-//       };
+      auto input_matrix = [](const GlobalElementIndex& index) {
+        SizeType i = index.row();
+        SizeType j = index.col();
+        return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
+      };
 
-//       MemoryViewT mem_src(layout.minMemSize());
-//       MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-//                                                           static_cast<TypeParam*>(mem_src()));
-//       dlaf::matrix::util::set(mat_src, input_matrix);
+      MemoryViewT mem_src(layout.minMemSize());
+      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_src()));
+      dlaf::matrix::util::set(mat_src, input_matrix);
 
-//       MatrixConstT mat_src_const = std::move(mat_src);
+      MatrixConstT mat_src_const = std::move(mat_src);
 
-//       MemoryViewT mem_dst(layout.minMemSize());
-//       MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-//                                                           static_cast<TypeParam*>(mem_dst()));
-//       dlaf::matrix::util::set(mat_dst,
-//                               [](const auto&) { return TypeUtilities<TypeParam>::element(13, 26); });
+      MemoryViewT mem_dst(layout.minMemSize());
+      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                          static_cast<TypeParam*>(mem_dst()));
+      dlaf::matrix::util::set(mat_dst,
+                              [](const auto&) { return TypeUtilities<TypeParam>::element(13, 26); });
 
-//       copy(mat_src_const, mat_dst);
+      copy(mat_src_const, mat_dst);
 
-//       CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
-//     }
-//   }
-// }
+      CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
+    }
+  }
+}
 
 #if DLAF_WITH_GPU
 TYPED_TEST(MatrixTest, GPUCopy) {
@@ -1134,99 +1129,97 @@ TYPED_TEST(MatrixTest, GPUCopy) {
 
 struct MatrixGenericTest : public TestWithCommGrids {};
 
-// TODO: read after readwrite?
-// TEST_F(MatrixGenericTest, SelectTilesReadonly) {
-//   using TypeParam = double;
-//   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-//   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+TEST_F(MatrixGenericTest, SelectTilesReadonly) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-//       MemoryViewT mem(layout.minMemSize());
-//       MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-//                                                       static_cast<TypeParam*>(mem()));
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                      static_cast<TypeParam*>(mem()));
 
-//       // if this rank has no tiles locally, there's nothing interesting to do...
-//       if (distribution.localNrTiles().isEmpty())
-//         continue;
+      // if this rank has no tiles locally, there's nothing interesting to do...
+      if (distribution.localNrTiles().isEmpty())
+        continue;
 
-//       const auto ncols = to_sizet(distribution.localNrTiles().cols());
-//       const LocalTileSize local_row_size{1, to_SizeType(ncols)};
-//       auto row0_range = common::iterate_range2d(local_row_size);
+      const auto ncols = to_sizet(distribution.localNrTiles().cols());
+      const LocalTileSize local_row_size{1, to_SizeType(ncols)};
+      auto row0_range = common::iterate_range2d(local_row_size);
 
-//       // top left tile is selected in rw (i.e. exclusive access)
-//       auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      // top left tile is selected in rw (i.e. exclusive access)
+      auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
 
-//       // the entire first row is selected in ro
-//       auto futs_row = selectRead(mat, row0_range);
-//       EXPECT_EQ(ncols, futs_row.size());
+      // the entire first row is selected in ro
+      auto futs_row = selectRead(mat, row0_range);
+      EXPECT_EQ(ncols, futs_row.size());
 
-//       tt::sync_wait(std::move(tile_sender));
-//       tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
+      tt::sync_wait(std::move(tile_sender));
+      tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
 
-//       // TODO: How much does this test make sense with senders?
-//       // // Since the top left tile has been selected two times, the group selection
-//       // // would have all but the first tile ready...
-//       // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+      // TODO: How much does this test make sense with senders?
+      // // Since the top left tile has been selected two times, the group selection
+      // // would have all but the first tile ready...
+      // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
 
-//       // // ... until the first one will be released.
-//       // tile_sender.get();
-//       // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
-//     }
-//   }
-// }
+      // // ... until the first one will be released.
+      // tile_sender.get();
+      // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+    }
+  }
+}
 
-// TODO: read after readwrite?
-// TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
-//   using TypeParam = double;
-//   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-//   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-//       MemoryViewT mem(layout.minMemSize());
-//       MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-//                                                       static_cast<TypeParam*>(mem()));
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                      static_cast<TypeParam*>(mem()));
 
-//       // if this rank has no tiles locally, there's nothing interesting to do...
-//       if (distribution.localNrTiles().isEmpty())
-//         continue;
+      // if this rank has no tiles locally, there's nothing interesting to do...
+      if (distribution.localNrTiles().isEmpty())
+        continue;
 
-//       const auto ncols = to_sizet(distribution.localNrTiles().cols());
-//       const LocalTileSize local_row_size{1, to_SizeType(ncols)};
-//       auto row0_range = common::iterate_range2d(local_row_size);
+      const auto ncols = to_sizet(distribution.localNrTiles().cols());
+      const LocalTileSize local_row_size{1, to_SizeType(ncols)};
+      auto row0_range = common::iterate_range2d(local_row_size);
 
-//       // top left tile is selected in rw (i.e. exclusive access)
-//       auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      // top left tile is selected in rw (i.e. exclusive access)
+      auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
 
-//       // the entire first row is selected in rw
-//       auto futs_row = select(mat, row0_range);
-//       EXPECT_EQ(ncols, futs_row.size());
+      // the entire first row is selected in rw
+      auto futs_row = select(mat, row0_range);
+      EXPECT_EQ(ncols, futs_row.size());
 
-//       tt::sync_wait(std::move(tile_sender));
-//       tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
+      tt::sync_wait(std::move(tile_sender));
+      tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
 
-//       // TODO: How much does this test make sense with senders?
-//       // // Since the top left tile has been selected two times, the group selection
-//       // // would have all but the first tile ready...
-//       // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+      // TODO: How much does this test make sense with senders?
+      // // Since the top left tile has been selected two times, the group selection
+      // // would have all but the first tile ready...
+      // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
 
-//       // // ... until the first one will be released.
-//       // tile_sender.get();
-//       // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
-//     }
-//   }
-// }
+      // // ... until the first one will be released.
+      // tile_sender.get();
+      // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+    }
+  }
+}
 
 // MatrixDestructorFutures
 //
@@ -1398,6 +1391,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
   tt::sync_wait(std::move(last_task));
 }
 
+// TODO: Delete? Future-specific test
 // TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
 //   pika::future<void> last_task;
 
@@ -1414,6 +1408,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWithSenderAdaptors_UserMemory) {
 //   last_task.get();
 // }
 
+// TODO: Delete? Future-specific test
 // TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
 //   pika::future<void> last_task;
 
@@ -1449,6 +1444,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemor
   tt::sync_wait(std::move(last_task));
 }
 
+// TODO: Delete? Future-specific test
 // TEST_F(MatrixGenericTest, SyncBarrier) {
 //   using TypeParam = double;
 //   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
@@ -1501,65 +1497,64 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWriteWithSenderAdaptors_UserMemor
 //   }
 // }
 
-// TODO: Read after readwrite?
-// TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
-//   using TypeParam = double;
-//   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-//   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
+TEST_F(MatrixGenericTest, SyncBarrierWithSenderAdaptors) {
+  using TypeParam = double;
+  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
+  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
 
-//       MemoryViewT mem(layout.minMemSize());
-//       MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-//                                                          static_cast<TypeParam*>(mem()));
+      MemoryViewT mem(layout.minMemSize());
+      MatrixT matrix = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
+                                                         static_cast<TypeParam*>(mem()));
 
-//       const auto local_size = distribution.localNrTiles();
-//       const LocalTileIndex tile_tl(0, 0);
-//       const LocalTileIndex tile_br(std::max(SizeType(0), local_size.rows() - 1),
-//                                    std::max(SizeType(0), local_size.cols() - 1));
+      const auto local_size = distribution.localNrTiles();
+      const LocalTileIndex tile_tl(0, 0);
+      const LocalTileIndex tile_br(std::max(SizeType(0), local_size.rows() - 1),
+                                   std::max(SizeType(0), local_size.cols() - 1));
 
-//       const bool has_local = !local_size.isEmpty();
+      const bool has_local = !local_size.isEmpty();
 
-//       // Note:
-//       // the guard is used to check that tasks before and after the barrier run sequentially and not
-//       // in parallel.
-//       // Indeed, two read calls one after the other would result in a parallel execution of their
-//       // tasks, while a barrier between them must assure that they will be run sequentially.
-//       std::atomic<bool> guard(false);
+      // Note:
+      // the guard is used to check that tasks before and after the barrier run sequentially and not
+      // in parallel.
+      // Indeed, two read calls one after the other would result in a parallel execution of their
+      // tasks, while a barrier between them must assure that they will be run sequentially.
+      std::atomic<bool> guard(false);
 
-//       // start a task (if it has at least a local part...otherwise there is no tile to work on)
-//       if (has_local)
-//         dlaf::internal::transformDetach(
-//             dlaf::internal::Policy<dlaf::Backend::MC>(),
-//             [&guard](auto&&) {
-//               std::this_thread::sleep_for(100ms);
-//               guard = true;
-//             },
-//             matrix.read_sender2(tile_tl));
+      // start a task (if it has at least a local part...otherwise there is no tile to work on)
+      if (has_local)
+        dlaf::internal::transformDetach(
+            dlaf::internal::Policy<dlaf::Backend::MC>(),
+            [&guard](auto&&) {
+              std::this_thread::sleep_for(100ms);
+              guard = true;
+            },
+            matrix.read_sender2(tile_tl));
 
-//       // everyone wait on its local part...
-//       // this means that it is possible to call it also on empty local matrices, they just don't
-//       // have anything to wait for
-//       matrix.waitLocalTiles();
+      // everyone wait on its local part...
+      // this means that it is possible to call it also on empty local matrices, they just don't
+      // have anything to wait for
+      matrix.waitLocalTiles();
 
-//       // after the sync barrier, start a task on a tile (another one/the same) expecting that
-//       // the previous task has been fully completed (and the future mechanism still works)
-//       if (has_local) {
-//         tt::sync_wait(dlaf::internal::transform(
-//             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-//             matrix.read_sender2(tile_tl)));
-//         tt::sync_wait(dlaf::internal::transform(
-//             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-//             matrix.read_sender2(tile_br)));
-//       }
-//     }
-//   }
-// }
+      // after the sync barrier, start a task on a tile (another one/the same) expecting that
+      // the previous task has been fully completed (and the future mechanism still works)
+      if (has_local) {
+        tt::sync_wait(dlaf::internal::transform(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
+            matrix.read_sender2(tile_tl)));
+        tt::sync_wait(dlaf::internal::transform(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
+            matrix.read_sender2(tile_br)));
+      }
+    }
+  }
+}
 
 // TODO: Does this still make sense with the sender version?
 // struct CustomException final : public std::exception {};

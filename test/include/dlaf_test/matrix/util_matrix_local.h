@@ -89,7 +89,8 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) 
       continue;
 
     auto& dest_tile = dest.tile(ij_tile);
-    const auto& source_tile = source.read(ij_tile).get();
+    auto source_tile_holder = pika::this_thread::experimental::sync_wait(source.read_sender2(ij_tile));
+    const auto& source_tile = source_tile_holder.get();
     matrix::internal::copy(source_tile, dest_tile);
   }
 

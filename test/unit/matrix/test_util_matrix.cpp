@@ -213,55 +213,54 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
   }
 }
 
-// TODO: Update panel to use senders only.
-// template <typename Type>
-// struct PanelUtilsTest : public TestWithCommGrids {};
+template <typename Type>
+struct PanelUtilsTest : public TestWithCommGrids {};
 
-// TYPED_TEST_SUITE(PanelUtilsTest, MatrixElementTypes);
+TYPED_TEST_SUITE(PanelUtilsTest, MatrixElementTypes);
 
-// struct config_t {
-//   const GlobalElementSize sz;
-//   const TileElementSize blocksz;
-//   const GlobalTileIndex offset;
-// };
+struct config_t {
+  const GlobalElementSize sz;
+  const TileElementSize blocksz;
+  const GlobalTileIndex offset;
+};
 
-// std::vector<config_t> test_params{
-//     {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
-//     {{26, 13}, {3, 3}, {1, 2}},
-// };
+std::vector<config_t> test_params{
+    {{0, 0}, {3, 3}, {0, 0}},  // empty matrix
+    {{26, 13}, {3, 3}, {1, 2}},
+};
 
-// template <class TypeParam, Coord panel_axis>
-// void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
-//   constexpr Coord coord1D = orthogonal(panel_axis);
+template <class TypeParam, Coord panel_axis>
+void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
+  constexpr Coord coord1D = orthogonal(panel_axis);
 
-//   Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
-//   Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
+  Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
+  Panel<panel_axis, TypeParam, dlaf::Device::CPU> panel(dist, cfg.offset);
 
-//   auto null_tile = [](const TileElementIndex&) { return TypeParam(0); };
+  auto null_tile = [](const TileElementIndex&) { return TypeParam(0); };
 
-//   for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
-//        ++head, --tail) {
-//     panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
+  for (SizeType head = cfg.offset.get<coord1D>(), tail = dist.nrTiles().get(coord1D); head <= tail;
+       ++head, --tail) {
+    panel.setRange(GlobalTileIndex(coord1D, head), GlobalTileIndex(coord1D, tail));
 
-//     for (const auto& idx : panel.iteratorLocal())
-//       start_detached(dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
-//                                                  panel.readwrite_sender(idx)) |
-//                      tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()));
+    for (const auto& idx : panel.iteratorLocal())
+      start_detached(dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
+                                                 panel.readwrite_sender_tile(idx)) |
+                     tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()));
 
-//     matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
+    matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
 
-//     for (const auto& idx : panel.iteratorLocal())
-//       CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender(idx)).get());
+    for (const auto& idx : panel.iteratorLocal())
+      CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender2(idx)).get());
 
-//     panel.reset();
-//   }
-// }
+    panel.reset();
+  }
+}
 
-// TYPED_TEST(PanelUtilsTest, Set0) {
-//   for (auto& comm_grid : this->commGrids()) {
-//     for (const auto& cfg : test_params) {
-//       testSet0<TypeParam, Coord::Col>(cfg, comm_grid);
-//       testSet0<TypeParam, Coord::Row>(cfg, comm_grid);
-//     }
-//   }
-// }
+TYPED_TEST(PanelUtilsTest, Set0) {
+  for (auto& comm_grid : this->commGrids()) {
+    for (const auto& cfg : test_params) {
+      testSet0<TypeParam, Coord::Col>(cfg, comm_grid);
+      testSet0<TypeParam, Coord::Row>(cfg, comm_grid);
+    }
+  }
+}

@@ -132,6 +132,7 @@ struct Panel<axis, const T, D> {
     // #endif
 
     external_senders_[linearIndex(index)] = std::forward<Sender>(new_tile_sender);
+    external_set_.insert(linearIndex(index));
   }
 
   /// Access a Tile of the panel in read-only mode
@@ -181,10 +182,7 @@ struct Panel<axis, const T, D> {
         return tile;
       }
       else {
-        // TODO: How to handle this case?
-        DLAF_UNREACHABLE_PLAIN;
-        // return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
-        return {};
+        return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
       }
     }
   }
@@ -353,11 +351,14 @@ struct Panel<axis, const T, D> {
       e = {};
     }
 
-    // TODO: They may have to be start_detached
-    for (auto& e : external_senders_) {
+    for (const auto index : external_set_) {
+      DLAF_ASSERT(index < external_senders_.size(), index, external_senders_.size());
+      auto& e = external_senders_[index];
+      pika::execution::experimental::start_detached(std::move(e));
       e = {};
     }
 
+    external_set_.clear();
     internal_.clear();
     dim_ = -1;
     has_been_used_ = false;
@@ -467,7 +468,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_set_.find(linearIndex(idx_matrix)) == external_set_.end();
+    return external_set_.find(linearIndex(idx_matrix)) != external_set_.end();
   }
 
   bool hasBeenUsed() const noexcept {
@@ -548,6 +549,24 @@ struct Panel : public Panel<axis, const T, D> {
   auto readwrite_sender(const LocalTileIndex& index) {
     // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
     return this->operator()(index);
+  }
+
+  pika::execution::experimental::unique_any_sender<TileType> readwrite_sender_tile(
+      const LocalTileIndex& index) {
+    // Note assertion on index done by linearIndex method.
+    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
+    // NOTE: read-write access not allowed because setTile takes shared_future
+    // of const tiles.
+
+    has_been_used_ = true;
+
+    BaseT::internal_.insert(BaseT::linearIndex(index));
+    auto tile = BaseT::data_.readwrite_sender_tile(BaseT::fullIndex(index));
+    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+      return tile;
+    else
+      return subTileSender(pika::execution::experimental::make_unique_any_sender(std::move(tile)),
+                           {{0, 0}, tileSize(index)});
   }
 
 protected:

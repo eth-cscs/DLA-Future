@@ -36,12 +36,12 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
   for (SizeType j = idx_begin; j <= idx_end; ++j) {
     for (SizeType i = idx_begin; i <= idx_end; ++i) {
       for (SizeType k = idx_begin; k <= idx_end; ++k) {
-        ex::start_detached(dlaf::internal::whenAllLift(opA, opB, alpha,
-                                                       mat_a.read_sender(GlobalTileIndex(i, k)),
-                                                       mat_b.read_sender(GlobalTileIndex(k, j)),
-                                                       k == idx_begin ? beta : T(1),
-                                                       mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
-                           tile::gemm(dlaf::internal::Policy<B>()));
+        ex::start_detached(
+            dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read_sender2(GlobalTileIndex(i, k)),
+                                        mat_b.read_sender2(GlobalTileIndex(k, j)),
+                                        k == idx_begin ? beta : T(1),
+                                        mat_c.readwrite_sender_tile(GlobalTileIndex(i, j))) |
+            tile::gemm(dlaf::internal::Policy<B>()));
       }
     }
   }
@@ -58,6 +58,8 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
                                  const SizeType idx_begin, const SizeType idx_last, const T alpha,
                                  Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                  Matrix<T, D>& mat_c) {
+  // TODO: internal?
+  using dlaf::matrix::subTileSender;
   namespace ex = pika::execution::experimental;
 
   const auto& dist_a = mat_a.distribution();
@@ -118,9 +120,9 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
         const LocalTileIndex ik(i, k_local);
         const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && rankHasLastRow);
         const SizeType nrows = isRowPartial ? partialSize : mb;
-        panelA.setTile(ik, (isRowPartial || isKPartial)
-                               ? splitTile(mat_a.read(ik), {{0, 0}, {nrows, kSize}})
-                               : mat_a.read(ik));
+        panelA.setTileSender(ik, (isRowPartial || isKPartial)
+                                     ? subTileSender(mat_a.read_sender2(ik), {{0, 0}, {nrows, kSize}})
+                                     : mat_a.read_sender2(ik));
       }
     }
     // Setup the row workspace for the root ranks, i.e. the ones in the current row
@@ -130,9 +132,9 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
         const LocalTileIndex kj(k_local, j);
         const bool isColPartial = (j == j_end - 1 && isEndRangePartial && rankHasLastCol);
         const SizeType ncols = isColPartial ? partialSize : mb;
-        panelB.setTile(kj, (isKPartial || isColPartial)
-                               ? splitTile(mat_b.read(kj), {{0, 0}, {kSize, ncols}})
-                               : mat_b.read(kj));
+        panelB.setTileSender(kj, (isKPartial || isColPartial)
+                                     ? subTileSender(mat_b.read_sender2(kj), {{0, 0}, {kSize, ncols}})
+                                     : mat_b.read_sender2(kj));
       }
     }
 
@@ -155,11 +157,13 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
 
         ex::start_detached(
             dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                        panelA.read_sender(ij), panelB.read_sender(ij),
+                                        panelA.read_sender2(ij), panelB.read_sender2(ij),
                                         k == idx_begin ? beta : T(1),
                                         (isRowPartial || isColPartial)
-                                            ? splitTile(mat_c(ij), {{0, 0}, {nrows, ncols}})
-                                            : mat_c.readwrite_sender(ij)) |
+                                            ? subTileSender(ex::make_unique_any_sender(
+                                                                mat_c.readwrite_sender_tile(ij)),
+                                                            {{0, 0}, {nrows, ncols}})
+                                            : mat_c.readwrite_sender_tile(ij)) |
             tile::gemm(dlaf::internal::Policy<B>()));
       }
     }

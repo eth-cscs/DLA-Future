@@ -491,7 +491,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
       for (SizeType i_local = kk_offset.row(); i_local < distr_a.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.col());
-        a_panel.setTile(ik_panel, mat_a.read(ik));
+        a_panel.setTileSender(ik_panel, mat_a.read_sender2(ik));
       }
     }
     broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
@@ -506,7 +506,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 
         trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
                                 mat_b.readwrite_sender_tile(kj));
-        b_panel.setTile(kj_panel, mat_b.read(kj));
+        b_panel.setTileSender(kj_panel, mat_b.read_sender2(kj));
       }
     }
     // Nothing else to do if the trailing matrix is empty.
@@ -580,7 +580,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     if (this_rank.col() == rank_kk.col()) {
       for (SizeType i_loc = kk_offset.row(); i_loc < distr_a.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex ik{i_loc, kk_offset.col()};
-        a_panel.setTile(ik, mat_a.read(ik));
+        a_panel.setTileSender(ik, mat_a.read_sender2(ik));
       }
     }
     comm::broadcast(rank_kk.col(), a_panel, mpi_row_task_chain);
@@ -597,8 +597,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
-                                                             ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender_tile(idx))));
+                                                             b_panel.readwrite_sender_tile(idx)));
         }
         else {
           ex::start_detached(
@@ -673,7 +672,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
       for (SizeType i_local = kk_offset.row() - 1; i_local >= 0; --i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.col());
-        a_panel.setTile(ik_panel, mat_a.read(ik));
+        a_panel.setTileSender(ik_panel, mat_a.read_sender2(ik));
       }
     }
     broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
@@ -688,7 +687,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 
         trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
                                 mat_b.readwrite_sender_tile(kj));
-        b_panel.setTile(kj_panel, mat_b.read(kj));
+        b_panel.setTileSender(kj_panel, mat_b.read_sender2(kj));
       }
     }
     // Nothing else to do if the trailing matrix is empty.
@@ -760,7 +759,7 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
     if (this_rank.col() == rank_kk.col()) {
       for (SizeType i_loc = kk_offset.row() - 1; i_loc >= 0; --i_loc) {
         const LocalTileIndex ik{i_loc, kk_offset.col()};
-        a_panel.setTile(ik, mat_a.read(ik));
+        a_panel.setTileSender(ik, mat_a.read_sender2(ik));
       }
     }
     comm::broadcast(rank_kk.col(), a_panel, mpi_row_task_chain);
@@ -855,7 +854,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
       for (SizeType j_local = kk_offset.col() - 1; j_local >= 0; --j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(kk_offset.row(), j_local);
-        a_panel.setTile(kj_panel, mat_a.read(kj));
+        a_panel.setTileSender(kj_panel, mat_a.read_sender2(kj));
       }
     }
     broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
@@ -870,7 +869,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 
         trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
                                 mat_b.readwrite_sender_tile(ik));
-        b_panel.setTile(ik_panel, mat_b.read(ik));
+        b_panel.setTileSender(ik_panel, mat_b.read_sender2(ik));
       }
     }
     // Nothing else to do if the trailing matrix is empty.
@@ -942,7 +941,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
     if (this_rank.row() == rank_kk.row()) {
       for (SizeType j_loc = kk_offset.col() - 1; j_loc >= 0; --j_loc) {
         const LocalTileIndex kj{kk_offset.row(), j_loc};
-        a_panel.setTile(kj, mat_a.read(kj));
+        a_panel.setTileSender(kj, mat_a.read_sender2(kj));
       }
     }
     comm::broadcast(rank_kk.row(), a_panel, mpi_col_task_chain);
@@ -1038,7 +1037,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
       for (SizeType j_local = kk_offset.col(); j_local < distr_a.localNrTiles().cols(); ++j_local) {
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(kk_offset.row(), j_local);
-        a_panel.setTile(kj_panel, mat_a.read(kj));
+        a_panel.setTileSender(kj_panel, mat_a.read_sender2(kj));
       }
     }
     broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
@@ -1053,7 +1052,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
 
         trsmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read_sender2(kk_panel),
                                 mat_b.readwrite_sender_tile(ik));
-        b_panel.setTile(ik_panel, mat_b.read(ik));
+        b_panel.setTileSender(ik_panel, mat_b.read_sender2(ik));
       }
     }
     // Nothing else to do if the trailing matrix is empty.
@@ -1126,7 +1125,7 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     if (this_rank.row() == rank_kk.row()) {
       for (SizeType j_loc = kk_offset.col(); j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex kj{kk_offset.row(), j_loc};
-        a_panel.setTile(kj, mat_a.read(kj));
+        a_panel.setTileSender(kj, mat_a.read_sender2(kj));
       }
     }
     comm::broadcast(rank_kk.row(), a_panel, mpi_col_task_chain);

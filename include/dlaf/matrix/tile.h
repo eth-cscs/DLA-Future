@@ -376,6 +376,7 @@ public:
   /// @c setPromise can be called only once per object.
   /// @pre this Tile should not be a subtile.
   Tile& setPromise(TilePromise&& p) {
+    DLAF_UNREACHABLE_PLAIN;
     DLAF_ASSERT(!std::holds_alternative<TilePromise>(dep_tracker_),
                 "setPromise has been already used on this object!");
     DLAF_ASSERT(std::holds_alternative<std::monostate>(dep_tracker_),

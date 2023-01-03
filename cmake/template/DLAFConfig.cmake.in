@@ -26,6 +26,18 @@ set(DLAF_WITH_GPU @DLAF_WITH_GPU@)
 # ===== DEPENDENCIES
 include(CMakeFindDependencyMacro)
 
+# ---- CUDA/HIP
+if(DLAF_WITH_CUDA)
+  find_dependency(CUDAToolkit)
+endif()
+
+if(DLAF_WITH_HIP)
+  find_dependency(rocblas)
+  find_dependency(rocprim)
+  find_dependency(rocsolver)
+  find_dependency(rocthrust)
+endif()
+
 # ----- MPI
 find_dependency(MPI)
 
@@ -45,27 +57,19 @@ else()
   find_dependency(LAPACK)
 endif()
 
-if(DLAF_WITH_CUDA)
-  find_dependency(CUDAToolkit)
-endif()
+# ----- pika
+find_dependency(pika PATHS @pika_DIR@)
+find_dependency(pika-algorithms PATHS @pika-algorithms_DIR@)
 
-if(DLAF_WITH_HIP)
-  find_dependency(rocblas)
-  find_dependency(rocprim)
-  find_dependency(rocsolver)
-  find_dependency(rocthrust)
-endif()
-
+# ----- BLASPP/LAPACKPP
 find_dependency(blaspp PATHS @blaspp_DIR@)
 find_dependency(lapackpp PATHS @lapackpp_DIR@)
+
+# ----- UMPIRE
 find_dependency(Umpire PATHS @Umpire_DIR@)
 
 if(DLAF_WITH_GPU)
   find_dependency(whip)
 endif()
-
-# ----- pika
-find_dependency(pika PATHS @pika_DIR@)
-find_dependency(pika-algorithms PATHS @pika-algorithms_DIR@)
 
 check_required_components(DLAF)

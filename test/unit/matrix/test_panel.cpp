@@ -37,6 +37,10 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 
+using pika::execution::experimental::start_detached;
+using pika::execution::experimental::then;
+using pika::this_thread::experimental::sync_wait;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
@@ -90,12 +94,12 @@ TYPED_TEST(PanelTest, AssignToConstRef) {
       EXPECT_EQ(exp_indices, ref_indices);
 
       for (const auto& idx : exp_indices) {
-        auto exp_tile_f = panel.read(idx);
+        auto exp_tile_f = sync_wait(panel.read_sender2(idx));
         const auto& exp_tile = exp_tile_f.get();
         auto get_element_ptr = [&exp_tile](const TileElementIndex& index) {
           return exp_tile.ptr(index);
         };
-        CHECK_TILE_PTR(get_element_ptr, ref.read(idx).get());
+        CHECK_TILE_PTR(get_element_ptr, sync_wait(ref.read_sender2(idx)).get());
       }
     }
   }
@@ -136,7 +140,6 @@ TYPED_TEST(PanelTest, IteratorRow) {
 template <class TypeParam, Coord panel_axis>
 void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using pika::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
@@ -146,13 +149,14 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
 
   // rw-access
   for (const auto& idx : panel.iteratorLocal()) {
-    panel(idx).then(unwrapping(
-        [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(idx.get(coord), 26)); }));
+    start_detached(panel.readwrite_sender_tile(idx) | then([idx](auto&& tile) {
+                     matrix::test::set(tile, TypeUtil::element(idx.get(coord), 26));
+                   }));
   }
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 26), panel.read(idx).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 26), sync_wait(panel.read_sender2(idx)).get());
 
   // Repeat the same test with sender adaptors
 
@@ -164,13 +168,12 @@ void testAccess(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
         [idx](typename PanelType::TileType&& tile) {
           matrix::test::set(tile, TypeUtil::element(idx.get(coord), 42));
         },
-        panel.readwrite_sender(idx));
+        panel.readwrite_sender_tile(idx));
   }
 
   // ro-access
   for (const auto& idx : panel.iteratorLocal())
-    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 42),
-                  pika::this_thread::experimental::sync_wait(panel.read_sender(idx)).get());
+    CHECK_TILE_EQ(TypeUtil::element(idx.get(coord), 42), sync_wait(panel.read_sender2(idx)).get());
 }
 
 TYPED_TEST(PanelTest, AccessTileCol) {
@@ -188,7 +191,6 @@ TYPED_TEST(PanelTest, AccessTileRow) {
 template <class TypeParam, Coord panel_axis>
 void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using pika::unwrapping;
 
   constexpr Coord coord = orthogonal(panel_axis);
 
@@ -214,18 +216,19 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   // - Even indexed, i.e. the one using panel memory, are set to a different value
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
-      panel(idx).then(unwrapping(
-          [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 13)); }));
+      start_detached(panel.readwrite_sender_tile(idx) | then([idx](auto&& tile) {
+                       matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 13));
+                     }));
     else
-      panel.setTile(idx, matrix.read(idx));
+      panel.setTileSender(idx, matrix.read_sender2(idx));
   }
 
   // Check that the values are correct, both for internal and externally linked tiles
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
-      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord), 13), panel.read(idx).get());
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord), 13), sync_wait(panel.read_sender2(idx)).get());
     else
-      CHECK_TILE_EQ(matrix.read(idx).get(), panel.read(idx).get());
+      CHECK_TILE_EQ(sync_wait(matrix.read_sender2(idx)).get(), sync_wait(panel.read_sender2(idx)).get());
   }
 
   // Reset external tiles links
@@ -234,17 +237,18 @@ void testExternalTile(const config_t& cfg, const comm::CommunicatorGrid comm_gri
   // Invert the "logic" of external tiles: even are linked to matrix, odd are in-panel
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
-      panel(idx).then(unwrapping(
-          [idx](auto&& tile) { matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 5)); }));
+      start_detached(panel.readwrite_sender_tile(idx) | then([idx](auto&& tile) {
+                       matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 5));
+                     }));
     else
-      panel.setTile(idx, matrix.read(idx));
+      panel.setTileSender(idx, matrix.read_sender2(idx));
   }
 
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
-      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord), 5), panel.read(idx).get());
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord), 5), sync_wait(panel.read_sender2(idx)).get());
     else
-      CHECK_TILE_EQ(matrix.read(idx).get(), panel.read(idx).get());
+      CHECK_TILE_EQ(sync_wait(matrix.read_sender2(idx)).get(), sync_wait(panel.read_sender2(idx)).get());
   }
 }
 
@@ -253,7 +257,6 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   using TypeUtil = TypeUtilities<TypeParam>;
   using dlaf::internal::Policy;
   using dlaf::internal::transformDetach;
-  using pika::this_thread::experimental::sync_wait;
 
   constexpr Coord coord1D = orthogonal(panel_axis);
 
@@ -281,19 +284,19 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   // - Even indexed, i.e. the one using panel memory, are set to a different value
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
-      panel.readwrite_sender(idx) | transformDetach(policy, [idx](TileType&& tile) {
+      panel.readwrite_sender_tile(idx) | transformDetach(policy, [idx](TileType&& tile) {
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 13));
       });
     else
-      panel.setTile(idx, matrix.read(idx));
+      panel.setTileSender(idx, matrix.read_sender2(idx));
   }
 
   // Check that the values are correct, both for internal and externally linked tiles
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 0)
-      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 13), sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 13), sync_wait(panel.read_sender2(idx)).get());
     else
-      CHECK_TILE_EQ(sync_wait(matrix.read_sender(idx)).get(), sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(sync_wait(matrix.read_sender2(idx)).get(), sync_wait(panel.read_sender2(idx)).get());
   }
 
   // Reset external tiles links
@@ -302,18 +305,18 @@ void testExternalTileWithSenders(const config_t& cfg, const comm::CommunicatorGr
   // Invert the "logic" of external tiles: even are linked to matrix, odd are in-panel
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
-      panel.readwrite_sender(idx) | transformDetach(policy, [idx](TileType&& tile) {
+      panel.readwrite_sender_tile(idx) | transformDetach(policy, [idx](TileType&& tile) {
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord1D), 5));
       });
     else
-      panel.setTile(idx, matrix.read(idx));
+      panel.setTileSender(idx, matrix.read_sender2(idx));
   }
 
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.row() % 2 == 1)
-      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 5), sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(TypeUtil::element(-idx.get(coord1D), 5), sync_wait(panel.read_sender2(idx)).get());
     else
-      CHECK_TILE_EQ(sync_wait(matrix.read_sender(idx)).get(), sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(sync_wait(matrix.read_sender2(idx)).get(), sync_wait(panel.read_sender2(idx)).get());
   }
 }
 
@@ -376,8 +379,9 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     for (SizeType k = head_loc; k < tail_loc; ++k) {
       const LocalTileIndex idx(coord, k);
       dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(), setTile,
-                                          panel.readwrite_sender(idx), counter++);
+                                          panel.readwrite_sender_tile(idx), counter++);
 
+      // TODO: Update or remove comment?
       // Getting the future from the panel and getting a reference to the tile
       // are separated because combining them into one operation would lead to
       // the tile being a dangling reference since the shared_future from
@@ -387,9 +391,9 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
       // because it may yield and change worker thread. SCOPED_TRACE uses thread
       // locals and does not support being created on one thread and destroyed
       // on another and will segfault if that happens.
-      auto panel_tile_f = panel.read(idx);
+      auto panel_tile_f = sync_wait(panel.read_sender2(idx));
       const auto& panel_tile = panel_tile_f.get();
-      auto matrix_tile_f = matrix.read(idx);
+      auto matrix_tile_f = sync_wait(matrix.read_sender2(idx));
       const auto& matrix_tile = matrix_tile_f.get();
 
       SCOPED_TRACE(message);
@@ -400,9 +404,9 @@ void testShrink(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
     for (const auto& idx : panel.iteratorLocal()) {
       // See comment in previous for loop. This section has the same concerns
       // regarding dangling references and yielding with SCOPED_TRACE.
-      auto panel_tile_f = panel.read(idx);
+      auto panel_tile_f = sync_wait(panel.read_sender2(idx));
       const auto& panel_tile = panel_tile_f.get();
-      auto matrix_tile_f = matrix.read(idx);
+      auto matrix_tile_f = sync_wait(matrix.read_sender2(idx));
       const auto& matrix_tile = matrix_tile_f.get();
 
       SCOPED_TRACE(message);
@@ -476,12 +480,13 @@ void checkPanelTileSize(SizeType dim, Panel<panel_axis, T, D>& panel) {
     auto dim_perp = dist.blockSize().get<coord>();
     if (dist.globalTileFromLocalTile<coord>(i) == dist.nrTiles().get<coord>() - 1)
       dim_perp = dist.size().get<coord>() % dist.blockSize().get<coord>();
+    // TODO: Why lambda?
     const auto tile_size = [](auto dim, auto dim_perp) {
       return TileElementSize(panel_axis, dim, dim_perp);
     }(dim, dim_perp);
 
-    EXPECT_EQ(tile_size, panel(LocalTileIndex{coord, i}).get().size());
-    EXPECT_EQ(tile_size, panel.read(LocalTileIndex{coord, i}).get().size());
+    EXPECT_EQ(tile_size, sync_wait(panel.readwrite_sender_tile(LocalTileIndex{coord, i})).size());
+    EXPECT_EQ(tile_size, sync_wait(panel.read_sender2(LocalTileIndex{coord, i})).get().size());
   }
 }
 
@@ -581,8 +586,8 @@ void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize
         return TileElementSize(coord, full_size.get<coord>() - sub_offset, size_axis);
       }();
 
-      EXPECT_EQ(expected_size, panel.read(i).get().size());
-      EXPECT_EQ(expected_size, panel(i).get().size());
+      EXPECT_EQ(expected_size, sync_wait(panel.read_sender2(i)).get().size());
+      EXPECT_EQ(expected_size, sync_wait(panel.readwrite_sender_tile(i)).size());
     }
 
     panel.reset();

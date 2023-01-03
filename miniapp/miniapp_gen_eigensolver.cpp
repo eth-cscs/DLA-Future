@@ -23,6 +23,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/eigensolver/gen_eigensolver.h"
+#include "dlaf/eigensolver/get_band_size.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
@@ -137,8 +138,10 @@ struct GenEigensolverMiniapp {
                   << " " << elapsed_time << "s"
                   << " " << dlaf::internal::FormatShort{opts.type}
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_a_host.size() << " "
-                  << matrix_a_host.blockSize() << " " << comm_grid.size() << " "
-                  << pika::get_os_thread_count() << " " << backend << std::endl;
+                  << matrix_a_host.blockSize() << " "
+                  << dlaf::eigensolver::internal::getBandSize(matrix_a_host.blockSize().rows()) << " "
+                  << comm_grid.size() << " " << pika::get_os_thread_count() << " " << backend
+                  << std::endl;
 
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||

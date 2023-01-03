@@ -42,10 +42,11 @@ TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, band_size}
-    {0, 2, 2},                                                // m = 0
-    {1, 2, 2},                                                // m = 1
-    {5, 5, 5}, {4, 4, 2},                                     // m = mb
-    {4, 6, 3}, {8, 4, 2}, {18, 4, 4}, {34, 6, 6}, {37, 9, 3}  // m != mb
+    {0, 2, 2},                            // m = 0
+    {1, 2, 2},                            // m = 1
+    {5, 5, 5},  {4, 4, 2},                // m = mb
+    {4, 6, 3},  {8, 4, 2},  {16, 12, 6},  // m != mb
+    {18, 4, 4}, {34, 6, 6}, {37, 9, 3}    // m != mb
 };
 
 template <class T, class... GridIfDistributed>

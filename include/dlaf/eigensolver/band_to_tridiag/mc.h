@@ -750,7 +750,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   const SizeType steps_per_task = nb / b;
   const SizeType sweeps = nrSweeps<T>(size);
-  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
+  for (SizeType sweep = 0, last_dep = deps.size() - 1; sweep < sweeps; ++sweep) {
     auto& w_pipeline = workers[sweep % max_workers];
 
     auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
@@ -759,29 +759,31 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
     const SizeType steps = nrStepsForSweep(sweep, size, b);
 
-    SizeType last_step = 0;
+    SizeType last_dep_new = 0;
     for (SizeType step = 0; step < steps;) {
       // First task might apply less steps to align with the boundaries of the HHR tile v.
       SizeType nr_steps = steps_per_task - (step == 0 ? (sweep % nb) / b : 0);
       // Last task only applies the remaining steps
       nr_steps = std::min(nr_steps, steps - step);
 
-      auto dep_index = std::min(ceilDiv(step + nr_steps, nb / b), deps.size() - 1);
+      auto dep_index = std::min(ceilDiv(step + nr_steps, nb / b), last_dep);
 
       const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
 
-      deps[ceilDiv(step, nb / b)] =
+      SizeType set_index = ceilDiv(step, nb / b);
+
+      deps[set_index] =
           dlaf::internal::whenAllLift(nr_steps, w_pipeline(),
                                       mat_v.readwrite_sender(dist_v.globalTileIndex(index_v)),
                                       dist_v.tileElementIndex(index_v), deps[dep_index]) |
           dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
 
-      last_step = step;
+      last_dep_new = set_index;
       step += nr_steps;
     }
 
-    // Shrink the dependency vector to only include the futures generated in this sweep.
-    deps.resize(ceilDiv(last_step, nb / b) + 1);
+    // Limit next sweep to only use valid senders from this sweep.
+    last_dep = last_dep_new;
   }
 
   // copy the last elements of the diagonals

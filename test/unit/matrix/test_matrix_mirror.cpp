@@ -151,117 +151,115 @@ TYPED_TEST(MatrixMirrorTest, GetSource) {
   }
 }
 
-// TODO: read after readwrite
-// template <typename T, Device Target, Device Source>
-// void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
-//   BaseType<T> offset = 0.0;
-//   auto el = [&offset](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<T>::element(i + j / 1024. + offset, j - i / 128. + offset);
-//   };
+template <typename T, Device Target, Device Source>
+void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+  BaseType<T> offset = 0.0;
+  auto el = [&offset](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<T>::element(i + j / 1024. + offset, j - i / 128. + offset);
+  };
 
-//   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//   // CPU support matrices for setting values to source and target matrices
-//   Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
-//   Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
+  // CPU support matrices for setting values to source and target matrices
+  Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
+  Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
 
-//   set(mat_source_cpu, el);
+  set(mat_source_cpu, el);
 
-//   Matrix<T, Source> mat(size, test.block_size, comm_grid);
-//   matrix::copy(mat_source_cpu, mat);
+  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  matrix::copy(mat_source_cpu, mat);
 
-//   {
-//     MatrixMirror<T, Target, Source> mat_mirror(mat);
+  {
+    MatrixMirror<T, Target, Source> mat_mirror(mat);
 
-//     copy(mat, mat_source_cpu);
-//     CHECK_MATRIX_EQ(el, mat_source_cpu);
-//     matrix::copy(mat_mirror.get(), mat_target_cpu);
-//     CHECK_MATRIX_EQ(el, mat_target_cpu);
+    copy(mat, mat_source_cpu);
+    CHECK_MATRIX_EQ(el, mat_source_cpu);
+    matrix::copy(mat_mirror.get(), mat_target_cpu);
+    CHECK_MATRIX_EQ(el, mat_target_cpu);
 
-//     offset = 1.0;
-//     set(mat_source_cpu, el);
-//     copy(mat_source_cpu, mat);
+    offset = 1.0;
+    set(mat_source_cpu, el);
+    copy(mat_source_cpu, mat);
 
-//     mat_mirror.copySourceToTarget();
+    mat_mirror.copySourceToTarget();
 
-//     copy(mat_mirror.get(), mat_target_cpu);
-//     CHECK_MATRIX_EQ(el, mat_target_cpu);
+    copy(mat_mirror.get(), mat_target_cpu);
+    CHECK_MATRIX_EQ(el, mat_target_cpu);
 
-//     offset = 2.0;
-//     set(mat_target_cpu, el);
-//     copy(mat_target_cpu, mat_mirror.get());
+    offset = 2.0;
+    set(mat_target_cpu, el);
+    copy(mat_target_cpu, mat_mirror.get());
 
-//     mat_mirror.copyTargetToSource();
+    mat_mirror.copyTargetToSource();
 
-//     copy(mat, mat_source_cpu);
-//     CHECK_MATRIX_EQ(el, mat_source_cpu);
+    copy(mat, mat_source_cpu);
+    CHECK_MATRIX_EQ(el, mat_source_cpu);
 
-//     offset = 3.0;
-//     set(mat_target_cpu, el);
-//     copy(mat_target_cpu, mat_mirror.get());
-//   }
+    offset = 3.0;
+    set(mat_target_cpu, el);
+    copy(mat_target_cpu, mat_mirror.get());
+  }
 
-//   copy(mat, mat_source_cpu);
-//   CHECK_MATRIX_EQ(el, mat_source_cpu);
-// }
+  copy(mat, mat_source_cpu);
+  CHECK_MATRIX_EQ(el, mat_source_cpu);
+}
 
-// TYPED_TEST(MatrixMirrorTest, Copy) {
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-// #ifdef DLAF_WITH_GPU
-//       copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-//       copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-//       copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
-// #endif
-//     }
-//   }
-// }
+TYPED_TEST(MatrixMirrorTest, Copy) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+#ifdef DLAF_WITH_GPU
+      copyTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      copyTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+#endif
+    }
+  }
+}
 
-// TODO: read after readwrite
-// template <typename T, Device Target, Device Source>
-// void copyConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
-//   BaseType<T> offset = 0.0;
-//   auto el = [&offset](const GlobalElementIndex& index) {
-//     SizeType i = index.row();
-//     SizeType j = index.col();
-//     return TypeUtilities<T>::element(i + j / 1024. + offset, j - i / 128. + offset);
-//   };
+template <typename T, Device Target, Device Source>
+void copyConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+  BaseType<T> offset = 0.0;
+  auto el = [&offset](const GlobalElementIndex& index) {
+    SizeType i = index.row();
+    SizeType j = index.col();
+    return TypeUtilities<T>::element(i + j / 1024. + offset, j - i / 128. + offset);
+  };
 
-//   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//   // CPU support matrices for setting values to source and target matrices
-//   Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
-//   Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
+  // CPU support matrices for setting values to source and target matrices
+  Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
+  Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
 
-//   set(mat_source_cpu, el);
+  set(mat_source_cpu, el);
 
-//   Matrix<T, Source> mat_nonconst(size, test.block_size, comm_grid);
-//   copy(mat_source_cpu, mat_nonconst);
-//   Matrix<const T, Source> mat(std::move(mat_nonconst));
+  Matrix<T, Source> mat_nonconst(size, test.block_size, comm_grid);
+  copy(mat_source_cpu, mat_nonconst);
+  Matrix<const T, Source> mat(std::move(mat_nonconst));
 
-//   MatrixMirror<const T, Target, Source> mat_mirror(mat);
+  MatrixMirror<const T, Target, Source> mat_mirror(mat);
 
-//   copy(mat, mat_source_cpu);
-//   CHECK_MATRIX_EQ(el, mat_source_cpu);
-//   copy(mat_mirror.get(), mat_target_cpu);
-//   CHECK_MATRIX_EQ(el, mat_target_cpu);
-// }
+  copy(mat, mat_source_cpu);
+  CHECK_MATRIX_EQ(el, mat_source_cpu);
+  copy(mat_mirror.get(), mat_target_cpu);
+  CHECK_MATRIX_EQ(el, mat_target_cpu);
+}
 
-// TYPED_TEST(MatrixMirrorTest, CopyConst) {
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       copyConstTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
-// #ifdef DLAF_WITH_GPU
-//       copyConstTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
-//       copyConstTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
-//       copyConstTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
-// #endif
-//     }
-//   }
-// }
+TYPED_TEST(MatrixMirrorTest, CopyConst) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      copyConstTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
+#ifdef DLAF_WITH_GPU
+      copyConstTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);
+      copyConstTest<TypeParam, Device::GPU, Device::GPU>(comm_grid, test);
+#endif
+    }
+  }
+}
 
 template <typename T, Device Target, Device Source>
 void sameDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {

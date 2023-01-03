@@ -63,156 +63,155 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
-// TODO: read after readwrite
-// TYPED_TEST(MatrixUtilsTest, Set0) {
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-//       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-//       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+TYPED_TEST(MatrixUtilsTest, Set0) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-//       auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
+      auto null_matrix = [](const GlobalElementIndex&) { return TypeParam(0); };
 
-//       matrix::util::set0<Backend::MC>(thread_priority::normal, matrix);
+      matrix::util::set0<Backend::MC>(thread_priority::normal, matrix);
 
-//       CHECK_MATRIX_EQ(null_matrix, matrix);
-//     }
-//   }
-// }
+      CHECK_MATRIX_EQ(null_matrix, matrix);
+    }
+  }
+}
 
-// TYPED_TEST(MatrixUtilsTest, Set) {
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-//       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-//       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+TYPED_TEST(MatrixUtilsTest, Set) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-//       auto linear_matrix = [size = matrix.size()](const GlobalElementIndex& index) {
-//         auto linear_index = common::computeLinearIndex<int>(common::Ordering::RowMajor, index, size);
-//         return TypeUtilities<TypeParam>::element(linear_index, linear_index);
-//       };
+      auto linear_matrix = [size = matrix.size()](const GlobalElementIndex& index) {
+        auto linear_index = common::computeLinearIndex<int>(common::Ordering::RowMajor, index, size);
+        return TypeUtilities<TypeParam>::element(linear_index, linear_index);
+      };
 
-//       matrix::util::set(matrix, linear_matrix);
+      matrix::util::set(matrix, linear_matrix);
 
-//       CHECK_MATRIX_EQ(linear_matrix, matrix);
-//     }
-//   }
-// }
+      CHECK_MATRIX_EQ(linear_matrix, matrix);
+    }
+  }
+}
 
-// TYPED_TEST(MatrixUtilsTest, SetRandom) {
-//   auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
+TYPED_TEST(MatrixUtilsTest, SetRandom) {
+  auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-//       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-//       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-//       matrix::util::set_random(matrix);
+      matrix::util::set_random(matrix);
 
-//       CHECK_MATRIX_NEAR(zero, matrix, 0, 1);
-//     }
-//   }
-// }
+      CHECK_MATRIX_NEAR(zero, matrix, 0, 1);
+    }
+  }
+}
 
-// template <class T>
-// void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
-//   using dlaf::util::size_t::mul;
-//   const auto& distribution = matrix.distribution();
-//   const auto current_rank = distribution.rankIndex();
+template <class T>
+void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
+  using dlaf::util::size_t::mul;
+  const auto& distribution = matrix.distribution();
+  const auto current_rank = distribution.rankIndex();
 
-//   for (auto j = 0; j < matrix.nrTiles().cols(); ++j) {
-//     for (auto i = 0; i <= j; ++i) {
-//       const GlobalTileIndex index_tile_original{i, j};
-//       const auto owner_original = distribution.rankGlobalTile(index_tile_original);
+  for (auto j = 0; j < matrix.nrTiles().cols(); ++j) {
+    for (auto i = 0; i <= j; ++i) {
+      const GlobalTileIndex index_tile_original{i, j};
+      const auto owner_original = distribution.rankGlobalTile(index_tile_original);
 
-//       const GlobalTileIndex index_tile_transposed{j, i};
-//       const auto owner_transposed = distribution.rankGlobalTile(index_tile_transposed);
+      const GlobalTileIndex index_tile_transposed{j, i};
+      const auto owner_transposed = distribution.rankGlobalTile(index_tile_transposed);
 
-//       if (current_rank != owner_original && current_rank != owner_transposed)
-//         continue;
+      if (current_rank != owner_original && current_rank != owner_transposed)
+        continue;
 
-//       if (current_rank == owner_original) {
-//         const auto& tile_original = sync_wait(matrix.read_sender(index_tile_original)).get();
-//         pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
-//         const auto size_tile_transposed = transposed(tile_original.size());
+      if (current_rank == owner_original) {
+        const auto& tile_original = sync_wait(matrix.read_sender2(index_tile_original)).get();
+        const auto size_tile_transposed = transposed(tile_original.size());
 
-//         if (current_rank == owner_transposed) {
-//           tile_transposed = matrix.read(index_tile_transposed);
-//         }
-//         else {
-//           Tile<T, Device::CPU> workspace(size_tile_transposed,
-//                                          memory::MemoryView<T, Device::CPU>(
-//                                              size_tile_transposed.linear_size()),
-//                                          size_tile_transposed.rows());
+        auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
+          return dlaf::conj(tile_original({index.col(), index.row()}));
+        };
 
-//           // recv from owner_transposed
-//           const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
-//           comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), workspace);
+        // TODO: Try to emulate old structure with shared_futures etc. or ok like this?
+        if (current_rank == owner_transposed) {
+          auto tile_transposed = matrix.read_sender2(index_tile_transposed);
 
-//           tile_transposed = pika::make_ready_future<Tile<const T, Device::CPU>>(std::move(workspace));
-//         }
+          CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(std::move(tile_transposed)).get(),
+                          TypeUtilities<T>::error, TypeUtilities<T>::error);
+        }
+        else {
+          Tile<T, Device::CPU> tile_transposed(size_tile_transposed,
+                                               memory::MemoryView<T, Device::CPU>(
+                                                   size_tile_transposed.linear_size()),
+                                               size_tile_transposed.rows());
 
-//         auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
-//           return dlaf::conj(tile_original({index.col(), index.row()}));
-//         };
+          // recv from owner_transposed
+          const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
+          comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), tile_transposed);
 
-//         CHECK_TILE_NEAR(transposed_conj_tile,
-//                         sync_wait(dlaf::internal::keepFuture(tile_transposed)).get(),
-//                         TypeUtilities<T>::error, TypeUtilities<T>::error);
-//       }
-//       else if (current_rank == owner_transposed) {
-//         // send to owner_original
-//         auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
-//         comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
-//                             matrix.read(index_tile_transposed).get());
-//       }
-//     }
-//   }
-// }
+          CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed, TypeUtilities<T>::error,
+                          TypeUtilities<T>::error);
+        }
+      }
+      else if (current_rank == owner_transposed) {
+        // send to owner_original
+        auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
+        comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
+                            sync_wait(matrix.read_sender2(index_tile_transposed)).get());
+      }
+    }
+  }
+}
 
-// TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
-//   std::vector<TestSizes> square_blocks_configs({
-//       {{0, 0}, {13, 13}},  // square null matrix
-//       {{5, 5}, {26, 26}},  // square matrix single block
-//       {{9, 9}, {3, 3}},    // square matrix multi block "full-tile"
-//       {{13, 13}, {3, 3}},  // square matrix multi block
-//   });
+TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
+  std::vector<TestSizes> square_blocks_configs({
+      {{0, 0}, {13, 13}},  // square null matrix
+      {{5, 5}, {26, 26}},  // square matrix single block
+      {{9, 9}, {3, 3}},    // square matrix multi block "full-tile"
+      {{13, 13}, {3, 3}},  // square matrix multi block
+  });
 
-//   auto globalSquareTestSize = [](const LocalElementSize& size, const comm::Size2D& grid_size) {
-//     auto k = std::max(grid_size.rows(), grid_size.cols());
-//     return GlobalElementSize{size.rows() * k, size.cols() * k};
-//   };
+  auto globalSquareTestSize = [](const LocalElementSize& size, const comm::Size2D& grid_size) {
+    auto k = std::max(grid_size.rows(), grid_size.cols());
+    return GlobalElementSize{size.rows() * k, size.cols() * k};
+  };
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : square_blocks_configs) {
-//       GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-//       memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
-//       Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : square_blocks_configs) {
+      GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<TypeParam, Device::CPU> mem(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> matrix(std::move(distribution), layout, mem());
 
-//       auto N = matrix.size().rows();
-//       auto identity_2N = [N](const GlobalElementIndex& index) {
-//         if (index.row() == index.col())
-//           return TypeUtilities<TypeParam>::element(2 * N, 0);
-//         return TypeUtilities<TypeParam>::element(0, 0);
-//       };
+      auto N = matrix.size().rows();
+      auto identity_2N = [N](const GlobalElementIndex& index) {
+        if (index.row() == index.col())
+          return TypeUtilities<TypeParam>::element(2 * N, 0);
+        return TypeUtilities<TypeParam>::element(0, 0);
+      };
 
-//       matrix::util::set_random_hermitian_positive_definite(matrix);
+      matrix::util::set_random_hermitian_positive_definite(matrix);
 
-//       CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
+      CHECK_MATRIX_NEAR(identity_2N, matrix, 0, 1);
 
-//       check_is_hermitian(matrix, comm_grid);
-//     }
-//   }
-// }
+      check_is_hermitian(matrix, comm_grid);
+    }
+  }
+}
 
 // TODO: Update panel to use senders only.
 // template <typename Type>

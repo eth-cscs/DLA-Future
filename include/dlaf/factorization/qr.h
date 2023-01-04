@@ -40,30 +40,30 @@ namespace internal {
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
-                    pika::future<matrix::Tile<T, device>> t) {
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t));
 }
 
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
-                    pika::future<matrix::Tile<T, device>> t,
+                    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
 }
 /// ---- ETI
-#define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)                  \
-  KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
-                                     pika::shared_future<common::internal::vector<T>> taus, \
-                                     pika::future<matrix::Tile<T, DEVICE>> t);
+#define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)       \
+  KWORD template void computeTFactor<                                            \
+      BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
+                          pika::shared_future<common::internal::vector<T>> taus, \
+                          pika::execution::experimental::unique_any_sender<matrix::Tile<T, DEVICE>> t);
 
-#define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                  \
-  KWORD template void                                                                       \
-  computeTFactor<BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
-                                     pika::shared_future<common::internal::vector<T>> taus, \
-                                     pika::future<matrix::Tile<T, DEVICE>> t,               \
-                                     common::Pipeline<comm::Communicator> & mpi_col_task_chain);
+#define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                             \
+  KWORD template void computeTFactor<                                                                  \
+      BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,                             \
+                          pika::shared_future<common::internal::vector<T>> taus,                       \
+                          pika::execution::experimental::unique_any_sender<matrix::Tile<T, DEVICE>> t, \
+                          common::Pipeline<comm::Communicator> & mpi_col_task_chain);
 
 #define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \

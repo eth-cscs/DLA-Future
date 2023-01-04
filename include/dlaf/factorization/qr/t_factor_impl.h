@@ -59,9 +59,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class TSender>
-  static auto gemvColumnT(SizeType first_row_tile,
-                          pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+  template <class VISender, class TSender>
+  static auto gemvColumnT(SizeType first_row_tile, VISender tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
@@ -102,8 +101,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
                                      std::move(gemv_func),
-                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
-                                                  dlaf::internal::keepFuture(taus),
+                                     ex::when_all(tile_vi, dlaf::internal::keepFuture(taus),
                                                   std::forward<TSender>(tile_t)));
   }
 
@@ -200,7 +198,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
                                                          pika::execution::thread_priority::high),
                                                      std::move(gemv_func),
-                                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
+                                                     ex::when_all(tile_vi,
                                                                   dlaf::internal::keepFuture(taus),
                                                                   std::forward<TSender>(tile_t)));
   }
@@ -235,9 +233,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t) {
+void QR_Tfactor<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel,
+    pika::shared_future<common::internal::vector<T>> taus,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -275,7 +274,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read_sender2(v_i), taus, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -285,10 +284,11 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t,
-                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void QR_Tfactor<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel,
+    pika::shared_future<common::internal::vector<T>> taus,
+    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t,
+    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -329,7 +329,8 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
+    t_local =
+        Helpers::gemvColumnT(first_row_tile, hh_panel.read_sender2(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column

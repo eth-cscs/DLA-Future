@@ -246,6 +246,7 @@ DLAF_addSublibrary(
 DLAF_addSublibrary(
   multiplication
   SOURCES multiplication/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
+          multiplication/hermitian/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/hermitian/gpu.cpp>
           multiplication/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>
   LIBRARIES dlaf.core
 )

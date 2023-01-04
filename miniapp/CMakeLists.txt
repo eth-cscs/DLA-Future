@@ -33,9 +33,6 @@ DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cp
 
 DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp)
 
-# Note:
-# HIP is not yet supported. Disabling this miniapp for HIP means that we don't have also the MC one...
-# ...but it is a shortcut in the meanwhile we get HIP support.
 DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)
 

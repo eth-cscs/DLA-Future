@@ -8,8 +8,16 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+cmake_minimum_required(VERSION 3.22)
+project(dlaf-miniapps)
+
+list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include(DLAF_AddMiniapp)
+
+find_package(DLAF REQUIRED)
+
 add_library(DLAF_miniapp INTERFACE)
-target_link_libraries(DLAF_miniapp INTERFACE DLAF)
+target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF)
 target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)

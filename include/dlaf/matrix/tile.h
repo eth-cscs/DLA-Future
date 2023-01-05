@@ -530,6 +530,17 @@ pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>
          pika::execution::experimental::split();
 }
 
+template <class T, Device D>
+pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> shareReadwriteTile(
+    pika::execution::experimental::unique_any_sender<Tile<T, D>> tile) {
+  return std::move(tile) | pika::execution::experimental::let_value([](Tile<T, D>& tile) {
+           pika::execution::experimental::async_rw_mutex<Tile<T, D>, Tile<const T, D>> tile_manager{
+               std::move(tile)};
+           return tile_manager.read();
+         }) |
+         pika::execution::experimental::split();
+}
+
 /// Create read-only subtiles of a given read-only tile.
 ///
 /// The returned subtiles will get ready, at the same time as @p tile gets ready.

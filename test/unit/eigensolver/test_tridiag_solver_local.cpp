@@ -18,6 +18,7 @@
 
 using namespace dlaf;
 using namespace dlaf::test;
+using pika::this_thread::experimental::sync_wait;
 
 template <typename Type>
 class TridiagEigensolverTestCPU : public ::testing::Test {};
@@ -101,7 +102,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   const auto& dist = evecs.distribution();
   for (SizeType i_tile = 0; i_tile < dist.nrTiles().cols(); ++i_tile) {
     SizeType i_gl_el = dist.template globalElementFromGlobalTileAndTileElement<Coord::Col>(i_tile, 0);
-    auto tile = evecs(GlobalTileIndex(0, i_tile)).get();
+    auto tile = sync_wait(evecs.readwrite_sender_tile(GlobalTileIndex(0, i_tile)));
     for (SizeType i_tile_el = 0; i_tile_el < tile.size().cols(); ++i_tile_el) {
       if (dlaf::util::sameSign(std::real(expected_evecs_fn(GlobalElementIndex(0, i_gl_el + i_tile_el))),
                                std::real(tile(TileElementIndex(0, i_tile_el)))))
@@ -116,7 +117,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
 
     // Iterate over all tiles on the `j_tile` tile column
     for (SizeType i_tile = 0; i_tile < dist.nrTiles().rows(); ++i_tile) {
-      auto tile = evecs(GlobalTileIndex(i_tile, j_tile)).get();
+      auto tile = sync_wait(evecs.readwrite_sender_tile(GlobalTileIndex(i_tile, j_tile)));
       tile::internal::scaleCol(T(-1), j_tile_el, tile);
     }
   }
@@ -215,16 +216,16 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
       }
     };
 
-    dlaf::internal::whenAllLift(evals.read_sender(LocalTileIndex(tile_wrt_local.col(), 0)),
-                                evecs.readwrite_sender(tile_wrt_local)) |
+    dlaf::internal::whenAllLift(evals.read_sender2(LocalTileIndex(tile_wrt_local.col(), 0)),
+                                evecs.readwrite_sender_tile(tile_wrt_local)) |
         dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(scale_f));
   }
 
   // Check that A * E is equal to E * D
   constexpr RealParam error = TypeUtilities<T>::error;
   for (auto tile_wrt_local : common::iterate_range2d(dist.localNrTiles())) {
-    auto& ae_tile = AE_gemm.read(tile_wrt_local).get();
-    auto& evecs_tile = evecs.read(tile_wrt_local).get();
+    auto& ae_tile = sync_wait(AE_gemm.read_sender2(tile_wrt_local)).get();
+    auto& evecs_tile = sync_wait(evecs.read_sender2(tile_wrt_local)).get();
     CHECK_TILE_NEAR(ae_tile, evecs_tile, error * n, error * n);
   }
 }

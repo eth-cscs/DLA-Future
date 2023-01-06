@@ -47,13 +47,14 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared
   // among multiple tasks.
 
-  auto readwrite_f = [this](const LocalTileIndex& index) {
-    const auto i = tileLinearIndex(index);
-    return this->tile_managers_[i].getRWTileFuture();
-  };
-
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
-  pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
+
+  // auto readwrite_f = [this](const LocalTileIndex& index) {
+  //   const auto i = tileLinearIndex(index);
+  //   return this->tile_managers_[i].getRWTileFuture();
+  // };
+
+  // pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
 
   // TODO: This is temporary. Eventually only the below should be used and the
   // above should be deleted.

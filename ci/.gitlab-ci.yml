@@ -109,6 +109,27 @@ cpu release build clang12:
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
 
+cpu debug build clang12:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: "clang-12 libomp-12-dev"
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: clang@12.0.1
+    CXXSTD: 17
+    USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-clang12/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-clang12/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+    USE_CODECOV: "false"
+
 # cpu release build clang13 cxx20:
 #   extends: .build_spack_common
 #   variables:
@@ -241,14 +262,23 @@ cpu release test clang12:
       - artifact: pipeline.yml
         job: cpu release build clang12
 
-cpu release test clang13 cxx20:
+cpu debug test clang12:
   extends: .run_common
   needs:
-    - cpu release build clang13 cxx20
+    - cpu debug build clang12
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cpu release build clang13 cxx20
+        job: cpu debug build clang12
+
+# cpu release test clang13 cxx20:
+#   extends: .run_common
+#   needs:
+#     - cpu release build clang13 cxx20
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu release build clang13 cxx20
 
 # cpu codecov test gcc11:
 #   extends: .run_common

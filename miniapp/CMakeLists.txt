@@ -13,6 +13,7 @@ project(dlaf-miniapps)
 
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(DLAF_AddMiniapp)
+include(DLAF_AddTargetWarnings)
 
 find_package(DLAF REQUIRED)
 

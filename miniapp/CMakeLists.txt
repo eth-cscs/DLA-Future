@@ -12,10 +12,11 @@ cmake_minimum_required(VERSION 3.22)
 project(dlaf-miniapps)
 
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-include(DLAF_AddMiniapp)
-include(DLAF_AddTargetWarnings)
 
 find_package(DLAF REQUIRED)
+
+include(DLAF_AddMiniapp)
+include(DLAF_AddTargetWarnings)
 
 add_library(DLAF_miniapp INTERFACE)
 target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF)

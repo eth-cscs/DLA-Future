@@ -306,9 +306,8 @@ endforeach()
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # install custom DLAF scripts
-install(
-  FILES ${PROJECT_SOURCE_DIR}/cmake/DLAF_AddTargetWarnings.cmake
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
+install(FILES ${PROJECT_SOURCE_DIR}/cmake/DLAF_AddTargetWarnings.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 
 # install custom FindModules
@@ -333,8 +332,7 @@ install(EXPORT DLAF-Targets NAMESPACE DLAF::
 
 # Config-file preparation and install
 configure_package_config_file(
-  ${PROJECT_SOURCE_DIR}/cmake/template/DLAFConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
+  ${PROJECT_SOURCE_DIR}/cmake/template/DLAFConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 

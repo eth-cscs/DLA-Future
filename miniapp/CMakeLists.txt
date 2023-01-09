@@ -24,9 +24,6 @@ target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURR
 
 DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
 
-# TODO it depends on DLAF_TEST exclusively for the check part (uses CHECK_MATRIX_NEAR)
-DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp LIBRARIES DLAF_test)
-
 DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp)
 
 DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp)
@@ -38,6 +35,8 @@ DLAF_addMiniapp(miniapp_tridiag_solver SOURCES miniapp_tridiag_solver.cpp)
 DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp)
 
 DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp)
+
+DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp)
 
 DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 

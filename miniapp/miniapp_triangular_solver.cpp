@@ -33,9 +33,6 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
-
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
 
@@ -72,6 +69,11 @@ struct Options
         diag(dlaf::miniapp::parseDiag(vm["diag"].as<std::string>())) {
     DLAF_ASSERT(m > 0 && n > 0, m, n);
     DLAF_ASSERT(mb > 0 && nb > 0, mb, nb);
+
+    if (do_check != dlaf::miniapp::CheckIterFreq::None) {
+      std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
+      do_check = dlaf::miniapp::CheckIterFreq::None;
+    }
   }
 
   Options(Options&&) = default;
@@ -165,12 +167,7 @@ struct triangularSolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        // TODO do not check element by element, but evaluate the entire matrix
-        static_assert(std::is_arithmetic_v<T>, "mul/add error is valid just for arithmetic types");
-        constexpr T muladd_error = 2 * std::numeric_limits<T>::epsilon();
-
-        const T max_error = 20 * (bh.size().rows() + 1) * muladd_error;
-        CHECK_MATRIX_NEAR(ref_x, bh, max_error, 0);
+        DLAF_UNIMPLEMENTED("Check");
       }
     }
   }

@@ -72,7 +72,7 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   const LocalTileIndex idx(0, 0);
 
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(matrix(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(matrix.readwrite_sender_tile(idx)), input_tile);
 
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
@@ -89,19 +89,17 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
         dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM,
                                        ex::make_unique_any_sender(matrix.read_sender2(idx))));
 
-    auto tile = tt::sync_wait(matrix.read_sender2(idx));
-    CHECK_TILE_EQ(input_tile, tile.get());
+    CHECK_TILE_EQ(input_tile, tt::sync_wait(matrix.read_sender2(idx)).get());
 
     auto new_tile = fixedValueTile(26);
-    matrix::test::set(matrix(idx).get(), new_tile);
+    matrix::test::set(tt::sync_wait(matrix.readwrite_sender_tile(idx)), new_tile);
 
     exp_tile = new_tile;
   }
-
-  const auto& tile = matrix.read(idx).get();
+  auto tile = tt::sync_wait(matrix.read_sender2(idx));
   SCOPED_TRACE(test_name);
 
-  CHECK_TILE_EQ(exp_tile, tile);
+  CHECK_TILE_EQ(exp_tile, tile.get());
 }
 
 TEST_F(CollectiveTest, ReduceInPlace) {
@@ -117,7 +115,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(matrix(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(matrix.readwrite_sender_tile(idx)), input_tile);
 
   auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
                                                     ex::make_unique_any_sender(
@@ -137,7 +135,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
     CHECK_TILE_EQ(exp_tile, tile);
   }
 
-  CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
+  CHECK_TILE_EQ(exp_tile, tt::sync_wait(matrix.read_sender2(idx)).get());
 }
 
 TEST_F(CollectiveTest, AllReduceInPlace) {
@@ -158,21 +156,21 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(mat_in(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(mat_in.readwrite_sender_tile(idx)), input_tile);
 
   ex::start_detached(
       dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
                                     ex::make_unique_any_sender(mat_in.read_sender2(idx)),
                                     ex::make_unique_any_sender(mat_out.readwrite_sender_tile(idx))));
 
-  const auto& tile_in = mat_in.read(idx).get();
-  const auto& tile_out = mat_out.read(idx).get();
+  auto tile_in = tt::sync_wait(mat_in.read_sender2(idx));
+  auto tile_out = tt::sync_wait(mat_out.read_sender2(idx));
   SCOPED_TRACE(test_name);
 
-  CHECK_TILE_EQ(input_tile, tile_in);
+  CHECK_TILE_EQ(input_tile, tile_in.get());
 
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
-  CHECK_TILE_EQ(exp_tile, tile_out);
+  CHECK_TILE_EQ(exp_tile, tile_out.get());
 }
 
 TEST_F(CollectiveTest, AllReduce) {

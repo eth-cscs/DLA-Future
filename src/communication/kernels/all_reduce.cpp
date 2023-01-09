@@ -132,10 +132,17 @@ template <class T, Device D>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
   auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(allReduceInPlace_o);
   };
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
   // The tile has to be copied both to and from the temporary tile since the
   // reduction is done in-place. The reduction is explicitly done on CPU memory

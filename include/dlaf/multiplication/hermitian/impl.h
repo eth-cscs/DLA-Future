@@ -33,51 +33,62 @@
 namespace dlaf::multiplication::internal {
 
 namespace hermitian_ll {
-/*template <Backend backend, class T, typename InSender, typename OutSender>
-void trmmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
-                    InSender&& in_tile, OutSender&& out_tile) {
+template <Backend B, class T, typename ASender, typename BSender, typename CSender>
+void hemm(const T alpha, ASender&& a_tile, BSender&& b_tile, const T beta, CSender&& c_tile) {
   pika::execution::experimental::start_detached(
-      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
-                                  std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trmm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), beta,
+                                  std::forward<CSender>(c_tile)) |
+      tile::hemm(dlaf::internal::Policy<B>(pika::execution::thread_priority::normal)));
 }
 
-template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
-void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T alpha, ASender&& a_tile,
-                            BSender&& b_tile, CSender&& c_tile) {
+template <Backend B, class T, typename ASender, typename BSender, typename CSender>
+void gemmN(const T alpha, ASender&& a_tile, BSender&& b_tile, const T beta, CSender&& c_tile) {
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), beta,
                                   std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<B>(pika::execution::thread_priority::normal)));
 }
-*/
+
+template <Backend B, class T, typename ASender, typename BSender, typename CSender>
+void gemmC(const T alpha, ASender&& a_tile, BSender&& b_tile, const T beta, CSender&& c_tile) {
+  pika::execution::experimental::start_detached(
+      dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, alpha,
+                                  std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), beta,
+                                  std::forward<CSender>(c_tile)) |
+      tile::gemm(dlaf::internal::Policy<B>(pika::execution::thread_priority::normal)));
+}
 }
 
 template <Backend B, Device D, class T>
 void Hermitian<B, D, T>::call_LL(const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,
                                  const T beta, Matrix<T, D>& mat_c) {
   using namespace hermitian_ll;
-  using pika::execution::thread_priority;
+  const SizeType k = mat_a.distribution().localNrTiles().cols();
 
-  const SizeType m = mat_b.nrTiles().rows();
-  const SizeType n = mat_b.nrTiles().cols();
+  for (const auto ij : common::iterate_range2d(mat_c.distribution().localNrTiles())) {
+    T beta_ij = beta;
+    for (SizeType l = 0; l < ij.row(); ++l) {
+      auto il = LocalTileIndex{ij.row(), l};
+      auto lj = LocalTileIndex{l, ij.col()};
+      gemmN<B>(alpha, mat_a.read_sender(il), mat_b.read_sender(lj), beta_ij, mat_c.readwrite_sender(ij));
+      beta_ij = 1;
+    }
 
-/*  for (SizeType k = m - 1; k >= 0; --k) {
-    for (SizeType j = 0; j < n; ++j) {
-      auto kj = LocalTileIndex{k, j};
+    {
+      auto ii = LocalTileIndex{ij.row(), ij.row()};
+      hemm<B>(alpha, mat_a.read_sender(ii), mat_b.read_sender(ij), beta_ij, mat_c.readwrite_sender(ij));
+      beta_ij = 1;
+    }
 
-      for (SizeType i = k + 1; i < m; ++i) {
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, alpha,
-                                        mat_a.read_sender(LocalTileIndex{i, k}), mat_b.read_sender(kj),
-                                        mat_b.readwrite_sender(LocalTileIndex{i, j}));
-      }
-
-      trmmBPanelTile<backend>(thread_priority::high, diag, alpha,
-                              mat_a.read_sender(LocalTileIndex{k, k}), mat_b.readwrite_sender(kj));
+    for (SizeType l = ij.row() + 1; l < k; ++l) {
+      auto li = LocalTileIndex{l, ij.row()};
+      auto lj = LocalTileIndex{l, ij.col()};
+      gemmC<B>(alpha, mat_a.read_sender(li), mat_b.read_sender(lj), beta_ij, mat_c.readwrite_sender(ij));
+      beta_ij = 1;
     }
   }
-*/
 }
 
 template <Backend B, Device D, class T>

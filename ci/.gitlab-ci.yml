@@ -17,7 +17,9 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 7efcb5ae73bdaa85886079ccfd5ff0f44b838508
+    # TODO waiting for ROCm 5.3.3 in spack
+    # https://github.com/spack/spack/pull/34862
+    SPACK_SHA: d74223ba20b00cb85d911e5ada92a5a3ac4fd754
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
@@ -193,22 +195,23 @@ cuda codecov build gcc11:
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
-rocm release build clang10+rocm-5.2.3:
+rocm release build clang10+rocm-5.3.3:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
-    DEPLOY_BASE_IMAGE: docker.io/rocm/dev-ubuntu-20.04:5.2.3
-    EXTRA_APTGET: "clang rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
-    EXTRA_APTGET_DEPLOY: ""
-    COMPILER: clang@10.0.0
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    EXTRA_APTGET: "clang-14 rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: clang@14.0.0
     CXXSTD: 17
     USE_MKL: "OFF"
     USE_ROCBLAS: "ON"
-    SPACK_ENVIRONMENT: ci/docker/release-rocm523.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang10/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang10/deploy:$CI_COMMIT_SHA
+    SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 64
     USE_CODECOV: "false"

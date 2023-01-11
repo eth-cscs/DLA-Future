@@ -10,14 +10,10 @@
 
 #include "dlaf/multiplication/hermitian/impl.h"
 
-namespace dlaf {
-namespace multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 
 DLAF_MULTIPLICATION_HERMITIAN_ETI(, Backend::GPU, Device::GPU, float)
 DLAF_MULTIPLICATION_HERMITIAN_ETI(, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_HERMITIAN_ETI(, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_HERMITIAN_ETI(, Backend::GPU, Device::GPU, std::complex<double>)
-}
-}
 }

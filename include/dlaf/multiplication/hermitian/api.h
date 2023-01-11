@@ -12,9 +12,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
-namespace dlaf {
-namespace multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 template <Backend B, Device D, class T>
 struct Hermitian {
   static void call_LL(const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
@@ -39,6 +37,4 @@ DLAF_MULTIPLICATION_HERMITIAN_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_HERMITIAN_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_HERMITIAN_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-}
-}
 }

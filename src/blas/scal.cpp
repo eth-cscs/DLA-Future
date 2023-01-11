@@ -8,9 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "dlaf/blas/scal.h"
+
 #include <blas/config.h>
 #include <blas/mangling.h>
-#include "dlaf/blas/scal.h"
+
 #include "dlaf/common/assert.h"
 #include "dlaf/types.h"
 

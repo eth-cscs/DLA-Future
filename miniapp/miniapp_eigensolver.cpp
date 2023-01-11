@@ -52,7 +52,9 @@ using dlaf::matrix::MatrixMirror;
 
 /// Check results of the eigensolver
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A, Matrix<const T, Device::CPU>& E);
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A,
+                      Matrix<const T, Device::CPU>& E);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -126,7 +128,7 @@ struct EigensolverMiniapp {
       std::unique_ptr<MatrixMirrorResultType> eigenvectors_host(nullptr);
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-          eigenvectors_host = std::make_unique<MatrixMirrorResultType>(eigenvectors);
+        eigenvectors_host = std::make_unique<MatrixMirrorResultType>(eigenvectors);
       }
 
       // print benchmark results
@@ -186,11 +188,11 @@ int main(int argc, char** argv) {
 
 namespace {
 using dlaf::Coord;
-using dlaf::comm::Index2D;
 using dlaf::GlobalElementIndex;
 using dlaf::GlobalTileIndex;
-using dlaf::matrix::Tile;
 using dlaf::TileElementIndex;
+using dlaf::comm::Index2D;
+using dlaf::matrix::Tile;
 
 /// TODO
 template <typename T>
@@ -202,7 +204,8 @@ void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T,
 
 /// TODO
 template <typename T>
-void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
+void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
+                       Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
   using pika::execution::thread_priority;
   copy(evectors, result);
 
@@ -211,8 +214,10 @@ void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<c
   for (const auto& ij : iterate_range2d(dist.localNrTiles())) {
     SizeType j = dist.template globalTileFromLocalTile<Coord::Col>(ij.col());
     pika::execution::experimental::start_detached(
-        dlaf::internal::whenAllLift(evalues.read_sender(GlobalTileIndex{j, 0}), result.readwrite_sender(ij)) |
-                                    dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_priority::normal), scaleTile<T>));
+        dlaf::internal::whenAllLift(evalues.read_sender(GlobalTileIndex{j, 0}),
+                                    result.readwrite_sender(ij)) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_priority::normal),
+                                  scaleTile<T>));
   }
 }
 
@@ -229,14 +234,17 @@ void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<c
 /// "ERROR":   error is high, there is an error in the results
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A, Matrix<const T, Device::CPU>& E) {
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A,
+                      Matrix<const T, Device::CPU>& E) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the norm of the original matrix in A (largest eigenvalue)
   const GlobalElementIndex last_ev(evalues.size().rows() - 1, 0);
   const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
   const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
-  const auto norm_A = std::max(std::norm(evalues.read(GlobalTileIndex{0, 0}).get()({0, 0})), std::norm(evalues.read(last_ev_tile).get()(last_ev_el_tile)));
+  const auto norm_A = std::max(std::norm(evalues.read(GlobalTileIndex{0, 0}).get()({0, 0})),
+                               std::norm(evalues.read(last_ev_tile).get()(last_ev_el_tile)));
 
   // 2.
   // Compute C = E D - A E
@@ -246,7 +254,8 @@ void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const 
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, blas::Uplo::General, C);
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
+                                               blas::Uplo::General, C);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

@@ -24,4 +24,3 @@ void scal(std::int64_t n, float a, std::complex<float>* x, std::int64_t incx) no
 void scal(std::int64_t n, double a, std::complex<double>* x, std::int64_t incx) noexcept;
 
 }
-

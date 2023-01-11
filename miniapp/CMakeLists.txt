@@ -16,9 +16,7 @@ DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
 
 if(DLAF_BUILD_TESTING)
   # TODO it depends on DLAF_TEST exclusively for the check part (uses CHECK_MATRIX_NEAR)
-  DLAF_addMiniapp(
-    miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp LIBRARIES DLAF_test
-  )
+  DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp LIBRARIES DLAF_test)
 endif()
 
 DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp)

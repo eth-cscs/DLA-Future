@@ -108,7 +108,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_WITH_MKL", True))
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
-            args.append(self.define("LAPACK_TYPE", "Custom"))
             args.append(self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),

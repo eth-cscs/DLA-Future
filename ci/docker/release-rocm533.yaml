@@ -21,38 +21,26 @@ spack:
       - build_type=Release
       - cxxstd=17
       - amdgpu_target=gfx90a:xnack-
-      providers:
-        mpi: [mpich]
-        blas: [openblas]
-        lapack: [openblas]
+    blas:
+      require: openblas
+    lapack:
+      require: openblas
+    mpi:
+      require: mpich ~fortran ~rocm device=ch3 netmod=tcp ~libxml2
     blaspp:
-      variants:
-      - ~cuda
-      - ~rocm
-      - ~openmp
+      require: ~cuda ~rocm ~openmp
     pika:
-      variants:
-      - malloc=mimalloc
-    mpich:
-      variants:
-      - ~fortran
-      - ~rocm
-      - device=ch3
-      - netmod=tcp
-      - ~libxml2
+      require: malloc=mimalloc
     hwloc:
-      variants:
-      - ~libxml2
+      require: ~libxml2
     git:
       # Force git as non-buildable to allow deprecated versions in environments
       # https://github.com/spack/spack/pull/30040
       buildable: false
     umpire:
-      version:
-      - 4.1.2
+      require: "@4.1.2"
     blt:
-      version:
-      - 0.4.1
+      require: "@0.4.1"
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.3.3 ~rocm-device-libs

@@ -19,7 +19,7 @@ stages:
     GIT_SUBMODULE_STRATEGY: recursive
     # TODO waiting for ROCm 5.3.3 in spack
     # https://github.com/spack/spack/pull/34862
-    SPACK_SHA: d74223ba20b00cb85d911e5ada92a5a3ac4fd754
+    SPACK_SHA: 84f65f5bda6270e1f0a4b6c942274768dae0bf83
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY

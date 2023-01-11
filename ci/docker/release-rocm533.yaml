@@ -10,7 +10,7 @@
 
 spack:
   specs:
-  - dla-future@develop +rocm +miniapps +ci-test
+  - dla-future@develop +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
   view: false
   concretizer:
     unify: true

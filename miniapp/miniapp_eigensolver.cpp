@@ -12,13 +12,11 @@
 #include <iostream>
 #include <limits>
 
-#include <blas.hh>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
 #include "dlaf/auxiliary/norm.h"
-#include "dlaf/blas/scal.h"
 #include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
@@ -33,6 +31,7 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
+#include "dlaf/miniapp/scale_eigenvectors.h"
 #include "dlaf/multiplication/hermitian.h"
 #include "dlaf/types.h"
 
@@ -52,8 +51,8 @@ using dlaf::matrix::MatrixMirror;
 
 /// Check results of the eigensolver
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A,
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues,
                       Matrix<const T, Device::CPU>& E);
 
 struct Options
@@ -145,7 +144,7 @@ struct EigensolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        checkEigensolver(comm_grid, opts.uplo, eigenvalues, matrix_ref, eigenvectors_host->get());
+        checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues, eigenvectors_host->get());
         eigenvectors_host.reset(nullptr);
       }
     }
@@ -194,48 +193,17 @@ using dlaf::TileElementIndex;
 using dlaf::comm::Index2D;
 using dlaf::matrix::Tile;
 
-/// TODO
-template <typename T>
-void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T, Device::CPU>& tile) {
-  for (SizeType j = 0; j < tile.size().cols(); ++j) {
-    blas::scal(tile.size().rows(), lambda({j, 0}), tile.ptr({0, j}), 1);
-  }
-}
-
-/// TODO
-template <typename T>
-void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
-                       Matrix<const T, Device::CPU>& evectors, Matrix<T, Device::CPU>& result) {
-  using pika::execution::thread_priority;
-  copy(evectors, result);
-
-  const auto& dist = result.distribution();
-
-  for (const auto& ij : iterate_range2d(dist.localNrTiles())) {
-    SizeType j = dist.template globalTileFromLocalTile<Coord::Col>(ij.col());
-    pika::execution::experimental::start_detached(
-        dlaf::internal::whenAllLift(evalues.read_sender(GlobalTileIndex{j, 0}),
-                                    result.readwrite_sender(ij)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_priority::normal),
-                                  scaleTile<T>));
-  }
-}
-
-// TODO
-/// Procedure to evaluate the result of the Cholesky factorization
+/// Procedure to evaluate the result of the Eigensolver
 ///
-/// 1. Compute the max norm of the original matrix
-/// 2. Compute the absolute difference between the original and the computed matrix using the factorization
-/// 3. Compute the max norm of the difference
-/// 4. Evaluate the correctness of the result using the ratio between the two matrix max norms
+/// 1. Check the value of | E D - A E | / | A |
 ///
 /// Prints a message with the ratio and a note about the error:
 /// "":        check ok
 /// "ERROR":   error is high, there is an error in the results
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& A,
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues,
                       Matrix<const T, Device::CPU>& E) {
   const Index2D rank_result{0, 0};
 
@@ -249,7 +217,7 @@ void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo,
   // 2.
   // Compute C = E D - A E
   Matrix<T, Device::CPU> C(E.distribution());
-  scaleEigenvectors(evalues, E, C);
+  dlaf::miniapp::scaleEigenvectors(evalues, E, C);
   dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
 
   // 3. Compute the max norm of the difference

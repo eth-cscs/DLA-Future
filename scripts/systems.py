@@ -51,6 +51,8 @@ cscs["daint-mc"] = {
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -80,6 +82,8 @@ cscs["daint-gpu"] = {
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -107,6 +111,8 @@ cscs["eiger"] = {
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -138,6 +144,8 @@ csc["lumi-cpu"] = {
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt
@@ -168,6 +176,8 @@ csc["lumi-gpu"] = {
 
 # Env
 export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
 
 # Debug
 module list &> modules_{bs_name}.txt

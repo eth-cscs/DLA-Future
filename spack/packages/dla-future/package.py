@@ -87,6 +87,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 when="amdgpu_target={0}".format(val))
             depends_on("rocblas amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
+            depends_on("rocprim amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocthrust amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("whip amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
             depends_on("umpire amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
 

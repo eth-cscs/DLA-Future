@@ -52,8 +52,7 @@ using dlaf::matrix::MatrixMirror;
 /// Check results of the eigensolver
 template <typename T>
 void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues,
-                      Matrix<const T, Device::CPU>& E);
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -203,8 +202,7 @@ using dlaf::matrix::Tile;
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
 void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues,
-                      Matrix<const T, Device::CPU>& E) {
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the norm of the original matrix in A (largest eigenvalue)

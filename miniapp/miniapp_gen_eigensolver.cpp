@@ -51,9 +51,10 @@ using dlaf::matrix::MatrixMirror;
 
 /// Check results of the eigensolver
 template <typename T>
-void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,  Matrix<const T, Device::CPU>& B,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues,
-                      Matrix<const T, Device::CPU>& E);
+void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                         Matrix<const T, Device::CPU>& B,
+                         Matrix<const BaseType<T>, Device::CPU>& evalues,
+                         Matrix<const T, Device::CPU>& E);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -159,7 +160,8 @@ struct GenEigensolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues, eigenvectors_host->get());
+        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues,
+                            eigenvectors_host->get());
         eigenvectors_host.reset(nullptr);
       }
     }
@@ -217,9 +219,10 @@ using dlaf::matrix::Tile;
 /// "ERROR":   error is high, there is an error in the results
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
-void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A, Matrix<const T, Device::CPU>& B,
-                      Matrix<const BaseType<T>, Device::CPU>& evalues,
-                      Matrix<const T, Device::CPU>& E) {
+void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                         Matrix<const T, Device::CPU>& B,
+                         Matrix<const BaseType<T>, Device::CPU>& evalues,
+                         Matrix<const T, Device::CPU>& E) {
   const Index2D rank_result{0, 0};
 
   // 1. Compute the norm of the original matrix in A (largest eigenvalue) and in B
@@ -229,7 +232,7 @@ void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<con
   const auto norm_A = std::max(std::norm(evalues.read(GlobalTileIndex{0, 0}).get()({0, 0})),
                                std::norm(evalues.read(last_ev_tile).get()(last_ev_el_tile)));
   const auto norm_B =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,uplo, B);
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, B);
 
   // 2.
   // Compute C = E D - A E

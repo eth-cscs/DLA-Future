@@ -47,4 +47,3 @@ void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
   }
 }
 }
-

@@ -14,12 +14,13 @@ project(DLAF-miniapps)
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(DLAF REQUIRED)
+find_package(pika 0.11.0 REQUIRED)
 
 include(DLAF_AddMiniapp)
 include(DLAF_AddTargetWarnings)
 
 add_library(DLAF_miniapp INTERFACE)
-target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF)
+target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF pika::pika)
 target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)

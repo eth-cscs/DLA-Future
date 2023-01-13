@@ -80,7 +80,8 @@ struct GenEigensolverMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
-    using MatrixMirrorResultType = MatrixMirror<const T, Device::CPU, DefaultDevice_v<backend>>;
+    using MatrixMirrorEvalsType = MatrixMirror<const BaseType<T>, Device::CPU, DefaultDevice_v<backend>>;
+    using MatrixMirrorEvectsType = MatrixMirror<const T, Device::CPU, DefaultDevice_v<backend>>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
@@ -140,10 +141,12 @@ struct GenEigensolverMiniapp {
       matrix_b.reset();
 
       // Copy back eigenvectors only if needed by the check
-      std::unique_ptr<MatrixMirrorResultType> eigenvectors_host(nullptr);
+      std::unique_ptr<MatrixMirrorEvalsType> eigenvalues_host(nullptr);
+      std::unique_ptr<MatrixMirrorEvectsType> eigenvectors_host(nullptr);
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        eigenvectors_host = std::make_unique<MatrixMirrorResultType>(eigenvectors);
+        eigenvalues_host = std::make_unique<MatrixMirrorEvalsType>(eigenvalues);
+        eigenvectors_host = std::make_unique<MatrixMirrorEvectsType>(eigenvectors);
       }
 
       // print benchmark results
@@ -160,8 +163,9 @@ struct GenEigensolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues,
+        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host->get(),
                             eigenvectors_host->get());
+        eigenvalues_host.reset(nullptr);
         eigenvectors_host.reset(nullptr);
       }
     }

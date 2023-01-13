@@ -140,15 +140,6 @@ struct GenEigensolverMiniapp {
       matrix_a.reset();
       matrix_b.reset();
 
-      // Copy back eigenvectors only if needed by the check
-      std::unique_ptr<MatrixMirrorEvalsType> eigenvalues_host(nullptr);
-      std::unique_ptr<MatrixMirrorEvectsType> eigenvectors_host(nullptr);
-      if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
-          opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        eigenvalues_host = std::make_unique<MatrixMirrorEvalsType>(eigenvalues);
-        eigenvectors_host = std::make_unique<MatrixMirrorEvectsType>(eigenvectors);
-      }
-
       // print benchmark results
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]"
@@ -163,10 +154,10 @@ struct GenEigensolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host->get(),
-                            eigenvectors_host->get());
-        eigenvalues_host.reset(nullptr);
-        eigenvectors_host.reset(nullptr);
+        MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
+        MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
+        checkGenEigensolver(comm_grid, opts.uplo, matrix_a_ref, matrix_b_ref, eigenvalues_host.get(),
+                            eigenvectors_host.get());
       }
     }
   }

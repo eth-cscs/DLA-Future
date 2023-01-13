@@ -9,7 +9,7 @@
 #
 
 cmake_minimum_required(VERSION 3.22)
-project(dlaf-miniapps)
+project(DLAF-miniapps)
 
 list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 

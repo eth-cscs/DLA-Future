@@ -16,6 +16,7 @@
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
+#include "dlaf/auxiliary/norm.h"
 #include "dlaf/common/format_short.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
@@ -30,10 +31,13 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
+#include "dlaf/miniapp/scale_eigenvectors.h"
+#include "dlaf/multiplication/hermitian.h"
 #include "dlaf/types.h"
 
 namespace {
 using dlaf::Backend;
+using dlaf::BaseType;
 using dlaf::DefaultDevice_v;
 using dlaf::Device;
 using dlaf::GlobalElementSize;
@@ -44,6 +48,11 @@ using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::matrix::MatrixMirror;
+
+/// Check results of the eigensolver
+template <typename T>
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E);
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -56,11 +65,6 @@ struct Options
         uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
-
-    if (do_check != dlaf::miniapp::CheckIterFreq::None) {
-      std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
-      do_check = dlaf::miniapp::CheckIterFreq::None;
-    }
   }
 
   Options(Options&&) = default;
@@ -74,6 +78,8 @@ struct EigensolverMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
     using MatrixMirrorType = MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
+    using MatrixMirrorEvalsType = MatrixMirror<const BaseType<T>, Device::CPU, DefaultDevice_v<backend>>;
+    using MatrixMirrorEvectsType = MatrixMirror<const T, Device::CPU, DefaultDevice_v<backend>>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
@@ -100,23 +106,22 @@ struct EigensolverMiniapp {
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
       copy(matrix_ref, matrix_host);
 
-      double elapsed_time;
-      {
-        MatrixMirrorType matrix(matrix_host);
+      auto matrix = std::make_unique<MatrixMirrorType>(matrix_host);
 
-        // Wait for matrix to be copied to GPU (if necessary)
-        matrix.get().waitLocalTiles();
-        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+      // Wait for matrix to be copied to GPU (if necessary)
+      matrix->get().waitLocalTiles();
+      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-        dlaf::common::Timer<> timeit;
-        auto [eigenvalues, eigenvectors] =
-            dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix.get());
+      dlaf::common::Timer<> timeit;
+      auto [eigenvalues, eigenvectors] =
+          dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
 
-        // wait and barrier for all ranks
-        eigenvectors.waitLocalTiles();
-        DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
-        elapsed_time = timeit.elapsed();
-      }
+      // wait and barrier for all ranks
+      eigenvectors.waitLocalTiles();
+      DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+      double elapsed_time = timeit.elapsed();
+
+      matrix.reset();
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0)
@@ -132,7 +137,10 @@ struct EigensolverMiniapp {
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
-        DLAF_UNIMPLEMENTED("Check");
+        MatrixMirrorEvalsType eigenvalues_host(eigenvalues);
+        MatrixMirrorEvectsType eigenvectors_host(eigenvectors);
+        checkEigensolver(comm_grid, opts.uplo, matrix_ref, eigenvalues_host.get(),
+                         eigenvectors_host.get());
       }
     }
   }
@@ -170,4 +178,62 @@ int main(int argc, char** argv) {
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
   return pika::init(pika_main, argc, argv, p);
+}
+
+namespace {
+using dlaf::Coord;
+using dlaf::GlobalElementIndex;
+using dlaf::GlobalTileIndex;
+using dlaf::TileElementIndex;
+using dlaf::comm::Index2D;
+using dlaf::matrix::Tile;
+
+/// Procedure to evaluate the result of the Eigensolver
+///
+/// 1. Check the value of | E D - A E | / | A |
+///
+/// Prints a message with the ratio and a note about the error:
+/// "":        check ok
+/// "ERROR":   error is high, there is an error in the results
+/// "WARNING": error is slightly high, there can be an error in the result
+template <typename T>
+void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+                      Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E) {
+  const Index2D rank_result{0, 0};
+
+  // 1. Compute the norm of the original matrix in A (largest eigenvalue)
+  const GlobalElementIndex last_ev(evalues.size().rows() - 1, 0);
+  const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
+  const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
+  const auto norm_A = std::max(std::norm(evalues.read(GlobalTileIndex{0, 0}).get()({0, 0})),
+                               std::norm(evalues.read(last_ev_tile).get()(last_ev_el_tile)));
+
+  // 2.
+  // Compute C = E D - A E
+  Matrix<T, Device::CPU> C(E.distribution());
+  dlaf::miniapp::scaleEigenvectors(evalues, E, C);
+  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+
+  // 3. Compute the max norm of the difference
+  const auto norm_diff =
+      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
+                                               blas::Uplo::General, C);
+
+  // 4.
+  // Evaluation of correctness is done just by the master rank
+  if (comm_grid.rank() != rank_result)
+    return;
+
+  constexpr auto eps = std::numeric_limits<dlaf::BaseType<T>>::epsilon();
+  const auto n = A.size().rows();
+
+  const auto diff_ratio = norm_diff / norm_A;
+
+  if (diff_ratio > 100 * eps * n)
+    std::cout << "ERROR: ";
+  else if (diff_ratio > eps * n)
+    std::cout << "Warning: ";
+
+  std::cout << "Max Diff / Max A: " << diff_ratio << std::endl;
+}
 }

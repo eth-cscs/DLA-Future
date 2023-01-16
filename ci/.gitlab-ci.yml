@@ -193,7 +193,7 @@ cuda codecov build gcc11:
     THREADS_PER_NODE: 24
     USE_CODECOV: "true"
 
-rocm release build clang10+rocm-5.3.3:
+rocm release build clang14+rocm-5.3.3:
   extends: .build_spack_common
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile

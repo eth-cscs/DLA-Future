@@ -188,7 +188,7 @@ pika::program_options::options_description getOptionsDescription() {
 
   // Tune parameters command line options
   desc.add_options()("dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
-                     "The minimun value to start looking for a divisor of the block size.");
+                     "The minimum value to start looking for a divisor of the block size.");
 
   return desc;
 }

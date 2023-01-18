@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include "dlaf/auxiliary/norm/mc.h"
+#include "dlaf/auxiliary/norm/api.h"
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -19,8 +19,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf {
-namespace auxiliary {
+namespace dlaf::auxiliary {
 
 /// Compute the norm @p norm_type of the distributed Matrix @p A (ge/sy/he)
 ///
@@ -40,7 +39,7 @@ namespace auxiliary {
 /// additional info).
 template <Backend backend, Device device, class T>
 dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
-                       blas::Uplo uplo, Matrix<T, device>& A) {
+                       blas::Uplo uplo, Matrix<const T, device>& A) {
   using dlaf::matrix::equal_process_grid;
 
   DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
@@ -61,9 +60,10 @@ dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::
         case blas::Uplo::Lower:
           return internal::Norm<backend, device, T>::max_L(grid, rank, A);
         case blas::Uplo::Upper:
-        case blas::Uplo::General:
           DLAF_UNIMPLEMENTED(norm_type, uplo);
           return {};
+        case blas::Uplo::General:
+          return internal::Norm<backend, device, T>::max_G(grid, rank, A);
         default:
           return {};
       }
@@ -72,5 +72,4 @@ dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::
   }
 }
 
-}
 }

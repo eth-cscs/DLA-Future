@@ -26,6 +26,7 @@
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/sync/broadcast.h"
+#include "dlaf/communication/sync/reduce.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"

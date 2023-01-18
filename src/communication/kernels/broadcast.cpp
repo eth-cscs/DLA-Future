@@ -117,9 +117,16 @@ template <class T, Device D, class Comm>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
   auto recv = [root_rank, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
   };
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
   constexpr Device in_device_type = D;
   constexpr Device comm_device_type = CommunicationDevice_v<in_device_type>;

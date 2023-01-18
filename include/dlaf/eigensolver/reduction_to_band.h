@@ -16,7 +16,7 @@
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/eigensolver/reduction_to_band/impl.h"
+#include "dlaf/eigensolver/reduction_to_band/api.h"
 
 namespace dlaf::eigensolver {
 
@@ -63,17 +63,19 @@ auto groupTausFromBandsToTiles(
 
 }
 
-/// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
+/// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with specified band_size.
 ///
 /// See the related distributed version for more details.
 //
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
 /// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
 /// triangular part will be used.
+/// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
 ///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size
 /// @pre mat_a is a local matrix
+/// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
     Matrix<T, D>& mat_a, const SizeType band_size) {
@@ -88,7 +90,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
                                              band_size, mat_a.blockSize().rows());
 }
 
-/// Reduce a distributed lower Hermitian matrix to symmetric band-diagonal form, with `band = blocksize + 1`.
+/// Reduce a distributed lower Hermitian matrix to symmetric band-diagonal form, with specified band_size.
 ///
 /// The reduction from a lower Hermitian matrix to the band-diagonal form is performed by an orthogonal
 /// similarity transformation Q, applied from left and right as in equation `Q**H . A . Q`, and whose
@@ -102,7 +104,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 /// which are stored, together with the resulting band-diagonal matrix, in-place in the lower triangular
 /// part of @p mat_a.
 ///
-/// In particular, @p mat_a will look like this (tile representation)
+/// In particular, @p mat_a will look like this (tile representation) if band_size == blocksize
 ///
 /// B ~ ~ ~ ~ ~
 /// * B ~ ~ ~ ~
@@ -116,41 +118,36 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 /// of the band (upper triangular diagonal included) and of the elementary reflectors (lower triangular
 /// diagonal excluded).
 ///
+/// In case band_size < blocksize:
+///
+/// * ~ ~ ~ ~ ~
+/// * * ~ ~ ~ ~
+/// v * * ~ ~ ~
+/// v v * * ~ ~
+/// v v v * * ~
+/// v v v v * *
+///
 /// @param grid is the CommunicatorGrid on which @p mat_a is distributed
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
 /// band-diagonal result together with the elementary reflectors as described above. Just the tiles of
 /// the lower triangular part will be used.
+/// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
+///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size
 /// @pre mat_a is distributed according to @p grid
+/// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
 common::internal::vector<pika::shared_future<common::internal::vector<T>>> reductionToBand(
-    comm::CommunicatorGrid grid, Matrix<T, D>& mat_a) {
+    comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
-  return internal::ReductionToBand<B, D, T>::call(grid, mat_a);
+  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
+
+  return internal::groupTausFromBandsToTiles(internal::ReductionToBand<B, D, T>::call(grid, mat_a,
+                                                                                      band_size),
+                                             band_size, mat_a.blockSize().rows());
 }
-
-/// ---- ETI
-#define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE)                   \
-  KWORD template common::internal::vector<pika::shared_future<common::internal::vector<DATATYPE>>> \
-  reductionToBand<BACKEND, DEVICE, DATATYPE>(Matrix<DATATYPE, DEVICE> & mat_a,                     \
-                                             const SizeType band_size);                            \
-  KWORD template common::internal::vector<pika::shared_future<common::internal::vector<DATATYPE>>> \
-  reductionToBand<BACKEND, DEVICE, DATATYPE>(comm::CommunicatorGrid grid,                          \
-                                             Matrix<DATATYPE, DEVICE> & mat_a);
-
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_GPU
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-#endif
 }

@@ -20,6 +20,8 @@
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::eigensolver::internal;
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
 
 template <typename Type>
 class TridiagEigensolverMergeTest : public ::testing::Test {};
@@ -69,7 +71,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   // Sort `vec` in ascending order
-  sortIndex(0, 3, pika::make_ready_future(split), vec, in, out);
+  sortIndex(0, 3, ex::just(split), vec, in, out);
 
   // Merges the two sorted ranges in `vec` to get the indices of the sorted array [1, 2, 4, 6, 7, 8, 9, 12, 17, 32]
   std::vector<SizeType> expected_out_arr{5, 1, 2, 9, 0, 3, 8, 4, 6, 7};
@@ -103,9 +105,9 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
 
   SizeType i_begin = 0;
   SizeType i_end = 3;
-  pika::future<SizeType> k_fut = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
+  auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
 
-  ASSERT_TRUE(k_fut.get() == 7);
+  ASSERT_TRUE(tt::sync_wait(std::move(k)) == 7);
 
   // f u l u l f l d d d
   std::vector<SizeType> expected_out_arr{1, 4, 0, 5, 6, 7, 9, 2, 3, 8};
@@ -153,9 +155,8 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   TypeParam rho = TypeParam(1);
   SizeType i_begin = 0;
   SizeType i_end = 3;
-  auto rots_fut =
-      applyDeflation<TypeParam>(i_begin, i_end, pika::make_ready_future(rho),
-                                pika::make_ready_future(tol), index_mat, d_mat, z_mat, c_mat);
+  auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_end, ex::just(rho), ex::just(tol),
+                                                      index_mat, d_mat, z_mat, c_mat));
 
   Matrix<TypeParam, Device::CPU> d_mat_sorted(sz, bk);
   Matrix<TypeParam, Device::CPU> z_mat_sorted(sz, bk);

@@ -88,6 +88,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 when="amdgpu_target={0}".format(val))
             depends_on("rocblas amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
+            depends_on("rocprim amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocthrust amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("whip amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
             depends_on("umpire amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
 
@@ -109,7 +115,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_WITH_MKL", True))
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
-            args.append(self.define("LAPACK_TYPE", "Custom"))
             args.append(self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
@@ -132,11 +137,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        if '+ci-test' in self.spec:
+        if "+ci-test" in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
-            args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
-            args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
+            if "+cuda":
+                args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
+            if "+rocm":
+                args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))

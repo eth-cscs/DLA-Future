@@ -11,7 +11,8 @@
 
 #include <algorithm>
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
+#include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
@@ -67,18 +68,24 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 }
 
 template <class T, Device D>
-std::vector<pika::shared_future<T>> cuppensDecomposition(Matrix<T, D>& tridiag) {
+auto cuppensDecomposition(Matrix<T, D>& tridiag) {
+  namespace ex = pika::execution::experimental;
+  using sender_type = decltype(ex::split(
+      cuppensDecompAsync<T, D>(tridiag.readwrite_sender_tile(std::declval<LocalTileIndex>()),
+                               tridiag.readwrite_sender_tile(std::declval<LocalTileIndex>()))));
+  using vector_type = std::vector<sender_type>;
+
   if (tridiag.nrTiles().rows() == 0)
-    return {};
+    return vector_type{};
 
   const SizeType i_end = tridiag.nrTiles().rows() - 1;
-  std::vector<pika::shared_future<T>> offdiag_vals;
+  vector_type offdiag_vals;
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(
+    offdiag_vals.push_back(ex::split(
         cuppensDecompAsync<T, D>(tridiag.readwrite_sender_tile(LocalTileIndex(i_split, 0)),
-                                 tridiag.readwrite_sender_tile(LocalTileIndex(i_split + 1, 0))));
+                                 tridiag.readwrite_sender_tile(LocalTileIndex(i_split + 1, 0)))));
   }
   return offdiag_vals;
 }
@@ -189,7 +196,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Ma
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
+  auto offdiag_vals = cuppensDecomposition(tridiag);
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
@@ -283,7 +290,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
 
   // Cuppen's decomposition
-  std::vector<pika::shared_future<T>> offdiag_vals = cuppensDecomposition(tridiag);
+  auto offdiag_vals = cuppensDecomposition(tridiag);
 
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());

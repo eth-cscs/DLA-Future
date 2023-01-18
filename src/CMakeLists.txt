@@ -175,7 +175,8 @@ endfunction()
 # Define DLAF's CORE library
 DLAF_addSublibrary(
   core
-  SOURCES communication/communicator_impl.cpp
+  SOURCES blas/scal.cpp
+          communication/communicator_impl.cpp
           communication/communicator.cpp
           communication/communicator_grid.cpp
           communication/datatypes.cpp
@@ -191,6 +192,7 @@ DLAF_addSublibrary(
           matrix_mirror.cpp
           memory/memory_view.cpp
           memory/memory_chunk.cpp
+          tune.cpp
   GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/lacpy.cu lapack/gpu/laset.cu
   COMPILE_OPTIONS $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>
 )
@@ -245,6 +247,7 @@ DLAF_addSublibrary(
 DLAF_addSublibrary(
   multiplication
   SOURCES multiplication/general/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/general/gpu.cpp>
+          multiplication/hermitian/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/hermitian/gpu.cpp>
           multiplication/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:multiplication/triangular/gpu.cpp>
   LIBRARIES dlaf.core
 )
@@ -262,22 +265,6 @@ DLAF_addSublibrary(
   solver SOURCES solver/triangular/mc.cpp $<$<BOOL:${DLAF_WITH_GPU}>:solver/triangular/gpu.cpp>
   LIBRARIES dlaf.core
 )
-
-target_compile_options(
-  dlaf.core_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=stringop-overflow
-                           -Wno-error=array-bounds>
-)
-target_compile_options(dlaf.eigensolver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
-target_compile_options(
-  dlaf.tridiagonal_eigensolver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
-)
-target_compile_options(
-  dlaf.factorization_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
-)
-target_compile_options(
-  dlaf.multiplication_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
-)
-target_compile_options(dlaf.solver_object PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
 
 # Define DLAF's complete library
 add_library(
@@ -298,19 +285,36 @@ target_add_warnings(DLAF)
 # ----- DEPLOY
 include(GNUInstallDirs)
 
+set(DLAF_EXPORTED_TARGETS DLAF dlaf.prop dlaf.prop_private)
+
 install(
-  TARGETS DLAF dlaf.prop dlaf.prop_private
+  TARGETS ${DLAF_EXPORTED_TARGETS}
   EXPORT DLAF-Targets
   INCLUDES
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+# Create aliases as a `find_package(DLAF)` call would do.
+# This allows external projects embedded in this build and depending on DLAF
+# to use targets at configure time.
+# Indeed, otherwise, targets would be available just calling find_package,
+# that relies on DLAFConfig.cmake and DLAF-Targets, but the latter one would
+# be available just after the cmake generate phase (i.e. too late).
+foreach(_target ${DLAF_EXPORTED_TARGETS})
+  add_library(DLAF::${_target} ALIAS ${_target})
+endforeach()
+
 # install includes
-install(DIRECTORY ../include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# install custom DLAF scripts
+install(FILES ${PROJECT_SOURCE_DIR}/cmake/DLAF_AddTargetWarnings.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
+)
 
 # install custom FindModules
 install(
-  DIRECTORY ../cmake/
+  DIRECTORY ${PROJECT_SOURCE_DIR}/cmake/
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
   FILES_MATCHING
   PATTERN "Find*.cmake"
@@ -330,8 +334,7 @@ install(EXPORT DLAF-Targets NAMESPACE DLAF::
 
 # Config-file preparation and install
 configure_package_config_file(
-  ${CMAKE_CURRENT_LIST_DIR}/../cmake/template/DLAFConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
+  ${PROJECT_SOURCE_DIR}/cmake/template/DLAFConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/DLAFConfig.cmake
   INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${CMAKE_PROJECT_NAME}
 )
 

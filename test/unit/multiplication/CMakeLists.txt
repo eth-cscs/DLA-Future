@@ -17,6 +17,14 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_multiplication_hermitian
+  SOURCES test_multiplication_hermitian.cpp
+  LIBRARIES dlaf.multiplication dlaf.core
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
+DLAF_addTest(
   test_multiplication_triangular
   SOURCES test_multiplication_triangular.cpp
   LIBRARIES dlaf.multiplication dlaf.core

@@ -9,13 +9,10 @@
 //
 #pragma once
 
-#include "dlaf/factorization/qr/mc.h"
-#include "dlaf/factorization/qr/t_factor_impl.h"
+#include "dlaf/factorization/qr/api.h"
 #include "dlaf/matrix/index.h"
 
-namespace dlaf::factorization {
-
-namespace internal {
+namespace dlaf::factorization::internal {
 
 /// Forms the triangular factor T of a block reflector H of order n,
 /// which is defined as a product of k := hh_panel.getWidth() elementary reflectors.
@@ -50,36 +47,6 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
-}
-/// ---- ETI
-#define DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, T)       \
-  KWORD template void computeTFactor<                                            \
-      BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,       \
-                          pika::shared_future<common::internal::vector<T>> taus, \
-                          pika::execution::experimental::unique_any_sender<matrix::Tile<T, DEVICE>> t);
-
-#define DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, T)                             \
-  KWORD template void computeTFactor<                                                                  \
-      BACKEND, DEVICE, T>(matrix::Panel<Coord::Col, T, DEVICE> & hh_panel,                             \
-                          pika::shared_future<common::internal::vector<T>> taus,                       \
-                          pika::execution::experimental::unique_any_sender<matrix::Tile<T, DEVICE>> t, \
-                          common::Pipeline<comm::Communicator> & mpi_col_task_chain);
-
-#define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  DLAF_FACTORIZATION_QR_TFACTOR_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE)
-
-DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, float)
-DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, double)
-DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
-DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
-
-#ifdef DLAF_WITH_GPU
-DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, float)
-DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, double)
-DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
-DLAF_FACTORIZATION_QR_TFACTOR_LOCAL_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
-#endif
 }
 
 }

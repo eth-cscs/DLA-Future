@@ -17,6 +17,7 @@
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/tune.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -50,10 +51,12 @@ TYPED_TEST_SUITE(GenEigensolverTestGPU, MatrixElementTypes);
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
-const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    {0, 2},                              // m = 0
-    {5, 8}, {34, 34},                    // m <= mb
-    {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
+const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
+    // {m, mb, eigensolver_min_band}
+    {0, 2, 100},                                              // m = 0
+    {5, 8, 100}, {34, 34, 100},                               // m <= mb
+    {4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
+    {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
 template <class T, Device D, class... GridIfDistributed>
@@ -187,8 +190,8 @@ void testGenEigensolver(CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      const auto& [m, mb] = sz;
+    for (auto [m, mb, b_min] : sizes) {
+      getTuneParameters().eigensolver_min_band = b_min;
       testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb);
     }
   }
@@ -197,8 +200,8 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        const auto& [m, mb] = sz;
+      for (auto [m, mb, b_min] : sizes) {
+        getTuneParameters().eigensolver_min_band = b_min;
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU>(grid, uplo, m, mb);
       }
     }
@@ -208,8 +211,8 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
-    for (auto sz : sizes) {
-      const auto& [m, mb] = sz;
+    for (auto [m, mb, b_min] : sizes) {
+      getTuneParameters().eigensolver_min_band = b_min;
       testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb);
     }
   }
@@ -218,8 +221,8 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
-      for (auto sz : sizes) {
-        const auto& [m, mb] = sz;
+      for (auto [m, mb, b_min] : sizes) {
+        getTuneParameters().eigensolver_min_band = b_min;
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU>(grid, uplo, m, mb);
       }
     }

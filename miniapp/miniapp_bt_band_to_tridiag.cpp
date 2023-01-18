@@ -60,10 +60,6 @@ struct Options
     DLAF_ASSERT(mb > 0, mb);
     DLAF_ASSERT(b > 0 && mb % b == 0, b, mb);
 
-    DLAF_ASSERT(grid_rows * grid_cols == 1,
-                "Error! Distributed is not avilable yet. "
-                "Please rerun with both --grid-rows and --grid-cols set to 1");
-
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
       do_check = dlaf::miniapp::CheckIterFreq::None;
@@ -84,20 +80,30 @@ struct BacktransformBandToTridiagMiniapp {
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
-    if (opts.grid_rows * opts.grid_cols != 1)
-      DLAF_UNIMPLEMENTED("Distributed implementation not available yet.");
-
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    // Allocate memory for the matrix
-    GlobalElementSize matrix_size(opts.m, opts.n);
-    TileElementSize block_size(opts.mb, opts.nb);
+    // Construct reference matrices.
+    GlobalElementSize mat_e_size(opts.m, opts.n);
+    TileElementSize mat_e_block_size(opts.mb, opts.nb);
 
-    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType mat_e_ref = [mat_e_size, mat_e_block_size, comm_grid]() {
       using dlaf::matrix::util::set_random;
 
-      HostMatrixType random(matrix_size, block_size, comm_grid);
+      HostMatrixType random(mat_e_size, mat_e_block_size, comm_grid);
+      set_random(random);
+
+      return random;
+    }();
+
+    GlobalElementSize mat_hh_size(opts.m, opts.m);
+    TileElementSize mat_hh_block_size(opts.mb, opts.mb);
+
+    // Note: random HHRs are not correct, but do not influence the benchmark result.
+    ConstHostMatrixType mat_hh_ref = [mat_hh_size, mat_hh_block_size, comm_grid]() {
+      using dlaf::matrix::util::set_random;
+
+      HostMatrixType random(mat_hh_size, mat_hh_block_size, comm_grid);
       set_random(random);
 
       return random;
@@ -107,22 +113,24 @@ struct BacktransformBandToTridiagMiniapp {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
 
-      HostMatrixType mat_e_host(matrix_size, block_size, comm_grid);
-      copy(matrix_ref, mat_e_host);
+      HostMatrixType mat_e_host(mat_e_size, mat_e_block_size, comm_grid);
+      copy(mat_e_ref, mat_e_host);
 
-      HostMatrixType mat_hh({opts.m, opts.m}, {opts.mb, opts.mb}, comm_grid);
+      HostMatrixType mat_hh(mat_hh_size, mat_hh_block_size, comm_grid);
+      copy(mat_hh_ref, mat_hh);
 
       double elapsed_time;
       {
         MatrixMirrorType mat_e(mat_e_host);
 
-        // Wait for matrices to be copied to GPU (if necessary)
+        // Wait for matrices to be copied
         mat_e.get().waitLocalTiles();
+        mat_hh.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
-                                                           T>(opts.b, mat_e.get(), mat_hh);
+                                                           T>(comm_grid, opts.b, mat_e.get(), mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

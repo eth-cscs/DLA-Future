@@ -613,8 +613,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(ij.row(), j_e);
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
-        // TODO: Remove?
-        // auto tile_e = mat_e.read_sender2(idx_e);
 
         if (!helper.affectsMultipleTiles()) {
           auto tile_v_top = subTileSender(tile_v, helper.topPart().specHH());

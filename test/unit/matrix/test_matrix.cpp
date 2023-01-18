@@ -72,27 +72,26 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
   return {size.rows() * grid_size.rows(), size.cols() * grid_size.cols()};
 }
 
-TYPED_TEST(MatrixLocalTest, StaticAPI) {
-  constexpr Device device = Device::CPU;
+template <class T, Device D>
+void testStaticAPI() {
+  using matrix_t = Matrix<T, D>;
 
-  using matrix_t = Matrix<TypeParam, device>;
-
-  static_assert(std::is_same_v<TypeParam, typename matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, device>, typename matrix_t::TileType>, "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename matrix_t::ConstTileType>,
+  // MatrixLike Traits
+  using ncT = std::remove_const_t<T>;
+  static_assert(std::is_same_v<ncT, typename matrix_t::ElementType>, "wrong ElementType");
+  static_assert(std::is_same_v<Tile<ncT, D>, typename matrix_t::TileType>, "wrong TileType");
+  static_assert(std::is_same_v<Tile<const T, D>, typename matrix_t::ConstTileType>,
                 "wrong ConstTileType");
 }
 
+TYPED_TEST(MatrixLocalTest, StaticAPI) {
+  testStaticAPI<TypeParam, Device::CPU>();
+  testStaticAPI<TypeParam, Device::GPU>();
+}
+
 TYPED_TEST(MatrixLocalTest, StaticAPIConst) {
-  constexpr Device device = Device::CPU;
-
-  using const_matrix_t = Matrix<const TypeParam, device>;
-
-  static_assert(std::is_same_v<TypeParam, typename const_matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<TypeParam, device>, typename const_matrix_t::TileType>,
-                "wrong TileType");
-  static_assert(std::is_same_v<Tile<const TypeParam, device>, typename const_matrix_t::ConstTileType>,
-                "wrong ConstTileType");
+  testStaticAPI<const TypeParam, Device::CPU>();
+  testStaticAPI<const TypeParam, Device::GPU>();
 }
 
 TYPED_TEST(MatrixLocalTest, Constructor) {

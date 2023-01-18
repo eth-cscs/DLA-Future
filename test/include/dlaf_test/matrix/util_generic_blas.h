@@ -85,6 +85,83 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const 
   return std::make_tuple<>(elA, elB, elC, elR);
 }
 
+template <class ElementIndex, class T>
+auto getHermitianMatrixMultiplication(const blas::Side side, const blas::Uplo uplo, const SizeType k,
+                                      const T alpha, const T beta) {
+  using dlaf::test::TypeUtilities;
+
+  // Note: The tile elements are chosen such that:
+  // Cij = 1.2 * i / (j+1) * exp(I * (j-i))
+  // where I is the imaginary number
+  //
+  // if side == Left
+  // Aik = 0.9 * (i+1) * (k+1) * exp(gamma * I * (i-k))
+  // Bkj = 0.7 / ((j+1) * (k+1)) * exp(gamma * I * (k+j))
+  //
+  // if side == Right
+  // Bik = 0.7 / ((i+1) * (k+1)) * exp(gamma * I * (i+k))
+  // Akj = 0.9 * (j+1) * (k+1) * exp(gamma * I * (j-k))
+  //
+  // Hence the solution (S) will be
+  // if side == Left
+  // Sij = beta * Cij + 0.63 * k * alpha * (i+1)/(j+1) exp(I * gamma * (i+j))
+  // if side == Right
+  // Sij = beta * Cij + 0.63 * k * alpha * (j+1)/(i+1) exp(I * gamma * (i+j))
+  const BaseType<T> gamma = 1.3f;
+
+  auto el_a = [uplo, side, gamma](const ElementIndex& index) {
+    if ((uplo == blas::Uplo::Lower && index.row() < index.col()) ||
+        (uplo == blas::Uplo::Upper && index.row() > index.col())) {
+      return TypeUtilities<T>::element(-99, -87);
+    }
+    if (side == blas::Side::Left) {
+      const double i = index.row();
+      const double k = index.col();
+      return TypeUtilities<T>::polar(.9 * (i + 1) * (k + 1), gamma * (i - k));
+    }
+    else {
+      const double k = index.row();
+      const double j = index.col();
+      return TypeUtilities<T>::polar(.9 * (j + 1) * (k + 1), gamma * (j - k));
+    }
+  };
+
+  auto el_b = [side, gamma](const ElementIndex& index) {
+    if (side == blas::Side::Left) {
+      const double k = index.row();
+      const double j = index.col();
+      return TypeUtilities<T>::polar(.7 / ((j + 1) * (k + 1)), gamma * (k + j));
+    }
+    else {
+      const double i = index.row();
+      const double k = index.col();
+      return TypeUtilities<T>::polar(.7 / ((i + 1) * (k + 1)), gamma * (i + k));
+    }
+  };
+
+  auto el_c = [](const ElementIndex& index) {
+    const double i = index.row();
+    const double j = index.col();
+    return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
+  };
+
+  auto res_c = [side, k, alpha, beta, gamma, el_c](const ElementIndex& index) {
+    const double i = index.row();
+    const double j = index.col();
+
+    if (side == blas::Side::Left) {
+      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
+                                      TypeUtilities<T>::polar((i + 1) / (j + 1), gamma * (i + j));
+    }
+    else {
+      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
+                                      TypeUtilities<T>::polar((j + 1) / (i + 1), gamma * (i + j));
+    }
+  };
+
+  return std::make_tuple<>(el_a, el_b, el_c, res_c);
+}
+
 /// Returns a tuple of element generators of three matrices A(m x m), B (m x n), X (m x n), for which it
 /// holds op(A) X = alpha B (n can be any value).
 ///

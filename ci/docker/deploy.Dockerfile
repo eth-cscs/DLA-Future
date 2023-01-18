@@ -29,6 +29,13 @@ RUN spack repo rm --scope site dlaf && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
     spack -e ci install --jobs ${NUM_PROCS} --keep-stage --verbose
 
+# Test deployment with miniapps as independent project
+RUN pushd ${SOURCE}/miniapp && \
+    mkdir build-miniapps && cd build-miniapps && \
+    spack -e ci build-env dla-future@develop -- \
+    bash -c "cmake -DCMAKE_PREFIX_PATH=`spack -e ci location -i dla-future` .. && make -j ${NUM_PROCS}" && \
+    popd
+
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \

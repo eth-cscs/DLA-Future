@@ -10,8 +10,10 @@
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
+#include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/multiplication/general.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
@@ -185,7 +187,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
   Distribution dist_evecs(GlobalElementSize(n, n), TileElementSize(nb, nb), grid.size(), grid.rank(),
                           src_rank_index);
 
-  // Allocate the tridiagonl, eigenvalues and eigenvectors matrices
+  // Allocate the tridiagonal, eigenvalues and eigenvectors matrices
   Matrix<RealParam, Device::CPU> tridiag(dist_trd);
   Matrix<RealParam, Device::CPU> evals(dist_evals);
   Matrix<T, Device::CPU> evecs(dist_evecs);

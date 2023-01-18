@@ -12,8 +12,11 @@
 
 /// @file
 
+#include <type_traits>
+
 #include <pika/future.hpp>
 
+#include "dlaf/common/index2d.h"
 #include "dlaf/communication/kernels/broadcast.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -36,6 +39,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
   const auto rank_owner = dist.template rankGlobalTile<orthogonal(dst_coord)>(idx_cross);
   return std::make_pair(idx_cross, rank_owner);
 }
+
 }
 
 /// Broadcast
@@ -49,8 +53,9 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 ///                     on other ranks it is the destination panel
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
-template <class T, Device D, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
-void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D>& panel,
+template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
+          class = std::enable_if_t<!std::is_const_v<T>>>
+void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                common::Pipeline<comm::Communicator>& serial_comm) {
   constexpr auto comm_coord = axis;
 
@@ -58,7 +63,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D>& panel,
   if (panel.parentDistribution().commGridSize().get(comm_coord) <= 1)
     return;
 
-  const auto rank = panel.rankIndex().get(comm_coord);
+  const auto rank = panel.parentDistribution().rankIndex().get(comm_coord);
 
   namespace ex = pika::execution::experimental;
   for (const auto& index : panel.iteratorLocal()) {
@@ -100,9 +105,10 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D>& panel,
 /// @pre both panels are child of a matrix (even not the same) with the same Distribution
 /// @pre both panels parent matrices should be square matrices with square blocksizes
 /// @pre both panels offsets should lay on the main diagonal of the parent matrix
-template <class T, Device D, Coord axis, class = std::enable_if_t<!std::is_const_v<T>>>
-void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D>& panel,
-               matrix::Panel<orthogonal(axis), T, D>& panelT,
+template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
+          matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
+void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
+               matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
                common::Pipeline<comm::Communicator>& row_task_chain,
                common::Pipeline<comm::Communicator>& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
@@ -193,5 +199,6 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D>& panel,
     }
   }
 }
+
 }
 }

@@ -84,4 +84,19 @@ struct QR_Tfactor {
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
+/// ---- ETI
+#define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct QR_Tfactor<BACKEND, DEVICE, DATATYPE>;
+
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, float)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, double)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<float>)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, std::complex<double>)
+
+#ifdef DLAF_WITH_GPU
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::GPU, Device::GPU, float)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::GPU, Device::GPU, double)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
+DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
+#endif
 }

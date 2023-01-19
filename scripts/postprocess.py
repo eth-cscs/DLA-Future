@@ -254,6 +254,11 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("chol_scalapack"):
         pstr_arr = ["PROBLEM PARAMETERS:"]
         pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_scalapack"):
+        pstr_res = "[{run_index:d}] scalapack time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_elpa"):
+        stages = bench_name[8]
+        pstr_res = "[{run_index:d}] elpa"+stages+" time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 

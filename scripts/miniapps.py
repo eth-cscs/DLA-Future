@@ -30,6 +30,8 @@ def _check_ranks_per_node(system, lib, rpn):
         raise ValueError(f"Wrong value rpn = {rpn}!")
     if lib == "scalapack":
         return
+    if lib.startswith("elpa"):
+        return
     if not rpn in system["Allowed rpns"]:
         raise ValueError(f"Wrong value rpn = {rpn}!")
     if rpn != 1 and lib == "dplasma":
@@ -526,6 +528,18 @@ def evp(
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_eigensolver"
         opts = f"--matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    elif lib == "scalapack":
+        env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/miniapp_evp_scalapack"
+        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns}"
+    elif lib == "elpa1":
+        env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/miniapp_evp_elpa"
+        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} 1"
+    elif lib == "elpa2":
+        env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/miniapp_evp_elpa"
+        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} 2"
     else:
         raise ValueError(_err_msg(lib))
 

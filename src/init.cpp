@@ -187,8 +187,9 @@ pika::program_options::options_description getOptionsDescription() {
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
 
   // Tune parameters command line options
-  desc.add_options()("dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
-                     "The minimun value to start looking for a divisor of the block size.");
+  desc.add_options()(
+      "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
+      "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
 
   return desc;
 }

@@ -81,3 +81,6 @@ spack:
       - spec: hsa-rocr-dev@5.3.3
         prefix: /opt/rocm-5.3.3
       buildable: false
+    whip:
+      version:
+        - git.6cbe9b8cb636348c3e2ad28f3d376a5004e14827

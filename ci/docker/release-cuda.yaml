@@ -41,3 +41,6 @@ spack:
       # Force git as non-buildable to allow deprecated versions in environments
       # https://github.com/spack/spack/pull/30040
       buildable: false
+    whip:
+      version:
+        - git.6cbe9b8cb636348c3e2ad28f3d376a5004e14827

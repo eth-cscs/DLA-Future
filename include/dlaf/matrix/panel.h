@@ -510,7 +510,7 @@ protected:
 
 template <Coord axis, class T, Device D>
 struct Panel<axis, const T, D, StoreTransposed::Yes>
-    : public Panel<orthogonal(axis), const T, D, StoreTransposed::No> {
+    : protected Panel<orthogonal(axis), const T, D, StoreTransposed::No> {
 private:
   using BaseT = Panel<orthogonal(axis), const T, D, StoreTransposed::No>;
 
@@ -590,19 +590,34 @@ public:
 
   using BaseT::offsetElement;
 
+  template <typename Sender>
+  void setTileSender(LocalTileIndex index, Sender&& new_tile_sender) {
+    index.transpose();
+    BaseT::setTileSender(index, std::forward<Sender>(new_tile_sender));
+  }
+
   void setTile(LocalTileIndex index, pika::shared_future<ConstTileType> new_tile_fut) {
+    DLAF_UNREACHABLE_PLAIN;
     index.transpose();
     BaseT::setTile(index, std::move(new_tile_fut));
   }
 
   pika::shared_future<ConstTileType> read(LocalTileIndex index) {
+    DLAF_UNREACHABLE_PLAIN;
     index.transpose();
     return BaseT::read(index);
   }
 
   auto read_sender(LocalTileIndex index) {
+    DLAF_UNREACHABLE_PLAIN;
     index.transpose();
     return BaseT::read_sender(index);
+  }
+
+  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
+      LocalTileIndex index) {
+    index.transpose();
+    return BaseT::read_sender2(index);
   }
 
   using BaseT::reset;

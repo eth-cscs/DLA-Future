@@ -237,7 +237,6 @@ template <Coord Axis, class T, StoreTransposed Storage>
 void testAccess(const GlobalElementSize size, const TileElementSize blocksize,
                 const GlobalTileIndex offset, const comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<T>;
-  using pika::unwrapping;
 
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
 

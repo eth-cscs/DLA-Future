@@ -126,15 +126,15 @@ DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<float>, Device::CPU, common::Promi
 DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, float, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, double, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<double>, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, float, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, double, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<float>, Device::GPU, Communicator);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<double>, Device::GPU, Communicator);
 
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_SFTILE_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_WRAPPER_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
 #endif
 
 template <class T, Device D, class Comm>

@@ -144,9 +144,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class TSender>
+  template <class VISender, class TSender>
   static auto gemvColumnT(SizeType first_row_tile,
-                          pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
+                          VISender&& tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus,
                           TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
@@ -198,7 +198,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
                                                          pika::execution::thread_priority::high),
                                                      std::move(gemv_func),
-                                                     ex::when_all(tile_vi,
+                                                     ex::when_all(std::forward<VISender>(tile_vi),
                                                                   dlaf::internal::keepFuture(taus),
                                                                   std::forward<TSender>(tile_t)));
   }

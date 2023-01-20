@@ -498,9 +498,8 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      auto tile_a = a.readwrite_sender_tile(ij_local);
-      auto getSubA = [&view, ij_local](auto&& tile_a) {
-        return subTileSender(make_unique_any_sender(std::move(tile_a)), view(ij_local));
+      auto getSubA = [&a, &view, ij_local]() {
+        return subTileSender(make_unique_any_sender(a.readwrite_sender_tile(ij_local)), view(ij_local));
       };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
@@ -508,17 +507,16 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
       const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag<B>(priority, v.read_sender2(ij_local), x.read_sender2(ij_local),
-                     getSubA(a.readwrite_sender_tile(ij_local)));
+        her2kDiag<B>(priority, v.read_sender2(ij_local), x.read_sender2(ij_local), getSubA());
       }
       else {
         // A -= X . V*
         her2kOffDiag<B>(priority, x.read_sender2(ij_local), v.read_sender2(transposed(ij_local)),
-                        getSubA(a.readwrite_sender_tile(ij_local)));
+                        getSubA());
 
         // A -= V . X*
         her2kOffDiag<B>(priority, v.read_sender2(ij_local), x.read_sender2(transposed(ij_local)),
-                        getSubA(a.readwrite_sender_tile(ij_local)));
+                        getSubA());
       }
     }
   }
@@ -571,7 +569,6 @@ template <class MatrixLike, class TriggerSender, class CommSender>
 auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                             CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
                             const matrix::SubPanelView& panel_view, const SizeType nrefls) {
-  static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
@@ -589,12 +586,17 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
     return taus;
   };
 
-  std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
+  using panel_tile_type =
+      decltype(matrix::subTileSender(ex::make_unique_any_sender(
+                                         mat_a.readwrite_sender_tile(std::declval<LocalTileIndex>())),
+                                     std::declval<matrix::SubTileSpec>()));
+  std::vector<panel_tile_type> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
+    panel_tiles.emplace_back(
+        matrix::subTileSender(ex::make_unique_any_sender(mat_a.readwrite_sender_tile(i)), spec));
   }
 
   return ex::when_all(ex::when_all_vector(std::move(panel_tiles)),
@@ -759,14 +761,14 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
       const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA());
+        her2kDiag<B>(priority, v.read_sender2(ij_local), x.read_sender2(ij_local), getSubA());
       }
       else {
         // A -= X . V*
-        her2kOffDiag<B>(priority, x.read_sender(ij_local), vt.read_sender(ij_local), getSubA());
+        her2kOffDiag<B>(priority, x.read_sender2(ij_local), vt.read_sender2(ij_local), getSubA());
 
         // A -= V . X*
-        her2kOffDiag<B>(priority, v.read_sender(ij_local), xt.read_sender(ij_local), getSubA());
+        her2kOffDiag<B>(priority, v.read_sender2(ij_local), xt.read_sender2(ij_local), getSubA());
       }
     }
   }
@@ -857,7 +859,7 @@ protected:
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite_sender_tile(i);
       ex::start_detached(
-          ex::when_all(subTileSender(mat_a.read_sender2(i), spec), subTileSender(tmp_tile, spec)) |
+          ex::when_all(subTileSender(mat_a.read_sender2(i), spec), subTileSender(std::move(tmp_tile), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
     }
   }
@@ -869,12 +871,13 @@ protected:
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
+    using pika::execution::experimental::make_unique_any_sender;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite_sender_tile(i);
       ex::start_detached(
-          ex::when_all(subTileSender(v.read_sender2(i), spec), subTileSender(tile_a, spec)) |
+          ex::when_all(subTileSender(v.read_sender2(i), spec), subTileSender(make_unique_any_sender(std::move(tile_a)), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
     }
   }
@@ -1280,17 +1283,17 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       if (at_tile_col == dist.nrTiles().cols() - 1) {
         const comm::IndexT_MPI owner = rank_v0.row();
         if (rank.row() == owner) {
-          xt.setTile(at, x.read(at));
+          xt.setTileSender(at, x.read_sender2(at));
 
           if (dist.commGridSize().rows() > 1)
             ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()),
-                                                       ex::make_unique_any_sender(xt.read_sender(at))));
+                                                       ex::make_unique_any_sender(xt.read_sender2(at))));
         }
         else {
           if (dist.commGridSize().rows() > 1)
             ex::start_detached(
                 comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()), owner,
-                                        ex::make_unique_any_sender(xt.readwrite_sender(at))));
+                                        ex::make_unique_any_sender(xt.readwrite_sender_tile(at))));
         }
       }
 

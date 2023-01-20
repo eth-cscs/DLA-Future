@@ -106,6 +106,7 @@ cscs["eiger"] = {
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
 #SBATCH --account=csstaff
+#SBATCH --constraint=mc
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
 

@@ -616,7 +616,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
         const LocalTileIndex idx_e(ij.row(), j_e);
         const auto sz_e = mat_e.tileSize({ij.row(), j_e});
-        auto tile_e = mat_e.read(idx_e);
 
         if (not helper.affectsMultipleTiles()) {
           ex::start_detached(

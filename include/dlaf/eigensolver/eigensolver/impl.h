@@ -20,6 +20,7 @@
 #include "dlaf/eigensolver/band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_reduction_to_band.h"
+#include "dlaf/eigensolver/get_band_size.h"
 #include "dlaf/eigensolver/reduction_to_band.h"
 #include "dlaf/eigensolver/tridiag_solver.h"
 #include "dlaf/lapack/tile.h"
@@ -36,7 +37,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
   using common::internal::vector;
 
   const SizeType size = mat_a.size().rows();
-  const SizeType band_size = mat_a.blockSize().rows();
+  const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)
@@ -78,7 +79,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   using common::internal::vector;
 
   const SizeType size = mat_a.size().rows();
-  const SizeType band_size = mat_a.blockSize().rows();
+  const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)

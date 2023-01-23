@@ -14,6 +14,7 @@
 #include <dlaf/communication/error.h>
 #include <dlaf/init.h>
 #include <dlaf/memory/memory_chunk.h>
+#include <dlaf/tune.h>
 
 #include <cstdlib>
 #include <iostream>
@@ -110,7 +111,14 @@ struct parseFromString {
 template <>
 struct parseFromString<std::size_t> {
   static std::size_t call(const std::string& var) {
-    return std::stoul(var);
+    return std::stoull(var);
+  };
+};
+
+template <>
+struct parseFromString<SizeType> {
+  static SizeType call(const std::string& var) {
+    return std::stoll(var);
   };
 };
 
@@ -148,6 +156,11 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
                            "UMPIRE_DEVICE_MEMORY_POOL_INITIAL_BYTES",
                            "umpire-device-memory-pool-initial-bytes");
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
+
+  // update tune parameters
+  auto& param = getTuneParameters();
+  updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND",
+                           "eigensolver-min-band");
 }
 
 configuration& getConfiguration() {
@@ -172,6 +185,11 @@ pika::program_options::options_description getOptionsDescription() {
                      pika::program_options::value<std::size_t>(),
                      "Number of bytes to preallocate for device memory pool");
   desc.add_options()("dlaf:no-mpi-pool", pika::program_options::bool_switch(), "Disable the MPI pool.");
+
+  // Tune parameters command line options
+  desc.add_options()(
+      "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
+      "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
 
   return desc;
 }

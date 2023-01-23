@@ -22,7 +22,3 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
-
-target_compile_options(
-  test_permutations_distributed PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
-)

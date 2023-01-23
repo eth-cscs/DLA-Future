@@ -149,6 +149,16 @@ add_subdirectory(src)
 # mini Apps
 # ---------------------------------------------------------------------------
 if(DLAF_BUILD_MINIAPPS)
+  # Create a "do-nothing" DLAFConfig.cmake, and make it usable by find_package
+  # by adding it in CMAKE_PREFIX_PATH.
+  # In this way any call to `find_package(DLAF)` is a no-op. Indeed, nothing
+  # is necessary to be done, since we are in-project and targets are still
+  # available thanks to manually created aliases for exported targets.
+  set(FAKE_INSTALL_DIR ${PROJECT_BINARY_DIR}/fake)
+  file(MAKE_DIRECTORY ${FAKE_INSTALL_DIR})
+  file(TOUCH ${FAKE_INSTALL_DIR}/DLAFConfig.cmake)
+  list(PREPEND CMAKE_PREFIX_PATH ${FAKE_INSTALL_DIR})
+
   add_subdirectory(miniapp)
 endif()
 

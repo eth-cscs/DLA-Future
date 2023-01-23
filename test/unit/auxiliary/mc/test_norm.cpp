@@ -125,7 +125,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
         Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
 
         for (const auto& uplo : blas_uplos) {
-          if (blas::Uplo::Lower != uplo)
+          if (blas::Uplo::Upper == uplo)
             continue;
 
           dlaf::matrix::util::set_random_hermitian(matrix);
@@ -135,7 +135,7 @@ TYPED_TEST(NormDistributedTest, NormMax) {
               auxiliary::norm<Backend::MC>(comm_grid, rank_result, norm_type, uplo, matrix);
 
           if (rank_result == comm_grid.rank()) {
-            EXPECT_GE(norm, -1);
+            EXPECT_GE(norm, 0);
             EXPECT_LE(norm, +1);
           }
 

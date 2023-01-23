@@ -8,12 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/auxiliary/norm/mc.h"
+#include <dlaf/init.h>
+#include <dlaf/tune.h>
 
-namespace dlaf::auxiliary::internal {
+namespace dlaf {
 
-DLAF_NORM_ETI(, float)
-DLAF_NORM_ETI(, double)
-DLAF_NORM_ETI(, std::complex<float>)
-DLAF_NORM_ETI(, std::complex<double>)
+TuneParameters& getTuneParameters() {
+  static TuneParameters params;
+  return params;
+}
+
 }

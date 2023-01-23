@@ -100,14 +100,14 @@ run.add(
     mp.evp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": None},
+    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "min_band": None},
     nruns,
 )
 run.add(
     mp.gevp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": None},
+    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "min_band": None},
     nruns,
 )
 run.submit(run_dir, debug=debug)

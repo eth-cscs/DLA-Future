@@ -226,8 +226,10 @@ def _parse_line_based(fout, bench_name, nodes):
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["trid_evp", "evp", "gevp"]:
+        if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["evp", "gevp"]:
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -397,11 +399,11 @@ def calc_bt_red2band_metrics(df):
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 # Customization that add a simple legend
@@ -416,7 +418,7 @@ def add_basic_legend(fig, ax):
 
 def _gen_plot(
     scaling,
-    title,
+    name,
     routine,
     filename,
     size_type,
@@ -435,7 +437,7 @@ def _gen_plot(
     """
     Args:
         scaling         strong | weak
-        title:          name of the routine to be included in the title
+        name:           name of the routine to be included in the title
         routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | evp | gevp
         combine_mb:     bool indicates if different mb has to be included in the same plot
         size_type:      m | mn It indicates which sizes are relevant.
@@ -510,7 +512,7 @@ def _gen_plot(
                     b = int(x[i])
                     i += 1
 
-        title = f"{title}: {scaling} scaling"
+        title = f"{name}: {scaling} scaling"
         filename_ppn = f"{filename}_{scaling}_ppn"
         filename_time = f"{filename}_{scaling}_time"
         if size_type == "m":
@@ -582,7 +584,7 @@ def gen_chol_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="Cholesky",
+        name="Cholesky",
         routine="chol",
         filename="chol",
         size_type="m",
@@ -616,7 +618,7 @@ def gen_chol_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="Cholesky",
+        name="Cholesky",
         routine="chol",
         filename="chol",
         size_type="m",
@@ -650,7 +652,7 @@ def gen_trsm_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="TRSM",
+        name="TRSM",
         routine="trsm",
         filename="trsm",
         size_type="mn",
@@ -684,7 +686,7 @@ def gen_trsm_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="TRSM",
+        name="TRSM",
         routine="trsm",
         filename="trsm",
         size_type="mn",
@@ -718,7 +720,7 @@ def gen_gen2std_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="HEGST",
+        name="HEGST",
         routine="hegst",
         filename="gen2std",
         size_type="m",
@@ -752,7 +754,7 @@ def gen_gen2std_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="HEGST",
+        name="HEGST",
         routine="hegst",
         filename="gen2std",
         size_type="m",
@@ -786,7 +788,7 @@ def gen_red2band_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="RED2B",
+        name="RED2B",
         routine="red2band",
         filename="red2band",
         size_type="m",
@@ -821,7 +823,7 @@ def gen_red2band_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="RED2B",
+        name="RED2B",
         routine="red2band",
         filename="red2band",
         size_type="m",
@@ -856,7 +858,7 @@ def gen_band2trid_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="B2T",
+        name="B2T",
         routine="band2trid",
         filename="band2trid",
         size_type="m",
@@ -891,7 +893,7 @@ def gen_band2trid_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="B2T",
+        name="B2T",
         routine="band2trid",
         filename="band2trid",
         size_type="m",
@@ -926,7 +928,7 @@ def gen_trid_evp_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="TridiagSolver",
+        name="TridiagSolver",
         routine="trid_evp",
         filename="trid_evp",
         size_type="m",
@@ -959,7 +961,7 @@ def gen_trid_evp_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="TridiagSolver",
+        name="TridiagSolver",
         routine="trid_evp",
         filename="trid_evp",
         size_type="m",
@@ -992,7 +994,7 @@ def gen_bt_band2trid_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="BT_B2T",
+        name="BT_B2T",
         routine="bt_band2trid",
         filename="bt_band2trid",
         size_type="mn",
@@ -1027,7 +1029,7 @@ def gen_bt_band2trid_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="BT_B2T",
+        name="BT_B2T",
         routine="bt_band2trid",
         filename="bt_band2trid",
         size_type="mn",
@@ -1062,7 +1064,7 @@ def gen_bt_red2band_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="BT_RED2B",
+        name="BT_RED2B",
         routine="bt_red2band",
         filename="bt_red2band",
         size_type="mn",
@@ -1097,7 +1099,7 @@ def gen_bt_red2band_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="BT_RED2B",
+        name="BT_RED2B",
         routine="bt_red2band",
         filename="bt_red2band",
         size_type="mn",
@@ -1132,7 +1134,7 @@ def gen_evp_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="EVP",
+        name="EVP",
         routine="evp",
         filename="evp",
         size_type="m",
@@ -1143,6 +1145,7 @@ def gen_evp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1165,7 +1168,7 @@ def gen_evp_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="EVP",
+        name="EVP",
         routine="evp",
         filename="evp",
         size_type="m",
@@ -1177,6 +1180,7 @@ def gen_evp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1198,7 +1202,7 @@ def gen_gevp_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="GEVP",
+        name="GEVP",
         routine="gevp",
         filename="gevp",
         size_type="m",
@@ -1209,6 +1213,7 @@ def gen_gevp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1231,7 +1236,7 @@ def gen_gevp_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="GEVP",
+        name="GEVP",
         routine="gevp",
         filename="gevp",
         size_type="m",
@@ -1243,5 +1248,6 @@ def gen_gevp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )

@@ -9,7 +9,7 @@
 #
 
 from itertools import product
-from math import sqrt
+from math import ceil, sqrt
 from os import makedirs, system
 from os.path import expanduser, isfile
 from time import sleep
@@ -39,10 +39,10 @@ def _check_ranks_per_node(system, lib, rpn):
 # return a dict with item "nodes" if rpn==None
 # return a dict with items "nodes", "rpn", "total_ranks", "cores_per_rank", "threads_per_rank" otherwise.
 def _computeResourcesNeeded(system, nodes, rpn):
-    resources = {"nodes": nodes}
+    resources = {"nodes": ceil(nodes)}
     if rpn != None:
         resources["rpn"] = rpn
-        resources["total_ranks"] = nodes * rpn
+        resources["total_ranks"] = int(nodes * rpn)
         resources["cores_per_rank"] = system["Cores"] // rpn
         resources["threads_per_rank"] = system["Threads per core"] * resources["cores_per_rank"]
     return resources
@@ -266,7 +266,7 @@ def gen2std(
 ):
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -312,7 +312,7 @@ def red2band(
 
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -352,7 +352,7 @@ def band2trid(
 
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -386,7 +386,7 @@ def trid_evp(
 ):
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -431,7 +431,7 @@ def bt_band2trid(
 
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -475,7 +475,7 @@ def bt_red2band(
 
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -511,7 +511,7 @@ def evp(
 ):
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
@@ -554,7 +554,7 @@ def gevp(
 ):
     _check_ranks_per_node(system, lib, rpn)
 
-    total_ranks = nodes * rpn
+    total_ranks = int(nodes * rpn)
     cores_per_rank = system["Cores"] // rpn
     grid_cols, grid_rows = _sq_factor(total_ranks)
 

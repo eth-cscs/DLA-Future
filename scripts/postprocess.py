@@ -120,7 +120,7 @@ def _gen_nodes_plot(
 
         nodes = df["nodes"].sort_values().unique()
         ax.set_xticks(nodes)
-        ax.set_xticklabels([f"{x:d}" for x in nodes])
+        ax.set_xticklabels([f"{x:f}" for x in nodes])
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
@@ -327,7 +327,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
                 if f.endswith(".out"):
-                    nodes = int(os.path.basename(subdir))
+                    nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
                         benchname += "@" + data_dir

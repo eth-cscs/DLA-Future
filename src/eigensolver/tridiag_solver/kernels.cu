@@ -171,7 +171,7 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-const T* maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream) {
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T& max_el, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
@@ -180,7 +180,8 @@ const T* maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, 
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = ::thrust::hip::par;
 #endif
-  return thrust::max_element(par.on(stream), arr, arr + len);
+  auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
+  whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);

@@ -260,7 +260,11 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("evp_elpa"):
         stages = bench_name[8]
         pstr_arr = []
-        pstr_res = "[{run_index:d}] Elpa"+stages+" {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+        pstr_res = (
+            "[{run_index:d}] Elpa"
+            + stages
+            + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+        )
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 

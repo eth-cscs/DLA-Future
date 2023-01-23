@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Usage: `mpirun gpu2ranks_slurm <my_commands>`
+#
+# This script is used to restrict visible GPUs when using multiple ranks per
+# node with slurm. It can be used with CUDA or HIP.
+
+set -eu
+
+export CUDA_VISIBLE_DEVICES=$SLURM_LOCALID
+export ROCR_VISIBLE_DEVICES=$SLURM_LOCALID
+
+eval "$@"

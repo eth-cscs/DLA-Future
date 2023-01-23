@@ -122,6 +122,69 @@ printenv > env_{bs_name}.txt
 """,
 }
 
+# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+#       modify "Run command" if it is not the case.
+cscs["hohgant-nvgpu"] = {
+    "Cores": 64,
+    "Threads per core": 2,
+    "Allowed rpns": [4],
+    "Multiple rpn in same job": True,
+    "GPU": True,
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm",
+    "Batch preamble": """
+#!/bin/bash -l
+#SBATCH --job-name={run_name}_{nodes}
+#SBATCH --time={time_min}
+#SBATCH --nodes={nodes}
+#SBATCH --partition=nvgpu
+#SBATCH --exclude=nid[002024-002025,002028-002029]
+#SBATCH --hint=multithread
+#SBATCH --output=output.txt
+#SBATCH --error=error.txt
+
+# Env
+export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
+
+# Debug
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# Commands
+""",
+}
+
+cscs["hohgant-amdgpu"] = {
+    "Cores": 64,
+    "Threads per core": 2,
+    "Allowed rpns": [8],
+    "Multiple rpn in same job": True,
+    "GPU": True,
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm",
+    "Batch preamble": """
+#!/bin/bash -l
+#SBATCH --job-name={run_name}_{nodes}
+#SBATCH --time={time_min}
+#SBATCH --nodes={nodes}
+#SBATCH --partition=amdgpu
+#SBATCH --hint=multithread
+#SBATCH --output=output.txt
+#SBATCH --error=error.txt
+
+# Env
+export MPICH_MAX_THREAD_SAFETY=multiple
+export MIMALLOC_EAGER_COMMIT_DELAY=0
+export MIMALLOC_LARGE_OS_PAGES=1
+
+# Debug
+module list &> modules_{bs_name}.txt
+printenv > env_{bs_name}.txt
+
+# Commands
+""",
+}
+
 csc = {}
 
 csc["lumi-cpu"] = {

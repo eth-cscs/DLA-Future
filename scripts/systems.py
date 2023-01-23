@@ -199,7 +199,7 @@ csc["lumi-cpu"] = {
 #SBATCH --job-name={run_name}_{nodes}
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
-#SBATCH --account=project_465000151
+#SBATCH --account=project_465000105
 #SBATCH --partition=standard
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
@@ -224,16 +224,17 @@ csc["lumi-gpu"] = {
     "Allowed rpns": [8],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    # Based on https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff000000000000,ff00000000000000,ff0000,ff000000,fe,ff00,ff00000000,ff0000000000 gpu2ranks_slurm",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
-#SBATCH --account=project_465000151
-#SBATCH --partition=pilot
+#SBATCH --account=project_465000105
+#SBATCH --partition=standard-g
 #SBATCH --hint=multithread
-#SBATCH --gpus-per-task=1
+#SBATCH --gpus-per-node=8
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
 

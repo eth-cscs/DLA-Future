@@ -13,7 +13,9 @@
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
@@ -213,11 +215,11 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream);
+const T* maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream);
 
-#define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                    \
-  kword template Type maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
-                                             whip::stream_t stream)
+#define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                     \
+  kword template const Type* maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
+                                              whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
@@ -229,8 +231,33 @@ DLAF_MAKE_CALLABLE_OBJECT(maxElementInColumnTile);
 template <class T, Device D, class TileSender>
 auto maxElementInColumnTileAsync(TileSender&& tile) {
   namespace di = dlaf::internal;
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), maxElementInColumnTile_o,
-                       std::forward<TileSender>(tile));
+  namespace ex = pika::execution::experimental;
+
+  using ElementType = dlaf::internal::SenderElementType<TileSender>;
+  constexpr auto default_backend = dlaf::DefaultBackend_v<D>;
+
+  // TODO: it should be possible to express all of this a bit more elegantly...
+  if constexpr (default_backend == dlaf::Backend::GPU) {
+    constexpr auto copy_backend = dlaf::matrix::internal::CopyBackend_v<D, Device::CPU>;
+
+    return ex::when_all(std::forward<TileSender>(tile), ex::just(ElementType{})) |
+           ex::let_value([](auto& tile, auto& result) {
+             return di::keepFuture(tile) |
+                    di::transform(di::Policy<default_backend>(), maxElementInColumnTile_o) |
+                    // TODO: this should should be scheduled on the same stream as the previous
+                    // transform, is it?
+                    di::transform(di::Policy<copy_backend>(),
+                                  [&result](auto* d_max_ptr, whip::stream_t stream) {
+                                    whip::memcpy_async(&result, d_max_ptr, sizeof(ElementType),
+                                                       whip::memcpy_device_to_host, stream);
+                                  }) |
+                    ex::then([&result]() { return result; });
+           });
+  }
+  else {
+    return di::transform(di::Policy<dlaf::DefaultBackend_v<D>>(), maxElementInColumnTile_o,
+                         std::forward<TileSender>(tile));
+  }
 }
 
 void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile);

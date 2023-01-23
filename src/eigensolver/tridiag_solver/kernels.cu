@@ -91,8 +91,8 @@ __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* 
 // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
 //
 template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                whip::stream_t stream) {
+void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                T& h_offdiag_val, whip::stream_t stream) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};
   TileElementIndex bottom_idx{0, 0};
@@ -101,12 +101,7 @@ T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, D
   T* d_bottom_diag_val = bottom.ptr(bottom_idx);
 
   cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
-
-  // TODO: this is a peformance pessimization, the value is on device
-  T h_offdiag_val;
   whip::memcpy_async(&h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
-
-  return h_offdiag_val;
 }
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(, float);

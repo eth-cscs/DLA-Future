@@ -90,12 +90,13 @@ DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                whip::stream_t stream);
+void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                T& h_offdiag_val, whip::stream_t stream);
 
 #define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
-  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
+  kword template void cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
                                     const matrix::Tile<Type, Device::GPU>& bottom, \
+                                    Type& h_offdiag_val, \
                                     whip::stream_t stream)
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
@@ -110,8 +111,22 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), cuppensDecomp_o, std::move(sender));
+  using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
+  constexpr auto default_backend = dlaf::DefaultBackend_v<D>;
+
+  // TODO: it should be possible to express all of this a bit more elegantly...
+  if constexpr (default_backend == dlaf::Backend::GPU) {
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(ElementType{})) |
+           ex::let_value([](auto& top, auto& bottom, auto& h_offdiag_val) {
+             return ex::just(std::ref(top), std::ref(bottom), std::ref(h_offdiag_val)) |
+                    di::transform(di::Policy<default_backend>(), cuppensDecomp_o) |
+                    ex::then([&h_offdiag_val]() { return h_offdiag_val; });
+           });
+  }
+  else {
+    auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
+    return di::transform(di::Policy<default_backend>(), cuppensDecomp_o, std::move(sender));
+  }
 }
 
 template <class T>

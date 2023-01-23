@@ -117,6 +117,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
     return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(ElementType{})) |
+           // TODO: This needs host pinned memory!
            ex::let_value([](auto& top, auto& bottom, auto& h_offdiag_val) {
              return ex::just(std::ref(top), std::ref(bottom), std::ref(h_offdiag_val)) |
                     di::transform(di::Policy<default_backend>(), cuppensDecomp_o) |
@@ -254,6 +255,7 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
     return ex::when_all(std::forward<TileSender>(tile), ex::just(ElementType{})) |
+           // TODO: This needs host pinned memory!
            ex::let_value([](auto& tile, auto& max_el) {
              DLAF_ASSERT(tile.is_ready(), "");
              return ex::just(tile, std::ref(max_el)) |

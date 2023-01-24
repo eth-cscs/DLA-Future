@@ -4,6 +4,11 @@
 #
 # This script is used to restrict visible GPUs when using multiple ranks per
 # node with slurm. It can be used with CUDA or HIP.
+#
+# Note that this script simply restricts the visible devices to SLURM_LOCALID.
+# If there is a different relationship between NUMA nodes and GPUs the remapping
+# must be done in systems.py by setting the --cpu-bind flag to srun. nvidia-smi
+# and rocm-smi can be used to find the affinity of GPUs to NUMA nodes.
 
 set -eu
 

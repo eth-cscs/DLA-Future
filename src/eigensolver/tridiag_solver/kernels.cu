@@ -92,7 +92,7 @@ __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* 
 //
 template <class T>
 void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                T& h_offdiag_val, whip::stream_t stream) {
+                T* h_offdiag_val, whip::stream_t stream) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};
   TileElementIndex bottom_idx{0, 0};
@@ -101,7 +101,7 @@ void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T
   T* d_bottom_diag_val = bottom.ptr(bottom_idx);
 
   cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
-  whip::memcpy_async(&h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
+  whip::memcpy_async(h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
@@ -166,7 +166,7 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T& max_el, whip::stream_t stream) {
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
@@ -176,7 +176,7 @@ void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T& m
   constexpr auto par = ::thrust::hip::par;
 #endif
   auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
-  whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
+  whip::memcpy_async(max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);

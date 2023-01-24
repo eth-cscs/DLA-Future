@@ -91,12 +91,12 @@ DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 
 template <class T>
 void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                T& h_offdiag_val, whip::stream_t stream);
+                T* h_offdiag_val, whip::stream_t stream);
 
 #define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
   kword template void cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
                                     const matrix::Tile<Type, Device::GPU>& bottom, \
-                                    Type& h_offdiag_val, \
+                                    Type* h_offdiag_val, \
                                     whip::stream_t stream)
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
@@ -116,12 +116,11 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
 
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(ElementType{})) |
-           // TODO: This needs host pinned memory!
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(memory::MemoryView<ElementType, Device::CPU>{1})) |
            ex::let_value([](auto& top, auto& bottom, auto& h_offdiag_val) {
-             return ex::just(std::ref(top), std::ref(bottom), std::ref(h_offdiag_val)) |
+             return ex::just(std::ref(top), std::ref(bottom), h_offdiag_val()) |
                     di::transform(di::Policy<default_backend>(), cuppensDecomp_o) |
-                    ex::then([&h_offdiag_val]() { return h_offdiag_val; });
+                    ex::then([&h_offdiag_val]() { return *h_offdiag_val(); });
            });
   }
   else {
@@ -231,10 +230,10 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T& max_el, whip::stream_t stream);
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, whip::stream_t stream);
 
 #define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                     \
-  kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, Type& max_el, \
+  kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, Type* max_el, \
                                               whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
@@ -254,13 +253,12 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
 
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TileSender>(tile), ex::just(ElementType{})) |
-           // TODO: This needs host pinned memory!
+    return ex::when_all(std::forward<TileSender>(tile), ex::just(memory::MemoryView<ElementType, Device::CPU>{1})) |
            ex::let_value([](auto& tile, auto& max_el) {
              DLAF_ASSERT(tile.is_ready(), "");
-             return ex::just(tile, std::ref(max_el)) |
+             return ex::just(tile, max_el()) |
                     di::transform(di::Policy<default_backend>(), maxElementInColumnTile_o) |
-                    ex::then([&max_el]() { return max_el; });
+                    ex::then([&max_el]() { return *max_el(); });
            });
   }
   else {

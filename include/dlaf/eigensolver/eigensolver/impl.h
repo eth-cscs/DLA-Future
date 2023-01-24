@@ -12,6 +12,7 @@
 #include <cmath>
 #include <vector>
 
+#include "dlaf/common/timer.h"
 #include "dlaf/eigensolver/eigensolver/api.h"
 
 #include "dlaf/blas/tile.h"
@@ -81,12 +82,25 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
   const SizeType size = mat_a.size().rows();
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
+  const bool isMaster = grid.rank() == comm::Index2D(0, 0);
+
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
+  auto printTime = [](common::Timer<>& timer) { std::cout << timer.elapsed() << "\n"; };
+
+  common::Timer t1;
   auto taus = reductionToBand<B>(grid, mat_a, band_size);
+  mat_a.waitLocalTiles();
+  if (isMaster)
+    printTime(t1);
+
+  common::Timer t2;
   auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
+  ret.tridiagonal.waitLocalTiles();
+  if (isMaster)
+    printTime(t2);
 
   // Note:
   // Since reduction from band to tridiagonal happens on MC for all backends, but eigensolver
@@ -107,10 +121,23 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
                                        TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> mat_e(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
+  common::Timer t3;
   eigensolver::tridiagSolver<B>(grid, tridiagonal, evals, mat_e);
+  mat_e.waitLocalTiles();
+  if (isMaster)
+    printTime(t3);
 
+  common::Timer t4;
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  mat_e.waitLocalTiles();
+  if (isMaster)
+    printTime(t4);
+
+  common::Timer t5;
   backTransformationReductionToBand<B>(grid, band_size, mat_e, mat_a, taus);
+  mat_e.waitLocalTiles();
+  if (isMaster)
+    printTime(t5);
 
   return {std::move(evals), std::move(mat_e)};
 }

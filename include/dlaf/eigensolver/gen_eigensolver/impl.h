@@ -36,12 +36,17 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
                                    Matrix<T, D>& eigenvectors) {
   cholesky_factorization<B>(grid, uplo, mat_b);
+  mat_b.waitLocalTiles();
+
   generalized_to_standard<B>(grid, uplo, mat_a, mat_b);
+  mat_a.waitLocalTiles();
 
   hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors);
+  eigenvectors.waitLocalTiles();
 
   triangular_solver<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                        mat_b, eigenvectors);
+  eigenvectors.waitLocalTiles();
 }
 
 }

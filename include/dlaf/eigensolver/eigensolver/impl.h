@@ -14,6 +14,7 @@
 #include <vector>
 
 #include <dlaf/blas/tile.h>
+#include <dlaf/common/timer.h>
 #include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/band_to_tridiag.h>
@@ -42,13 +43,32 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
+  auto printTime = [](common::Timer<>& timer) { std::cout << timer.elapsed() << "\n"; };
+
+  common::Timer t1;
   auto mat_taus = reduction_to_band<B>(mat_a, band_size);
+  mat_a.waitLocalTiles();
+  printTime(t1);
+
+  common::Timer t2;
   auto ret = band_to_tridiagonal<Backend::MC>(uplo, band_size, mat_a);
+  ret.tridiagonal.waitLocalTiles();
+  printTime(t2);
 
+  common::Timer t3;
   tridiagonal_eigensolver<B>(ret.tridiagonal, evals, mat_e);
+  mat_e.waitLocalTiles();
+  printTime(t3);
 
+  common::Timer t4;
   bt_band_to_tridiagonal<B>(band_size, mat_e, ret.hh_reflectors);
+  mat_e.waitLocalTiles();
+  printTime(t4);
+
+  common::Timer t5;
   bt_reduction_to_band<B>(band_size, mat_e, mat_a, mat_taus);
+  mat_e.waitLocalTiles();
+  printTime(t5);
 }
 
 template <Backend B, Device D, class T>
@@ -60,8 +80,20 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
 
+  auto printTime = [isMaster = (grid.rank() == comm::Index2D(0, 0))](common::Timer<>& timer) {
+    if (isMaster)
+      std::cout << timer.elapsed() << "\n";
+  };
+
+  common::Timer t1;
   auto mat_taus = reduction_to_band<B>(grid, mat_a, band_size);
+  mat_a.waitLocalTiles();
+  printTime(t1);
+
+  common::Timer t2;
   auto ret = band_to_tridiagonal<Backend::MC>(grid, uplo, band_size, mat_a);
+  ret.tridiagonal.waitLocalTiles();
+  printTime(t2);
 
 #ifdef DLAF_WITH_HDF5
   std::optional<matrix::internal::FileHDF5> file;
@@ -72,7 +104,10 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   }
 #endif
 
+  common::Timer t3;
   tridiagonal_eigensolver<B>(grid, ret.tridiagonal, evals, mat_e);
+  mat_e.waitLocalTiles();
+  printTime(t3);
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_trisolver_data) {
@@ -81,7 +116,14 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   }
 #endif
 
+  common::Timer t4;
   bt_band_to_tridiagonal<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  mat_e.waitLocalTiles();
+  printTime(t4);
+
+  common::Timer t5;
   bt_reduction_to_band<B>(grid, band_size, mat_e, mat_a, mat_taus);
+  mat_e.waitLocalTiles();
+  printTime(t5);
 }
 }

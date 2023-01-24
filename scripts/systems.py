@@ -131,7 +131,7 @@ cscs["hohgant-nvgpu"] = {
     "Multiple rpn in same job": True,
     "GPU": True,
     # Based on nvidia-smi topo --matrix
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000,ffff00000000,ffff0000,ffff gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -166,7 +166,7 @@ cscs["hohgant-amdgpu"] = {
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --showtoponuma
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff000000000000,ff00000000000000,ff0000,ff000000,ff,ff00,ff00000000,ff0000000000 gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -232,7 +232,7 @@ csc["lumi-gpu"] = {
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --show-topo
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff000000000000,ff00000000000000,ff0000,ff000000,fe,ff00,ff00000000,ff0000000000 gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}

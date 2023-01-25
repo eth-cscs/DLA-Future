@@ -167,24 +167,22 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
 __global__
-void maxElementInColumnTileKernel(const T* begin, const T* end, const T* d_max_ptr) {
+void maxElementInColumnTileKernel(const T* begin, const T* end, T* d_max_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = ::thrust::hip::par;
 #endif
 
-  d_max_ptr = thrust::max_element(par, begin, end);
+  *d_max_ptr = *thrust::max_element(par, begin, end);
 }
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, const T* d_max_ptr, whip::stream_t stream) {
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, T* d_max_ptr, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
-  maxElementInColumnTileKernel
-      <<<1, 1, 0, stream>>>
-      (arr, arr + len, d_max_ptr);
+  maxElementInColumnTileKernel<<<1, 1, 0, stream>>>(arr, arr + len, d_max_ptr);
   whip::memcpy_async(max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
@@ -608,29 +606,39 @@ DLAF_GPU_COPY_1D_ETI(, float);
 DLAF_GPU_COPY_1D_ETI(, double);
 
 // -----------------------------------------
+__device__ bool pred(const SizeType) { return false; }
 
-// Note: that this blocks the thread until the kernels complete
-SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, whip::stream_t stream) {
-  // The number of non-deflated values
+struct PartitionPredicate {
+  const ColType* c_ptr;
+  __device__ bool operator()(const SizeType i) {
+      return c_ptr[i] != ColType::Deflated;
+  } 
+};
+
+__global__ void stablePartitionIndexKernel(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                      SizeType* out_ptr, SizeType* k_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = thrust::hip::par;
 #endif
-  // TODO: This is still blocking, even with par_nosync.
-  // TODO: Why is this even needed?? Does the partition below not compute the
-  // same thing? Not quite. k is needed to know where to put the second half of
-  // the partition. However, this could be a copy + partition in place.
-  // Plan: move these into kernels.
-  SizeType k = n - thrust::count(par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+  // Alternative: copy, then partition in place. Is it faster?
+
+  SizeType& k = *k_ptr;
+
+  // The number of non-deflated values
+  k = n - thrust::count(par, c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
-  auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
-  // TODO: This is also always blocking.
-  thrust::stable_partition_copy(par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-                                std::move(cmp));
-  return k;
+  thrust::stable_partition_copy(par, in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+                                PartitionPredicate{c_ptr});
+}
+
+void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                  SizeType* out_ptr, SizeType* k_ptr, SizeType* d_k_ptr,
+                                  whip::stream_t stream) {
+  stablePartitionIndexKernel<<<1, 1, 0, stream>>>(n, c_ptr, in_ptr, out_ptr, d_k_ptr);
+  whip::memcpy_async(k_ptr, d_k_ptr, sizeof(SizeType), whip::memcpy_device_to_host, stream);
 }
 
 template <class T>

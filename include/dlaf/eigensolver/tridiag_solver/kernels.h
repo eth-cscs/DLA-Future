@@ -231,11 +231,11 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, const T* d_max_ptr, whip::stream_t stream);
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, T* d_max_ptr, whip::stream_t stream);
 
 #define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                     \
   kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, Type* max_el, \
-                                             const Type* d_max_ptr, whip::stream_t stream)
+                                             Type* d_max_ptr, whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
@@ -653,8 +653,9 @@ void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTile
 #ifdef DLAF_WITH_GPU
 
 // Returns the number of non-deflated entries
-SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, whip::stream_t stream);
+void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                  SizeType* out_ptr, SizeType* k_ptr, SizeType* d_k_ptr,
+                                  whip::stream_t stream);
 
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,

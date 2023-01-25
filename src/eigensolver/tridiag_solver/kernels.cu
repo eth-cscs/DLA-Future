@@ -610,10 +610,6 @@ DLAF_GPU_COPY_1D_ETI(, float);
 DLAF_GPU_COPY_1D_ETI(, double);
 
 // -----------------------------------------
-__device__ bool pred(const SizeType) {
-  return false;
-}
-
 // This is a separate struct with a call operator instead of a lambda, because
 // nvcc does not compile the file with a lambda.
 struct PartitionIndicesPredicate {

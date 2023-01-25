@@ -15,6 +15,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/memory/memory_chunk.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
@@ -116,7 +117,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
 
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(memory::MemoryView<ElementType, Device::CPU>{1})) |
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
            ex::let_value([](auto& top, auto& bottom, auto& h_offdiag_val) {
              return ex::just(std::ref(top), std::ref(bottom), h_offdiag_val()) |
                     di::transform(di::Policy<default_backend>(), cuppensDecomp_o) |
@@ -230,11 +231,11 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, whip::stream_t stream);
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, const T* d_max_ptr, whip::stream_t stream);
 
 #define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                     \
   kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, Type* max_el, \
-                                              whip::stream_t stream)
+                                             const Type* d_max_ptr, whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
@@ -253,10 +254,10 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
 
   // TODO: it should be possible to express all of this a bit more elegantly...
   if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TileSender>(tile), ex::just(memory::MemoryView<ElementType, Device::CPU>{1})) |
-           ex::let_value([](auto& tile, auto& max_el) {
+    return ex::when_all(std::forward<TileSender>(tile), ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1}, memory::MemoryChunk<ElementType, Device::GPU>{1})) |
+           ex::let_value([](auto& tile, auto& max_el, auto& d_max) {
              DLAF_ASSERT(tile.is_ready(), "");
-             return ex::just(tile, max_el()) |
+             return ex::just(tile, max_el(), d_max()) |
                     di::transform(di::Policy<default_backend>(), maxElementInColumnTile_o) |
                     ex::then([&max_el]() { return *max_el(); });
            });

@@ -166,16 +166,25 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, whip::stream_t stream) {
-  SizeType len = tile.size().rows();
-  const T* arr = tile.ptr();
-
+__global__
+void maxElementInColumnTileKernel(const T* begin, const T* end, const T* d_max_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = ::thrust::hip::par;
 #endif
-  auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
+
+  d_max_ptr = thrust::max_element(par, begin, end);
+}
+
+template <class T>
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, const T* d_max_ptr, whip::stream_t stream) {
+  SizeType len = tile.size().rows();
+  const T* arr = tile.ptr();
+
+  maxElementInColumnTileKernel
+      <<<1, 1, 0, stream>>>
+      (arr, arr + len, d_max_ptr);
   whip::memcpy_async(max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
@@ -609,33 +618,42 @@ SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const Si
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = thrust::hip::par;
 #endif
+  // TODO: This is still blocking, even with par_nosync.
+  // TODO: Why is this even needed?? Does the partition below not compute the
+  // same thing? Not quite. k is needed to know where to put the second half of
+  // the partition. However, this could be a copy + partition in place.
+  // Plan: move these into kernels.
   SizeType k = n - thrust::count(par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
   auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
+  // TODO: This is also always blocking.
   thrust::stable_partition_copy(par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
                                 std::move(cmp));
   return k;
 }
 
-// https://github.com/NVIDIA/thrust/issues/1515
-//
 template <class T>
-void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
-                          SizeType* out_ptr, const T* v_ptr, whip::stream_t stream) {
-  auto cmp = [v_ptr] __device__(const SizeType& i1, const SizeType& i2) {
+__global__ void mergeIndicesKernel(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
+                          SizeType* out_ptr, const T* v_ptr)
+{
+  auto cmp = [v_ptr] (const SizeType& i1, const SizeType& i2) {
     return v_ptr[i1] < v_ptr[i2];
   };
-  // NOTE: The call may be synchronous, to avoid that either wrap in a __global__ function as shown in
-  // thrust's `examples/cuda/async_reduce.cu` or use the policy `thrust::cuda::par_nosync.on(stream)` in
-  // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
-  //
+
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = thrust::hip::par;
 #endif
-  thrust::merge(par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
+
+  thrust::merge(par, begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
+}
+
+template <class T>
+void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
+                          SizeType* out_ptr, const T* v_ptr, whip::stream_t stream) {
+  mergeIndicesKernel<<<1, 1, 0, stream>>>(begin_ptr, split_ptr, end_ptr, out_ptr, v_ptr);
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);

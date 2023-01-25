@@ -38,12 +38,17 @@ template <Backend B, Device D, class T>
 EigensolverResult<T, D> GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                                       Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   factorization::cholesky<B>(grid, uplo, mat_b);
+  mat_b.waitLocalTiles();
+
   eigensolver::genToStd<B>(grid, uplo, mat_a, mat_b);
+  mat_a.waitLocalTiles();
 
   auto ret = eigensolver::eigensolver<B>(grid, uplo, mat_a);
+  ret.eigenvectors.waitLocalTiles();
 
   solver::triangular<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                         mat_b, ret.eigenvectors);
+  ret.eigenvectors.waitLocalTiles();
 
   return ret;
 }

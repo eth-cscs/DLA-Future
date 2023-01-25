@@ -156,6 +156,8 @@ printenv > env_{bs_name}.txt
 """,
 }
 
+# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+#       modify "Run command" if it is not the case.
 cscs["hohgant-amdgpu"] = {
     "Cores": 64,
     "Threads per core": 2,
@@ -223,6 +225,8 @@ printenv > env_{bs_name}.txt
 """,
 }
 
+# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+#       modify "Run command" if it is not the case.
 csc["lumi-gpu"] = {
     "Cores": 64,
     "Threads per core": 2,

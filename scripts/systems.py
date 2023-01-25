@@ -232,7 +232,7 @@ csc["lumi-gpu"] = {
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --show-topo
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,fe00000000000000fe,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}

@@ -9,8 +9,6 @@
 //
 #pragma once
 
-#include "dlaf/eigensolver/eigensolver/api.h"
-
 #include "dlaf/common/assert.h"
 #include "dlaf/tune.h"
 #include "dlaf/types.h"

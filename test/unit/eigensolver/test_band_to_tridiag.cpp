@@ -18,6 +18,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/traits.h"
+#include "dlaf/tune.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_generic_lapack.h"
@@ -40,13 +41,13 @@ struct EigensolverBandToTridiagTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(EigensolverBandToTridiagTest, MatrixElementTypes);
 
-const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
-    // {m, mb, band_size}
-    {0, 2, 2},                            // m = 0
-    {1, 2, 2},                            // m = 1
-    {5, 5, 5},  {4, 4, 2},                // m = mb
-    {4, 6, 3},  {8, 4, 2},  {16, 12, 6},  // m != mb
-    {18, 4, 4}, {34, 6, 6}, {37, 9, 3}    // m != mb
+const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
+    // {m, mb, mb_1d, band_size}
+    {0, 2, 2, 2},                                    // m = 0
+    {1, 2, 2, 2},                                    // m = 1
+    {5, 5, 5, 5},  {4, 4, 4, 2},                     // m = mb
+    {4, 6, 6, 3},  {8, 4, 8, 2},   {16, 12, 12, 6},  // m != mb
+    {18, 4, 8, 4}, {34, 6, 18, 6}, {37, 9, 9, 3}     // m != mb
 };
 
 template <class T, class... GridIfDistributed>
@@ -131,6 +132,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 template <Device D, class T>
 void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType band_size,
                        const SizeType m, const SizeType mb) {
+  std::cout << m << std::endl;
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
   Distribution distr({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
 
@@ -157,16 +159,20 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromCPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (const auto& [m, mb, b] : sizes)
+  for (const auto& [m, mb, mb_1d, b] : sizes) {
+    getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
     testBandToTridiag<Device::CPU, TypeParam>(uplo, b, m, mb);
+  }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (const auto& [m, mb, b] : sizes)
+  for (const auto& [m, mb, mb_1d, b] : sizes) {
+    getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
     testBandToTridiag<Device::GPU, TypeParam>(uplo, b, m, mb);
+  }
 }
 #endif
 
@@ -174,7 +180,8 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, mb, b] : sizes) {
+    for (const auto& [m, mb, mb_1d, b] : sizes) {
+      getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
       testBandToTridiag<Device::CPU, TypeParam>(comm_grid, uplo, b, m, mb);
     }
   }
@@ -185,7 +192,8 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributedFromGPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, mb, b] : sizes) {
+    for (const auto& [m, mb, mb_1d, b] : sizes) {
+      getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
       testBandToTridiag<Device::GPU, TypeParam>(comm_grid, uplo, b, m, mb);
     }
   }

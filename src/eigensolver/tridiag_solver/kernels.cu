@@ -73,10 +73,11 @@ DLAF_GPU_CAST_TO_COMPLEX_ETI(, float);
 DLAF_GPU_CAST_TO_COMPLEX_ETI(, double);
 
 template <class T>
-__global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
-  const T offdiag = *offdiag_val;
-  T& top_diag = *top_diag_val;
-  T& bottom_diag = *bottom_diag_val;
+__global__ void cuppensDecompOnDevice(const T* offdiag_val_ptr, T* top_diag_val_ptr,
+                                      T* bottom_diag_val_ptr) {
+  const T offdiag = *offdiag_val_ptr;
+  T& top_diag = *top_diag_val_ptr;
+  T& bottom_diag = *bottom_diag_val_ptr;
 
   if constexpr (std::is_same<T, float>::value) {
     top_diag -= fabsf(offdiag);
@@ -92,16 +93,18 @@ __global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* 
 //
 template <class T>
 void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                T* h_offdiag_val, whip::stream_t stream) {
+                   T* host_offdiag_val_ptr, whip::stream_t stream) {
   TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
   TileElementIndex top_idx{top.size().rows() - 1, 0};
   TileElementIndex bottom_idx{0, 0};
-  const T* d_offdiag_val = top.ptr(offdiag_idx);
-  T* d_top_diag_val = top.ptr(top_idx);
-  T* d_bottom_diag_val = bottom.ptr(bottom_idx);
+  const T* device_offdiag_val_ptr = top.ptr(offdiag_idx);
+  T* device_top_diag_val_ptr = top.ptr(top_idx);
+  T* device_bottom_diag_val_ptr = bottom.ptr(bottom_idx);
 
-  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
-  whip::memcpy_async(h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
+  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(device_offdiag_val_ptr, device_top_diag_val_ptr,
+                                             device_bottom_diag_val_ptr);
+  whip::memcpy_async(host_offdiag_val_ptr, device_offdiag_val_ptr, sizeof(T),
+                     whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
@@ -166,24 +169,25 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-__global__
-void maxElementInColumnTileKernel(const T* begin, const T* end, T* d_max_ptr) {
+__global__ void maxElementInColumnTileOnDevice(const T* begin_ptr, const T* end_ptr,
+                                             T* device_max_el_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = ::thrust::hip::par;
 #endif
 
-  *d_max_ptr = *thrust::max_element(par, begin, end);
+  *device_max_el_ptr = *thrust::max_element(par, begin_ptr, end_ptr);
 }
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, T* d_max_ptr, whip::stream_t stream) {
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* host_max_el_ptr,
+                            T* device_max_el_ptr, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
-  maxElementInColumnTileKernel<<<1, 1, 0, stream>>>(arr, arr + len, d_max_ptr);
-  whip::memcpy_async(max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
+  maxElementInColumnTileOnDevice<<<1, 1, 0, stream>>>(arr, arr + len, device_max_el_ptr);
+  whip::memcpy_async(host_max_el_ptr, device_max_el_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
@@ -606,17 +610,21 @@ DLAF_GPU_COPY_1D_ETI(, float);
 DLAF_GPU_COPY_1D_ETI(, double);
 
 // -----------------------------------------
-__device__ bool pred(const SizeType) { return false; }
+__device__ bool pred(const SizeType) {
+  return false;
+}
 
-struct PartitionPredicate {
+// This is a separate struct with a call operator instead of a lambda, because
+// nvcc does not compile the file with a lambda.
+struct PartitionIndicesPredicate {
   const ColType* c_ptr;
   __device__ bool operator()(const SizeType i) {
-      return c_ptr[i] != ColType::Deflated;
-  } 
+    return c_ptr[i] != ColType::Deflated;
+  }
 };
 
-__global__ void stablePartitionIndexKernel(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, SizeType* k_ptr) {
+__global__ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                           SizeType* out_ptr, SizeType* device_k_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
@@ -624,30 +632,27 @@ __global__ void stablePartitionIndexKernel(SizeType n, const ColType* c_ptr, con
 #endif
   // Alternative: copy, then partition in place. Is it faster?
 
-  SizeType& k = *k_ptr;
+  SizeType& k = *device_k_ptr;
 
   // The number of non-deflated values
   k = n - thrust::count(par, c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
   thrust::stable_partition_copy(par, in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-                                PartitionPredicate{c_ptr});
+                                PartitionIndicesPredicate{c_ptr});
 }
 
 void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                  SizeType* out_ptr, SizeType* k_ptr, SizeType* d_k_ptr,
+                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
                                   whip::stream_t stream) {
-  stablePartitionIndexKernel<<<1, 1, 0, stream>>>(n, c_ptr, in_ptr, out_ptr, d_k_ptr);
-  whip::memcpy_async(k_ptr, d_k_ptr, sizeof(SizeType), whip::memcpy_device_to_host, stream);
+  stablePartitionIndexOnDevice<<<1, 1, 0, stream>>>(n, c_ptr, in_ptr, out_ptr, device_k_ptr);
+  whip::memcpy_async(host_k_ptr, device_k_ptr, sizeof(SizeType), whip::memcpy_device_to_host, stream);
 }
 
 template <class T>
-__global__ void mergeIndicesKernel(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
-                          SizeType* out_ptr, const T* v_ptr)
-{
-  auto cmp = [v_ptr] (const SizeType& i1, const SizeType& i2) {
-    return v_ptr[i1] < v_ptr[i2];
-  };
+__global__ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr,
+                                   const SizeType* end_ptr, SizeType* out_ptr, const T* v_ptr) {
+  auto cmp = [v_ptr](const SizeType& i1, const SizeType& i2) { return v_ptr[i1] < v_ptr[i2]; };
 
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
@@ -661,7 +666,7 @@ __global__ void mergeIndicesKernel(const SizeType* begin_ptr, const SizeType* sp
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
                           SizeType* out_ptr, const T* v_ptr, whip::stream_t stream) {
-  mergeIndicesKernel<<<1, 1, 0, stream>>>(begin_ptr, split_ptr, end_ptr, out_ptr, v_ptr);
+  mergeIndicesOnDevice<<<1, 1, 0, stream>>>(begin_ptr, split_ptr, end_ptr, out_ptr, v_ptr);
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);

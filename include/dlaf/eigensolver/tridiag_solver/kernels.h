@@ -16,7 +16,6 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_chunk.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
@@ -92,13 +91,12 @@ DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 
 template <class T>
 void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                T* h_offdiag_val, whip::stream_t stream);
+                   T* host_offdiag_val_ptr, whip::stream_t stream);
 
 #define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
   kword template void cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
                                     const matrix::Tile<Type, Device::GPU>& bottom, \
-                                    Type* h_offdiag_val, \
-                                    whip::stream_t stream)
+                                    Type* host_offdiag_val_ptr, whip::stream_t stream)
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
@@ -113,20 +111,20 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace di = dlaf::internal;
 
   using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
-  constexpr auto default_backend = dlaf::DefaultBackend_v<D>;
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
-  // TODO: it should be possible to express all of this a bit more elegantly...
-  if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom), ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
-           ex::let_value([](auto& top, auto& bottom, auto& h_offdiag_val) {
-             return ex::just(std::ref(top), std::ref(bottom), h_offdiag_val()) |
-                    di::transform(di::Policy<default_backend>(), cuppensDecomp_o) |
-                    ex::then([&h_offdiag_val]() { return *h_offdiag_val(); });
+  if constexpr (backend == dlaf::Backend::GPU) {
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom),
+                        ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
+           ex::let_value([](auto& top, auto& bottom, auto& host_offdiag_val) {
+             return ex::just(std::ref(top), std::ref(bottom), host_offdiag_val()) |
+                    di::transform(di::Policy<backend>(), cuppensDecomp_o) |
+                    ex::then([&host_offdiag_val]() { return *host_offdiag_val(); });
            });
   }
   else {
-    auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
-    return di::transform(di::Policy<default_backend>(), cuppensDecomp_o, std::move(sender));
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
+           di::transform(di::Policy<backend>(), cuppensDecomp_o);
   }
 }
 
@@ -231,11 +229,13 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* max_el, T* d_max_ptr, whip::stream_t stream);
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* host_max_el_ptr,
+                            T* device_max_el_ptr, whip::stream_t stream);
 
-#define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                     \
-  kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, Type* max_el, \
-                                             Type* d_max_ptr, whip::stream_t stream)
+#define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                    \
+  kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
+                                             Type* host_max_el_ptr, Type* device_max_el_ptr,    \
+                                             whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
@@ -250,21 +250,22 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
   namespace ex = pika::execution::experimental;
 
   using ElementType = dlaf::internal::SenderElementType<TileSender>;
-  constexpr auto default_backend = dlaf::DefaultBackend_v<D>;
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
-  // TODO: it should be possible to express all of this a bit more elegantly...
-  if constexpr (default_backend == dlaf::Backend::GPU) {
-    return ex::when_all(std::forward<TileSender>(tile), ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1}, memory::MemoryChunk<ElementType, Device::GPU>{1})) |
-           ex::let_value([](auto& tile, auto& max_el, auto& d_max) {
+  if constexpr (backend == dlaf::Backend::GPU) {
+    return ex::when_all(std::forward<TileSender>(tile),
+                        ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},
+                                 memory::MemoryChunk<ElementType, Device::GPU>{1})) |
+           ex::let_value([](auto& tile, auto& host_max_el, auto& device_max_el) {
              DLAF_ASSERT(tile.is_ready(), "");
-             return ex::just(tile, max_el(), d_max()) |
-                    di::transform(di::Policy<default_backend>(), maxElementInColumnTile_o) |
-                    ex::then([&max_el]() { return *max_el(); });
+             return ex::just(tile, host_max_el(), device_max_el()) |
+                    di::transform(di::Policy<backend>(), maxElementInColumnTile_o) |
+                    ex::then([&host_max_el]() { return *host_max_el(); });
            });
   }
   else {
-    return di::transform(di::Policy<dlaf::DefaultBackend_v<D>>(), maxElementInColumnTile_o,
-                         std::forward<TileSender>(tile));
+    return std::forward<TileSender>(tile) |
+           di::transform(di::Policy<backend>(), maxElementInColumnTile_o);
   }
 }
 
@@ -654,7 +655,7 @@ void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTile
 
 // Returns the number of non-deflated entries
 void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                  SizeType* out_ptr, SizeType* k_ptr, SizeType* d_k_ptr,
+                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
                                   whip::stream_t stream);
 
 template <class T>

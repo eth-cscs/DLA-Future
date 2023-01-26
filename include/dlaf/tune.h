@@ -22,7 +22,7 @@ namespace dlaf {
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by algorithms.
 struct TuneParameters {
   SizeType eigensolver_min_band = 100;
-  SizeType band_to_tridiag_1d_block_size_base = 4096;
+  SizeType band_to_tridiag_1d_block_size_base = 8192;
 };
 
 TuneParameters& getTuneParameters();

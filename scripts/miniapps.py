@@ -532,18 +532,13 @@ def evp(
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/miniapp_evp_scalapack"
         opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns}"
-    elif lib == "elpa1":
+    elif lib == "elpa1" or lib == "elpa2":
+        stages = int(lib[4])
         if system["GPU"]:
             env += f" env 'ELPA_DEFAULT_nvidia-gpu=1'"
         env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/miniapp_evp_elpa"
-        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} 1"
-    elif lib == "elpa2":
-        if system["GPU"]:
-            env += f" env 'ELPA_DEFAULT_nvidia-gpu=1'"
-        env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
-        app = f"{build_dir}/miniapp_evp_elpa"
-        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} 2"
+        opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} {stages}"
     else:
         raise ValueError(_err_msg(lib))
 

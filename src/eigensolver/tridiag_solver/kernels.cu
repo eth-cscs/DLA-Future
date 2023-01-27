@@ -19,9 +19,10 @@
 
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
-#include <thrust/extrema.h>
+#include <thrust/functional.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
+#include <thrust/reduce.h>
 #include <pika/cuda.hpp>
 #include <whip.hpp>
 #include "dlaf/gpu/blas/api.h"
@@ -177,7 +178,9 @@ __global__ void maxElementInColumnTileOnDevice(const T* begin_ptr, const T* end_
   constexpr auto par = ::thrust::hip::par;
 #endif
 
-  *device_max_el_ptr = *thrust::max_element(par, begin_ptr, end_ptr);
+  // NOTE: This could also use max_element. However, it fails to compile with
+  // HIP, so we use reduce as an alternative which works with both HIP and CUDA.
+  *device_max_el_ptr = thrust::reduce(par, begin_ptr, end_ptr, *begin_ptr, thrust::maximum<T>());
 }
 
 template <class T>
@@ -185,6 +188,8 @@ void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* h
                             T* device_max_el_ptr, whip::stream_t stream) {
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
+
+  DLAF_ASSERT(len > 0);
 
   maxElementInColumnTileOnDevice<<<1, 1, 0, stream>>>(arr, arr + len, device_max_el_ptr);
   whip::memcpy_async(host_max_el_ptr, device_max_el_ptr, sizeof(T), whip::memcpy_device_to_host, stream);

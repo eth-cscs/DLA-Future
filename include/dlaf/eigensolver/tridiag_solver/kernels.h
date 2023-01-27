@@ -258,7 +258,7 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
     return std::forward<TileSender>(tile) |
            di::transform(di::Policy<backend>(), maxElementInColumnTile_o);
   }
-  {
+  else {
 #ifdef DLAF_WITH_GPU
     return ex::when_all(std::forward<TileSender>(tile),
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},

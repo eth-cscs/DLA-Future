@@ -63,7 +63,7 @@ auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI 
 
   if constexpr (D == Device::CPU) {
     return di::whenAllLift(std::forward<CommSender>(comm), dest, tag, col_data, n) |
-           dlaf::comm::internal::transformMPI(sendCol<D, T>);
+           dlaf::comm::internal::transformMPI(sendCol<D, T>, pika::mpi::experimental::stream_type::send_1);
   }
 #ifdef DLAF_WITH_GPU
   else if constexpr (D == Device::GPU) {
@@ -81,7 +81,7 @@ auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI 
 
              return di::whenAllLift(std::move(copy), std::forward<CommSender>(comm), dest, tag,
                                     mem_view(), n) |
-                    dlaf::comm::internal::transformMPI(sendCol<Device::CPU, T>);
+                    dlaf::comm::internal::transformMPI(sendCol<Device::CPU, T>, pika::mpi::experimental::stream_type::send_1);
            });
   }
 #endif
@@ -97,7 +97,7 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
 
   if constexpr (D == Device::CPU) {
     return di::whenAllLift(std::forward<CommSender>(comm), source, tag, col_data, n) |
-           dlaf::comm::internal::transformMPI(recvCol<D, T>);
+           dlaf::comm::internal::transformMPI(recvCol<D, T>, pika::mpi::experimental::stream_type::receive_1);
   }
 #ifdef DLAF_WITH_GPU
   else if constexpr (D == Device::GPU) {
@@ -110,7 +110,7 @@ auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MP
            ex::let_value([comm = std::forward<CommSender>(comm), source, tag, col_data,
                           n](memory::MemoryView<T, Device::CPU>& mem_view) mutable {
              auto recv = di::whenAllLift(std::forward<CommSender>(comm), source, tag, mem_view(), n) |
-                         dlaf::comm::internal::transformMPI(recvCol<Device::CPU, T>);
+                         dlaf::comm::internal::transformMPI(recvCol<Device::CPU, T>, pika::mpi::experimental::stream_type::receive_1);
 
              return di::whenAllLift(std::move(recv), col_data, mem_view(), to_sizet(n) * sizeof(T),
                                     whip::memcpy_host_to_device) |

@@ -64,7 +64,7 @@ template <class TileInSender, class TileOutSender>
                        &tile_out_comm](auto const& tile_in_comm) mutable {
       return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
                          std::cref(tile_out_comm)) |
-             transformMPI(allReduce_o);
+             transformMPI(allReduce_o, pika::mpi::experimental::stream_type::collective_1);
     };
     // The input tile must be copied to the temporary tile used for the
     // reduction, but the temporary tile does not need to be copied back to the
@@ -138,7 +138,7 @@ template <class T, Device D>
 #endif
   auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
-           transformMPI(allReduceInPlace_o);
+           transformMPI(allReduceInPlace_o, pika::mpi::experimental::stream_type::collective_2);
   };
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

@@ -39,7 +39,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::withTemporaryTile;
 
   auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
+    return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o, pika::mpi::experimental::stream_type::send_2);
   };
 
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<TileSender>>::device;
@@ -96,7 +96,7 @@ template <class T, Device D, class Comm>
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
   auto recv = [root_rank, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
+    return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o, pika::mpi::experimental::stream_type::receive_2);
   };
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

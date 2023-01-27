@@ -83,17 +83,17 @@ struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts)
-      -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., std::declval<MPI_Request*>()))
+      -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts).../*, std::declval<MPI_Request*>()*/))
   {
     using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...));
     if constexpr (std::is_void_v<result_type>) {
       pika::unwrapping(std::move(f))(
-          unwrapPromiseGuard(dlaf::common::internal::unwrap(ts))...);
+          dlaf::common::internal::unwrap(dlaf::common::internal::unwrap(ts))...);
       (internal::consumePromiseGuardCommunicator(dlaf::common::internal::unwrap(ts)), ...);
     }
     else {
       auto r = pika::unwrapping(std::move(f))(
-          unwrapPromiseGuard(dlaf::common::internal::unwrap(ts))...);
+          dlaf::common::internal::unwrap(dlaf::common::internal::unwrap(ts))...);
       (internal::consumePromiseGuardCommunicator(dlaf::common::internal::unwrap(ts)), ...);
       return r;
     }

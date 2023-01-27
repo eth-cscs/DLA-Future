@@ -70,7 +70,7 @@ template <class CommSender, class TileSender>
   auto reduce_send = [rank_root, reduce_op,
                       pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), rank_root, reduce_op, std::cref(tile_comm)) |
-           transformMPI(reduceSend_o);
+           transformMPI(reduceSend_o, pika::mpi::experimental::stream_type::send_2);
   };
 
   // The input tile must be copied to the temporary tile used for the send, but
@@ -102,7 +102,7 @@ template <class T, Device D>
 #endif
   auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
-           transformMPI(reduceRecvInPlace_o);
+           transformMPI(reduceRecvInPlace_o, pika::mpi::experimental::stream_type::receive_2);
   };
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

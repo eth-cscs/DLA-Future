@@ -53,7 +53,7 @@ template <class CommSender, class Sender>
   using dlaf::internal::withTemporaryTile;
 
   auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
+    return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o, pika::mpi::experimental::stream_type::send_1);
   };
 
   constexpr Device in_device_type = SenderSingleValueType<std::decay_t<Sender>>::device;
@@ -121,7 +121,7 @@ template <class T, Device D, class Comm>
   using dlaf::internal::withTemporaryTile;
 
   auto recv = [source, tag, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
-    return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
+    return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o, pika::mpi::experimental::stream_type::receive_1);
   };
 
   constexpr Device in_device_type = D;

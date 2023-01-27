@@ -204,7 +204,7 @@ void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int 
   };
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f),
                                            ex::when_all(sub_task_chain(),
-                                                        ex::just(std::vector<int>(to_sizet(nranks), 0)),
+                                                        ex::just(std::vector<int>(to_sizet(nranks), 0))),
                            pika::mpi::experimental::stream_type::collective_1);
 }
 
@@ -252,7 +252,7 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
                    ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
                    std::forward<RecvCountsSender>(recv_counts_sender),
                    ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
-  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
+  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender), pika::mpi::experimental::stream_type::collective_1);
 }
 
 // @param nranks number of ranks

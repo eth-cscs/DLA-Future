@@ -189,7 +189,7 @@ void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* h
   SizeType len = tile.size().rows();
   const T* arr = tile.ptr();
 
-  DLAF_ASSERT(len > 0);
+  DLAF_ASSERT(len > 0, len);
 
   maxElementInColumnTileOnDevice<<<1, 1, 0, stream>>>(arr, arr + len, device_max_el_ptr);
   whip::memcpy_async(host_max_el_ptr, device_max_el_ptr, sizeof(T), whip::memcpy_device_to_host, stream);

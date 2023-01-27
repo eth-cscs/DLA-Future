@@ -384,8 +384,8 @@ auto stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_end, Matrix<c
 
     TileCollector tc{i_begin, i_end};
     return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
-                 ex::when_all_vector(tc.readwrite(out))) |
-        di::transform(di::Policy<backend>(), std::move(part_fn));
+                        ex::when_all_vector(tc.readwrite(out))) |
+           di::transform(di::Policy<backend>(), std::move(part_fn));
   }
 #ifdef DLAF_WITH_GPU
   else {

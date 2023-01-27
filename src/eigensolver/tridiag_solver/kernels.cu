@@ -171,7 +171,7 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
 __global__ void maxElementInColumnTileOnDevice(const T* begin_ptr, const T* end_ptr,
-                                             T* device_max_el_ptr) {
+                                               T* device_max_el_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
@@ -625,7 +625,7 @@ struct PartitionIndicesPredicate {
 };
 
 __global__ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                           SizeType* out_ptr, SizeType* device_k_ptr) {
+                                             SizeType* out_ptr, SizeType* device_k_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
@@ -652,7 +652,7 @@ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeTy
 
 template <class T>
 __global__ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr,
-                                   const SizeType* end_ptr, SizeType* out_ptr, const T* v_ptr) {
+                                     const SizeType* end_ptr, SizeType* out_ptr, const T* v_ptr) {
   auto cmp = [v_ptr](const SizeType& i1, const SizeType& i2) { return v_ptr[i1] < v_ptr[i2]; };
 
 #ifdef DLAF_WITH_CUDA

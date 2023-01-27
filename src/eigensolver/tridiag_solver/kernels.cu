@@ -631,7 +631,6 @@ __global__ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, c
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = thrust::hip::par;
 #endif
-  // Alternative: copy, then partition in place. Is it faster?
 
   SizeType& k = *device_k_ptr;
 

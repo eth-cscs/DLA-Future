@@ -50,11 +50,6 @@ struct MPIYieldWhileCallHelper {
   auto operator()(Ts&&... ts)
       -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., std::declval<MPI_Request*>())) {
     MPI_Request req;
-    auto is_request_completed = [&req] {
-      int flag;
-      MPI_Test(&req, &flag, MPI_STATUS_IGNORE);
-      return flag == 0;
-    };
 
     // Note:
     // Callables passed to transformMPI have their arguments passed by reference, but doing so
@@ -70,16 +65,17 @@ struct MPIYieldWhileCallHelper {
     if constexpr (std::is_void_v<result_type>) {
       std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
       (internal::consumePromiseGuardCommunicator(ts), ...);
-      pika::util::yield_while(is_request_completed);
+      pika::util::yield_while(std::bind(pika::mpi::experimental::detail::eager_poll_request, req));
     }
     else {
       auto r = std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
       (internal::consumePromiseGuardCommunicator(ts), ...);
-      pika::util::yield_while(is_request_completed);
+      pika::util::yield_while(std::bind(pika::mpi::experimental::detail::eager_poll_request, req));
       return r;
     }
   }
 };
+
 
 /// Helper type for wrapping MPI calls.
 template <typename F>
@@ -87,7 +83,8 @@ struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
   auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
-      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...)) {
+      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...))
+  {
     using result_type = decltype(pika::unwrapping(std::move(f))(
         unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...));
     if constexpr (std::is_void_v<result_type>) {
@@ -117,11 +114,10 @@ template <typename F, typename Sender,
   namespace ex = pika::execution::experimental;
   namespace mpi = pika::mpi::experimental;
 
-  if (mpi::get_completion_mode()==0) {
+  if (mpi::get_completion_mode()==100) {
       auto snd1 = ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
          ex::then(MPIYieldWhileCallHelper{std::forward<F>(f)});
     return ex::make_unique_any_sender(std::move(snd1));
-
   }
   else {
     return std::forward<Sender>(sender)

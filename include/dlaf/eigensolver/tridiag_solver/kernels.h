@@ -264,7 +264,6 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},
                                  memory::MemoryChunk<ElementType, Device::GPU>{1})) |
            ex::let_value([](auto& tile, auto& host_max_el, auto& device_max_el) {
-             DLAF_ASSERT(tile.is_ready(), "");
              return ex::just(tile, host_max_el(), device_max_el()) |
                     di::transform(di::Policy<backend>(), maxElementInColumnTile_o) |
                     ex::then([&host_max_el]() { return *host_max_el(); });

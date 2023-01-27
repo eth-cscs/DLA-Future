@@ -43,6 +43,7 @@
 #ifdef CSV_OUTPUT
 # include <fmt/format.h>
 # include <fmt/ostream.h>
+# include <fmt/printf.h>
 template <> struct fmt::formatter<blas::Uplo> : ostream_formatter {};
 template <> struct fmt::formatter<dlaf::miniapp::ElementType> : ostream_formatter {};
 template <> struct fmt::formatter<dlaf::Backend> : ostream_formatter {};
@@ -178,7 +179,7 @@ struct choleskyMiniapp {
             pd::get_self_id_data()->get_scheduler_base()->get_description();
         namespace mpi = pika::mpi::experimental;
         // clang-format off
-        char const* msg = "CSVData, "
+        constexpr char const* msg = "CSVData, "
                           "{}, run, "            "{}, time, "
                           "{}, GFlops, "         "{}, type, "
                           "{}, UpLo, "           "{}, matrixsize, "

@@ -132,7 +132,6 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 template <Device D, class T>
 void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType band_size,
                        const SizeType m, const SizeType mb) {
-  std::cout << m << std::endl;
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
   Distribution distr({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
 

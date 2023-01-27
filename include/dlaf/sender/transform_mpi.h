@@ -82,20 +82,19 @@ template <typename F>
 struct MPICallHelper {
   std::decay_t<F> f;
   template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(pika::unwrapping(std::move(f))(
-      unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...))
+  auto operator()(Ts&&... ts)
+      -> decltype(std::move(f)(dlaf::common::internal::unwrap(ts)..., std::declval<MPI_Request*>()))
   {
-    using result_type = decltype(pika::unwrapping(std::move(f))(
-        unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...));
+    using result_type = decltype(std::move(f)(dlaf::common::internal::unwrap(ts)...));
     if constexpr (std::is_void_v<result_type>) {
       pika::unwrapping(std::move(f))(
-          unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...);
-      (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
+          unwrapPromiseGuard(dlaf::common::internal::unwrap(ts))...);
+      (internal::consumePromiseGuardCommunicator(dlaf::common::internal::unwrap(ts)), ...);
     }
     else {
       auto r = pika::unwrapping(std::move(f))(
-          unwrapPromiseGuard(dlaf::internal::getReferenceWrapper(ts))...);
-      (internal::consumePromiseGuardCommunicator(dlaf::internal::getReferenceWrapper(ts)), ...);
+          unwrapPromiseGuard(dlaf::common::internal::unwrap(ts))...);
+      (internal::consumePromiseGuardCommunicator(dlaf::common::internal::unwrap(ts)), ...);
       return r;
     }
   }

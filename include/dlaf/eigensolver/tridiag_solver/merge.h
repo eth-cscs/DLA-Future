@@ -387,8 +387,8 @@ auto stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_end, Matrix<c
                         ex::when_all_vector(tc.readwrite(out))) |
            di::transform(di::Policy<backend>(), std::move(part_fn));
   }
-#ifdef DLAF_WITH_GPU
   else {
+#ifdef DLAF_WITH_GPU
     auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles,
                        auto& host_k, auto& device_k) {
       TileElementIndex zero_idx(0, 0);
@@ -407,8 +407,8 @@ auto stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_end, Matrix<c
                         ex::just(memory::MemoryChunk<SizeType, Device::CPU>{1},
                                  memory::MemoryChunk<SizeType, Device::GPU>{1})) |
            ex::let_value(std::move(part_fn));
-  }
 #endif
+  }
 }
 
 template <Device D>

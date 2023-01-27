@@ -113,7 +113,12 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
   constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
-  if constexpr (backend == dlaf::Backend::GPU) {
+  if constexpr (D == Device::CPU) {
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
+           di::transform(di::Policy<backend>(), cuppensDecomp_o);
+  }
+  else {
+#ifdef DLAF_WITH_GPU
     return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom),
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
            ex::let_value([](auto& top, auto& bottom, auto& host_offdiag_val) {
@@ -121,10 +126,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
                     di::transform(di::Policy<backend>(), cuppensDecomp_o) |
                     ex::then([&host_offdiag_val]() { return *host_offdiag_val(); });
            });
-  }
-  else {
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
-           di::transform(di::Policy<backend>(), cuppensDecomp_o);
+#endif
   }
 }
 
@@ -252,7 +254,12 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
   using ElementType = dlaf::internal::SenderElementType<TileSender>;
   constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
-  if constexpr (backend == dlaf::Backend::GPU) {
+  if constexpr (D == Device::CPU) {
+    return std::forward<TileSender>(tile) |
+           di::transform(di::Policy<backend>(), maxElementInColumnTile_o);
+  }
+  {
+#ifdef DLAF_WITH_GPU
     return ex::when_all(std::forward<TileSender>(tile),
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},
                                  memory::MemoryChunk<ElementType, Device::GPU>{1})) |
@@ -262,10 +269,7 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
                     di::transform(di::Policy<backend>(), maxElementInColumnTile_o) |
                     ex::then([&host_max_el]() { return *host_max_el(); });
            });
-  }
-  else {
-    return std::forward<TileSender>(tile) |
-           di::transform(di::Policy<backend>(), maxElementInColumnTile_o);
+#endif
   }
 }
 
@@ -693,5 +697,4 @@ DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
 
 #endif
-
 }

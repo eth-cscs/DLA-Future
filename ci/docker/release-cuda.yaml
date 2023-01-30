@@ -25,7 +25,12 @@ spack:
       variants:
         - '~cuda'
         - '~openmp'
+    pika-algorithms:
+      version:
+        - main
     pika:
+      version:
+        - main
       variants:
         - 'malloc=mimalloc'
     mpich:

@@ -29,7 +29,12 @@ spack:
       require: mpich ~fortran ~rocm device=ch3 netmod=tcp ~libxml2
     blaspp:
       require: ~cuda ~rocm ~openmp
+    pika-algorithms:
+      version:
+        - main
     pika:
+      version:
+        - main
       require: malloc=mimalloc
     hwloc:
       require: ~libxml2

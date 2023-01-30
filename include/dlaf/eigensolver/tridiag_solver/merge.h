@@ -369,27 +369,46 @@ auto stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_end, Matrix<c
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+
   SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles,
-                     [[maybe_unused]] auto&&... ts) {
-    TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
-    SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
+  if constexpr (D == Device::CPU) {
+    auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles) {
+      TileElementIndex zero_idx(0, 0);
+      const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+      const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+      SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
 
-    if constexpr (D == Device::CPU) {
       return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
-    }
-    else {
-      return stablePartitionIndexOnDevice(n, c_ptr, in_ptr, out_ptr, ts...);
-    }
-  };
+    };
 
-  TileCollector tc{i_begin, i_end};
-  auto sender = ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
-                             ex::when_all_vector(tc.readwrite(out)));
+    TileCollector tc{i_begin, i_end};
+    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
+                        ex::when_all_vector(tc.readwrite(out))) |
+           di::transform(di::Policy<backend>(), std::move(part_fn));
+  }
+  else {
+#ifdef DLAF_WITH_GPU
+    auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles,
+                       auto& host_k, auto& device_k) {
+      TileElementIndex zero_idx(0, 0);
+      const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+      const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+      SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
 
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(part_fn), std::move(sender));
+      return ex::just(n, c_ptr, in_ptr, out_ptr, host_k(), device_k()) |
+             di::transform(di::Policy<backend>(), stablePartitionIndexOnDevice) |
+             ex::then([&host_k]() { return *host_k(); });
+    };
+
+    TileCollector tc{i_begin, i_end};
+    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
+                        ex::when_all_vector(tc.readwrite(out)),
+                        ex::just(memory::MemoryChunk<SizeType, Device::CPU>{1},
+                                 memory::MemoryChunk<SizeType, Device::GPU>{1})) |
+           ex::let_value(std::move(part_fn));
+#endif
+  }
 }
 
 template <Device D>

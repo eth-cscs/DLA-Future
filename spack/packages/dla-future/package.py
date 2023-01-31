@@ -44,9 +44,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+cuda~shared", when="+cuda")
     depends_on("umpire+rocm~shared", when="+rocm")
 
-    # https://github.com/eth-cscs/DLA-Future/issues/420
-    conflicts("umpire@6:")
-
     depends_on("pika@0.11:")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")

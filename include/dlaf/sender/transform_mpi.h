@@ -65,12 +65,16 @@ struct MPIYieldWhileCallHelper {
     if constexpr (std::is_void_v<result_type>) {
       std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
       (internal::consumePromiseGuardCommunicator(ts), ...);
-      pika::util::yield_while(std::bind(pika::mpi::experimental::detail::eager_poll_request, req));
+      pika::util::yield_while([&req](){
+        return !pika::mpi::experimental::detail::poll_request(req);
+      });
     }
     else {
       auto r = std::move(f)(dlaf::common::internal::unwrap(ts)..., &req);
       (internal::consumePromiseGuardCommunicator(ts), ...);
-      pika::util::yield_while(std::bind(pika::mpi::experimental::detail::eager_poll_request, req));
+      pika::util::yield_while([&req](){
+        return !pika::mpi::experimental::detail::poll_request(req);
+      });
       return r;
     }
   }

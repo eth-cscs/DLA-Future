@@ -51,6 +51,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
   using BaseT = Matrix<T, D>;
+  using ReadOnlySenderType = typename BaseT::ReadOnlySenderType;
 
   Panel(Panel&&) = default;
 
@@ -104,8 +105,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     external_[linearIndex(index)] = std::move(new_tile_fut);
   }
 
-  template <typename Sender>
-  void setTileSender(const LocalTileIndex& index, Sender&& new_tile_sender) {
+  void setTileSender(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
     // TODO: What is this checking? Once an internal tile has been accessed, do
     // not set an external tile?
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
@@ -128,7 +128,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     //     }
     // #endif
 
-    external_senders_[linearIndex(index)] = std::forward<Sender>(new_tile_sender);
+    external_senders_[linearIndex(index)] = std::move(new_tile_sender);
     external_set_.insert(linearIndex(index));
   }
 
@@ -163,8 +163,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     return dlaf::internal::keepFuture(read(index));
   }
 
-  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
-      const LocalTileIndex& index) {
+  ReadOnlySenderType read_sender2(const LocalTileIndex& index) {
     has_been_used_ = true;
 
     const SizeType internal_linear_idx = linearIndex(index);
@@ -362,6 +361,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   }
 
 protected:
+  using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
+
   bool isFirstGlobalTileFull() const {
     return start_offset_ == 0;
   }
@@ -497,11 +498,9 @@ protected:
 
   ///> Container for references to external tiles
   common::internal::vector<pika::shared_future<ConstTileType>> external_;
-  common::internal::vector<
-      pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>>>
-      external_senders_;
+  common::internal::vector<ReadOnlySenderType> external_senders_;
   // TODO: This only works around not having empty/valid on any_senders. Add in
-  // pika.
+  // pika. TODO: pika 0.12.0 has empty()/bool(). Try it.
   std::set<SizeType> external_set_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   // TODO: unordered_set (and #include <unordered_set>)
@@ -527,6 +526,7 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
+  using ReadOnlySenderType = typename BaseT::ReadOnlySenderType;
 
   Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : BaseT(transposeDist(distribution), common::transposed(start)),
@@ -590,10 +590,9 @@ public:
 
   using BaseT::offsetElement;
 
-  template <typename Sender>
-  void setTileSender(LocalTileIndex index, Sender&& new_tile_sender) {
+  void setTileSender(LocalTileIndex index, ReadOnlySenderType new_tile_sender) {
     index.transpose();
-    BaseT::setTileSender(index, std::forward<Sender>(new_tile_sender));
+    BaseT::setTileSender(index, std::move(new_tile_sender));
   }
 
   void setTile(LocalTileIndex index, pika::shared_future<ConstTileType> new_tile_fut) {
@@ -614,8 +613,7 @@ public:
     return BaseT::read_sender(index);
   }
 
-  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
-      LocalTileIndex index) {
+  ReadOnlySenderType read_sender2(LocalTileIndex index) {
     index.transpose();
     return BaseT::read_sender2(index);
   }
@@ -640,6 +638,7 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
+  using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
 
   Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : Panel<axis, const T, D, Storage>(distribution, start) {}
@@ -675,7 +674,7 @@ public:
     return this->operator()(index);
   }
 
-  pika::execution::experimental::unique_any_sender<TileType> readwrite_sender_tile(LocalTileIndex index) {
+  ReadWriteSenderType readwrite_sender_tile(LocalTileIndex index) {
     if constexpr (StoreTransposed::Yes == Storage)
       index.transpose();
 

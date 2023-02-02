@@ -1160,7 +1160,9 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
       EXPECT_EQ(ncols, futs_row.size());
 
       tt::sync_wait(std::move(tile_sender));
-      tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
+      // The vector of senders should be copiable and movable
+      tt::sync_wait(ex::when_all_vector(futs_row));
+      tt::sync_wait(ex::when_all_vector(std::move(futs_row)));
 
       // TODO: How much does this test make sense with senders?
       // // Since the top left tile has been selected two times, the group selection
@@ -1206,7 +1208,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
       EXPECT_EQ(ncols, futs_row.size());
 
       tt::sync_wait(std::move(tile_sender));
-      tt::sync_wait(std::move(ex::when_all_vector(futs_row)));
+      tt::sync_wait(ex::when_all_vector(std::move(futs_row)));
 
       // TODO: How much does this test make sense with senders?
       // // Since the top left tile has been selected two times, the group selection

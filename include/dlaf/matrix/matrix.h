@@ -64,6 +64,7 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<const ElementType, D>;
+  using ReadWriteSenderType = pika::execution::experimental::unique_any_sender<TileType>;
   friend Matrix<const ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -154,7 +155,7 @@ public:
     return readwrite_sender2(this->distribution().localTileIndex(index));
   }
 
-  auto readwrite_sender_tile(const LocalTileIndex& index) noexcept {
+  ReadWriteSenderType readwrite_sender_tile(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
     return tile_managers_senders_[i].readwrite() |
            pika::execution::experimental::then([](auto tile_wrapper) {
@@ -162,7 +163,7 @@ public:
            });
   }
 
-  auto readwrite_sender_tile(const GlobalTileIndex& index) noexcept {
+  ReadWriteSenderType readwrite_sender_tile(const GlobalTileIndex& index) noexcept {
     return readwrite_sender_tile(this->distribution().localTileIndex(index));
   }
 
@@ -184,6 +185,8 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
+  using ReadOnlySenderType = pika::execution::experimental::any_sender<
+      tile_async_ro_mutex_wrapper_type<T, D>>;
   friend Matrix<ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);
@@ -230,15 +233,14 @@ public:
     return read_sender(distribution().localTileIndex(index));
   }
 
-  pika::execution::experimental::any_sender<tile_async_ro_mutex_wrapper_type<T, D>> read_sender2(
-      const LocalTileIndex& index) noexcept {
+  ReadOnlySenderType read_sender2(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    // TODO: Maybe async_rw_mutex read-only access senders should be copyable?
+    // TODO: The split should no longer be necessary with pika 0.12.0. Try removing it.
     return tile_managers_senders_[i].read() | pika::execution::experimental::split() |
            pika::execution::experimental::then([](const auto& tile_wrapper) { return tile_wrapper; });
   }
 
-  auto read_sender2(const GlobalTileIndex& index) {
+  ReadOnlySenderType read_sender2(const GlobalTileIndex& index) {
     return read_sender2(distribution().localTileIndex(index));
   }
 

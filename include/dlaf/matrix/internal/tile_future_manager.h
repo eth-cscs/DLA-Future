@@ -14,9 +14,7 @@
 
 #include "dlaf/matrix/tile.h"
 
-namespace dlaf {
-namespace matrix {
-namespace internal {
+namespace dlaf::matrix::internal {
 
 // Attach the promise to the tile included in old_future with a continuation and returns a new future to it.
 template <class ReturnTileType>
@@ -112,6 +110,94 @@ protected:
   pika::shared_future<ConstTileType> tile_shared_future_;
 };
 
-}
-}
+// TileFutureManager manages the futures and promises for tiles in the Matrix object.
+// See misc/synchronization.md for details.
+template <class T, Device D>
+class SplittedTileFutureManager {
+public:
+  using TileType = Tile<T, D>;
+  using ConstTileType = Tile<const T, D>;
+  using TileDataType = internal::TileData<T, D>;
+  using DepTrackerType = pika::shared_future<TileType>;
+  using DepTrackerSender = pika::execution::experimental::unique_any_sender<DepTrackerType>;
+
+  SplittedTileFutureManager() {}
+
+  SplittedTileFutureManager(pika::future<TileType> tile) {
+    namespace ex = pika::execution::experimental;
+    auto setup = [](TileType tile) {
+      DLAF_ASSERT_MODERATE(std::holds_alternative<pika::shared_future<TileType>>(tile.dep_tracker_), "");
+
+      auto dep = std::get<DepTrackerType>(tile.dep_tracker_);
+      tile.dep_tracker_ = std::monostate();
+
+      return std::make_tuple<TileDataType, DepTrackerType>(std::move(tile.data_), std::move(dep));
+    };
+    auto ret = ex::split_tuple(std::move(tile) | ex::then(std::move(setup)));
+
+    tile_future_ = std::move(std::get<0>(ret)) | ex::make_future();
+    dep_tracker_ = std::move(std::get<1>(ret));
+  }
+
+  SplittedTileFutureManager(SplittedTileFutureManager&& rhs)
+      : tile_future_(std::move(rhs.tile_future_)),
+        tile_shared_future_(std::move(rhs.tile_shared_future_)),
+        dep_tracker_(std::move(rhs.dep_tracker_)) {
+    rhs.dep_tracker_.reset();
+  }
+
+  ~SplittedTileFutureManager() {
+    clear();
+  }
+
+  SplittedTileFutureManager& operator=(SplittedTileFutureManager&& rhs) {
+    tile_future_ = std::move(rhs.tile_future_);
+    tile_shared_future_ = std::move(rhs.tile_shared_future_);
+    dep_tracker_ = std::move(rhs.dep_tracker_);
+    rhs.dep_tracker_.reset();
+    return *this;
+  }
+
+  pika::shared_future<ConstTileType> getReadTileSharedFuture() noexcept {
+    DLAF_ASSERT_HEAVY(dep_tracker_.has_value(), "Accessing a cleared Manager");
+    if (!tile_shared_future_.valid()) {
+      tile_shared_future_ = getTileFuture<ConstTileType>(tile_future_);
+    }
+    return tile_shared_future_;
+  }
+
+  pika::future<TileType> getRWTileFuture() noexcept {
+    DLAF_ASSERT_HEAVY(dep_tracker_.has_value(), "Accessing a cleared Manager");
+    tile_shared_future_ = {};
+    return getTileFuture<TileType>(tile_future_);
+  }
+
+  // Destroys the pipeline and when the work is completed triggers the original pipeline.
+  // and destroys the tile.
+  // Note that this operation invalidates the internal state of the object,
+  // which shouldn't be used anymore,
+  // however it is safe to call clear() multiple times.
+  void clear() {
+    namespace ex = pika::execution::experimental;
+    if (dep_tracker_) {
+      DLAF_ASSERT_HEAVY(tile_future_.valid(), "");
+
+      ex::start_detached(ex::when_all(std::move(tile_future_), std::move(*dep_tracker_)) |
+                         ex::then([](TileDataType, DepTrackerType dep) { dep.get(); }));
+      dep_tracker_.reset();
+    }
+  }
+
+protected:
+  // The future of the tile with no promise set.
+  pika::future<TileDataType> tile_future_;
+
+  // If valid, a copy of the shared future of the tile,
+  // which has the promise set to the promise for tile_future_.
+  pika::shared_future<ConstTileType> tile_shared_future_;
+
+  // The original dependency tracker to be released when finished working with this pipeline.
+  std::optional<DepTrackerSender> dep_tracker_;
+};
+
 }

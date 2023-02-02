@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -22,6 +22,7 @@ namespace dlaf {
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by algorithms.
 struct TuneParameters {
   SizeType eigensolver_min_band = 100;
+  SizeType band_to_tridiag_1d_block_size_base = 8192;
 };
 
 TuneParameters& getTuneParameters();

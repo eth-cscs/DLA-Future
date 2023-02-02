@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -13,7 +13,9 @@
 #include "dlaf/common/callable_object.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/lapack/tile.h"
+#include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/memory/memory_chunk.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 
@@ -88,13 +90,13 @@ DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                whip::stream_t stream);
+void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
+                   T* host_offdiag_val_ptr, whip::stream_t stream);
 
 #define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
-  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
+  kword template void cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
                                     const matrix::Tile<Type, Device::GPU>& bottom, \
-                                    whip::stream_t stream)
+                                    Type* host_offdiag_val_ptr, whip::stream_t stream)
 
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
 DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
@@ -108,8 +110,24 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto sender = ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom));
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), cuppensDecomp_o, std::move(sender));
+  using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+
+  if constexpr (D == Device::CPU) {
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
+           di::transform(di::Policy<backend>(), cuppensDecomp_o);
+  }
+  else {
+#ifdef DLAF_WITH_GPU
+    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom),
+                        ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
+           ex::let_value([](auto& top, auto& bottom, auto& host_offdiag_val) {
+             return ex::just(std::ref(top), std::ref(bottom), host_offdiag_val()) |
+                    di::transform(di::Policy<backend>(), cuppensDecomp_o) |
+                    ex::then([&host_offdiag_val]() { return *host_offdiag_val(); });
+           });
+#endif
+  }
 }
 
 template <class T>
@@ -213,10 +231,12 @@ DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream);
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* host_max_el_ptr,
+                            T* device_max_el_ptr, whip::stream_t stream);
 
 #define DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(kword, Type)                                    \
-  kword template Type maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
+  kword template void maxElementInColumnTile(const matrix::Tile<const Type, Device::GPU>& tile, \
+                                             Type* host_max_el_ptr, Type* device_max_el_ptr,    \
                                              whip::stream_t stream)
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(extern, float);
@@ -229,8 +249,27 @@ DLAF_MAKE_CALLABLE_OBJECT(maxElementInColumnTile);
 template <class T, Device D, class TileSender>
 auto maxElementInColumnTileAsync(TileSender&& tile) {
   namespace di = dlaf::internal;
-  return di::transform(di::Policy<DefaultBackend_v<D>>(), maxElementInColumnTile_o,
-                       std::forward<TileSender>(tile));
+  namespace ex = pika::execution::experimental;
+
+  using ElementType = dlaf::internal::SenderElementType<TileSender>;
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+
+  if constexpr (D == Device::CPU) {
+    return std::forward<TileSender>(tile) |
+           di::transform(di::Policy<backend>(), maxElementInColumnTile_o);
+  }
+  else {
+#ifdef DLAF_WITH_GPU
+    return ex::when_all(std::forward<TileSender>(tile),
+                        ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},
+                                 memory::MemoryChunk<ElementType, Device::GPU>{1})) |
+           ex::let_value([](auto& tile, auto& host_max_el, auto& device_max_el) {
+             return ex::just(tile, host_max_el(), device_max_el()) |
+                    di::transform(di::Policy<backend>(), maxElementInColumnTile_o) |
+                    ex::then([&host_max_el]() { return *host_max_el(); });
+           });
+#endif
+  }
 }
 
 void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile);
@@ -618,8 +657,9 @@ void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTile
 #ifdef DLAF_WITH_GPU
 
 // Returns the number of non-deflated entries
-SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, whip::stream_t stream);
+void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
+                                  whip::stream_t stream);
 
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
@@ -656,5 +696,4 @@ DLAF_GIVENS_ROT_ETI(extern, float);
 DLAF_GIVENS_ROT_ETI(extern, double);
 
 #endif
-
 }

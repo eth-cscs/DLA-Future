@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -27,6 +27,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
+#include "dlaf/eigensolver/get_1d_block_size.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/lapack/tile.h"
@@ -1018,9 +1019,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   const auto prev_rank = (rank == 0 ? ranks - 1 : rank - 1);
   const auto next_rank = (rank + 1 == ranks ? 0 : rank + 1);
 
-  SizeType tiles_per_block = 1;
-  matrix::Distribution dist({1, size}, {1, nb * tiles_per_block}, {1, ranks}, {0, rank}, {0, 0});
-  SizeType nb_band = dist.blockSize().cols();
+  const SizeType nb_band = get1DBlockSize(nb);
+  const SizeType tiles_per_block = nb_band / nb;
+  matrix::Distribution dist({1, size}, {1, nb_band}, {1, ranks}, {0, rank}, {0, 0});
 
   // Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.
   const auto workers_per_block = 1 + ceilDiv(dist.blockSize().cols(), 2 * b - 1);
@@ -1039,14 +1040,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // The offset is set to the first unused tag by compute_copy_tag.
   const comm::IndexT_MPI offset_v_tag = compute_copy_tag(nrtile, false);
 
-  auto compute_v_tag = [offset_v_tag](SizeType i) {
+  auto compute_v_tag = [offset_v_tag](SizeType i, bool is_bottom) {
     // only the row index is needed as dependencies are added to avoid
     // more columns of the same row at the same time.
-    return offset_v_tag + static_cast<comm::IndexT_MPI>(i);
+    return offset_v_tag + static_cast<comm::IndexT_MPI>(2 * i) + (is_bottom ? 1 : 0);
   };
 
   // The offset is set to the first unused tag by compute_v_tag.
-  const comm::IndexT_MPI offset_col_tag = compute_v_tag(nrtile);
+  const comm::IndexT_MPI offset_col_tag = compute_v_tag(nrtile, false);
 
   auto compute_col_tag = [offset_col_tag, ranks](SizeType block_id, bool last_col) {
     // By construction the communication from block j+1 to block j are dependent, therefore a tag per
@@ -1339,7 +1340,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 [&comm, rank, &v_panel, &mat_v,
                  &compute_v_tag](const LocalTileIndex index_panel, const matrix::SubTileSpec spec_panel,
                                  const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
-                                 const matrix::SubTileSpec spec_v) {
+                                 const matrix::SubTileSpec spec_v, const bool bottom) {
                   auto tile_v_panel = subTileSender(v_panel.read_sender2(index_panel), spec_panel);
                   if (rank == rank_v) {
                     auto tile_v =
@@ -1351,23 +1352,23 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                   else {
                     ex::start_detached(
                         comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
-                                           compute_v_tag(index_v.row()),
+                                           compute_v_tag(index_v.row(), bottom),
                                            ex::make_unique_any_sender(std::move(tile_v_panel))));
                   }
                 };
 
             copy_or_send(helper.indexPanel(), helper.specPanelTop(), helper.rankVTop(),
-                         helper.indexVTop(), helper.specVTop());
+                         helper.indexVTop(), helper.specVTop(), false);
             if (helper.copyIsSplitted()) {
               copy_or_send(helper.indexPanel(), helper.specPanelBottom(), helper.rankVBottom(),
-                           helper.indexVBottom(), helper.specVBottom());
+                           helper.indexVBottom(), helper.specVBottom(), true);
             }
           }
           else {
             auto recv = [&comm, rank, &dist_v, &mat_v,
                          &compute_v_tag](const comm::IndexT_MPI rank_panel,
                                          const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
-                                         const matrix::SubTileSpec spec_v) {
+                                         const matrix::SubTileSpec spec_v, const bool bottom) {
               if (rank == rank_v) {
                 auto tile_v =
                     subTileSender(ex::make_unique_any_sender(mat_v.readwrite_sender_tile(index_v)),
@@ -1382,16 +1383,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
                 ex::start_detached(
                     comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_panel,
-                                       compute_v_tag(index_v.row()),
+                                       compute_v_tag(index_v.row(), bottom),
                                        ex::make_unique_any_sender(
                                            ex::when_all(std::move(tile_v), std::move(dep)))));
               }
             };
 
-            recv(helper.rankPanel(), helper.rankVTop(), helper.indexVTop(), helper.specVTop());
+            recv(helper.rankPanel(), helper.rankVTop(), helper.indexVTop(), helper.specVTop(), false);
             if (helper.copyIsSplitted()) {
-              recv(helper.rankPanel(), helper.rankVBottom(), helper.indexVBottom(),
-                   helper.specVBottom());
+              recv(helper.rankPanel(), helper.rankVBottom(), helper.indexVBottom(), helper.specVBottom(),
+                   true);
             }
           }
         }

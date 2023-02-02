@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -120,7 +120,7 @@ def _gen_nodes_plot(
 
         nodes = df["nodes"].sort_values().unique()
         ax.set_xticks(nodes)
-        ax.set_xticklabels([f"{x:d}" for x in nodes])
+        ax.set_xticklabels([f"{x:f}" for x in nodes])
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
@@ -254,6 +254,17 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("chol_scalapack"):
         pstr_arr = ["PROBLEM PARAMETERS:"]
         pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_scalapack"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] Scalapack {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_elpa"):
+        stages = bench_name[8]
+        pstr_arr = []
+        pstr_res = (
+            "[{run_index:d}] Elpa"
+            + stages
+            + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+        )
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
@@ -327,7 +338,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
                 if f.endswith(".out"):
-                    nodes = int(os.path.basename(subdir))
+                    nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
                         benchname += "@" + data_dir

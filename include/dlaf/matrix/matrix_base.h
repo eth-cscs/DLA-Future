@@ -27,6 +27,19 @@ public:
                 "Multi Tile distribution block is not supperted by Matrix yet.");
   }
 
+  MatrixBase(const Distribution& distribution, const LocalTileSize& tiles_per_block)
+      : distribution_(std::make_shared<Distribution>(  //
+            distribution.size(),
+            TileElementSize{distribution.blockSize().rows() / tiles_per_block.rows(),
+                            distribution.blockSize().cols() / tiles_per_block.cols()},
+            tiles_per_block, distribution.commGridSize(), distribution.rankIndex(),
+            distribution.sourceRankIndex())) {
+    DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
+                "distribution should be the distribution of the original Matrix.");
+    DLAF_ASSERT(distribution.blockSize() == distribution_->blockSize(), distribution.blockSize(),
+                distribution_->blockSize());
+  }
+
   MatrixBase(const MatrixBase& rhs) = default;
   MatrixBase& operator=(const MatrixBase& rhs) = default;
 

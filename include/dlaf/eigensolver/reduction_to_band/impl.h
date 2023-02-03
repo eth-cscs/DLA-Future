@@ -12,9 +12,11 @@
 #include <cmath>
 #include <vector>
 
+#include <pika/barrier.hpp>
 #include <pika/future.hpp>
 
 #include "dlaf/blas/tile.h"
+#include "dlaf/common/assert.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -36,8 +38,11 @@
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
+#include "dlaf/schedulers.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/types.h"
+#include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf/eigensolver/reduction_to_band/api.h"
@@ -108,20 +113,20 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
 }
 
 template <Device D, class T>
-std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
-                                     SizeType j, const SizeType pt_cols) {
+void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
+                           common::internal::vector<T>& w, SizeType j, const SizeType pt_cols,
+                           const size_t from, const size_t to) {
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
   if (!(pt_cols > 0))
-    return {};
-
-  std::vector<T> w(to_sizet(pt_cols), 0);
+    return;
 
   const TileElementIndex index_el_x0(j, j);
   bool has_first_component = has_head;
 
-  // W = Pt * V
-  for (const matrix::Tile<const T, D>& tile_a : panel) {
+  // W = Pt* . V
+  for (auto index = from; index < to; ++index) {
+    const matrix::Tile<const T, D>& tile_a = panel[index];
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -148,19 +153,18 @@ std::vector<T> computeWTrailingPanel(const bool has_head, const std::vector<matr
                  tile_a.ptr(pt_start), tile_a.ld(), tile_a.ptr(v_start), 1, T(1), w.data(), 1);
     }
   }
-
-  return w;
 }
 
 template <Device D, class T>
 void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
-                         const std::vector<T>& w, const T tau) {
+                         const std::vector<T>& w, const T tau, const size_t from, const size_t to) {
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
 
   // GER Pt = Pt - tau . v . w*
-  for (const matrix::Tile<T, D>& tile_a : panel) {
+  for (auto index = from; index < to; ++index) {
+    const matrix::Tile<T, D>& tile_a = panel[index];
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
     TileElementIndex pt_start{first_element, index_el_x0.col() + 1};
@@ -252,13 +256,14 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
 template <Device D, class T>
 void updateTrailingPanelWithReflector(const std::vector<matrix::Tile<T, D>>& panel, const SizeType j,
                                       const SizeType pt_cols, const T tau) {
-  constexpr bool has_head = true;
-  std::vector<T> w = computeWTrailingPanel(has_head, panel, j, pt_cols);
-
-  if (w.size() == 0)
+  if (pt_cols == 0)
     return;
 
-  updateTrailingPanel(has_head, panel, j, w, tau);
+  constexpr bool has_head = true;
+  common::internal::vector<T> w(pt_cols, 0);
+  computeWTrailingPanel(has_head, panel, w, j, pt_cols, 0, panel.size());
+
+  updateTrailingPanel(has_head, panel, j, w, tau, 0, panel.size());
 }
 
 template <class MatrixLike>
@@ -268,17 +273,6 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
 
-  auto panel_task = [nrefls, cols = panel_view.cols()](std::vector<matrix::Tile<T, D>>&& panel_tiles) {
-    common::internal::vector<T> taus;
-    taus.reserve(nrefls);
-    for (SizeType j = 0; j < nrefls; ++j) {
-      taus.emplace_back(computeReflector(panel_tiles, j));
-      updateTrailingPanelWithReflector(panel_tiles, j, cols - (j + 1), taus.back());
-    }
-
-    return taus;
-  };
-
   std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
@@ -287,10 +281,60 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  return ex::when_all_vector(std::move(panel_tiles)) |
-         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                       pika::execution::thread_priority::high),
-                                   std::move(panel_task)) |
+  const size_t nthreads = std::max<size_t>(1, pika::get_num_worker_threads() / 2);
+  return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
+                      ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
+                      ex::just(common::internal::vector<T>{}),               // taus
+                      ex::when_all_vector(std::move(panel_tiles))) |
+         ex::let_value([nthreads, nrefls, cols = panel_view.cols()](auto& barrier_ptr, auto& w,
+                                                                    auto& taus, auto& tiles) {
+           return ex::schedule(dlaf::internal::getBackendScheduler<Backend::MC>(
+                      pika::execution::thread_priority::high)) |
+                  ex::bulk(nthreads,
+                           [=, &barrier_ptr, &taus, &w, &tiles](const size_t index) {
+                             const size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+                             const size_t from = index * batch_size;
+                             const size_t to = std::min(index * batch_size + batch_size, tiles.size());
+
+                             if (index == 0) {
+                               taus.reserve(nrefls);
+                               w.resize(nthreads);
+                             }
+
+                             for (SizeType j = 0; j < nrefls; ++j) {
+                               // STEP1: compute tau and reflector (single-thread)
+                               if (index == 0)
+                                 taus.emplace_back(computeReflector(tiles, j));
+                               barrier_ptr->arrive_and_wait();
+
+                               // STEP2a: compute w (multi-threaded)
+                               const SizeType pt_cols = cols - (j + 1);
+                               if (pt_cols == 0)
+                                 break;
+                               const bool has_head = (index == 0);
+
+                               w[index] = common::internal::vector<T>(pt_cols, 0);
+                               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, from, to);
+                               barrier_ptr->arrive_and_wait();
+
+                               // STEP2b: reduce w results (single-threaded)
+                               if (index == 0) {
+                                 for (size_t i = 1; i < w.size(); ++i) {
+                                   DLAF_ASSERT_HEAVY(w[0].size() == w[i].size(), w[0].size(),
+                                                     w[i].size());
+                                   for (SizeType j = 0; j < w[0].size(); ++j)
+                                     w[0][j] += w[i][j];
+                                 }
+                               }
+                               barrier_ptr->arrive_and_wait();
+
+                               // STEP3: update trailing panel (multi-threaded)
+                               updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), from, to);
+                               barrier_ptr->arrive_and_wait();
+                             }
+                           }) |
+                  ex::then([&taus]() { return std::move(taus); });
+         }) |
          ex::make_future();
 }
 
@@ -548,14 +592,15 @@ template <Device D, class T>
 void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& communicator,
                                       const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
                                       const SizeType pt_cols, const T tau) {
-  std::vector<T> w = computeWTrailingPanel(has_head, panel, j, pt_cols);
-
-  if (w.size() == 0)
+  if (pt_cols == 0)
     return;
+
+  common::internal::vector<T> w(pt_cols, 0);
+  computeWTrailingPanel(has_head, panel, w, j, pt_cols, 0, panel.size());
 
   comm::sync::allReduceInPlace(communicator, MPI_SUM, common::make_data(w.data(), pt_cols));
 
-  updateTrailingPanel(has_head, panel, j, w, tau);
+  updateTrailingPanel(has_head, panel, j, w, tau, 0, panel.size());
 }
 
 template <class MatrixLike, class TriggerSender, class CommSender>

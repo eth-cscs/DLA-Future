@@ -86,10 +86,14 @@ struct Options
   SizeType m;
   SizeType mb;
   blas::Uplo uplo;
+  SizeType timeout;
 
   Options(const pika::program_options::variables_map& vm)
-      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
+      : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>())
+      , mb(vm["block-size"].as<SizeType>())
+      , uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>()))
+      , timeout(vm["timeout"].as<SizeType>())
+  {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -131,6 +135,7 @@ struct choleskyMiniapp {
       return hermitian_pos_def;
     }();
 
+    dlaf::common::Timer<> total_timeit;
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
         std::cout << "[" << run_index << "]" << std::endl;
@@ -155,6 +160,10 @@ struct choleskyMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();
+        if (total_timeit.elapsed() > opts.timeout) {
+            std::cout << "timeout " << total_timeit.elapsed() << " " << opts.timeout << std::endl;
+            break;
+        }
       }
 
       double gigaflops;
@@ -241,6 +250,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("timeout",      value<SizeType>()   ->default_value(   0), "stop after N seconds when set")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

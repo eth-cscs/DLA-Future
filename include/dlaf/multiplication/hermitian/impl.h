@@ -187,8 +187,7 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
         for (const auto& idx : c_panel.iteratorLocal()) {
           if (this_rank.row() == rank_ll.row()) {
             ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
-                                                               ex::make_unique_any_sender(
-                                                                   c_panel.readwrite_sender_tile(idx))));
+                                                               c_panel.readwrite_sender_tile(idx)));
           }
           else {
             ex::start_detached(

@@ -72,7 +72,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
                                            ex::make_unique_any_sender(panel.read_sender2(index))));
     else
       ex::start_detached(scheduleRecvBcast(ex::make_unique_any_sender(serial_comm()), rank_root,
-                                           ex::make_unique_any_sender(panel.readwrite_sender_tile(index))));
+                                           panel.readwrite_sender_tile(index)));
   }
 }
 
@@ -195,7 +195,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
       if (dist.commGridSize().get(comm_coord_step2) > 1)
         ex::start_detached(
             scheduleRecvBcast(ex::make_unique_any_sender(chain_step2()), owner_diag,
-                              ex::make_unique_any_sender(panelT.readwrite_sender_tile(indexT))));
+                              panelT.readwrite_sender_tile(indexT)));
     }
   }
 }

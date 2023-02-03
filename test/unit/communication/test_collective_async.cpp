@@ -77,9 +77,7 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    ex::start_detached(dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM,
-                                                             ex::make_unique_any_sender(
-                                                                 matrix.readwrite_sender_tile(idx))));
+    ex::start_detached(dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix.readwrite_sender_tile(idx)));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
@@ -117,9 +115,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(tt::sync_wait(matrix.readwrite_sender_tile(idx)), input_tile);
 
-  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
-                                                    ex::make_unique_any_sender(
-                                                        matrix.readwrite_sender_tile(idx)));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix.readwrite_sender_tile(idx));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
@@ -161,7 +157,7 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
   ex::start_detached(
       dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
                                     ex::make_unique_any_sender(mat_in.read_sender2(idx)),
-                                    ex::make_unique_any_sender(mat_out.readwrite_sender_tile(idx))));
+                                    mat_out.readwrite_sender_tile(idx)));
 
   auto tile_in = tt::sync_wait(mat_in.read_sender2(idx));
   auto tile_out = tt::sync_wait(mat_out.read_sender2(idx));

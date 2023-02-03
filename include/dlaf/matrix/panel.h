@@ -690,8 +690,7 @@ public:
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
-      return subTileSender(pika::execution::experimental::make_unique_any_sender(std::move(tile)),
-                           {{0, 0}, tileSize(index)});
+      return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
   }
 
 private:

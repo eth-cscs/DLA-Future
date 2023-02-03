@@ -882,13 +882,14 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read_sender2(idx_evecs),
                                                z.readwrite_sender_tile(z_idx));
       ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 // TODO: any_sender to unique_any_sender conversion. Should not be necessary.
                                                  ex::make_unique_any_sender(z.read_sender2(z_idx))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(z.readwrite_sender_tile(z_idx))));
+                                  z.readwrite_sender_tile(z_idx)));
     }
   }
 }
@@ -932,8 +933,7 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
         ex::start_detached(tile::laset(di::Policy<DefaultBackend_v<D>>(), std::move(laset_sender)));
         ex::start_detached(
             comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()), MPI_PROD,
-                                           ex::make_unique_any_sender(
-                                               comm_vec.readwrite_sender_tile(idx_gl_comm))));
+                                           comm_vec.readwrite_sender_tile(idx_gl_comm)));
       }
     }
     return;
@@ -956,9 +956,7 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
                    Coord::Col, comm_vec.readwrite_sender_tile(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()),
-                                                      MPI_PROD,
-                                                      ex::make_unique_any_sender(
-                                                          comm_vec.readwrite_sender_tile(idx_gl_comm))));
+                                                      MPI_PROD, comm_vec.readwrite_sender_tile(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender2(idx_gl_comm),
@@ -988,8 +986,7 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
             tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite_sender_tile(idx_gl_comm)));
         ex::start_detached(
             comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()), MPI_SUM,
-                                           ex::make_unique_any_sender(
-                                               comm_vec.readwrite_sender_tile(idx_gl_comm))));
+                                           comm_vec.readwrite_sender_tile(idx_gl_comm)));
       }
     }
     return;
@@ -1011,9 +1008,7 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
                    Coord::Col, comm_vec.readwrite_sender_tile(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()),
-                                                      MPI_SUM,
-                                                      ex::make_unique_any_sender(
-                                                          comm_vec.readwrite_sender_tile(idx_gl_comm))));
+                                                      MPI_SUM, comm_vec.readwrite_sender_tile(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read_sender2(idx_gl_comm),
@@ -1119,12 +1114,13 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
     if (evecs_tile_rank == this_rank.col()) {
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(row_task_chain()),
+                                  // TODO: any_sender to unique_any_sender conversion. Should not be necessary.
                                   ex::make_unique_any_sender(evals.read_sender2(evals_idx))));
     }
     else {
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(row_task_chain()), evecs_tile_rank,
-                                  ex::make_unique_any_sender(evals.readwrite_sender_tile(evals_idx))));
+                                  evals.readwrite_sender_tile(evals_idx)));
     }
   }
 }

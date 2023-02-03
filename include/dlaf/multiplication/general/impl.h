@@ -160,9 +160,7 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
                                         panelA.read_sender2(ij), panelB.read_sender2(ij),
                                         k == idx_begin ? beta : T(1),
                                         (isRowPartial || isColPartial)
-                                            ? subTileSender(ex::make_unique_any_sender(
-                                                                mat_c.readwrite_sender_tile(ij)),
-                                                            {{0, 0}, {nrows, ncols}})
+                                            ? subTileSender(mat_c.readwrite_sender_tile(ij), {{0, 0}, {nrows, ncols}})
                                             : mat_c.readwrite_sender_tile(ij)) |
             tile::gemm(dlaf::internal::Policy<B>()));
       }

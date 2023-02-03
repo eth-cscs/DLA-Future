@@ -38,7 +38,6 @@ using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
-using pika::execution::experimental::make_unique_any_sender;
 using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
@@ -288,8 +287,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input,
-                      make_unique_any_sender(t_output.get().readwrite_sender_tile(t_idx)));
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite_sender_tile(t_idx));
   }
 
   // Note:
@@ -372,8 +370,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input,
-                      make_unique_any_sender(t_output.get().readwrite_sender_tile(t_idx)), serial_comm);
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite_sender_tile(t_idx), serial_comm);
   }
 
   // Note:

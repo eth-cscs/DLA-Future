@@ -215,9 +215,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
     // Update trailing matrix: C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmTrailingMatrix<backend>(np, panelV.read_sender2(ij), panelW2.read_sender2(ij),
-                                  subTileSender(ex::make_unique_any_sender(
-                                                    mat_c.readwrite_sender_tile(ij)),
+      gemmTrailingMatrix<backend>(np, panelV.read_sender2(ij),
+                                  panelW2.read_sender2(ij),
+                                  subTileSender(mat_c.readwrite_sender_tile(ij),
                                                 mat_c_view(ij)));
     }
 
@@ -343,16 +343,14 @@ void BackTransformationReductionToBand<B, D, T>::call(
     for (const auto& kj_panel : panelW2.iteratorLocal())
       ex::start_detached(
           dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
-                                               ex::make_unique_any_sender(
-                                                   panelW2.readwrite_sender_tile(kj_panel))));
+                                               panelW2.readwrite_sender_tile(kj_panel)));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 
     // C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
       gemmTrailingMatrix<B>(np, panelV.read_sender2(ij), panelW2.read_sender2(ij),
-                            subTileSender(ex::make_unique_any_sender(mat_c.readwrite_sender_tile(ij)),
-                                          mat_c_view(ij)));
+                            subTileSender(mat_c.readwrite_sender_tile(ij), mat_c_view(ij)));
     }
 
     panelV.reset();

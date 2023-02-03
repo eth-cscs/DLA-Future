@@ -777,8 +777,7 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
-                                                             ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender_tile(idx))));
+                                                             b_panel.readwrite_sender_tile(idx)));
         }
         else {
           ex::start_detached(
@@ -959,8 +958,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
-                                                             ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender_tile(idx))));
+                                                             b_panel.readwrite_sender_tile(idx)));
         }
         else {
           ex::start_detached(
@@ -1142,8 +1140,7 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
           ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
-                                                             ex::make_unique_any_sender(
-                                                                 b_panel.readwrite_sender_tile(idx))));
+                                                             b_panel.readwrite_sender_tile(idx)));
         }
         else {
           ex::start_detached(

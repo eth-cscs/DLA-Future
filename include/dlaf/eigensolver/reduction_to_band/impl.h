@@ -284,8 +284,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(
-        matrix::subTileSender(ex::make_unique_any_sender(mat_a.readwrite_sender_tile(i)), spec));
+    panel_tiles.emplace_back(matrix::subTileSender(mat_a.readwrite_sender_tile(i), spec));
   }
 
   return ex::when_all_vector(std::move(panel_tiles)) |
@@ -499,7 +498,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       auto getSubA = [&a, &view, ij_local]() {
-        return subTileSender(make_unique_any_sender(a.readwrite_sender_tile(ij_local)), view(ij_local));
+        return subTileSender(a.readwrite_sender_tile(ij_local), view(ij_local));
       };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
@@ -587,8 +586,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   };
 
   using panel_tile_type =
-      decltype(matrix::subTileSender(ex::make_unique_any_sender(
-                                         mat_a.readwrite_sender_tile(std::declval<LocalTileIndex>())),
+      decltype(matrix::subTileSender(mat_a.readwrite_sender_tile(std::declval<LocalTileIndex>()),
                                      std::declval<matrix::SubTileSpec>()));
   std::vector<panel_tile_type> panel_tiles;
   panel_tiles.reserve(
@@ -596,7 +594,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
     panel_tiles.emplace_back(
-        matrix::subTileSender(ex::make_unique_any_sender(mat_a.readwrite_sender_tile(i)), spec));
+        matrix::subTileSender(mat_a.readwrite_sender_tile(i), spec));
   }
 
   return ex::when_all(ex::when_all_vector(std::move(panel_tiles)),
@@ -703,8 +701,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
       ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM,
-                                          ex::make_unique_any_sender(x.readwrite_sender_tile({i, 0}))));
+          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite_sender_tile({i, 0})));
     }
     else {
       ex::start_detached(
@@ -720,8 +717,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
       ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
-                                          ex::make_unique_any_sender(x.readwrite_sender_tile(index_x))));
+          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender_tile(index_x)));
     else
       ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
                                                   ex::make_unique_any_sender(x.read_sender2(index_x))));
@@ -753,7 +749,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       auto getSubA = [&a, &view, ij_local]() {
-        return subTileSender(make_unique_any_sender(a.readwrite_sender_tile(ij_local)), view(ij_local));
+        return subTileSender(a.readwrite_sender_tile(ij_local), view(ij_local));
       };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
@@ -877,7 +873,7 @@ protected:
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite_sender_tile(i);
       ex::start_detached(
-          ex::when_all(subTileSender(v.read_sender2(i), spec), subTileSender(make_unique_any_sender(std::move(tile_a)), spec)) |
+          ex::when_all(subTileSender(v.read_sender2(i), spec), subTileSender(std::move(tile_a), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
     }
   }
@@ -975,7 +971,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
 
-    computeTFactor<B>(v, taus.back(), make_unique_any_sender(t.readwrite_sender_tile(t_idx)));
+    computeTFactor<B>(v, taus.back(), t.readwrite_sender_tile(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1137,8 +1133,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       // deadlock due to tile shared between panel and trailing matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_block, v, mat_a, !is_full_band);
-      computeTFactor<B>(v, taus.back(), ex::make_unique_any_sender(t.readwrite_sender_tile(t_idx)),
-                        mpi_col_chain);
+      computeTFactor<B>(v, taus.back(), t.readwrite_sender_tile(t_idx), mpi_col_chain);
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -1202,8 +1197,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
       ex::start_detached(
           comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
-                                         ex::make_unique_any_sender(
-                                             w2.readwrite_sender_tile(LocalTileIndex(0, 0)))));
+                                         w2.readwrite_sender_tile(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1293,7 +1287,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           if (dist.commGridSize().rows() > 1)
             ex::start_detached(
                 comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()), owner,
-                                        ex::make_unique_any_sender(xt.readwrite_sender_tile(at))));
+                                        xt.readwrite_sender_tile(at)));
         }
       }
 

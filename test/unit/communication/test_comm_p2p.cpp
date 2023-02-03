@@ -97,7 +97,7 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   else if (rank_dst == world.rank()) {
     ex::start_detached(
         comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, tag,
-                           ex::make_unique_any_sender(matrix.readwrite_sender_tile(idx))));
+                           matrix.readwrite_sender_tile(idx)));
   }
   else {
     return;
@@ -160,7 +160,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         ex::start_detached(
             comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, id,
-                               ex::make_unique_any_sender(matrix.readwrite_sender_tile(idx))));
+                               matrix.readwrite_sender_tile(idx)));
       }
     }
   }

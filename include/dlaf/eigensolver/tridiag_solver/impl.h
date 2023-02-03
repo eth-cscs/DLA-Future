@@ -249,13 +249,14 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
       stedcAsync<D>(tridiag.readwrite_sender_tile(idx_trd), evecs.readwrite_sender_tile(ii_tile));
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                  // TODO: any_sender to unique_any_sender conversion. Should not be necessary.
                                   ex::make_unique_any_sender(tridiag.read_sender2(idx_trd))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(tridiag.readwrite_sender_tile(idx_trd))));
+                                  tridiag.readwrite_sender_tile(idx_trd)));
     }
   }
 }

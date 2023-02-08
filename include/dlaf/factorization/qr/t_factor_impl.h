@@ -10,9 +10,15 @@
 
 #pragma once
 
-#include <pika/future.hpp>
+#include <memory>
 
 #include <blas.hh>
+#include <pika/barrier.hpp>
+#include <pika/future.hpp>
+
+#include "dlaf/blas/tile_extensions.h"
+#include "dlaf/matrix/tile.h"
+#include "dlaf/util_matrix.h"
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
@@ -238,20 +244,19 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 #endif
 }
 
-template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t) {
+template <Backend B, Device D, class T>
+void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
+                               pika::shared_future<common::internal::vector<T>> taus,
+                               pika::future<matrix::Tile<T, D>> t) {
   namespace ex = pika::execution::experimental;
 
-  using Helpers = tfactor_l::Helpers<backend, device, T>;
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)
     return;
 
-  const auto v_start = hh_panel.offsetElement();
-
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  std::vector<decltype(hh_panel.read_sender(std::declval<LocalTileIndex>()))> panel_tiles;
+  for (const auto idx : hh_panel.iteratorLocal())
+    panel_tiles.push_back(hh_panel.read_sender(idx));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -268,24 +273,67 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // 1) t = -tau(j) . V(j:, 0:j)* . V(j:, j)
   // 2) T(0:j, j) = T(0:j, 0:j) . t
 
-  // 1st step: compute the column partial result `t`
-  // First we compute the matrix vector multiplication for each column
-  // -tau(j) . V(j:, 0:j)* . V(j:, j)
-  for (const auto& v_i : hh_panel.iteratorLocal()) {
-    const SizeType first_row_tile =
-        std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
+  const SizeType v_start = hh_panel.offsetElement();
+  const SizeType bsRows = hh_panel.parentDistribution().blockSize().rows();
+  const SizeType panelRowBegin = hh_panel.iteratorLocal().begin()->row();
 
-    // Note:
-    // Since we are writing always on the same t, the gemv are serialized
-    // A possible solution to this would be to have multiple places where to store partial
-    // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
-  }
+  const SizeType nthreads = std::max<SizeType>(1, (pika::get_num_worker_threads() / 2));
+  ex::start_detached(
+      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
+                   ex::when_all_vector(std::move(panel_tiles)), std::move(taus), std::move(t)) |
+      ex::let_value([nthreads, v_start, panelRowBegin,
+                     bsRows](std::shared_ptr<pika::barrier<>>& barrier_ptr, auto&& panel,
+                             const common::internal::vector<T>& taus, matrix::Tile<T, D>& t) {
+        matrix::Matrix<T, D> t_all({t.size().rows() * (nthreads - 1), t.size().cols()}, t.size());
+        return ex::when_all_vector(
+                   select(t_all, common::iterate_range2d(t_all.distribution().localNrTiles()))) |
+               ex::transfer(
+                   dlaf::internal::getBackendScheduler<B>(pika::execution::thread_priority::high)) |
+               ex::bulk(nthreads, [&barrier_ptr, &t, &taus, &panel, nthreads, v_start, panelRowBegin,
+                                   bsRows](const SizeType index,
+                                           std::vector<matrix::Tile<T, D>>& t_all) {
+                 using Helpers = tfactor_l::Helpers<B, D, T>;
 
-  // 2nd step: compute the T factor, by performing the last step on each column
-  // each column depends on the previous part (all reflectors that comes before)
-  // so it is performed sequentially
-  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
+                 tile::internal::set0<T>(index == 0 ? t : t_all[index - 1]);
+
+                 // 1st step
+                 // compute the column partial result `t` (multi-threaded)
+                 // First we compute the matrix vector multiplication for each column
+                 // -tau(j) . V(j:, 0:j)* . V(j:, j)
+                 const SizeType chunk_size = util::ceilDiv<SizeType>(panel.size(), nthreads);
+                 const SizeType from = to_SizeType(index) * chunk_size;
+                 const SizeType to = std::min(index * chunk_size + chunk_size, SizeType(panel.size()));
+
+                 for (auto i = from; i < to; ++i) {
+                   const matrix::Tile<const T, D>& tile_v = panel[i].get();
+
+                   // std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
+                   const SizeType first_row_tile =
+                       std::max<SizeType>(0, (panelRowBegin + i) * bsRows - v_start);
+
+                   if (index == 0)
+                     t = Helpers::gemv_func(first_row_tile, tile_v, taus, std::move(t));
+                   else
+                     t_all[index - 1] =
+                         Helpers::gemv_func(first_row_tile, tile_v, taus, std::move(t_all[index - 1]));
+                 }
+
+                 barrier_ptr->arrive_and_wait();
+
+                 // (single-threaded)
+                 if (index == 0) {
+                   // reduce
+                   for (auto& partial_t : t_all)
+                     tile::internal::add(T(1), partial_t, t);
+
+                   // 2nd step
+                   // compute the T factor, by performing the last step on each column (single-threaded)
+                   // each column depends on the previous part (all reflectors that comes before) so it
+                   // is performed sequentially
+                   t = Helpers::trmv_func(std::move(t));
+                 }
+               });
+      }));
 }
 
 template <Backend backend, Device device, class T>

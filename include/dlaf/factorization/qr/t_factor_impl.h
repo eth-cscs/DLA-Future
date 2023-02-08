@@ -59,74 +59,78 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         std::forward<TSender>(t));
   }
 
+  static auto gemv_func(const SizeType first_row_tile, const matrix::Tile<const T, Device::CPU>& tile_v,
+                        const common::internal::vector<T>& taus,
+                        matrix::Tile<T, Device::CPU> tile_t) noexcept {
+    const SizeType k = tile_t.size().cols();
+    DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
+    DLAF_ASSERT(taus.size() == k, taus.size(), k);
+
+    for (SizeType j = 0; j < k; ++j) {
+      const T tau = taus[j];
+
+      const TileElementIndex t_start{0, j};
+
+      // Position of the 1 in the diagonal in the current column.
+      SizeType i_diag = j - first_row_tile;
+      const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
+
+      // Break if the reflector starts in the next tile.
+      if (i_diag >= tile_v.size().rows())
+        break;
+
+      // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
+      // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
+      TileElementIndex va_start{first_element_in_col, 0};
+      TileElementIndex vb_start{first_element_in_col, j};
+      TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
+
+      if (i_diag >= 0) {
+        tile_t({j, j}) = tau;
+      }
+
+      blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
+                 tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
+    }
+    return std::move(tile_t);
+  };
+
   template <class TSender>
   static auto gemvColumnT(SizeType first_row_tile,
                           pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
-    auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
-      const SizeType k = tile_t.size().cols();
-      DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-      DLAF_ASSERT(taus.size() == k, taus.size(), k);
-
-      for (SizeType j = 0; j < k; ++j) {
-        const T tau = taus[j];
-
-        const TileElementIndex t_start{0, j};
-
-        // Position of the 1 in the diagonal in the current column.
-        SizeType i_diag = j - first_row_tile;
-        const SizeType first_element_in_col = std::max<SizeType>(0, i_diag);
-
-        // Break if the reflector starts in the next tile.
-        if (i_diag >= tile_v.size().rows())
-          break;
-
-        // T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)
-        // [j x 1] = [(n-j) x j]* . [(n-j) x 1]
-        TileElementIndex va_start{first_element_in_col, 0};
-        TileElementIndex vb_start{first_element_in_col, j};
-        TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};
-
-        if (i_diag >= 0) {
-          tile_t({j, j}) = tau;
-        }
-
-        blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
-                   tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start),
-                   1);
-      }
-      return std::move(tile_t);
-    };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
-                                     std::move(gemv_func),
-                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
+                                     gemv_func,
+                                     ex::when_all(ex::just(first_row_tile),
+                                                  dlaf::internal::keepFuture(tile_vi),
                                                   dlaf::internal::keepFuture(taus),
                                                   std::forward<TSender>(tile_t)));
+  }
+
+  // Update each column (in order) t = T . t
+  // remember that T is upper triangular, so it is possible to use TRMV
+  static auto trmv_func(matrix::Tile<T, Device::CPU>&& tile_t) {
+    for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
+      const TileElementIndex t_start{0, j};
+      const TileElementSize t_size{j, 1};
+
+      blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
+                 t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
+    }
+    // TODO: Why return if the tile is unused?
+    return std::move(tile_t);
   }
 
   template <typename TSender>
   static auto trmvUpdateColumn(TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
-    // Update each column (in order) t = T . t
-    // remember that T is upper triangular, so it is possible to use TRMV
-    auto trmv_func = [](matrix::Tile<T, Device::CPU>&& tile_t) {
-      for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
-        const TileElementIndex t_start{0, j};
-        const TileElementSize t_size{j, 1};
-
-        blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
-                   t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
-      }
-      // TODO: Why return if the tile is unused?
-      return std::move(tile_t);
-    };
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
-                                     std::move(trmv_func), std::forward<TSender>(tile_t));
+                                     trmv_func, std::forward<TSender>(tile_t));
   }
 };
 

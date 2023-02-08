@@ -185,7 +185,15 @@ public:
   ///
   /// If a promise was set using @c setPromise its value is set to a Tile
   /// which has the same size and which references the same memory as @p *this.
-  ~Tile();
+  ~Tile() {
+    if (std::holds_alternative<TilePromise>(dep_tracker_)) {
+      auto& p_ = std::get<TilePromise>(dep_tracker_);
+      if (std::uncaught_exceptions() > 0)
+        p_.set_exception(std::make_exception_ptr(ContinuationException{}));
+      else
+        p_.set_value(std::move(this->data_));
+    }
+  }
 
   Tile& operator=(const Tile&) = delete;
 
@@ -231,6 +239,12 @@ public:
     return data_.ld() == data_.size().rows();
   }
 
+  /// Returns a subtile.
+  /// Note: to avoid segfaults or race conditions, the original tile must be kept in scope.
+  Tile subTileReference(const SubTileSpec& spec) const noexcept {
+    return Tile(*this, spec);
+  }
+
   /// Prints information about the tile.
   friend std::ostream& operator<<(std::ostream& out, const Tile& tile) {
     return out << "size=" << tile.size() << ", ld=" << tile.ld();
@@ -252,13 +266,13 @@ private:
   // Creates an untracked subtile.
   // Dependencies are not influenced by the new created object therefore race-conditions
   // might happen if used improperly.
-  Tile(const Tile& tile, const SubTileSpec& spec) noexcept;
+  Tile(const Tile& tile, const SubTileSpec& spec) noexcept
+      : Tile(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
   // Creates a read-only subtile keeping the dependencies.
   // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...
-  Tile(pika::shared_future<ConstTileType> tile, const SubTileSpec& spec)
-      : Tile<const T, D>(tile.get(), spec) {
+  Tile(pika::shared_future<ConstTileType> tile, const SubTileSpec& spec) : Tile(tile.get(), spec) {
     dep_tracker_ = std::move(tile);
   }
 
@@ -267,21 +281,6 @@ private:
                pika::shared_future<ConstTileType>>
       dep_tracker_;
 };
-
-template <class T, Device D>
-Tile<const T, D>::~Tile() {
-  if (std::holds_alternative<TilePromise>(dep_tracker_)) {
-    auto& p_ = std::get<TilePromise>(dep_tracker_);
-    if (std::uncaught_exceptions() > 0)
-      p_.set_exception(std::make_exception_ptr(ContinuationException{}));
-    else
-      p_.set_value(std::move(this->data_));
-  }
-}
-
-template <class T, Device D>
-Tile<const T, D>::Tile(const Tile<const T, D>& tile, const SubTileSpec& spec) noexcept
-    : Tile<const T, D>(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
 template <class T, Device D>
 class Tile : public Tile<const T, D> {
@@ -352,7 +351,18 @@ public:
     return *this;
   }
 
+  /// Returns a subtile.
+  /// Note: to avoid segfaults or race conditions, the original tile must be kept in scope.
+  Tile subTileReference(const SubTileSpec& spec) const noexcept {
+    return Tile(*this, spec);
+  }
+
 private:
+  // Creates an untracked subtile.
+  // Dependencies are not influenced by the new created object therefore race-conditions
+  // might happen if used improperly.
+  Tile(const Tile& tile, const SubTileSpec& spec) noexcept : Tile<const T, D>(tile, spec) {}
+
   // Creates a writable subtile keeping the dependencies.
   // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
   // e.g. in dataflow, .then, ...

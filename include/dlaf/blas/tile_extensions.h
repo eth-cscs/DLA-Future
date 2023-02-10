@@ -22,6 +22,7 @@
 #ifdef DLAF_WITH_GPU
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/blas/error.h"
+#include "dlaf/lapack/gpu/add.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -69,11 +70,11 @@ template <class T>
 void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
          const matrix::Tile<T, Device::GPU>& tile_a) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
-  for (auto j = 0; j < tile_a.size().cols(); ++j)
-    gpublas::internal::Axpy<T>::call(handle, to_int(tile_a.size().rows()),
-                                     util::blasToCublasCast(&alpha),
-                                     util::blasToCublasCast(tile_b.ptr({0, j})), 1,
-                                     util::blasToCublasCast(tile_a.ptr({0, j})), 1);
+  whip::stream_t stream;
+  cublasGetStream(handle, &stream);
+
+  gpulapack::add(blas::Uplo::General, tile_a.size().rows(), tile_a.size().cols(), alpha, tile_b.ptr(),
+                 tile_b.ld(), tile_a.ptr(), tile_a.ld(), stream);
 }
 #endif
 

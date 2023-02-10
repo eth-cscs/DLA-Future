@@ -228,7 +228,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(
-    const SizeType b, comm::CommunicatorGrid grid, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
+    comm::CommunicatorGrid grid, const SizeType b, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;

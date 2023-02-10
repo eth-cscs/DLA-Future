@@ -20,7 +20,7 @@ struct BackTransformationReductionToBand {
   static void call(SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 
-  static void call(const SizeType b, comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
+  static void call(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
                    Matrix<const T, device>& mat_v,
                    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 };

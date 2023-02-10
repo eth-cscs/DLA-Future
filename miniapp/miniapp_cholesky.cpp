@@ -136,8 +136,11 @@ struct choleskyMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                            matrix.get());
+        if (opts.local)
+          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix.get());
+        else
+          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
+                                                                              matrix.get());
 
         // wait and barrier for all ranks
         matrix.get().waitLocalTiles();

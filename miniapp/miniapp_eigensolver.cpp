@@ -113,8 +113,13 @@ struct EigensolverMiniapp {
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
       dlaf::common::Timer<> timeit;
-      auto [eigenvalues, eigenvectors] =
-          dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+      auto bench = [&]() {
+        if (opts.local)
+          return dlaf::eigensolver::eigensolver<backend>(opts.uplo, matrix->get());
+        else
+          return dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+      };
+      auto [eigenvalues, eigenvectors] = bench();
 
       // wait and barrier for all ranks
       eigenvectors.waitLocalTiles();

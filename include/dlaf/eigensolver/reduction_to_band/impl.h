@@ -116,7 +116,7 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
 template <Device D, class T>
 void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                            common::internal::vector<T>& w, SizeType j, const SizeType pt_cols,
-                           const size_t from, const size_t to) {
+                           const size_t begin, const size_t end) {
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
   if (!(pt_cols > 0))
@@ -126,7 +126,7 @@ void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T
   bool has_first_component = has_head;
 
   // W = Pt* . V
-  for (auto index = from; index < to; ++index) {
+  for (auto index = begin; index < end; ++index) {
     const matrix::Tile<const T, D>& tile_a = panel[index];
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
@@ -158,13 +158,13 @@ void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T
 
 template <Device D, class T>
 void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
-                         const std::vector<T>& w, const T tau, const size_t from, const size_t to) {
+                         const std::vector<T>& w, const T tau, const size_t begin, const size_t end) {
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
 
   // GER Pt = Pt - tau . v . w*
-  for (auto index = from; index < to; ++index) {
+  for (auto index = begin; index < end; ++index) {
     const matrix::Tile<T, D>& tile_a = panel[index];
     const SizeType first_element = has_first_component ? index_el_x0.row() : 0;
 
@@ -294,8 +294,8 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                   ex::bulk(nthreads,
                            [=, &barrier_ptr, &taus, &w, &tiles](const size_t index) {
                              const size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                             const size_t from = index * batch_size;
-                             const size_t to = std::min(index * batch_size + batch_size, tiles.size());
+                             const size_t begin = index * batch_size;
+                             const size_t end = std::min(index * batch_size + batch_size, tiles.size());
 
                              if (index == 0) {
                                taus.reserve(nrefls);
@@ -315,7 +315,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                                const bool has_head = (index == 0);
 
                                w[index] = common::internal::vector<T>(pt_cols, 0);
-                               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, from, to);
+                               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
                                barrier_ptr->arrive_and_wait();
 
                                // STEP2b: reduce w results (single-threaded)
@@ -330,7 +330,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                                barrier_ptr->arrive_and_wait();
 
                                // STEP3: update trailing panel (multi-threaded)
-                               updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), from, to);
+                               updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
                                barrier_ptr->arrive_and_wait();
                              }
                            }) |

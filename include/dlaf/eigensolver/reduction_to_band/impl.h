@@ -30,6 +30,7 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/eigensolver/get_red2band_panel_nworkers.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
@@ -281,7 +282,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  const size_t nthreads = std::max<size_t>(1, pika::get_num_worker_threads() / 2);
+  const size_t nthreads = getReductionToBandPanelNWorkers();
   return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
                       ex::just(common::internal::vector<T>{}),               // taus

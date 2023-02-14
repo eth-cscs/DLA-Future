@@ -67,11 +67,9 @@ void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
-         const matrix::Tile<T, Device::GPU>& tile_a) {
+void add(T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
+         const matrix::Tile<T, Device::GPU>& tile_a, whip::stream_t stream) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
-  whip::stream_t stream;
-  cublasGetStream(handle, &stream);
 
   gpulapack::add(blas::Uplo::General, tile_a.size().rows(), tile_a.size().cols(), alpha, tile_b.ptr(),
                  tile_b.ld(), tile_a.ptr(), tile_a.ld(), stream);
@@ -81,7 +79,7 @@ void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU
 DLAF_MAKE_CALLABLE_OBJECT(add);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Blas, add, internal::add_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, add, internal::add_o)
 
 #endif
 }

@@ -392,14 +392,14 @@ void QR_Tfactor<Backend::GPU, Device::GPU, T>::call(matrix::Panel<Coord::Col, T,
 }
 #endif
 
-template <Backend backend, Device device, class T>
-void QR_TfactorDistributed<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel,
-    pika::shared_future<common::internal::vector<T>> taus, pika::future<matrix::Tile<T, device>> t,
-    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+template <Backend B, Device D, class T>
+void QR_TfactorDistributed<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
+                                          pika::shared_future<common::internal::vector<T>> taus,
+                                          pika::future<matrix::Tile<T, D>> t,
+                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
-  using Helpers = tfactor_l::Helpers<backend, device, T>;
+  using Helpers = tfactor_l::Helpers<B, D, T>;
 
   // Fast return in case of no reflectors
   if (hh_panel.getWidth() == 0)
@@ -408,7 +408,7 @@ void QR_TfactorDistributed<backend, device, T>::call(
   const auto v_start = hh_panel.offsetElement();
   auto dist = hh_panel.parentDistribution();
 
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  ex::unique_any_sender<matrix::Tile<T, D>> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column

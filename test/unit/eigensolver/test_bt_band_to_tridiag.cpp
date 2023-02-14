@@ -18,6 +18,7 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/tune.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
@@ -232,24 +233,27 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 }
 
 struct config_t {
-  const SizeType m, n, mb, nb, b = mb;
+  const SizeType m, n, mb, nb, group_size, b = mb;
 };
 
 std::vector<config_t> configs{
-    {0, 0, 4, 4},                                  // empty
-    {1, 1, 4, 4},   {2, 2, 4, 4},   {2, 2, 1, 1},  // edge-cases
-    {12, 12, 4, 4}, {12, 12, 4, 3}, {20, 30, 5, 5}, {20, 30, 5, 6},
-    {8, 8, 3, 3},   {10, 10, 3, 3}, {12, 12, 5, 5}, {12, 30, 5, 6},
+    {0, 0, 4, 4, 4},                                        // empty
+    {1, 1, 4, 4, 4},   {2, 2, 4, 4, 2},   {2, 2, 1, 1, 1},  // edge-cases
+    {12, 12, 4, 4, 4}, {12, 12, 4, 3, 2}, {20, 30, 5, 5, 3}, {20, 30, 5, 6, 5},
+    {8, 8, 3, 3, 3},   {10, 10, 3, 3, 3}, {12, 12, 5, 5, 4}, {12, 30, 5, 6, 1},
 };
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocal) {
-  for (const auto& [m, n, mb, nb, b] : configs)
+  for (const auto& [m, n, mb, nb, group_size, b] : configs) {
+    getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
+  }
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, n, mb, nb, b] : configs) {
+    for (const auto& [m, n, mb, nb, group_size, b] : configs) {
+      getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
     }
   }
@@ -257,13 +261,16 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocal) {
-  for (const auto& [m, n, mb, nb, b] : configs)
+  for (const auto& [m, n, mb, nb, group_size, b] : configs) {
+    getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+  }
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, n, mb, nb, b] : configs) {
+    for (const auto& [m, n, mb, nb, group_size, b] : configs) {
+      getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
     }
   }
@@ -271,17 +278,21 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
 #endif
 
 std::vector<config_t> configs_subband{
-    {0, 12, 4, 4, 2}, {4, 4, 4, 4, 2}, {12, 12, 4, 4, 2}, {12, 25, 6, 3, 2}, {11, 13, 6, 4, 2},
+    {0, 12, 4, 4, 2, 2},  {4, 4, 4, 4, 2, 2},   {12, 12, 4, 4, 2, 2},
+    {12, 25, 6, 3, 2, 3}, {15, 13, 8, 4, 2, 4},
 };
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocalSubBand) {
-  for (const auto& [m, n, mb, nb, b] : configs_subband)
+  for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
+    getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
     testBacktransformation<Backend::MC, Device::CPU, TypeParam>(m, n, mb, nb, b);
+  }
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+    for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
+      getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
     }
   }
@@ -289,13 +300,16 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocalSubBand) {
-  for (const auto& [m, n, mb, nb, b] : configs_subband)
+  for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
+    getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
     testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(m, n, mb, nb, b);
+  }
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand) {
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& [m, n, mb, nb, b] : configs_subband) {
+    for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
+      getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
     }
   }

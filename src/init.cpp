@@ -164,6 +164,10 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
 
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
                            "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
+
+  updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size,
+                           "DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
+                           "bt-band-to-tridiag-hh-apply-group-size");
 }
 
 configuration& getConfiguration() {
@@ -195,7 +199,10 @@ pika::program_options::options_description getOptionsDescription() {
       "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
   desc.add_options()(
       "dlaf:band-to-tridiag-1d-block-size-base", pika::program_options::value<SizeType>(),
-      "The 1D block size for band_to_tridiagonal is computed as band_to_tridiag_1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
+      "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
+  desc.add_options()(
+      "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(),
+      "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
 
   return desc;
 }

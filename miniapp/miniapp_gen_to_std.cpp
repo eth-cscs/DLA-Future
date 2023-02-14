@@ -130,9 +130,13 @@ struct GenToStdMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                          matrix_a.get(),
-                                                                          matrix_b.get());
+        if (opts.local)
+          dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix_a.get(),
+                                                                            matrix_b.get());
+        else
+          dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
+                                                                            matrix_a.get(),
+                                                                            matrix_b.get());
 
         // wait and barrier for all ranks
         matrix_a.get().waitLocalTiles();

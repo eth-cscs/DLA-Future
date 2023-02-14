@@ -46,7 +46,7 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
                     pika::future<matrix::Tile<T, device>> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
+  QR_TfactorDistributed<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
 }
 
 }

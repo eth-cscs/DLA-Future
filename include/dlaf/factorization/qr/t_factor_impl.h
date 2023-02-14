@@ -244,10 +244,13 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 #endif
 }
 
-template <Backend B, Device D, class T>
-void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
-                               pika::shared_future<common::internal::vector<T>> taus,
-                               pika::future<matrix::Tile<T, D>> t) {
+template <class T>
+void QR_Tfactor<Backend::MC, Device::CPU, T>::call(matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
+                                                   pika::shared_future<common::internal::vector<T>> taus,
+                                                   pika::future<matrix::Tile<T, Device::CPU>> t) {
+  constexpr auto B = Backend::MC;
+  constexpr auto D = Device::CPU;
+
   namespace ex = pika::execution::experimental;
 
   // Fast return in case of no reflectors
@@ -334,11 +337,66 @@ void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
       }));
 }
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+void QR_Tfactor<Backend::GPU, Device::GPU, T>::call(matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
+                                                    pika::shared_future<common::internal::vector<T>> taus,
+                                                    pika::future<matrix::Tile<T, Device::GPU>> t) {
+  constexpr auto B = Backend::GPU;
+  constexpr auto D = Device::GPU;
+
+  namespace ex = pika::execution::experimental;
+
+  using Helpers = tfactor_l::Helpers<B, D, T>;
+  // Fast return in case of no reflectors
+  if (hh_panel.getWidth() == 0)
+    return;
+
+  const auto v_start = hh_panel.offsetElement();
+
+  ex::unique_any_sender<matrix::Tile<T, D>> t_local = Helpers::set0(std::move(t));
+
+  // Note:
+  // T factor is an upper triangular square matrix, built column by column
+  // with taus values on the diagonal
+  //
+  // T(j,j) = tau(j)
+  //
+  // and in the upper triangular part the following formula applies
+  //
+  // T(0:j, j) = T(0:j, 0:j) . -tau(j) . V(j:, 0:j)* . V(j:, j)
+  //
+  //
+  // The result is achieved in two main steps:
+  // 1) t = -tau(j) . V(j:, 0:j)* . V(j:, j)
+  // 2) T(0:j, j) = T(0:j, 0:j) . t
+
+  // 1st step: compute the column partial result `t`
+  // First we compute the matrix vector multiplication for each column
+  // -tau(j) . V(j:, 0:j)* . V(j:, j)
+  for (const auto& v_i : hh_panel.iteratorLocal()) {
+    const SizeType first_row_tile =
+        std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
+
+    // Note:
+    // Since we are writing always on the same t, the gemv are serialized
+    // A possible solution to this would be to have multiple places where to store partial
+    // results, and then locally reduce them just before the reduce over ranks
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
+  }
+
+  // 2nd step: compute the T factor, by performing the last step on each column
+  // each column depends on the previous part (all reflectors that comes before)
+  // so it is performed sequentially
+  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
+}
+#endif
+
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t,
-                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void QR_TfactorDistributed<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel,
+    pika::shared_future<common::internal::vector<T>> taus, pika::future<matrix::Tile<T, device>> t,
+    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -392,5 +450,4 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   // so it is performed sequentially
   ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));
 }
-
 }

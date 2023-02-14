@@ -110,7 +110,6 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
   constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
   if constexpr (D == Device::CPU) {
@@ -119,6 +118,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   }
   else {
 #ifdef DLAF_WITH_GPU
+    using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
     return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom),
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
            ex::let_value([](auto& top, auto& bottom, auto& host_offdiag_val) {
@@ -251,7 +251,6 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
 
-  using ElementType = dlaf::internal::SenderElementType<TileSender>;
   constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
   if constexpr (D == Device::CPU) {
@@ -260,6 +259,7 @@ auto maxElementInColumnTileAsync(TileSender&& tile) {
   }
   else {
 #ifdef DLAF_WITH_GPU
+    using ElementType = dlaf::internal::SenderElementType<TileSender>;
     return ex::when_all(std::forward<TileSender>(tile),
                         ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1},
                                  memory::MemoryChunk<ElementType, Device::GPU>{1})) |

@@ -98,7 +98,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       blas::gemv(blas::Layout::ColMajor, blas::Op::ConjTrans, va_size.rows(), va_size.cols(), -tau,
                  tile_v.ptr(va_start), tile_v.ld(), tile_v.ptr(vb_start), 1, 1, tile_t.ptr(t_start), 1);
     }
-    return std::move(tile_t);
+    return tile_t;
   };
 
   template <class TSender>
@@ -277,21 +277,20 @@ void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
   const SizeType bsRows = hh_panel.parentDistribution().blockSize().rows();
   const SizeType panelRowBegin = hh_panel.iteratorLocal().begin()->row();
 
-  const SizeType nthreads = std::max<SizeType>(1, (pika::get_num_worker_threads() / 2));
+  const size_t nthreads = std::max<size_t>(1, (pika::get_num_worker_threads() / 2));
   ex::start_detached(
       ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                    ex::when_all_vector(std::move(panel_tiles)), std::move(taus), std::move(t)) |
-      ex::let_value([nthreads, v_start, panelRowBegin,
-                     bsRows](std::shared_ptr<pika::barrier<>>& barrier_ptr, auto&& panel,
-                             const common::internal::vector<T>& taus, matrix::Tile<T, D>& t) {
-        matrix::Matrix<T, D> t_all({t.size().rows() * (nthreads - 1), t.size().cols()}, t.size());
+      ex::let_value([=](std::shared_ptr<pika::barrier<>>& barrier_ptr, auto&& panel,
+                        const common::internal::vector<T>& taus, matrix::Tile<T, D>& t) {
+        matrix::Matrix<T, D> t_all({t.size().rows() * to_SizeType(nthreads - 1), t.size().cols()},
+                                   t.size());
         return ex::when_all_vector(
                    select(t_all, common::iterate_range2d(t_all.distribution().localNrTiles()))) |
                ex::transfer(
                    dlaf::internal::getBackendScheduler<B>(pika::execution::thread_priority::high)) |
-               ex::bulk(nthreads, [&barrier_ptr, &t, &taus, &panel, nthreads, v_start, panelRowBegin,
-                                   bsRows](const SizeType index,
-                                           std::vector<matrix::Tile<T, D>>& t_all) {
+               ex::bulk(nthreads, [=, &barrier_ptr, &t, &taus,
+                                   &panel](const size_t index, std::vector<matrix::Tile<T, D>>& t_all) {
                  using Helpers = tfactor_l::Helpers<B, D, T>;
 
                  tile::internal::set0<T>(index == 0 ? t : t_all[index - 1]);
@@ -300,16 +299,15 @@ void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
                  // compute the column partial result `t` (multi-threaded)
                  // First we compute the matrix vector multiplication for each column
                  // -tau(j) . V(j:, 0:j)* . V(j:, j)
-                 const SizeType chunk_size = util::ceilDiv<SizeType>(panel.size(), nthreads);
-                 const SizeType from = to_SizeType(index) * chunk_size;
-                 const SizeType to = std::min(index * chunk_size + chunk_size, SizeType(panel.size()));
+                 const size_t chunk_size = util::ceilDiv(panel.size(), nthreads);
+                 const size_t begin = index * chunk_size;
+                 const size_t end = std::min(index * chunk_size + chunk_size, panel.size());
 
-                 for (auto i = from; i < to; ++i) {
+                 for (size_t i = begin; i < end; ++i) {
                    const matrix::Tile<const T, D>& tile_v = panel[i].get();
 
-                   // std::max<SizeType>(0, v_i.row() * hh_panel.parentDistribution().blockSize().rows() - v_start);
                    const SizeType first_row_tile =
-                       std::max<SizeType>(0, (panelRowBegin + i) * bsRows - v_start);
+                       std::max<SizeType>(0, (panelRowBegin + to_SizeType(i)) * bsRows - v_start);
 
                    if (index == 0)
                      t = Helpers::gemv_func(first_row_tile, tile_v, taus, std::move(t));
@@ -327,9 +325,9 @@ void QR_Tfactor<B, D, T>::call(matrix::Panel<Coord::Col, T, D>& hh_panel,
                      tile::internal::add(T(1), partial_t, t);
 
                    // 2nd step
-                   // compute the T factor, by performing the last step on each column (single-threaded)
-                   // each column depends on the previous part (all reflectors that comes before) so it
-                   // is performed sequentially
+                   // compute the T factor, by performing the last step on each column
+                   // (single-threaded) each column depends on the previous part (all reflectors
+                   // that comes before) so it is performed sequentially
                    t = Helpers::trmv_func(std::move(t));
                  }
                });

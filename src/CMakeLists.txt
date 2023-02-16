@@ -170,6 +170,9 @@ function(DLAF_addSublibrary name)
   target_link_libraries(${lib_name} PUBLIC dlaf.prop)
   target_link_libraries(${lib_name} PUBLIC ${DLAF_ASL_LIBRARIES})
   target_link_libraries(${lib_name} PRIVATE dlaf.prop_private)
+  if(DLAF_WITH_CUDA)
+    set_target_properties(${lib_name} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  endif()
 endfunction()
 
 # Define DLAF's CORE library
@@ -282,6 +285,7 @@ add_library(
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)
 target_add_warnings(DLAF)
+set_target_properties(DLAF PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 # ----- DEPLOY
 include(GNUInstallDirs)

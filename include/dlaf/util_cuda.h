@@ -12,10 +12,11 @@
 
 #ifdef DLAF_WITH_GPU
 
-#if defined DLAF_WITH_HIP
+#ifdef DLAF_WITH_HIP
 
 // Float
 #define make_cuComplex make_hipComplex
+#define cuConjf        hipConjf
 #define cuCaddf        hipCaddf
 #define cuCsubf        hipCsubf
 #define cuCmulf        hipCmulf
@@ -24,6 +25,7 @@
 
 // Double
 #define make_cuDoubleComplex make_hipDoubleComplex
+#define cuConj               hipConj
 #define cuCadd               hipCadd
 #define cuCsub               hipCsub
 #define cuCmul               hipCmul
@@ -112,16 +114,8 @@ __host__ __device__ inline float fma(const float& a, const float& b, const float
 }
 
 // Complex
-__host__ __device__ inline cuComplex operator-(const cuComplex& a) noexcept {
-  return make_cuComplex(-a.x, -a.y);
-}
-
 __host__ __device__ inline cuComplex conj(const cuComplex& a) noexcept {
-#ifdef DLAF_WITH_CUDA
   return cuConjf(a);
-#elif defined DLAF_WITH_HIP
-  return make_cuComplex(a.x, -a.y);
-#endif
 }
 
 __host__ __device__ inline float real(const cuComplex& a) noexcept {
@@ -132,7 +126,11 @@ __host__ __device__ inline float imag(const cuComplex& a) noexcept {
   return a.y;
 }
 
-#if defined DLAF_WITH_CUDA
+#ifdef DLAF_WITH_CUDA
+__host__ __device__ inline cuComplex operator-(const cuComplex& a) noexcept {
+  return make_cuComplex(-a.x, -a.y);
+}
+
 __host__ __device__ inline bool operator==(const cuComplex& a, const cuComplex& b) noexcept {
   return a.x == b.x && a.y == b.y;
 }
@@ -140,7 +138,6 @@ __host__ __device__ inline bool operator==(const cuComplex& a, const cuComplex& 
 __host__ __device__ inline bool operator!=(const cuComplex& a, const cuComplex& b) noexcept {
   return !operator==(a, b);
 }
-#endif
 
 __host__ __device__ inline cuComplex operator+(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCaddf(a, b);
@@ -157,6 +154,7 @@ __host__ __device__ inline cuComplex operator*(const cuComplex& a, const cuCompl
 __host__ __device__ inline cuComplex operator/(const cuComplex& a, const cuComplex& b) noexcept {
   return cuCdivf(a, b);
 }
+#endif
 
 __host__ __device__ inline cuComplex fma(const cuComplex& a, const cuComplex& b,
                                          const cuComplex& c) noexcept {
@@ -193,16 +191,8 @@ __host__ __device__ inline double fma(const double& a, const double& b, const do
 }
 
 // Double complex
-__host__ __device__ inline cuDoubleComplex operator-(const cuDoubleComplex& a) noexcept {
-  return make_cuDoubleComplex(-a.x, -a.y);
-}
-
 __host__ __device__ inline cuDoubleComplex conj(const cuDoubleComplex& a) noexcept {
-#if defined DLAF_WITH_CUDA
   return cuConj(a);
-#elif defined DLAF_WITH_HIP
-  return make_cuDoubleComplex(a.x, -a.y);
-#endif
 }
 
 __host__ __device__ inline double real(const cuDoubleComplex& a) noexcept {
@@ -213,7 +203,11 @@ __host__ __device__ inline double imag(const cuDoubleComplex& a) noexcept {
   return a.y;
 }
 
-#if defined DLAF_WITH_CUDA
+#ifdef DLAF_WITH_CUDA
+__host__ __device__ inline cuDoubleComplex operator-(const cuDoubleComplex& a) noexcept {
+  return make_cuDoubleComplex(-a.x, -a.y);
+}
+
 __host__ __device__ inline bool operator==(const cuDoubleComplex& a, const cuDoubleComplex& b) noexcept {
   return a.x == b.x && a.y == b.y;
 }
@@ -221,7 +215,6 @@ __host__ __device__ inline bool operator==(const cuDoubleComplex& a, const cuDou
 __host__ __device__ inline bool operator!=(const cuDoubleComplex& a, const cuDoubleComplex& b) noexcept {
   return !operator==(a, b);
 }
-#endif
 
 __host__ __device__ inline cuDoubleComplex operator+(const cuDoubleComplex& a,
                                                      const cuDoubleComplex& b) noexcept {
@@ -242,6 +235,7 @@ __host__ __device__ inline cuDoubleComplex operator/(const cuDoubleComplex& a,
                                                      const cuDoubleComplex& b) noexcept {
   return cuCdiv(a, b);
 }
+#endif
 
 __host__ __device__ inline cuDoubleComplex fma(const cuDoubleComplex& a, const cuDoubleComplex& b,
                                                const cuDoubleComplex& c) noexcept {

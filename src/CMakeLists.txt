@@ -196,7 +196,8 @@ DLAF_addSublibrary(
           memory/memory_view.cpp
           memory/memory_chunk.cpp
           tune.cpp
-  GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/lacpy.cu lapack/gpu/laset.cu
+  GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/add.cu lapack/gpu/lacpy.cu
+              lapack/gpu/laset.cu
   COMPILE_OPTIONS $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>
 )
 

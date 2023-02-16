@@ -112,7 +112,13 @@ struct reductionToBandMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        auto taus = dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix, opts.b);
+        auto bench = [&]() {
+          if (opts.local)
+            return dlaf::eigensolver::reductionToBand<backend>(matrix, opts.b);
+          else
+            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix, opts.b);
+        };
+        auto taus = bench();
 
         // wait and barrier for all ranks
         matrix.waitLocalTiles();

@@ -147,6 +147,9 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
     return;
 
   // SCOPED_TRACE cannot yield.
+  // As not all the tiles are needed by the algorithm,
+  // this wait is needed to ensure that the full matrix is setup to avoid yielding.
+  mat_a_h.waitLocalTiles();
   mat_trid.waitLocalTiles();
   mat_v.waitLocalTiles();
   SCOPED_TRACE(::testing::Message() << "size " << m << ", block " << mb << ", band " << band_size

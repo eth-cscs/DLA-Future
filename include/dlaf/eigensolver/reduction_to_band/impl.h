@@ -38,6 +38,7 @@
 #include "dlaf/matrix/views.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
+#include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
 #include "dlaf/eigensolver/reduction_to_band/api.h"
@@ -622,6 +623,40 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
 
   const LocalTileIndex at_offset = view.begin();
 
+  // PHASE 1: schedule computations (diag, offdiag nt, offidag t)
+
+  // PHASE 1a: schedule transposed-ops
+  for (SizeType j = dist.localNrTiles().cols() - 1; j >= at_offset.col(); --j) {
+    const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Row>(
+        dist.template globalTileFromLocalTile<Coord::Col>(j) + 1);
+    for (SizeType i = limit; i < dist.localNrTiles().rows(); ++i) {
+      const LocalTileIndex ij_local{i, j};
+      const GlobalTileIndex ij = dist.globalTileIndex(ij_local);
+
+      const auto& tile_a = splitTile(a.read(ij), view(ij_local));
+      // Note:
+      // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
+      // So, first step is identifying the mirrored cell coordinate, i.e. swap row/col, together
+      // with realizing if the new coord lays on an owned row or not.
+      // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
+      // For what concerns the second operand, it can be found for sure in W. In fact, the
+      // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
+      // we are matching row(A) == row(W), so it is local by construction.
+      const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
+
+      const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
+      const LocalTileIndex index_xt{0, ij_local.col()};
+
+      // TODO evaluate using just xt
+      auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
+                                                      : xt.readwrite_sender(index_xt);
+
+      hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
+                     w.read_sender(ij_local), std::move(tile_x));
+    }
+  }
+
+  // PHASE 1b: schedule non-transposed-ops
   for (SizeType i = at_offset.row(); i < dist.localNrTiles().rows(); ++i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
         dist.template globalTileFromLocalTile<Coord::Row>(i) + 1);
@@ -646,25 +681,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         // in the "local" panel X.
         hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, keepFuture(tile_a),
                        wt.read_sender(ij_local), x.readwrite_sender(ij_local));
-
-        // Note:
-        // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
-        // So, first step is identifying the mirrored cell coordinate, i.e. swap row/col, together
-        // with realizing if the new coord lays on an owned row or not.
-        // If yes, the result can be stored in the X, otherwise Xt support panel will be used.
-        // For what concerns the second operand, it can be found for sure in W. In fact, the
-        // multiplication requires matching col(A) == row(W), but since coordinates are mirrored,
-        // we are matching row(A) == row(W), so it is local by construction.
-        const auto owner = dist.template rankGlobalTile<Coord::Row>(ij.col());
-
-        const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
-        const LocalTileIndex index_xt{0, ij_local.col()};
-
-        auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
-                                                        : xt.readwrite_sender(index_xt);
-
-        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
-                       w.read_sender(ij_local), std::move(tile_x));
       }
     }
   }

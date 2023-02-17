@@ -31,6 +31,10 @@ struct QR_Tfactor<Backend::MC, Device::CPU, T> {
   static void call(matrix::Panel<Coord::Col, T, Device::CPU>& panel_view,
                    pika::shared_future<common::internal::vector<T>> taus,
                    pika::future<matrix::Tile<T, Device::CPU>> t);
+  static void call(matrix::Panel<Coord::Col, T, Device::CPU>& hh_panel,
+                   pika::shared_future<common::internal::vector<T>> taus,
+                   pika::future<matrix::Tile<T, Device::CPU>> t,
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 #ifdef DLAF_WITH_GPU
@@ -39,21 +43,16 @@ struct QR_Tfactor<Backend::GPU, Device::GPU, T> {
   static void call(matrix::Panel<Coord::Col, T, Device::GPU>& panel_view,
                    pika::shared_future<common::internal::vector<T>> taus,
                    pika::future<matrix::Tile<T, Device::GPU>> t);
+  static void call(matrix::Panel<Coord::Col, T, Device::GPU>& hh_panel,
+                   pika::shared_future<common::internal::vector<T>> taus,
+                   pika::future<matrix::Tile<T, Device::GPU>> t,
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 #endif
 
-template <Backend backend, Device device, class T>
-struct QR_TfactorDistributed {
-  static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                   pika::shared_future<common::internal::vector<T>> taus,
-                   pika::future<matrix::Tile<T, device>> t,
-                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
-};
-
 /// ---- ETI
 #define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
-  KWORD template struct QR_Tfactor<BACKEND, DEVICE, DATATYPE>;              \
-  KWORD template struct QR_TfactorDistributed<BACKEND, DEVICE, DATATYPE>;
+  KWORD template struct QR_Tfactor<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_FACTORIZATION_QR_TFACTOR_ETI(extern, Backend::MC, Device::CPU, double)

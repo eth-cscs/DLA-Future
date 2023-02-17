@@ -159,6 +159,9 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
 
   // update tune parameters
   auto& param = getTuneParameters();
+  updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS",
+                           "red2band-panel-nworkers");
+
   updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND",
                            "eigensolver-min-band");
 

@@ -659,7 +659,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   }
 
   // PHASE 1b: schedule non-transposed-ops
-  for (SizeType i = at_offset.row(); i < dist.localNrTiles().rows(); ++i) {
+  for (SizeType i = dist.localNrTiles().rows() - 1; i >= at_offset.row(); --i) {
     const auto limit = dist.template nextLocalTileFromGlobalTile<Coord::Col>(
         dist.template globalTileFromLocalTile<Coord::Row>(i) + 1);
     for (SizeType j = limit - 1; j >= at_offset.col(); --j) {
@@ -699,7 +699,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
   // mirror and reduce on it.
-  for (const auto& index_xt : xt.iteratorLocal()) {
+  for (auto it = xt.iteratorLocal().end() - 1; it >= xt.iteratorLocal().begin(); --it) {
+    const auto& index_xt = *it;
     const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
     const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
 
@@ -737,7 +738,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // At this point partial results are all collected in X (Xt has been embedded in previous step),
   // so the last step needed is to reduce these last partial results in the final results.
   // The result is needed just on the column with reflectors.
-  for (const auto& index_x : x.iteratorLocal()) {
+  for (auto it = x.iteratorLocal().end() - 1; it >= x.iteratorLocal().begin(); --it) {
+    const auto& index_x = *it;
     if (reducer_col == rank.col())
       ex::start_detached(
           comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,

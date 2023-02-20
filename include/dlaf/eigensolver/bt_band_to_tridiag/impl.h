@@ -45,6 +45,7 @@
 #include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/sender/when_all_lift.h"
+#include "dlaf/tune.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 #include "dlaf/util_matrix.h"
@@ -155,7 +156,8 @@ struct ApplyHHToSingleTileRow<Backend::MC, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), apply_nb) - 1) * apply_nb; j >= 0; j -= apply_nb) {
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), apply_nb) - 1) * apply_nb; j >= 0;
+         j -= apply_nb) {
       SizeType jb = std::min(apply_nb, tile_v.size().cols() - j);
       SizeType ib = tile_v.size().rows() - j;
       auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
@@ -193,16 +195,17 @@ struct ApplyHHToSingleTileRow<Backend::GPU, T> {
 
 template <class Tile, class CTile>
 std::tuple<CTile, CTile, CTile, CTile, Tile, Tile> applyHHToDoubleTileRowSubtileHelper(  //
-    const SizeType j, const SizeType jb,
-    const CTile& tile_v, const CTile& tile_w, const Tile& tile_e_top, const Tile& tile_e_bottom) {
+    const SizeType j, const SizeType jb, const CTile& tile_v, const CTile& tile_w,
+    const Tile& tile_e_top, const Tile& tile_e_bottom) {
   DLAF_ASSERT_HEAVY(tile_v.size() == tile_w.size(), tile_v, tile_w);
   DLAF_ASSERT_HEAVY(tile_e_top.size().rows() + tile_e_bottom.size().rows() - 1 == tile_v.size().rows(),
                     tile_e_top, tile_e_bottom, tile_v);
 
-  // NOTE: b = tile_e_top.size().rows()
-
-  auto subtile_e_top = tile_e_top.subTileReference({{j + 1, 0}, tile_e_top.size() - TileElementSize{j + 1, 0}});
-  auto subtile_e_bottom = tile_e_bottom.subTileReference({{0, 0}, TileElementSize{std::min(tile_e_bottom.size().rows(), j + jb), tile_e_bottom.size().cols()}});
+  auto subtile_e_top =
+      tile_e_top.subTileReference({{j + 1, 0}, tile_e_top.size() - TileElementSize{j + 1, 0}});
+  auto subtile_e_bottom = tile_e_bottom.subTileReference(
+      {{0, 0},
+       TileElementSize{std::min(tile_e_bottom.size().rows(), j + jb), tile_e_bottom.size().cols()}});
 
   matrix::SubTileSpec spec_top{{j, j}, {subtile_e_top.size().rows(), jb}};
   matrix::SubTileSpec spec_bottom{{tile_e_top.size().rows() - 1, j},
@@ -213,8 +216,8 @@ std::tuple<CTile, CTile, CTile, CTile, Tile, Tile> applyHHToDoubleTileRowSubtile
   auto subtile_w_top = tile_w.subTileReference(spec_top);
   auto subtile_w_bottom = tile_w.subTileReference(spec_bottom);
 
-  return {std::move(subtile_v_top), std::move(subtile_v_bottom), std::move(subtile_w_top),
-          std::move(subtile_w_bottom), std::move(subtile_e_top), std::move(subtile_e_bottom)};
+  return {std::move(subtile_v_top),    std::move(subtile_v_bottom), std::move(subtile_w_top),
+          std::move(subtile_w_bottom), std::move(subtile_e_top),    std::move(subtile_e_bottom)};
 }
 
 template <Backend B, class T>
@@ -230,9 +233,11 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), apply_nb) - 1) * apply_nb; j >= 0; j -= apply_nb) {
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), apply_nb) - 1) * apply_nb; j >= 0;
+         j -= apply_nb) {
       SizeType jb = std::min(apply_nb, tile_v.size().cols() - j);
-      auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_e_top, subtile_e_bottom] =
+      auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_e_top,
+            subtile_e_bottom] =
           applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_e_top, tile_e_bottom);
 
       auto subtile_w2 = tile_w2.subTileReference({{0, 0}, {jb, tile_w2.size().cols()}});
@@ -461,9 +466,9 @@ struct HHManager<Backend::MC, Device::CPU, T> {
 
   template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const SizeType nb_apply, const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
-            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-            matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const SizeType nb_apply, const LocalTileIndex ij, const TileAccessHelper& helper,
+            SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto tup =
@@ -570,6 +575,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     return;
 
   const SizeType b = band_size;
+  const SizeType batch_size = getTuneParameters().bt_band_to_tridiag_hh_apply_batch_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
@@ -641,7 +647,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       }
 
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(64, ij, helper,
+          helperBackend.computeVW(batch_size, ij, helper,
                                   keepFuture(splitTile(mat_hh.read(ij), helper.specHHCompact())), mat_v,
                                   mat_t, mat_w);
 
@@ -650,7 +656,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
         if (not helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(ex::just(64), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(batch_size), keepFuture(tile_v), keepFuture(tile_w),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e)) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -659,7 +665,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         }
         else {
           ex::start_detached(
-              ex::when_all(ex::just(64), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(batch_size), keepFuture(tile_v), keepFuture(tile_w),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e),
                            mat_e_rt(helper.bottomIndexE(j_e))) |
               dlaf::internal::transform<
@@ -698,6 +704,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
   const SizeType b = band_size;
   const SizeType mb = mat_hh.blockSize().rows();
+  const SizeType batch_size = getTuneParameters().bt_band_to_tridiag_hh_apply_batch_size;
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
   matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
@@ -867,13 +874,17 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         }
       }
 
+      // Batched application increases the communication messages and volume,
+      // therefore we use it only for local applications.
+      const SizeType current_batch_size = helper.affectsMultipleRanks() ? b : batch_size;
+
       // COMPUTE V and W from HH and T
       auto tile_hh = (rankHH == rank)
                          ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                          : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(b, indexing_helper.wsIndexHH(), helper, keepFuture(std::move(tile_hh)),
-                                  mat_v, mat_t, mat_w);
+          helperBackend.computeVW(current_batch_size, indexing_helper.wsIndexHH(), helper,
+                                  keepFuture(std::move(tile_hh)), mat_v, mat_t, mat_w);
 
       // UPDATE E
       const SizeType ncols_local = dist_e_rt.localNrTiles().cols();
@@ -887,7 +898,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         // SINGLE ROW UPDATE
         if (!helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(ex::just(b), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(current_batch_size), keepFuture(tile_v), keepFuture(tile_w),
                            splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top)) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -901,7 +912,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           // TWO ROWs (same RANK)
           if (!helper.affectsMultipleRanks()) {
             ex::start_detached(
-                ex::when_all(ex::just(b), keepFuture(tile_v), keepFuture(tile_w),
+                ex::when_all(ex::just(current_batch_size), keepFuture(tile_v), keepFuture(tile_w),
                              splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top),
                              mat_e_rt(idx_e_bottom)) |
                 dlaf::internal::transform<

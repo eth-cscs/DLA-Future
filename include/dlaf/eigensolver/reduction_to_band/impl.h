@@ -15,6 +15,7 @@
 #include <pika/future.hpp>
 
 #include "dlaf/blas/tile.h"
+#include "dlaf/blas/tile_extensions.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -607,6 +608,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   common::Pipeline<comm::Communicator>& mpi_row_chain,
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
@@ -690,7 +692,9 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // both row-wise and col-wise.
   // The final X result will be available just on Ai panel column.
 
-  // Note:
+  // PHASE 2/3: reduce Xt over X
+
+  // PHASE 2a: reduce over Xt (network involved)
   // The first step in reducing partial results distributed over X and Xt, it is to reduce the row
   // panel Xt col-wise, by collecting all Xt results on the rank which can "mirror" the result on its
   // rows (i.e. diagonal). So, for each tile of the row panel, select who is the "diagonal" rank that can
@@ -706,14 +710,26 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       //
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
-      const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
       ex::start_detached(
           comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM,
-                                          ex::make_unique_any_sender(x.readwrite_sender({i, 0}))));
+                                          ex::make_unique_any_sender(xt.readwrite_sender(index_xt))));
     }
     else {
       ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
                                                   ex::make_unique_any_sender(xt.read_sender(index_xt))));
+    }
+  }
+
+  // PHASE 2b: reduce Xt on X (local)
+  for (const auto& index_xt : xt.iteratorLocal()) {
+    const auto index_k = dist.template globalTileFromLocalTile<Coord::Col>(index_xt.col());
+    const auto rank_owner_row = dist.template rankGlobalTile<Coord::Row>(index_k);
+
+    if (rank_owner_row == rank.row()) {
+      const LocalTileIndex index_x(dist.template localTileFromGlobalTile<Coord::Row>(index_k), 0);
+      ex::start_detached(
+          ex::when_all(ex::just(T(1)), xt.read_sender(index_xt), x.readwrite_sender(index_x)) |
+          tile::add(di::Policy<B>()));
     }
   }
 

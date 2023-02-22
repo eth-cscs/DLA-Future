@@ -112,7 +112,11 @@ struct TridiagSolverMiniapp {
 
         dlaf::common::Timer<> timeit;
         using dlaf::eigensolver::tridiagSolver;
-        tridiagSolver<backend>(comm_grid, tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+        if (opts.local)
+          tridiagSolver<backend>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+        else
+          tridiagSolver<backend>(comm_grid, tridiag_mirror.get(), evals_mirror.get(),
+                                 evecs_mirror.get());
 
         // wait and barrier for all ranks
         tridiag_mirror.get().waitLocalTiles();

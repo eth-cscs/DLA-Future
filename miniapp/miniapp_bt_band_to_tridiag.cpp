@@ -129,8 +129,12 @@ struct BacktransformBandToTridiagMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
-                                                           T>(comm_grid, opts.b, mat_e.get(), mat_hh);
+        if (opts.local)
+          dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
+                                                             T>(opts.b, mat_e.get(), mat_hh);
+        else
+          dlaf::eigensolver::backTransformationBandToTridiag<backend, DefaultDevice_v<backend>,
+                                                             T>(comm_grid, opts.b, mat_e.get(), mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

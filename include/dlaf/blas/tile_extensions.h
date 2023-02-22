@@ -22,6 +22,7 @@
 #ifdef DLAF_WITH_GPU
 #include "dlaf/gpu/blas/api.h"
 #include "dlaf/gpu/blas/error.h"
+#include "dlaf/lapack/gpu/add.h"
 #include "dlaf/util_cublas.h"
 #endif
 
@@ -66,21 +67,19 @@ void add(T alpha, const matrix::Tile<const T, Device::CPU>& tile_b,
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void add(cublasHandle_t handle, T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
-         const matrix::Tile<T, Device::GPU>& tile_a) {
+void add(T alpha, const matrix::Tile<const T, Device::GPU>& tile_b,
+         const matrix::Tile<T, Device::GPU>& tile_a, whip::stream_t stream) {
   DLAF_ASSERT(equal_size(tile_a, tile_b), tile_a, tile_b);
-  for (auto j = 0; j < tile_a.size().cols(); ++j)
-    gpublas::internal::Axpy<T>::call(handle, to_int(tile_a.size().rows()),
-                                     util::blasToCublasCast(&alpha),
-                                     util::blasToCublasCast(tile_b.ptr({0, j})), 1,
-                                     util::blasToCublasCast(tile_a.ptr({0, j})), 1);
+
+  gpulapack::add(blas::Uplo::General, tile_a.size().rows(), tile_a.size().cols(), alpha, tile_b.ptr(),
+                 tile_b.ld(), tile_a.ptr(), tile_a.ld(), stream);
 }
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(add);
 }
 
-DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Blas, add, internal::add_o)
+DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plain, add, internal::add_o)
 
 #endif
 }

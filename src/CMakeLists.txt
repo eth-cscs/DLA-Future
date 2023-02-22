@@ -170,6 +170,9 @@ function(DLAF_addSublibrary name)
   target_link_libraries(${lib_name} PUBLIC dlaf.prop)
   target_link_libraries(${lib_name} PUBLIC ${DLAF_ASL_LIBRARIES})
   target_link_libraries(${lib_name} PRIVATE dlaf.prop_private)
+  if(DLAF_WITH_CUDA)
+    set_target_properties(${lib_name} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  endif()
 endfunction()
 
 # Define DLAF's CORE library
@@ -193,7 +196,8 @@ DLAF_addSublibrary(
           memory/memory_view.cpp
           memory/memory_chunk.cpp
           tune.cpp
-  GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/lacpy.cu lapack/gpu/laset.cu
+  GPU_SOURCES cusolver/assert_info.cu cusolver/stedc.cu lapack/gpu/add.cu lapack/gpu/lacpy.cu
+              lapack/gpu/laset.cu
   COMPILE_OPTIONS $<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--extended-lambda>
 )
 
@@ -281,6 +285,9 @@ add_library(
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)
 target_add_warnings(DLAF)
+if(DLAF_WITH_CUDA)
+  set_target_properties(DLAF PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+endif()
 
 # ----- DEPLOY
 include(GNUInstallDirs)

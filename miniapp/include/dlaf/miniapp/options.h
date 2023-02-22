@@ -203,6 +203,7 @@ struct MiniappOptions {
   ElementType type;
   int grid_rows;
   int grid_cols;
+  bool local;
   int64_t nruns;
   int64_t nwarmups;
   CheckIterFreq do_check;
@@ -211,10 +212,12 @@ struct MiniappOptions {
       : backend(parseBackend(vm["backend"].as<std::string>())),
         type(parseElementType<support_real, support_complex>(vm["type"].as<std::string>())),
         grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
-        nruns(vm["nruns"].as<int64_t>()), nwarmups(vm["nwarmups"].as<int64_t>()),
+        local(vm["local"].as<bool>()), nruns(vm["nruns"].as<int64_t>()),
+        nwarmups(vm["nwarmups"].as<int64_t>()),
         do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())) {
     DLAF_ASSERT(grid_rows > 0, grid_rows);
     DLAF_ASSERT(grid_cols > 0, grid_cols);
+    DLAF_ASSERT(!local || grid_cols * grid_rows == 1, local, grid_rows, grid_cols);
     DLAF_ASSERT(nruns > 0, nruns);
     DLAF_ASSERT(nwarmups >= 0, nwarmups);
   }
@@ -238,6 +241,8 @@ inline pika::program_options::options_description getMiniappOptionsDescription()
                      "Number of row processes in the 2D communicator");
   desc.add_options()("grid-cols", pika::program_options::value<int>()->default_value(1),
                      "Number of column processes in the 2D communicator");
+  desc.add_options()("local", pika::program_options::bool_switch()->default_value(false),
+                     "Use the local implementation if available. (Requires a (1x1) communicator)");
   desc.add_options()("nruns", pika::program_options::value<int64_t>()->default_value(1),
                      "Number of runs");
   desc.add_options()("nwarmups", pika::program_options::value<int64_t>()->default_value(1),

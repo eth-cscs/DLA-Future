@@ -128,9 +128,14 @@ struct GenEigensolverMiniapp {
       DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
       dlaf::common::Timer<> timeit;
-      auto [eigenvalues, eigenvectors] =
-          dlaf::eigensolver::genEigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
-                                                     matrix_b->get());
+      auto bench = [&]() {
+        if (opts.local)
+          return dlaf::eigensolver::genEigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get());
+        else
+          return dlaf::eigensolver::genEigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
+                                                            matrix_b->get());
+      };
+      auto [eigenvalues, eigenvectors] = bench();
 
       // wait and barrier for all ranks
       eigenvectors.waitLocalTiles();

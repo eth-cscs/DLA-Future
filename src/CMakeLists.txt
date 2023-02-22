@@ -285,7 +285,9 @@ add_library(
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)
 target_add_warnings(DLAF)
-set_target_properties(DLAF PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+if(DLAF_WITH_CUDA)
+  set_target_properties(DLAF PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+endif()
 
 # ----- DEPLOY
 include(GNUInstallDirs)

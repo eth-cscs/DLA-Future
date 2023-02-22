@@ -462,8 +462,6 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
   //// Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   //// the column are going to participate to the reduce. For them, it is important to set the
   //// partial result W2 to zero.
-  // ex::start_detached(w2.readwrite_sender(LocalTileIndex(0, 0)) |
-  //                    tile::set0(dlaf::internal::Policy<B>(thread_priority::high)));
 
   using namespace blas;
   // GEMM W2 = W* . X
@@ -474,6 +472,7 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
                        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
   }
 
+  ex::start_detached(tile::set0(dlaf::internal::Policy<B>(), w2.readwrite_sender(LocalTileIndex(0, 0))));
   ex::start_detached(buffers.reduce(w2.readwrite_sender(LocalTileIndex(0, 0))));
 }
 

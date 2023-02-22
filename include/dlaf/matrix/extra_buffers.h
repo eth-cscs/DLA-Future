@@ -29,29 +29,51 @@ struct ExtraBuffers : protected Matrix<T, D> {
                              pika::execution::thread_priority::high)));
   }
 
+  auto read_sender(SizeType index) {
+    return Matrix<T, D>::read_sender(internalIndex(index));
+  }
+
   auto readwrite_sender(SizeType index) {
-    index %= nbuffers_;
-    return Matrix<T, D>::readwrite_sender(LocalTileIndex{index, 0});
+    return Matrix<T, D>::readwrite_sender(internalIndex(index));
   }
 
   template <class TileSender>
   [[nodiscard]] auto reduce(TileSender tile) {
     namespace ex = pika::execution::experimental;
 
-    std::vector<pika::future<matrix::Tile<T, D>>> buffers;
-    for (const auto& ij : common::iterate_range2d(this->distribution().localNrTiles()))
-      buffers.emplace_back(Matrix<T, D>::operator()(ij));
-    auto all_buffers = ex::when_all_vector(std::move(buffers));
+    std::vector<ex::any_sender<pika::shared_future<matrix::Tile<const T, D>>>> buffers;
+    for (SizeType index = 0; index < nbuffers_; ++index)
+      buffers.emplace_back(read_sender(index));
 
-    return ex::when_all(std::move(tile), std::move(all_buffers)) |
-           ex::then([](const matrix::Tile<T, D>& tile, const std::vector<matrix::Tile<T, D>>& buffers) {
-             tile::internal::set0(tile);
-             for (auto& buffer : buffers)
-               dlaf::tile::internal::add(T(1), buffer, tile);
-           });
+    return ex::when_all(std::move(tile), ex::when_all_vector(std::move(buffers))) |
+           dlaf::internal::transform(dlaf::internal::Policy<DefaultBackend_v<D>>(),
+                                     [](const matrix::Tile<T, D>& tile,
+                                        const std::vector<pika::shared_future<matrix::Tile<const T, D>>>&
+                                            buffers,
+                                        auto&&... ts) {
+                                       for (const auto& buffer : buffers) {
+                                         if constexpr (D == Device::CPU) {
+                                           static_assert(sizeof...(ts) == 0,
+                                                         "Parameter pack should be empty for MC.");
+                                           dlaf::tile::internal::add(T(1), buffer.get(), tile);
+                                         }
+#ifdef DLAF_WITH_GPU
+                                         else if constexpr (D == Device::GPU) {
+                                           dlaf::tile::internal::add(T(1), buffer.get(), tile, ts...);
+                                         }
+#endif
+                                         else {
+                                           DLAF_STATIC_UNIMPLEMENTED(T);
+                                         }
+                                       }
+                                     });
   }
 
 protected:
+  LocalTileIndex internalIndex(SizeType index) const noexcept {
+    return LocalTileIndex{index % nbuffers_, 0};
+  }
+
   SizeType nbuffers_;
 };
 }

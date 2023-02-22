@@ -301,10 +301,12 @@ struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
 
       // W2 = V* . E
       gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_top, subtile_e_top, T(0), subtile_w2);
-      gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, subtile_e_bottom, T(1), subtile_w2);
+      gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, subtile_e_bottom, T(1),
+           subtile_w2);
       // E -= W . W2
       gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_top, subtile_w2, T(1), subtile_e_top);
-      gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, subtile_w2, T(1), subtile_e_bottom);
+      gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, subtile_w2, T(1),
+           subtile_e_bottom);
     }
   }
 };
@@ -551,33 +553,34 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
-    auto copyVTandComputeW =
-        [b=this->b, batch_nb](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
-                      const matrix::Tile<const T, Device::CPU>& tile_t_h,
-                      matrix::Tile<T, Device::GPU>& tile_v, matrix::Tile<T, Device::GPU>& tile_t,
-                      matrix::Tile<T, Device::GPU>& tile_w) {
-          whip::stream_t stream;
-          DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+    auto copyVTandComputeW = [b = this->b, batch_nb](cublasHandle_t handle,
+                                                     const matrix::Tile<const T, Device::CPU>& tile_v_h,
+                                                     const matrix::Tile<const T, Device::CPU>& tile_t_h,
+                                                     matrix::Tile<T, Device::GPU>& tile_v,
+                                                     matrix::Tile<T, Device::GPU>& tile_t,
+                                                     matrix::Tile<T, Device::GPU>& tile_w) {
+      whip::stream_t stream;
+      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-          matrix::internal::copy(tile_v_h, tile_v, stream);
-          matrix::internal::copy(tile_t_h, tile_t, stream);
+      matrix::internal::copy(tile_v_h, tile_v, stream);
+      matrix::internal::copy(tile_t_h, tile_t, stream);
 
-          // W = V . T
-          using namespace blas;
-          for (SizeType j = 0; j < tile_v_h.size().cols(); j += batch_nb) {
-            SizeType jb = std::min(batch_nb, tile_v_h.size().cols() - j);
-            SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
-            auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
-            auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
-            auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
+      // W = V . T
+      using namespace blas;
+      for (SizeType j = 0; j < tile_v_h.size().cols(); j += batch_nb) {
+        SizeType jb = std::min(batch_nb, tile_v_h.size().cols() - j);
+        SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
+        auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
+        auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
+        auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
 
-            dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
-                                        T(1), subtile_t, subtile_v, subtile_w);
-          }
+        dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
+                                    subtile_t, subtile_v, subtile_w);
+      }
 
-          return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
-                                 matrix::Tile<const T, D>(std::move(tile_w)));
-        };
+      return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
+                             matrix::Tile<const T, D>(std::move(tile_w)));
+    };
 
     auto tup2 =
         ex::when_all(std::move(tile_v_h), std::move(tile_t_h), splitTile(mat_v(ij), helper.specHH()),

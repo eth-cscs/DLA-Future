@@ -705,8 +705,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
     }
     else {
       ex::start_detached(
-          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
-                                   ex::make_unique_any_sender(xt.read_sender2(index_xt))));
+          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read_sender2(index_xt)));
     }
   }
 
@@ -719,8 +718,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       ex::start_detached(
           comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender_tile(index_x)));
     else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
-                                                  ex::make_unique_any_sender(x.read_sender2(index_x))));
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read_sender2(index_x)));
   }
 }
 
@@ -1280,8 +1278,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           xt.setTileSender(at, x.read_sender2(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()),
-                                                       ex::make_unique_any_sender(xt.read_sender2(at))));
+            ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()), xt.read_sender2(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)

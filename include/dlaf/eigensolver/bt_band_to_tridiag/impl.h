@@ -806,9 +806,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_chain_row()),
-                                                     ex::make_unique_any_sender(
-                                                         subTileSender(mat_hh.read_sender2(ij_g),
-                                                                       helper.specHHCompact()))));
+                                                     subTileSender(mat_hh.read_sender2(ij_g), helper.specHHCompact())));
         }
         else {
           ex::start_detached(
@@ -828,8 +826,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
               rank.col() == rankHH.col()
                   ? subTileSender(mat_hh.read_sender2(ij_g), helper.specHHCompact())
                   : subTileSender(panel_hh.read_sender2(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(mpi_chain_col()), rank_dst, 0,
-                                                ex::make_unique_any_sender(std::move(tile_hh))));
+          ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(mpi_chain_col()), rank_dst, 0, std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
           ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(mpi_chain_col()), rank_src, 0,

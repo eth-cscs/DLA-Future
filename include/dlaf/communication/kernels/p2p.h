@@ -64,14 +64,14 @@ DLAF_SCHEDULE_SEND_SFTILE_ETI(extern, std::complex<double>, Device::GPU,
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
-    pika::execution::experimental::unique_any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
+    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
         tile);
 
 #define DLAF_SCHEDULE_SEND_WRAPPER_ETI(kword, Type, Device, Comm)                             \
   kword template pika::execution::experimental::unique_any_sender<>                           \
   scheduleSend(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, \
                IndexT_MPI tag,                                                                \
-               pika::execution::experimental::unique_any_sender<                              \
+               pika::execution::experimental::any_sender<                              \
                    matrix::tile_async_ro_mutex_wrapper_type<Type, Device>>                    \
                    tile)
 

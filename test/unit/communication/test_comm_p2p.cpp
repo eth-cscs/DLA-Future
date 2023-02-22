@@ -92,7 +92,7 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   if (rank_src == world.rank()) {
     ex::start_detached(setTileTo(matrix.readwrite_sender_tile(idx), input_value));
     ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, tag,
-                                          ex::make_unique_any_sender(matrix.read_sender2(idx))));
+                                          matrix.read_sender2(idx)));
   }
   else if (rank_dst == world.rank()) {
     ex::start_detached(
@@ -145,7 +145,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
         auto tile = tt::sync_wait(matrix.readwrite_sender_tile(idx));
         matrix::test::set(tile, fixedValueTile(id));
         ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, id,
-                                              ex::make_unique_any_sender(matrix.read_sender2(idx))));
+                                              matrix.read_sender2(idx)));
       }
     }
   }

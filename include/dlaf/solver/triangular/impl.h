@@ -602,7 +602,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
+                                       b_panel.read_sender2(idx)));
         }
       }
     }
@@ -782,7 +782,7 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
+                                       b_panel.read_sender2(idx)));
         }
       }
     }
@@ -963,7 +963,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
+                                       b_panel.read_sender2(idx)));
         }
       }
     }
@@ -1145,7 +1145,7 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
         else {
           ex::start_detached(
               comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                       ex::make_unique_any_sender(b_panel.read_sender2(idx))));
+                                       b_panel.read_sender2(idx)));
         }
       }
     }

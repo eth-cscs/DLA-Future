@@ -84,8 +84,7 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   else {
     // use -> read -> set -> read
     ex::start_detached(
-        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM,
-                                       ex::make_unique_any_sender(matrix.read_sender2(idx))));
+        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM, matrix.read_sender2(idx)));
 
     CHECK_TILE_EQ(input_tile, tt::sync_wait(matrix.read_sender2(idx)).get());
 
@@ -155,9 +154,7 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
   matrix::test::set(tt::sync_wait(mat_in.readwrite_sender_tile(idx)), input_tile);
 
   ex::start_detached(
-      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
-                                    ex::make_unique_any_sender(mat_in.read_sender2(idx)),
-                                    mat_out.readwrite_sender_tile(idx)));
+      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read_sender2(idx), mat_out.readwrite_sender_tile(idx)));
 
   auto tile_in = tt::sync_wait(mat_in.read_sender2(idx));
   auto tile_out = tt::sync_wait(mat_out.read_sender2(idx));

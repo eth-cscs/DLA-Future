@@ -192,7 +192,7 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
           else {
             ex::start_detached(
                 comm::scheduleReduceSend(mpi_col_task_chain(), rank_ll.row(), MPI_SUM,
-                                         ex::make_unique_any_sender(c_panel.read_sender2(idx))));
+                                         c_panel.read_sender2(idx)));
           }
         }
       }

@@ -68,11 +68,9 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   namespace ex = pika::execution::experimental;
   for (const auto& index : panel.iteratorLocal()) {
     if (rank == rank_root)
-      ex::start_detached(scheduleSendBcast(ex::make_unique_any_sender(serial_comm()),
-                                           ex::make_unique_any_sender(panel.read_sender2(index))));
+      ex::start_detached(scheduleSendBcast(ex::make_unique_any_sender(serial_comm()), panel.read_sender2(index)));
     else
-      ex::start_detached(scheduleRecvBcast(ex::make_unique_any_sender(serial_comm()), rank_root,
-                                           panel.readwrite_sender_tile(index)));
+      ex::start_detached(scheduleRecvBcast(ex::make_unique_any_sender(serial_comm()), rank_root, panel.readwrite_sender_tile(index)));
   }
 }
 
@@ -188,14 +186,12 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
       panelT.setTileSender(indexT, panel.read_sender2({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        ex::start_detached(scheduleSendBcast(ex::make_unique_any_sender(chain_step2()),
-                                             ex::make_unique_any_sender(panelT.read_sender2(indexT))));
+        ex::start_detached(scheduleSendBcast(ex::make_unique_any_sender(chain_step2()), panelT.read_sender2(indexT)));
     }
     else {
       if (dist.commGridSize().get(comm_coord_step2) > 1)
         ex::start_detached(
-            scheduleRecvBcast(ex::make_unique_any_sender(chain_step2()), owner_diag,
-                              panelT.readwrite_sender_tile(indexT)));
+            scheduleRecvBcast(ex::make_unique_any_sender(chain_step2()), owner_diag, panelT.readwrite_sender_tile(indexT)));
     }
   }
 }

@@ -122,7 +122,7 @@ template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
+    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
         tile);
 
 #define DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(kword, Type, Device)               \
@@ -131,7 +131,7 @@ template <class T, Device D>
                          dlaf::common::PromiseGuard<Communicator>>               \
                          pcomm,                                                  \
                      comm::IndexT_MPI rank_root, MPI_Op reduce_op,               \
-                     pika::execution::experimental::unique_any_sender<           \
+                     pika::execution::experimental::any_sender<           \
                          matrix::tile_async_ro_mutex_wrapper_type<Type, Device>> \
                          tile)
 

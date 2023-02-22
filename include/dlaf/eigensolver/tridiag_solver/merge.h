@@ -881,9 +881,7 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read_sender2(idx_evecs),
                                                z.readwrite_sender_tile(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                                 // TODO: any_sender to unique_any_sender conversion. Should not be necessary.
-                                                 ex::make_unique_any_sender(z.read_sender2(z_idx))));
+      ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), z.read_sender2(z_idx)));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
@@ -1114,8 +1112,7 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
     if (evecs_tile_rank == this_rank.col()) {
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(row_task_chain()),
-                                  // TODO: any_sender to unique_any_sender conversion. Should not be necessary.
-                                  ex::make_unique_any_sender(evals.read_sender2(evals_idx))));
+                                  evals.read_sender2(evals_idx)));
     }
     else {
       ex::start_detached(

@@ -148,7 +148,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(col_task_chain()),
-                                  ex::make_unique_any_sender(sign_mat.read_sender2(idx_sign_tile))));
+                                  sign_mat.read_sender2(idx_sign_tile)));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank

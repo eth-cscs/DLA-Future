@@ -55,8 +55,7 @@ template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
-        tile_in,
+    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile_in,
     pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out);
 
 #define DLAF_SCHEDULE_ALL_REDUCE_WRAPPER_ETI(kword, Type, Device)                                \
@@ -65,7 +64,7 @@ template <class T, Device D>
                         dlaf::common::PromiseGuard<Communicator>>                                \
                         pcomm,                                                                   \
                     MPI_Op reduce_op,                                                            \
-                    pika::execution::experimental::unique_any_sender<                            \
+                    pika::execution::experimental::any_sender<                                   \
                         matrix::tile_async_ro_mutex_wrapper_type<Type, Device>>                  \
                         tile_in,                                                                 \
                     pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \

@@ -136,7 +136,6 @@ struct GenEigensolverMiniapp {
                                                             matrix_b->get());
       };
       auto [eigenvalues, eigenvectors] = bench();
-      dlaf::eigensolver::genEigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(), matrix_b->get());
 
       // wait and barrier for all ranks
       eigenvectors.waitLocalTiles();

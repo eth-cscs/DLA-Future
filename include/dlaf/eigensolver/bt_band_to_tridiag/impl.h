@@ -196,19 +196,25 @@ struct ApplyHHToSingleTileRow<Backend::MC, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToSingleTileRow<Backend::GPU, T> {
-  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+  void operator()(cublasHandle_t handle, const SizeType batch_nb,
+                  const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
                   const matrix::Tile<T, Device::GPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
 
-    auto subtile_e = tile_e.subTileReference({{1, 0}, tile_e.size() - TileElementSize{1, 0}});
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
+         j -= batch_nb) {
+      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+      auto [subtile_v, subtile_w, subtile_w2, subtile_e] =
+          applyHHToSingleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e);
 
-    // W2 = V* . E
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v, subtile_e, T(0), tile_w2);
-    // E -= W . W2
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), subtile_e);
+      // W2 = V* . E
+      gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v, subtile_e, T(0), subtile_w2);
+      // E -= W . W2
+      gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w, subtile_w2, T(1), subtile_e);
+    }
   }
 };
 #endif
@@ -277,7 +283,8 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
-  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+  void operator()(cublasHandle_t handle, const SizeType batch_nb,
+                  const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
                   const matrix::Tile<T, Device::GPU>& tile_e_top,
@@ -285,15 +292,20 @@ struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_e_top] =
-        applyHHToDoubleTileRowSubtileHelper(tile_v, tile_w, tile_e_top, tile_e_bottom);
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
+         j -= batch_nb) {
+      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+      auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_w2, subtile_e_top,
+            subtile_e_bottom] =
+          applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e_top, tile_e_bottom);
 
-    // W2 = V* . E
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_top, subtile_e_top, T(0), tile_w2);
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, tile_e_bottom, T(1), tile_w2);
-    // E -= W . W2
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_top, tile_w2, T(1), subtile_e_top);
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, tile_w2, T(1), tile_e_bottom);
+      // W2 = V* . E
+      gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_top, subtile_e_top, T(0), subtile_w2);
+      gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, subtile_e_bottom, T(1), subtile_w2);
+      // E -= W . W2
+      gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_top, subtile_w2, T(1), subtile_e_top);
+      gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, subtile_w2, T(1), subtile_e_bottom);
+    }
   }
 };
 #endif
@@ -520,9 +532,9 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
   template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
-            matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-            matrix::Panel<Coord::Col, T, D>& mat_w) {
+  computeVW(const SizeType batch_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
+            SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -531,7 +543,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     const LocalTileIndex ij_t = ij;
     const matrix::SubTileSpec t_spec = helper.specT();
 
-    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
+    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), batch_nb,
                                            splitTile(mat_v_h(ij), helper.specHH()),
                                            splitTile(mat_t_h(ij_t), t_spec)) |
                dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
@@ -540,9 +552,10 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
     auto copyVTandComputeW =
-        [](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
-           const matrix::Tile<const T, Device::CPU>& tile_t_h, matrix::Tile<T, Device::GPU>& tile_v,
-           matrix::Tile<T, Device::GPU>& tile_t, matrix::Tile<T, Device::GPU>& tile_w) {
+        [b=this->b, batch_nb](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
+                      const matrix::Tile<const T, Device::CPU>& tile_t_h,
+                      matrix::Tile<T, Device::GPU>& tile_v, matrix::Tile<T, Device::GPU>& tile_t,
+                      matrix::Tile<T, Device::GPU>& tile_w) {
           whip::stream_t stream;
           DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
@@ -551,8 +564,16 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
           // W = V . T
           using namespace blas;
-          tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
-                                tile_t, tile_v, tile_w);
+          for (SizeType j = 0; j < tile_v_h.size().cols(); j += batch_nb) {
+            SizeType jb = std::min(batch_nb, tile_v_h.size().cols() - j);
+            SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
+            auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
+            auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
+            auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
+
+            dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
+                                        T(1), subtile_t, subtile_v, subtile_w);
+          }
 
           return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
                                  matrix::Tile<const T, D>(std::move(tile_w)));

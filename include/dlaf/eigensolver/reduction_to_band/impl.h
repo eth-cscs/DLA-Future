@@ -12,11 +12,11 @@
 #include <cmath>
 #include <vector>
 
-#include <pika/barrier.hpp>
 #include <pika/future.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/assert.h"
+#include "dlaf/common/barrier.h"
 #include "dlaf/common/data.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -283,7 +283,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
   }
 
   const size_t nthreads = getReductionToBandPanelNWorkers();
-  return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
+  return ex::when_all(ex::just(std::make_shared<barrier_t>(nthreads)),
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
                       ex::just(common::internal::vector<T>{}),               // taus
                       ex::when_all_vector(std::move(panel_tiles))) |
@@ -621,7 +621,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   }
 
   const size_t nthreads = getReductionToBandPanelNWorkers();
-  return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
+  return ex::when_all(ex::just(std::make_shared<barrier_t>(nthreads)),
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
                       ex::just(common::internal::vector<T>{}),               // taus
                       ex::when_all_vector(std::move(panel_tiles)),

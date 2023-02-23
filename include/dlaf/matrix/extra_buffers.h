@@ -39,6 +39,7 @@ struct ExtraBuffers : protected Matrix<T, D> {
 
   template <class TileSender>
   [[nodiscard]] auto reduce(TileSender tile) {
+    namespace di = dlaf::internal;
     namespace ex = pika::execution::experimental;
 
     std::vector<ex::any_sender<pika::shared_future<matrix::Tile<const T, D>>>> buffers;
@@ -46,27 +47,13 @@ struct ExtraBuffers : protected Matrix<T, D> {
       buffers.emplace_back(read_sender(index));
 
     return ex::when_all(std::move(tile), ex::when_all_vector(std::move(buffers))) |
-           dlaf::internal::transform(dlaf::internal::Policy<DefaultBackend_v<D>>(),
-                                     [](const matrix::Tile<T, D>& tile,
-                                        const std::vector<pika::shared_future<matrix::Tile<const T, D>>>&
-                                            buffers,
-                                        auto&&... ts) {
-                                       for (const auto& buffer : buffers) {
-                                         if constexpr (D == Device::CPU) {
-                                           static_assert(sizeof...(ts) == 0,
-                                                         "Parameter pack should be empty for MC.");
-                                           dlaf::tile::internal::add(T(1), buffer.get(), tile);
-                                         }
-#ifdef DLAF_WITH_GPU
-                                         else if constexpr (D == Device::GPU) {
-                                           dlaf::tile::internal::add(T(1), buffer.get(), tile, ts...);
-                                         }
-#endif
-                                         else {
-                                           DLAF_STATIC_UNIMPLEMENTED(T);
-                                         }
-                                       }
-                                     });
+           di::transform(di::Policy<DefaultBackend_v<D>>(),
+                         [](const matrix::Tile<T, D>& tile,
+                            const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& buffers,
+                            auto&&... ts) {
+                           for (const auto& buffer : buffers)
+                             dlaf::tile::internal::add(T(1), buffer.get(), tile, ts...);
+                         });
   }
 
 protected:

@@ -113,11 +113,11 @@ void computeTFactor(const matrix::Tile<const T, Device::CPU>& tile_taus,
 
 template <class T>
 std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>> computeVT(
-    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh, const SizeType batch_nb,
+    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh, const SizeType hhr_nb,
     matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t) {
   auto tile_v_c = setupVWellFormed(b, tile_hh, std::move(tile_v));
-  for (SizeType j = 0; j < tile_v_c.size().cols(); j += batch_nb) {
-    SizeType jb = std::min(batch_nb, tile_v_c.size().cols() - j);
+  for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
+    SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
     SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
     auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
     auto subtile_hh = tile_hh.subTileReference({{0, j}, {1, jb}});
@@ -130,15 +130,15 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
 
 template <class T>
 std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU>> computeVW(
-    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh, const SizeType batch_nb,
+    const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh, const SizeType hhr_nb,
     matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t,
     matrix::Tile<T, Device::CPU> tile_w) {
   using namespace blas;
 
-  auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, batch_nb, std::move(tile_v), std::move(tile_t));
+  auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, hhr_nb, std::move(tile_v), std::move(tile_t));
 
-  for (SizeType j = 0; j < tile_v_c.size().cols(); j += batch_nb) {
-    SizeType jb = std::min(batch_nb, tile_v_c.size().cols() - j);
+  for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
+    SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
     SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
     auto subtile_t_c = tile_t_c.subTileReference({{j, j}, {jb, jb}});
     auto subtile_v_c = tile_v_c.subTileReference({{j, j}, {ib, jb}});
@@ -172,16 +172,15 @@ struct ApplyHHToSingleTileRow;
 
 template <class T>
 struct ApplyHHToSingleTileRow<Backend::MC, T> {
-  void operator()(const SizeType batch_nb, const matrix::Tile<const T, Device::CPU>& tile_v,
+  void operator()(const SizeType hhr_nb, const matrix::Tile<const T, Device::CPU>& tile_v,
                   const matrix::Tile<const T, Device::CPU>& tile_w,
                   const matrix::Tile<T, Device::CPU>& tile_w2,
                   const matrix::Tile<T, Device::CPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
-         j -= batch_nb) {
-      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
+      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v, subtile_w, subtile_w2, subtile_e] =
           applyHHToSingleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e);
 
@@ -196,7 +195,7 @@ struct ApplyHHToSingleTileRow<Backend::MC, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToSingleTileRow<Backend::GPU, T> {
-  void operator()(cublasHandle_t handle, const SizeType batch_nb,
+  void operator()(cublasHandle_t handle, const SizeType hhr_nb,
                   const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
@@ -204,9 +203,8 @@ struct ApplyHHToSingleTileRow<Backend::GPU, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
-         j -= batch_nb) {
-      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
+      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v, subtile_w, subtile_w2, subtile_e] =
           applyHHToSingleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e);
 
@@ -255,7 +253,7 @@ struct ApplyHHToDoubleTileRow;
 
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::MC, T> {
-  void operator()(const SizeType batch_nb, const matrix::Tile<const T, Device::CPU>& tile_v,
+  void operator()(const SizeType hhr_nb, const matrix::Tile<const T, Device::CPU>& tile_v,
                   const matrix::Tile<const T, Device::CPU>& tile_w,
                   const matrix::Tile<T, Device::CPU>& tile_w2,
                   const matrix::Tile<T, Device::CPU>& tile_e_top,
@@ -263,9 +261,8 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
-         j -= batch_nb) {
-      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
+      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_w2, subtile_e_top,
             subtile_e_bottom] =
           applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e_top, tile_e_bottom);
@@ -283,7 +280,7 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
-  void operator()(cublasHandle_t handle, const SizeType batch_nb,
+  void operator()(cublasHandle_t handle, const SizeType hhr_nb,
                   const matrix::Tile<const T, Device::GPU>& tile_v,
                   const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
@@ -292,9 +289,8 @@ struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
     using namespace blas;
     using tile::internal::gemm;
 
-    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), batch_nb) - 1) * batch_nb; j >= 0;
-         j -= batch_nb) {
-      SizeType jb = std::min(batch_nb, tile_v.size().cols() - j);
+    for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
+      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_w2, subtile_e_top,
             subtile_e_bottom] =
           applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e_top, tile_e_bottom);
@@ -534,7 +530,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
   template <class SenderHH>
   std::tuple<pika::shared_future<matrix::Tile<const T, D>>, pika::shared_future<matrix::Tile<const T, D>>>
-  computeVW(const SizeType batch_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
+  computeVW(const SizeType hhr_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
             SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
             matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
@@ -545,7 +541,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
     const LocalTileIndex ij_t = ij;
     const matrix::SubTileSpec t_spec = helper.specT();
 
-    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), batch_nb,
+    auto tup = dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), hhr_nb,
                                            splitTile(mat_v_h(ij), helper.specHH()),
                                            splitTile(mat_t_h(ij_t), t_spec)) |
                dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
@@ -553,34 +549,33 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
     auto [tile_v_h, tile_t_h] = pika::split_future(std::move(tup));
 
-    auto copyVTandComputeW = [b = this->b, batch_nb](cublasHandle_t handle,
-                                                     const matrix::Tile<const T, Device::CPU>& tile_v_h,
-                                                     const matrix::Tile<const T, Device::CPU>& tile_t_h,
-                                                     matrix::Tile<T, Device::GPU>& tile_v,
-                                                     matrix::Tile<T, Device::GPU>& tile_t,
-                                                     matrix::Tile<T, Device::GPU>& tile_w) {
-      whip::stream_t stream;
-      DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
+    auto copyVTandComputeW =
+        [b = this->b, hhr_nb](cublasHandle_t handle, const matrix::Tile<const T, Device::CPU>& tile_v_h,
+                              const matrix::Tile<const T, Device::CPU>& tile_t_h,
+                              matrix::Tile<T, Device::GPU>& tile_v, matrix::Tile<T, Device::GPU>& tile_t,
+                              matrix::Tile<T, Device::GPU>& tile_w) {
+          whip::stream_t stream;
+          DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-      matrix::internal::copy(tile_v_h, tile_v, stream);
-      matrix::internal::copy(tile_t_h, tile_t, stream);
+          matrix::internal::copy(tile_v_h, tile_v, stream);
+          matrix::internal::copy(tile_t_h, tile_t, stream);
 
-      // W = V . T
-      using namespace blas;
-      for (SizeType j = 0; j < tile_v_h.size().cols(); j += batch_nb) {
-        SizeType jb = std::min(batch_nb, tile_v_h.size().cols() - j);
-        SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
-        auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
-        auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
-        auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
+          // W = V . T
+          using namespace blas;
+          for (SizeType j = 0; j < tile_v_h.size().cols(); j += hhr_nb) {
+            SizeType jb = std::min(hhr_nb, tile_v_h.size().cols() - j);
+            SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
+            auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
+            auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
+            auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
 
-        dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1),
-                                    subtile_t, subtile_v, subtile_w);
-      }
+            dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
+                                        T(1), subtile_t, subtile_v, subtile_w);
+          }
 
-      return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
-                             matrix::Tile<const T, D>(std::move(tile_w)));
-    };
+          return std::make_tuple(matrix::Tile<const T, D>(std::move(tile_v)),
+                                 matrix::Tile<const T, D>(std::move(tile_w)));
+        };
 
     auto tup2 =
         ex::when_all(std::move(tile_v_h), std::move(tile_t_h), splitTile(mat_v(ij), helper.specHH()),
@@ -621,7 +616,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     return;
 
   const SizeType b = band_size;
-  const SizeType batch_size = getTuneParameters().bt_band_to_tridiag_hh_apply_batch_size;
+  const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
@@ -693,7 +688,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       }
 
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(batch_size, ij, helper,
+          helperBackend.computeVW(group_size, ij, helper,
                                   keepFuture(splitTile(mat_hh.read(ij), helper.specHHCompact())), mat_v,
                                   mat_t, mat_w);
 
@@ -702,7 +697,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 
         if (not helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(ex::just(batch_size), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(group_size), keepFuture(tile_v), keepFuture(tile_w),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e)) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -711,7 +706,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         }
         else {
           ex::start_detached(
-              ex::when_all(ex::just(batch_size), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(group_size), keepFuture(tile_v), keepFuture(tile_w),
                            mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e),
                            mat_e_rt(helper.bottomIndexE(j_e))) |
               dlaf::internal::transform<
@@ -750,7 +745,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
   const SizeType b = band_size;
   const SizeType mb = mat_hh.blockSize().rows();
-  const SizeType batch_size = getTuneParameters().bt_band_to_tridiag_hh_apply_batch_size;
+  const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
   matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
@@ -922,14 +917,14 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
       // Batched application increases the communication messages and volume,
       // therefore we use it only for local applications.
-      const SizeType current_batch_size = helper.affectsMultipleRanks() ? b : batch_size;
+      const SizeType current_group_size = helper.affectsMultipleRanks() ? b : group_size;
 
       // COMPUTE V and W from HH and T
       auto tile_hh = (rankHH == rank)
                          ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                          : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
       auto [tile_v, tile_w] =
-          helperBackend.computeVW(current_batch_size, indexing_helper.wsIndexHH(), helper,
+          helperBackend.computeVW(current_group_size, indexing_helper.wsIndexHH(), helper,
                                   keepFuture(std::move(tile_hh)), mat_v, mat_t, mat_w);
 
       // UPDATE E
@@ -944,7 +939,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         // SINGLE ROW UPDATE
         if (!helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(ex::just(current_batch_size), keepFuture(tile_v), keepFuture(tile_w),
+              ex::when_all(ex::just(current_group_size), keepFuture(tile_v), keepFuture(tile_w),
                            splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top)) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -958,7 +953,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           // TWO ROWs (same RANK)
           if (!helper.affectsMultipleRanks()) {
             ex::start_detached(
-                ex::when_all(ex::just(current_batch_size), keepFuture(tile_v), keepFuture(tile_w),
+                ex::when_all(ex::just(current_group_size), keepFuture(tile_v), keepFuture(tile_w),
                              splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top),
                              mat_e_rt(idx_e_bottom)) |
                 dlaf::internal::transform<

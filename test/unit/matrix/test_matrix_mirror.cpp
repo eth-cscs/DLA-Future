@@ -311,7 +311,7 @@ void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& tes
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_EQ(tt::sync_wait(mat.read_sender2(idx)).get().ptr(),
+      EXPECT_NE(tt::sync_wait(mat.read_sender2(idx)).get().ptr(),
                 tt::sync_wait(mat_mirror.get().read_sender2(idx)).get().ptr());
     }
   }

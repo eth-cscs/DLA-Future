@@ -31,6 +31,18 @@
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
 #include "dlaf/types.h"
+//
+#ifdef DLAF_MINIAPP_CSV_OUTPUT
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+#include <fmt/printf.h>
+template <>
+struct fmt::formatter<blas::Uplo> : ostream_formatter {};
+template <>
+struct fmt::formatter<dlaf::miniapp::ElementType> : ostream_formatter {};
+template <>
+struct fmt::formatter<dlaf::Backend> : ostream_formatter {};
+#endif
 
 namespace {
 using dlaf::Device;
@@ -41,10 +53,11 @@ struct Options
   SizeType m;
   SizeType mb;
   SizeType b;
+  std::string info;
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        b(vm["band-size"].as<SizeType>()) {
+        b(vm["band-size"].as<SizeType>()), info(vm["pp-info"].as<std::string>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -136,14 +149,38 @@ struct reductionToBandMiniapp {
       }
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-
+#ifdef DLAF_MINIAPP_CSV_OUTPUT
+        // clang-format off
+        // CSV formatted output with column names that can be read by pandas to simplify post-processing
+        // CSVData{-version}, value_0, title_0, value_1, title_1
+        constexpr char const* msg = "CSVData-2, "
+            "run, "        "{}, "    "time, "       "{}, "
+            "GFlops, "     "{}, "    "type, "       "{}, "
+            "matrixsize, " "{}, "    "blocksize, "  "{}, "
+            "band_size, "  "{}, "    "comm_rows, "  "{}, "
+            "comm_cols, "  "{}, "    "threads, "    "{}, "
+            "backend, "    "{}, "    "{}";
+        fmt::print(std::cout, msg,
+                   run_index, elapsed_time, gigaflops,
+                   dlaf::internal::FormatShort{opts.type}.value,
+                   matrix_host.size().rows(),
+                   matrix_host.blockSize().rows(),
+                   opts.b,
+                   comm_grid.size().rows(), comm_grid.size().cols(),
+                   pika::get_os_thread_count(),
+                   backend,
+                   opts.info);
+        std::cout << std::endl;
+        // clang-format on
+#endif
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
@@ -176,9 +213,10 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>()  ->default_value(4096), "Matrix rows")
-    ("block-size",  value<SizeType>()  ->default_value(256),  "Block cyclic distribution size")
-    ("band-size",   value<SizeType>()  ->default_value(-1),   "Band size (a negative value implies band-size=block-size")
+    ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix rows")
+    ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
+    ("pp-info",     value<std::string>()->default_value(  ""), "info for postprocessing scripts")
   ;
   // clang-format on
 

@@ -152,7 +152,7 @@ struct reductionToBandMiniapp {
                   << "GFlops, " << gigaflops << ", "
                   << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
                   << "matrixsize, " << matrix_host.size().rows() << ", "
-                  << "blocksize, " << matrix_host.size().rows() << ", "
+                  << "blocksize, " << block_size.rows() << ", "
                   << "band_size, " << opts.b << ", "
                   << "comm_rows, " << comm_grid.size().rows() << ", "
                   << "comm_cols, " << comm_grid.size().cols() << ", "

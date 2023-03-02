@@ -37,18 +37,6 @@
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
-//
-#ifdef DLAF_MINIAPP_CSV_OUTPUT
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-#include <fmt/printf.h>
-template <>
-struct fmt::formatter<blas::Uplo> : ostream_formatter {};
-template <>
-struct fmt::formatter<dlaf::miniapp::ElementType> : ostream_formatter {};
-template <>
-struct fmt::formatter<dlaf::Backend> : ostream_formatter {};
-#endif
 
 namespace {
 
@@ -87,12 +75,10 @@ struct Options
   SizeType m;
   SizeType mb;
   blas::Uplo uplo;
-  std::string info;
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
-        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())),
-        info(vm["pp-info"].as<std::string>()) {
+        uplo(dlaf::miniapp::parseUplo(vm["uplo"].as<std::string>())) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -183,24 +169,19 @@ struct choleskyMiniapp {
         // clang-format off
         // CSV formatted output with column names that can be read by pandas to simplify post-processing
         // CSVData{-version}, value_0, title_0, value_1, title_1
-        constexpr char const* msg = "CSVData-2, "
-            "run, "       "{}, "    "time, "       "{}, "
-            "GFlops, "    "{}, "    "type, "       "{}, "
-            "UpLo, "      "{}, "    "matrixsize, " "{}, "
-            "blocksize, " "{}, "    "comm_rows, "  "{}, "
-            "comm_cols, " "{}, "    "threads, "    "{}, "
-            "backend, "   "{}, "    "{}";
-        fmt::print(std::cout, msg,
-                   run_index, elapsed_time, gigaflops,
-                   dlaf::internal::FormatShort{opts.type}.value,
-                   dlaf::internal::FormatShort{opts.uplo}.value,
-                   matrix_host.size().rows(),
-                   matrix_host.blockSize().rows(),
-                   comm_grid.size().rows(), comm_grid.size().cols(),
-                   pika::get_os_thread_count(),
-                   backend,
-                   opts.info);
-        std::cout << std::endl;
+        std::cout << "CSVData-2, "
+                  << "run, "        << run_index << ", "
+                  << "time, "       << elapsed_time << ", "
+                  << "GFlops, "     << gigaflops << ", "
+                  << "type, "       << dlaf::internal::FormatShort{opts.type}.value << ", "
+                  << "UpLo, "       << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                  << "matrixsize, " << matrix_host.size().rows() << ", "
+                  << "blocksize, "  << matrix_host.size().rows() << ", "
+                  << "comm_rows, "  << comm_grid.size().rows() << ", "
+                  << "comm_cols, "  << comm_grid.size().cols() << ", "
+                  << "threads, "    << pika::get_os_thread_count() << ", "
+                  << "backend, "    << backend << ", "
+                  << opts.info << std::endl;
         // clang-format on
 #endif
       }
@@ -239,7 +220,6 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
-    ("pp-info",     value<std::string>()->default_value(  ""), "info for postprocessing scripts")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

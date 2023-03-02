@@ -207,6 +207,7 @@ struct MiniappOptions {
   int64_t nruns;
   int64_t nwarmups;
   CheckIterFreq do_check;
+  std::string info;
 
   MiniappOptions(const pika::program_options::variables_map& vm)
       : backend(parseBackend(vm["backend"].as<std::string>())),
@@ -214,7 +215,9 @@ struct MiniappOptions {
         grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
         local(vm["local"].as<bool>()), nruns(vm["nruns"].as<int64_t>()),
         nwarmups(vm["nwarmups"].as<int64_t>()),
-        do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())) {
+        do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())),
+        info(vm["pp-info"].as<std::string>())
+  {
     DLAF_ASSERT(grid_rows > 0, grid_rows);
     DLAF_ASSERT(grid_cols > 0, grid_cols);
     DLAF_ASSERT(!local || grid_cols * grid_rows == 1, local, grid_rows, grid_cols);
@@ -249,7 +252,8 @@ inline pika::program_options::options_description getMiniappOptionsDescription()
                      "Number of warmup runs");
   desc.add_options()("check-result", pika::program_options::value<std::string>()->default_value("none"),
                      "Enable result checking ('none', 'all', 'last')");
-
+  desc.add_options()("pp-info", pika::program_options::value<std::string>()->default_value(""),
+                     "info for postprocessing scripts");
   return desc;
 }
 

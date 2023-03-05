@@ -165,25 +165,22 @@ struct choleskyMiniapp {
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-#ifdef DLAF_MINIAPP_CSV_OUTPUT
-        // clang-format off
-        // CSV formatted output with column names that can be read by pandas to simplify post-processing
-        // CSVData{-version}, value_0, title_0, value_1, title_1
-        std::cout << "CSVData-2, "
-                  << "run, "        << run_index << ", "
-                  << "time, "       << elapsed_time << ", "
-                  << "GFlops, "     << gigaflops << ", "
-                  << "type, "       << dlaf::internal::FormatShort{opts.type}.value << ", "
-                  << "UpLo, "       << dlaf::internal::FormatShort{opts.uplo}.value << ", "
-                  << "matrixsize, " << matrix_host.size().rows() << ", "
-                  << "blocksize, "  << block_size.rows() << ", "
-                  << "comm_rows, "  << comm_grid.size().rows() << ", "
-                  << "comm_cols, "  << comm_grid.size().cols() << ", "
-                  << "threads, "    << pika::get_os_thread_count() << ", "
-                  << "backend, "    << backend << ", "
-                  << opts.info << std::endl;
-        // clang-format on
-#endif
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "UpLo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << block_size.rows() << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
       }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||

@@ -143,22 +143,22 @@ struct reductionToBandMiniapp {
                   << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-#ifdef DLAF_MINIAPP_CSV_OUTPUT
-        // CSV formatted output with column names that can be read by pandas to simplify post-processing
-        // CSVData{-version}, value_0, title_0, value_1, title_1
-        std::cout << "CSVData-2, "
-                  << "run, " << run_index << ", "
-                  << "time, " << elapsed_time << ", "
-                  << "GFlops, " << gigaflops << ", "
-                  << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
-                  << "matrixsize, " << matrix_host.size().rows() << ", "
-                  << "blocksize, " << block_size.rows() << ", "
-                  << "band_size, " << opts.b << ", "
-                  << "comm_rows, " << comm_grid.size().rows() << ", "
-                  << "comm_cols, " << comm_grid.size().cols() << ", "
-                  << "threads, " << pika::get_os_thread_count() << ", "
-                  << "backend, " << backend << ", " << opts.info << std::endl;
-#endif
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << block_size.rows() << ", "
+                    << "band_size, " << opts.b << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
       }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||

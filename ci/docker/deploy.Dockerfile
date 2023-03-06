@@ -39,12 +39,15 @@ RUN pushd ${SOURCE}/miniapp && \
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \
+    export MINIAPP_BINARIES=`find miniapp/ -type f -executable -name "miniapp_*" -exec realpath {} \;` && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
+    libtree -d ${DEPLOY} ${MINIAPP_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest addr2line) && \
     cp -L ${SOURCE}/ci/mpi-ctest ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find -name CTestTestfile.cmake -exec cp --parents '{}' ${BUILD}-tmp ';' && \
+    echo "$MINIAPP_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \
     mv ${BUILD}-tmp ${BUILD}
 

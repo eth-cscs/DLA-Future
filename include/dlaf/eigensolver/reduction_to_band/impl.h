@@ -51,6 +51,16 @@
 
 namespace dlaf::eigensolver::internal {
 
+// Given a vector of vectors, reduce all vectors in the first one using sum operation
+template <class T>
+void reduceColumnVectors(std::vector<common::internal::vector<T>>& battery) {
+  for (size_t i = 1; i < battery.size(); ++i) {
+    DLAF_ASSERT_HEAVY(battery[0].size() == battery[i].size(), battery[0].size(), battery[i].size());
+    for (SizeType j = 0; j < battery[0].size(); ++j)
+      battery[0][j] += battery[i][j];
+  }
+}
+
 namespace red2band {
 
 // Extract x0 and compute local cumulative sum of squares of the reflector column
@@ -319,14 +329,8 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                                barrier_ptr->arrive_and_wait();
 
                                // STEP2b: reduce w results (single-threaded)
-                               if (index == 0) {
-                                 for (size_t i = 1; i < w.size(); ++i) {
-                                   DLAF_ASSERT_HEAVY(w[0].size() == w[i].size(), w[0].size(),
-                                                     w[i].size());
-                                   for (SizeType j = 0; j < w[0].size(); ++j)
-                                     w[0][j] += w[i][j];
-                                 }
-                               }
+                               if (index == 0)
+                                 dlaf::eigensolver::internal::reduceColumnVectors(w);
                                barrier_ptr->arrive_and_wait();
 
                                // STEP3: update trailing panel (multi-threaded)
@@ -656,6 +660,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                                const SizeType pt_cols = cols - (j + 1);
                                if (pt_cols == 0)
                                  break;
+
                                const bool has_head = rankHasHead && (index == 0);
 
                                w[index] = common::internal::vector<T>(pt_cols, 0);
@@ -664,12 +669,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
                                // STEP2b: reduce w results (single-threaded)
                                if (index == 0) {
-                                 for (size_t i = 1; i < w.size(); ++i) {
-                                   DLAF_ASSERT_HEAVY(w[0].size() == w[i].size(), w[0].size(),
-                                                     w[i].size());
-                                   for (SizeType j = 0; j < w[0].size(); ++j)
-                                     w[0][j] += w[i][j];
-                                 }
+                                 dlaf::eigensolver::internal::reduceColumnVectors(w);
                                  comm::sync::allReduceInPlace(pcomm.ref(), MPI_SUM,
                                                               common::make_data(w[0].data(), pt_cols));
                                }

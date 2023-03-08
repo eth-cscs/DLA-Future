@@ -19,7 +19,9 @@ namespace dlaf::eigensolver::internal {
 inline size_t getReductionToBandPanelNWorkers() noexcept {
   const size_t nworkers = getTuneParameters().red2band_panel_nworkers;
 
-  DLAF_ASSERT(nworkers >= 1 && nworkers < pika::get_num_worker_threads(), nworkers);
+  DLAF_ASSERT(nworkers >= 1 &&
+                  nworkers < pika::resource::get_thread_pool("default").get_os_thread_count(),
+              nworkers);
 
   return nworkers;
 }

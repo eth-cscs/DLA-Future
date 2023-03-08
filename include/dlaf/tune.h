@@ -9,8 +9,7 @@
 //
 #pragma once
 
-#include <pika/program_options.hpp>
-
+#include <pika/runtime.hpp>
 #include <dlaf/types.h>
 
 namespace dlaf {
@@ -22,7 +21,8 @@ namespace dlaf {
 ///                         Set with --dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by algorithms.
 struct TuneParameters {
-  size_t red2band_panel_nworkers = std::max<size_t>(1, pika::get_num_worker_threads() / 2);
+  size_t red2band_panel_nworkers =
+      std::max<size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
 
   SizeType eigensolver_min_band = 100;
   SizeType band_to_tridiag_1d_block_size_base = 8192;

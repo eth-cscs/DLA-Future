@@ -53,7 +53,6 @@ function(DLAF_addMiniapp miniapp_target_name)
   target_compile_definitions(${miniapp_target_name} PRIVATE ${DLAF_AM_COMPILE_DEFINITIONS})
   target_include_directories(${miniapp_target_name} PRIVATE ${DLAF_AM_INCLUDE_DIRS})
   target_add_warnings(${miniapp_target_name})
-
   ### DEPLOY
   include(GNUInstallDirs)
 

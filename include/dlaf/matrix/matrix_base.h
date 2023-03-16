@@ -49,7 +49,7 @@ public:
   }
 
   /// Returns the block size of the matrix.
-  const TileElementSize blockSize() const noexcept {
+  TileElementSize blockSize() const noexcept {
     return distribution_->blockSize();
   }
 

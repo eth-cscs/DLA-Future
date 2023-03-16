@@ -27,8 +27,8 @@
 
 namespace dlaf::matrix {
 
-/// TODO
-/// A @c Matrix object represents a collection of tiles which contain all the elements of a matrix.
+/// A @c RetiledMatrix object represents a collection of tiles which contain all the elements of a matrix.
+/// It is constructed on top of a Matrix and allows to divide the distribution block in multiple tiles.
 ///
 /// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
 /// therefore some tiles are stored locally on this rank,

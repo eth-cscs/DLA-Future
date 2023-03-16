@@ -47,9 +47,10 @@ public:
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
                const comm::Index2D& source_rank_index);
 
-  /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
-  /// TODO
+  /// Constructs a distribution for a matrix of size @p size
   /// distributed on a 2D grid of processes of size @p grid_size.
+  /// The distribution block size is @p block_size = tile_size * tiles_per_block,
+  /// i.e. multiple tiles per distribution blocks are allowed.
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
@@ -100,7 +101,7 @@ public:
     return local_nr_tiles_;
   }
 
-  const TileElementSize blockSize() const noexcept {
+  TileElementSize blockSize() const noexcept {
     return TileElementSize{tile_size_.rows() * tiles_per_block_.rows(),
                            tile_size_.cols() * tiles_per_block_.cols()};
   }

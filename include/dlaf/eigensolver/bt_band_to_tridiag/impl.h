@@ -907,8 +907,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
             // W2 = V* . E
             ex::start_detached(
                 dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                                            keepFuture(subtile_v), keepFuture(std::move(subtile_e_ro)), T(0),
-                                            splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
+                                            keepFuture(subtile_v), keepFuture(std::move(subtile_e_ro)),
+                                            T(0), splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
                 dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
 
             // Compute final W2 by adding the contribution from the partner rank

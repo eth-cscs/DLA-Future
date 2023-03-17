@@ -208,6 +208,53 @@ void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int 
                                                         ex::just(std::vector<int>(to_sizet(nranks), 0))));
 }
 
+template <class T, Device D, class SendCountsSender, class RecvCountsSender>
+void all2allDataTmp(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
+                    LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
+                    Matrix<T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
+                    Matrix<T, D>& recv_mat) {
+  constexpr auto C = Coord::Col;
+  namespace ex = pika::execution::experimental;
+
+  auto all2all_f =
+      [len = sz_loc.get<orthogonal(C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
+                                          std::vector<int>& send_displs,
+                                          const std::vector<matrix::Tile<T, D>>& send_tiles,
+                                          std::vector<int>& recv_counts, std::vector<int>& recv_displs,
+                                          const std::vector<matrix::Tile<T, D>>& recv_tiles,
+                                          MPI_Request* req) {
+        // datatype to be sent to each rank
+        MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+
+        // scale by the length of the row or column vectors to get the number of elements sent to each process
+        auto mul_const = [len](int num) { return to_int(len) * num; };
+        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
+        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
+
+        // Note: that was guaranteed to be contiguous on allocation
+        T* send_ptr = send_tiles[0].ptr();
+        T* recv_ptr = recv_tiles[0].ptr();
+
+        // send displacements
+        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+
+        // recv displacements
+        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+
+        // All-to-All communication
+        DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
+                                            recv_ptr, recv_counts.data(), recv_displs.data(), dtype,
+                                            comm, req));
+      };
+
+  auto sender =
+      ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
+                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
+                   std::forward<RecvCountsSender>(recv_counts_sender),
+                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
+  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
+}
+
 // Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!
 //
 template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
@@ -410,6 +457,95 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 
+template <class T>
+void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
+                     SizeType i_end, Matrix<const SizeType, Device::CPU>& perms,
+                     Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
+  constexpr Coord C = Coord::Col;
+  constexpr Device D = Device::CPU;
+
+  const matrix::Distribution& dist = mat_in.distribution();
+  int nranks = to_int(dist.commGridSize().get<C>());
+
+  // Local size and index of subproblem [i_begin, i_end]
+  SizeType i_el_begin = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
+  TileElementSize blk = dist.blockSize();
+  LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
+                             dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
+  LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
+                           dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
+  // Note: the local shape of the permutation region may not be square if the process grid is not square
+  LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end + 1),
+                          dist.localElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end + 1)};
+
+  // If there are no tiles in this rank, participate in the all2all call and return
+  if (sz_loc.isEmpty()) {
+    all2allEmptyData<T>(sub_task_chain, nranks);
+    return;
+  }
+
+  // Create a map from send indices to receive indices (inverse of perms)
+  Matrix<SizeType, D> inverse_perms(perms.distribution());
+  invertIndex(i_begin, i_end, perms, inverse_perms);
+
+  // Local distribution used for packing and unpacking
+  matrix::Distribution subm_dist(sz_loc, blk);
+
+  // Local single tile column matrices representing index maps used for packing and unpacking of
+  // communication data
+  matrix::Distribution index_dist(LocalElementSize(sz_loc.get<C>(), 1), TileElementSize(blk.rows(), 1));
+  Matrix<SizeType, D> ws_index(index_dist);
+  Matrix<SizeType, D> packing_index(index_dist);
+  Matrix<SizeType, D> unpacking_index(index_dist);
+
+  // Local matrices used for packing data for communication. Both matrices are in column-major order.
+  // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
+  // such that there is no padding and gaps between them.
+  LocalElementSize comm_sz = (C == Coord::Col) ? sz_loc : transposed(sz_loc);
+  matrix::Distribution comm_dist(comm_sz, blk);
+  matrix::LayoutInfo comm_layout = matrix::colMajorLayout(comm_sz, blk, comm_sz.rows());
+  Matrix<T, D> mat_send(comm_dist, comm_layout);
+  Matrix<T, D> mat_recv(comm_dist, comm_layout);
+
+  // Initialize the unpacking index
+  copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, ws_index);
+  auto recv_counts_sender =
+      initPackingIndex<C, false>(nranks, i_el_begin, dist, ws_index, unpacking_index);
+
+  // Initialize the packing index
+  // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
+  copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, inverse_perms, ws_index);
+  auto send_counts_sender = initPackingIndex<C, true>(nranks, i_el_begin, dist, ws_index, packing_index);
+
+  // Pack local rows or columns to be sent from this rank
+  applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
+                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             (C == Coord::Col)
+                                 ? whenAllReadWriteTilesArray(mat_send)
+                                 : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
+
+  // Pack data into the contiguous column-major send buffer by transposing
+  if constexpr (C == Coord::Row) {
+    transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
+  }
+
+  // Communicate data
+  all2allDataTmp<T, D>(sub_task_chain, nranks, sz_loc, std::move(send_counts_sender), mat_send,
+                       std::move(recv_counts_sender), mat_recv);
+
+  // Unpack data from the contiguous column-major receive buffer by transposing
+  if constexpr (C == Coord::Row) {
+    transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
+  }
+
+  // Unpack local rows or columns received on this rank
+  applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),
+                             (C == Coord::Col)
+                                 ? whenAllReadWriteTilesArray(mat_recv)
+                                 : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
+}
+
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<T, Device::CPU>& mat_in,
@@ -509,7 +645,12 @@ void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_ta
     return;
   }
   else {
-    permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+    if constexpr (Coord::Col == C) {
+      permuteOnCPUCol<T>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+    }
+    else {
+      permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+    }
   }
 }
 

@@ -24,6 +24,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/schedulers.h"
+#include "dlaf/sender/policy.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/when_all_lift.h"
@@ -213,46 +214,69 @@ void all2allDataTmp(common::Pipeline<comm::Communicator>& sub_task_chain, int nr
                     LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
                     Matrix<T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                     Matrix<T, D>& recv_mat) {
-  constexpr auto C = Coord::Col;
   namespace ex = pika::execution::experimental;
 
-  auto all2all_f =
-      [len = sz_loc.get<orthogonal(C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
-                                          std::vector<int>& send_displs,
-                                          const std::vector<matrix::Tile<T, D>>& send_tiles,
-                                          std::vector<int>& recv_counts, std::vector<int>& recv_displs,
-                                          const std::vector<matrix::Tile<T, D>>& recv_tiles,
-                                          MPI_Request* req) {
-        // datatype to be sent to each rank
-        MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
+  auto sendrecv_f = [vec_size = sz_loc.rows()](comm::Communicator& comm, std::vector<int> send_counts,
+                                               std::vector<int> send_displs,
+                                               const std::vector<matrix::Tile<T, D>>& send_tiles,
+                                               std::vector<int> recv_counts,
+                                               std::vector<int> recv_displs,
+                                               const std::vector<matrix::Tile<T, D>>& recv_tiles) {
+    const MPI_Datatype dtype = dlaf::comm::mpi_datatype<T>::type;
 
-        // scale by the length of the row or column vectors to get the number of elements sent to each process
-        auto mul_const = [len](int num) { return to_int(len) * num; };
-        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
-        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
+    // Note: both guaranteed to be contiguous on allocation
+    const T* send_ptr = send_tiles[0].ptr();
+    T* recv_ptr = recv_tiles[0].ptr();
 
-        // Note: that was guaranteed to be contiguous on allocation
-        T* send_ptr = send_tiles[0].ptr();
-        T* recv_ptr = recv_tiles[0].ptr();
+    // Note: each count represents how many vectors have to permuted, so we transform from number of
+    // vectors to the total number of elements in them
+    const auto nvecs2elements = [vec_size](int num) { return to_int(vec_size) * num; };
+    std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), nvecs2elements);
+    std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), nvecs2elements);
 
-        // send displacements
-        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+    // cumulative sum for computing rank data displacements in packed vectors
+    std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
 
-        // recv displacements
-        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+    std::vector<ex::unique_any_sender<>> all_comms;
+    all_comms.reserve(to_sizet(comm.size() - 1) * 2);
+    const comm::IndexT_MPI rank = comm.rank();
+    for (comm::IndexT_MPI rank_partner = 0; rank_partner < comm.size(); ++rank_partner) {
+      if (rank == rank_partner)
+        continue;
 
-        // All-to-All communication
-        DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
-                                            recv_ptr, recv_counts.data(), recv_displs.data(), dtype,
-                                            comm, req));
-      };
+      const auto rank_partner_index = to_sizet(rank_partner);
+      if (send_counts[rank_partner_index])
+        all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                              DLAF_MPI_CHECK_ERROR(MPI_Isend(send_ptr + send_displs[rank_partner_index],
+                                                             send_counts[rank_partner_index], dtype,
+                                                             rank_partner, 0, comm, req));
+                            }));
+      if (recv_counts[rank_partner_index])
+        all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                              DLAF_MPI_CHECK_ERROR(MPI_Irecv(recv_ptr + recv_displs[rank_partner_index],
+                                                             recv_counts[rank_partner_index], dtype,
+                                                             rank_partner, 0, comm, req));
+                            }));
+    }
 
-  auto sender =
-      ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
-                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
-                   std::forward<RecvCountsSender>(recv_counts_sender),
-                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
-  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
+    // Note:
+    // Once all communications are scheuled, while they complete, just do the "local" copy that imhitates
+    // the communication. This is superfluous and is going to be removed, since it also add an
+    // additioanl dependency that impose to wait all communications also for data already available
+    // locally
+    const auto rank_index = to_sizet(rank);
+    std::memcpy(recv_ptr + recv_displs[rank_index], send_ptr + send_displs[rank_index],
+                to_sizet(send_counts[rank_index]) * sizeof(T));
+
+    pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
+  };
+
+  ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
+               ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
+               std::forward<RecvCountsSender>(recv_counts_sender),
+               ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat)) |
+      dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), sendrecv_f);
 }
 
 // Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!
@@ -478,11 +502,9 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
   LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end + 1),
                           dist.localElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end + 1)};
 
-  // If there are no tiles in this rank, participate in the all2all call and return
-  if (sz_loc.isEmpty()) {
-    all2allEmptyData<T>(sub_task_chain, nranks);
+  // If there are no tiles in this rank, nothing to do here
+  if (sz_loc.isEmpty())
     return;
-  }
 
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());

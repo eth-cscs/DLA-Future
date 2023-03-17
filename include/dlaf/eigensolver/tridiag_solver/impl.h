@@ -91,14 +91,39 @@ auto cuppensDecomposition(Matrix<T, D>& tridiag) {
 }
 
 // Solve leaf eigensystem with stedc
-template <class T, Device D>
-void solveLeaf(Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
+template <class T>
+void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    stedcAsync<D>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
-                  evecs.readwrite_sender(LocalTileIndex(i, i)));
+    stedcAsync<Device::CPU>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
+                            evecs.readwrite_sender(LocalTileIndex(i, i)));
   }
 }
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void solveLeaf(Matrix<T, Device::GPU>& tridiag, Matrix<T, Device::GPU>& evecs,
+               Matrix<T, Device::CPU>& h_tridiag, Matrix<T, Device::CPU>& h_evecs) {
+  namespace ex = pika::execution::experimental;
+  using matrix::copy;
+  const auto cp_policy =
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+
+  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    const auto id_tr = LocalTileIndex(i, 0);
+    const auto id_ev = LocalTileIndex(i, i);
+
+    ex::start_detached(ex::when_all(tridiag.read_sender(id_tr), h_tridiag.readwrite_sender(id_tr)) |
+                       copy(cp_policy));
+    stedcAsync<Device::CPU>(h_tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(id_ev));
+    ex::start_detached(ex::when_all(h_tridiag.read_sender(id_tr), tridiag.readwrite_sender(id_tr)) |
+                       copy(cp_policy));
+    ex::start_detached(ex::when_all(h_evecs.read_sender(id_ev), evecs.readwrite_sender(id_ev)) |
+                       copy(cp_policy));
+  }
+}
+#endif
 
 // Copy the first column of @p tridiag (n x 2) into the column matrix @p evals (n x 1).
 template <class T, Device D>
@@ -188,7 +213,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Ma
                                  initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
                                  initMirrorMatrix(ws.c),
                                  // TODO: Not needed: for local version (appease warning)
-                                 initMirrorMatrix(evecs), initMirrorMatrix(ws.mat2)
+                                 initMirrorMatrix(evecs), initMirrorMatrix(ws.mat2),
+                                 initMirrorMatrix(tridiag)
 
   };
 
@@ -200,7 +226,12 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Ma
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveLeaf(tridiag, evecs);
+  if constexpr (D == Device::CPU) {
+    solveLeaf(tridiag, evecs);
+  }
+  else {
+    solveLeaf(tridiag, evecs, ws_h.tridiag, ws_h.evecs);
+  }
 
   // Offload the diagonal from `tridiag` to `evals`
   offloadDiagonal(tridiag, evals);
@@ -233,9 +264,9 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals,
 // @p tridiag is a local matrix of size (n x 2)
 // @p evecs is a distributed matrix of size (n x n)
 //
-template <class T, Device D>
+template <class T>
 void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
-                   Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
+                   Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
 
@@ -244,21 +275,60 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   for (SizeType i = 0; i < ntiles; ++i) {
     GlobalTileIndex ii_tile(i, i);
     comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex idx_trd(i, 0);
+    GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<D>(tridiag.readwrite_sender(idx_trd), evecs.readwrite_sender(ii_tile));
+      stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), evecs.readwrite_sender(ii_tile));
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                  ex::make_unique_any_sender(tridiag.read_sender(idx_trd))));
+                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(tridiag.readwrite_sender(idx_trd))));
+                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+template <class T>
+void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
+                   Matrix<T, Device::GPU>& tridiag, Matrix<T, Device::GPU>& evecs,
+                   Matrix<T, Device::CPU>& h_tridiag, Matrix<T, Device::CPU>& h_evecs) {
+  const matrix::Distribution& dist = evecs.distribution();
+  namespace ex = pika::execution::experimental;
+  using matrix::copy;
+  const auto cp_policy =
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+
+  comm::Index2D this_rank = dist.rankIndex();
+  SizeType ntiles = dist.nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    GlobalTileIndex ii_tile(i, i);
+    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    GlobalTileIndex id_tr(i, 0);
+    if (ii_rank == this_rank) {
+      ex::start_detached(ex::when_all(tridiag.read_sender(id_tr), h_tridiag.readwrite_sender(id_tr)) |
+                         copy(cp_policy));
+      stedcAsync<Device::CPU>(h_tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(ii_tile));
+      ex::start_detached(ex::when_all(h_tridiag.read_sender(id_tr), tridiag.readwrite_sender(id_tr)) |
+                         copy(cp_policy));
+      ex::start_detached(ex::when_all(h_evecs.read_sender(ii_tile), evecs.readwrite_sender(ii_tile)) |
+                         copy(cp_policy));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
+    }
+    else {
+      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      ex::start_detached(
+          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
+                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
+    }
+  }
+}
+#endif
 
 // Distributed tridiagonal eigensolver
 //
@@ -284,7 +354,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
                                  initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
                                  initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
                                  initMirrorMatrix(ws.c),    initMirrorMatrix(evecs),
-                                 initMirrorMatrix(ws.mat2)};
+                                 initMirrorMatrix(ws.mat2), initMirrorMatrix(tridiag)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
@@ -298,7 +368,12 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+  if constexpr (D == Device::CPU) {
+    solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+  }
+  else {
+    solveDistLeaf(grid, full_task_chain, tridiag, evecs, ws_h.tridiag, ws_h.evecs);
+  }
 
   // Offload the diagonal from `tridiag` to `evals`
   offloadDiagonal(tridiag, evals);

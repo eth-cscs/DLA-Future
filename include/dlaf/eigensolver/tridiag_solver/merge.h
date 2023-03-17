@@ -107,6 +107,9 @@ struct WorkSpaceHostMirror {
   // only needed for the distributed tridiagonal solver
   matrix::Matrix<T, Device::CPU> evecs;
   matrix::Matrix<T, Device::CPU> mat2;
+
+  // Test
+  matrix::Matrix<T, Device::CPU> tridiag;
 };
 
 template <class T>
@@ -122,6 +125,9 @@ struct WorkSpaceHostMirror<T, Device::CPU> {
   // only needed for the distributed tridiagonal solver
   matrix::Matrix<T, Device::CPU>& evecs;
   matrix::Matrix<T, Device::CPU>& mat2;
+
+  // Test
+  matrix::Matrix<T, Device::CPU>& tridiag;
 };
 
 template <class T>

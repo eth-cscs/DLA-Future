@@ -31,7 +31,7 @@
 #include "dlaf/util_matrix.h"
 
 #include <mpi.h>
-#include <pika/futures/future.hpp>
+#include <pika/future.hpp>
 #include "pika/algorithm.hpp"
 
 namespace dlaf::permutations::internal {

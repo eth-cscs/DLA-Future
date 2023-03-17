@@ -210,7 +210,7 @@ void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int 
 }
 
 template <class T, Device D, class SendCountsSender, class RecvCountsSender>
-void all2allDataTmp(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
+void all2allDataCol(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
                     LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
                     Matrix<T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                     Matrix<T, D>& recv_mat) {
@@ -546,19 +546,9 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
                                  ? whenAllReadWriteTilesArray(mat_send)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 
-  // Pack data into the contiguous column-major send buffer by transposing
-  if constexpr (C == Coord::Row) {
-    transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
-  }
-
   // Communicate data
-  all2allDataTmp<T, D>(sub_task_chain, nranks, sz_loc, std::move(send_counts_sender), mat_send,
+  all2allDataCol<T, D>(sub_task_chain, nranks, sz_loc, std::move(send_counts_sender), mat_send,
                        std::move(recv_counts_sender), mat_recv);
-
-  // Unpack data from the contiguous column-major receive buffer by transposing
-  if constexpr (C == Coord::Row) {
-    transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
-  }
 
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),

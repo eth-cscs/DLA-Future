@@ -212,20 +212,21 @@ void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int 
 template <class T, Device D, class SendCountsSender, class RecvCountsSender>
 void all2allDataCol(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
                     LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
-                    Matrix<T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
+                    Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                     Matrix<T, D>& recv_mat) {
   namespace ex = pika::execution::experimental;
 
-  auto sendrecv_f = [vec_size = sz_loc.rows()](comm::Communicator& comm, std::vector<int> send_counts,
-                                               std::vector<int> send_displs,
-                                               const std::vector<matrix::Tile<T, D>>& send_tiles,
-                                               std::vector<int> recv_counts,
-                                               std::vector<int> recv_displs,
-                                               const std::vector<matrix::Tile<T, D>>& recv_tiles) {
+  auto sendrecv_f = [vec_size =
+                         sz_loc.rows()](comm::Communicator& comm, std::vector<int> send_counts,
+                                        std::vector<int> send_displs,
+                                        const std::vector<pika::shared_future<matrix::Tile<const T, D>>>&
+                                            send_tiles_fut,
+                                        std::vector<int> recv_counts, std::vector<int> recv_displs,
+                                        const std::vector<matrix::Tile<T, D>>& recv_tiles) {
     const MPI_Datatype dtype = dlaf::comm::mpi_datatype<T>::type;
 
     // Note: both guaranteed to be contiguous on allocation
-    const T* send_ptr = send_tiles[0].ptr();
+    const T* send_ptr = send_tiles_fut[0].get().ptr();
     T* recv_ptr = recv_tiles[0].ptr();
 
     // Note: each count represents how many vectors have to permuted, so we transform from number of
@@ -273,7 +274,7 @@ void all2allDataCol(common::Pipeline<comm::Communicator>& sub_task_chain, int nr
   };
 
   ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
-               ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
+               ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
                std::forward<RecvCountsSender>(recv_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat)) |
       dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), sendrecv_f);
@@ -541,7 +542,7 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
-                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
                              (C == Coord::Col)
                                  ? whenAllReadWriteTilesArray(mat_send)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
@@ -553,8 +554,8 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),
                              (C == Coord::Col)
-                                 ? whenAllReadWriteTilesArray(mat_recv)
-                                 : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                                 ? whenAllReadOnlyTilesArray(mat_recv)
+                                 : whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
                              whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
 

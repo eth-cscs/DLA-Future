@@ -100,12 +100,11 @@ struct TridiagSolverMiniapp {
 
       double elapsed_time;
       {
-        MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> tridiag_mirror(tridiag);
         MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evals_mirror(evals);
         MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evecs_mirror(evecs);
 
         // Wait for matrix to be copied to GPU (if necessary)
-        tridiag_mirror.get().waitLocalTiles();
+        tridiag.waitLocalTiles();
         evals_mirror.get().waitLocalTiles();
         evecs_mirror.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
@@ -113,13 +112,12 @@ struct TridiagSolverMiniapp {
         dlaf::common::Timer<> timeit;
         using dlaf::eigensolver::tridiagSolver;
         if (opts.local)
-          tridiagSolver<backend>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+          tridiagSolver<backend>(tridiag, evals_mirror.get(), evecs_mirror.get());
         else
-          tridiagSolver<backend>(comm_grid, tridiag_mirror.get(), evals_mirror.get(),
-                                 evecs_mirror.get());
+          tridiagSolver<backend>(comm_grid, tridiag, evals_mirror.get(), evecs_mirror.get());
 
         // wait and barrier for all ranks
-        tridiag_mirror.get().waitLocalTiles();
+        tridiag.waitLocalTiles();
         evals_mirror.get().waitLocalTiles();
         evecs_mirror.get().waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));

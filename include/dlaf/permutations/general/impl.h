@@ -262,9 +262,9 @@ void all2allDataCol(common::Pipeline<comm::Communicator>& sub_task_chain, int nr
     }
 
     // Note:
-    // Once all communications are scheuled, while they complete, just do the "local" copy that imhitates
-    // the communication. This is superfluous and is going to be removed, since it also add an
-    // additioanl dependency that impose to wait all communications also for data already available
+    // Once all communications are scheduled, while they complete, just do the "local" copy that
+    // imhitates the communication. This is superfluous and is going to be removed, since it also add an
+    // additional dependency that impose to wait all communications also for data already available
     // locally
     const auto rank_index = to_sizet(rank);
     std::memcpy(recv_ptr + recv_displs[rank_index], send_ptr + send_displs[rank_index],

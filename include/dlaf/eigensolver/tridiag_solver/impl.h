@@ -329,22 +329,20 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
 
-  DistWorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),         // mat1
-                         Matrix<T, D>(dist_evecs),         // mat2
-                         Matrix<T, D>(dist_evals),         // dtmp
-                         Matrix<T, D>(dist_evals),         // z
-                         Matrix<T, D>(dist_evals),         // ztmp
-                         Matrix<SizeType, D>(dist_evals),  // i1
-                         Matrix<SizeType, D>(dist_evals),  // i2
-                         Matrix<SizeType, D>(dist_evals),  // i3
-                         Matrix<ColType, D>(dist_evals)};  // c
+  DistWorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),   // mat1
+                         Matrix<T, D>(dist_evecs),   // mat2
+                         Matrix<T, D>(dist_evals),   // z
+                         Matrix<T, D>(dist_evals)};  // ztmp
 
-  // Mirror workspace on host memory for CPU-only kernels
-  DistWorkSpaceHostMirror<T, D> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
-                                     initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
-                                     initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
-                                     initMirrorMatrix(ws.c),    initMirrorMatrix(evecs),
-                                     initMirrorMatrix(ws.mat2)};
+  DistWorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),         // dtmp
+                            Matrix<SizeType, Device::CPU>(dist_evals),  // i1
+                            Matrix<SizeType, Device::CPU>(dist_evals),  // i2
+                            Matrix<SizeType, Device::CPU>(dist_evals),  // i3
+                            Matrix<ColType, Device::CPU>(dist_evals)};  // c
+
+  DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(evals),   initMirrorMatrix(evecs),
+                                      initMirrorMatrix(ws.mat1), initMirrorMatrix(ws.mat2),
+                                      initMirrorMatrix(ws.z),    initMirrorMatrix(ws.ztmp)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
@@ -362,18 +360,20 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
     solveDistLeaf(grid, full_task_chain, tridiag, evecs);
   }
   else {
-    solveDistLeaf(grid, full_task_chain, tridiag, evecs, ws_h.evecs);
+    solveDistLeaf(grid, full_task_chain, tridiag, evecs, ws_hm.evecs);
   }
 
   // Offload the diagonal from `tridiag` to `evals`
-  offloadDiagonal(tridiag, evals);
+  offloadDiagonal(tridiag, ws_hm.evals);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
     mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
-                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals, evecs);
+                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals, evecs);
   }
+
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
 }
 
 // \overload TridiagSolver<B, D, T>::call()

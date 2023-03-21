@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "dlaf/matrix/index.h"
 #include "dlaf/permutations/general/api.h"
 #include "dlaf/permutations/general/perms.h"
 
@@ -32,6 +33,7 @@
 #include "dlaf/util_matrix.h"
 
 #include <mpi.h>
+#include <numeric>
 #include <pika/future.hpp>
 #include "pika/algorithm.hpp"
 
@@ -386,11 +388,11 @@ void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribut
                                    Matrix<SizeType, D>& local_index) {
   namespace ex = pika::execution::experimental;
 
-  for (auto tile_wrt_local : common::iterate_range2d(local_index.distribution().localNrTiles())) {
-    SizeType i_gl_tile = dist.globalTileFromLocalTile<C>(i_loc_begin + tile_wrt_local.row());
-    ex::start_detached(ex::when_all(global_index.read_sender(GlobalTileIndex(i_gl_tile, 0)),
-                                    local_index.readwrite_sender(tile_wrt_local)) |
-                       dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
+  for (const LocalTileIndex i : common::iterate_range2d(local_index.distribution().localNrTiles())) {
+    const GlobalTileIndex i_global(dist.globalTileFromLocalTile<C>(i_loc_begin + i.row()), 0);
+    ex::start_detached(
+        ex::when_all(global_index.read_sender(i_global), local_index.readwrite_sender(i)) |
+        dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
   }
 }
 

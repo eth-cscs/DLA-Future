@@ -8,11 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/future.hpp>
+#include <whip.hpp>
+
 #include "dlaf/permutations/general/perms.h"
 #include "dlaf/types.h"
 #include "dlaf/util_cuda.h"
-
-#include <whip.hpp>
 
 namespace dlaf::permutations::internal {
 
@@ -44,6 +45,18 @@ MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
   layout.ld = tiles[0].ld();
   layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].ptr() - tiles[0].ptr() : 0;
   layout.col_offset = (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].ptr() - tiles[0].ptr() : 0;
+  return layout;
+}
+
+template <class T>
+MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
+                             const std::vector<pika::shared_future<matrix::Tile<const T, Device::GPU>>>& tiles) {
+  const LocalTileSize tile_sz = distr.localNrTiles();
+  MatrixLayout layout;
+  layout.nb = distr.blockSize().rows();
+  layout.ld = tiles[0].get().ld();
+  layout.row_offset = (tile_sz.rows() > 1) ? tiles[1].get().ptr() - tiles[0].get().ptr() : 0;
+  layout.col_offset = (tile_sz.cols() > 1) ? tiles[to_sizet(tile_sz.rows())].get().ptr() - tiles[0].get().ptr() : 0;
   return layout;
 }
 
@@ -86,12 +99,12 @@ __global__ void applyPermutationsOnDevice(SizeType out_begin_row, SizeType out_b
 template <class T, Coord coord>
 void applyPermutationsOnDevice(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
                                const matrix::Distribution& distr, const SizeType* perms,
-                               const std::vector<matrix::Tile<T, Device::GPU>>& in_tiles,
+                               const std::vector<pika::shared_future<matrix::Tile<const T, Device::GPU>>>& in_tiles_fut,
                                const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles,
                                whip::stream_t stream) {
-  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles);
+  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles_fut);
   MatrixLayout out_layout = getMatrixLayout(distr, out_tiles);
-  const T* in = in_tiles[0].ptr();
+  const T* in = in_tiles_fut[0].get().ptr();
   T* out = out_tiles[0].ptr();
 
   constexpr Coord orth_coord = orthogonal(coord);

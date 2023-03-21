@@ -120,8 +120,8 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   }
   else if constexpr (D == Device::GPU) {
 #if defined(DLAF_WITH_GPU)
-    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles, out_tiles,
-                                        args...);
+    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles_fut,
+                                        out_tiles, args...);
 #endif
   }
 }

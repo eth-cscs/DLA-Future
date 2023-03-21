@@ -330,54 +330,59 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
 }
 
 // @param nranks number of ranks
-// @param loc2gl_index  a column matrix that represents a map from local to global indices
+// @param offset_sub where the sub-matrix to permute starts in the global matrix
+// @param loc2sub_index a column matrix that represents a map from local to sub indices
 // @param packing_index a column matrix that represents a map from packed indices to local indices
-//        that is used for packing columns or rows on each rank
 //
 // Note: the order of the packed rows or columns on the send side must match the expected order at
 // unpacking on the receive side
-template <Coord C, bool PackBasedOnGlobalIndex>
-auto initPackingIndex(int nranks, SizeType i_el_begin, const matrix::Distribution& dist,
-                      Matrix<const SizeType, Device::CPU>& loc2gl_index,
+template <Coord C, bool BackwardMapping = false>
+auto initPackingIndex(comm::IndexT_MPI nranks, SizeType offset_sub, const matrix::Distribution& dist,
+                      Matrix<const SizeType, Device::CPU>& loc2sub_index,
                       Matrix<SizeType, Device::CPU>& packing_index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto counts_fn = [nranks, i_el_begin, dist,
-                    len = packing_index.size().rows()](const auto& loc2gl_index_tiles,
-                                                       const auto& packing_index_tiles) {
-    const SizeType* in = loc2gl_index_tiles[0].get().ptr();
+  auto counts_fn = [nranks, offset_sub, dist,
+                    nperms = packing_index.size().rows()](const auto& loc2gl_index_tiles,
+                                                          const auto& packing_index_tiles) {
+    const SizeType* loc2sub = loc2gl_index_tiles[0].get().ptr();
     SizeType* out = packing_index_tiles[0].ptr();
 
     std::vector<int> counts(to_sizet(nranks));
-    int offset = 0;
-    for (int rank = 0; rank < nranks; ++rank) {
-      int& count = counts[to_sizet(rank)];
-      count = 0;
-      for (SizeType i = 0; i < len; ++i) {
-        if (dist.rankGlobalElement<C>(i_el_begin + in[i]) == rank) {
-          if constexpr (PackBasedOnGlobalIndex) {
-            out[offset + count] = i;
-          }
-          else {
-            out[i] = offset + count;
-          }
-          ++count;
+
+    for (int rank = 0, rank_displacement = 0; rank < nranks; ++rank) {
+      int& nperms_local = counts[to_sizet(rank)] = 0;
+
+      for (SizeType perm_index_local = 0; perm_index_local < nperms; ++perm_index_local) {
+        const SizeType perm_index_global = offset_sub + loc2sub[perm_index_local];
+        if (dist.rankGlobalElement<C>(perm_index_global) == rank) {
+          const SizeType perm_index_packed = rank_displacement + nperms_local;
+
+          if constexpr (BackwardMapping)
+            out[perm_index_packed] = perm_index_local;
+          else
+            out[perm_index_local] = perm_index_packed;
+
+          ++nperms_local;
         }
       }
-      if constexpr (PackBasedOnGlobalIndex) {
-        std::sort(out + offset, out + offset + count,
-                  [in](SizeType i1, SizeType i2) { return in[i1] < in[i2]; });
-      }
-      offset += count;
+
+      // Note:
+      // This sorting actually "inverts" the mapping.
+      if constexpr (BackwardMapping)
+        std::sort(out + rank_displacement, out + rank_displacement + nperms_local,
+                  [loc2sub](SizeType i1, SizeType i2) { return loc2sub[i1] < loc2sub[i2]; });
+
+      rank_displacement += nperms_local;
     }
+
     return counts;
   };
 
-  auto sender =
-      ex::when_all(whenAllReadOnlyTilesArray(loc2gl_index), whenAllReadWriteTilesArray(packing_index));
   return ex::ensure_started(
-      di::transform(di::Policy<Backend::MC>{}, std::move(counts_fn), std::move(sender)));
+      ex::when_all(whenAllReadOnlyTilesArray(loc2sub_index), whenAllReadWriteTilesArray(packing_index)) |
+      di::transform(di::Policy<Backend::MC>{}, std::move(counts_fn)));
 }
 
 // Copies index tiles belonging to the current process from the complete index @p global_index into the

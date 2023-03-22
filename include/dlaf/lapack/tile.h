@@ -481,8 +481,7 @@ class CusolverInfo {
 
 public:
 #ifdef DLAF_WITH_CUDA
-  CusolverInfo(int workspace_size)
-      : workspace_(workspace_size), info_(1) {}
+  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 #endif
   CusolverInfo() : info_(1) {}
 

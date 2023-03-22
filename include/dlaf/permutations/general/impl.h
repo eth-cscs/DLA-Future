@@ -31,6 +31,7 @@
 #include "dlaf/util_matrix.h"
 
 #include <mpi.h>
+#include <pika/future.hpp>
 #include "pika/algorithm.hpp"
 
 namespace dlaf::permutations::internal {
@@ -83,7 +84,7 @@ namespace dlaf::permutations::internal {
 template <class T, Device D, Coord coord, class... Args>
 void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
                        const matrix::Distribution& distr, const SizeType* perm_arr,
-                       const std::vector<matrix::Tile<T, D>>& in_tiles,
+                       const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& in_tiles_fut,
                        const std::vector<matrix::Tile<T, D>>& out_tiles,
                        [[maybe_unused]] Args&&... args) {
   if constexpr (D == Device::CPU) {
@@ -109,7 +110,7 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
         }
 
         TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
-        auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))];
+        const auto& tile_in = in_tiles_fut[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))].get();
         TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
         auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
@@ -119,8 +120,8 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   }
   else if constexpr (D == Device::GPU) {
 #if defined(DLAF_WITH_GPU)
-    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles, out_tiles,
-                                        args...);
+    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles_fut,
+                                        out_tiles, args...);
 #endif
   }
 }
@@ -141,8 +142,8 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
   auto sender =
       ex::when_all(ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, 0),
                                                             LocalTileSize(ntiles, 1), perms)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
-                                                                 LocalTileSize(ntiles, ntiles), mat_in)),
+                   ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, i_begin),
+                                                            LocalTileSize(ntiles, ntiles), mat_in)),
                    ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
                                                                  LocalTileSize(ntiles, ntiles),
                                                                  mat_out)));
@@ -216,12 +217,12 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
   namespace ex = pika::execution::experimental;
 
   auto all2all_f =
-      [len = sz_loc.get<orthogonal(C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
-                                          std::vector<int>& send_displs,
-                                          const std::vector<matrix::Tile<T, D>>& send_tiles,
-                                          std::vector<int>& recv_counts, std::vector<int>& recv_displs,
-                                          const std::vector<matrix::Tile<T, D>>& recv_tiles,
-                                          MPI_Request* req) {
+      [len = sz_loc.get<orthogonal(
+           C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
+                  std::vector<int>& send_displs,
+                  const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& send_tiles_fut,
+                  std::vector<int>& recv_counts, std::vector<int>& recv_displs,
+                  const std::vector<matrix::Tile<T, D>>& recv_tiles, MPI_Request* req) {
         // datatype to be sent to each rank
         MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
 
@@ -231,7 +232,7 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
         std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
 
         // Note: that was guaranteed to be contiguous on allocation
-        T* send_ptr = send_tiles[0].ptr();
+        const T* send_ptr = send_tiles_fut[0].get().ptr();
         T* recv_ptr = recv_tiles[0].ptr();
 
         // send displacements
@@ -248,7 +249,7 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
 
   auto sender =
       ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
-                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(send_mat),
+                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
                    std::forward<RecvCountsSender>(recv_counts_sender),
                    ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
   dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
@@ -470,7 +471,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
-                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
                              (C == Coord::Col)
                                  ? whenAllReadWriteTilesArray(mat_send)
                                  : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
@@ -492,8 +493,8 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // Unpack local rows or columns received on this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),
                              (C == Coord::Col)
-                                 ? whenAllReadWriteTilesArray(mat_recv)
-                                 : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_in),
+                                 ? whenAllReadOnlyTilesArray(mat_recv)
+                                 : whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
                              whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
 

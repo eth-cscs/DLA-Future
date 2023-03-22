@@ -480,13 +480,9 @@ class CusolverInfo {
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverInfo(int workspace_size)
-      :
 #ifdef DLAF_WITH_CUDA
-        workspace_(workspace_size),
+  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 #endif
-        info_(1) {
-  }
   CusolverInfo() : info_(1) {}
 
 #ifdef DLAF_WITH_CUDA

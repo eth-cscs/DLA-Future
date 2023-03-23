@@ -293,7 +293,7 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   // Multiply along rows
   //
   // Note: the output of the reduction is saved in the first column.
-  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
+  auto mult_op = [] __host__ __device__(const T& a, const T& b) { return a * b; };
   size_t temp_storage_bytes;
 
   using OffsetIterator =

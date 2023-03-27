@@ -74,53 +74,14 @@ DLAF_GPU_CAST_TO_COMPLEX_ETI(, float);
 DLAF_GPU_CAST_TO_COMPLEX_ETI(, double);
 
 template <class T>
-__global__ void cuppensDecompOnDevice(const T* offdiag_val_ptr, T* top_diag_val_ptr,
-                                      T* bottom_diag_val_ptr) {
-  const T offdiag = *offdiag_val_ptr;
-  T& top_diag = *top_diag_val_ptr;
-  T& bottom_diag = *bottom_diag_val_ptr;
-
-  if constexpr (std::is_same<T, float>::value) {
-    top_diag -= fabsf(offdiag);
-    bottom_diag -= fabsf(offdiag);
-  }
-  else {
-    top_diag -= fabs(offdiag);
-    bottom_diag -= fabs(offdiag);
-  }
-}
-
-// Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-//
-template <class T>
-void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                   T* host_offdiag_val_ptr, whip::stream_t stream) {
-  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
-  TileElementIndex top_idx{top.size().rows() - 1, 0};
-  TileElementIndex bottom_idx{0, 0};
-  const T* device_offdiag_val_ptr = top.ptr(offdiag_idx);
-  T* device_top_diag_val_ptr = top.ptr(top_idx);
-  T* device_bottom_diag_val_ptr = bottom.ptr(bottom_idx);
-
-  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(device_offdiag_val_ptr, device_top_diag_val_ptr,
-                                             device_bottom_diag_val_ptr);
-  whip::memcpy_async(host_offdiag_val_ptr, device_offdiag_val_ptr, sizeof(T),
-                     whip::memcpy_device_to_host, stream);
-}
-
-DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
-DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
-
-template <class T>
-void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
                                         whip::stream_t stream) {
   SizeType len = tridiag_tile.size().rows();
   const T* tridiag_ptr = tridiag_tile.ptr();
   T* diag_ptr = diag_tile.ptr();
 
-  whip::memcpy_async(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len), whip::memcpy_device_to_device,
-                     stream);
+  whip::memcpy_async(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len), whip::memcpy_default, stream);
 }
 
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);

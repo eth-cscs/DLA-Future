@@ -123,7 +123,6 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
-
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                              TileElementSize(mat.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat.blockSize(), grid);

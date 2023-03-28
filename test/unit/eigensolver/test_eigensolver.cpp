@@ -149,7 +149,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
 
     {
       MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-      return eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvectors, eigenvalues);
+      eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvectors, eigenvalues);
     }  // Mirror gets out of scope
 
     if (mat_a_h.size().isEmpty())

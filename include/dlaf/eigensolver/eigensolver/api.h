@@ -28,8 +28,6 @@ namespace internal {
 
 template <Backend B, Device D, class T>
 struct Eigensolver {
-  static EigensolverResult<T, D> call(blas::Uplo uplo, Matrix<T, D>& mat_a);
-  static EigensolverResult<T, D> call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a);
   static void call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
                    Matrix<T, D>& mat_e);
   static void call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,

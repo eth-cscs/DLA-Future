@@ -65,11 +65,13 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eig
 /// @param mat contains the Hermitian matrix A
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
-  DLAF_ASSERT(matrix::local_matrix(mat), mat);
-  DLAF_ASSERT(square_size(mat), mat);
-  DLAF_ASSERT(square_blocksize(mat), mat);
+  const SizeType size = mat.size().rows();
+  matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                             TileElementSize(mat.blockSize().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat.blockSize());
 
-  return internal::Eigensolver<B, D, T>::call(uplo, mat);
+  eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors);
+  return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
 /// Standard Eigensolver.
@@ -120,10 +122,13 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
 /// @param mat contains the Hermitian matrix A
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
-  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
-  DLAF_ASSERT(square_size(mat), mat);
-  DLAF_ASSERT(square_blocksize(mat), mat);
+  const SizeType size = mat.size().rows();
 
-  return internal::Eigensolver<B, D, T>::call(grid, uplo, mat);
+  matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                             TileElementSize(mat.blockSize().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat.blockSize(), grid);
+
+  eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors);
+  return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 }

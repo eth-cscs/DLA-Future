@@ -243,8 +243,8 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation : do_allocation>(grid, uplo, m,
-                                                                                          mb);
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(grid, uplo, m,
+                                                                                         mb);
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(grid, uplo,
                                                                                             m, mb);
       }

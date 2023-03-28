@@ -56,7 +56,7 @@ TYPED_TEST_SUITE(EigensolverTestGPU, MatrixElementTypes);
 template <typename>
 inline constexpr bool dependent_false_v = false;
 
-enum class Allocation { use_preallocated, do_allocation };
+enum class Allocation { use_preallocated, do_allocation, test };
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
@@ -151,7 +151,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
       return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }
     else {
-      static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
+      static_assert(dependent_false_v<T>, "Invalid value for template parameter 'allocation'.");
+      return eigensolver::eigensolver<B>(uplo, mat_a.get()); // Ensure correct return type
     }
   }();
 
@@ -193,7 +194,8 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
       return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }
     else {
-      static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
+      static_assert(dependent_false_v<T>, "Invalid value for template parameter 'allocation'.");
+      return eigensolver::eigensolver<B>(grid, uplo, mat_a.get()); // Ensure correct return type
     }
   }();
 

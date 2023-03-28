@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/eigensolver/eigensolver/api.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -69,8 +70,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 template <class T, Device D, class... GridIfDistributed>
 void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
-                                Matrix<T, D>& eigenvectors, Matrix<BaseType<T>, D>& eigenvalues,
-                                GridIfDistributed... grid) {
+                                eigensolver::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
   // calls that might lead to deadlocks.
@@ -82,11 +82,11 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
 
   auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
   auto mat_evalues_local = [&]() {
-    MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(eigenvalues);
+    MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
     return allGather(blas::Uplo::General, mat_evals.get());
   }();
   auto mat_e_local = [&]() {
-    MatrixMirror<const T, Device::CPU, D> mat_e(eigenvectors);
+    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
     return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
 
@@ -134,37 +134,31 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  if constexpr (allocation == Allocation::do_allocation) {
-    eigensolver::EigensolverResult<T, D> ret = [&]() {
-      MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+
+    if constexpr (allocation == Allocation::do_allocation) {
       return eigensolver::eigensolver<B>(uplo, mat_a.get());
-    }();
+    }
+    else if constexpr (allocation == Allocation::use_preallocated) {
+      const SizeType size = mat_a_h.size().rows();
+      Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                         TileElementSize(mat_a_h.blockSize().rows(), 1));
+      Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
 
-    if (mat_a_h.size().isEmpty())
-      return;
-
-    testEigensolverCorrectness(uplo, reference, ret.eigenvectors, ret.eigenvalues);
-  }
-  else if constexpr (allocation == Allocation::use_preallocated) {
-    const SizeType size = mat_a_h.size().rows();
-
-    Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                       TileElementSize(mat_a_h.blockSize().rows(), 1));
-    Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-
-    {
-      MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
       eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvectors, eigenvalues);
-    }  // Mirror gets out of scope
 
-    if (mat_a_h.size().isEmpty())
-      return;
+      return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+    }
+    else {
+      static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
+    }
+  }();
 
-    testEigensolverCorrectness(uplo, reference, eigenvectors, eigenvalues);
-  }
-  else {
-    static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
-  }
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testEigensolverCorrectness(uplo, reference, ret);
 }
 
 template <class T, Backend B, Device D, Allocation allocation>
@@ -182,37 +176,31 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  if constexpr (allocation == Allocation::do_allocation) {
-    eigensolver::EigensolverResult<T, D> ret = [&]() {
-      MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+  eigensolver::EigensolverResult<T, D> ret = [&]() {
+    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
+
+    if constexpr (allocation == Allocation::do_allocation) {
       return eigensolver::eigensolver<B>(grid, uplo, mat_a.get());
-    }();
-
-    if (mat_a_h.size().isEmpty())
-      return;
-
-    testEigensolverCorrectness(uplo, reference, ret.eigenvectors, ret.eigenvalues, grid);
-  }
-  else if constexpr (allocation == Allocation::use_preallocated){
-    const SizeType size = mat_a_h.size().rows();
-
-    matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                               TileElementSize(mat_a_h.blockSize().rows(), 1));
-    matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
-
-    {
-      MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-      eigensolver::eigensolver<B>(grid, uplo, mat_a.get(), eigenvectors, eigenvalues);
     }
+    else if constexpr (allocation == Allocation::use_preallocated) {
+      const SizeType size = mat_a_h.size().rows();
+      matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                                 TileElementSize(mat_a_h.blockSize().rows(), 1));
+      matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
 
-    if (mat_a_h.size().isEmpty())
-      return;
+      eigensolver::eigensolver<B>(grid, uplo, mat_a.get(), eigenvectors, eigenvalues);
 
-    testEigensolverCorrectness(uplo, reference, eigenvectors, eigenvalues, grid);
-  }
-  else {
-    static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
-  }
+      return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+    }
+    else {
+      static_assert(dependent_false_v<Allocation>, "Invalid value for template parameter 'allocation'.");
+    }
+  }();
+
+  if (mat_a_h.size().isEmpty())
+    return;
+
+  testEigensolverCorrectness(uplo, reference, ret, grid);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

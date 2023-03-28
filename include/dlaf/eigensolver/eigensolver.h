@@ -31,7 +31,7 @@ namespace dlaf::eigensolver {
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
 /// @param eigenvectors matrix of eigenvectors
-/// @param vector of eigenvalues
+/// @param eigenvalues vector of eigenvalues
 template <Backend B, Device D, class T>
 void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<T, D>& eigenvectors,
                  Matrix<BaseType<T>, D>& eigenvalues) {
@@ -76,7 +76,7 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
 /// @param eigenvectors matrix of eigenvectors
-/// @param vector of eigenvalues
+/// @param eigenvalues vector of eigenvalues
 template <Backend B, Device D, class T>
 void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
                  Matrix<T, D>& eigenvectors, Matrix<BaseType<T>, D>& eigenvalues) {

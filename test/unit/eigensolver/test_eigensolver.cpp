@@ -56,7 +56,7 @@ TYPED_TEST_SUITE(EigensolverTestGPU, MatrixElementTypes);
 template <typename>
 inline constexpr bool dependent_false_v = false;
 
-enum class Allocation { use_preallocated, do_allocation, test };
+enum class Allocation { use_preallocated, do_allocation };
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 

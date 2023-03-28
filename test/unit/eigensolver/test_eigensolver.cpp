@@ -146,7 +146,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
       Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
 
-      eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvectors, eigenvalues);
+      eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors);
 
       return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }
@@ -188,7 +188,7 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
                                                  TileElementSize(mat_a_h.blockSize().rows(), 1));
       matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
 
-      eigensolver::eigensolver<B>(grid, uplo, mat_a.get(), eigenvectors, eigenvalues);
+      eigensolver::eigensolver<B>(grid, uplo, mat_a.get(), eigenvalues, eigenvectors);
 
       return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }

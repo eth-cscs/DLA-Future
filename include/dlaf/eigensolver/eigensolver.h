@@ -33,8 +33,8 @@ namespace dlaf::eigensolver {
 /// @param eigenvectors matrix of eigenvectors
 /// @param eigenvalues vector of eigenvalues
 template <Backend B, Device D, class T>
-void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<T, D>& eigenvectors,
-                 Matrix<BaseType<T>, D>& eigenvalues) {
+void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
+                 Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -48,7 +48,7 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<T, D>& eigenvectors,
   DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);
   DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);
 
-  internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvectors, eigenvalues);
+  internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors);
 }
 
 /// Standard Eigensolver.
@@ -88,7 +88,7 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 /// @param eigenvalues vector of eigenvalues
 template <Backend B, Device D, class T>
 void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
-                 Matrix<T, D>& eigenvectors, Matrix<BaseType<T>, D>& eigenvalues) {
+                 Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -102,7 +102,7 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
   DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);
   DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);
 
-  internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvectors, eigenvalues);
+  internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors);
 }
 
 /// Standard Eigensolver.

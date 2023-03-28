@@ -33,8 +33,8 @@
 namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
-void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_e,
-                                Matrix<BaseType<T>, D>& evals) {
+void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<BaseType<T>, D>& evals,
+                                Matrix<T, D>& mat_e) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -58,14 +58,14 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>
                                        TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> mat_e(LocalElementSize(size, size), mat_a.blockSize());
 
-  Eigensolver<B, D, T>::call(uplo, mat_a, mat_e, evals);
+  Eigensolver<B, D, T>::call(uplo, mat_a, evals, mat_e);
 
   return {std::move(evals), std::move(mat_e)};
 }
 
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                Matrix<T, D>& mat_e, Matrix<BaseType<T>, D>& evals) {
+                                Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
   // need uplo check as reduction to band doesn't have the uplo argument yet.
@@ -90,7 +90,7 @@ EigensolverResult<T, D> Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, 
                                        TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> mat_e(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
-  Eigensolver<B, D, T>::call(grid, uplo, mat_a, mat_e, evals);
+  Eigensolver<B, D, T>::call(grid, uplo, mat_a, evals, mat_e);
 
   return {std::move(evals), std::move(mat_e)};
 }

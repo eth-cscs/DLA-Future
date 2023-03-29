@@ -28,7 +28,6 @@ namespace dlaf::eigensolver {
 ///
 /// Implementation on local memory.
 ///
-/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
@@ -98,11 +97,12 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 ///
 /// Implementation on distributed memory.
 ///
-/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
 /// @param grid is the communicator grid on which the matrices @p mat_a and @p mat_b have been distributed,
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
+/// @param eigenvectors is the matrix of eigenvectors
+/// @param eigenvalues is the vector of eigenvalues
 template <Backend B, Device D, class T>
 void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                     Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,

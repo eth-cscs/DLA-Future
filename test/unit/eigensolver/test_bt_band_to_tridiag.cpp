@@ -253,6 +253,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs) {
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -267,6 +268,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs) {
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -285,6 +287,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs_subband) {
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -299,6 +302,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : configs_subband) {
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }

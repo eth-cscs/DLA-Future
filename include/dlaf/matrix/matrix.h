@@ -235,8 +235,7 @@ public:
 
   ReadOnlySenderType read_sender2(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    // TODO: The split should no longer be necessary with pika 0.12.0. Try removing it.
-    return tile_managers_senders_[i].read() | pika::execution::experimental::split() |
+    return tile_managers_senders_[i].read() |
            pika::execution::experimental::then([](const auto& tile_wrapper) { return tile_wrapper; });
   }
 

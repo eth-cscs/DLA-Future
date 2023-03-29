@@ -135,7 +135,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   const SizeType n = mat_c.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
 
-  if (m <= 1 || n == 0)
+  if (m == 0 || n == 0)
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
@@ -186,9 +186,12 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       const SizeType j_diag =
           std::max<SizeType>(0, i.row() * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
-      if (j_diag < mb) {
+      if (j_diag < nr_reflectors) {
         auto tile_v = splitTile(mat_v.read(i), panel_view(i));
         copyAndSetHHUpperTiles<backend>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(i));
+      }
+      else if (j_diag < mb) {
+        panelV.setTile(i, splitTile(mat_v.read(i), panel_view(i)));
       }
       else {
         panelV.setTile(i, mat_v.read(i));
@@ -251,7 +254,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
 
   const comm::Index2D this_rank = grid.rank();
 
-  if (m <= 1 || n == 0)
+  if (m == 0 || n == 0)
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
@@ -306,9 +309,12 @@ void BackTransformationReductionToBand<B, D, T>::call(
         const SizeType j_diag =
             std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
-        if (j_diag < mb) {
+        if (j_diag < nr_reflectors) {
           auto tile_v = splitTile(mat_v.read(ik), panel_view(ik));
           copyAndSetHHUpperTiles<B>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(ik));
+        }
+        else if (j_diag < mb) {
+          panelV.setTile(ik, splitTile(mat_v.read(ik), panel_view(ik)));
         }
         else {
           panelV.setTile(ik, mat_v.read(ik));

@@ -1293,14 +1293,14 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
         // if there is no need for additional buffers, we can just wait that xt[0] is ready for
         // reading.
         if (rank.row() == rank_v0.row()) {
-          trigger_panel = xt.read_sender2(at) | ex::drop_value();
+          trigger_panel = xt.read_sender2(at) | ex::drop_value() | ex::ensure_started();
         }
         else {
           // Note:
           // Conservatively ensure that xt[0] needed for updating the first column has been
           // received. Just wait for xt because communication of x happens over rows, while the
           // pivot rank can just block rank in the same column.
-          trigger_panel = xt.read_sender2(at) | ex::drop_value();
+          trigger_panel = xt.read_sender2(at) | ex::drop_value() | ex::ensure_started();
         }
       }
       else {
@@ -1313,14 +1313,14 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           // since we will wait not just for the communication to be complete (which is already more
           // than what needed), but we will also wait till xt[0] will be released, so after all local
           // communication and computation on the first column of the trailing matrix will be completed.
-          trigger_panel = x.readwrite_sender_tile(at) | ex::drop_value();
+          trigger_panel = x.readwrite_sender_tile(at) | ex::drop_value() | ex::ensure_started();
         }
         else {
           // Note:
           // Conservatively ensure that xt[0] needed for updating the first column has been
           // received. Just wait for xt because communication of x happens over rows, while the
           // pivot rank can just block rank in the same column.
-          trigger_panel = xt.read_sender2(at) | ex::drop_value();
+          trigger_panel = xt.read_sender2(at) | ex::drop_value() | ex::ensure_started();
         }
       }
     }
@@ -1334,11 +1334,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     w.reset();
     vt.reset();
     v.reset();
-  }
-
-  // TODO: Alternative: add ensure_started where the senders may end up unused?
-  if (trigger_panel) {
-    ex::start_detached(std::move(trigger_panel));
   }
 
   return taus;

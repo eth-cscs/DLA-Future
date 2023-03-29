@@ -24,14 +24,15 @@ namespace dlaf::eigensolver {
 /// It solves the standard eigenvalue problem A * x = lambda * x.
 ///
 /// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed.
+/// including the diagonal, is destroyed. @p eigenvalues will contain all the eigenvalues
+/// lambda, while @p eigenvectors will contain all the corresponding eigenvectors x.
 ///
 /// Implementation on local memory.
 ///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
-/// @param eigenvectors matrix of eigenvectors
-/// @param eigenvalues vector of eigenvalues
+/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
+/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
 void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                  Matrix<T, D>& eigenvectors) {
@@ -79,15 +80,16 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 /// It solves the standard eigenvalue problem A * x = lambda * x.
 ///
 /// On exit, the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
-/// including the diagonal, is destroyed.
+/// including the diagonal, is destroyed. @p eigenvalues will contain all the eigenvalues
+/// lambda, while @p eigenvectors will contain all the corresponding eigenvectors x.
 ///
 /// Implementation on distributed memory.
 ///
 /// @param grid is the communicator grid on which the matrix @p mat has been distributed,
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
-/// @param eigenvectors matrix of eigenvectors
-/// @param eigenvalues vector of eigenvalues
+/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
+/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
 void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
                  Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {

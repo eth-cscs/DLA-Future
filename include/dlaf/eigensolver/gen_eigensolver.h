@@ -25,14 +25,16 @@ namespace dlaf::eigensolver {
 /// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
 /// including the diagonal, is destroyed.
 /// - @p mat_b contains the Cholesky decomposition of B
+/// - @eigenvalues contains all the eigenvalues lambda
+/// - @eigenvectors contains all the eigenvectors x
 ///
 /// Implementation on local memory.
 ///
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
-/// @param eigenvectors is the matrix of eigenvectors
-/// @param eigenvalues is the vector of eigenvalues
+/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
+/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
 void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                     Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -94,6 +96,8 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
 /// including the diagonal, is destroyed.
 /// - @p mat_b contains the Cholesky decomposition of B
+/// - @eigenvalues contains all the eigenvalues lambda
+/// - @eigenvectors contains all the eigenvectors x
 ///
 /// Implementation on distributed memory.
 ///
@@ -101,8 +105,8 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
-/// @param eigenvectors is the matrix of eigenvectors
-/// @param eigenvalues is the vector of eigenvalues
+/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
+/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
 void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                     Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,

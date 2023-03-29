@@ -47,9 +47,9 @@ EigensolverResult<T, D> GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T,
 }
 
 template <Backend B, Device D, class T>
-void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                                      Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
-                                   Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
+                                   Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
+                                   Matrix<T, D>& eigenvectors) {
   factorization::cholesky<B>(grid, uplo, mat_b);
   eigensolver::genToStd<B>(grid, uplo, mat_a, mat_b);
 

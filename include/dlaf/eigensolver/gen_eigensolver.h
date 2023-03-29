@@ -35,7 +35,8 @@ namespace dlaf::eigensolver {
 /// @param eigenvectors is the matrix of eigenvectors
 /// @param eigenvalues is the vector of eigenvalues
 template <Backend B, Device D, class T>
-void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -49,7 +50,8 @@ void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b, M
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);
-  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues, eigenvectors);
+  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,
+              eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
 
@@ -103,7 +105,8 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend B, Device D, class T>
 void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                       Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
+                    Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -117,7 +120,8 @@ void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& 
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
   DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);
-  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues, eigenvectors);
+  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,
+              eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
 

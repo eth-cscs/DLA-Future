@@ -78,6 +78,10 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
     using pika::cuda::experimental::then_with_cusolver;
     using pika::cuda::experimental::then_with_stream;
 
+    if (policy.annotation()) {
+      scheduler = with_annotation(scheduler, policy.annotation());
+    }
+    auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
     if constexpr (Tag == TransformDispatchType::Plain) {
       return then_with_stream(std::move(transfer_sender),
                               ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |

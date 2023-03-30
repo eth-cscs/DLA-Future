@@ -42,14 +42,22 @@
 
 namespace dlaf::factorization::internal {
 
+#ifdef PIKA_HAVE_APEX
+#define ANNOTATE(NAME) (priority == pika::execution::thread_priority::high ? "HP_" #NAME : #NAME)
+#else
+#define ANNOTATE(name) nullptr
+#endif
+
 namespace cholesky_l {
+
 template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
   using pika::execution::thread_stacksize;
 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::potrf(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                  ANNOTATE(potrfDiagTile))));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -63,7 +71,8 @@ void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_
                                   blas::Diag::NonUnit, ElementType(1.0),
                                   std::forward<KKTileSender>(kk_tile),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(trsmPanelTile))));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -76,7 +85,8 @@ void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSe
       dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, BaseElementType(-1.0),
                                   std::forward<PanelTileSender>(panel_tile), BaseElementType(1.0),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::herk(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(herkTrailingDiagTile))));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -90,7 +100,8 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTile
                                   std::forward<PanelTileSender>(panel_tile),
                                   std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(gemmTrailingMatrixTile))));
 }
 }
 
@@ -101,7 +112,8 @@ void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&&
 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::potrf(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                  ANNOTATE(potrfDiagTile))));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -115,7 +127,8 @@ void trsmPanelTile(pika::execution::thread_priority priority, KKTileSender&& kk_
                                   blas::Diag::NonUnit, ElementType(1.0),
                                   std::forward<KKTileSender>(kk_tile),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(trsmPanelTile))));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender>
@@ -128,7 +141,8 @@ void herkTrailingDiagTile(pika::execution::thread_priority priority, PanelTileSe
       dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, base_element_type(-1.0),
                                   std::forward<PanelTileSender>(panel_tile), base_element_type(1.0),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::herk(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::herk(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(herkTrailingDiagTile))));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
@@ -142,7 +156,8 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, PanelTile
                                   std::forward<PanelTileSender>(panel_tile),
                                   std::forward<ColPanelSender>(col_panel), ElementType(1.0),
                                   std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack,
+                                                 ANNOTATE(gemmTrailingMatrixTile))));
 }
 }
 

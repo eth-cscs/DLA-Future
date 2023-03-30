@@ -25,14 +25,17 @@ class Policy {
 private:
   const pika::execution::thread_priority priority_ = pika::execution::thread_priority::normal;
   const pika::execution::thread_stacksize stacksize_ = pika::execution::thread_stacksize::default_;
+  const char* annotation_ = nullptr;
 
 public:
   Policy() = default;
   explicit Policy(
       pika::execution::thread_priority priority,
-      pika::execution::thread_stacksize stacksize = pika::execution::thread_stacksize::default_)
-      : priority_(priority), stacksize_(stacksize) {}
-  explicit Policy(pika::execution::thread_stacksize stacksize) : stacksize_(stacksize) {}
+      pika::execution::thread_stacksize stacksize = pika::execution::thread_stacksize::default_,
+      const char* annotation = nullptr)
+      : priority_(priority), stacksize_(stacksize), annotation_(annotation) {}
+  explicit Policy(pika::execution::thread_stacksize stacksize, const char* annotation = nullptr)
+      : stacksize_(stacksize), annotation_(annotation) {}
   Policy(Policy&&) = default;
   Policy(const Policy&) = default;
   Policy& operator=(Policy&&) = default;
@@ -44,6 +47,10 @@ public:
 
   pika::execution::thread_stacksize stacksize() const noexcept {
     return stacksize_;
+  }
+
+  const char* annotation() const noexcept {
+    return annotation_;
   }
 };
 }

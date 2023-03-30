@@ -56,14 +56,19 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
   using pika::execution::experimental::drop_operation_state;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
+  using pika::execution::experimental::with_annotation;
 
   auto scheduler = getBackendScheduler<B>(policy.priority(), policy.stacksize());
-  auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
 
   using dlaf::common::internal::ConsumeRvalues;
   using dlaf::common::internal::Unwrapping;
 
   if constexpr (B == Backend::MC) {
+    if (policy.annotation()) {
+      scheduler = with_annotation(scheduler, policy.annotation());
+    }
+    auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
+
     return then(std::move(transfer_sender), ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |
            drop_operation_state();
   }

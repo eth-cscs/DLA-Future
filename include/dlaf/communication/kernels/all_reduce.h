@@ -33,6 +33,9 @@ template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     MPI_Op reduce_op,
+    // TODO: This overload shouldn't be needed anymore. Check if I can remove
+    // it. The second overload should be enough (i.e.
+    // unique_any_sender<shared_future<Tile>> replaced by ReadOnlyTileSender).
     pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
         tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out);

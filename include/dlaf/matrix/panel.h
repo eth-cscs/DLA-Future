@@ -81,28 +81,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType>) {
     DLAF_UNREACHABLE_PLAIN;
-    DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
-    DLAF_ASSERT(!isExternal(index), "already set to external", index);
-    // Note assertion on index done by linearIndex method.
-
-    has_been_used_ = true;
-
-#if defined DLAF_ASSERT_MODERATE_ENABLE
-    {
-      namespace ex = pika::execution::experimental;
-
-      const auto panel_tile_size = tileSize(index);
-      auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
-        DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
-      });
-      ex::start_detached(dlaf::internal::keepFuture(new_tile_fut) |
-                         ex::then(std::move(assert_tile_size)));
-    }
-#endif
-
-    external_[linearIndex(index)] = std::move(new_tile_fut);
   }
 
   void setTileSender(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
@@ -125,7 +105,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     }
 #endif
 
-    external_senders_[linearIndex(index)] = std::move(new_tile_sender);
+    external_[linearIndex(index)] = std::move(new_tile_sender);
   }
 
   /// Access a Tile of the panel in read-only mode
@@ -133,25 +113,9 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @pre @p index must be a valid index for the current panel size
-  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) {
+  pika::shared_future<ConstTileType> read(const LocalTileIndex&) {
     DLAF_UNREACHABLE_PLAIN;
-    // Note assertion on index done by linearIndex method.
-
-    has_been_used_ = true;
-
-    const SizeType internal_linear_idx = linearIndex(index);
-    if (isExternal(index)) {
-      return external_[internal_linear_idx];
-    }
-    else {
-      internal_.insert(internal_linear_idx);
-      auto tile = data_.read(fullIndex(index));
-
-      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
-        return tile;
-      else
-        return splitTile(tile, {{0, 0}, tileSize(index)});
-    }
+    return {};
   }
 
   auto read_sender(const LocalTileIndex& index) {
@@ -164,7 +128,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 
     const SizeType internal_linear_idx = linearIndex(index);
     if (isExternal(index)) {
-      return external_senders_[internal_linear_idx];
+      return external_[internal_linear_idx];
     }
     else {
       internal_.insert(internal_linear_idx);
@@ -340,10 +304,6 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// - The width (Col Panel) or the height (Row panel) are reset.
   void reset() noexcept {
     for (auto& e : external_) {
-      e = {};
-    }
-
-    for (auto& e : external_senders_) {
       if (e) {
         pika::execution::experimental::start_detached(std::move(e));
       }
@@ -434,10 +394,10 @@ protected:
 
     setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
-    external_senders_.resize(data_.nrTiles().get(coord));
+    external_.resize(data_.nrTiles().get(coord));
 
-    DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_senders_.size(),
-                      data_.distribution().localNrTiles().linear_size(), external_senders_.size());
+    DLAF_ASSERT_HEAVY(data_.distribution().localNrTiles().linear_size() == external_.size(),
+                      data_.distribution().localNrTiles().linear_size(), external_.size());
   }
 
   /// Given a matrix index, compute the internal linear index
@@ -463,7 +423,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_senders_[linearIndex(idx_matrix)];
+    return external_[linearIndex(idx_matrix)];
   }
 
   bool hasBeenUsed() const noexcept {
@@ -494,8 +454,7 @@ protected:
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
-  common::internal::vector<pika::shared_future<ConstTileType>> external_;
-  common::internal::vector<ReadOnlySenderType> external_senders_;
+  common::internal::vector<ReadOnlySenderType> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   // TODO: unordered_set (and #include <unordered_set>)
   std::set<SizeType> internal_;

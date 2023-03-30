@@ -14,7 +14,6 @@
 #include <vector>
 
 #include <pika/execution.hpp>
-#include <pika/synchronization/async_rw_mutex.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
@@ -156,8 +155,7 @@ public:
 
   ReadWriteSenderType readwrite_sender_tile(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    return tile_managers_[i].readwrite() |
-           pika::execution::experimental::then([](auto tile_wrapper) {
+    return tile_managers_[i].readwrite() | pika::execution::experimental::then([](auto tile_wrapper) {
              return internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
            });
   }
@@ -247,9 +245,7 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>,
-                                                            Tile<const ElementType, device>>>
-      tile_managers_;
+  std::vector<TileAsyncRwMutex<T, D>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

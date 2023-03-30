@@ -10,7 +10,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/synchronization/async_rw_mutex.hpp>
 
 #include "dlaf/common/unwrap.h"
 #include "dlaf/init.h"

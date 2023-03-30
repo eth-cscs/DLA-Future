@@ -61,14 +61,6 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
-  test_matrix_view
-  SOURCES test_matrix_view.cpp
-  LIBRARIES dlaf.core
-  USE_MAIN MPIPIKA
-  MPIRANKS 6
-)
-
-DLAF_addTest(
   test_util_matrix
   SOURCES test_util_matrix.cpp
   LIBRARIES dlaf.core

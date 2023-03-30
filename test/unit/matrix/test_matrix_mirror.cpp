@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/matrix_view.h"
-
 #include <vector>
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"

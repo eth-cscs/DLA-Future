@@ -49,15 +49,6 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
 
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
 
-  // auto readwrite_f = [this](const LocalTileIndex& index) {
-  //   const auto i = tileLinearIndex(index);
-  //   return this->tile_managers_[i].getRWTileFuture();
-  // };
-
-  // pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
-
-  // TODO: This is temporary. Eventually only the below should be used and the
-  // above should be deleted.
   auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
                [this](const LocalTileIndex& index) {
                  return this->tile_managers_senders_[tileLinearIndex(index)].readwrite();

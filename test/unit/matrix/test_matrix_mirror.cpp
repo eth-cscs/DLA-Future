@@ -27,7 +27,7 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
-namespace tt = pika::this_thread::experimental;
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -277,8 +277,8 @@ void sameDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_EQ(tt::sync_wait(mat.read_sender2(idx)).get().ptr(),
-                tt::sync_wait(mat_mirror.get().read_sender2(idx)).get().ptr());
+      EXPECT_EQ(sync_wait(mat.read_sender2(idx)).get().ptr(),
+                sync_wait(mat_mirror.get().read_sender2(idx)).get().ptr());
     }
   }
 }
@@ -311,8 +311,8 @@ void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& tes
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_NE(tt::sync_wait(mat.read_sender2(idx)).get().ptr(),
-                tt::sync_wait(mat_mirror.get().read_sender2(idx)).get().ptr());
+      EXPECT_NE(sync_wait(mat.read_sender2(idx)).get().ptr(),
+                sync_wait(mat_mirror.get().read_sender2(idx)).get().ptr());
     }
   }
 }

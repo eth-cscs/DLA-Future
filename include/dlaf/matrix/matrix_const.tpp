@@ -37,8 +37,6 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
 template <class T, Device D>
 pika::shared_future<Tile<const T, D>> Matrix<const T, D>::read(const LocalTileIndex& index) noexcept {
   DLAF_UNREACHABLE_PLAIN;
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getReadTileSharedFuture();
 }
 
 template <class T, Device D>
@@ -63,8 +61,9 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
                                     const LayoutInfo& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
 
-  tile_managers_.clear();
-  tile_managers_.reserve(futureVectorSize(nr_tiles));
+  // TODO: Is this a reasonable assumption?
+  DLAF_ASSERT(tile_managers_senders_.empty(), "");
+  tile_managers_senders_.reserve(static_cast<std::size_t>(nr_tiles.linear_size()));
 
   using MemView = memory::MemoryView<T, D>;
 
@@ -72,9 +71,6 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
       LocalTileIndex ind(i, j);
       TileElementSize tile_size = layout.tileSize(ind);
-      tile_managers_.emplace_back(
-          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
-                       layout.ldTile()));
       tile_managers_senders_.emplace_back(
           TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
                        layout.ldTile()));

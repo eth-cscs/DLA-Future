@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+// TODO: Remove completely (and rewrite later)?
+
 #include "dlaf/blas/enum_output.h"
 
 namespace dlaf {

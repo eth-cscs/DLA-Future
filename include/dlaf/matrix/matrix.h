@@ -64,7 +64,7 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<const ElementType, D>;
-  using ReadWriteSenderType = pika::execution::experimental::unique_any_sender<TileType>;
+  using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -185,8 +185,7 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
-  using ReadOnlySenderType = pika::execution::experimental::any_sender<
-      tile_async_ro_mutex_wrapper_type<T, D>>;
+  using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   friend Matrix<ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);

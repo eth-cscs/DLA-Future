@@ -421,6 +421,10 @@ auto selectRead(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_
   return internal::selectGeneric([&](auto index) { return matrix.read_sender2(index); }, range);
 }
 
+// TODO: Would a selectRead(mat, begin, end) overload be useful? Yes. Would the
+// semantics be clear or is it better to require explicit use of
+// iterate_range2d.
+
 /// Returns a container grouping all the tiles retrieved using Matrix::operator()
 ///
 /// @pre @p range must be a valid range for @p matrix

@@ -139,13 +139,15 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
   SizeType ntiles = i_end - i_begin + 1;
 
   auto sender =
-      ex::when_all(ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, 0),
-                                                            LocalTileSize(ntiles, 1), perms)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
-                                                                 LocalTileSize(ntiles, ntiles), mat_in)),
-                   ex::when_all_vector(ut::collectReadWriteTiles(LocalTileIndex(i_begin, i_begin),
-                                                                 LocalTileSize(ntiles, ntiles),
-                                                                 mat_out)));
+      ex::when_all(ex::when_all_vector(
+                       matrix::selectRead(perms, common::iterate_range2d(LocalTileIndex(i_begin, 0),
+                                                                         LocalTileSize(ntiles, 1)))),
+                   ex::when_all_vector(
+                       matrix::select(mat_in, common::iterate_range2d(LocalTileIndex(i_begin, i_begin),
+                                                                      LocalTileSize(ntiles, ntiles)))),
+                   ex::when_all_vector(
+                       matrix::select(mat_out, common::iterate_range2d(LocalTileIndex(i_begin, i_begin),
+                                                                       LocalTileSize(ntiles, ntiles)))));
 
   auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
                                  const auto& mat_out_tiles, auto&&... ts) {
@@ -163,7 +165,7 @@ auto whenAllReadWriteTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix
   LocalTileSize sz{end.row() - begin.row() + 1, end.col() - begin.col() + 1};
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
-  return ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, matrix));
+  return ex::when_all_vector(matrix::select(matrix, common::iterate_range2d(begin, sz)));
 }
 
 template <class T, Device D>
@@ -171,7 +173,8 @@ auto whenAllReadWriteTilesArray(Matrix<T, D>& matrix) {
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
   return ex::when_all_vector(
-      ut::collectReadWriteTiles(LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix));
+      matrix::select(matrix, common::iterate_range2d(LocalTileIndex(0, 0),
+                                                     matrix.distribution().localNrTiles())));
 }
 
 template <class T, Device D>
@@ -179,7 +182,7 @@ auto whenAllReadOnlyTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix<
   LocalTileSize sz{end.row() - begin.row() + 1, end.col() - begin.col() + 1};
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
-  return ex::when_all_vector(ut::collectReadTiles(begin, sz, matrix));
+  return ex::when_all_vector(matrix::selectRead(matrix, common::iterate_range2d(begin, sz)));
 }
 
 template <class T, Device D>
@@ -187,7 +190,8 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
   return ex::when_all_vector(
-      ut::collectReadTiles(LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix));
+      matrix::selectRead(matrix, common::iterate_range2d(LocalTileIndex(0, 0),
+                                                         matrix.distribution().localNrTiles())));
 }
 
 // No data is sent or received but the processes participates in the collective call
@@ -404,8 +408,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 
   LocalTileIndex begin{i_begin, 0};
   LocalTileSize sz{i_end - i_begin + 1, 1};
-  auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
-                             ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
+  auto sender =
+      ex::when_all(ex::when_all_vector(matrix::selectRead(in, common::iterate_range2d(begin, sz))),
+                   ex::when_all_vector(matrix::select(out, common::iterate_range2d(begin, sz))));
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 

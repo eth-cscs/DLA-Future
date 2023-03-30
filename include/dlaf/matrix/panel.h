@@ -126,7 +126,6 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 #endif
 
     external_senders_[linearIndex(index)] = std::move(new_tile_sender);
-    external_set_.insert(linearIndex(index));
   }
 
   /// Access a Tile of the panel in read-only mode
@@ -344,14 +343,15 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
       e = {};
     }
 
-    for (const auto index : external_set_) {
-      DLAF_ASSERT(index < external_senders_.size(), index, external_senders_.size());
-      auto& e = external_senders_[index];
-      pika::execution::experimental::start_detached(std::move(e));
-      e = {};
+    for (auto& e : external_senders_) {
+      if (e) {
+        pika::execution::experimental::start_detached(std::move(e));
+      }
+      else {
+        e = {};
+      }
     }
 
-    external_set_.clear();
     internal_.clear();
     dim_ = -1;
     has_been_used_ = false;
@@ -463,7 +463,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_set_.find(linearIndex(idx_matrix)) != external_set_.end();
+    return external_[linearIndex(idx_matrix)];
   }
 
   bool hasBeenUsed() const noexcept {
@@ -496,9 +496,6 @@ protected:
   ///> Container for references to external tiles
   common::internal::vector<pika::shared_future<ConstTileType>> external_;
   common::internal::vector<ReadOnlySenderType> external_senders_;
-  // TODO: This only works around not having empty/valid on any_senders. Add in
-  // pika. TODO: pika 0.12.0 has empty()/bool(). Try it.
-  std::set<SizeType> external_set_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   // TODO: unordered_set (and #include <unordered_set>)
   std::set<SizeType> internal_;

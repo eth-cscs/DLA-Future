@@ -130,13 +130,12 @@ public:
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::future<TileType> operator()(const GlobalTileIndex& index) {
+  pika::future<TileType> operator()(const GlobalTileIndex&) {
     DLAF_UNREACHABLE_PLAIN;
-    return operator()(this->distribution().localTileIndex(index));
+    return {};
   }
 
   auto readwrite_sender(const LocalTileIndex& index) noexcept {
-    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
     DLAF_UNREACHABLE_PLAIN;
     return this->operator()(index);
   }
@@ -215,14 +214,12 @@ public:
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+  pika::shared_future<ConstTileType> read(const GlobalTileIndex&) {
     DLAF_UNREACHABLE_PLAIN;
-    return read(distribution().localTileIndex(index));
+    return {};
   }
 
   auto read_sender(const LocalTileIndex& index) noexcept {
-    // We want to explicitly deal with the shared_future, not the const& to the
-    // value.
     DLAF_UNREACHABLE_PLAIN;
     return dlaf::internal::keepFuture(read(index));
   }

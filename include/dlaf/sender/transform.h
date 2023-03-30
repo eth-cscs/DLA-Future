@@ -52,11 +52,14 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
+  using pika::execution::experimental::with_annotation;
 
   auto scheduler = getBackendScheduler<B>(policy.priority());
-  auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
-
   if constexpr (B == Backend::MC) {
+    if (policy.annotation()) {
+      scheduler = with_annotation(scheduler, policy.annotation());
+    }
+    auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
     return then(std::move(transfer_sender), dlaf::common::internal::Unwrapping{std::forward<F>(f)});
   }
   else if constexpr (B == Backend::GPU) {

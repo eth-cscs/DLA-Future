@@ -106,27 +106,24 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   }
 
   void setTileSender(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
-    // TODO: What is this checking? Once an internal tile has been accessed, do
-    // not set an external tile?
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
-    // TODO: Can't set an external tile twice?
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
 
     has_been_used_ = true;
 
-    // TODO: Keep some assertions here.
-    // #if defined DLAF_ASSERT_MODERATE_ENABLE
-    //     {
-    //       namespace ex = pika::execution::experimental;
+#if defined DLAF_ASSERT_MODERATE_ENABLE
+    {
+      namespace ex = pika::execution::experimental;
 
-    //       const auto panel_tile_size = tileSize(index);
-    //       auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
-    //         DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
-    //       });
-    //       ex::start_detached(ex::keep_future(new_tile_fut) | ex::then(std::move(assert_tile_size)));
-    //     }
-    // #endif
+      const auto panel_tile_size = tileSize(index);
+      auto assert_tile_size = [panel_tile_size](auto tile_wrapper) {
+        DLAF_ASSERT_MODERATE(panel_tile_size == tile_wrapper.get().size(), panel_tile_size,
+                             tile_wrapper.get().size());
+      };
+      ex::start_detached(new_tile_sender | ex::then(std::move(assert_tile_size)));
+    }
+#endif
 
     external_senders_[linearIndex(index)] = std::move(new_tile_sender);
     external_set_.insert(linearIndex(index));

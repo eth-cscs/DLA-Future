@@ -50,7 +50,7 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
 
   auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
                [this](const LocalTileIndex& index) {
-                 return this->tile_managers_senders_[tileLinearIndex(index)].readwrite();
+                 return this->tile_managers_[tileLinearIndex(index)].readwrite();
                },
                range_local)) |
            pika::execution::experimental::drop_value();
@@ -63,8 +63,8 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
   const auto& nr_tiles = layout.nrTiles();
 
   // TODO: Is this a reasonable assumption?
-  DLAF_ASSERT(tile_managers_senders_.empty(), "");
-  tile_managers_senders_.reserve(static_cast<std::size_t>(nr_tiles.linear_size()));
+  DLAF_ASSERT(tile_managers_.empty(), "");
+  tile_managers_.reserve(static_cast<std::size_t>(nr_tiles.linear_size()));
 
   using MemView = memory::MemoryView<T, D>;
 
@@ -72,7 +72,7 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
     for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
       LocalTileIndex ind(i, j);
       TileElementSize tile_size = layout.tileSize(ind);
-      tile_managers_senders_.emplace_back(
+      tile_managers_.emplace_back(
           TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
                        layout.ldTile()));
     }

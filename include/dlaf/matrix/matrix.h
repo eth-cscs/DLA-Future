@@ -147,7 +147,7 @@ public:
 
   auto readwrite_sender2(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    return tile_managers_senders_[i].readwrite();
+    return tile_managers_[i].readwrite();
   }
 
   auto readwrite_sender2(const GlobalTileIndex& index) {
@@ -156,7 +156,7 @@ public:
 
   ReadWriteSenderType readwrite_sender_tile(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    return tile_managers_senders_[i].readwrite() |
+    return tile_managers_[i].readwrite() |
            pika::execution::experimental::then([](auto tile_wrapper) {
              return internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
            });
@@ -171,7 +171,7 @@ protected:
 
 private:
   using Matrix<const T, D>::setUpTiles;
-  using Matrix<const T, D>::tile_managers_senders_;
+  using Matrix<const T, D>::tile_managers_;
 };
 
 template <class T, Device D>
@@ -229,7 +229,7 @@ public:
   }
 
   ReadOnlySenderType read_sender2(const LocalTileIndex& index) noexcept {
-    return tile_managers_senders_[tileLinearIndex(index)].read();
+    return tile_managers_[tileLinearIndex(index)].read();
   }
 
   ReadOnlySenderType read_sender2(const GlobalTileIndex& index) {
@@ -249,7 +249,7 @@ protected:
 
   std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>,
                                                             Tile<const ElementType, device>>>
-      tile_managers_senders_;
+      tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

@@ -17,7 +17,6 @@
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/internal/tile_future_manager.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"

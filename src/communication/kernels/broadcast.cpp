@@ -22,6 +22,7 @@
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/sender/with_temporary_tile.h"
 

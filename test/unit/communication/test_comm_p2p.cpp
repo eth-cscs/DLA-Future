@@ -62,13 +62,6 @@ auto setTileTo(SenderTile&& tile, const T input_value) {
          tile::laset(internal::Policy<DefaultBackend_v<D>>());
 }
 
-template <class SenderTile>
-auto checkTileSize(SenderTile&& tile) {
-  return std::forward<SenderTile>(tile) |
-         internal::transform(internal::Policy<Backend::MC>(),
-                             [](auto const& tile) { std::cerr << "size: " << tile.size() << "\n"; });
-}
-
 template <class SenderTile, class TileLike>
 auto checkTileEq(TileLike&& ref_tile, SenderTile&& tile) {
   constexpr auto D = internal::SenderSingleValueType<SenderTile>::device;

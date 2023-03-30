@@ -171,7 +171,6 @@ protected:
 
 private:
   using Matrix<const T, D>::setUpTiles;
-  using Matrix<const T, D>::tile_managers_;
   using Matrix<const T, D>::tile_managers_senders_;
 };
 
@@ -230,9 +229,7 @@ public:
   }
 
   ReadOnlySenderType read_sender2(const LocalTileIndex& index) noexcept {
-    const auto i = tileLinearIndex(index);
-    return tile_managers_senders_[i].read() |
-           pika::execution::experimental::then([](const auto& tile_wrapper) { return tile_wrapper; });
+    return tile_managers_senders_[tileLinearIndex(index)].read();
   }
 
   ReadOnlySenderType read_sender2(const GlobalTileIndex& index) {
@@ -250,7 +247,6 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<internal::TileFutureManager<T, D>> tile_managers_;
   std::vector<pika::execution::experimental::async_rw_mutex<Tile<ElementType, D>,
                                                             Tile<const ElementType, device>>>
       tile_managers_senders_;

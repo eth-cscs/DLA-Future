@@ -57,10 +57,9 @@ template <class T, Device D>
 Matrix<T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr) : Matrix<const T, D>(layout, ptr) {}
 
 template <class T, Device D>
-pika::future<Tile<T, D>> Matrix<T, D>::operator()(const LocalTileIndex& index) noexcept {
+pika::future<Tile<T, D>> Matrix<T, D>::operator()(const LocalTileIndex&) noexcept {
   DLAF_UNREACHABLE_PLAIN;
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getRWTileFuture();
+  return {};
 }
 
 }

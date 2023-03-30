@@ -133,8 +133,7 @@ matrix::Tile<T, Device::GPU> gpuTile(const matrix::Tile<const T, Device::CPU>& t
 
 TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
     auto& tile = std::get<0>(config);
     std::string output_np = std::get<1>(config);
@@ -149,8 +148,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatTile) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, NumpyFormatTile) {
   using test_output = test_tile_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
     auto tile = gpuTile(std::get<0>(config));
     std::string output_np = std::get<1>(config);
@@ -165,8 +163,7 @@ TYPED_TEST(MatrixOutputTestGPU, NumpyFormatTile) {
 
 TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
   using test_output = test_tile_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
     auto& tile = std::get<0>(config);
     std::string output_csv = std::get<2>(config);
@@ -181,8 +178,7 @@ TYPED_TEST(MatrixOutputTest, CsvFormatTile) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, CsvFormatTile) {
   using test_output = test_tile_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     const auto config = get_test_config();
     auto tile = gpuTile(std::get<0>(config));
     std::string output_np = std::get<2>(config);
@@ -290,8 +286,7 @@ struct test_matrix_output<std::complex<T>> {
 
 TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     auto config = get_test_config();
     auto& matrix = std::get<0>(config);
     std::string output_np = std::get<1>(config);
@@ -306,8 +301,7 @@ TYPED_TEST(MatrixOutputTest, NumpyFormatMatrix) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     auto config = get_test_config();
     auto& matrix = std::get<0>(config);
     MatrixMirror<const TypeParam, Device::GPU, Device::CPU> matrix_d(matrix);
@@ -324,8 +318,7 @@ TYPED_TEST(MatrixOutputTestGPU, NumpyFormatMatrix) {
 
 TYPED_TEST(MatrixOutputTest, CsvFormatMatrix) {
   using test_output = test_matrix_output<TypeParam>;
-  std::vector x{test_output::empty, test_output::nonempty};
-  for (auto get_test_config : x) {
+  for (auto get_test_config : {test_output::empty, test_output::nonempty}) {
     auto config = get_test_config();
     auto& matrix = std::get<0>(config);
     std::string output_csv = std::get<2>(config);

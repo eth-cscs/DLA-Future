@@ -463,7 +463,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_[linearIndex(idx_matrix)];
+    return external_senders_[linearIndex(idx_matrix)];
   }
 
   bool hasBeenUsed() const noexcept {

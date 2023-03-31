@@ -17,8 +17,6 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
-#include <pika/unwrap.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/util_matrix.h"
@@ -478,199 +476,198 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   }
 }
 
-// TODO: How many of the following make sense with senders?
-// TYPED_TEST(MatrixTest, Dependencies) {
-//   using Type = TypeParam;
+TYPED_TEST(MatrixTest, Dependencies) {
+  using Type = TypeParam;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       // Dependencies graph:
-//       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
-//       //             \ shfut2b /      \ shfut4b /
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      // Dependencies graph:
+      // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
+      //           \ ro2b /     \ ro4b /
 
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-//       auto fut0 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
+      auto senders0 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
 
-//       auto fut1 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut1));
+      auto senders1 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders1));
 
-//       auto shfut2a = getSharedFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
+      auto rosenders2a = getRoSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-//       auto shfut2b = getSharedFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
+      auto rosenders2b = getRoSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2b));
 
-//       auto fut3 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders3 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders3));
 
-//       auto shfut4a = getSharedFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut4a));
+      auto rosenders4a = getRoSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, rosenders4a));
 
-//       CHECK_MATRIX_FUTURES(true, fut1, fut0);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-//       CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
-//       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
+      CHECK_MATRIX_SENDERS(true, senders1, senders0);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2b));
+      CHECK_MATRIX_SENDERS(true, rosenders2b, senders1);
+      EXPECT_TRUE(checkSendersStep(rosenders2a.size(), rosenders2a));
 
-//       CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
-//       CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
+      CHECK_MATRIX_SENDERS(false, senders3, rosenders2b);
+      CHECK_MATRIX_SENDERS(true, senders3, rosenders2a);
 
-//       CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
+      CHECK_MATRIX_SENDERS(true, rosenders4a, senders3);
 
-//       auto shfut4b = getSharedFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
+      auto rosenders4b = getRoSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(rosenders4b.size(), rosenders4b));
 
-//       auto fut5 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders5 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders5));
 
-//       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
-//       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
-//     }
-//   }
-// }
+      CHECK_MATRIX_SENDERS(false, senders5, rosenders4a);
+      CHECK_MATRIX_SENDERS(true, senders5, rosenders4b);
+    }
+  }
+}
 
-// TYPED_TEST(MatrixTest, DependenciesConst) {
-//   using Type = TypeParam;
+TYPED_TEST(MatrixTest, DependenciesConst) {
+  using Type = TypeParam;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-//       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-//       LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
-//       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
-//       const Type* p = mem();
-//       Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
-//       auto shfut1 = getSharedFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(shfut1.size(), shfut1));
+      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
+      const Type* p = mem();
+      Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
+      auto rosenders1 = getRoSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(rosenders1.size(), rosenders1));
 
-//       auto shfut2 = getSharedFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(shfut2.size(), shfut2));
-//     }
-//   }
-// }
+      auto rosenders2 = getRoSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(rosenders2.size(), rosenders2));
+    }
+  }
+}
 
-// TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
-//   using Type = TypeParam;
+TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
+  using Type = TypeParam;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       // Dependencies graph:
-//       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
-//       //             \ shfut2b /      \ shfut4b /
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      // Dependencies graph:
+      // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
+      //           \ ro2b /    \ ro4b /
 
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-//       auto fut0 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
+      auto senders0 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
 
-//       auto fut1 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut1));
+      auto senders1 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders1));
 
-//       auto shfut2a = getSharedFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
+      auto rosenders2a = getRoSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-//       decltype(shfut2a) shfut2b;
-//       {
-//         Matrix<const Type, Device::CPU>& const_mat = mat;
-//         shfut2b = getSharedFuturesUsingLocalIndex(const_mat);
-//         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-//       }
+      decltype(rosenders2a) rosenders2b;
+      {
+        Matrix<const Type, Device::CPU>& const_mat = mat;
+        rosenders2b = getRoSendersUsingLocalIndex(const_mat);
+        EXPECT_TRUE(checkSendersStep(0, rosenders2b));
+      }
 
-//       auto fut3 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders3 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders3));
 
-//       decltype(shfut2a) shfut4a;
-//       {
-//         Matrix<const Type, Device::CPU>& const_mat = mat;
-//         shfut4a = getSharedFuturesUsingLocalIndex(const_mat);
-//         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
-//       }
+      decltype(rosenders2a) rosenders4a;
+      {
+        Matrix<const Type, Device::CPU>& const_mat = mat;
+        rosenders4a = getRoSendersUsingLocalIndex(const_mat);
+        EXPECT_TRUE(checkSendersStep(0, rosenders4a));
+      }
 
-//       CHECK_MATRIX_FUTURES(true, fut1, fut0);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-//       CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
-//       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
+      CHECK_MATRIX_SENDERS(true, senders1, senders0);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2b));
+      CHECK_MATRIX_SENDERS(true, rosenders2b, senders1);
+      EXPECT_TRUE(checkSendersStep(rosenders2a.size(), rosenders2a));
 
-//       CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
-//       CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
+      CHECK_MATRIX_SENDERS(false, senders3, rosenders2b);
+      CHECK_MATRIX_SENDERS(true, senders3, rosenders2a);
 
-//       CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
+      CHECK_MATRIX_SENDERS(true, rosenders4a, senders3);
 
-//       auto shfut4b = getSharedFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
+      auto rosenders4b = getRoSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(rosenders4b.size(), rosenders4b));
 
-//       auto fut5 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders5 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders5));
 
-//       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
-//       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
-//     }
-//   }
-// }
+      CHECK_MATRIX_SENDERS(false, senders5, rosenders4a);
+      CHECK_MATRIX_SENDERS(true, senders5, rosenders4b);
+    }
+  }
+}
 
-// TYPED_TEST(MatrixTest, DependenciesPointerMix) {
-//   using Type = TypeParam;
+TYPED_TEST(MatrixTest, DependenciesPointerMix) {
+  using Type = TypeParam;
 
-//   for (const auto& comm_grid : this->commGrids()) {
-//     for (const auto& test : sizes_tests) {
-//       // Dependencies graph:
-//       // fut0 - fut1 - shfut2a - fut3 - shfut4a - fut5
-//       //             \ shfut2b /      \ shfut4b /
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : sizes_tests) {
+      // Dependencies graph:
+      // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
+      //           \ ro2b /    \ ro4b /
 
-//       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-//       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
+      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
 
-//       auto fut0 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(fut0.size(), fut0));
+      auto senders0 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(senders0.size(), senders0));
 
-//       auto fut1 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut1));
+      auto senders1 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders1));
 
-//       auto shfut2a = getSharedFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2a));
+      auto rosenders2a = getRoSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-//       decltype(shfut2a) shfut2b;
-//       {
-//         Matrix<const Type, Device::CPU>* const_mat = &mat;
-//         shfut2b = getSharedFuturesUsingGlobalIndex(*const_mat);
-//         EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-//       }
+      decltype(rosenders2a) rosenders2b;
+      {
+        Matrix<const Type, Device::CPU>* const_mat = &mat;
+        rosenders2b = getRoSendersUsingGlobalIndex(*const_mat);
+        EXPECT_TRUE(checkSendersStep(0, rosenders2b));
+      }
 
-//       auto fut3 = getFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders3 = getSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders3));
 
-//       decltype(shfut2a) shfut4a;
-//       {
-//         Matrix<const Type, Device::CPU>* const_mat = &mat;
-//         shfut4a = getSharedFuturesUsingGlobalIndex(*const_mat);
-//         EXPECT_TRUE(checkFuturesStep(0, shfut4a));
-//       }
+      decltype(rosenders2a) rosenders4a;
+      {
+        Matrix<const Type, Device::CPU>* const_mat = &mat;
+        rosenders4a = getRoSendersUsingGlobalIndex(*const_mat);
+        EXPECT_TRUE(checkSendersStep(0, rosenders4a));
+      }
 
-//       CHECK_MATRIX_FUTURES(true, fut1, fut0);
-//       EXPECT_TRUE(checkFuturesStep(0, shfut2b));
-//       CHECK_MATRIX_FUTURES(true, shfut2b, fut1);
-//       EXPECT_TRUE(checkFuturesStep(shfut2a.size(), shfut2a));
+      CHECK_MATRIX_SENDERS(true, senders1, senders0);
+      EXPECT_TRUE(checkSendersStep(0, rosenders2b));
+      CHECK_MATRIX_SENDERS(true, rosenders2b, senders1);
+      EXPECT_TRUE(checkSendersStep(rosenders2a.size(), rosenders2a));
 
-//       CHECK_MATRIX_FUTURES(false, fut3, shfut2b);
-//       CHECK_MATRIX_FUTURES(true, fut3, shfut2a);
+      CHECK_MATRIX_SENDERS(false, senders3, rosenders2b);
+      CHECK_MATRIX_SENDERS(true, senders3, rosenders2a);
 
-//       CHECK_MATRIX_FUTURES(true, shfut4a, fut3);
+      CHECK_MATRIX_SENDERS(true, rosenders4a, senders3);
 
-//       auto shfut4b = getSharedFuturesUsingLocalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
+      auto rosenders4b = getRoSendersUsingLocalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(rosenders4b.size(), rosenders4b));
 
-//       auto fut5 = getFuturesUsingGlobalIndex(mat);
-//       EXPECT_TRUE(checkFuturesStep(0, fut3));
+      auto senders5 = getSendersUsingGlobalIndex(mat);
+      EXPECT_TRUE(checkSendersStep(0, senders5));
 
-//       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
-//       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
-//     }
-//   }
-// }
+      CHECK_MATRIX_SENDERS(false, senders5, rosenders4a);
+      CHECK_MATRIX_SENDERS(true, senders5, rosenders4b);
+    }
+  }
+}
 
 TYPED_TEST(MatrixTest, TileSize) {
   using Type = TypeParam;
@@ -908,12 +905,12 @@ TYPED_TEST(MatrixTest, FromTile) {
         // specify src_rank
         comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
                                std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+        src_rank); LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank, mem());
-        ASSERT_FALSE(haveConstElements(mat));
+        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank,
+        mem()); ASSERT_FALSE(haveConstElements(mat));
 
         CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
       }
@@ -983,8 +980,8 @@ TYPED_TEST(MatrixTest, FromTileConst) {
         // specify src_rank
         comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
                                std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
-        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
+        src_rank); LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
         const Type* p = mem();
@@ -1152,25 +1149,26 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
       auto row0_range = common::iterate_range2d(local_row_size);
 
       // top left tile is selected in rw (i.e. exclusive access)
-      auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      auto sender_tl = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
 
       // the entire first row is selected in ro
-      auto futs_row = selectRead(mat, row0_range);
-      EXPECT_EQ(ncols, futs_row.size());
+      auto senders_row = selectRead(mat, row0_range);
+      EXPECT_EQ(ncols, senders_row.size());
 
-      tt::sync_wait(std::move(tile_sender));
-      // The vector of senders should be copiable and movable
-      tt::sync_wait(ex::when_all_vector(futs_row));
-      tt::sync_wait(ex::when_all_vector(std::move(futs_row)));
+      // eagerly start the tile senders, but don't release them
+      std::vector<VoidSenderWithAtomicBool> void_senders_row;
+      void_senders_row.reserve(senders_row.size());
+      for (auto& s : senders_row) {
+        void_senders_row.emplace_back(std::move(s));
+      }
 
-      // TODO: How much does this test make sense with senders?
-      // // Since the top left tile has been selected two times, the group selection
-      // // would have all but the first tile ready...
-      // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+      // Since the top left tile has been selected two times, the group selection
+      // would have all but the first tile ready...
+      EXPECT_TRUE(checkSendersStep(1, void_senders_row, true));
 
-      // // ... until the first one will be released.
-      // tile_sender.get();
-      // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+      // ... until the first one will be released.
+      tt::sync_wait(std::move(sender_tl));
+      EXPECT_TRUE(checkSendersStep(ncols, void_senders_row));
     }
   }
 }
@@ -1200,36 +1198,39 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
       auto row0_range = common::iterate_range2d(local_row_size);
 
       // top left tile is selected in rw (i.e. exclusive access)
-      auto tile_sender = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      auto sender_tl = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
 
       // the entire first row is selected in rw
-      auto futs_row = select(mat, row0_range);
-      EXPECT_EQ(ncols, futs_row.size());
+      auto senders_row = select(mat, row0_range);
+      EXPECT_EQ(ncols, senders_row.size());
 
-      tt::sync_wait(std::move(tile_sender));
-      tt::sync_wait(ex::when_all_vector(std::move(futs_row)));
+      // eagerly start the tile senders, but don't release them
+      std::vector<VoidSenderWithAtomicBool> void_senders_row;
+      void_senders_row.reserve(senders_row.size());
+      for (auto& s : senders_row) {
+        void_senders_row.emplace_back(std::move(s));
+      }
 
-      // TODO: How much does this test make sense with senders?
-      // // Since the top left tile has been selected two times, the group selection
-      // // would have all but the first tile ready...
-      // EXPECT_TRUE(checkFuturesStep(1, futs_row, true));
+      // Since the top left tile has been selected two times, the group selection
+      // would have all but the first tile ready...
+      EXPECT_TRUE(checkSendersStep(1, void_senders_row, true));
 
-      // // ... until the first one will be released.
-      // tile_sender.get();
-      // EXPECT_TRUE(checkFuturesStep(ncols, futs_row));
+      // ... until the first one will be released.
+      tt::sync_wait(std::move(sender_tl));
+      EXPECT_TRUE(checkSendersStep(ncols, void_senders_row));
     }
   }
 }
 
-// MatrixDestructorFutures
+// MatrixDestructorSenders
 //
-// These tests checks that futures management on destruction is performed correctly. The behaviour is
-// strictly related to the future/shared_futures mechanism and generally is not affected by the
-// element type of the matrix. For this reason, this kind of test will be carried out with just a
+// These tests checks that sender management on destruction is performed correctly. The behaviour is
+// strictly related to the internal dependency management mechanism and generally is not affected by
+// the element type of the matrix. For this reason, this kind of test will be carried out with just a
 // (randomly chosen) element type.
 //
 // Note 1:
-// In each task there is the last_task future that must depend on the launched task. This is needed
+// In each task there is the last_task sender that must depend on the launched task. This is needed
 // in order to being able to wait for it before the test ends, otherwise it may end after the test is
 // already finished (and in case of failure it may not be presented correctly)
 //
@@ -1284,8 +1285,7 @@ struct WaitGuardHelper {
   }
 };
 
-// TODO: Are there cases missing here?
-TEST(MatrixDestructorFutures, NonConstAfterRead) {
+TEST(MatrixDestructorSenders, NonConstAfterRead) {
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
@@ -1303,7 +1303,7 @@ TEST(MatrixDestructorFutures, NonConstAfterRead) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
+TEST(MatrixDestructorSenders, NonConstAfterReadWrite) {
   namespace ex = pika::execution::experimental;
   ex::unique_any_sender<> last_task;
 
@@ -1322,7 +1322,7 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
+TEST(MatrixDestructorSenders, NonConstAfterRead_UserMemory) {
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
@@ -1341,26 +1341,8 @@ TEST(MatrixDestructorFutures, NonConstAfterRead_UserMemory) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorFutures, ConstAfterRead_UserMemory) {
-  ex::unique_any_sender<> last_task;
-
-  std::atomic<bool> is_exited_from_scope{false};
-  {
-    T data;
-    auto matrix = createConstMatrix<T>(data);
-
-    auto tile_sender = matrix.read_sender2(LocalTileIndex(0, 0));
-    last_task = std::move(tile_sender) |
-                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
-                                          WaitGuardHelper{is_exited_from_scope}) |
-                ex::ensure_started();
-  }
-  is_exited_from_scope = true;
-
-  tt::sync_wait(std::move(last_task));
-}
-
-TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
+TEST(MatrixDestructorSenders, NonConstAfterReadWrite_UserMemory) {
+  namespace ex = pika::execution::experimental;
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
@@ -1369,6 +1351,25 @@ TEST(MatrixDestructorFutures, NonConstAfterReadWrite_UserMemory) {
     auto matrix = createMatrix<T>(data);
 
     auto tile_sender = matrix.readwrite_sender_tile(LocalTileIndex(0, 0));
+    last_task = std::move(tile_sender) |
+                dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                          WaitGuardHelper{is_exited_from_scope}) |
+                ex::ensure_started();
+  }
+  is_exited_from_scope = true;
+
+  tt::sync_wait(std::move(last_task));
+}
+
+TEST(MatrixDestructorSenders, ConstAfterRead_UserMemory) {
+  ex::unique_any_sender<> last_task;
+
+  std::atomic<bool> is_exited_from_scope{false};
+  {
+    T data;
+    auto matrix = createConstMatrix<T>(data);
+
+    auto tile_sender = matrix.read_sender2(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1425,7 +1426,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       matrix.waitLocalTiles();
 
       // after the sync barrier, start a task on a tile (another one/the same) expecting that
-      // the previous task has been fully completed (and the future mechanism still works)
+      // the previous task has been fully completed (and the dependency mechanism still works)
       if (has_local) {
         tt::sync_wait(dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },

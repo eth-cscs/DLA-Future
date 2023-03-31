@@ -15,44 +15,89 @@
 #include <sstream>
 #include <vector>
 
+#include <pika/execution.hpp>
 #include <pika/future.hpp>
 
 #include "gtest/gtest.h"
 #include "dlaf/matrix/matrix.h"
 
-namespace dlaf {
-namespace matrix {
-namespace test {
+// TODO: Rename this whole file (it no longer deals only with futures).
 
-/// Returns a col-major ordered vector with the futures to the matrix tiles.
+namespace dlaf::matrix::test {
+// Senders are not inherently ready or not. They represent work that can be
+// waited for, or are invalid. To work around that for testing purposes we
+// associate a boolean with a sender. The sender will get a continuation which
+// sets the associated boolean to true, and the sender is then ensure_started to
+// determine if the sender is blocked by some other work or if it was ready to
+// run. The value that the original sender sends is forwarded through
+// ensure_started. This means that the value is released only once the new
+// sender is waited for. Finally, we drop the value with drop_value so that the
+// class doesn't have to be templated with the type that the original sender
+// sends.
+//
+// TODO: Suggestions for a better name for this are more than welcome.
+class VoidSenderWithAtomicBool {
+public:
+  template <typename Sender>
+  VoidSenderWithAtomicBool(Sender&& sender)
+      : ready(std::make_shared<std::atomic<bool>>(false)),
+        sender(std::forward<Sender>(sender) |
+               pika::execution::experimental::then([ready = this->ready](auto x) {
+                 *ready = true;
+                 return x;
+               }) |
+               pika::execution::experimental::ensure_started() |
+               pika::execution::experimental::drop_value()) {}
+  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool&&) = default;
+  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool const&) = delete;
+  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool&&) = default;
+  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool const&) = delete;
+
+  void get() && {
+    DLAF_ASSERT(bool(sender), "");
+    pika::this_thread::experimental::sync_wait(std::move(sender));
+  }
+
+  bool is_ready() const {
+    DLAF_ASSERT(bool(ready), "");
+    return *ready;
+  }
+
+private:
+  std::shared_ptr<std::atomic<bool>> ready;
+  pika::execution::experimental::unique_any_sender<> sender;
+};
+
+/// Returns a col-major ordered vector with wrappers of senders to matrix tiles.
 ///
-/// The futures are created using the matrix method operator()(const LocalTileIndex&).
-/// Note: This function is interchangeable with getFuturesUsingGlobalIndex.
+/// The senders are created using the matrix method readwrite_sender_tile(const
+/// LocalTileIndex&). Note: This function is interchangeable with
+/// getSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<pika::future<Tile<T, D>>> getFuturesUsingLocalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::future<Tile<T, D>>> result;
+  std::vector<VoidSenderWithAtomicBool> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(std::move(mat(LocalTileIndex(i, j))));
-      EXPECT_TRUE(result.back().valid());
+      result.emplace_back(mat.readwrite_sender_tile(LocalTileIndex(i, j)));
     }
   }
   return result;
 }
 
-/// Returns a col-major ordered vector with the futures to the matrix tiles.
+/// Returns a col-major ordered vector with senders to the matrix tiles.
 ///
-/// The futures are created using the matrix method operator()(const GlobalTileIndex&).
-/// Note: This function is interchangeable with getFuturesUsingLocalIndex.
+/// The senders are created using the matrix method readwrite_sender_tile(const
+/// GlobalTileIndex&).  Note: This function is interchangeable with
+/// getSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<pika::future<Tile<T, D>>> getFuturesUsingGlobalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::future<Tile<T, D>>> result;
+  std::vector<VoidSenderWithAtomicBool> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -61,46 +106,42 @@ std::vector<pika::future<Tile<T, D>>> getFuturesUsingGlobalIndex(MatrixType<T, D
       comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(std::move(mat(global_index)));
-        EXPECT_TRUE(result.back().valid());
+        result.emplace_back(mat.readwrite_sender_tile(global_index));
       }
     }
   }
   return result;
 }
 
-/// Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+/// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
-/// The futures are created using the matrix method read(const LocalTileIndex&).
-/// Note: This function is interchangeable with getSharedFuturesUsingGlobalIndex.
+/// The senders are created using the matrix method read_sender2(const LocalTileIndex&).
+/// Note: This function is interchangeable with getRoSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingLocalIndex(
-    MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::shared_future<Tile<const T, D>>> result;
+  std::vector<VoidSenderWithAtomicBool> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(mat.read(LocalTileIndex(i, j)));
-      EXPECT_TRUE(result.back().valid());
+      result.emplace_back(mat.read_sender2(LocalTileIndex(i, j)));
     }
   }
 
   return result;
 }
 
-/// Returns a col-major ordered vector with the read-only shared-futures to the matrix tiles.
+/// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
-/// The futures are created using the matrix method read(const GlobalTileIndex&).
-/// Note: This function is interchangeable with getSharedFuturesUsingLocalIndex.
+/// The senders are created using the matrix method read_sender2(const GlobalTileIndex&).
+/// Note: This function is interchangeable with getRoSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingGlobalIndex(
-    MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getRoSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<pika::shared_future<Tile<const T, D>>> result;
+  std::vector<VoidSenderWithAtomicBool> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -109,8 +150,7 @@ std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingGlobalIn
       comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(mat.read(global_index));
-        EXPECT_TRUE(result.back().valid());
+        result.emplace_back(mat.read_sender2(global_index));
       }
     }
   }
@@ -118,24 +158,23 @@ std::vector<pika::shared_future<Tile<const T, D>>> getSharedFuturesUsingGlobalIn
   return result;
 }
 
-/// Returns true if only the @p first_n futures are ready (or the opposite).
+/// Returns true if only the @p first_n senders are ready (or the opposite).
 ///
-/// @param invert if set to true it checks that all futures are ready except the first_n
+/// @param invert if set to true it checks that all senders are ready except the first_n
 ///
-/// @pre Future should be a future or shared_future,
-/// @pre 0 <= ready <= futures.size().
-template <class Future>
-bool checkFuturesStep(size_t first_n, const std::vector<Future>& futures, bool invert = false) {
-  DLAF_ASSERT_HEAVY(first_n <= futures.size(), first_n, futures.size());
+/// @pre 0 <= ready <= senders.size().
+inline bool checkSendersStep(size_t first_n, const std::vector<VoidSenderWithAtomicBool>& senders,
+                             bool invert = false) {
+  DLAF_ASSERT_HEAVY(first_n <= senders.size(), first_n, senders.size());
 
   const bool first_n_status = !invert;
 
   for (std::size_t index = 0; index < first_n; ++index) {
-    if (futures[index].is_ready() != first_n_status)
+    if (senders[index].is_ready() != first_n_status)
       return false;
   }
-  for (std::size_t index = first_n; index < futures.size(); ++index) {
-    if (futures[index].is_ready() == first_n_status)
+  for (std::size_t index = first_n; index < senders.size(); ++index) {
+    if (senders[index].is_ready() == first_n_status)
       return false;
   }
   return true;
@@ -145,53 +184,21 @@ bool checkFuturesStep(size_t first_n, const std::vector<Future>& futures, bool i
 ///
 /// If get_ready == true it checks if current[i] is ready after previous[i] is used.
 /// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
-/// @pre Future[1,2] should be a future or shared_future.
-template <class Future1, class Future2>
-void checkFutures(bool get_ready, const std::vector<Future1>& current, std::vector<Future2>& previous) {
+void checkSenders(bool get_ready, const std::vector<VoidSenderWithAtomicBool>& current,
+                  std::vector<VoidSenderWithAtomicBool>& previous) {
   DLAF_ASSERT_HEAVY(current.size() == previous.size(), current.size(), previous.size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {
-    EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
-    previous[index].get();
-    previous[index] = {};
+    EXPECT_TRUE(checkSendersStep(get_ready ? index : 0, current));
+    std::move(previous[index]).get();
   }
 
-  EXPECT_TRUE(checkFuturesStep(get_ready ? current.size() : 0, current));
+  EXPECT_TRUE(checkSendersStep(get_ready ? current.size() : 0, current));
 }
 
-#define CHECK_MATRIX_FUTURES(get_ready, current, previous)            \
+#define CHECK_MATRIX_SENDERS(get_ready, current, previous)            \
   do {                                                                \
     SCOPED_TRACE("");                                                 \
-    ::dlaf::matrix::test::checkFutures(get_ready, current, previous); \
+    ::dlaf::matrix::test::checkSenders(get_ready, current, previous); \
   } while (0)
-
-/// Checks if current[i] depends correctly on mat_view.done(index),
-///
-/// where index = LocalTileIndex(i % mat_view.localNrTiles.rows(), i / mat_view.localNrTiles.rows())
-/// If get_ready == true it checks if current[i] is ready after the call to mat_view.done(i).
-/// If get_ready == false it checks if current[i] is not ready after the call to mat_view.done(i).
-/// @pre Future should be a future or shared_future.
-template <class Future, class MatrixViewType>
-void checkFuturesDone(bool get_ready, const std::vector<Future>& current, MatrixViewType& mat_view) {
-  const auto& nr_tiles = mat_view.distribution().localNrTiles();
-  DLAF_ASSERT(static_cast<SizeType>(current.size()) == nr_tiles.linear_size(), current.size(),
-              nr_tiles.linear_size());
-
-  for (std::size_t index = 0; index < current.size(); ++index) {
-    EXPECT_TRUE(checkFuturesStep(get_ready ? index : 0, current));
-    LocalTileIndex tile_index(to_signed<LocalTileIndex::IndexType>(index) % nr_tiles.rows(),
-                              to_signed<LocalTileIndex::IndexType>(index) / nr_tiles.rows());
-    mat_view.done(tile_index);
-  }
-
-  EXPECT_TRUE(checkFuturesStep(get_ready ? current.size() : 0, current));
-}
-
-#define CHECK_MATRIX_FUTURES_DONE(get_ready, current, mat_view)           \
-  do {                                                                    \
-    SCOPED_TRACE("");                                                     \
-    ::dlaf::matrix::test::checkFuturesDone(get_ready, current, mat_view); \
-  } while (0)
-}
-}
 }

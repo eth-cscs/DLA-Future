@@ -294,7 +294,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
 
   const size_t nthreads = getReductionToBandPanelNWorkers();
   return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
-                      ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
+                      ex::just(std::vector<common::internal::vector<T>>{}),  // w (internally required)
                       ex::just(common::internal::vector<T>{}),               // taus
                       ex::when_all_vector(std::move(panel_tiles))) |
          ex::let_value([nthreads, nrefls, cols = panel_view.cols()](auto& barrier_ptr, auto& w,

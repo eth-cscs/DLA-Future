@@ -129,6 +129,48 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   }
 }
 
+template <class T, Device D, Coord C>
+void applyPermutationsFiltered(
+    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+    const matrix::Distribution& subm_dist, const SizeType* perm_arr,
+    const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& in_tiles_fut,
+    const std::vector<matrix::Tile<T, D>>& out_tiles, std::function<bool(SizeType)> filter) {
+  constexpr auto OC = orthogonal(C);
+  std::vector<SizeType> splits =
+      dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
+                                   subm_dist.distanceToAdjacentTile<OC>(in_offset),
+                                   subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
+
+  const SizeType nperms = subm_dist.size().get<C>();
+
+  // Parallelized over the number of permutations
+  pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+    if (filter(perm_arr[i_perm]))
+      return;
+
+    for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
+      const SizeType split = splits[i_split];
+
+      GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
+      GlobalElementIndex i_split_gl_out(split + out_begin.get<OC>(), out_begin.get<C>() + i_perm);
+      TileElementSize region(splits[i_split + 1] - split, 1);
+
+      if constexpr (C == Coord::Row) {
+        region.transpose();
+        i_split_gl_in.transpose();
+        i_split_gl_out.transpose();
+      }
+
+      const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
+      const auto& tile_in = in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
+      const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
+      auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
+
+      dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
+    }
+  });
+}
+
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                                     Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
@@ -194,130 +236,67 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
       ut::collectReadTiles(LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix));
 }
 
-// No data is sent or received but the processes participates in the collective call
-template <class T>
-void all2allEmptyData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks) {
+template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
+void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
+                 LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
+                 Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
+                 Matrix<T, D>& recv_mat) {
   namespace ex = pika::execution::experimental;
+  const SizeType vec_size = sz_loc.get<orthogonal(C)>();
+  auto sendrecv_f =
+      [vec_size](comm::Communicator& comm, std::vector<int> send_counts, std::vector<int> send_displs,
+                 const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& send_tiles_fut,
+                 std::vector<int> recv_counts, std::vector<int> recv_displs,
+                 const std::vector<matrix::Tile<T, D>>& recv_tiles) {
+        const MPI_Datatype dtype = dlaf::comm::mpi_datatype<T>::type;
 
-  auto all2all_f = [](const comm::Communicator& comm, const std::vector<int>& arr, MPI_Request* req) {
-    MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-    // Avoid buffer aliasing error reported when send_ptr and recv_ptr are the same.
-    int irrelevant = 42;
-    DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(nullptr, arr.data(), arr.data(), dtype, &irrelevant, arr.data(),
-                                        arr.data(), dtype, comm, req));
-  };
-  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f),
-                                           ex::when_all(sub_task_chain(),
-                                                        ex::just(std::vector<int>(to_sizet(nranks), 0))));
-}
+        // Note: both guaranteed to be contiguous on allocation
+        const T* send_ptr = send_tiles_fut[0].get().ptr();
+        T* recv_ptr = recv_tiles[0].ptr();
 
-template <class T, Device D, class SendCountsSender, class RecvCountsSender>
-void all2allDataCol(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
-                    LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
-                    Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
-                    Matrix<T, D>& recv_mat) {
-  namespace ex = pika::execution::experimental;
+        // Note: each count represents how many vectors have to permuted, so we transform from number of
+        // vectors to the total number of elements in them
+        const auto nvecs2elements = [vec_size](int num) { return to_int(vec_size) * num; };
+        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), nvecs2elements);
+        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), nvecs2elements);
 
-  auto sendrecv_f = [vec_size =
-                         sz_loc.rows()](comm::Communicator& comm, std::vector<int> send_counts,
-                                        std::vector<int> send_displs,
-                                        const std::vector<pika::shared_future<matrix::Tile<const T, D>>>&
-                                            send_tiles_fut,
-                                        std::vector<int> recv_counts, std::vector<int> recv_displs,
-                                        const std::vector<matrix::Tile<T, D>>& recv_tiles) {
-    const MPI_Datatype dtype = dlaf::comm::mpi_datatype<T>::type;
+        // cumulative sum for computing rank data displacements in packed vectors
+        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
 
-    // Note: both guaranteed to be contiguous on allocation
-    const T* send_ptr = send_tiles_fut[0].get().ptr();
-    T* recv_ptr = recv_tiles[0].ptr();
+        std::vector<ex::unique_any_sender<>> all_comms;
+        all_comms.reserve(to_sizet(comm.size() - 1) * 2);
+        const comm::IndexT_MPI rank = comm.rank();
+        for (comm::IndexT_MPI rank_partner = 0; rank_partner < comm.size(); ++rank_partner) {
+          if (rank == rank_partner)
+            continue;
 
-    // Note: each count represents how many vectors have to permuted, so we transform from number of
-    // vectors to the total number of elements in them
-    const auto nvecs2elements = [vec_size](int num) { return to_int(vec_size) * num; };
-    std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), nvecs2elements);
-    std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), nvecs2elements);
+          const auto rank_partner_index = to_sizet(rank_partner);
 
-    // cumulative sum for computing rank data displacements in packed vectors
-    std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
-    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+          if (send_counts[rank_partner_index])
+            all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                                  DLAF_MPI_CHECK_ERROR(
+                                      MPI_Isend(send_ptr + send_displs[rank_partner_index],
+                                                send_counts[rank_partner_index], dtype, rank_partner, 0,
+                                                comm, req));
+                                }));
+          if (recv_counts[rank_partner_index])
+            all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                                  DLAF_MPI_CHECK_ERROR(
+                                      MPI_Irecv(recv_ptr + recv_displs[rank_partner_index],
+                                                recv_counts[rank_partner_index], dtype, rank_partner, 0,
+                                                comm, req));
+                                }));
+        }
 
-    std::vector<ex::unique_any_sender<>> all_comms;
-    all_comms.reserve(to_sizet(comm.size() - 1) * 2);
-    const comm::IndexT_MPI rank = comm.rank();
-    for (comm::IndexT_MPI rank_partner = 0; rank_partner < comm.size(); ++rank_partner) {
-      if (rank == rank_partner)
-        continue;
-
-      const auto rank_partner_index = to_sizet(rank_partner);
-      if (send_counts[rank_partner_index])
-        all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                              DLAF_MPI_CHECK_ERROR(MPI_Isend(send_ptr + send_displs[rank_partner_index],
-                                                             send_counts[rank_partner_index], dtype,
-                                                             rank_partner, 0, comm, req));
-                            }));
-      if (recv_counts[rank_partner_index])
-        all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                              DLAF_MPI_CHECK_ERROR(MPI_Irecv(recv_ptr + recv_displs[rank_partner_index],
-                                                             recv_counts[rank_partner_index], dtype,
-                                                             rank_partner, 0, comm, req));
-                            }));
-    }
-
-    pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
-  };
+        pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
+      };
 
   ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
                std::forward<RecvCountsSender>(recv_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat)) |
       dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), sendrecv_f);
-}
-
-// Note: Matrices used for communication @p send_mat and @p recv_mat are assumed to be in column-major layout!
-//
-template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
-void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
-                 LocalElementSize sz_loc, SendCountsSender&& send_counts_sender, Matrix<T, D>& send_mat,
-                 RecvCountsSender&& recv_counts_sender, Matrix<T, D>& recv_mat) {
-  namespace ex = pika::execution::experimental;
-
-  auto all2all_f =
-      [len = sz_loc.get<orthogonal(
-           C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
-                  std::vector<int>& send_displs,
-                  const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& send_tiles_fut,
-                  std::vector<int>& recv_counts, std::vector<int>& recv_displs,
-                  const std::vector<matrix::Tile<T, D>>& recv_tiles, MPI_Request* req) {
-        // datatype to be sent to each rank
-        MPI_Datatype dtype = dlaf::comm::mpi_datatype<std::remove_pointer_t<T>>::type;
-
-        // scale by the length of the row or column vectors to get the number of elements sent to each process
-        auto mul_const = [len](int num) { return to_int(len) * num; };
-        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), mul_const);
-        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), mul_const);
-
-        // Note: that was guaranteed to be contiguous on allocation
-        const T* send_ptr = send_tiles_fut[0].get().ptr();
-        T* recv_ptr = recv_tiles[0].ptr();
-
-        // send displacements
-        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
-
-        // recv displacements
-        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
-
-        // All-to-All communication
-        DLAF_MPI_CHECK_ERROR(MPI_Ialltoallv(send_ptr, send_counts.data(), send_displs.data(), dtype,
-                                            recv_ptr, recv_counts.data(), recv_displs.data(), dtype,
-                                            comm, req));
-      };
-
-  auto sender =
-      ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
-                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
-                   std::forward<RecvCountsSender>(recv_counts_sender),
-                   ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat));
-  dlaf::comm::internal::transformMPIDetach(std::move(all2all_f), std::move(sender));
 }
 
 // @param nranks number of ranks
@@ -480,11 +459,10 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 
-template <class T>
-void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
-                     SizeType i_last, Matrix<const SizeType, Device::CPU>& perms,
-                     Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
-  constexpr Coord C = Coord::Col;
+template <class T, Coord C>
+void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
+                  SizeType i_last, Matrix<const SizeType, Device::CPU>& perms,
+                  Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
   using namespace dlaf::matrix;
@@ -522,7 +500,7 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
 
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
-  const SizeType nvecs = sz_loc.cols();
+  const SizeType nvecs = sz_loc.get<C>();
   const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.rows(), 1));
   Matrix<SizeType, D> local2global_index(index_dist);
   Matrix<SizeType, D> packing_index(index_dist);
@@ -531,12 +509,14 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
   // Local matrices used for packing data for communication. Both matrices are in column-major order.
   // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
   // such that there is no padding and gaps between them.
-  const LocalElementSize comm_sz = sz_loc;
+  const LocalElementSize comm_sz = (C == Coord::Col) ? sz_loc : transposed(sz_loc);
   const Distribution comm_dist(comm_sz, blk);
   const LayoutInfo comm_layout = matrix::colMajorLayout(comm_sz, blk, comm_sz.rows());
 
   Matrix<T, D> mat_send(comm_dist, comm_layout);
   Matrix<T, D> mat_recv(comm_dist, comm_layout);
+
+  Matrix<T, D> mat_send_local(Distribution{sz_loc, blk});
 
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, local2global_index);
@@ -550,220 +530,11 @@ void permuteOnCPUCol(common::Pipeline<comm::Communicator>& sub_task_chain, SizeT
       initPackingIndex<C, true>(nranks, offset_sub, dist, local2global_index, packing_index) |
       ex::split();
 
-  // Pack local columns to be sent from this rank
+  // TODO temporary copy
+  // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
                              whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
-                             whenAllReadWriteTilesArray(mat_send));
-
-  // Unpacking
-  // separate unpacking:
-  // - locals
-  // - communicated
-  // and then start two different tasks:
-  // - the first depends on mat_send instead of mat_recv (no dependency on comm)
-  // - the last is the same, but it has to skip the part already done for local
-
-  // LOCAL
-  auto unpack_local_f =
-      [subm_dist, rank = dist.rankIndex().col()](const auto& send_counts, const auto& index_tile_futs,
-                                                 const auto& mat_in_tiles, const auto& mat_out_tiles) {
-        const size_t rank_index = to_sizet(rank);
-
-        const SizeType* i_ptr = index_tile_futs[0].get().ptr();
-        const SizeType vec_size = subm_dist.size().rows();
-        const SizeType nperms = subm_dist.size().cols();
-        const GlobalElementSize sz(vec_size, nperms);
-
-        const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
-        const int b = a + send_counts[rank_index];
-
-        const SizeType in_offset = 0;
-        const GlobalElementIndex out_begin(0, 0);
-        const SizeType* perm_arr = i_ptr;
-
-        auto&& in_tiles_fut = mat_in_tiles;
-        auto&& out_tiles = mat_out_tiles;
-
-        std::vector<SizeType> splits =
-            dlaf::util::interleaveSplits(sz.rows(), subm_dist.blockSize().rows(),
-                                         subm_dist.distanceToAdjacentTile<Coord::Row>(in_offset),
-                                         subm_dist.distanceToAdjacentTile<Coord::Row>(out_begin.row()));
-
-        // Parallelized over the number of permutations
-        pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-          if (perm_arr[i_perm] < a || perm_arr[i_perm] >= b)
-            return;
-
-          for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-            const SizeType split = splits[i_split];
-
-            const GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-            const GlobalElementIndex i_split_gl_out(split + out_begin.row(), out_begin.col() + i_perm);
-            const TileElementSize region(splits[i_split + 1] - split, 1);
-
-            const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-            const auto& tile_in =
-                in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-            const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-            auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
-
-            dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-          }
-        });
-      };
-
-  ex::when_all(send_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               whenAllReadOnlyTilesArray(mat_send),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
-      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));
-
-  // COMMUNICATION-dependent
-  all2allDataCol<T, D>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
-                       mat_recv);
-
-  auto unpack_others_f = [subm_dist, rank = dist.rankIndex().col()](const auto& recv_counts,
-                                                                    const auto& index_tile_futs,
-                                                                    const auto& mat_in_tiles,
-                                                                    const auto& mat_out_tiles) {
-    const size_t rank_index = to_sizet(rank);
-    const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
-    const int b = a + recv_counts[rank_index];
-
-    const SizeType* i_ptr = index_tile_futs[0].get().ptr();
-    const SizeType vec_size = subm_dist.size().rows();
-    const SizeType nperms = subm_dist.size().cols();
-    const GlobalElementSize sz(vec_size, nperms);
-
-    const SizeType in_offset = 0;
-    const GlobalElementIndex out_begin(0, 0);
-    const SizeType* perm_arr = i_ptr;
-
-    auto&& in_tiles_fut = mat_in_tiles;
-    auto&& out_tiles = mat_out_tiles;
-
-    {
-      std::vector<SizeType> splits =
-          dlaf::util::interleaveSplits(sz.rows(), subm_dist.blockSize().rows(),
-                                       subm_dist.distanceToAdjacentTile<Coord::Row>(in_offset),
-                                       subm_dist.distanceToAdjacentTile<Coord::Row>(out_begin.row()));
-
-      // Parallelized over the number of permutations
-      pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-        if (perm_arr[i_perm] >= a)
-          return;
-
-        for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-          const SizeType split = splits[i_split];
-
-          const GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-          const GlobalElementIndex i_split_gl_out(split + out_begin.row(), out_begin.col() + i_perm);
-          const TileElementSize region(splits[i_split + 1] - split, 1);
-
-          const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-          const auto& tile_in =
-              in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-          const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-          auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
-
-          dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-        }
-      });
-    }
-
-    {
-      std::vector<SizeType> splits =
-          dlaf::util::interleaveSplits(sz.rows(), subm_dist.blockSize().rows(),
-                                       subm_dist.distanceToAdjacentTile<Coord::Row>(in_offset),
-                                       subm_dist.distanceToAdjacentTile<Coord::Row>(out_begin.row()));
-
-      // Parallelized over the number of permutations
-      pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-        if (perm_arr[i_perm] < b)
-          return;
-
-        for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-          const SizeType split = splits[i_split];
-
-          const GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-          const GlobalElementIndex i_split_gl_out(split + out_begin.row(), out_begin.col() + i_perm);
-          const TileElementSize region(splits[i_split + 1] - split, 1);
-
-          const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-          const auto& tile_in =
-              in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-          const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-          auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
-
-          dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-        }
-      });
-    }
-  };
-
-  ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               whenAllReadOnlyTilesArray(mat_recv),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
-      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f));
-}
-
-template <class T, Coord C>
-void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
-                  Matrix<const SizeType, Device::CPU>& perms, Matrix<T, Device::CPU>& mat_in,
-                  Matrix<T, Device::CPU>& mat_out) {
-  constexpr Device D = Device::CPU;
-
-  const matrix::Distribution& dist = mat_in.distribution();
-  int nranks = to_int(dist.commGridSize().get<C>());
-
-  // Local size and index of subproblem [i_begin, i_end]
-  SizeType i_el_begin = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
-  TileElementSize blk = dist.blockSize();
-  LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
-                             dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end + 1) - 1,
-                           dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end + 1) - 1};
-  // Note: the local shape of the permutation region may not be square if the process grid is not square
-  LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end + 1),
-                          dist.localElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end + 1)};
-
-  // If there are no tiles in this rank, participate in the all2all call and return
-  if (sz_loc.isEmpty()) {
-    all2allEmptyData<T>(sub_task_chain, nranks);
-    return;
-  }
-
-  // Create a map from send indices to receive indices (inverse of perms)
-  Matrix<SizeType, D> inverse_perms(perms.distribution());
-  invertIndex(i_begin, i_end, perms, inverse_perms);
-
-  // Local distribution used for packing and unpacking
-  matrix::Distribution subm_dist(sz_loc, blk);
-
-  // Local single tile column matrices representing index maps used for packing and unpacking of
-  // communication data
-  matrix::Distribution index_dist(LocalElementSize(sz_loc.get<C>(), 1), TileElementSize(blk.rows(), 1));
-  Matrix<SizeType, D> ws_index(index_dist);
-  Matrix<SizeType, D> packing_index(index_dist);
-  Matrix<SizeType, D> unpacking_index(index_dist);
-
-  // Local matrices used for packing data for communication. Both matrices are in column-major order.
-  // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
-  // such that there is no padding and gaps between them.
-  LocalElementSize comm_sz = (C == Coord::Col) ? sz_loc : transposed(sz_loc);
-  matrix::Distribution comm_dist(comm_sz, blk);
-  matrix::LayoutInfo comm_layout = matrix::colMajorLayout(comm_sz, blk, comm_sz.rows());
-  Matrix<T, D> mat_send(comm_dist, comm_layout);
-  Matrix<T, D> mat_recv(comm_dist, comm_layout);
-
-  // Initialize the unpacking index
-  copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, ws_index);
-  auto recv_counts_sender =
-      initPackingIndex<C, false>(nranks, i_el_begin, dist, ws_index, unpacking_index);
-
-  // Initialize the packing index
-  // Here `true` is specified so that the send side matches the order of columns/rows on the receive side
-  copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, inverse_perms, ws_index);
-  auto send_counts_sender = initPackingIndex<C, true>(nranks, i_el_begin, dist, ws_index, packing_index);
+                             whenAllReadWriteTilesArray(mat_send_local));
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
@@ -777,21 +548,73 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
     transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
   }
 
-  // Communicate data
-  all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, std::move(send_counts_sender), mat_send,
-                       std::move(recv_counts_sender), mat_recv);
+  // Unpacking
+  // separate unpacking:
+  // - locals
+  // - communicated
+  // and then start two different tasks:
+  // - the first depends on mat_send instead of mat_recv (no dependency on comm)
+  // - the last is the same, but it has to skip the part already done for local
+
+  // LOCAL
+  auto unpack_local_f = [subm_dist, rank = dist.rankIndex().get<C>()](const auto& send_counts,
+                                                                      const auto& index_tile_futs,
+                                                                      const auto& mat_in_tiles,
+                                                                      const auto& mat_out_tiles) {
+    const size_t rank_index = to_sizet(rank);
+
+    const SizeType* perm_arr = index_tile_futs[0].get().ptr();
+    const GlobalElementSize sz = subm_dist.size();
+    // const SizeType nperms = sz.get<C>();
+
+    const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
+    const int b = a + send_counts[rank_index];
+
+    // [a, b)
+    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
+                                       [a, b](SizeType i_perm) { return i_perm < a || i_perm >= b; });
+  };
+
+  ex::when_all(send_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
+               whenAllReadOnlyTilesArray(mat_send_local),
+               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));
+
+  // COMMUNICATION-dependent
+  all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
+                       mat_recv);
 
   // Unpack data from the contiguous column-major receive buffer by transposing
   if constexpr (C == Coord::Row) {
     transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
   }
 
-  // Unpack local rows or columns received on this rank
-  applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(unpacking_index),
-                             (C == Coord::Col)
-                                 ? whenAllReadOnlyTilesArray(mat_recv)
+  auto unpack_others_f = [subm_dist, rank = dist.rankIndex().get<C>()](const auto& recv_counts,
+                                                                       const auto& index_tile_futs,
+                                                                       const auto& mat_in_tiles,
+                                                                       const auto& mat_out_tiles) {
+    const size_t rank_index = to_sizet(rank);
+    const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
+    const int b = a + recv_counts[rank_index];
+
+    const SizeType* perm_arr = index_tile_futs[0].get().ptr();
+    const GlobalElementSize sz = subm_dist.size();
+    // const SizeType nperms = sz.get<C>();
+
+    // [0, a)
+    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
+                                       [a](SizeType i_perm) { return i_perm >= a; });
+
+    // [b, end)
+    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
+                                       [b](SizeType i_perm) { return i_perm < b; });
+  };
+
+  ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
+               (C == Coord::Col) ? whenAllReadOnlyTilesArray(mat_recv)
                                  : whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
-                             whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
+               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f));
 }
 
 template <Backend B, Device D, class T, Coord C>
@@ -805,13 +628,7 @@ void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_ta
     return;
   }
   else {
-    if constexpr (Coord::Col == C) {
-      permuteOnCPUCol<T>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
-    }
-    else {
-      permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
-    }
+    permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
   }
 }
-
 }

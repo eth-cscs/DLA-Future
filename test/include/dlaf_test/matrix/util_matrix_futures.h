@@ -20,53 +20,11 @@
 
 #include "gtest/gtest.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf_test/matrix/util_tile.h"
 
 // TODO: Rename this whole file (it no longer deals only with futures).
 
 namespace dlaf::matrix::test {
-// Senders are not inherently ready or not. They represent work that can be
-// waited for, or are invalid. To work around that for testing purposes we
-// associate a boolean with a sender. The sender will get a continuation which
-// sets the associated boolean to true, and the sender is then ensure_started to
-// determine if the sender is blocked by some other work or if it was ready to
-// run. The value that the original sender sends is forwarded through
-// ensure_started. This means that the value is released only once the new
-// sender is waited for. Finally, we drop the value with drop_value so that the
-// class doesn't have to be templated with the type that the original sender
-// sends.
-//
-// TODO: Suggestions for a better name for this are more than welcome.
-class VoidSenderWithAtomicBool {
-public:
-  template <typename Sender>
-  VoidSenderWithAtomicBool(Sender&& sender)
-      : ready(std::make_shared<std::atomic<bool>>(false)),
-        sender(std::forward<Sender>(sender) |
-               pika::execution::experimental::then([ready = this->ready](auto x) {
-                 *ready = true;
-                 return x;
-               }) |
-               pika::execution::experimental::ensure_started() |
-               pika::execution::experimental::drop_value()) {}
-  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool&&) = default;
-  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool const&) = delete;
-  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool&&) = default;
-  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool const&) = delete;
-
-  void get() && {
-    DLAF_ASSERT(bool(sender), "");
-    pika::this_thread::experimental::sync_wait(std::move(sender));
-  }
-
-  bool is_ready() const {
-    DLAF_ASSERT(bool(ready), "");
-    return *ready;
-  }
-
-private:
-  std::shared_ptr<std::atomic<bool>> ready;
-  pika::execution::experimental::unique_any_sender<> sender;
-};
 
 /// Returns a col-major ordered vector with wrappers of senders to matrix tiles.
 ///

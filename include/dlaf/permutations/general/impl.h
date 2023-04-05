@@ -242,23 +242,24 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
                  Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                  Matrix<T, D>& recv_mat) {
   namespace ex = pika::execution::experimental;
+
+  using dlaf::common::DataDescriptor;
+
   const SizeType vec_size = sz_loc.get<orthogonal(C)>();
   auto sendrecv_f =
       [vec_size](comm::Communicator& comm, std::vector<int> send_counts, std::vector<int> send_displs,
                  const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& send_tiles_fut,
                  std::vector<int> recv_counts, std::vector<int> recv_displs,
                  const std::vector<matrix::Tile<T, D>>& recv_tiles) {
-        const MPI_Datatype dtype = dlaf::comm::mpi_datatype<T>::type;
-
-        // Note: both guaranteed to be contiguous on allocation
+        // Note: both guaranteed to be column-major on allocation
         const T* send_ptr = send_tiles_fut[0].get().ptr();
         T* recv_ptr = recv_tiles[0].ptr();
 
-        // Note: each count represents how many vectors have to permuted, so we transform from number of
-        // vectors to the total number of elements in them
-        const auto nvecs2elements = [vec_size](int num) { return to_int(vec_size) * num; };
-        std::transform(send_counts.cbegin(), send_counts.cend(), send_counts.begin(), nvecs2elements);
-        std::transform(recv_counts.cbegin(), recv_counts.cend(), recv_counts.begin(), nvecs2elements);
+        const SizeType send_ld = send_tiles_fut[0].get().ld();
+        const SizeType recv_ld = recv_tiles[0].ld();
+
+        const SizeType send_perm_stride = (C == Coord::Col) ? send_ld : 1;
+        const SizeType recv_perm_stride = (C == Coord::Col) ? recv_ld : 1;
 
         // cumulative sum for computing rank data displacements in packed vectors
         std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
@@ -274,19 +275,30 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
           const auto rank_partner_index = to_sizet(rank_partner);
 
           if (send_counts[rank_partner_index])
-            all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                                  DLAF_MPI_CHECK_ERROR(
-                                      MPI_Isend(send_ptr + send_displs[rank_partner_index],
-                                                send_counts[rank_partner_index], dtype, rank_partner, 0,
-                                                comm, req));
-                                }));
+            all_comms.push_back(
+                ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                  const SizeType nperms = send_counts[rank_partner_index];
+                  auto message = dlaf::comm::make_message(
+                      DataDescriptor<const T>(send_ptr +
+                                                  send_displs[rank_partner_index] * send_perm_stride,
+                                              C == Coord::Col ? nperms : vec_size,
+                                              C == Coord::Col ? vec_size : nperms, send_ld));
+
+                  DLAF_MPI_CHECK_ERROR(MPI_Isend(message.data(), message.count(), message.mpi_type(),
+                                                 rank_partner, 0, comm, req));
+                }));
           if (recv_counts[rank_partner_index])
-            all_comms.push_back(ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                                  DLAF_MPI_CHECK_ERROR(
-                                      MPI_Irecv(recv_ptr + recv_displs[rank_partner_index],
-                                                recv_counts[rank_partner_index], dtype, rank_partner, 0,
-                                                comm, req));
-                                }));
+            all_comms.push_back(
+                ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+                  const SizeType nperms = recv_counts[rank_partner_index];
+                  auto message = dlaf::comm::make_message(
+                      DataDescriptor<T>(recv_ptr + recv_displs[rank_partner_index] * recv_perm_stride,
+                                        C == Coord::Col ? nperms : vec_size,
+                                        C == Coord::Col ? vec_size : nperms, recv_ld));
+
+                  DLAF_MPI_CHECK_ERROR(MPI_Irecv(message.data(), message.count(), message.mpi_type(),
+                                                 rank_partner, 0, comm, req));
+                }));
         }
 
         pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
@@ -509,14 +521,12 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // Local matrices used for packing data for communication. Both matrices are in column-major order.
   // The particular constructor is used on purpose to guarantee that columns are stored contiguosly,
   // such that there is no padding and gaps between them.
-  const LocalElementSize comm_sz = (C == Coord::Col) ? sz_loc : transposed(sz_loc);
+  const LocalElementSize comm_sz = sz_loc;
   const Distribution comm_dist(comm_sz, blk);
   const LayoutInfo comm_layout = matrix::colMajorLayout(comm_sz, blk, comm_sz.rows());
 
   Matrix<T, D> mat_send(comm_dist, comm_layout);
   Matrix<T, D> mat_recv(comm_dist, comm_layout);
-
-  Matrix<T, D> mat_send_local(Distribution{sz_loc, blk});
 
   // Initialize the unpacking index
   copyLocalPartsFromGlobalIndex<D, C>(i_loc_begin.get<C>(), dist, perms, local2global_index);
@@ -530,23 +540,10 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
       initPackingIndex<C, true>(nranks, offset_sub, dist, local2global_index, packing_index) |
       ex::split();
 
-  // TODO temporary copy
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
                              whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
-                             whenAllReadWriteTilesArray(mat_send_local));
-
-  // Pack local rows or columns to be sent from this rank
-  applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
-                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
-                             (C == Coord::Col)
-                                 ? whenAllReadWriteTilesArray(mat_send)
-                                 : whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
-
-  // Pack data into the contiguous column-major send buffer by transposing
-  if constexpr (C == Coord::Row) {
-    transposeFromDistributedToLocalMatrix(i_loc_begin, mat_out, mat_send);
-  }
+                             whenAllReadWriteTilesArray(mat_send));
 
   // Unpacking
   // separate unpacking:
@@ -565,7 +562,6 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
     const GlobalElementSize sz = subm_dist.size();
-    // const SizeType nperms = sz.get<C>();
 
     const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
     const int b = a + send_counts[rank_index];
@@ -576,18 +572,13 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   };
 
   ex::when_all(send_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               whenAllReadOnlyTilesArray(mat_send_local),
+               whenAllReadOnlyTilesArray(mat_send),
                whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
       di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));
 
   // COMMUNICATION-dependent
   all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
                        mat_recv);
-
-  // Unpack data from the contiguous column-major receive buffer by transposing
-  if constexpr (C == Coord::Row) {
-    transposeFromLocalToDistributedMatrix(i_loc_begin, mat_recv, mat_in);
-  }
 
   auto unpack_others_f = [subm_dist, rank = dist.rankIndex().get<C>()](const auto& recv_counts,
                                                                        const auto& index_tile_futs,
@@ -599,7 +590,6 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
     const GlobalElementSize sz = subm_dist.size();
-    // const SizeType nperms = sz.get<C>();
 
     // [0, a)
     applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
@@ -611,8 +601,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   };
 
   ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               (C == Coord::Col) ? whenAllReadOnlyTilesArray(mat_recv)
-                                 : whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
+               whenAllReadOnlyTilesArray(mat_recv),
                whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
       di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f));
 }

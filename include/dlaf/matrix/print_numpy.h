@@ -99,13 +99,13 @@ void print(format::numpy, std::string sym, MatrixLikeT<const T, D>& matrix,
   };
 
   for (const auto& ij_local : iterate_range2d(local_tiles)) {
-    const auto& tile = matrix.read(ij_local).get();
+    const auto tile = pika::this_thread::experimental::sync_wait(matrix.read_sender2(ij_local));
 
     const auto tl = getTileTopLeft(ij_local);
-    const auto br = tl + GlobalElementSize{tile.size().rows(), tile.size().cols()};
+    const auto br = tl + GlobalElementSize{tile.get().size().rows(), tile.get().size().cols()};
 
     os << sym << "[" << tl.row() << ":" << br.row() << "," << tl.col() << ":" << br.col() << "] = ";
-    print(format::numpy{}, tile, os);
+    print(format::numpy{}, tile.get(), os);
   }
 }
 }

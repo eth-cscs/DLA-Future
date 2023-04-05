@@ -125,13 +125,10 @@ struct choleskyMiniapp {
         std::cout << "[" << run_index << "]" << std::endl;
 
       HostMatrixType matrix_host(matrix_size, block_size, comm_grid);
-      matrix_ref.waitLocalTiles();
       copy(matrix_ref, matrix_host);
 
       double elapsed_time;
       {
-        matrix_ref.waitLocalTiles();
-        matrix_host.waitLocalTiles();
         MatrixMirrorType matrix(matrix_host);
 
         // Wait for matrix to be copied to GPU (if necessary)

@@ -69,6 +69,76 @@ private:
   pika::execution::experimental::unique_any_sender<> sender;
 };
 
+template <class T, Device D>
+class EagerReadOnlyTileSender {
+public:
+  template <typename Sender>
+  EagerReadOnlyTileSender(Sender&& sender)
+      : ready(std::make_shared<std::atomic<bool>>(false)),
+        sender(std::forward<Sender>(sender) |
+               pika::execution::experimental::then([ready = this->ready](auto x) {
+                 *ready = true;
+                 return x;
+               }) |
+               pika::execution::experimental::ensure_started() |
+               pika::execution::experimental::split()) {}
+  EagerReadOnlyTileSender(EagerReadOnlyTileSender&&) = default;
+  EagerReadOnlyTileSender(EagerReadOnlyTileSender const&) = default;
+  EagerReadOnlyTileSender& operator=(EagerReadOnlyTileSender&&) = default;
+  EagerReadOnlyTileSender& operator=(EagerReadOnlyTileSender const&) = default;
+
+  auto get() const& {
+    DLAF_ASSERT(bool(sender), "");
+    return pika::this_thread::experimental::sync_wait(sender);
+  }
+
+  auto get() && {
+    DLAF_ASSERT(bool(sender), "");
+    return pika::this_thread::experimental::sync_wait(std::move(sender));
+  }
+
+  bool is_ready() const {
+    DLAF_ASSERT(bool(ready), "");
+    return *ready;
+  }
+
+private:
+  std::shared_ptr<std::atomic<bool>> ready;
+  dlaf::matrix::ReadOnlyTileSender<T, D> sender;
+};
+
+template <class T, Device D>
+class EagerReadWriteTileSender {
+public:
+  template <typename Sender>
+  EagerReadWriteTileSender(Sender&& sender)
+      : ready(std::make_shared<std::atomic<bool>>(false)),
+        sender(std::forward<Sender>(sender) |
+               pika::execution::experimental::then([ready = this->ready](auto x) {
+                 *ready = true;
+                 return x;
+               }) |
+               pika::execution::experimental::ensure_started()) {}
+  EagerReadWriteTileSender(EagerReadWriteTileSender&&) = default;
+  EagerReadWriteTileSender(EagerReadWriteTileSender const&) = delete;
+  EagerReadWriteTileSender& operator=(EagerReadWriteTileSender&&) = default;
+  EagerReadWriteTileSender& operator=(EagerReadWriteTileSender const&) = delete;
+
+  auto get() && {
+    DLAF_ASSERT(bool(sender), "");
+    return pika::this_thread::experimental::sync_wait(std::move(sender));
+  }
+
+  bool is_ready() const {
+    DLAF_ASSERT(bool(ready), "");
+    return *ready;
+  }
+
+private:
+  std::shared_ptr<std::atomic<bool>> ready;
+  dlaf::matrix::ReadWriteTileSender<T, D> sender;
+};
+
 /// Sets the elements of the tile.
 ///
 /// The (i, j)-element of the tile is set to el({i, j}).

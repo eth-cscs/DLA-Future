@@ -475,6 +475,13 @@ ReadWriteTileSender<T, D> subTileSender(ReadWriteTileSender<T, D>&& tile, const 
          });
 }
 
+template <class T, Device D>
+std::vector<ReadWriteTileSender<T, D>> subTileSenders(ReadWriteTileSender<T, D>&&,
+                                                      const std::vector<SubTileSpec>&) {
+  DLAF_UNIMPLEMENTED("read-write version of subTileSenders (with disjoint subtiles)");
+  return {};
+}
+
 // TODO: Add the subTile/splitTile helpers for accessing a set of disjoint specs.
 
 /// ---- ETI

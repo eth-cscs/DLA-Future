@@ -28,8 +28,9 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
+using dlaf::common::internal::unwrap;
 
-// using pika::execution::experimental::make_future;
+using pika::execution::experimental::make_future;
 using pika::execution::experimental::then;
 using pika::this_thread::experimental::sync_wait;
 
@@ -48,6 +49,24 @@ template <class T, Device D>
 TileSizes getSizes(const Tile<T, D>& tile) {
   return TileSizes(tile.size(), tile.ld());
 }
+
+// TODO: Make this the actual pipeline type used in Matrix
+template <class T, Device D>
+struct TilePipeline {
+  TileAsyncRwMutex<T, D> pipeline;
+
+  TilePipeline(Tile<T, D>&& tile) : pipeline(std::move(tile)) {}
+
+  ReadOnlyTileSender<T, D> read() {
+    return pipeline.read();
+  }
+
+  ReadWriteTileSender<T, D> readwrite() {
+    return pipeline.readwrite() | pika::execution::experimental::then([](auto tile_wrapper) {
+             return dlaf::matrix::internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
+           });
+  }
+};
 
 template <typename Type>
 class TileTest : public ::testing::Test {};
@@ -273,11 +292,6 @@ TYPED_TEST(TileTest, PointerMix) {
   CHECK_TILE_PTR(ptr, *const_tile);
 }
 
-// There is no direct equivalent to this. setPromise is now gone. The closest
-// would be using the various private/protected constructors to create a Tile
-// holding an async_rw_mutex access wrapper.
-// TYPED_TEST(TileTest, PromiseToFuture) ...
-
 // Buffer
 TYPED_TEST(TileTest, CreateBuffer) {
   SizeType m = 37;
@@ -298,432 +312,347 @@ TYPED_TEST(TileTest, CreateBuffer) {
   EXPECT_EQ(tile.ld(), data_stride(tile_data));
 }
 
-// TODO: Test subTileSender and friends but without digging into the internals
-// of tile.
-// template <class T, Device D>
-// auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
-//   memory::MemoryView<T, D> memory_view(ld * size.cols());
-//   auto memory_view2 = memory_view;
-//   typename Tile<T, D>::TileDataType tile(size, std::move(memory_view), ld);
-//   // construct a second tile referencing the same memory for testing pointers
-//   Tile<T, D> tile2(size, std::move(memory_view2), ld);
-//   auto tile_ptr = [tile2 = std::move(tile2)](const TileElementIndex& index) { return tile2.ptr(index); };
-//   return std::make_tuple(std::move(tile), std::move(tile_ptr));
-// }
+template <class T, Device D>
+auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
+  memory::MemoryView<T, D> memory_view(ld * size.cols());
+  typename Tile<T, D>::TileDataType tile(size, memory_view, ld);
+  Tile<T, D> tile2(size, std::move(memory_view), ld);
+  auto tile_ptr = [tile2 = std::move(tile2)](const TileElementIndex& index) { return tile2.ptr(index); };
+  return std::make_tuple(std::move(tile), std::move(tile_ptr));
+}
 
-// template <class T, Device D>
-// auto createTileChain() {
-//   using TileType = Tile<T, Device::CPU>;
-//   using NonConstTileType = typename TileType::TileType;
-//   using TileDataType = typename TileType::TileDataType;
+template <class T, Device D>
+TilePipeline<T, D> createTilePipeline(Tile<T, D>&& tile) {
+  return TilePipeline<T, D>(std::move(tile));
+}
 
-//   // set up tile chain
-//   pika::lcos::local::promise<TileDataType> tile_p;
-//   auto tmp_tile_f = tile_p.get_future();
-//   pika::lcos::local::promise<TileDataType> next_tile_p;
-//   auto next_tile_f = next_tile_p.get_future();
+template <class F, class T>
+void checkSubtile(F&& ptr, T&& tile, SubTileSpec spec) {
+  auto subtile_ptr = [&ptr, origin = spec.origin](const TileElementIndex& index) {
+    return ptr(index + common::sizeFromOrigin(origin));
+  };
+  EXPECT_EQ(spec.size, tile.size());
+  CHECK_TILE_PTR(subtile_ptr, tile);
+}
 
-//   pika::future<TileType> tile_f =
-//       std::move(tmp_tile_f) | then([p = std::move(next_tile_p)](TileDataType&& tile) mutable {
-//         return TileType(std::move(NonConstTileType(std::move(tile)).setPromise(std::move(p))));
-//       }) |
-//       make_future();
+template <class F, class T>
+void checkFullTile(F&& ptr, T&& tile, TileElementSize size) {
+  EXPECT_EQ(size, tile.size());
+  CHECK_TILE_PTR(ptr, tile);
+}
 
-//   return std::make_tuple(std::move(tile_p), std::move(tile_f), std::move(next_tile_f));
-// }
+template <class SenderWrapper>
+void checkNonReady(const std::vector<SenderWrapper>& subtiles) {
+  for (const auto& subtile : subtiles) {
+    EXPECT_FALSE(subtile.is_ready());
+  }
+}
 
-// template <class F, class T>
-// void checkSubtile(F&& ptr, T&& tile, SubTileSpec spec) {
-//   auto subtile_ptr = [&ptr, origin = spec.origin](const TileElementIndex& index) {
-//     return ptr(index + common::sizeFromOrigin(origin));
-//   };
-//   EXPECT_EQ(spec.size, tile.size());
-//   CHECK_TILE_PTR(subtile_ptr, tile);
-// }
+// TileFutureOrConstTileSharedFuture should be
+// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
+// TileFuture should be pika::future<Tile<T, D>>
+template <class F, class TileFutureOrConstTileSharedFuture, class TileFuture>
+void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTileSharedFuture>& subtiles,
+                                  const std::vector<SubTileSpec>& specs, std::size_t last_dep,
+                                  TileFuture& next_tile) {
+  ASSERT_EQ(subtiles.size(), specs.size());
+  ASSERT_GT(subtiles.size(), last_dep);
 
-// template <class F, class T>
-// void checkFullTile(F&& ptr, T&& tile, TileElementSize size) {
-//   EXPECT_EQ(size, tile.size());
-//   CHECK_TILE_PTR(ptr, tile);
-// }
+  for (const auto& subtile : subtiles) {
+    EXPECT_TRUE(subtile.is_ready());
+  }
+  EXPECT_FALSE(next_tile.is_ready());
 
-// // TileFutureOrConstTileSharedFuture should be
-// // either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
-// template <class TileFutureOrConstTileSharedFuture>
-// void checkValidNonReady(const std::vector<TileFutureOrConstTileSharedFuture>& subtiles) {
-//   for (const auto& subtile : subtiles) {
-//     EXPECT_TRUE(subtile.valid());
-//     EXPECT_FALSE(subtile.is_ready());
-//   }
-// }
+  // Check pointer of subtiles (all apart from last_dep) and clear them.
+  // As one subtile (last_dep) is still alive next_tile is still locked.
+  for (std::size_t i = 0; i < subtiles.size(); ++i) {
+    if (i != last_dep) {
+      checkSubtile(tile_ptr, unwrap(std::move(subtiles[i]).get()), specs[i]);
+    }
+  }
+  EXPECT_TRUE(subtiles[last_dep].is_ready());
+  EXPECT_FALSE(next_tile.is_ready());
 
-// // TileFutureOrConstTileSharedFuture should be
-// // either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
-// // TileFuture should be pika::future<Tile<T, D>>
-// template <class F, class TileFutureOrConstTileSharedFuture, class TileFuture>
-// void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTileSharedFuture>& subtiles,
-//                                   const std::vector<SubTileSpec>& specs, std::size_t last_dep,
-//                                   TileFuture& next_tile_f) {
-//   ASSERT_EQ(subtiles.size(), specs.size());
-//   ASSERT_GT(subtiles.size(), last_dep);
-
-//   for (const auto& subtile : subtiles) {
-//     EXPECT_TRUE(subtile.is_ready());
-//   }
-//   EXPECT_FALSE(next_tile_f.is_ready());
-
-//   // Check pointer of subtiles (all apart from last_dep) and clear them.
-//   // As one subtile (last_dep) is still alive next_tile is still locked.
-//   for (std::size_t i = 0; i < subtiles.size(); ++i) {
-//     if (i != last_dep) {
-//       checkSubtile(tile_ptr, std::move(subtiles[i]).get(), specs[i]);
-//       subtiles[i] = {};
-//     }
-//   }
-//   EXPECT_TRUE(subtiles[last_dep].valid());
-//   EXPECT_TRUE(subtiles[last_dep].is_ready());
-//   EXPECT_FALSE(next_tile_f.is_ready());
-
-//   // Check pointer of last_dep subtile and clear it.
-//   // next_tile_f should be ready.
-//   {
-//     std::size_t i = last_dep;
-//     checkSubtile(tile_ptr, std::move(subtiles[i]).get(), specs[i]);
-//     subtiles[i] = {};
-//   }
-//   EXPECT_TRUE(next_tile_f.is_ready());
-// }
+  // Check pointer of last_dep subtile and clear it.
+  // next_tile should be ready.
+  {
+    std::size_t i = last_dep;
+    checkSubtile(tile_ptr, unwrap(std::move(subtiles[i]).get()), specs[i]);
+  }
+  EXPECT_TRUE(next_tile.is_ready());
+}
 
 template <class T, Device D>
 void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec,
                       std::size_t last_dep) {
   SCOPED_TRACE(name);
-  ASSERT_LE(last_dep, 1);
 
-  // auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-  // auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
-  // auto tile_sf = tile_f.share();
-  // ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
-  // ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  auto second_tile_orig = pipeline.read();
+  EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
+  EagerReadOnlyTileSender<T, D> subtile(subTileSender(second_tile_orig, spec));
+  std::vector<EagerReadOnlyTileSender<T, D>> subtiles = {std::move(subtile), std::move(second_tile)};
+  std::vector<SubTileSpec> full_specs = {spec, {{0, 0}, size}};
+  second_tile_orig = {};
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-  // // create subtiles
-  // auto subtile = subTileSender(tile_sf, spec);
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-  // // append the full tile to the end of the subtile vector and add its specs to full_specs.
-  // std::vector<pika::shared_future<Tile<const T, D>>> subtiles = {std::move(subtile), std::move(tile_sf)};
-  // std::vector<SubTileSpec> full_specs = {spec, {{0, 0}, size}};
+  ASSERT_FALSE(third_tile.is_ready());
+  checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, third_tile);
 
-  // checkValidNonReady(subtiles);
-  // ASSERT_FALSE(next_tile_f.is_ready());
-
-  // // Make subtiles ready
-  // tile_p.set_value(std::move(tile));
-
-  // checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, last_dep, next_tile_f);
-
-  // // Check next tile in the dependency chain
-  // checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
 }
 
-// template <class T, Device D>
-// void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
-//                        std::vector<SubTileSpec> specs, std::size_t last_dep) {
-//   SCOPED_TRACE(name);
-//   ASSERT_LE(last_dep, specs.size());
+template <class T, Device D>
+void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
+                       std::vector<SubTileSpec> specs, std::size_t last_dep) {
+  SCOPED_TRACE(name);
+  ASSERT_LE(last_dep, specs.size());
 
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
-//   auto tile_sf = tile_f.share();
-//   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  auto second_tile_orig = pipeline.read();
+  EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
+  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
+  subtiles.reserve(specs.size());
+  for (auto& subtile : subtiles_orig) {
+    subtiles.emplace_back(std::move(subtile));
+  }
+  subtiles.push_back(std::move(second_tile));
+  specs.push_back({{0, 0}, size});
+  subtiles_orig.clear();
+  second_tile_orig = {};
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-//   // create subtiles
-//   auto subtiles = subTileSender(tile_sf, specs);
-//   ASSERT_EQ(specs.size(), subtiles.size());
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-//   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-//   subtiles.emplace_back(std::move(tile_sf));
-//   specs.push_back({{0, 0}, size});
+  ASSERT_FALSE(third_tile.is_ready());
+  if (subtiles.size() > 0) {
+    checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, third_tile);
+  }
 
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(next_tile_f.is_ready());
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
 
-//   // Make subtiles ready and check them
-//   tile_p.set_value(std::move(tile));
+template <class T, Device D>
+void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
+                           std::vector<SubTileSpec> specs, const SubTileSpec& subspec,
+                           std::size_t last_dep) {
+  SCOPED_TRACE(name);
+  ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
+  ASSERT_LE(last_dep, specs.size() + 1);
+  // specs.size() -> subsubtile
+  // spec.size() + 1 -> full tile
 
-//   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-//   checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
-// }
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-// template <class T, Device D>
-// void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
-//                            std::vector<SubTileSpec> specs, const SubTileSpec& subspec,
-//                            std::size_t last_dep) {
-//   SCOPED_TRACE(name);
-//   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
-//   ASSERT_LE(last_dep, specs.size() + 1);
-//   // specs.size() -> subsubtile
-//   // specs.size() + 1 -> full tile
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  auto second_tile_orig = pipeline.read();
+  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  subtiles_orig.emplace_back(subTileSender(subtiles_orig[0], subspec));
+  subtiles_orig.emplace_back(std::move(second_tile_orig));
+  specs.push_back({specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size});
+  specs.push_back({{0, 0}, size});
 
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<const T, D>();
-//   auto tile_sf = tile_f.share();
-//   ASSERT_TRUE(tile_sf.valid() && !tile_sf.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+  std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
+  subtiles.reserve(subtiles_orig.size());
+  for (auto& subtile : subtiles_orig) {
+    subtiles.emplace_back(std::move(subtile));
+  }
+  subtiles_orig.clear();
 
-//   // create subtiles
-//   auto subtiles = subTileSender(tile_sf, specs);
-//   ASSERT_EQ(specs.size(), subtiles.size());
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-//   // create sub tile of subtiles[0]
-//   auto subsubtile = subTileSender(subtiles[0], subspec);
+  ASSERT_FALSE(third_tile.is_ready());
+  if (subtiles.size() > 0) {
+    checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, third_tile);
+  }
 
-//   // append the subsubtile and the full tile to the end of the subtile vector and add its specs to full_specs.
-//   subtiles.emplace_back(std::move(subsubtile));
-//   subtiles.emplace_back(std::move(tile_sf));
-//   specs.push_back({specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size});
-//   specs.push_back({{0, 0}, size});
-
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(next_tile_f.is_ready());
-
-//   // Make subtiles ready and check them
-//   tile_p.set_value(std::move(tile));
-
-//   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, next_tile_f);
-//   checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
-// }
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
 
 TYPED_TEST(TileTest, SubtileConst) {
   using Type = TypeParam;
 
   testSubtileConst<Type, Device::CPU>("Test 1", {5, 7}, 8, {{3, 4}, {2, 3}}, 0);
-//   testSubtileConst<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}}, 1);
-//   testSubtileConst<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}}, 0);
+  testSubtileConst<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}}, 1);
+  testSubtileConst<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}}, 0);
 
-//   testSubtilesConst<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
-//   testSubtilesConst<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 1);
-//   testSubtilesConst<Type, Device::CPU>("Test Vector 2", {5, 7}, 8, {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}},
-//                                        2);
-//   testSubtilesConst<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-//                                        {{{5, 7}, {0, 0}},
-//                                         {{2, 2}, {2, 2}},
-//                                         {{3, 0}, {2, 7}},
-//                                         {{0, 0}, {5, 7}}},
-//                                        2);
-//   testSubtilesConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
-//                                        {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+  testSubtilesConst<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 1);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 2", {5, 7}, 8, {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}},
+                                       2);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
+                                       {{{5, 7}, {0, 0}},
+                                        {{2, 2}, {2, 2}},
+                                        {{3, 0}, {2, 7}},
+                                        {{0, 0}, {5, 7}}},
+                                       2);
+  testSubtilesConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
+                                       {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
-//   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6,
-//                                            {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 0);
-//   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
-//                                            {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 1);
-//   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
-//                                            {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 2);
-//   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 3", {6, 7}, 6,
-//                                            {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 3);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 0);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 1);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 2", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 2);
+  testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 3", {6, 7}, 6,
+                                           {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}}, {{0, 2}, {2, 1}}, 3);
 }
 
-// template <class T, Device D>
-// void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
-//   SCOPED_TRACE(name);
+template <class T, Device D>
+void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
+  SCOPED_TRACE(name);
 
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
-//   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  EagerReadWriteTileSender<T, D> subtile(subTileSender(pipeline.readwrite(), spec));
+  std::vector<EagerReadWriteTileSender<T, D>> subtiles;
+  subtiles.push_back(std::move(subtile));
+  std::vector<SubTileSpec> full_specs = {spec};
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-//   // create subtiles
-//   auto subtile = subTileSender(tile_f, spec);
-//   ASSERT_TRUE(tile_f.valid());
-//   ASSERT_FALSE(tile_f.is_ready());
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-//   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-//   std::vector<pika::future<Tile<T, D>>> subtiles;
-//   subtiles.emplace_back(std::move(subtile));
-//   std::vector<SubTileSpec> full_specs = {spec};
+  ASSERT_FALSE(third_tile.is_ready());
+  checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, 0, third_tile);
 
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(tile_f.is_ready());
-//   ASSERT_FALSE(next_tile_f.is_ready());
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
 
-//   // Make subtiles ready
-//   tile_p.set_value(std::move(tile));
+// TODO: This doesn't test the read-write disjoint splitter, but the read-only version. Change it.
+template <class T, Device D>
+void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
+                          const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
+  SCOPED_TRACE(name);
+  if (specs.size() > 0) {
+    ASSERT_LT(last_dep, specs.size());
+  }
 
-//   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, 0, tile_f);
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-//   ASSERT_TRUE(tile_f.is_ready());
-//   EXPECT_FALSE(next_tile_f.is_ready());
-//   // check tile pointer and unlock next_tile.
-//   // next_tile_f should be ready.
-//   checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  auto second_tile_orig = pipeline.read();
+  EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
+  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
+  subtiles.reserve(specs.size());
+  for (auto& subtile : subtiles_orig) {
+    subtiles.emplace_back(std::move(subtile));
+  }
+  subtiles_orig.clear();
+  second_tile_orig = {};
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-//   ASSERT_TRUE(next_tile_f.is_ready());
-//   checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
-// }
+  ASSERT_TRUE(first_tile.is_ready());
+  ASSERT_FALSE(second_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-// template <class T, Device D>
-// void testSubtileMove(std::string name, TileElementSize size, SizeType ld, const SubTileSpec& spec) {
-//   SCOPED_TRACE(name);
+  ASSERT_TRUE(second_tile.is_ready());
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(second_tile).get().get(), size);
+  if (subtiles.size() > 0) {
+    checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, third_tile);
+  }
 
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
 
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
-//   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+template <class T, Device D>
+void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
+                      std::vector<SubTileSpec> specs, const SubTileSpec& subspec) {
+  GTEST_SKIP() << "Not yet implemented";
 
-//   // create subtiles
-//   auto subtile = subTileSender(std::move(tile_f), spec);
+  SCOPED_TRACE(name);
+  ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
+  // last_dep = 0 -> subsubtile
 
-//   // append the full tile to the end of the subtile vector and add its specs to full_specs.
-//   std::vector<pika::future<Tile<T, D>>> subtiles;
-//   subtiles.emplace_back(std::move(subtile));
-//   std::vector<SubTileSpec> full_specs = {spec};
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(next_tile_f.is_ready());
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  // TODO: This is not yet implemented.
+  auto subtiles_orig = subTileSenders(pipeline.readwrite(), specs);
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-//   // Make subtiles ready
-//   tile_p.set_value(std::move(tile));
+  // create subsubtile
+  subtiles_orig[0] = subTileSender(std::move(subtiles_orig[0]), subspec);
+  specs[0] = {specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size};
+  std::vector<EagerReadWriteTileSender<T, D>> subtiles;
+  subtiles.reserve(specs.size());
+  for (auto& subtile : subtiles_orig) {
+    subtiles.emplace_back(std::move(subtile));
+  }
+  subtiles_orig.clear();
 
-//   checkReadyAndDependencyChain(tile_ptr, subtiles, full_specs, 0, next_tile_f);
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-//   ASSERT_TRUE(next_tile_f.is_ready());
-//   checkFullTile(tile_ptr, Tile<T, D>{next_tile_f.get()}, size);
-// }
+  ASSERT_FALSE(third_tile.is_ready());
+  if (subtiles.size() > 0) {
+    checkReadyAndDependencyChain(tile_ptr, subtiles, specs, 0, third_tile);
+  }
 
-// template <class T, Device D>
-// void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
-//                           const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
-//   SCOPED_TRACE(name);
-//   if (specs.size() > 0) {
-//     ASSERT_LT(last_dep, specs.size());
-//   }
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
 
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+TYPED_TEST(TileTest, Subtile) {
+  using Type = TypeParam;
 
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
-//   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
+  testSubtile<Type, Device::CPU>("Test 1", {5, 7}, 8, {{3, 4}, {2, 3}});
+  testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
+  testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
 
-//   // create subtiles
-//   auto subtiles = splitTileDisjoint(tile_f, specs);
-//   ASSERT_TRUE(tile_f.valid());
-//   ASSERT_FALSE(tile_f.is_ready());
-//   ASSERT_EQ(specs.size(), subtiles.size());
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 2", {5, 7}, 8,
+                                          {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 1);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
+                                          {{{5, 7}, {0, 0}},
+                                           {{1, 2}, {2, 2}},
+                                           {{3, 0}, {2, 7}},
+                                           {{0, 0}, {1, 4}},
+                                           {{0, 4}, {3, 3}}},
+                                          2);
+  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
+                                          {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(tile_f.is_ready());
-//   ASSERT_FALSE(next_tile_f.is_ready());
-
-//   // Make subtiles ready and check them
-//   tile_p.set_value(std::move(tile));
-
-//   if (subtiles.size() > 0) {
-//     checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, tile_f);
-//   }
-//   ASSERT_TRUE(tile_f.is_ready());
-//   EXPECT_FALSE(next_tile_f.is_ready());
-//   // check tile pointer and unlock next_tile.
-//   // next_tile_f should be ready.
-//   checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
-
-//   ASSERT_TRUE(next_tile_f.is_ready());
-//   checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
-// }
-
-// template <class T, Device D>
-// void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
-//                       std::vector<SubTileSpec> specs, const SubTileSpec& subspec) {
-//   SCOPED_TRACE(name);
-//   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
-//   // last_dep = 0 -> subsubtile
-
-//   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
-
-//   auto [tile_p, tile_f, next_tile_f] = createTileChain<T, D>();
-//   ASSERT_TRUE(tile_f.valid() && !tile_f.is_ready());
-//   ASSERT_TRUE(next_tile_f.valid() && !next_tile_f.is_ready());
-
-//   // create subtiles
-//   auto subtiles = splitTileDisjoint(tile_f, specs);
-//   ASSERT_TRUE(tile_f.valid());
-//   ASSERT_FALSE(tile_f.is_ready());
-//   ASSERT_EQ(specs.size(), subtiles.size());
-
-//   // extract subtile from which we will create the subsubtile
-//   auto subtile_f = std::move(subtiles[0]);
-//   // create subsubtile
-//   auto subsubtile = splitTile(subtile_f, subspec);
-//   ASSERT_TRUE(subtile_f.valid());
-
-//   // replace the subtile with its subsubtile and update specs
-//   auto spec0 = specs[0];
-//   subtiles[0] = std::move(subsubtile);
-//   specs[0] = {spec0.origin + common::sizeFromOrigin(subspec.origin), subspec.size};
-
-//   checkValidNonReady(subtiles);
-//   ASSERT_FALSE(subtile_f.is_ready());
-//   ASSERT_FALSE(tile_f.is_ready());
-//   ASSERT_FALSE(next_tile_f.is_ready());
-
-//   // The dependencies are currently in the following way
-
-//   // ---> subtiles[0] (the subsubtile) -> subtile_f ---> tile_f -> next_tile_f
-//   //  |-> subtiles[1] -------------------------------|
-//   //  |-> subtiles[2] -------------------------------|
-//   // ...
-
-//   // Make subtiles ready and check them
-//   tile_p.set_value(std::move(tile));
-
-//   checkReadyAndDependencyChain(tile_ptr, subtiles, specs, 0, subtile_f);
-//   ASSERT_TRUE(subtile_f.is_ready());
-//   EXPECT_FALSE(tile_f.is_ready());
-//   EXPECT_FALSE(next_tile_f.is_ready());
-//   // check subtile pointer and unlock tile.
-//   // tile_f should be ready.
-//   checkSubtile(tile_ptr, sync_wait(std::move(subtile_f)), spec0);
-
-//   ASSERT_TRUE(tile_f.is_ready());
-//   EXPECT_FALSE(next_tile_f.is_ready());
-//   // check tile pointer and unlock next_tile.
-//   // next_tile_f should be ready.
-//   checkFullTile(tile_ptr, sync_wait(std::move(tile_f)), size);
-
-//   ASSERT_TRUE(next_tile_f.is_ready());
-//   checkFullTile(tile_ptr, Tile<T, D>{sync_wait(std::move(next_tile_f))}, size);
-// }
-
-// TYPED_TEST(TileTest, Subtile) {
-//   using Type = TypeParam;
-
-//   testSubtile<Type, Device::CPU>("Test 1", {5, 7}, 8, {{3, 4}, {2, 3}});
-//   testSubtile<Type, Device::CPU>("Test 2", {5, 7}, 8, {{4, 6}, {1, 1}});
-//   testSubtile<Type, Device::CPU>("Test 3", {5, 7}, 8, {{0, 0}, {5, 7}});
-
-//   testSubtileMove<Type, Device::CPU>("Test Move 1", {5, 7}, 8, {{3, 4}, {2, 3}});
-//   testSubtileMove<Type, Device::CPU>("Test Move 2", {5, 7}, 8, {{4, 6}, {1, 1}});
-//   testSubtileMove<Type, Device::CPU>("Test Move 3", {5, 7}, 8, {{0, 0}, {5, 7}});
-
-//   testSubtilesDisjoint<Type, Device::CPU>("Test Vector Empty", {5, 7}, 8, {}, 0);
-//   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);
-//   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 2", {5, 7}, 8,
-//                                           {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 1);
-//   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-//                                           {{{5, 7}, {0, 0}},
-//                                            {{1, 2}, {2, 2}},
-//                                            {{3, 0}, {2, 7}},
-//                                            {{0, 0}, {1, 4}},
-//                                            {{0, 4}, {3, 3}}},
-//                                           2);
-//   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
-//                                           {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
-
-//   testSubOfSubtile<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6, {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}},
-//                                       {{0, 2}, {2, 1}});
-// }
+  testSubOfSubtile<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6, {{{2, 3}, {3, 3}}, {{4, 6}, {1, 1}}},
+                                      {{0, 2}, {2, 1}});
+}

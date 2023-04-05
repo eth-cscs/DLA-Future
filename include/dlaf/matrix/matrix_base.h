@@ -78,11 +78,6 @@ protected:
   MatrixBase(MatrixBase&& rhs) = default;
   MatrixBase& operator=(MatrixBase&& rhs) = default;
 
-  // TODO: Remove?
-  static std::size_t futureVectorSize(const LocalTileSize& local_nr_tiles) noexcept {
-    return static_cast<std::size_t>(local_nr_tiles.linear_size());
-  }
-
   /// Returns the position in the vector of the index Tile.
   ///
   /// @pre index.isIn(localNrTiles()).

@@ -17,7 +17,7 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 4b6715361340a2dc1fe7a0ab92fd84a958983433
+    SPACK_SHA: 0ce548a850eda4b742260dc63afcb7104a44b08c
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY

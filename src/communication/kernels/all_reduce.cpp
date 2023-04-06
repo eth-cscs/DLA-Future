@@ -108,26 +108,13 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
-        tile_in,
-    dlaf::matrix::ReadWriteTileSender<T, D> tile_out) {
-  return internal::scheduleAllReduce(std::move(pcomm), reduce_op, std::move(tile_in),
-                                     std::move(tile_out));
-}
-
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, int, Device::CPU);
-
-template <class T, Device D>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out) {
   return internal::scheduleAllReduce(std::move(pcomm), reduce_op, std::move(tile_in),
                                      std::move(tile_out));
 }
 
-DLAF_SCHEDULE_ALL_REDUCE_WRAPPER_ETI(, int, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(, int, Device::CPU);
 
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(

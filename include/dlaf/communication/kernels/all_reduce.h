@@ -32,35 +32,10 @@ namespace dlaf::comm {
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op,
-    // TODO: This overload shouldn't be needed anymore. Check if I can remove
-    // it. The second overload should be enough (i.e.
-    // unique_any_sender<shared_future<Tile>> replaced by ReadOnlyTileSender).
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
-        tile_in,
-    dlaf::matrix::ReadWriteTileSender<T, D> tile_out);
-
-#define DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(kword, Type, Device)               \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>               \
-  scheduleAllReduce(pika::execution::experimental::unique_any_sender<          \
-                        dlaf::common::PromiseGuard<Communicator>>              \
-                        pcomm,                                                 \
-                    MPI_Op reduce_op,                                          \
-                    pika::execution::experimental::unique_any_sender<          \
-                        pika::shared_future<matrix::Tile<const Type, Device>>> \
-                        tile_in,                                               \
-                    dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
-
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, int, Device::CPU);
-
-/// \overload scheduleAllReduce
-template <class T, Device D>
-[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out);
 
-#define DLAF_SCHEDULE_ALL_REDUCE_WRAPPER_ETI(kword, Type, Device)                             \
+#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                     \
   kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                              \
   scheduleAllReduce(pika::execution::experimental::unique_any_sender<                         \
                         dlaf::common::PromiseGuard<Communicator>>                             \
@@ -68,7 +43,7 @@ template <class T, Device D>
                     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in, \
                     dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
 
-DLAF_SCHEDULE_ALL_REDUCE_WRAPPER_ETI(extern, int, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, int, Device::CPU);
 
 /// Schedule an in-place all reduce.
 ///

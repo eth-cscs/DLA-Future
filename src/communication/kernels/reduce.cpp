@@ -134,42 +134,21 @@ template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>> tile) {
-  return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
-}
-
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_SFTILE_ETI(, std::complex<double>, Device::GPU);
-#endif
-
-template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    comm::IndexT_MPI rank_root, MPI_Op reduce_op,
     pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
         tile) {
   return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }
 
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, std::complex<double>, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, int, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::CPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::CPU);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_WRAPPER_ETI(, std::complex<double>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::GPU);
+DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::GPU);
 #endif
 }

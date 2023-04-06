@@ -63,74 +63,31 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>> tile);
+    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile);
 
-#define DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(kword, Type, Device, Comm)            \
+#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                   \
   kword template pika::execution::experimental::unique_any_sender<>               \
   scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
-                    pika::execution::experimental::unique_any_sender<             \
-                        pika::shared_future<matrix::Tile<const Type, Device>>>    \
-                        tile)
-
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<float>, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<float>, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-#endif
-
-template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
-    pika::execution::experimental::unique_any_sender<Comm> pcomm,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>>
-        tile);
-
-#define DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(kword, Type, Device, Comm)           \
-  kword template pika::execution::experimental::unique_any_sender<>               \
-  scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
-                    pika::execution::experimental::any_sender<             \
+                    pika::execution::experimental::any_sender<                    \
                         matrix::tile_async_ro_mutex_wrapper_type<Type, Device>>   \
                         tile)
 
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, SizeType, Device::CPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, float, Device::CPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, double, Device::CPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, std::complex<float>, Device::CPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, std::complex<double>, Device::CPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<float>, Device::CPU,
+                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<double>, Device::CPU,
+                             dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, SizeType, Device::GPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, float, Device::GPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, double, Device::GPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, std::complex<float>, Device::GPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_WRAPPER_ETI(extern, std::complex<double>, Device::GPU,
-                                     dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<float>, Device::GPU,
+                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<double>, Device::GPU,
+                             dlaf::common::PromiseGuard<Communicator>);
 #endif
 
 /// Schedule a broadcast receive.

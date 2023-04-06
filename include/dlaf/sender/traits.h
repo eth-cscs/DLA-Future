@@ -61,7 +61,7 @@ struct SenderSingleValueTypeImpl<
 };
 
 // The type sent by Sender, if Sender sends exactly one type.
-#if defined(PIKA_HAVE_P2300_REFERENCE_IMPLEMENTATION)
+#if defined(PIKA_HAVE_STDEXEC)
 template <typename Sender>
 using SenderSingleValueType =
     typename SenderSingleValueTypeImpl<pika::execution::experimental::value_types_of_t<

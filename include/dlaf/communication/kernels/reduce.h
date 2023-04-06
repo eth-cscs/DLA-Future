@@ -30,18 +30,16 @@ namespace dlaf::comm {
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleReduceRecvInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleReduceRecvInPlace(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
+    MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)                                      \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>            \
-  scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender<                            \
-                                dlaf::common::PromiseGuard<Communicator>>                                \
-                                pcomm,                                                                   \
-                            MPI_Op reduce_op,                                                            \
-                            pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-                                tile)
+#define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)           \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>              \
+  scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender< \
+                                dlaf::common::PromiseGuard<Communicator>>     \
+                                pcomm,                                        \
+                            MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::CPU);
@@ -64,18 +62,15 @@ DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::GPU
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    comm::IndexT_MPI rank_root, MPI_Op reduce_op,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile);
+    comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_REDUCE_SEND_ETI(kword, Type, Device)                       \
-  kword template pika::execution::experimental::unique_any_sender<>              \
-  scheduleReduceSend(pika::execution::experimental::unique_any_sender<           \
-                         dlaf::common::PromiseGuard<Communicator>>               \
-                         pcomm,                                                  \
-                     comm::IndexT_MPI rank_root, MPI_Op reduce_op,               \
-                     pika::execution::experimental::any_sender<                  \
-                         matrix::tile_async_ro_mutex_wrapper_type<Type, Device>> \
-                         tile)
+#define DLAF_SCHEDULE_REDUCE_SEND_ETI(kword, Type, Device)             \
+  kword template pika::execution::experimental::unique_any_sender<>    \
+  scheduleReduceSend(pika::execution::experimental::unique_any_sender< \
+                         dlaf::common::PromiseGuard<Communicator>>     \
+                         pcomm,                                        \
+                     comm::IndexT_MPI rank_root, MPI_Op reduce_op,     \
+                     dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, float, Device::CPU);

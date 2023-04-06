@@ -81,7 +81,7 @@ DLAF_MAKE_CALLABLE_OBJECT(recv);
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile) {
+    dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   return internal::scheduleSend(std::move(pcomm), dest, tag, std::move(tile));
 }
 
@@ -108,9 +108,9 @@ DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard
 #endif
 
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecv(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile) {
+    dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recv_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;

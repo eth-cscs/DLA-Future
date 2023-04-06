@@ -377,7 +377,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, device>> a_diag;
+    matrix::ReadOnlyTileSender<T, device> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -653,7 +653,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, device>> a_diag;
+    matrix::ReadOnlyTileSender<T, device> a_diag;
     if (kk_rank.row() == this_rank.row()) {
       // Note:
       // [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal

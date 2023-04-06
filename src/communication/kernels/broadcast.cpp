@@ -57,7 +57,7 @@ template <class CommSender, class TileSender>
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile) {
+    dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   return internal::scheduleSendBcast(std::move(pcomm), std::move(tile));
 }
 
@@ -80,9 +80,9 @@ DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::GPU,
 #endif
 
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecvBcast(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile) {
+    dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recvBcast_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;

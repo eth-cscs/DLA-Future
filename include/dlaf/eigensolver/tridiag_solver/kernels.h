@@ -16,6 +16,7 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_chunk.h"
+#include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 

@@ -25,15 +25,12 @@ namespace dlaf::comm {
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile);
+    dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
 #define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, Comm)                                     \
   kword template pika::execution::experimental::unique_any_sender<>                           \
   scheduleSend(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, \
-               IndexT_MPI tag,                                                                \
-               pika::execution::experimental::any_sender<                                     \
-                   matrix::tile_async_ro_mutex_wrapper_type<Type, Device>>                    \
-                   tile)
+               IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, Communicator);
@@ -58,15 +55,14 @@ DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::GPU, common::Promis
 #endif
 
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecv(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
+    dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
 #define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, Comm)                                       \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>   \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                                \
   scheduleRecv(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, \
-               IndexT_MPI tag,                                                                  \
-               pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
+               IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, Communicator);

@@ -357,9 +357,8 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
 }
 
 template <Backend B, Device D, class T>
-void trmmComputeW(
-    matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
-    pika::execution::experimental::any_sender<matrix::tile_async_ro_mutex_wrapper_type<T, D>> tile_t) {
+void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
+                  matrix::ReadOnlyTileSender<T, D> tile_t) {
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;
@@ -593,8 +592,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(
-        matrix::subTileSender(mat_a.readwrite_sender_tile(i), spec));
+    panel_tiles.emplace_back(matrix::subTileSender(mat_a.readwrite_sender_tile(i), spec));
   }
 
   return ex::when_all(ex::when_all_vector(std::move(panel_tiles)),
@@ -718,7 +716,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       ex::start_detached(
           comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite_sender_tile(index_x)));
     else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read_sender2(index_x)));
+      ex::start_detached(
+          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read_sender2(index_x)));
   }
 }
 
@@ -853,7 +852,8 @@ protected:
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite_sender_tile(i);
       ex::start_detached(
-          ex::when_all(subTileSender(mat_a.read_sender2(i), spec), subTileSender(std::move(tmp_tile), spec)) |
+          ex::when_all(subTileSender(mat_a.read_sender2(i), spec),
+                       subTileSender(std::move(tmp_tile), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
     }
   }
@@ -1193,9 +1193,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(
-          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
-                                         w2.readwrite_sender_tile(LocalTileIndex(0, 0))));
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+                                                        w2.readwrite_sender_tile(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1278,13 +1277,13 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           xt.setTileSender(at, x.read_sender2(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()), xt.read_sender2(at)));
+            ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()),
+                                                       xt.read_sender2(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(
-                comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()), owner,
-                                        xt.readwrite_sender_tile(at)));
+            ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()),
+                                                       owner, xt.readwrite_sender_tile(at)));
         }
       }
 

@@ -594,8 +594,6 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
 template <class T, Device D>
 void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
                       std::vector<SubTileSpec> specs, const SubTileSpec& subspec) {
-  GTEST_SKIP() << "Not yet implemented";
-
   SCOPED_TRACE(name);
   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
   // last_dep = 0 -> subsubtile
@@ -604,7 +602,6 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
-  // TODO: This is not yet implemented.
   auto subtiles_orig = subTileSenders(pipeline.readwrite(), specs);
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 

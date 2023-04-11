@@ -1132,10 +1132,8 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
     GlobalElementIndex origin{i_begin * dist.blockSize().rows(), i_begin * dist.blockSize().cols()};
     for (SizeType i = 0; i < n; ++i) {
       SizeType j = i2_ptr[i];
-      std::cout << i << ", " << j << std::endl;
       if (j >= k) {
         GlobalElementIndex i_g{i + origin.row(), j + origin.col()};
-        std::cout << i_g << std::endl;
         GlobalTileIndex i_tile = dist.globalTileIndex(i_g);
         if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
           LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);

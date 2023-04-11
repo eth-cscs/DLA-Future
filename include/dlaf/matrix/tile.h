@@ -393,8 +393,7 @@ private:
     dep_tracker_ = std::move(tile_wrapper);
   }
 
-  // TODO: Can use Tile without template parameters?
-  Tile(Tile<T, D> tile, const SubTileSpec& spec) : ConstTileType(tile, spec) {
+  Tile(Tile tile, const SubTileSpec& spec) : ConstTileType(tile, spec) {
     dep_tracker_ = std::move(tile.dep_tracker_);
   }
 

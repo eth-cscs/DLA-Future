@@ -398,8 +398,13 @@ private:
   }
 
   void prepareDisjointTile() {
-    // We only expect read-write tiles for disjoint access.
-    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
+    // We only expect read-write tiles for disjoint access. That means that the
+    // dependency tracker holds anything but a read-only wrapper.
+    // TODO: Condition is not inside DLAF_ASSERT because it contains a comma. Do
+    // we want to support a more convenient syntax for this or is this ok?
+    [[maybe_unused]] const bool holds_read_only_wrapper =
+        std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_);
+    DLAF_ASSERT(!holds_read_only_wrapper, "");
 
     // If a tile is untracked (std::monostate), or already a disjoint subtile
     // (std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>) we don't do
@@ -414,19 +419,21 @@ private:
   Tile createDisjointSubTile(const SubTileSpec& spec) const& {
     // We only expect read-write tiles for disjoint access. They should be
     // either untracked or disjoint tracked read-write access.
-    // TODO
-    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
-    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_));
+    // TODO: Condition is not inside DLAF_ASSERT because it contains a comma. Do
+    // we want to support a more convenient syntax for this or is this ok?
+    [[maybe_unused]] const bool holds_read_only_wrapper =
+        std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_);
+    [[maybe_unused]] const bool holds_read_write_wrapper =
+        std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_);
+    DLAF_ASSERT(!holds_read_only_wrapper, "");
+    DLAF_ASSERT(!holds_read_write_wrapper, "");
 
     Tile subtile(spec.size, ConstTileType::createMemoryViewForSubtile(*this, spec), this->ld());
     // Not all possible states of the dependency tracker are copyable. This
     // means that we can't copy the variant as a whole, but only copy the states
     // that are copyable, if they are active.
-    if (std::holds_alternative<std::monostate>(dep_tracker_)) {
-      // Do nothing. subtile.dep_tracker_ is already initialized to this.
-    }
-    else if (std::holds_alternative<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(
-                 dep_tracker_)) {
+    if (std::holds_alternative<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(
+            dep_tracker_)) {
       subtile.dep_tracker_ =
           std::get<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(dep_tracker_);
     }

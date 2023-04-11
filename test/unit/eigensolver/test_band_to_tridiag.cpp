@@ -104,8 +104,7 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
       return mat_local(index);
 
     const auto& dist_a = mat_a_h.distribution();
-    return sync_wait(mat_a_h.read_sender2(dist_a.globalTileIndex(index)))
-        .get()(dist_a.tileElementIndex(index));
+    return sync_wait(mat_a_h.read(dist_a.globalTileIndex(index))).get()(dist_a.tileElementIndex(index));
   };
 
   CHECK_MATRIX_NEAR(res, mat_a_h, mb * m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);

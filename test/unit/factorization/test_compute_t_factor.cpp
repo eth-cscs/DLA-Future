@@ -256,7 +256,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   for (SizeType i = v_start.row(); i < v_start.row() + k && i < m; ++i) {
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
-    auto tile = sync_wait(v_h.readwrite_sender_tile(dist_v.globalTileIndex(ij)));
+    auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
     auto ij_tile = dist_v.tileElementIndex(ij);
     tile(ij_tile) = T{1};
     for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -283,11 +283,11 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     panel_v.setRangeStart(v_start);
     panel_v.setWidth(k);
     for (const auto& i : panel_view.iteratorLocal()) {
-      panel_v.setTileSender(i, subTileSender(v.get().read_sender2(i), panel_view(i)));
+      panel_v.setTileSender(i, subTileSender(v.get().read(i), panel_view(i)));
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite_sender_tile(t_idx));
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx));
   }
 
   // Note:
@@ -299,7 +299,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  auto t_holder = sync_wait(t_output_h.read_sender2(t_idx));
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
   const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
@@ -332,7 +332,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
     if (dist_v.rankIndex() == dist_v.rankGlobalTile(dist_v.globalTileIndex(ij))) {
-      auto tile = sync_wait(v_h.readwrite_sender_tile(dist_v.globalTileIndex(ij)));
+      auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
       auto ij_tile = dist_v.tileElementIndex(ij);
       tile(ij_tile) = T{1};
       for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -366,11 +366,11 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     panel_v.setRangeStart(v_start);
     panel_v.setWidth(k);
     for (const auto& i : panel_view.iteratorLocal()) {
-      panel_v.setTileSender(i, subTileSender(v.get().read_sender2(i), panel_view(i)));
+      panel_v.setTileSender(i, subTileSender(v.get().read(i), panel_view(i)));
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite_sender_tile(t_idx), serial_comm);
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx), serial_comm);
   }
 
   // Note:
@@ -382,7 +382,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  auto t_holder = sync_wait(t_output_h.read_sender2(t_idx));
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
   const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 

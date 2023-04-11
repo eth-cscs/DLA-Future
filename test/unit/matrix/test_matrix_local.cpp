@@ -212,7 +212,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
           if (isTileToSkip(gather_type, ij_global))
             continue;
 
-          const auto tile_src = sync_wait(source.read_sender2(ij_local));
+          const auto tile_src = sync_wait(source.read(ij_local));
           const auto& tile_dst = dest.tile_read(ij_global);
 
           CHECK_TILE_NEAR(tile_src.get(), tile_dst, error, error);

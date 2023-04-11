@@ -138,7 +138,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = sync_wait(matrix.read_sender2(index_tile_original)).get();
+        const auto& tile_original = sync_wait(matrix.read(index_tile_original)).get();
         const auto size_tile_transposed = transposed(tile_original.size());
 
         auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
@@ -147,7 +147,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
 
         // TODO: Try to emulate old structure with shared_futures etc. or ok like this?
         if (current_rank == owner_transposed) {
-          auto tile_transposed = matrix.read_sender2(index_tile_transposed);
+          auto tile_transposed = matrix.read(index_tile_transposed);
 
           CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(std::move(tile_transposed)).get(),
                           TypeUtilities<T>::error, TypeUtilities<T>::error);
@@ -170,7 +170,7 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         // send to owner_original
         auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
         comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
-                            sync_wait(matrix.read_sender2(index_tile_transposed)).get());
+                            sync_wait(matrix.read(index_tile_transposed)).get());
       }
     }
   }
@@ -244,13 +244,13 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
     for (const auto& idx : panel.iteratorLocal())
       start_detached(dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
-                                                 panel.readwrite_sender_tile(idx)) |
+                                                 panel.readwrite(idx)) |
                      tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()));
 
     matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
-      CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender2(idx)).get());
+      CHECK_TILE_EQ(null_tile, sync_wait(panel.read(idx)).get());
 
     panel.reset();
   }

@@ -39,7 +39,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Workspace) {
     Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, message_values<TypeParam>);
 
@@ -62,10 +62,10 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Workspace) {
     Matrix<TypeParam, Device::CPU> mat({26, 13}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    set(sync_wait(mat.readwrite_sender_tile(selected_tile)), message_values<TypeParam>);
+    set(sync_wait(mat.readwrite(selected_tile)), message_values<TypeParam>);
 
     Matrix<const TypeParam, Device::CPU>& const_mat = mat;
-    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read_sender2(selected_tile)).get());
+    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read(selected_tile)).get());
   }
   else {
     TypeParam data[4];
@@ -84,7 +84,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({5, 10}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, message_values<TypeParam>);
 
@@ -94,7 +94,7 @@ TEST_F(BroadcastMatrixTest, Matrix2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({10, 5}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, TypeParam{});
 
@@ -110,16 +110,16 @@ TEST_F(BroadcastMatrixTest, ConstMatrix2Matrix) {
 
     LocalTileIndex selected_tile{0, 1};
 
-    set(sync_wait(mat.readwrite_sender_tile(selected_tile)), message_values<TypeParam>);
+    set(sync_wait(mat.readwrite(selected_tile)), message_values<TypeParam>);
 
     Matrix<const TypeParam, Device::CPU>& const_mat = mat;
-    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read_sender2(selected_tile)).get());
+    sync::broadcast::send(splitted_comm, sync_wait(const_mat.read(selected_tile)).get());
   }
   else {
     Matrix<TypeParam, Device::CPU> mat({10, 5}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, TypeParam{});
 
@@ -142,7 +142,7 @@ TEST_F(BroadcastMatrixTest, Workspace2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({13, 26}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, TypeParam{});
 
@@ -166,7 +166,7 @@ TEST_F(BroadcastMatrixTest, ConstWorkspace2Matrix) {
     Matrix<TypeParam, Device::CPU> mat({13, 26}, {2, 2});
 
     LocalTileIndex selected_tile{0, 1};
-    auto tile = sync_wait(mat.readwrite_sender_tile(selected_tile));
+    auto tile = sync_wait(mat.readwrite(selected_tile));
 
     set(tile, TypeParam{});
 

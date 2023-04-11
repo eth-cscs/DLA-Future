@@ -42,6 +42,7 @@ namespace {
 
 using pika::execution::experimental::start_detached;
 using pika::execution::experimental::when_all;
+using pika::this_thread::experimental::sync_wait;
 
 using dlaf::Backend;
 using dlaf::Coord;
@@ -61,6 +62,8 @@ using dlaf::comm::Index2D;
 using dlaf::common::Ordering;
 using dlaf::internal::transformDetach;
 using dlaf::matrix::MatrixMirror;
+
+// TODO: All remains of shared_futures need to be remooved from here.
 
 /// Check Cholesky Factorization results
 ///
@@ -237,7 +240,7 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
                       tile.ptr({0, 1}), tile.ld());
     };
 
-    matrix.readwrite_sender2(diag_tile) |
+    matrix.readwrite(diag_tile) |
         transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(tile_set));
   }
 }
@@ -333,13 +336,12 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       for (; i_loc < distribution.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
-        start_detached(
-            dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                        L.read_sender2(tile_wrt_local),
-                                        dlaf::internal::keepFuture(tile_to_transpose),
-                                        j_loc == 0 ? T(0.0) : T(1.0),
-                                        partial_result.readwrite_sender2(LocalTileIndex{i_loc, 0})) |
-            dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));
+        start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
+                                                   L.read(tile_wrt_local),
+                                                   dlaf::internal::keepFuture(tile_to_transpose),
+                                                   j_loc == 0 ? T(0.0) : T(1.0),
+                                                   partial_result.readwrite(LocalTileIndex{i_loc, 0})) |
+                       dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));
       }
     }
 
@@ -352,17 +354,17 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
       dlaf::common::DataDescriptor<T> output_message;
       if (owner_result == current_rank)
-        output_message = make_data(mul_result(tile_result).get());
+        output_message = make_data(sync_wait(mul_result.readwrite(tile_result)));
 
       dlaf::comm::sync::reduce(owner_result.col(), comm_grid.rowCommunicator(), MPI_SUM,
-                               make_data(partial_result.read(LocalTileIndex{i_loc, 0}).get()),
+                               make_data(sync_wait(partial_result.read(LocalTileIndex{i_loc, 0})).get()),
                                output_message);
 
       // L * L' for the current cell is computed
       // here the owner of the result performs the last step (difference with original)
 
       if (owner_result == current_rank) {
-        when_all(A.readwrite_sender2(tile_result), mul_result.read_sender2(tile_result)) |
+        when_all(A.readwrite(tile_result), mul_result.read(tile_result)) |
             transformDetach(dlaf::internal::Policy<Backend::MC>(), tile_abs_diff);
       }
     }

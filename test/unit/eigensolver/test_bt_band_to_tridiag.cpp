@@ -112,7 +112,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
                                             b, k,
-                                            subTileSender(mat_hh.readwrite_sender_tile(ij_tile), {sub_origin, sub_size}));
+                                            subTileSender(mat_hh.readwrite(ij_tile),
+                                                          {sub_origin, sub_size}));
       }
     }
 
@@ -187,7 +188,8 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
                                             b, k,
-                                            subTileSender(mat_hh.readwrite_sender_tile(LocalTileIndex{i, j}), {sub_origin, sub_size}));
+                                            subTileSender(mat_hh.readwrite(LocalTileIndex{i, j}),
+                                                          {sub_origin, sub_size}));
       }
     }
 

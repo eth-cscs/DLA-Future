@@ -438,9 +438,9 @@ struct HHManager<Backend::MC, Device::CPU, T> {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
-                                       subTileSender(mat_v.readwrite_sender_tile(ij), helper.specHH()),
-                                       subTileSender(mat_t.readwrite_sender_tile(ij), helper.specT()),
-                                       subTileSender(mat_w.readwrite_sender_tile(ij), helper.specHH())) |
+                                       subTileSender(mat_v.readwrite(ij), helper.specHH()),
+                                       subTileSender(mat_t.readwrite(ij), helper.specT()),
+                                       subTileSender(mat_w.readwrite(ij), helper.specHH())) |
            dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
            ex::split_tuple();
   }
@@ -473,8 +473,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
 
     auto [tile_v_h, tile_t_h] =
         dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh),
-                                    subTileSender(mat_v_h.readwrite_sender_tile(ij), helper.specHH()),
-                                    subTileSender(mat_t_h.readwrite_sender_tile(ij_t), t_spec)) |
+                                    subTileSender(mat_v_h.readwrite(ij), helper.specHH()),
+                                    subTileSender(mat_t_h.readwrite(ij_t), t_spec)) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
         ex::split_tuple();
 
@@ -497,9 +497,9 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
         };
 
     return ex::when_all(std::move(tile_v_h), std::move(tile_t_h),
-                        subTileSender(mat_v.readwrite_sender_tile(ij), helper.specHH()),
-                        subTileSender(mat_t.readwrite_sender_tile(ij_t), t_spec),
-                        subTileSender(mat_w.readwrite_sender_tile(ij), helper.specHH())) |
+                        subTileSender(mat_v.readwrite(ij), helper.specHH()),
+                        subTileSender(mat_t.readwrite(ij_t), t_spec),
+                        subTileSender(mat_w.readwrite(ij), helper.specHH())) |
            dlaf::internal::transform<
                dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(),
                                                             copyVTandComputeW) |
@@ -600,9 +600,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       }
 
       auto [tile_v_unshared, tile_w_unshared] =
-          helperBackend.computeVW(ij, helper,
-                                  subTileSender(mat_hh.read_sender2(ij), helper.specHHCompact()), mat_v,
-                                  mat_t, mat_w);
+          helperBackend.computeVW(ij, helper, subTileSender(mat_hh.read(ij), helper.specHHCompact()),
+                                  mat_v, mat_t, mat_w);
       // TODO: Need make_unique_any_sender?
       auto tile_v = matrix::shareReadwriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadwriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
@@ -615,9 +614,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           auto tile_v_top = subTileSender(tile_v, helper.topPart().specHH());
           auto tile_w_top = subTileSender(tile_w, helper.topPart().specHH());
           ex::start_detached(
-              ex::when_all(tile_v_top, tile_w_top, mat_w2.readwrite_sender_tile(LocalTileIndex(0, j_e)),
-                           subTileSender(mat_e.readwrite_sender_tile(idx_e),
-                                         helper.topPart().specEV(sz_e.cols()))) |
+              ex::when_all(tile_v_top, tile_w_top, mat_w2.readwrite(LocalTileIndex(0, j_e)),
+                           subTileSender(mat_e.readwrite(idx_e), helper.topPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                    thread_priority::normal),
@@ -630,10 +628,9 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           auto tile_w_bottom = subTileSender(tile_w, helper.bottomPart().specHH());
           ex::start_detached(
               ex::when_all(tile_v_top, tile_v_bottom, tile_w_top, tile_w_bottom,
-                           mat_w2.readwrite_sender_tile(LocalTileIndex(0, j_e)),
-                           subTileSender(mat_e.readwrite_sender_tile(idx_e),
-                                         helper.topPart().specEV(sz_e.cols())),
-                           subTileSender(mat_e.readwrite_sender_tile(LocalTileIndex{ij.row() + 1, j_e}),
+                           mat_w2.readwrite(LocalTileIndex(0, j_e)),
+                           subTileSender(mat_e.readwrite(idx_e), helper.topPart().specEV(sz_e.cols())),
+                           subTileSender(mat_e.readwrite(LocalTileIndex{ij.row() + 1, j_e}),
                                          helper.bottomPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -805,14 +802,15 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       // Broadcast on ROW
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
-          ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_chain_row()),
-                                                     subTileSender(mat_hh.read_sender2(ij_g), helper.specHHCompact())));
+          ex::start_detached(
+              comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_chain_row()),
+                                      subTileSender(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
-          ex::start_detached(
-              comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_chain_row()), rankHH.col(),
-                                      subTileSender(panel_hh.readwrite_sender_tile(ij_hh_panel),
-                                                    helper.specHHCompact(true))));
+          ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_chain_row()),
+                                                     rankHH.col(),
+                                                     subTileSender(panel_hh.readwrite(ij_hh_panel),
+                                                                   helper.specHHCompact(true))));
         }
       }
 
@@ -822,22 +820,22 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
 
         if (rank.row() == rank_src) {
-          auto tile_hh =
-              rank.col() == rankHH.col()
-                  ? subTileSender(mat_hh.read_sender2(ij_g), helper.specHHCompact())
-                  : subTileSender(panel_hh.read_sender2(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(mpi_chain_col()), rank_dst, 0, std::move(tile_hh)));
+          auto tile_hh = rank.col() == rankHH.col()
+                             ? subTileSender(mat_hh.read(ij_g), helper.specHHCompact())
+                             : subTileSender(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
+          ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(mpi_chain_col()), rank_dst, 0,
+                                                std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
           ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(mpi_chain_col()), rank_src, 0,
-                                                panel_hh.readwrite_sender_tile(ij_hh_panel)));
+                                                panel_hh.readwrite(ij_hh_panel)));
         }
       }
 
       // COMPUTE V and W from HH and T
       auto tile_hh = (rankHH == rank)
-                         ? subTileSender(mat_hh.read_sender2(ij_g), helper.specHHCompact())
-                         : subTileSender(panel_hh.read_sender2(ij_hh_panel), helper.specHHCompact(true));
+                         ? subTileSender(mat_hh.read(ij_g), helper.specHHCompact())
+                         : subTileSender(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
       auto [tile_v_unshared, tile_w_unshared] =
           helperBackend.computeVW(indexing_helper.wsIndexHH(), helper, std::move(tile_hh), mat_v, mat_t,
                                   mat_w);
@@ -868,9 +866,9 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
             ex::start_detached(
                 ex::when_all(std::move(tile_v_top), std::move(tile_v_bottom), std::move(tile_w_top),
                              std::move(tile_w_bottom),
-                             subTileSender(mat_w2.readwrite_sender_tile(idx_w2), helper.specW2(nb)),
-                             subTileSender(mat_e.readwrite_sender_tile(idx_e), helper.topPart().specEV(nb)),
-                             subTileSender(mat_e.readwrite_sender_tile(LocalTileIndex{idx_e.row() + 1, j_e}),
+                             subTileSender(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                             subTileSender(mat_e.readwrite(idx_e), helper.topPart().specEV(nb)),
+                             subTileSender(mat_e.readwrite(LocalTileIndex{idx_e.row() + 1, j_e}),
                                            helper.bottomPart().specEV(nb))) |
                 dlaf::internal::transform<
                     dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -882,8 +880,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
             ex::start_detached(
                 ex::when_all(subTileSender(tile_v, helper.topPart().specHH()),
                              subTileSender(tile_w, helper.topPart().specHH()),
-                             subTileSender(mat_w2.readwrite_sender_tile(idx_w2), helper.specW2(nb)),
-                             subTileSender(mat_e.readwrite_sender_tile(idx_e), helper.topPart().specEV(nb))) |
+                             subTileSender(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                             subTileSender(mat_e.readwrite(idx_e), helper.topPart().specEV(nb))) |
                 dlaf::internal::transform<
                     dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                      thread_priority::normal),
@@ -909,24 +907,23 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           ex::start_detached(
               dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                                           subTileSender(tile_v, part.specHH()),
-                                          subTileSender(mat_e.readwrite_sender_tile(idx_e), part.specEV(nb)),
-                                          T(0),
-                                          subTileSender(mat_w2tmp.readwrite_sender_tile(idx_w2), helper.specW2(nb))) |
+                                          subTileSender(mat_e.readwrite(idx_e), part.specEV(nb)), T(0),
+                                          subTileSender(mat_w2tmp.readwrite(idx_w2),
+                                                        helper.specW2(nb))) |
               dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
 
           // Compute final W2 by adding the contribution from the partner rank
           ex::start_detached(
               comm::scheduleAllSumP2P<B>(mpi_col_comm, rankPartner, tag,
-                                         subTileSender(mat_w2tmp.read_sender2(idx_w2), helper.specW2(nb)),
-                                         subTileSender(mat_w2.readwrite_sender_tile(idx_w2), helper.specW2(nb))));
+                                         subTileSender(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
+                                         subTileSender(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
 
           // E -= W . W2
           ex::start_detached(
               dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),
                                           subTileSender(tile_w, part.specHH()),
-                                          subTileSender(mat_w2.read_sender2(idx_w2), helper.specW2(nb)),
-                                          T(1),
-                                          subTileSender(mat_e.readwrite_sender_tile(idx_e), part.specEV(nb))) |
+                                          subTileSender(mat_w2.read(idx_w2), helper.specW2(nb)), T(1),
+                                          subTileSender(mat_e.readwrite(idx_e), part.specEV(nb))) |
               dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
         }
       }

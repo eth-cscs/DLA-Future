@@ -133,8 +133,8 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     if (rank_evecs_0row == this_rank) {
       // If the tile is in this rank, check if signs are matching and broadcast them along the column
       SizeType j_gl_el = dist_evecs.globalElementFromGlobalTileAndTileElement<Coord::Col>(j_tile, 0);
-      auto evecs_tile = sync_wait(evecs.readwrite_sender_tile(idx_evecs_0row_tile));
-      auto sign_tile = sync_wait(sign_mat.readwrite_sender_tile(idx_sign_tile));
+      auto evecs_tile = sync_wait(evecs.readwrite(idx_evecs_0row_tile));
+      auto sign_tile = sync_wait(sign_mat.readwrite(idx_sign_tile));
 
       // Iterate over the first column of the tile
       for (SizeType j_el = 0; j_el < evecs_tile.size().cols(); ++j_el) {
@@ -146,23 +146,22 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
         sign_tile(transposed(idx_el)) = (dlaf::util::sameSign(act_val, exp_val)) ? 1 : -1;
       }
 
-      ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(col_task_chain()),
-                                  sign_mat.read_sender2(idx_sign_tile)));
+      ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(col_task_chain()),
+                                                 sign_mat.read(idx_sign_tile)));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank
       ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(col_task_chain()),
                                                  rank_evecs_0row.row(),
-                                                 sign_mat.readwrite_sender_tile(idx_sign_tile)));
+                                                 sign_mat.readwrite(idx_sign_tile)));
     }
   }
 
   for (auto idx_tile_evecs : common::iterate_range2d(dist_evecs.localNrTiles())) {
     GlobalTileIndex idx_tile_sign(dist_evecs.globalTileFromLocalTile<Coord::Col>(idx_tile_evecs.col()),
                                   0);
-    auto evecs_tile = sync_wait(evecs.readwrite_sender_tile(idx_tile_evecs));
-    auto sign_tile = sync_wait(sign_mat.readwrite_sender_tile(idx_tile_sign));
+    auto evecs_tile = sync_wait(evecs.readwrite(idx_tile_evecs));
+    auto sign_tile = sync_wait(sign_mat.readwrite(idx_tile_sign));
 
     for (SizeType i_el = 0; i_el < evecs_tile.size().cols(); ++i_el) {
       TileElementIndex idx_el_sign(i_el, 0);
@@ -278,16 +277,15 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
     };
 
     GlobalTileIndex idx_gl_evals(dist_evecs.globalTileFromLocalTile<Coord::Col>(idx_loc_tile.col()), 0);
-    dlaf::internal::whenAllLift(evals.read_sender2(idx_gl_evals),
-                                evecs.readwrite_sender_tile(idx_loc_tile)) |
+    dlaf::internal::whenAllLift(evals.read(idx_gl_evals), evecs.readwrite(idx_loc_tile)) |
         dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(scale_f));
   }
 
   // Check that A * E is equal to E * D
   constexpr RealParam error = TypeUtilities<T>::error;
   for (auto idx_loc_tile : common::iterate_range2d(dist_evecs.localNrTiles())) {
-    CHECK_TILE_NEAR(sync_wait(AE_gemm.read_sender2(idx_loc_tile)).get(),
-                    sync_wait(evecs.read_sender2(idx_loc_tile)).get(), error * n, error * n);
+    CHECK_TILE_NEAR(sync_wait(AE_gemm.read(idx_loc_tile)).get(),
+                    sync_wait(evecs.read(idx_loc_tile)).get(), error * n, error * n);
   }
 }
 

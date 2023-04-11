@@ -145,8 +145,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
   }
 
   template <class VISender, class TSender>
-  static auto gemvColumnT(SizeType first_row_tile,
-                          VISender&& tile_vi,
+  static auto gemvColumnT(SizeType first_row_tile, VISender&& tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus,
                           TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
@@ -274,7 +273,7 @@ void QR_Tfactor<backend, device, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read_sender2(v_i), taus, std::move(t_local));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -329,8 +328,7 @@ void QR_Tfactor<backend, device, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local =
-        Helpers::gemvColumnT(first_row_tile, hh_panel.read_sender2(v_i_loc), taus, std::move(t_local));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column

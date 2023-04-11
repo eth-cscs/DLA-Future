@@ -118,48 +118,21 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  /// Returns a future of the Tile with local index @p index.
+  /// Returns a sender of the Tile with local index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  pika::future<TileType> operator()(const LocalTileIndex& index) noexcept;
+  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].readwrite();
+  }
 
-  /// Returns a future of the Tile with global index @p index.
+  /// Returns a sender of the Tile with global index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::future<TileType> operator()(const GlobalTileIndex&) {
-    DLAF_UNREACHABLE_PLAIN;
-    return {};
-  }
-
-  auto readwrite_sender(const LocalTileIndex& index) noexcept {
-    DLAF_UNREACHABLE_PLAIN;
-    return this->operator()(index);
-  }
-
-  auto readwrite_sender(const GlobalTileIndex& index) {
-    DLAF_UNREACHABLE_PLAIN;
-    return readwrite_sender(this->distribution().localTileIndex(index));
-  }
-
-  auto readwrite_sender2(const LocalTileIndex& index) noexcept {
-    DLAF_UNREACHABLE_PLAIN;
-    return tile_managers_[tileLinearIndex(index)].readwrite();
-  }
-
-  auto readwrite_sender2(const GlobalTileIndex& index) {
-    DLAF_UNREACHABLE_PLAIN;
-    return readwrite_sender2(this->distribution().localTileIndex(index));
-  }
-
-  ReadWriteSenderType readwrite_sender_tile(const LocalTileIndex& index) noexcept {
-    return tile_managers_[tileLinearIndex(index)].readwrite();
-  }
-
-  ReadWriteSenderType readwrite_sender_tile(const GlobalTileIndex& index) noexcept {
-    return readwrite_sender_tile(this->distribution().localTileIndex(index));
+  ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
+    return readwrite(this->distribution().localTileIndex(index));
   }
 
 protected:
@@ -198,38 +171,21 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  /// Returns a read-only shared_future of the Tile with local index @p index.
+  /// Returns a read-only sender of the Tile with local index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
+  ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].read();
+  }
 
-  /// Returns a read-only shared_future of the Tile with global index @p index.
+  /// Returns a read-only sender of the Tile with global index @p index.
   ///
   /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::shared_future<ConstTileType> read(const GlobalTileIndex&) {
-    DLAF_UNREACHABLE_PLAIN;
-    return {};
-  }
-
-  auto read_sender(const LocalTileIndex& index) noexcept {
-    DLAF_UNREACHABLE_PLAIN;
-    return dlaf::internal::keepFuture(read(index));
-  }
-
-  auto read_sender(const GlobalTileIndex& index) {
-    DLAF_UNREACHABLE_PLAIN;
-    return read_sender(distribution().localTileIndex(index));
-  }
-
-  ReadOnlySenderType read_sender2(const LocalTileIndex& index) noexcept {
-    return tile_managers_[tileLinearIndex(index)].read();
-  }
-
-  ReadOnlySenderType read_sender2(const GlobalTileIndex& index) {
-    return read_sender2(distribution().localTileIndex(index));
+  ReadOnlySenderType read(const GlobalTileIndex& index) {
+    return read(distribution().localTileIndex(index));
   }
 
   /// Synchronization barrier for all local tiles in the matrix
@@ -416,7 +372,7 @@ Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileEleme
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
 auto selectRead(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  return internal::selectGeneric([&](auto index) { return matrix.read_sender2(index); }, range);
+  return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
 }
 
 // TODO: Would a selectRead(mat, begin, end) overload be useful? Yes. Would the
@@ -428,7 +384,7 @@ auto selectRead(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
 auto select(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  return internal::selectGeneric([&](auto index) { return matrix.readwrite_sender_tile(index); }, range);
+  return internal::selectGeneric([&](auto index) { return matrix.readwrite(index); }, range);
 }
 
 /// ---- ETI

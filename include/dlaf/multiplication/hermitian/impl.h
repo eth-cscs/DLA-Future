@@ -71,23 +71,20 @@ void Hermitian<B, D, T>::call_LL(const T alpha, Matrix<const T, D>& mat_a, Matri
     for (SizeType l = 0; l < ij.row(); ++l) {
       auto il = LocalTileIndex{ij.row(), l};
       auto lj = LocalTileIndex{l, ij.col()};
-      gemmN<B>(alpha, mat_a.read_sender2(il), mat_b.read_sender2(lj), beta_ij,
-               mat_c.readwrite_sender_tile(ij));
+      gemmN<B>(alpha, mat_a.read(il), mat_b.read(lj), beta_ij, mat_c.readwrite(ij));
       beta_ij = 1;
     }
 
     {
       auto ii = LocalTileIndex{ij.row(), ij.row()};
-      hemm<B>(alpha, mat_a.read_sender2(ii), mat_b.read_sender2(ij), beta_ij,
-              mat_c.readwrite_sender_tile(ij));
+      hemm<B>(alpha, mat_a.read(ii), mat_b.read(ij), beta_ij, mat_c.readwrite(ij));
       beta_ij = 1;
     }
 
     for (SizeType l = ij.row() + 1; l < k; ++l) {
       auto li = LocalTileIndex{l, ij.row()};
       auto lj = LocalTileIndex{l, ij.col()};
-      gemmC<B>(alpha, mat_a.read_sender2(li), mat_b.read_sender2(lj), beta_ij,
-               mat_c.readwrite_sender_tile(ij));
+      gemmC<B>(alpha, mat_a.read(li), mat_b.read(lj), beta_ij, mat_c.readwrite(ij));
       beta_ij = 1;
     }
   }
@@ -150,7 +147,7 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
     if (this_rank.col() == rank_ll.col()) {
       for (SizeType i_loc = ll_offset.row(); i_loc < distr_a.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex il{i_loc, ll_offset.col()};
-        a_panel.setTileSender(il, mat_a.read_sender2(il));
+        a_panel.setTileSender(il, mat_a.read(il));
       }
     }
     comm::broadcast(rank_ll.col(), a_panel, mpi_row_task_chain);
@@ -158,14 +155,13 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
     if (this_rank.row() == rank_ll.row()) {
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex lj{diag_offset.row(), j_loc};
-        b_panel.setTileSender(lj, mat_b.read_sender2(lj));
+        b_panel.setTileSender(lj, mat_b.read(lj));
       }
     }
     comm::broadcast(rank_ll.row(), b_panel, mpi_col_task_chain);
 
     for (const auto ij : common::iterate_range2d(diag_offset, diag_end_offset)) {
-      hemm<B>(alpha, a_panel.read_sender2(ij), b_panel.read_sender2(ij), beta_,
-              mat_c.readwrite_sender_tile(ij));
+      hemm<B>(alpha, a_panel.read(ij), b_panel.read(ij), beta_, mat_c.readwrite(ij));
     }
 
     if (l < k - 1) {
@@ -174,32 +170,28 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
       for (const auto ij : common::iterate_range2d(lower_offset, lower_end_offset)) {
         // No Transpose part
         // C_ij += A_ik * B_kj
-        gemmN<B>(alpha, a_panel.read_sender2(ij), b_panel.read_sender2(ij), beta_,
-                 mat_c.readwrite_sender_tile(ij));
+        gemmN<B>(alpha, a_panel.read(ij), b_panel.read(ij), beta_, mat_c.readwrite(ij));
 
         // ConjTranspose part
         // C_kj += (A_ik)^T * B_ij
-        gemmC<B>(alpha, a_panel.read_sender2(ij), mat_b.read_sender2(ij), T{1},
-                 c_panel.readwrite_sender_tile(ij));
+        gemmC<B>(alpha, a_panel.read(ij), mat_b.read(ij), T{1}, c_panel.readwrite(ij));
       }
 
       if (grid.colCommunicator().size() != 1) {
         for (const auto& idx : c_panel.iteratorLocal()) {
           if (this_rank.row() == rank_ll.row()) {
-            ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
-                                                               c_panel.readwrite_sender_tile(idx)));
+            ex::start_detached(
+                comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, c_panel.readwrite(idx)));
           }
           else {
-            ex::start_detached(
-                comm::scheduleReduceSend(mpi_col_task_chain(), rank_ll.row(), MPI_SUM,
-                                         c_panel.read_sender2(idx)));
+            ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_ll.row(), MPI_SUM,
+                                                        c_panel.read(idx)));
           }
         }
       }
       for (const auto lj : common::iterate_range2d(diag_offset, diag_end_offset)) {
         pika::execution::experimental::start_detached(
-            dlaf::internal::whenAllLift(T{1}, c_panel.read_sender2(lj),
-                                        mat_c.readwrite_sender_tile(lj)) |
+            dlaf::internal::whenAllLift(T{1}, c_panel.read(lj), mat_c.readwrite(lj)) |
             tile::add(dlaf::internal::Policy<B>(thread_priority::high)));
       }
     }

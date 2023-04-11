@@ -70,9 +70,9 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 template <class T, Device D>
 auto cuppensDecomposition(Matrix<T, D>& tridiag) {
   namespace ex = pika::execution::experimental;
-  using sender_type = decltype(ex::split(
-      cuppensDecompAsync<T, D>(tridiag.readwrite_sender_tile(std::declval<LocalTileIndex>()),
-                               tridiag.readwrite_sender_tile(std::declval<LocalTileIndex>()))));
+  using sender_type =
+      decltype(ex::split(cuppensDecompAsync<T, D>(tridiag.readwrite(std::declval<LocalTileIndex>()),
+                                                  tridiag.readwrite(std::declval<LocalTileIndex>()))));
   using vector_type = std::vector<sender_type>;
 
   if (tridiag.nrTiles().rows() == 0)
@@ -83,9 +83,9 @@ auto cuppensDecomposition(Matrix<T, D>& tridiag) {
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(ex::split(
-        cuppensDecompAsync<T, D>(tridiag.readwrite_sender_tile(LocalTileIndex(i_split, 0)),
-                                 tridiag.readwrite_sender_tile(LocalTileIndex(i_split + 1, 0)))));
+    offdiag_vals.push_back(
+        ex::split(cuppensDecompAsync<T, D>(tridiag.readwrite(LocalTileIndex(i_split, 0)),
+                                           tridiag.readwrite(LocalTileIndex(i_split + 1, 0)))));
   }
   return offdiag_vals;
 }
@@ -95,8 +95,7 @@ template <class T, Device D>
 void solveLeaf(Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
   SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    stedcAsync<D>(tridiag.readwrite_sender_tile(LocalTileIndex(i, 0)),
-                  evecs.readwrite_sender_tile(LocalTileIndex(i, i)));
+    stedcAsync<D>(tridiag.readwrite(LocalTileIndex(i, 0)), evecs.readwrite(LocalTileIndex(i, i)));
   }
 }
 
@@ -104,8 +103,8 @@ void solveLeaf(Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
 template <class T, Device D>
 void offloadDiagonal(Matrix<const T, D>& tridiag, Matrix<T, D>& evals) {
   for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
-    copyDiagonalFromCompactTridiagonalAsync<D>(tridiag.read_sender2(GlobalTileIndex(i, 0)),
-                                               evals.readwrite_sender_tile(GlobalTileIndex(i, 0)));
+    copyDiagonalFromCompactTridiagonalAsync<D>(tridiag.read(GlobalTileIndex(i, 0)),
+                                               evals.readwrite(GlobalTileIndex(i, 0)));
   }
 }
 
@@ -222,8 +221,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals,
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<D>(real_evecs.read_sender2(tile_wrt_local),
-                          evecs.readwrite_sender_tile(tile_wrt_local));
+    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
   }
 }
 
@@ -246,15 +244,14 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
     GlobalTileIndex idx_trd(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<D>(tridiag.readwrite_sender_tile(idx_trd), evecs.readwrite_sender_tile(ii_tile));
+      stedcAsync<D>(tridiag.readwrite(idx_trd), evecs.readwrite(ii_tile));
       ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read_sender2(idx_trd)));
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read(idx_trd)));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
-      ex::start_detached(
-          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  tridiag.readwrite_sender_tile(idx_trd)));
+      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 root_rank, tridiag.readwrite(idx_trd)));
     }
   }
 }
@@ -324,8 +321,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<D>(real_evecs.read_sender2(tile_wrt_local),
-                          evecs.readwrite_sender_tile(tile_wrt_local));
+    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
   }
 }
 

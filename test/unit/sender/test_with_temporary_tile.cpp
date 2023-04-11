@@ -28,8 +28,8 @@ auto newBlockMatrixContiguous() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_TRUE(data_iscontiguous(
-      common::make_data(tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0))).get())));
+  EXPECT_TRUE(
+      data_iscontiguous(common::make_data(tt::sync_wait(matrix.read(LocalTileIndex(0, 0))).get())));
 
   return matrix;
 }
@@ -41,8 +41,8 @@ auto newBlockMatrixStrided() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_FALSE(data_iscontiguous(
-      common::make_data(tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0))).get())));
+  EXPECT_FALSE(
+      data_iscontiguous(common::make_data(tt::sync_wait(matrix.read(LocalTileIndex(0, 0))).get())));
 
   return matrix;
 }
@@ -58,13 +58,13 @@ void testWithTemporaryTile() {
                                                ? newBlockMatrixContiguous<T, input_device>()
                                                : newBlockMatrixStrided<T, input_device>();
 
-  const bool is_contiguous =
-      tt::sync_wait(matrix.readwrite_sender_tile(LocalTileIndex(0, 0))).is_contiguous();
+  const bool is_contiguous = tt::sync_wait(matrix.readwrite(LocalTileIndex(0, 0))).is_contiguous();
   constexpr bool is_same_device = input_device == destination_device;
   const bool expect_new_tile = !is_same_device || (bool(require_contiguous) && !is_contiguous);
-  const T* input_ptr = tt::sync_wait(matrix.readwrite_sender_tile(LocalTileIndex(0, 0))).ptr();
+  const T* input_ptr = tt::sync_wait(matrix.readwrite(LocalTileIndex(0, 0))).ptr();
 
-  T input_value = 42.0; T output_value = 17.0;
+  T input_value = 42.0;
+  T output_value = 17.0;
 
   // If we expect the temporary tile to be a copy the pointers should be
   // different.
@@ -89,14 +89,14 @@ void testWithTemporaryTile() {
   {
     // Synchronously set values in the tile.
     tt::sync_wait(internal::whenAllLift(blas::Uplo::General, input_value, input_value,
-                                        matrix.readwrite_sender_tile(LocalTileIndex(0, 0))) |
+                                        matrix.readwrite(LocalTileIndex(0, 0))) |
                   tile::laset(internal::Policy<DefaultBackend_v<input_device>>()));
 
     // Actually use withTemporaryTile, checking the values of the temporary
     // tiles asynchronously.
     auto sender = internal::withTemporaryTile<
         destination_device, copy_to_destination, copy_from_destination,
-        require_contiguous>(matrix.readwrite_sender_tile(LocalTileIndex(0, 0)), [&](auto& temp) {
+        require_contiguous>(matrix.readwrite(LocalTileIndex(0, 0)), [&](auto& temp) {
       check_tile_ptr(temp.ptr());
       check_tile_contiguous(temp);
 
@@ -147,14 +147,14 @@ void testWithTemporaryTile() {
   if constexpr (!bool(copy_from_destination)) {
     // Synchronously set values in the tile.
     tt::sync_wait(internal::whenAllLift(blas::Uplo::General, input_value, input_value,
-                                        matrix.readwrite_sender_tile(LocalTileIndex(0, 0))) |
+                                        matrix.readwrite(LocalTileIndex(0, 0))) |
                   tile::laset(internal::Policy<DefaultBackend_v<input_device>>()));
 
     // Actually use withTemporaryTile, checking the values of the temporary
     // tiles asynchronously.
     auto sender = internal::withTemporaryTile<
         destination_device, copy_to_destination, copy_from_destination,
-        require_contiguous>(matrix.read_sender2(LocalTileIndex(0, 0)), [&](auto& temp) {
+        require_contiguous>(matrix.read(LocalTileIndex(0, 0)), [&](auto& temp) {
       check_tile_ptr(temp.ptr());
       check_tile_contiguous(temp);
 
@@ -181,7 +181,7 @@ void testWithTemporaryTile() {
     // When the input is read-only we can't write to it. The input tile should
     // still contain the values we set in the beginning.
     auto tile_cpu = tt::sync_wait(
-        matrix.read_sender2(LocalTileIndex(0, 0)) |
+        matrix.read(LocalTileIndex(0, 0)) |
         internal::transform(internal::Policy<matrix::internal::CopyBackend_v<input_device, Device::CPU>>(),
                             matrix::Duplicate<Device::CPU>{}));
     CHECK_TILE_EQ(check_input_value, tile_cpu);

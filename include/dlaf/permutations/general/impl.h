@@ -319,8 +319,8 @@ void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribut
 
   for (auto tile_wrt_local : common::iterate_range2d(local_index.distribution().localNrTiles())) {
     SizeType i_gl_tile = dist.globalTileFromLocalTile<C>(i_loc_begin + tile_wrt_local.row());
-    ex::start_detached(ex::when_all(global_index.read_sender2(GlobalTileIndex(i_gl_tile, 0)),
-                                    local_index.readwrite_sender_tile(tile_wrt_local)) |
+    ex::start_detached(ex::when_all(global_index.read(GlobalTileIndex(i_gl_tile, 0)),
+                                    local_index.readwrite(tile_wrt_local)) |
                        dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
   }
 }
@@ -370,7 +370,7 @@ void transposeFromLocalToDistributedMatrix(LocalTileIndex i_loc_begin,
                                            Matrix<T, Device::CPU>& mat_out) {
   for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
     LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(), i_loc_begin.col() + i_in_tile.row());
-    transposeTileSenders(mat_in.read_sender2(i_in_tile), mat_out.readwrite_sender_tile(i_out_tile));
+    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
   }
 }
 
@@ -381,7 +381,7 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
                                            Matrix<T, Device::CPU>& mat_out) {
   for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
     LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(), i_loc_begin.col() + i_out_tile.row());
-    transposeTileSenders(mat_in.read_sender2(i_in_tile), mat_out.readwrite_sender_tile(i_out_tile));
+    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
   }
 }
 

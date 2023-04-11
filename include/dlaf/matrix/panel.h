@@ -113,17 +113,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @pre @p index must be a valid index for the current panel size
-  pika::shared_future<ConstTileType> read(const LocalTileIndex&) {
-    DLAF_UNREACHABLE_PLAIN;
-    return {};
-  }
-
-  auto read_sender(const LocalTileIndex& index) {
-    DLAF_UNREACHABLE_PLAIN;
-    return dlaf::internal::keepFuture(read(index));
-  }
-
-  ReadOnlySenderType read_sender2(const LocalTileIndex& index) {
+  ReadOnlySenderType read(const LocalTileIndex& index) {
     has_been_used_ = true;
 
     const SizeType internal_linear_idx = linearIndex(index);
@@ -132,7 +122,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
     }
     else {
       internal_.insert(internal_linear_idx);
-      auto tile = data_.read_sender2(fullIndex(index));
+      auto tile = data_.read(fullIndex(index));
 
       if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull())) {
         return tile;
@@ -554,21 +544,9 @@ public:
     BaseT::setTile(index, std::move(new_tile_fut));
   }
 
-  pika::shared_future<ConstTileType> read(LocalTileIndex index) {
-    DLAF_UNREACHABLE_PLAIN;
+  ReadOnlySenderType read(LocalTileIndex index) {
     index.transpose();
     return BaseT::read(index);
-  }
-
-  auto read_sender(LocalTileIndex index) {
-    DLAF_UNREACHABLE_PLAIN;
-    index.transpose();
-    return BaseT::read_sender(index);
-  }
-
-  ReadOnlySenderType read_sender2(LocalTileIndex index) {
-    index.transpose();
-    return BaseT::read_sender2(index);
   }
 
   using BaseT::reset;
@@ -601,9 +579,7 @@ public:
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  pika::future<TileType> operator()(LocalTileIndex index) {
-    DLAF_UNREACHABLE_PLAIN;
-
+  ReadWriteSenderType readwrite(LocalTileIndex index) {
     if constexpr (StoreTransposed::Yes == Storage)
       index.transpose();
 
@@ -615,31 +591,7 @@ public:
     has_been_used_ = true;
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
-    auto tile = BaseT::data_.readwrite_sender(BaseT::fullIndex(index));
-    if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
-      return tile;
-    else
-      return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
-  }
-
-  auto readwrite_sender(const LocalTileIndex& index) {
-    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
-    return this->operator()(index);
-  }
-
-  ReadWriteSenderType readwrite_sender_tile(LocalTileIndex index) {
-    if constexpr (StoreTransposed::Yes == Storage)
-      index.transpose();
-
-    // Note assertion on index done by linearIndex method.
-    DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
-    // NOTE: read-write access not allowed because setTile takes shared_future
-    // of const tiles.
-
-    has_been_used_ = true;
-
-    BaseT::internal_.insert(BaseT::linearIndex(index));
-    auto tile = BaseT::data_.readwrite_sender_tile(BaseT::fullIndex(index));
+    auto tile = BaseT::data_.readwrite(BaseT::fullIndex(index));
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else

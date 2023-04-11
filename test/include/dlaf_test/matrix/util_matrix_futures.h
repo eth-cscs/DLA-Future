@@ -28,7 +28,7 @@ namespace dlaf::matrix::test {
 
 /// Returns a col-major ordered vector with wrappers of senders to matrix tiles.
 ///
-/// The senders are created using the matrix method readwrite_sender_tile(const
+/// The senders are created using the matrix method readwrite(const
 /// LocalTileIndex&). Note: This function is interchangeable with
 /// getSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
@@ -40,7 +40,7 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingLocalIndex(MatrixType<T, D>
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(mat.readwrite_sender_tile(LocalTileIndex(i, j)));
+      result.emplace_back(mat.readwrite(LocalTileIndex(i, j)));
     }
   }
   return result;
@@ -48,7 +48,7 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingLocalIndex(MatrixType<T, D>
 
 /// Returns a col-major ordered vector with senders to the matrix tiles.
 ///
-/// The senders are created using the matrix method readwrite_sender_tile(const
+/// The senders are created using the matrix method readwrite(const
 /// GlobalTileIndex&).  Note: This function is interchangeable with
 /// getSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
@@ -64,7 +64,7 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingGlobalIndex(MatrixType<T, D
       comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(mat.readwrite_sender_tile(global_index));
+        result.emplace_back(mat.readwrite(global_index));
       }
     }
   }
@@ -73,7 +73,7 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingGlobalIndex(MatrixType<T, D
 
 /// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
-/// The senders are created using the matrix method read_sender2(const LocalTileIndex&).
+/// The senders are created using the matrix method read(const LocalTileIndex&).
 /// Note: This function is interchangeable with getRoSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
 std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, D>& mat) {
@@ -84,7 +84,7 @@ std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, 
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
     for (SizeType i = 0; i < dist.localNrTiles().rows(); ++i) {
-      result.emplace_back(mat.read_sender2(LocalTileIndex(i, j)));
+      result.emplace_back(mat.read(LocalTileIndex(i, j)));
     }
   }
 
@@ -93,7 +93,7 @@ std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, 
 
 /// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
-/// The senders are created using the matrix method read_sender2(const GlobalTileIndex&).
+/// The senders are created using the matrix method read(const GlobalTileIndex&).
 /// Note: This function is interchangeable with getRoSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
 std::vector<VoidSenderWithAtomicBool> getRoSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
@@ -108,7 +108,7 @@ std::vector<VoidSenderWithAtomicBool> getRoSendersUsingGlobalIndex(MatrixType<T,
       comm::Index2D owner = dist.rankGlobalTile(global_index);
 
       if (dist.rankIndex() == owner) {
-        result.emplace_back(mat.read_sender2(global_index));
+        result.emplace_back(mat.read(global_index));
       }
     }
   }

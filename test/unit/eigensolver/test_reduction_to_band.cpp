@@ -269,9 +269,9 @@ auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
     const bool is_in_upper = index.row() < index.col();
 
     if (!is_in_upper)
-      return sync_wait(matrix_a.read_sender2(ij_tile)).get()(ij_element_wrt_tile);
+      return sync_wait(matrix_a.read(ij_tile)).get()(ij_element_wrt_tile);
     else
-      return sync_wait(reference.read_sender2(ij_tile)).get()(ij_element_wrt_tile);
+      return sync_wait(reference.read(ij_tile)).get()(ij_element_wrt_tile);
   };
   CHECK_MATRIX_NEAR(merged_matrices, matrix_a, 0, TypeUtilities<T>::error);
 }

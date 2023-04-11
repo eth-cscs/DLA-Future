@@ -306,7 +306,7 @@ TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
       Matrix<Type, Device::CPU> mat(std::move(distribution), layout);
       Type* ptr = nullptr;
       if (!mat.distribution().localSize().isEmpty()) {
-        ptr = tt::sync_wait(mat.readwrite_sender_tile(LocalTileIndex(0, 0))).ptr();
+        ptr = tt::sync_wait(mat.readwrite(LocalTileIndex(0, 0))).ptr();
       }
 
       CHECK_DISTRIBUTION_LAYOUT(ptr, distribution_copy, layout, mat);
@@ -337,9 +337,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 
             const TypeParam* ptr_global =
-                tt::sync_wait(mat.readwrite_sender_tile(global_index)).ptr(TileElementIndex{0, 0});
+                tt::sync_wait(mat.readwrite(global_index)).ptr(TileElementIndex{0, 0});
             const TypeParam* ptr_local =
-                tt::sync_wait(mat.readwrite_sender_tile(local_index)).ptr(TileElementIndex{0, 0});
+                tt::sync_wait(mat.readwrite(local_index)).ptr(TileElementIndex{0, 0});
 
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
@@ -373,9 +373,9 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
             LocalTileIndex local_index = dist.localTileIndex(global_index);
 
             const TypeParam* ptr_global =
-                tt::sync_wait(mat.readwrite_sender2(global_index)).get().ptr(TileElementIndex{0, 0});
+                tt::sync_wait(mat.readwrite(global_index)).ptr(TileElementIndex{0, 0});
             const TypeParam* ptr_local =
-                tt::sync_wait(mat.readwrite_sender2(local_index)).get().ptr(TileElementIndex{0, 0});
+                tt::sync_wait(mat.readwrite(local_index)).ptr(TileElementIndex{0, 0});
 
             EXPECT_NE(ptr_global, nullptr);
             EXPECT_EQ(ptr_global, ptr_local);
@@ -905,12 +905,12 @@ TYPED_TEST(MatrixTest, FromTile) {
         // specify src_rank
         comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
                                std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-        src_rank); LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
+        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
-        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank,
-        mem()); ASSERT_FALSE(haveConstElements(mat));
+        auto mat = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, src_rank, mem());
+        ASSERT_FALSE(haveConstElements(mat));
 
         CHECK_DISTRIBUTION_LAYOUT(mem(), distribution, layout, mat);
       }
@@ -980,8 +980,8 @@ TYPED_TEST(MatrixTest, FromTileConst) {
         // specify src_rank
         comm::Index2D src_rank(std::max(0, comm_grid.size().rows() - 1),
                                std::max(0, comm_grid.size().cols() - 1));
-        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-        src_rank); LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+        Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), src_rank);
+        LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
         memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
         const Type* p = mem();
@@ -1149,7 +1149,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
       auto row0_range = common::iterate_range2d(local_row_size);
 
       // top left tile is selected in rw (i.e. exclusive access)
-      auto sender_tl = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      auto sender_tl = mat.readwrite(LocalTileIndex{0, 0});
 
       // the entire first row is selected in ro
       auto senders_row = selectRead(mat, row0_range);
@@ -1198,7 +1198,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
       auto row0_range = common::iterate_range2d(local_row_size);
 
       // top left tile is selected in rw (i.e. exclusive access)
-      auto sender_tl = mat.readwrite_sender_tile(LocalTileIndex{0, 0});
+      auto sender_tl = mat.readwrite(LocalTileIndex{0, 0});
 
       // the entire first row is selected in rw
       auto senders_row = select(mat, row0_range);
@@ -1292,7 +1292,7 @@ TEST(MatrixDestructorSenders, NonConstAfterRead) {
   {
     auto matrix = createMatrix<T>();
 
-    auto tile_sender = matrix.read_sender2(LocalTileIndex(0, 0));
+    auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1311,7 +1311,7 @@ TEST(MatrixDestructorSenders, NonConstAfterReadWrite) {
   {
     auto matrix = createMatrix<T>();
 
-    auto tile_sender = matrix.readwrite_sender_tile(LocalTileIndex(0, 0));
+    auto tile_sender = matrix.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1330,7 +1330,7 @@ TEST(MatrixDestructorSenders, NonConstAfterRead_UserMemory) {
     T data;
     auto matrix = createMatrix<T>(data);
 
-    auto tile_sender = matrix.read_sender2(LocalTileIndex(0, 0));
+    auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1350,7 +1350,7 @@ TEST(MatrixDestructorSenders, NonConstAfterReadWrite_UserMemory) {
     T data;
     auto matrix = createMatrix<T>(data);
 
-    auto tile_sender = matrix.readwrite_sender_tile(LocalTileIndex(0, 0));
+    auto tile_sender = matrix.readwrite(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1369,7 +1369,7 @@ TEST(MatrixDestructorSenders, ConstAfterRead_UserMemory) {
     T data;
     auto matrix = createConstMatrix<T>(data);
 
-    auto tile_sender = matrix.read_sender2(LocalTileIndex(0, 0));
+    auto tile_sender = matrix.read(LocalTileIndex(0, 0));
     last_task = std::move(tile_sender) |
                 dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                           WaitGuardHelper{is_exited_from_scope}) |
@@ -1418,7 +1418,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
               std::this_thread::sleep_for(100ms);
               guard = true;
             },
-            matrix.read_sender2(tile_tl));
+            matrix.read(tile_tl));
 
       // everyone wait on its local part...
       // this means that it is possible to call it also on empty local matrices, they just don't
@@ -1430,10 +1430,10 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
       if (has_local) {
         tt::sync_wait(dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-            matrix.read_sender2(tile_tl)));
+            matrix.read(tile_tl)));
         tt::sync_wait(dlaf::internal::transform(
             dlaf::internal::Policy<dlaf::Backend::MC>(), [&guard](auto&&) { EXPECT_TRUE(guard); },
-            matrix.read_sender2(tile_br)));
+            matrix.read(tile_br)));
       }
     }
   }
@@ -1447,37 +1447,35 @@ inline auto throw_custom = [](auto) { throw CustomException{}; };
 TEST(MatrixExceptionPropagation, RWDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<T>();
 
-  auto s =
-      matrix.readwrite_sender_tile(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
+  auto s = matrix.readwrite(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
-  EXPECT_NO_THROW(tt::sync_wait(matrix.readwrite_sender_tile(LocalTileIndex(0, 0))));
+  EXPECT_NO_THROW(tt::sync_wait(matrix.readwrite(LocalTileIndex(0, 0))));
   EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, RWDoesNotPropagateInReadAccess) {
   auto matrix = createMatrix<T>();
 
-  auto s =
-      matrix.readwrite_sender_tile(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
+  auto s = matrix.readwrite(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
-  EXPECT_NO_THROW(tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0))).get());
+  EXPECT_NO_THROW(tt::sync_wait(matrix.read(LocalTileIndex(0, 0))).get());
   EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInRWAccess) {
   auto matrix = createMatrix<T>();
 
-  auto s = matrix.read_sender2(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
+  auto s = matrix.read(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
-  EXPECT_NO_THROW(tt::sync_wait(matrix.readwrite_sender_tile(LocalTileIndex(0, 0))));
+  EXPECT_NO_THROW(tt::sync_wait(matrix.readwrite(LocalTileIndex(0, 0))));
   EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }
 
 TEST(MatrixExceptionPropagation, ReadDoesNotPropagateInReadAccess) {
   auto matrix = createMatrix<T>();
 
-  auto s = matrix.read_sender2(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
+  auto s = matrix.read(LocalTileIndex(0, 0)) | ex::then(throw_custom) | ex::ensure_started();
 
-  EXPECT_NO_THROW(tt::sync_wait(matrix.read_sender2(LocalTileIndex(0, 0))).get());
+  EXPECT_NO_THROW(tt::sync_wait(matrix.read(LocalTileIndex(0, 0))).get());
   EXPECT_THROW(tt::sync_wait(std::move(s)), CustomException);
 }

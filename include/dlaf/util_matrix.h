@@ -145,7 +145,7 @@ void set0(pika::execution::thread_priority priority, LocalTileIndex begin, Local
   using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(begin, sz))
-    start_detached(matrix.readwrite_sender_tile(idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(matrix.readwrite(idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// \overload set0
@@ -164,7 +164,7 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>&
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    start_detached(panel.readwrite_sender_tile(tile_idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(panel.readwrite(tile_idx) | tile::set0(Policy<backend>(priority)));
 }
 
 /// Set the elements of the matrix.
@@ -189,7 +189,7 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
-                                    matrix.readwrite_sender_tile(tile_wrt_local));
+                                    matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -249,7 +249,7 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
-                                    matrix.readwrite_sender_tile(tile_wrt_local));
+                                    matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -352,7 +352,7 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
-                                    matrix.readwrite_sender_tile(tile_wrt_local));
+                                    matrix.readwrite(tile_wrt_local));
   }
 }
 

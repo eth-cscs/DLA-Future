@@ -35,12 +35,6 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
 }
 
 template <class T, Device D>
-pika::shared_future<Tile<const T, D>> Matrix<const T, D>::read(const LocalTileIndex&) noexcept {
-  DLAF_UNREACHABLE_PLAIN;
-  return {};
-}
-
-template <class T, Device D>
 void Matrix<const T, D>::waitLocalTiles() noexcept {
   // Note:
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared

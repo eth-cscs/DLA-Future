@@ -23,7 +23,8 @@ add_library(DLAF_miniapp INTERFACE)
 target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF pika::pika)
 target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
+#TODO : Reenable.
+#DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
 
 DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp)
 

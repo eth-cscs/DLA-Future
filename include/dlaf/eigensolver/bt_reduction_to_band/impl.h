@@ -186,39 +186,36 @@ void BackTransformationReductionToBand<backend, device, T>::call(
           std::max<SizeType>(0, i.row() * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
       if (j_diag < mb) {
-        auto tile_v = subTileSender(mat_v.read_sender2(i), panel_view(i));
-        copyAndSetHHUpperTiles<backend>(j_diag, tile_v, panelV.readwrite_sender_tile(i));
+        auto tile_v = subTileSender(mat_v.read(i), panel_view(i));
+        copyAndSetHHUpperTiles<backend>(j_diag, tile_v, panelV.readwrite(i));
       }
       else {
-        panelV.setTileSender(i, mat_v.read_sender2(i));
+        panelV.setTileSender(i, mat_v.read(i));
       }
     }
 
     auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
     dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel,
-                                                           panelT.readwrite_sender_tile(t_index));
+                                                           panelT.readwrite(t_index));
 
     // W = V T
-    auto tile_t = panelT.read_sender2(t_index);
+    auto tile_t = panelT.read(t_index);
     for (const auto& idx : panelW.iteratorLocal()) {
-      trmmPanel<backend>(np, tile_t, panelV.read_sender2(idx), panelW.readwrite_sender_tile(idx));
+      trmmPanel<backend>(np, tile_t, panelV.read(idx), panelW.readwrite(idx));
     }
 
     // W2 = W C
     matrix::util::set0<backend>(hp, panelW2);
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmUpdateW2<backend>(np, panelW.read_sender2(ij),
-                            subTileSender(mat_c.read_sender2(ij), mat_c_view(ij)),
-                            panelW2.readwrite_sender_tile(ij));
+      gemmUpdateW2<backend>(np, panelW.read(ij), subTileSender(mat_c.read(ij), mat_c_view(ij)),
+                            panelW2.readwrite(ij));
     }
 
     // Update trailing matrix: C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmTrailingMatrix<backend>(np, panelV.read_sender2(ij),
-                                  panelW2.read_sender2(ij),
-                                  subTileSender(mat_c.readwrite_sender_tile(ij),
-                                                mat_c_view(ij)));
+      gemmTrailingMatrix<backend>(np, panelV.read(ij), panelW2.read(ij),
+                                  subTileSender(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
     panelV.reset();
@@ -307,11 +304,11 @@ void BackTransformationReductionToBand<B, D, T>::call(
             std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
         if (j_diag < mb) {
-          auto tile_v = subTileSender(mat_v.read_sender2(ik), panel_view(ik));
-          copyAndSetHHUpperTiles<B>(j_diag, tile_v, panelV.readwrite_sender_tile(ik));
+          auto tile_v = subTileSender(mat_v.read(ik), panel_view(ik));
+          copyAndSetHHUpperTiles<B>(j_diag, tile_v, panelV.readwrite(ik));
         }
         else {
-          panelV.setTileSender(ik, mat_v.read_sender2(ik));
+          panelV.setTileSender(ik, mat_v.read(ik));
         }
       }
 
@@ -320,12 +317,11 @@ void BackTransformationReductionToBand<B, D, T>::call(
       auto taus_panel = taus[k_local];
 
       using dlaf::factorization::internal::computeTFactor;
-      computeTFactor<B>(panelV, taus_panel, panelT.readwrite_sender_tile(t_index), mpi_col_task_chain);
+      computeTFactor<B>(panelV, taus_panel, panelT.readwrite(t_index), mpi_col_task_chain);
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {
-        trmmPanel<B>(np, panelT.read_sender2(t_index), panelV.read_sender2(idx),
-                     panelW.readwrite_sender_tile(idx));
+        trmmPanel<B>(np, panelT.read(t_index), panelV.read(idx), panelW.readwrite(idx));
       }
     }
 
@@ -335,22 +331,20 @@ void BackTransformationReductionToBand<B, D, T>::call(
 
     // W2 = W C
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmUpdateW2<B>(np, panelW.readwrite_sender_tile(ij),
-                      subTileSender(mat_c.read_sender2(ij), mat_c_view(ij)),
-                      panelW2.readwrite_sender_tile(ij));
+      gemmUpdateW2<B>(np, panelW.readwrite(ij), subTileSender(mat_c.read(ij), mat_c_view(ij)),
+                      panelW2.readwrite(ij));
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      ex::start_detached(
-          dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
-                                               panelW2.readwrite_sender_tile(kj_panel)));
+      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                              panelW2.readwrite(kj_panel)));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);
 
     // C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmTrailingMatrix<B>(np, panelV.read_sender2(ij), panelW2.read_sender2(ij),
-                            subTileSender(mat_c.readwrite_sender_tile(ij), mat_c_view(ij)));
+      gemmTrailingMatrix<B>(np, panelV.read(ij), panelW2.read(ij),
+                            subTileSender(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
     panelV.reset();

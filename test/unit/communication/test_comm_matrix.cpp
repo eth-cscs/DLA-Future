@@ -38,20 +38,20 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   LocalTileIndex index(0, 0);
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
-    sync_wait(mat.readwrite_sender_tile(index))({sz - 1, 0}) = 1.;
-    start_detached(when_all(ccomm(), mat.readwrite_sender_tile(index)) |
+    sync_wait(mat.readwrite(index))({sz - 1, 0}) = 1.;
+    start_detached(when_all(ccomm(), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
-    mat.readwrite_sender_tile(index) |
+    mat.readwrite(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
           tile({sz - 1, 0}) = 2.;
         });
-    EXPECT_EQ(2., sync_wait(mat.read_sender2(index)).get()({sz - 1, 0}));
+    EXPECT_EQ(2., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    start_detached(when_all(ccomm(), just(root), mat.readwrite_sender_tile(index)) |
+    start_detached(when_all(ccomm(), just(root), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::recvBcast_o));
-    EXPECT_EQ(1., sync_wait(mat.read_sender2(index)).get()({sz - 1, 0}));
+    EXPECT_EQ(1., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
 }
 
@@ -70,19 +70,19 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   LocalTileIndex index(0, 0);
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
-    sync_wait(mat.readwrite_sender_tile(index))({sz - 1, 0}) = 1.;
-    start_detached(when_all(ccomm(), mat.read_sender2(index)) |
+    sync_wait(mat.readwrite(index))({sz - 1, 0}) = 1.;
+    start_detached(when_all(ccomm(), mat.read(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
-    mat.readwrite_sender_tile(index) |
+    mat.readwrite(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
           tile({sz - 1, 0}) = 2.;
         });
-    EXPECT_EQ(2., sync_wait(mat.read_sender2(index)).get()({sz - 1, 0}));
+    EXPECT_EQ(2., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
   else {
     std::this_thread::sleep_for(50ms);
-    start_detached(when_all(ccomm(), just(root), mat.readwrite_sender_tile(index)) |
+    start_detached(when_all(ccomm(), just(root), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::recvBcast_o));
-    EXPECT_EQ(1., sync_wait(mat.read_sender2(index)).get()({sz - 1, 0}));
+    EXPECT_EQ(1., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
 }

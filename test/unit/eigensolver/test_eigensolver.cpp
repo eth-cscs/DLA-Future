@@ -23,6 +23,7 @@
 #include "dlaf/tune.h"
 #include "dlaf/types.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include "dlaf_test/eigensolver/test_eigensolver_correctness.h"
 #include "dlaf_test/matrix/matrix_local.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_matrix_local.h"
@@ -65,58 +66,6 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
-template <class T, Device D, class... GridIfDistributed>
-void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference,
-                                eigensolver::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
-  // Note:
-  // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
-  // calls that might lead to deadlocks.
-  constexpr bool isDistributed = (sizeof...(grid) == 1);
-  if constexpr (isDistributed)
-    pika::threads::get_thread_manager().wait();
-
-  const SizeType m = reference.size().rows();
-
-  auto mat_a_local = allGather(blas::Uplo::General, reference, grid...);
-  auto mat_evalues_local = [&]() {
-    MatrixMirror<const BaseType<T>, Device::CPU, D> mat_evals(ret.eigenvalues);
-    return allGather(blas::Uplo::General, mat_evals.get());
-  }();
-  auto mat_e_local = [&]() {
-    MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
-    return allGather(blas::Uplo::General, mat_e.get(), grid...);
-  }();
-
-  MatrixLocal<T> workspace({m, m}, reference.blockSize());
-
-  // Check eigenvectors orthogonality (E^H E == Id)
-  blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},
-             mat_e_local.ptr(), mat_e_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0},
-             workspace.ptr(), workspace.ld());
-
-  auto id = [](GlobalElementIndex index) {
-    if (index.row() == index.col())
-      return T{1};
-    return T{0};
-  };
-  CHECK_MATRIX_NEAR(id, workspace, m * TypeUtilities<T>::error, 10 * m * TypeUtilities<T>::error);
-
-  // Check Ax = lambda x
-  // Compute A E
-  blas::hemm(blas::Layout::ColMajor, blas::Side::Left, uplo, m, m, T{1}, mat_a_local.ptr(),
-             mat_a_local.ld(), mat_e_local.ptr(), mat_e_local.ld(), T{0}, workspace.ptr(),
-             workspace.ld());
-
-  // Compute Lambda E (in place in mat_e_local)
-  for (SizeType j = 0; j < m; ++j) {
-    blas::scal(m, mat_evalues_local({j, 0}), mat_e_local.ptr({0, j}), 1);
-  }
-
-  // Check A E == Lambda E
-  auto res = [&mat_e_local](GlobalElementIndex index) { return mat_e_local(index); };
-  CHECK_MATRIX_NEAR(res, workspace, 2 * m * TypeUtilities<T>::error, 2 * m * TypeUtilities<T>::error);
-}
-
 template <class T, Backend B, Device D, Allocation allocation>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
   const LocalElementSize size(m, m);
@@ -152,7 +101,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb)
   if (mat_a_h.size().isEmpty())
     return;
 
-  testEigensolverCorrectness(uplo, reference, ret);
+  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors);
 }
 
 template <class T, Backend B, Device D, Allocation allocation>
@@ -191,7 +140,7 @@ void testEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const S
   if (mat_a_h.size().isEmpty())
     return;
 
-  testEigensolverCorrectness(uplo, reference, ret, grid);
+  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {

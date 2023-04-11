@@ -125,7 +125,6 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   using namespace bt_red_band;
-  namespace ex = pika::execution::experimental;
 
   auto hp = pika::execution::thread_priority::high;
   auto np = pika::execution::thread_priority::normal;

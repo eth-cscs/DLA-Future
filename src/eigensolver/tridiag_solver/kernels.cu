@@ -227,7 +227,8 @@ struct Row2ColMajor {
 };
 
 template <class T>
-void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el, const SizeType& j_subm_el,
+void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el,
+                           const SizeType& j_subm_el,
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
@@ -300,8 +301,8 @@ __global__ void multiplyColumns(SizeType len, const T* in, T* out) {
 }
 
 template <class T>
-void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
   if (row >= k_row || col >= k_col)
     return;
@@ -345,8 +346,8 @@ __global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType 
 }
 
 template <class T>
-void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
-                            const matrix::Tile<const T, Device::GPU>& z_tile,
+void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                            const SizeType& col, const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
                             const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream) {
   if (row >= k_row || col >= k_col)
@@ -486,8 +487,8 @@ __global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld,
 }
 
 template <class T>
-void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
   if (row >= k_row || col >= k_col)
     return;
@@ -545,9 +546,10 @@ DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
 
 // Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
 template <class T>
-void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
-            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
-            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
+void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+            const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::GPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::GPU>& out_tile) {
   if (row >= k_row || col >= k_col)
     return;
 

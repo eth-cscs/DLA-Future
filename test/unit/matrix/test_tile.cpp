@@ -17,12 +17,11 @@
 #include <pika/future.hpp>
 
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/internal/tile_pipeline.h"
 #include "dlaf/memory/memory_view.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
 
-// TODO: Rewrite these tests to not rely so heavily on internal implementation
-// details.
 using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
@@ -49,24 +48,6 @@ template <class T, Device D>
 TileSizes getSizes(const Tile<T, D>& tile) {
   return TileSizes(tile.size(), tile.ld());
 }
-
-// TODO: Make this the actual pipeline type used in Matrix
-template <class T, Device D>
-struct TilePipeline {
-  dlaf::matrix::internal::TileAsyncRwMutex<T, D> pipeline;
-
-  TilePipeline(Tile<T, D>&& tile) : pipeline(std::move(tile)) {}
-
-  ReadOnlyTileSender<T, D> read() {
-    return pipeline.read();
-  }
-
-  ReadWriteTileSender<T, D> readwrite() {
-    return pipeline.readwrite() | pika::execution::experimental::then([](auto tile_wrapper) {
-             return dlaf::matrix::internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
-           });
-  }
-};
 
 template <typename Type>
 class TileTest : public ::testing::Test {};
@@ -322,8 +303,8 @@ auto createTileAndPtrChecker(TileElementSize size, SizeType ld) {
 }
 
 template <class T, Device D>
-TilePipeline<T, D> createTilePipeline(Tile<T, D>&& tile) {
-  return TilePipeline<T, D>(std::move(tile));
+dlaf::matrix::internal::TilePipeline<T, D> createTilePipeline(Tile<T, D>&& tile) {
+  return dlaf::matrix::internal::TilePipeline<T, D>(std::move(tile));
 }
 
 template <class F, class T>

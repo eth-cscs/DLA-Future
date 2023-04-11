@@ -17,6 +17,7 @@
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/internal/tile_pipeline.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
@@ -144,19 +145,17 @@ public:
   }
 
   auto readwrite_sender2(const LocalTileIndex& index) noexcept {
-    const auto i = tileLinearIndex(index);
-    return tile_managers_[i].readwrite();
+    DLAF_UNREACHABLE_PLAIN;
+    return tile_managers_[tileLinearIndex(index)].readwrite();
   }
 
   auto readwrite_sender2(const GlobalTileIndex& index) {
+    DLAF_UNREACHABLE_PLAIN;
     return readwrite_sender2(this->distribution().localTileIndex(index));
   }
 
   ReadWriteSenderType readwrite_sender_tile(const LocalTileIndex& index) noexcept {
-    const auto i = tileLinearIndex(index);
-    return tile_managers_[i].readwrite() | pika::execution::experimental::then([](auto tile_wrapper) {
-             return internal::createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
-           });
+    return tile_managers_[tileLinearIndex(index)].readwrite();
   }
 
   ReadWriteSenderType readwrite_sender_tile(const GlobalTileIndex& index) noexcept {
@@ -244,7 +243,7 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<internal::TileAsyncRwMutex<T, D>> tile_managers_;
+  std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

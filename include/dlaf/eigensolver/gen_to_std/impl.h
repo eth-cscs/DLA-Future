@@ -316,7 +316,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       for (SizeType i_local = kk_offset.rows(); i_local < distr.localNrTiles().rows(); ++i_local) {
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.cols());
-        l_panel.setTileSender(ik_panel, mat_l.read(ik));
+        l_panel.setTile(ik_panel, mat_l.read(ik));
       }
     }
 
@@ -335,7 +335,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
         trsmPanelUpdateTile<backend>(thread_priority::high, l_panel.read(kk_panel), mat_a.readwrite(kj));
 
-        a_panelT.setTileSender(kj_panelT, mat_a.read(kj));
+        a_panelT.setTile(kj_panelT, mat_a.read(kj));
       }
     }
 
@@ -377,7 +377,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.setRange(kk, at);
 
       if (kk_rank.row() == this_rank.row()) {
-        a_panelT.setTileSender(diag_wp_idx, mat_a.read(kk));
+        a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
       }
       broadcast(kk_rank.row(), a_panelT, mpi_col_task_chain);
 
@@ -390,7 +390,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         hemmPanelTile<backend>(thread_priority::high, a_panelT.read(diag_wp_idx), mat_l.read(ik),
                                mat_a.readwrite(ik));
 
-        a_panel.setTileSender(ik_panel, mat_a.read(ik));
+        a_panel.setTile(ik_panel, mat_a.read(ik));
       }
 
       // keep diagonal tile for later.
@@ -580,7 +580,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ki_panel(Coord::Col, i_local);
         const LocalTileIndex ki(kk_offset.rows(), i_local);
 
-        u_panel.setTileSender(ki_panel, mat_u.read(ki));
+        u_panel.setTile(ki_panel, mat_u.read(ki));
       }
     }
 
@@ -599,7 +599,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
         trsmPanelUpdateTile<backend>(thread_priority::high, u_panel.read(kk_panel), mat_a.readwrite(ik));
 
-        a_panelT.setTileSender(ki_panelT, mat_a.read(ik));
+        a_panelT.setTile(ki_panelT, mat_a.read(ik));
       }
     }
 
@@ -641,7 +641,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       a_panelT.setRange(kk, at);
 
       if (kk_rank.col() == this_rank.col()) {
-        a_panelT.setTileSender(diag_wp_idx, mat_a.read(kk));
+        a_panelT.setTile(diag_wp_idx, mat_a.read(kk));
       }
       broadcast(kk_rank.col(), a_panelT, mpi_row_task_chain);
 
@@ -654,7 +654,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         hemmPanelTile<backend>(thread_priority::high, a_panelT.read(diag_wp_idx), mat_u.read(kj),
                                mat_a.readwrite(kj));
 
-        a_panel.setTileSender(kj_panel, mat_a.read(kj));
+        a_panel.setTile(kj_panel, mat_a.read(kj));
       }
 
       // keep diagonal tile for later.

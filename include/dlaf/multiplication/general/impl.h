@@ -119,9 +119,9 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
         const LocalTileIndex ik(i, k_local);
         const bool isRowPartial = (i == i_end - 1 && isEndRangePartial && rankHasLastRow);
         const SizeType nrows = isRowPartial ? partialSize : mb;
-        panelA.setTileSender(ik, (isRowPartial || isKPartial)
-                                     ? subTileSender(mat_a.read(ik), {{0, 0}, {nrows, kSize}})
-                                     : mat_a.read(ik));
+        panelA.setTile(ik, (isRowPartial || isKPartial)
+                               ? subTileSender(mat_a.read(ik), {{0, 0}, {nrows, kSize}})
+                               : mat_a.read(ik));
       }
     }
     // Setup the row workspace for the root ranks, i.e. the ones in the current row
@@ -131,9 +131,9 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
         const LocalTileIndex kj(k_local, j);
         const bool isColPartial = (j == j_end - 1 && isEndRangePartial && rankHasLastCol);
         const SizeType ncols = isColPartial ? partialSize : mb;
-        panelB.setTileSender(kj, (isKPartial || isColPartial)
-                                     ? subTileSender(mat_b.read(kj), {{0, 0}, {kSize, ncols}})
-                                     : mat_b.read(kj));
+        panelB.setTile(kj, (isKPartial || isColPartial)
+                               ? subTileSender(mat_b.read(kj), {{0, 0}, {kSize, ncols}})
+                               : mat_b.read(kj));
       }
     }
 

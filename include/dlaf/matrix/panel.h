@@ -81,11 +81,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType>) {
-    DLAF_UNREACHABLE_PLAIN;
-  }
-
-  void setTileSender(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
+  void setTile(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
@@ -533,15 +529,9 @@ public:
 
   using BaseT::offsetElement;
 
-  void setTileSender(LocalTileIndex index, ReadOnlySenderType new_tile_sender) {
+  void setTile(LocalTileIndex index, ReadOnlySenderType new_tile_sender) {
     index.transpose();
-    BaseT::setTileSender(index, std::move(new_tile_sender));
-  }
-
-  void setTile(LocalTileIndex index, pika::shared_future<ConstTileType> new_tile_fut) {
-    DLAF_UNREACHABLE_PLAIN;
-    index.transpose();
-    BaseT::setTile(index, std::move(new_tile_fut));
+    BaseT::setTile(index, std::move(new_tile_sender));
   }
 
   ReadOnlySenderType read(LocalTileIndex index) {

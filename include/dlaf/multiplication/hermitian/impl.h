@@ -147,7 +147,7 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
     if (this_rank.col() == rank_ll.col()) {
       for (SizeType i_loc = ll_offset.row(); i_loc < distr_a.localNrTiles().rows(); ++i_loc) {
         const LocalTileIndex il{i_loc, ll_offset.col()};
-        a_panel.setTileSender(il, mat_a.read(il));
+        a_panel.setTile(il, mat_a.read(il));
       }
     }
     comm::broadcast(rank_ll.col(), a_panel, mpi_row_task_chain);
@@ -155,7 +155,7 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
     if (this_rank.row() == rank_ll.row()) {
       for (SizeType j_loc = 0; j_loc < distr_b.localNrTiles().cols(); ++j_loc) {
         const LocalTileIndex lj{diag_offset.row(), j_loc};
-        b_panel.setTileSender(lj, mat_b.read(lj));
+        b_panel.setTile(lj, mat_b.read(lj));
       }
     }
     comm::broadcast(rank_ll.row(), b_panel, mpi_col_task_chain);

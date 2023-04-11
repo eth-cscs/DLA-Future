@@ -354,7 +354,7 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 13));
       });
     else
-      panel.setTileSender(idx, matrix.read(correctIndex(idx)));
+      panel.setTile(idx, matrix.read(correctIndex(idx)));
   }
 
   // Check that the values are correct, both for internal and externally linked tiles
@@ -375,7 +375,7 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 5));
       });
     else
-      panel.setTileSender(idx, matrix.read(correctIndex(idx)));
+      panel.setTile(idx, matrix.read(correctIndex(idx)));
   }
 
   for (const auto& idx : panel.iteratorLocal()) {

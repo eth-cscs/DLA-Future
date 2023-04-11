@@ -216,7 +216,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       panelT.setRange({k, k}, {kt, kt});
 
       if (kk_rank.row() == this_rank.row())
-        panelT.setTileSender(diag_wp_idx, mat_a.read(kk_idx));
+        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
       broadcast(kk_rank.row(), panelT, mpi_col_task_chain);
 
       // COLUMN UPDATE
@@ -227,7 +227,7 @@ void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
         trsmPanelTile<backend>(thread_priority::high, panelT.read(diag_wp_idx), mat_a.readwrite(ik_idx));
 
-        panel.setTileSender(local_idx, mat_a.read(ik_idx));
+        panel.setTile(local_idx, mat_a.read(ik_idx));
       }
 
       // row panel has been used for temporary storage of diagonal panel for column update
@@ -356,7 +356,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       panelT.setRange({k, k}, {kt, kt});
 
       if (kk_rank.col() == this_rank.col())
-        panelT.setTileSender(diag_wp_idx, mat_a.read(kk_idx));
+        panelT.setTile(diag_wp_idx, mat_a.read(kk_idx));
       broadcast(kk_rank.col(), panelT, mpi_row_task_chain);
 
       // ROW UPDATE
@@ -367,7 +367,7 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
         trsmPanelTile<backend>(thread_priority::high, panelT.read(diag_wp_idx), mat_a.readwrite(kj_idx));
 
-        panel.setTileSender(local_idx, mat_a.read(kj_idx));
+        panel.setTile(local_idx, mat_a.read(kj_idx));
       }
 
       // col panel has been used for temporary storage of diagonal panel for column update

@@ -190,7 +190,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
         copyAndSetHHUpperTiles<backend>(j_diag, tile_v, panelV.readwrite(i));
       }
       else {
-        panelV.setTileSender(i, mat_v.read(i));
+        panelV.setTile(i, mat_v.read(i));
       }
     }
 
@@ -308,7 +308,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
           copyAndSetHHUpperTiles<B>(j_diag, tile_v, panelV.readwrite(ik));
         }
         else {
-          panelV.setTileSender(ik, mat_v.read(ik));
+          panelV.setTile(ik, mat_v.read(ik));
         }
       }
 

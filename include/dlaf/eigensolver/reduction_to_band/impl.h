@@ -349,7 +349,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
       ex::start_detached(ex::when_all(matrix::subTileSender(mat_a.read(idx), spec), v.readwrite(idx)) |
                          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
     else
-      v.setTileSender(idx, matrix::subTileSender(mat_a.read(idx), spec));
+      v.setTile(idx, matrix::subTileSender(mat_a.read(idx), spec));
   }
 }
 
@@ -1261,7 +1261,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       if (at_tile_col == dist.nrTiles().cols() - 1) {
         const comm::IndexT_MPI owner = rank_v0.row();
         if (rank.row() == owner) {
-          xt.setTileSender(at, x.read(at));
+          xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
             ex::start_detached(

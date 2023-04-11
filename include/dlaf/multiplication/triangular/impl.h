@@ -442,7 +442,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.col());
 
-        a_panel.setTileSender(ik_panel, mat_a.read(ik));
+        a_panel.setTile(ik_panel, mat_a.read(ik));
       }
     }
     broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
@@ -454,7 +454,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        b_panel.setTileSender(kj_panel, mat_b.read(kj));
+        b_panel.setTile(kj_panel, mat_b.read(kj));
         trmmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read(kk_panel),
                                 mat_b.readwrite(kj));
       }
@@ -523,7 +523,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, kk_offset.col());
 
-        a_panel.setTileSender(ik_panel, mat_a.read(ik));
+        a_panel.setTile(ik_panel, mat_a.read(ik));
       }
     }
     broadcast(kk_rank.col(), a_panel, mpi_row_task_chain);
@@ -535,7 +535,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj(k_local_row, j_local);
         const LocalTileIndex kj_panel(Coord::Col, j_local);
 
-        b_panel.setTileSender(kj_panel, mat_b.read(kj));
+        b_panel.setTile(kj_panel, mat_b.read(kj));
         trmmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read(kk_panel),
                                 mat_b.readwrite(kj));
       }
@@ -604,7 +604,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(kk_offset.row(), j_local);
 
-        a_panel.setTileSender(kj_panel, mat_a.read(kj));
+        a_panel.setTile(kj_panel, mat_a.read(kj));
       }
     }
     broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
@@ -616,7 +616,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        b_panel.setTileSender(ik_panel, mat_b.read(ik));
+        b_panel.setTile(ik_panel, mat_b.read(ik));
         trmmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read(kk_panel),
                                 mat_b.readwrite(ik));
       }
@@ -687,7 +687,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(kk_offset.row(), j_local);
 
-        a_panel.setTileSender(kj_panel, mat_a.read(kj));
+        a_panel.setTile(kj_panel, mat_a.read(kj));
       }
     }
     broadcast(kk_rank.row(), a_panel, mpi_col_task_chain);
@@ -699,7 +699,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
         const LocalTileIndex ik(i_local, k_local_col);
         const LocalTileIndex ik_panel(Coord::Row, i_local);
 
-        b_panel.setTileSender(ik_panel, mat_b.read(ik));
+        b_panel.setTile(ik_panel, mat_b.read(ik));
         trmmBPanelTile<backend>(thread_priority::high, diag, alpha, a_panel.read(kk_panel),
                                 mat_b.readwrite(ik));
       }

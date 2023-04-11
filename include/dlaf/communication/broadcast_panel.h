@@ -185,7 +185,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
     namespace ex = pika::execution::experimental;
     if (dist.rankIndex().get(coord) == owner_diag) {
       const auto index_diag_local = dist.template localTileFromGlobalTile<coord>(index_diag);
-      panelT.setTileSender(indexT, panel.read({coord, index_diag_local}));
+      panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
         ex::start_detached(

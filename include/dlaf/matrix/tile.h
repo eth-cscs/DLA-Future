@@ -310,7 +310,7 @@ private:
       std::monostate,
       // Read-write access
       internal::TileAsyncRwMutexReadOnlyWrapper<T, D>,
-      // Read-only access TODO: Is this one used? Maybe not...
+      // Read-only access
       internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
       // Disjoint read-write access
       std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>

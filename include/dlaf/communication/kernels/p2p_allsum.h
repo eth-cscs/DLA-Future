@@ -54,7 +54,6 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
 
   auto tile_out =
       comm::scheduleRecv(ex::make_unique_any_sender(std::forward<CommSender>(comm)), rank_mate, tag,
-                         // TODO: Probably don't need the make_unique_any_sender here. Try removing.
                          ex::make_unique_any_sender(std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());

@@ -36,7 +36,6 @@ namespace dlaf::comm {
 ///
 /// `in` is a sender of a read-only tile that, together with the one received from `rank_mate`, will be
 /// summed in `out` (on both ranks)
-// TODO: Type-erase this interface as well.
 template <Backend B, class CommSender, class SenderIn, class SenderOut>
 [[nodiscard]] auto scheduleAllSumP2P(CommSender&& comm, IndexT_MPI rank_mate, IndexT_MPI tag,
                                      SenderIn&& in, SenderOut&& out) {

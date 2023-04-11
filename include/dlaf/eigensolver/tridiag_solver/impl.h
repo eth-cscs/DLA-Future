@@ -70,9 +70,9 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 template <class T>
 auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   namespace ex = pika::execution::experimental;
-  using sender_type = decltype(
-      ex::split(cuppensDecompAsync<T>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
-                                      tridiag.readwrite_sender(std::declval<LocalTileIndex>()))));
+  using sender_type = decltype(ex::split(ex::ensure_started(
+      cuppensDecompAsync<T>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
+                            tridiag.readwrite_sender(std::declval<LocalTileIndex>())))));
   using vector_type = std::vector<sender_type>;
 
   if (tridiag.nrTiles().rows() == 0)
@@ -83,9 +83,9 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(
-        ex::split(cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_split, 0)),
-                                        tridiag.readwrite_sender(LocalTileIndex(i_split + 1, 0)))));
+    offdiag_vals.push_back(ex::split(ex::ensure_started(
+        cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_split, 0)),
+                              tridiag.readwrite_sender(LocalTileIndex(i_split + 1, 0))))));
   }
   return offdiag_vals;
 }
@@ -329,20 +329,21 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
 
-  DistWorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),   // mat1
-                         Matrix<T, D>(dist_evecs),   // mat2
-                         Matrix<T, D>(dist_evals),   // z
-                         Matrix<T, D>(dist_evals)};  // ztmp
+  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),          // mat1
+                     Matrix<T, D>(dist_evecs),          // mat2
+                     Matrix<T, D>(dist_evals),          // z
+                     Matrix<T, D>(dist_evals),          // ztmp
+                     Matrix<SizeType, D>(dist_evals)};  // i2
 
-  DistWorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),         // dtmp
-                            Matrix<SizeType, Device::CPU>(dist_evals),  // i1
-                            Matrix<SizeType, Device::CPU>(dist_evals),  // i2
-                            Matrix<SizeType, Device::CPU>(dist_evals),  // i3
-                            Matrix<ColType, Device::CPU>(dist_evals)};  // c
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),         // dtmp
+                        Matrix<SizeType, Device::CPU>(dist_evals),  // i1
+                        Matrix<SizeType, Device::CPU>(dist_evals),  // i3
+                        Matrix<ColType, Device::CPU>(dist_evals)};  // c
 
   DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(evals),   initMirrorMatrix(evecs),
                                       initMirrorMatrix(ws.mat1), initMirrorMatrix(ws.mat2),
-                                      initMirrorMatrix(ws.z),    initMirrorMatrix(ws.ztmp)};
+                                      initMirrorMatrix(ws.z),    initMirrorMatrix(ws.ztmp),
+                                      initMirrorMatrix(ws.i2)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);

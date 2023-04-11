@@ -277,15 +277,16 @@ void initIndexTileAsync(SizeType tile_row, TileSender&& tile) {
 }
 
 template <class T>
-void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el,
+                           const SizeType& j_subm_el,
                            const matrix::Tile<const T, Device::CPU>& diag_rows,
                            const matrix::Tile<const T, Device::CPU>& diag_cols,
                            const matrix::Tile<const T, Device::CPU>& evecs_tile,
                            const matrix::Tile<T, Device::CPU>& ws_tile);
 
 #define DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(kword, Type)                                           \
-  kword template void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el,            \
-                                            const SizeType& j_subm_el,                               \
+  kword template void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col,            \
+                                            const SizeType& i_subm_el, const SizeType& j_subm_el,    \
                                             const matrix::Tile<const Type, Device::CPU>& diag_rows,  \
                                             const matrix::Tile<const Type, Device::CPU>& diag_cols,  \
                                             const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
@@ -296,15 +297,16 @@ DLAF_CPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el,
+                           const SizeType& j_subm_el,
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
                            const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
 #define DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(kword, Type)                                           \
-  kword template void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el,            \
-                                            const SizeType& j_subm_el,                               \
+  kword template void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col,            \
+                                            const SizeType& i_subm_el, const SizeType& j_subm_el,    \
                                             const matrix::Tile<const Type, Device::GPU>& diag_rows,  \
                                             const matrix::Tile<const Type, Device::GPU>& diag_cols,  \
                                             const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
@@ -317,14 +319,15 @@ DLAF_GPU_DIVIDE_EVECS_BY_DIAGONAL_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(divideEvecsByDiagonal);
 
-template <Device D, class KSender, class DiagRowsTileSender, class DiagColsTileSender,
+template <Device D, class KRSender, class KCSender, class DiagRowsTileSender, class DiagColsTileSender,
           class EvecsTileSender, class TempTileSender>
-void divideEvecsByDiagonalAsync(KSender&& k, SizeType i_subm_el, SizeType j_subm_el,
-                                DiagRowsTileSender&& diag_rows, DiagColsTileSender&& diag_cols,
-                                EvecsTileSender&& evecs, TempTileSender&& temp) {
+void divideEvecsByDiagonalAsync(KRSender&& k_row, KCSender&& k_col, SizeType i_subm_el,
+                                SizeType j_subm_el, DiagRowsTileSender&& diag_rows,
+                                DiagColsTileSender&& diag_cols, EvecsTileSender&& evecs,
+                                TempTileSender&& temp) {
   namespace di = dlaf::internal;
   auto sender =
-      di::whenAllLift(std::forward<KSender>(k), i_subm_el, j_subm_el,
+      di::whenAllLift(std::forward<KRSender>(k_row), std::forward<KCSender>(k_col), i_subm_el, j_subm_el,
                       std::forward<DiagRowsTileSender>(diag_rows),
                       std::forward<DiagColsTileSender>(diag_cols), std::forward<EvecsTileSender>(evecs),
                       std::forward<TempTileSender>(temp));
@@ -332,13 +335,14 @@ void divideEvecsByDiagonalAsync(KSender&& k, SizeType i_subm_el, SizeType j_subm
 }
 
 template <class T>
-void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::CPU>& in,
+void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::CPU>& in,
                           const matrix::Tile<T, Device::CPU>& out);
 
-#define DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                                \
-  kword template void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                           const matrix::Tile<const Type, Device::CPU>& in,             \
+#define DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                    \
+  kword template void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col,    \
+                                           const SizeType& row, const SizeType& col,        \
+                                           const matrix::Tile<const Type, Device::CPU>& in, \
                                            const matrix::Tile<Type, Device::CPU>& out)
 
 DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, float);
@@ -346,14 +350,15 @@ DLAF_CPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream);
 
-#define DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                                \
-  kword template void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                           const matrix::Tile<const Type, Device::GPU>& in,             \
-                                           const matrix::Tile<Type, Device::GPU>& out,                  \
+#define DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(kword, Type)                                    \
+  kword template void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col,    \
+                                           const SizeType& row, const SizeType& col,        \
+                                           const matrix::Tile<const Type, Device::GPU>& in, \
+                                           const matrix::Tile<Type, Device::GPU>& out,      \
                                            whip::stream_t stream)
 
 DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, float);
@@ -362,24 +367,24 @@ DLAF_GPU_MULTIPLY_FIRST_COLUMNS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(multiplyFirstColumns);
 
-template <Device D, class KSender, class InTileSender, class OutTileSender>
-void multiplyFirstColumnsAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in,
-                               OutTileSender&& out) {
+template <Device D, class KRSender, class KCSender, class InTileSender, class OutTileSender>
+void multiplyFirstColumnsAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col,
+                               InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
+  auto sender = di::whenAllLift(k_row, k_col, row, col, std::forward<InTileSender>(in),
                                 std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), multiplyFirstColumns_o, std::move(sender));
 }
 
 template <class T>
-void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
-                            const matrix::Tile<const T, Device::CPU>& z_tile,
+void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                            const SizeType& col, const matrix::Tile<const T, Device::CPU>& z_tile,
                             const matrix::Tile<const T, Device::CPU>& ws_tile,
                             const matrix::Tile<T, Device::CPU>& evecs_tile);
 
 #define DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(kword, Type)                                       \
-  kword template void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row,               \
-                                             const SizeType& col,                                  \
+  kword template void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col,         \
+                                             const SizeType& row, const SizeType& col,             \
                                              const matrix::Tile<const Type, Device::CPU>& z_tile,  \
                                              const matrix::Tile<const Type, Device::CPU>& ws_tile, \
                                              const matrix::Tile<Type, Device::CPU>& evecs_tile)
@@ -389,14 +394,14 @@ DLAF_CPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
-                            const matrix::Tile<const T, Device::GPU>& z_tile,
+void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                            const SizeType& col, const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
                             const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream);
 
 #define DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(kword, Type)                                       \
-  kword template void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row,               \
-                                             const SizeType& col,                                  \
+  kword template void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col,         \
+                                             const SizeType& row, const SizeType& col,             \
                                              const matrix::Tile<const Type, Device::GPU>& z_tile,  \
                                              const matrix::Tile<const Type, Device::GPU>& ws_tile, \
                                              const matrix::Tile<Type, Device::GPU>& evecs_tile,    \
@@ -408,25 +413,28 @@ DLAF_GPU_CALC_EVECS_FROM_WEIGHT_VEC_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(calcEvecsFromWeightVec);
 
-template <Device D, class KSender, class Rank1TileSender, class TempTileSender, class EvecsTileSender>
-void calcEvecsFromWeightVecAsync(KSender&& k, SizeType row, SizeType col, Rank1TileSender&& rank1,
-                                 TempTileSender&& temp, EvecsTileSender&& evecs) {
+template <Device D, class KRSender, class KCSender, class Rank1TileSender, class TempTileSender,
+          class EvecsTileSender>
+void calcEvecsFromWeightVecAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col,
+                                 Rank1TileSender&& rank1, TempTileSender&& temp,
+                                 EvecsTileSender&& evecs) {
   namespace di = dlaf::internal;
 
   auto sender =
-      di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<Rank1TileSender>(rank1),
+      di::whenAllLift(k_row, k_col, row, col, std::forward<Rank1TileSender>(rank1),
                       std::forward<TempTileSender>(temp), std::forward<EvecsTileSender>(evecs));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), calcEvecsFromWeightVec_o, std::move(sender));
 }
 
 template <class T>
-void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::CPU>& evecs_tile,
                const matrix::Tile<T, Device::CPU>& ws_tile);
 
-#define DLAF_CPU_SUMSQ_COLS_ETI(kword, Type)                                                 \
-  kword template void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                const matrix::Tile<const Type, Device::CPU>& evecs_tile,     \
+#define DLAF_CPU_SUMSQ_COLS_ETI(kword, Type)                                                       \
+  kword template void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, \
+                                const SizeType& col,                                               \
+                                const matrix::Tile<const Type, Device::CPU>& evecs_tile,           \
                                 const matrix::Tile<Type, Device::CPU>& ws_tile)
 
 DLAF_CPU_SUMSQ_COLS_ETI(extern, float);
@@ -434,13 +442,14 @@ DLAF_CPU_SUMSQ_COLS_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
                const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
-#define DLAF_GPU_SUMSQ_COLS_ETI(kword, Type)                                                 \
-  kword template void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                const matrix::Tile<const Type, Device::GPU>& evecs_tile,     \
+#define DLAF_GPU_SUMSQ_COLS_ETI(kword, Type)                                                       \
+  kword template void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, \
+                                const SizeType& col,                                               \
+                                const matrix::Tile<const Type, Device::GPU>& evecs_tile,           \
                                 const matrix::Tile<Type, Device::GPU>& ws_tile, whip::stream_t stream)
 
 DLAF_GPU_SUMSQ_COLS_ETI(extern, float);
@@ -449,23 +458,25 @@ DLAF_GPU_SUMSQ_COLS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(sumsqCols);
 
-template <Device D, class KSender, class EvecsTileSender, class TempTileSender>
-void sumsqColsAsync(KSender&& k, SizeType row, SizeType col, EvecsTileSender&& evecs,
-                    TempTileSender&& temp) {
+template <Device D, class KRSender, class KCSender, class EvecsTileSender, class TempTileSender>
+void sumsqColsAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col,
+                    EvecsTileSender&& evecs, TempTileSender&& temp) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<EvecsTileSender>(evecs),
-                                std::forward<TempTileSender>(temp));
+  auto sender =
+      di::whenAllLift(std::forward<KRSender>(k_row), std::forward<KCSender>(k_col), row, col,
+                      std::forward<EvecsTileSender>(evecs), std::forward<TempTileSender>(temp));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), sumsqCols_o, std::move(sender));
 }
 
 template <class T>
-void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::CPU>& in, const matrix::Tile<T, Device::CPU>& out);
 
-#define DLAF_CPU_ADD_FIRST_ROWS_ETI(kword, Type)                                                \
-  kword template void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                   const matrix::Tile<const Type, Device::CPU>& in,             \
+#define DLAF_CPU_ADD_FIRST_ROWS_ETI(kword, Type)                                                      \
+  kword template void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, \
+                                   const SizeType& col,                                               \
+                                   const matrix::Tile<const Type, Device::CPU>& in,                   \
                                    const matrix::Tile<Type, Device::CPU>& out)
 
 DLAF_CPU_ADD_FIRST_ROWS_ETI(extern, float);
@@ -473,13 +484,14 @@ DLAF_CPU_ADD_FIRST_ROWS_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& evecs_tile,
                   const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
-#define DLAF_GPU_ADD_FIRST_ROWS_ETI(kword, Type)                                                \
-  kword template void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                   const matrix::Tile<const Type, Device::GPU>& in,             \
+#define DLAF_GPU_ADD_FIRST_ROWS_ETI(kword, Type)                                                      \
+  kword template void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, \
+                                   const SizeType& col,                                               \
+                                   const matrix::Tile<const Type, Device::GPU>& in,                   \
                                    const matrix::Tile<Type, Device::GPU>& out, whip::stream_t stream)
 
 DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, float);
@@ -488,23 +500,25 @@ DLAF_GPU_ADD_FIRST_ROWS_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(addFirstRows);
 
-template <Device D, class KSender, class InTileSender, class OutTileSender>
-void addFirstRowsAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in, OutTileSender&& out) {
+template <Device D, class KRSender, class KCSender, class InTileSender, class OutTileSender>
+void addFirstRowsAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col, InTileSender&& in,
+                       OutTileSender&& out) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
-                                std::forward<OutTileSender>(out));
+  auto sender = di::whenAllLift(std::forward<KRSender>(k_row), std::forward<KCSender>(k_col), row, col,
+                                std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), addFirstRows_o, std::move(sender));
 }
 
 template <class T>
-void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::CPU>& in,
+void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::CPU>& in,
                           const matrix::Tile<T, Device::CPU>& out);
 
-#define DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                              \
-  kword template void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                           const matrix::Tile<const Type, Device::CPU>& in,             \
+#define DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                  \
+  kword template void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col,    \
+                                           const SizeType& row, const SizeType& col,        \
+                                           const matrix::Tile<const Type, Device::CPU>& in, \
                                            const matrix::Tile<Type, Device::CPU>& out)
 
 DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, float);
@@ -512,14 +526,15 @@ DLAF_CPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& evecs_tile,
+void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& evecs_tile,
                           const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream);
 
-#define DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                              \
-  kword template void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col, \
-                                           const matrix::Tile<const Type, Device::GPU>& in,             \
-                                           const matrix::Tile<Type, Device::GPU>& out,                  \
+#define DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(kword, Type)                                  \
+  kword template void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col,    \
+                                           const SizeType& row, const SizeType& col,        \
+                                           const matrix::Tile<const Type, Device::GPU>& in, \
+                                           const matrix::Tile<Type, Device::GPU>& out,      \
                                            whip::stream_t stream)
 
 DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, float);
@@ -528,13 +543,13 @@ DLAF_GPU_DIVIDE_COLS_BY_FIRST_ROW_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(divideColsByFirstRow);
 
-template <Device D, class KSender, class InTileSender, class OutTileSender>
-void divideColsByFirstRowAsync(KSender&& k, SizeType row, SizeType col, InTileSender&& in,
-                               OutTileSender&& out) {
+template <Device D, class KRSender, class KCSender, class InTileSender, class OutTileSender>
+void divideColsByFirstRowAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col,
+                               InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
 
-  auto sender = di::whenAllLift(std::forward<KSender>(k), row, col, std::forward<InTileSender>(in),
-                                std::forward<OutTileSender>(out));
+  auto sender = di::whenAllLift(std::forward<KRSender>(k_row), std::forward<KCSender>(k_col), row, col,
+                                std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), divideColsByFirstRow_o, std::move(sender));
 }
 
@@ -577,14 +592,14 @@ void setUnitDiagonalAsync(KSender&& k, SizeType tile_begin, TileSender&& tile) {
 // out_coord) of @p out_tile that is inside a sqaure defined by the global element index @p k where both
 // tiles begin at global element index (@p row, @p col).
 template <class T>
-void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, const Coord& in_coord,
-            const matrix::Tile<const T, Device::CPU>& in_tile, const Coord& out_coord,
-            const matrix::Tile<T, Device::CPU>& out_tile);
+void copy1D(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
+            const Coord& in_coord, const matrix::Tile<const T, Device::CPU>& in_tile,
+            const Coord& out_coord, const matrix::Tile<T, Device::CPU>& out_tile);
 
-#define DLAF_CPU_COPY_1D_ETI(kword, Type)                                                 \
-  kword template void copy1D(const SizeType& k, const SizeType& row, const SizeType& col, \
-                             const Coord& in_coord,                                       \
-                             const matrix::Tile<const Type, Device::CPU>& in_tile,        \
+#define DLAF_CPU_COPY_1D_ETI(kword, Type)                                                       \
+  kword template void copy1D(const SizeType& k_row, const SizeType& k_col, const SizeType& row, \
+                             const SizeType& col, const Coord& in_coord,                        \
+                             const matrix::Tile<const Type, Device::CPU>& in_tile,              \
                              const Coord& out_coord, const matrix::Tile<Type, Device::CPU>& out_tile)
 
 DLAF_CPU_COPY_1D_ETI(extern, float);
@@ -593,14 +608,15 @@ DLAF_CPU_COPY_1D_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
-            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
-            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile);
+void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+            const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::GPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::GPU>& out_tile);
 
-#define DLAF_GPU_COPY_1D_ETI(kword, Type)                                                   \
-  kword template void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, \
-                             const SizeType& col, const Coord& in_coord,                    \
-                             const matrix::Tile<const Type, Device::GPU>& in_tile,          \
+#define DLAF_GPU_COPY_1D_ETI(kword, Type)                                                         \
+  kword template void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, \
+                             const SizeType& row, const SizeType& col, const Coord& in_coord,     \
+                             const matrix::Tile<const Type, Device::GPU>& in_tile,                \
                              const Coord& out_coord, const matrix::Tile<Type, Device::GPU>& out_tile)
 
 DLAF_GPU_COPY_1D_ETI(extern, float);
@@ -610,14 +626,14 @@ DLAF_GPU_COPY_1D_ETI(extern, double);
 
 DLAF_MAKE_CALLABLE_OBJECT(copy1D);
 
-template <Device D, class KSender, class InTileSender, class OutTileSender>
-void copy1DAsync(KSender&& k, SizeType row, SizeType col, Coord in_coord, InTileSender&& in,
-                 Coord out_coord, OutTileSender&& out) {
+template <Device D, class KRSender, class KCSender, class InTileSender, class OutTileSender>
+void copy1DAsync(KRSender&& k_row, KCSender&& k_col, SizeType row, SizeType col, Coord in_coord,
+                 InTileSender&& in, Coord out_coord, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
   auto sender =
-      di::whenAllLift(std::forward<KSender>(k), row, col, in_coord, std::forward<InTileSender>(in),
-                      out_coord, std::forward<OutTileSender>(out));
+      di::whenAllLift(std::forward<KRSender>(k_row), std::forward<KCSender>(k_col), row, col, in_coord,
+                      std::forward<InTileSender>(in), out_coord, std::forward<OutTileSender>(out));
   ex::start_detached(di::transform<di::TransformDispatchType::Blas>(di::Policy<DefaultBackend_v<D>>(),
                                                                     copy1D_o, std::move(sender)));
 }

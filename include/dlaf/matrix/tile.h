@@ -139,7 +139,7 @@ class Tile;
 template <class T, Device D>
 class Tile<const T, D>;
 
-// TODO: Should these be public?
+namespace internal {
 template <class T, Device D>
 using TileAsyncRwMutex =
     pika::execution::experimental::async_rw_mutex<Tile<T, D>, const Tile<const T, D>>;
@@ -149,36 +149,33 @@ using TileAsyncRwMutexReadWriteWrapper =
     pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
         Tile<T, D>, const Tile<const T, D>,
         pika::execution::experimental::detail::async_rw_mutex_access_type::readwrite>;
-// TODO: This could in theory look like this. However, it seems like we end
-// up with recursive definitions and incomplete types if we try. Can that
-// be avoided?
-// typename TileAsyncRwMutex<T, D>::readwrite_access_type;
 
 template <class T, Device D>
 using TileAsyncRwMutexReadOnlyWrapper =
     pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
         Tile<T, D>, const Tile<const T, D>,
         pika::execution::experimental::detail::async_rw_mutex_access_type::read>;
+}
 
 template <class T, Device D>
 using ReadWriteTileSender = pika::execution::experimental::unique_any_sender<Tile<T, D>>;
 
 template <class T, Device D>
 using ReadOnlyTileSender =
-    pika::execution::experimental::any_sender<TileAsyncRwMutexReadOnlyWrapper<T, D>>;
+    pika::execution::experimental::any_sender<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>;
 
 namespace internal {
 // TODO: Do these need to be free functions or could they be hidden inside Tile?
 // They're already friends.
 template <class T, Device D>
-Tile<T, D> createSubTileAsyncRwMutex(TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
                                      const SubTileSpec& spec);
 
 template <class T, Device D>
-Tile<T, D> createTileAsyncRwMutex(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
+Tile<T, D> createTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
 
 template <class T, Device D>
-Tile<T, D> createSubTileAsyncRwMutex(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
                                      const SubTileSpec& spec);
 
 template <class T, Device D>
@@ -312,11 +309,11 @@ private:
       // No dependency
       std::monostate,
       // Read-write access
-      TileAsyncRwMutexReadOnlyWrapper<T, D>,
+      internal::TileAsyncRwMutexReadOnlyWrapper<T, D>,
       // Read-only access TODO: Is this one used? Maybe not...
-      TileAsyncRwMutexReadWriteWrapper<T, D>,
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
       // Disjoint read-write access
-      std::shared_ptr<TileAsyncRwMutexReadWriteWrapper<T, D>>>
+      std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>
       dep_tracker_;
 };
 
@@ -329,11 +326,11 @@ public:
 
   friend ConstTileType;
   friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(
-      TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
+      internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
   friend Tile<T, D> internal::createTileAsyncRwMutex<>(
-      TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
   friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(
-      TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
   friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(Tile<T, D> tile, const SubTileSpec& spec);
   friend Tile<T, D> internal::prepareDisjointTile<>(Tile<T, D>&& tile);
   friend Tile<T, D> internal::createDisjointSubTile<>(const Tile<T, D>& tile, const SubTileSpec& spec);
@@ -380,18 +377,18 @@ public:
   }
 
 private:
-  Tile(TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
+  Tile(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
       : Tile<const T, D>(tile_wrapper.get(), spec) {
     dep_tracker_ = std::move(tile_wrapper);
   }
 
-  Tile(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper)
+  Tile(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper)
       : ConstTileType(tile_wrapper.get().size(), tile_wrapper.get().data_.memoryView(),
                       tile_wrapper.get().ld()) {
     dep_tracker_ = std::move(tile_wrapper);
   }
 
-  Tile(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
+  Tile(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
       : ConstTileType(tile_wrapper.get(), spec) {
     dep_tracker_ = std::move(tile_wrapper);
   }
@@ -403,15 +400,15 @@ private:
 
   void prepareDisjointTile() {
     // We only expect read-write tiles for disjoint access.
-    // DLAF_ASSERT(!std::holds_alternative<TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
+    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
 
     // If a tile is untracked (std::monostate), or already a disjoint subtile
-    // (std::shared_ptr<TileAsyncRwMutexReadWriteWrapper<T, D>) we don't do
+    // (std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>) we don't do
     // anything. If a tile is in read-write mode we upgrade it to allow shared,
     // but disjoint, access.
-    if (std::holds_alternative<TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)) {
-      dep_tracker_ = std::make_shared<TileAsyncRwMutexReadWriteWrapper<T, D>>(
-          std::get<TileAsyncRwMutexReadWriteWrapper<T, D>>(std::move(dep_tracker_)));
+    if (std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)) {
+      dep_tracker_ = std::make_shared<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(
+          std::get<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(std::move(dep_tracker_)));
     }
   }
 
@@ -419,8 +416,8 @@ private:
     // We only expect read-write tiles for disjoint access. They should be
     // either untracked or disjoint tracked read-write access.
     // TODO
-    // DLAF_ASSERT(!std::holds_alternative<TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
-    // DLAF_ASSERT(!std::holds_alternative<TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_));
+    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_));
+    // DLAF_ASSERT(!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_));
 
     Tile subtile(spec.size, ConstTileType::createMemoryViewForSubtile(*this, spec), this->ld());
     // Not all possible states of the dependency tracker are copyable. This
@@ -429,10 +426,10 @@ private:
     if (std::holds_alternative<std::monostate>(dep_tracker_)) {
       // Do nothing. subtile.dep_tracker_ is already initialized to this.
     }
-    else if (std::holds_alternative<std::shared_ptr<TileAsyncRwMutexReadWriteWrapper<T, D>>>(
+    else if (std::holds_alternative<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(
                  dep_tracker_)) {
       subtile.dep_tracker_ =
-          std::get<std::shared_ptr<TileAsyncRwMutexReadWriteWrapper<T, D>>>(dep_tracker_);
+          std::get<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(dep_tracker_);
     }
 
     return subtile;
@@ -450,18 +447,18 @@ auto create_data(const Tile<T, D>& tile) {
 
 namespace internal {
 template <class T, Device D>
-Tile<T, D> createSubTileAsyncRwMutex(TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
                                      const SubTileSpec& spec) {
   return {std::move(tile_wrapper), spec};
 }
 
 template <class T, Device D>
-Tile<T, D> createTileAsyncRwMutex(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
+Tile<T, D> createTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
   return {std::move(tile_wrapper)};
 }
 
 template <class T, Device D>
-Tile<T, D> createSubTileAsyncRwMutex(TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
                                      const SubTileSpec& spec) {
   return {std::move(tile_wrapper), spec};
 }
@@ -492,8 +489,8 @@ template <class T, Device D>
 ReadOnlyTileSender<T, D> subTileSender(ReadOnlyTileSender<T, D> tile, const SubTileSpec& spec) {
   return std::move(tile) |
          pika::execution::experimental::let_value(
-             [spec](TileAsyncRwMutexReadOnlyWrapper<T, D>& tile_wrapper) {
-               TileAsyncRwMutex<T, D> tile_manager{
+             [spec](internal::TileAsyncRwMutexReadOnlyWrapper<T, D>& tile_wrapper) {
+               internal::TileAsyncRwMutex<T, D> tile_manager{
                    internal::createSubTileAsyncRwMutex<T, D>(std::move(tile_wrapper), spec)};
                return tile_manager.read();
              }) |
@@ -505,7 +502,7 @@ ReadOnlyTileSender<T, D> subTileSender(ReadOnlyTileSender<T, D> tile, const SubT
 template <class T, Device D>
 ReadOnlyTileSender<T, D> shareReadwriteTile(ReadWriteTileSender<T, D>&& tile) {
   return std::move(tile) | pika::execution::experimental::let_value([](Tile<T, D>& tile) {
-           TileAsyncRwMutex<T, D> tile_manager{std::move(tile)};
+           internal::TileAsyncRwMutex<T, D> tile_manager{std::move(tile)};
            return tile_manager.read();
          }) |
          pika::execution::experimental::split();
@@ -530,12 +527,12 @@ std::vector<ReadOnlyTileSender<T, D>> subTileSenders(ReadOnlyTileSender<T, D> ti
 // actually used anywhere? Most use cases should send the Tile without the
 // wrapper.
 template <class T, Device D>
-ReadWriteTileSender<T, D> subTileSender(
-    pika::execution::experimental::unique_any_sender<TileAsyncRwMutexReadWriteWrapper<T, D>>&& tile,
-    const SubTileSpec& spec) {
+ReadWriteTileSender<T, D> subTileSender(pika::execution::experimental::unique_any_sender<
+                                            internal::TileAsyncRwMutexReadWriteWrapper<T, D>>&& tile,
+                                        const SubTileSpec& spec) {
   return std::move(tile) |
          pika::execution::experimental::then(
-             [spec](TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
+             [spec](internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
                return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile_wrapper), spec);
              });
 }

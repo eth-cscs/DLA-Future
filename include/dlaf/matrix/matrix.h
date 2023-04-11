@@ -244,7 +244,7 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<TileAsyncRwMutex<T, D>> tile_managers_;
+  std::vector<internal::TileAsyncRwMutex<T, D>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates

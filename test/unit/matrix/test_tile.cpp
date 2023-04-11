@@ -53,7 +53,7 @@ TileSizes getSizes(const Tile<T, D>& tile) {
 // TODO: Make this the actual pipeline type used in Matrix
 template <class T, Device D>
 struct TilePipeline {
-  TileAsyncRwMutex<T, D> pipeline;
+  dlaf::matrix::internal::TileAsyncRwMutex<T, D> pipeline;
 
   TilePipeline(Tile<T, D>&& tile) : pipeline(std::move(tile)) {}
 

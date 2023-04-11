@@ -489,8 +489,8 @@ Tile<T, D> createDisjointSubTile(const Tile<T, D>& tile, const SubTileSpec& spec
 /// Create a read-only subtile of a given read-only tile.
 ///
 /// The returned subtile will get ready, at the same time as @p tile gets ready.
-/// The next dependency in the dependency chain will become ready only when @p tile
-/// and the returned subtile go out of scope.
+/// The next dependency in the dependency chain will become ready only when @p
+/// tile and the returned subtile go out of scope.
 template <class T, Device D>
 ReadOnlyTileSender<T, D> subTileSender(ReadOnlyTileSender<T, D> tile, const SubTileSpec& spec) {
   return std::move(tile) |
@@ -503,8 +503,11 @@ ReadOnlyTileSender<T, D> subTileSender(ReadOnlyTileSender<T, D> tile, const SubT
          pika::execution::experimental::split();
 }
 
-// TODO: Docs.
-// TODO: shareReadWriteTile?
+/// Create a read-only tile from a given read-write tile.
+///
+/// The returned tile will get ready, at the same time as @p tile would have
+/// been ready. The next dependency in the dependency chain will become ready
+/// only when the returned tile goes out of scope.
 template <class T, Device D>
 ReadOnlyTileSender<T, D> shareReadwriteTile(ReadWriteTileSender<T, D>&& tile) {
   return std::move(tile) | pika::execution::experimental::let_value([](Tile<T, D>& tile) {
@@ -514,7 +517,11 @@ ReadOnlyTileSender<T, D> shareReadwriteTile(ReadWriteTileSender<T, D>&& tile) {
          pika::execution::experimental::split();
 }
 
-// TODO: Docs.
+/// Create read-only subtiles of a given read-only tile.
+///
+/// The returned subtiles will get ready, at the same time as @p tile gets
+/// ready. The next dependency in the dependency chain will become ready only
+/// when @p tile and the returned subtiles go out of scope.
 template <class T, Device D>
 std::vector<ReadOnlyTileSender<T, D>> subTileSenders(ReadOnlyTileSender<T, D> tile,
                                                      const std::vector<SubTileSpec>& specs) {
@@ -528,35 +535,37 @@ std::vector<ReadOnlyTileSender<T, D>> subTileSenders(ReadOnlyTileSender<T, D> ti
   return senders;
 }
 
-// TODO: Docs.
-// TODO: This is the version which takes a ReadWriteWrapper. However, is this
-// actually used anywhere? Most use cases should send the Tile without the
-// wrapper.
-template <class T, Device D>
-ReadWriteTileSender<T, D> subTileSender(pika::execution::experimental::unique_any_sender<
-                                            internal::TileAsyncRwMutexReadWriteWrapper<T, D>>&& tile,
-                                        const SubTileSpec& spec) {
-  return std::move(tile) |
-         pika::execution::experimental::then(
-             [spec](internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
-               return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile_wrapper), spec);
-             });
-}
-
-// TODO: Docs.
+/// Create a read-write subtile of a given read-write tile.
+///
+/// The returned subtile will get ready, at the same time as @p tile would have
+/// been ready. The next dependency in the dependency chain will become ready
+/// only when the returned subtile goes out of scope.
 template <class T, Device D>
 ReadWriteTileSender<T, D> subTileSender(ReadWriteTileSender<T, D>&& tile, const SubTileSpec& spec) {
-  // TODO: tile_wrapper vs tile...
-  return std::move(tile) | pika::execution::experimental::then([spec](Tile<T, D> tile_wrapper) {
-           return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile_wrapper), spec);
+  return std::move(tile) | pika::execution::experimental::then([spec](Tile<T, D> tile) {
+           return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile), spec);
          });
 }
 
-// TODO: Docs. This is the "splitTileDisjoint" version.
+/// Create read-write subtiles of a given read-write tile.
+///
+/// @pre specs are disjoint.
+/// @pre specs.size() >= 1
+///
+/// The returned subtiles will get ready, at the same time as @p tile gets
+/// ready. The next dependency in the dependency chain will become ready only
+/// when returned subtiles go out of scope.
 template <class T, Device D>
 std::vector<ReadWriteTileSender<T, D>> subTileSenders(ReadWriteTileSender<T, D>&& tile,
                                                       const std::vector<SubTileSpec>& specs) {
-  // TODO: If specs.size() == 1 call single-tile version. If specs.size() == 0 shortcut return? Error?
+  // TODO: The alternative to this assertion is to start_detached the tile.
+  // Otherwise callers have to do it. What's clearest?
+  DLAF_ASSERT(specs.size() >= 1, specs.size());
+
+  if (specs.size() == 1) {
+    return std::vector<ReadWriteTileSender<T, D>>(subTileSender(std::move(tile), specs[0]));
+  }
+
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
   for (auto it1 = specs.cbegin(); it1 < specs.cend(); ++it1) {
     for (auto it2 = specs.cbegin(); it2 < it1; ++it2) {
@@ -586,8 +595,6 @@ std::vector<ReadWriteTileSender<T, D>> subTileSenders(ReadWriteTileSender<T, D>&
 
   return senders;
 }
-
-// TODO: Add the subTile/splitTile helpers for accessing a set of disjoint specs.
 
 /// ---- ETI
 

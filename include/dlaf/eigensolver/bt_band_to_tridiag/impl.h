@@ -613,7 +613,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           auto tile_v_top = splitTile(tile_v, helper.topPart().specHH());
           auto tile_w_top = splitTile(tile_w, helper.topPart().specHH());
           ex::start_detached(
-              ex::when_all(tile_v_top, tile_w_top, mat_w2.readwrite(LocalTileIndex(0, j_e)),
+              ex::when_all(std::move(tile_v_top), std::move(tile_w_top),
+                           mat_w2.readwrite(LocalTileIndex(0, j_e)),
                            splitTile(mat_e.readwrite(idx_e), helper.topPart().specEV(sz_e.cols()))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
@@ -626,8 +627,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           auto tile_w_top = splitTile(tile_w, helper.topPart().specHH());
           auto tile_w_bottom = splitTile(tile_w, helper.bottomPart().specHH());
           ex::start_detached(
-              ex::when_all(tile_v_top, tile_v_bottom, tile_w_top, tile_w_bottom,
-                           mat_w2.readwrite(LocalTileIndex(0, j_e)),
+              ex::when_all(std::move(tile_v_top), std::move(tile_v_bottom), std::move(tile_w_top),
+                           std::move(tile_w_bottom), mat_w2.readwrite(LocalTileIndex(0, j_e)),
                            splitTile(mat_e.readwrite(idx_e), helper.topPart().specEV(sz_e.cols())),
                            splitTile(mat_e.readwrite(LocalTileIndex{ij.row() + 1, j_e}),
                                      helper.bottomPart().specEV(sz_e.cols()))) |

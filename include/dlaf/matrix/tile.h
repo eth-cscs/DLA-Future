@@ -562,6 +562,9 @@ std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, 
   // Otherwise callers have to do it. What's clearest?
   DLAF_ASSERT(specs.size() >= 1, specs.size());
 
+  // If there is only one spec we can avoid calling execution::split on the
+  // input tile (and thus avoid a heap allocation) and directly call the
+  // single-spec splitTile instead.
   if (specs.size() == 1) {
     return std::vector<ReadWriteTileSender<T, D>>(splitTile(std::move(tile), specs[0]));
   }

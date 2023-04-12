@@ -57,8 +57,6 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
                                  const SizeType idx_begin, const SizeType idx_last, const T alpha,
                                  Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                  Matrix<T, D>& mat_c) {
-  // TODO: internal?
-  using dlaf::matrix::splitTile;
   namespace ex = pika::execution::experimental;
 
   const auto& dist_a = mat_a.distribution();

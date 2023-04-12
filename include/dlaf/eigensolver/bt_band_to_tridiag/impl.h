@@ -602,7 +602,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
       auto [tile_v_unshared, tile_w_unshared] =
           helperBackend.computeVW(ij, helper, splitTile(mat_hh.read(ij), helper.specHHCompact()), mat_v,
                                   mat_t, mat_w);
-      auto tile_v = matrix::shareReadwriteTile(std::move(tile_v_unshared)));
+      auto tile_v = matrix::shareReadwriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadwriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
 
       for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {

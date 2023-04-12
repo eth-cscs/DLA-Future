@@ -42,7 +42,7 @@ namespace dlaf::eigensolver::internal {
 // Auxiliary matrix and vectors used for the D&C algorithm
 //
 // - mat1 and mat2: (matrices)
-// Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
+//   Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
 //
 //   ┌──────┬──────┬───┐
 //   │  Q1' │  Q2' │   │
@@ -54,15 +54,17 @@ namespace dlaf::eigensolver::internal {
 //   │     U1'    │    │
 //   │            │    │
 //   └────────────┴────┘
+//
 // - dtmp: (vector)
-// Holds the values of the deflated diagonal sorted in ascending order
+//   Holds the values of the deflated diagonal sorted in ascending order
 // - z: (vector)
-// Holds the values of Cuppen's rank-1 vector
+//   Holds the values of Cuppen's rank-1 vector
 // - ztmp: (vector)
-// Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
+//   Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
 //
 // - i1, i2, i3: (vectors if indices)
-// Hold the permutation indices.
+//   Hold the permutation indices.
+//
 // Steps:
 //
 // 1. Sort index based on diagonal values in ascending order. This creates a map sorted to inital indices
@@ -83,8 +85,9 @@ namespace dlaf::eigensolver::internal {
 //        post_sorted <--- matmul
 //
 // - c
-// Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
-// that bring them in matrix multiplication form.
+//   Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
+//   that bring them in matrix multiplication form.
+//
 
 template <class T, Device device>
 struct WorkSpace {

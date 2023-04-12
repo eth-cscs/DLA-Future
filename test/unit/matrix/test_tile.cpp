@@ -374,7 +374,7 @@ void testSubtileConst(std::string name, TileElementSize size, SizeType ld, const
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
   auto second_tile_orig = pipeline.read();
   EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
-  EagerReadOnlyTileSender<T, D> subtile(subTileSender(second_tile_orig, spec));
+  EagerReadOnlyTileSender<T, D> subtile(splitTile(second_tile_orig, spec));
   std::vector<EagerReadOnlyTileSender<T, D>> subtiles = {std::move(subtile), std::move(second_tile)};
   std::vector<SubTileSpec> full_specs = {spec, {{0, 0}, size}};
   second_tile_orig = {};
@@ -448,7 +448,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   auto subtiles_orig = splitTile(second_tile_orig, specs);
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
-  subtiles_orig.emplace_back(subTileSender(subtiles_orig[0], subspec));
+  subtiles_orig.emplace_back(splitTile(subtiles_orig[0], subspec));
   subtiles_orig.emplace_back(std::move(second_tile_orig));
   specs.push_back({specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size});
   specs.push_back({{0, 0}, size});
@@ -512,7 +512,7 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
-  EagerReadWriteTileSender<T, D> subtile(subTileSender(pipeline.readwrite(), spec));
+  EagerReadWriteTileSender<T, D> subtile(splitTile(pipeline.readwrite(), spec));
   std::vector<EagerReadWriteTileSender<T, D>> subtiles;
   subtiles.push_back(std::move(subtile));
   std::vector<SubTileSpec> full_specs = {spec};
@@ -587,7 +587,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
   // create subsubtile
-  subtiles_orig[0] = subTileSender(std::move(subtiles_orig[0]), subspec);
+  subtiles_orig[0] = splitTile(std::move(subtiles_orig[0]), subspec);
   specs[0] = {specs[0].origin + common::sizeFromOrigin(subspec.origin), subspec.size};
   std::vector<EagerReadWriteTileSender<T, D>> subtiles;
   subtiles.reserve(specs.size());

@@ -284,7 +284,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::subTileSender(mat_a.readwrite(i), spec));
+    panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
   }
 
   return ex::when_all_vector(std::move(panel_tiles)) |
@@ -325,7 +325,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
     // single task doing both.
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
-    ex::start_detached(dlaf::internal::whenAllLift(subTileSender(mat_a.read(i), spec), v.readwrite(i)) |
+    ex::start_detached(dlaf::internal::whenAllLift(splitTile(mat_a.read(i), spec), v.readwrite(i)) |
                        matrix::copy(p));
     ex::start_detached(dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite(i)) |
                        tile::laset(p));
@@ -346,10 +346,10 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        tile, memory provided internally by the panel is used as support. In this way, the two
     //        subtiles used in the operation belong to different tiles.
     if (force_copy)
-      ex::start_detached(ex::when_all(matrix::subTileSender(mat_a.read(idx), spec), v.readwrite(idx)) |
+      ex::start_detached(ex::when_all(matrix::splitTile(mat_a.read(idx), spec), v.readwrite(idx)) |
                          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
     else
-      v.setTile(idx, matrix::subTileSender(mat_a.read(idx), spec));
+      v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
 }
 
@@ -414,7 +414,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      const auto& tile_a = subTileSender(a.read(ij), view(ij));
+      const auto& tile_a = splitTile(a.read(ij), view(ij));
 
       if (is_diagonal_tile) {
         hemmDiag<B>(thread_priority::high, tile_a, w.read(ij), x.readwrite(ij));
@@ -491,7 +491,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       auto getSubA = [&a, &view, ij_local]() {
-        return subTileSender(a.readwrite(ij_local), view(ij_local));
+        return splitTile(a.readwrite(ij_local), view(ij_local));
       };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
@@ -576,14 +576,14 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
     return taus;
   };
 
-  using panel_tile_type = decltype(matrix::subTileSender(mat_a.readwrite(std::declval<LocalTileIndex>()),
-                                                         std::declval<matrix::SubTileSpec>()));
+  using panel_tile_type = decltype(matrix::splitTile(mat_a.readwrite(std::declval<LocalTileIndex>()),
+                                                     std::declval<matrix::SubTileSpec>()));
   std::vector<panel_tile_type> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::subTileSender(mat_a.readwrite(i), spec));
+    panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
   }
 
   return ex::when_all(ex::when_all_vector(std::move(panel_tiles)),
@@ -629,7 +629,7 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      auto tile_a = subTileSender(a.read(ij), view(ij_local));
+      auto tile_a = splitTile(a.read(ij), view(ij_local));
 
       if (is_diagonal_tile) {
         hemmDiag<B>(thread_priority::high, std::move(tile_a), w.read(ij_local), x.readwrite(ij_local));
@@ -734,7 +734,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
       auto getSubA = [&a, &view, ij_local]() {
-        return subTileSender(a.readwrite(ij_local), view(ij_local));
+        return splitTile(a.readwrite(ij_local), view(ij_local));
       };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
@@ -840,7 +840,7 @@ protected:
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite(i);
       ex::start_detached(
-          ex::when_all(subTileSender(mat_a.read(i), spec), subTileSender(std::move(tmp_tile), spec)) |
+          ex::when_all(splitTile(mat_a.read(i), spec), splitTile(std::move(tmp_tile), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
     }
   }
@@ -858,7 +858,7 @@ protected:
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite(i);
       ex::start_detached(
-          ex::when_all(subTileSender(v.read(i), spec), subTileSender(std::move(tile_a), spec)) |
+          ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
     }
   }

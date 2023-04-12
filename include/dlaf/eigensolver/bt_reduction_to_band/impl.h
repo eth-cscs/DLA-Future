@@ -185,7 +185,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
           std::max<SizeType>(0, i.row() * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
       if (j_diag < mb) {
-        auto tile_v = subTileSender(mat_v.read(i), panel_view(i));
+        auto tile_v = splitTile(mat_v.read(i), panel_view(i));
         copyAndSetHHUpperTiles<backend>(j_diag, tile_v, panelV.readwrite(i));
       }
       else {
@@ -207,14 +207,14 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     // W2 = W C
     matrix::util::set0<backend>(hp, panelW2);
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmUpdateW2<backend>(np, panelW.read(ij), subTileSender(mat_c.read(ij), mat_c_view(ij)),
+      gemmUpdateW2<backend>(np, panelW.read(ij), splitTile(mat_c.read(ij), mat_c_view(ij)),
                             panelW2.readwrite(ij));
     }
 
     // Update trailing matrix: C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
       gemmTrailingMatrix<backend>(np, panelV.read(ij), panelW2.read(ij),
-                                  subTileSender(mat_c.readwrite(ij), mat_c_view(ij)));
+                                  splitTile(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
     panelV.reset();
@@ -303,7 +303,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
             std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
         if (j_diag < mb) {
-          auto tile_v = subTileSender(mat_v.read(ik), panel_view(ik));
+          auto tile_v = splitTile(mat_v.read(ik), panel_view(ik));
           copyAndSetHHUpperTiles<B>(j_diag, tile_v, panelV.readwrite(ik));
         }
         else {
@@ -330,7 +330,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
 
     // W2 = W C
     for (const auto& ij : mat_c_view.iteratorLocal()) {
-      gemmUpdateW2<B>(np, panelW.readwrite(ij), subTileSender(mat_c.read(ij), mat_c_view(ij)),
+      gemmUpdateW2<B>(np, panelW.readwrite(ij), splitTile(mat_c.read(ij), mat_c_view(ij)),
                       panelW2.readwrite(ij));
     }
 
@@ -343,7 +343,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
     // C = C - V W2
     for (const auto& ij : mat_c_view.iteratorLocal()) {
       gemmTrailingMatrix<B>(np, panelV.read(ij), panelW2.read(ij),
-                            subTileSender(mat_c.readwrite(ij), mat_c_view(ij)));
+                            splitTile(mat_c.readwrite(ij), mat_c_view(ij)));
     }
 
     panelV.reset();

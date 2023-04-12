@@ -1123,8 +1123,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         else {
           auto& temp = temps.nextResource();
           auto diag_tile = comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_diag, tag_diag,
-                                              subTileSender(temp.readwrite(LocalTileIndex{0, 0}),
-                                                            {{0, 0}, dist_a.tileSize(index_diag)}));
+                                              splitTile(temp.readwrite(LocalTileIndex{0, 0}),
+                                                        {{0, 0}, dist_a.tileSize(index_diag)}));
           dep = copy_diag(a_ws[id_block_local], k * nb, std::move(diag_tile)) | ex::split();
         }
 
@@ -1138,8 +1138,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             auto& temp = temps.nextResource();
             auto offdiag_tile =
                 comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_offdiag, tag_offdiag,
-                                   subTileSender(temp.readwrite(LocalTileIndex{0, 0}),
-                                                 {{0, 0}, dist_a.tileSize(index_offdiag)}));
+                                   splitTile(temp.readwrite(LocalTileIndex{0, 0}),
+                                             {{0, 0}, dist_a.tileSize(index_offdiag)}));
             dep = copy_offdiag(a_ws[id_block_local], k * nb,
                                ex::when_all(std::move(dep), std::move(offdiag_tile))) |
                   ex::split();
@@ -1335,9 +1335,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                  &compute_v_tag](const LocalTileIndex index_panel, const matrix::SubTileSpec spec_panel,
                                  const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
                                  const matrix::SubTileSpec spec_v, const bool bottom) {
-                  auto tile_v_panel = subTileSender(v_panel.read(index_panel), spec_panel);
+                  auto tile_v_panel = splitTile(v_panel.read(index_panel), spec_panel);
                   if (rank == rank_v) {
-                    auto tile_v = subTileSender(mat_v.readwrite(index_v), spec_v);
+                    auto tile_v = splitTile(mat_v.readwrite(index_v), spec_v);
                     ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
                                        copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
                   }
@@ -1361,7 +1361,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                          const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
                                          const matrix::SubTileSpec spec_v, const bool bottom) {
               if (rank == rank_v) {
-                auto tile_v = subTileSender(mat_v.readwrite(index_v), spec_v);
+                auto tile_v = splitTile(mat_v.readwrite(index_v), spec_v);
                 auto local_index_v = dist_v.localTileIndex(index_v);
 
                 ex::any_sender<> dep;

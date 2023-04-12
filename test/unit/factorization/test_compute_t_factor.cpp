@@ -283,7 +283,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     panel_v.setRangeStart(v_start);
     panel_v.setWidth(k);
     for (const auto& i : panel_view.iteratorLocal()) {
-      panel_v.setTile(i, subTileSender(v.get().read(i), panel_view(i)));
+      panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
     using dlaf::factorization::internal::computeTFactor;
@@ -366,7 +366,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     panel_v.setRangeStart(v_start);
     panel_v.setWidth(k);
     for (const auto& i : panel_view.iteratorLocal()) {
-      panel_v.setTile(i, subTileSender(v.get().read(i), panel_view(i)));
+      panel_v.setTile(i, splitTile(v.get().read(i), panel_view(i)));
     }
 
     using dlaf::factorization::internal::computeTFactor;

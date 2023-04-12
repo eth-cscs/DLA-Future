@@ -492,7 +492,7 @@ Tile<T, D> createDisjointSubTile(const Tile<T, D>& tile, const SubTileSpec& spec
 /// The next dependency in the dependency chain will become ready only when @p
 /// tile and the returned subtile go out of scope.
 template <class T, Device D>
-ReadOnlyTileSender<T, D> subTileSender(ReadOnlyTileSender<T, D> tile, const SubTileSpec& spec) {
+ReadOnlyTileSender<T, D> splitTile(ReadOnlyTileSender<T, D> tile, const SubTileSpec& spec) {
   return std::move(tile) |
          pika::execution::experimental::let_value(
              [spec](internal::TileAsyncRwMutexReadOnlyWrapper<T, D>& tile_wrapper) {
@@ -529,7 +529,7 @@ std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
   senders.reserve(specs.size());
 
   for (const auto& spec : specs) {
-    senders.push_back(subTileSender(tile, spec));
+    senders.push_back(splitTile(tile, spec));
   }
 
   return senders;
@@ -541,7 +541,7 @@ std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
 /// been ready. The next dependency in the dependency chain will become ready
 /// only when the returned subtile goes out of scope.
 template <class T, Device D>
-ReadWriteTileSender<T, D> subTileSender(ReadWriteTileSender<T, D>&& tile, const SubTileSpec& spec) {
+ReadWriteTileSender<T, D> splitTile(ReadWriteTileSender<T, D>&& tile, const SubTileSpec& spec) {
   return std::move(tile) | pika::execution::experimental::then([spec](Tile<T, D> tile) {
            return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile), spec);
          });
@@ -563,7 +563,7 @@ std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, 
   DLAF_ASSERT(specs.size() >= 1, specs.size());
 
   if (specs.size() == 1) {
-    return std::vector<ReadWriteTileSender<T, D>>(subTileSender(std::move(tile), specs[0]));
+    return std::vector<ReadWriteTileSender<T, D>>(splitTile(std::move(tile), specs[0]));
   }
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE

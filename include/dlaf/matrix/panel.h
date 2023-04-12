@@ -124,7 +124,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
         return tile;
       }
       else {
-        return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+        return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
       }
     }
   }
@@ -585,7 +585,7 @@ public:
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
-      return subTileSender(std::move(tile), {{0, 0}, tileSize(index)});
+      return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
   }
 
 private:

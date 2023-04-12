@@ -186,7 +186,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
       if (j_diag < mb) {
         auto tile_v = splitTile(mat_v.read(i), panel_view(i));
-        copyAndSetHHUpperTiles<backend>(j_diag, tile_v, panelV.readwrite(i));
+        copyAndSetHHUpperTiles<backend>(j_diag, std::move(tile_v), panelV.readwrite(i));
       }
       else {
         panelV.setTile(i, mat_v.read(i));

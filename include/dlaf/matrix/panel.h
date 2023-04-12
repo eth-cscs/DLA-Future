@@ -441,7 +441,6 @@ protected:
   ///> Container for references to external tiles
   common::internal::vector<ReadOnlySenderType> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
-  // TODO: unordered_set (and #include <unordered_set>)
   std::set<SizeType> internal_;
 };
 

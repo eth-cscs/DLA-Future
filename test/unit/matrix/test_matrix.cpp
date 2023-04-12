@@ -1222,7 +1222,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
   }
 }
 
-// MatrixDestructorSenders
+// MatrixDestructor
 //
 // These tests checks that sender management on destruction is performed correctly. The behaviour is
 // strictly related to the internal dependency management mechanism and generally is not affected by
@@ -1285,7 +1285,7 @@ struct WaitGuardHelper {
   }
 };
 
-TEST(MatrixDestructorSenders, NonConstAfterRead) {
+TEST(MatrixDestructor, NonConstAfterRead) {
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
@@ -1303,7 +1303,7 @@ TEST(MatrixDestructorSenders, NonConstAfterRead) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorSenders, NonConstAfterReadWrite) {
+TEST(MatrixDestructor, NonConstAfterReadWrite) {
   namespace ex = pika::execution::experimental;
   ex::unique_any_sender<> last_task;
 
@@ -1322,7 +1322,7 @@ TEST(MatrixDestructorSenders, NonConstAfterReadWrite) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorSenders, NonConstAfterRead_UserMemory) {
+TEST(MatrixDestructor, NonConstAfterRead_UserMemory) {
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};
@@ -1341,7 +1341,7 @@ TEST(MatrixDestructorSenders, NonConstAfterRead_UserMemory) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorSenders, NonConstAfterReadWrite_UserMemory) {
+TEST(MatrixDestructor, NonConstAfterReadWrite_UserMemory) {
   namespace ex = pika::execution::experimental;
   ex::unique_any_sender<> last_task;
 
@@ -1361,7 +1361,7 @@ TEST(MatrixDestructorSenders, NonConstAfterReadWrite_UserMemory) {
   tt::sync_wait(std::move(last_task));
 }
 
-TEST(MatrixDestructorSenders, ConstAfterRead_UserMemory) {
+TEST(MatrixDestructor, ConstAfterRead_UserMemory) {
   ex::unique_any_sender<> last_task;
 
   std::atomic<bool> is_exited_from_scope{false};

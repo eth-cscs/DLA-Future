@@ -295,9 +295,6 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
       if (e) {
         pika::execution::experimental::start_detached(std::move(e));
       }
-      else {
-        e = {};
-      }
     }
 
     internal_.clear();

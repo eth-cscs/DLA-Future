@@ -404,7 +404,7 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
   auto second_tile_orig = pipeline.read();
   EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
-  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  auto subtiles_orig = splitTile(second_tile_orig, specs);
   std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
   subtiles.reserve(specs.size());
   for (auto& subtile : subtiles_orig) {
@@ -445,7 +445,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
 
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
   auto second_tile_orig = pipeline.read();
-  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  auto subtiles_orig = splitTile(second_tile_orig, specs);
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
   subtiles_orig.emplace_back(subTileSender(subtiles_orig[0], subspec));
@@ -545,7 +545,7 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
   auto second_tile_orig = pipeline.read();
   EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
-  auto subtiles_orig = subTileSenders(second_tile_orig, specs);
+  auto subtiles_orig = splitTile(second_tile_orig, specs);
   std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
   subtiles.reserve(specs.size());
   for (auto& subtile : subtiles_orig) {
@@ -583,7 +583,7 @@ void testSubOfSubtile(std::string name, TileElementSize size, SizeType ld,
   auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
-  auto subtiles_orig = subTileSenders(pipeline.readwrite(), specs);
+  auto subtiles_orig = splitTileDisjoint(pipeline.readwrite(), specs);
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
   // create subsubtile

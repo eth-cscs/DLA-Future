@@ -523,8 +523,8 @@ ReadOnlyTileSender<T, D> shareReadwriteTile(ReadWriteTileSender<T, D>&& tile) {
 /// ready. The next dependency in the dependency chain will become ready only
 /// when @p tile and the returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<ReadOnlyTileSender<T, D>> subTileSenders(ReadOnlyTileSender<T, D> tile,
-                                                     const std::vector<SubTileSpec>& specs) {
+std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
+                                                const std::vector<SubTileSpec>& specs) {
   std::vector<ReadOnlyTileSender<T, D>> senders;
   senders.reserve(specs.size());
 
@@ -556,8 +556,8 @@ ReadWriteTileSender<T, D> subTileSender(ReadWriteTileSender<T, D>&& tile, const 
 /// ready. The next dependency in the dependency chain will become ready only
 /// when returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<ReadWriteTileSender<T, D>> subTileSenders(ReadWriteTileSender<T, D>&& tile,
-                                                      const std::vector<SubTileSpec>& specs) {
+std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, D>&& tile,
+                                                         const std::vector<SubTileSpec>& specs) {
   // TODO: The alternative to this assertion is to start_detached the tile.
   // Otherwise callers have to do it. What's clearest?
   DLAF_ASSERT(specs.size() >= 1, specs.size());

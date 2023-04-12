@@ -28,9 +28,9 @@ namespace dlaf::matrix::test {
 ///
 /// The senders are created using the matrix method readwrite(const
 /// LocalTileIndex&). Note: This function is interchangeable with
-/// getSendersUsingGlobalIndex.
+/// getReadWriteSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getSendersUsingLocalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<VoidSenderWithAtomicBool> result;
@@ -48,9 +48,9 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingLocalIndex(MatrixType<T, D>
 ///
 /// The senders are created using the matrix method readwrite(const
 /// GlobalTileIndex&).  Note: This function is interchangeable with
-/// getSendersUsingLocalIndex.
+/// getReadWriteSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<VoidSenderWithAtomicBool> result;
@@ -72,9 +72,9 @@ std::vector<VoidSenderWithAtomicBool> getSendersUsingGlobalIndex(MatrixType<T, D
 /// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
 /// The senders are created using the matrix method read(const LocalTileIndex&).
-/// Note: This function is interchangeable with getRoSendersUsingGlobalIndex.
+/// Note: This function is interchangeable with getReadSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getReadSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<VoidSenderWithAtomicBool> result;
@@ -92,9 +92,9 @@ std::vector<VoidSenderWithAtomicBool> getRoSendersUsingLocalIndex(MatrixType<T, 
 /// Returns a col-major ordered vector with read-only senders to the matrix tiles.
 ///
 /// The senders are created using the matrix method read(const GlobalTileIndex&).
-/// Note: This function is interchangeable with getRoSendersUsingLocalIndex.
+/// Note: This function is interchangeable with getReadSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getRoSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
+std::vector<VoidSenderWithAtomicBool> getReadSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
   std::vector<VoidSenderWithAtomicBool> result;

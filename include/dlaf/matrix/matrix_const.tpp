@@ -56,7 +56,6 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
                                     const LayoutInfo& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
 
-  // TODO: Is this a reasonable assumption?
   DLAF_ASSERT(tile_managers_.empty(), "");
   tile_managers_.reserve(static_cast<std::size_t>(nr_tiles.linear_size()));
 

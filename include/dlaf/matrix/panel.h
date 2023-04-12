@@ -573,8 +573,6 @@ public:
 
     // Note assertion on index done by linearIndex method.
     DLAF_ASSERT(!BaseT::isExternal(index), "read-write access not allowed on external tiles", index);
-    // NOTE: read-write access not allowed because setTile takes shared_future
-    // of const tiles.
 
     has_been_used_ = true;
 

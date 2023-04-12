@@ -27,9 +27,7 @@ public:
   }
 
   ReadWriteTileSender<T, D> readwrite() {
-    return pipeline.readwrite() | pika::execution::experimental::then([](auto tile_wrapper) {
-             return createTileAsyncRwMutex<T, D>(std::move(tile_wrapper));
-           });
+    return pipeline.readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
   }
 
 private:

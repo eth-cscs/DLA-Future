@@ -555,6 +555,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // LOCAL
   auto unpack_local_f = [subm_dist, rank = dist.rankIndex().get<C>()](const auto& send_counts,
+                                                                      const auto& recv_counts,
                                                                       const auto& index_tile_futs,
                                                                       const auto& mat_in_tiles,
                                                                       const auto& mat_out_tiles) {
@@ -566,12 +567,27 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
     const int a = std::accumulate(send_counts.cbegin(), send_counts.cbegin() + rank, 0);
     const int b = a + send_counts[rank_index];
 
+    // Note:
+    // These are copied directly from mat_send, while unpacking permutation applies to indices on
+    // the receiver side. So, we have to "align" the unpacking permutation, by applying the offset
+    // existing between the send and recv side.
+    // This is due to the fact that send and recv buffers might be "unbalanced", e.g. rank1 sends 2
+    // and receive 1 with rank0, so resulting in a shift in indices between the two buffer sides,
+    // following previous example the local part would start at index (0-based) 2 in mat_send and
+    // at index 1 in mat_recv.
+    const int a_r = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
+    const SizeType offset = to_SizeType(a - a_r);
+    std::vector<SizeType> perm_offseted(perm_arr, perm_arr + subm_dist.size().get<C>());
+    std::transform(perm_offseted.begin(), perm_offseted.end(), perm_offseted.begin(),
+                   [offset](const SizeType perm) { return perm + offset; });
+
     // [a, b)
-    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
+    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_offseted.data(), mat_in_tiles,
+                                       mat_out_tiles,
                                        [a, b](SizeType i_perm) { return i_perm < a || i_perm >= b; });
   };
 
-  ex::when_all(send_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
+  ex::when_all(send_counts_sender, recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
                whenAllReadOnlyTilesArray(mat_send),
                whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
       di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));

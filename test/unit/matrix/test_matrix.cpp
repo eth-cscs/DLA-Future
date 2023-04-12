@@ -1439,8 +1439,6 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
   }
 }
 
-// TODO: Do these tests still make sense with the sender version? They do
-// nothing special.
 struct CustomException final : public std::exception {};
 inline auto throw_custom = [](auto) { throw CustomException{}; };
 

@@ -30,10 +30,10 @@ namespace dlaf::matrix::test {
 /// LocalTileIndex&). Note: This function is interchangeable with
 /// getReadWriteSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingLocalIndex(MatrixType<T, D>& mat) {
+std::vector<EagerVoidSender> getReadWriteSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<VoidSenderWithAtomicBool> result;
+  std::vector<EagerVoidSender> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
@@ -50,10 +50,10 @@ std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingLocalIndex(MatrixT
 /// GlobalTileIndex&).  Note: This function is interchangeable with
 /// getReadWriteSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
+std::vector<EagerVoidSender> getReadWriteSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<VoidSenderWithAtomicBool> result;
+  std::vector<EagerVoidSender> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -74,10 +74,10 @@ std::vector<VoidSenderWithAtomicBool> getReadWriteSendersUsingGlobalIndex(Matrix
 /// The senders are created using the matrix method read(const LocalTileIndex&).
 /// Note: This function is interchangeable with getReadSendersUsingGlobalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getReadSendersUsingLocalIndex(MatrixType<T, D>& mat) {
+std::vector<EagerVoidSender> getReadSendersUsingLocalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<VoidSenderWithAtomicBool> result;
+  std::vector<EagerVoidSender> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.localNrTiles().cols(); ++j) {
@@ -94,10 +94,10 @@ std::vector<VoidSenderWithAtomicBool> getReadSendersUsingLocalIndex(MatrixType<T
 /// The senders are created using the matrix method read(const GlobalTileIndex&).
 /// Note: This function is interchangeable with getReadSendersUsingLocalIndex.
 template <template <class, Device> class MatrixType, class T, Device D>
-std::vector<VoidSenderWithAtomicBool> getReadSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
+std::vector<EagerVoidSender> getReadSendersUsingGlobalIndex(MatrixType<T, D>& mat) {
   const matrix::Distribution& dist = mat.distribution();
 
-  std::vector<VoidSenderWithAtomicBool> result;
+  std::vector<EagerVoidSender> result;
   result.reserve(static_cast<std::size_t>(dist.localNrTiles().linear_size()));
 
   for (SizeType j = 0; j < dist.nrTiles().cols(); ++j) {
@@ -119,7 +119,7 @@ std::vector<VoidSenderWithAtomicBool> getReadSendersUsingGlobalIndex(MatrixType<
 /// @param invert if set to true it checks that all senders are ready except the first_n
 ///
 /// @pre 0 <= ready <= senders.size().
-inline bool checkSendersStep(size_t first_n, const std::vector<VoidSenderWithAtomicBool>& senders,
+inline bool checkSendersStep(size_t first_n, const std::vector<EagerVoidSender>& senders,
                              bool invert = false) {
   DLAF_ASSERT_HEAVY(first_n <= senders.size(), first_n, senders.size());
 
@@ -140,8 +140,8 @@ inline bool checkSendersStep(size_t first_n, const std::vector<VoidSenderWithAto
 ///
 /// If get_ready == true it checks if current[i] is ready after previous[i] is used.
 /// If get_ready == false it checks if current[i] is not ready after previous[i] is used.
-void checkSenders(bool get_ready, const std::vector<VoidSenderWithAtomicBool>& current,
-                  std::vector<VoidSenderWithAtomicBool>& previous) {
+void checkSenders(bool get_ready, const std::vector<EagerVoidSender>& current,
+                  std::vector<EagerVoidSender>& previous) {
   DLAF_ASSERT_HEAVY(current.size() == previous.size(), current.size(), previous.size());
 
   for (std::size_t index = 0; index < current.size(); ++index) {

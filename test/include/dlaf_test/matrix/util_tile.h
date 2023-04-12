@@ -32,15 +32,14 @@ namespace test {
 // determine if the sender is blocked by some other work or if it was ready to
 // run. The value that the original sender sends is forwarded through
 // ensure_started. This means that the value is released only once the new
-// sender is waited for. Finally, we drop the value with drop_value so that the
-// class doesn't have to be templated with the type that the original sender
-// sends.
-//
-// TODO: Suggestions for a better name for this are more than welcome.
-class VoidSenderWithAtomicBool {
+// sender is waited for.
+
+// EagerVoidSender drops the sent tile so that the class does not have to be
+// templated on the tile and its template parameters.
+class EagerVoidSender {
 public:
   template <typename Sender>
-  VoidSenderWithAtomicBool(Sender&& sender)
+  EagerVoidSender(Sender&& sender)
       : ready(std::make_shared<std::atomic<bool>>(false)),
         sender(std::forward<Sender>(sender) |
                pika::execution::experimental::then([ready = this->ready](auto x) {
@@ -49,10 +48,10 @@ public:
                }) |
                pika::execution::experimental::ensure_started() |
                pika::execution::experimental::drop_value()) {}
-  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool&&) = default;
-  VoidSenderWithAtomicBool(VoidSenderWithAtomicBool const&) = delete;
-  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool&&) = default;
-  VoidSenderWithAtomicBool& operator=(VoidSenderWithAtomicBool const&) = delete;
+  EagerVoidSender(EagerVoidSender&&) = default;
+  EagerVoidSender(EagerVoidSender const&) = delete;
+  EagerVoidSender& operator=(EagerVoidSender&&) = default;
+  EagerVoidSender& operator=(EagerVoidSender const&) = delete;
 
   void get() && {
     DLAF_ASSERT(bool(sender), "");
@@ -69,6 +68,8 @@ private:
   pika::execution::experimental::unique_any_sender<> sender;
 };
 
+// EagerReadOnlyTileSender wraps a read-only sender and sends the original tile
+// unlike EagerVoidSender.
 template <class T, Device D>
 class EagerReadOnlyTileSender {
 public:
@@ -107,6 +108,8 @@ private:
   dlaf::matrix::ReadOnlyTileSender<T, D> sender;
 };
 
+// EagerReadWriteTileSender wraps a read-only sender and sends the original tile
+// unlike EagerVoidSender.
 template <class T, Device D>
 class EagerReadWriteTileSender {
 public:

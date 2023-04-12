@@ -1156,7 +1156,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
       EXPECT_EQ(ncols, senders_row.size());
 
       // eagerly start the tile senders, but don't release them
-      std::vector<VoidSenderWithAtomicBool> void_senders_row;
+      std::vector<EagerVoidSender> void_senders_row;
       void_senders_row.reserve(senders_row.size());
       for (auto& s : senders_row) {
         void_senders_row.emplace_back(std::move(s));
@@ -1205,7 +1205,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
       EXPECT_EQ(ncols, senders_row.size());
 
       // eagerly start the tile senders, but don't release them
-      std::vector<VoidSenderWithAtomicBool> void_senders_row;
+      std::vector<EagerVoidSender> void_senders_row;
       void_senders_row.reserve(senders_row.size());
       for (auto& s : senders_row) {
         void_senders_row.emplace_back(std::move(s));

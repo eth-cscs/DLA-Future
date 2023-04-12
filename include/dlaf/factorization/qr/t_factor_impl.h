@@ -29,6 +29,7 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
@@ -232,10 +233,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel,
-    pika::shared_future<common::internal::vector<T>> taus,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t) {
+void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                                          pika::shared_future<common::internal::vector<T>> taus,
+                                          matrix::ReadWriteTileSender<T, device> t) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -245,7 +245,7 @@ void QR_Tfactor<backend, device, T>::call(
 
   const auto v_start = hh_panel.offsetElement();
 
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -283,11 +283,10 @@ void QR_Tfactor<backend, device, T>::call(
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel,
-    pika::shared_future<common::internal::vector<T>> taus,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t,
-    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                                          pika::shared_future<common::internal::vector<T>> taus,
+                                          matrix::ReadWriteTileSender<T, device> t,
+                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -299,7 +298,7 @@ void QR_Tfactor<backend, device, T>::call(
   const auto v_start = hh_panel.offsetElement();
   auto dist = hh_panel.parentDistribution();
 
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column

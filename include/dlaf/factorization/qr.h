@@ -11,6 +11,7 @@
 
 #include "dlaf/factorization/qr/api.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/tile.h"
 
 namespace dlaf::factorization::internal {
 
@@ -37,14 +38,14 @@ namespace dlaf::factorization::internal {
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t) {
+                    matrix::ReadWriteTileSender<T, device> t) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t));
 }
 
 template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     pika::shared_future<common::internal::vector<T>> taus,
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<T, device>> t,
+                    matrix::ReadWriteTileSender<T, device> t,
                     common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
 }

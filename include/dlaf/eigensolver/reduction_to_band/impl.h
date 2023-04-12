@@ -279,7 +279,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
     return taus;
   };
 
-  std::vector<pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>>> panel_tiles;
+  std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {

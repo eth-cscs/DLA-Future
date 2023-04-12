@@ -110,6 +110,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   ///
   /// @pre @p index must be a valid index for the current panel size
   ReadOnlySenderType read(const LocalTileIndex& index) {
+    // Note assertion on index done by linearIndex method.
+
     has_been_used_ = true;
 
     const SizeType internal_linear_idx = linearIndex(index);

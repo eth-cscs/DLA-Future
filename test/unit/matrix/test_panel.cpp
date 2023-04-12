@@ -452,16 +452,15 @@ void testShrink(const GlobalElementSize size, const TileElementSize blocksize,
       dlaf::internal::transformLiftDetach(dlaf::internal::Policy<Backend::MC>(), setTile,
                                           panel.readwrite(idx), counter++);
 
-      // TODO: Update or remove comment?
-      // Getting the future from the panel and getting a reference to the tile
+      // Getting the sender from the panel and getting a reference to the tile
       // are separated because combining them into one operation would lead to
-      // the tile being a dangling reference since the shared_future from
+      // the tile being a dangling reference since the tile wrapper sent by
       // panel.read(idx) is released at the end of the expression.
       //
-      // Also note that shared_future::get is not called inside EXPECT_EQ
-      // because it may yield and change worker thread. SCOPED_TRACE uses thread
-      // locals and does not support being created on one thread and destroyed
-      // on another and will segfault if that happens.
+      // Also note that sync_wait is not called inside EXPECT_EQ because it may
+      // yield and change worker thread. SCOPED_TRACE uses thread locals and
+      // does not support being created on one thread and destroyed on another
+      // and will segfault if that happens.
       auto panel_tile_f = sync_wait(panel.read(idx));
       const auto& panel_tile = panel_tile_f.get();
       auto matrix_tile_f = sync_wait(matrix.read(idx));

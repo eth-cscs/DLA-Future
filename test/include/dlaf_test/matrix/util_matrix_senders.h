@@ -22,8 +22,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 
-// TODO: Rename this whole file (it no longer deals only with futures).
-
 namespace dlaf::matrix::test {
 
 /// Returns a col-major ordered vector with wrappers of senders to matrix tiles.

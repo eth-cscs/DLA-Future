@@ -15,7 +15,7 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_futures.h"
+#include "dlaf_test/matrix/util_matrix_senders.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;

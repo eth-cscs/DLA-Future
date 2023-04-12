@@ -33,8 +33,6 @@ using namespace dlaf::matrix::util;
 using namespace dlaf::test;
 using namespace dlaf::matrix::test;
 
-using pika::execution::experimental::make_unique_any_sender;
-
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 

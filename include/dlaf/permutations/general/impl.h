@@ -78,15 +78,12 @@ namespace dlaf::permutations::internal {
 // [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-//
-// Note: `in_tiles` should be `const T` but to avoid extra allocations necessary for unwrapping
-//       `std::vector<shared_future<matrix::Tile<const T, D>>>` it is left as non-const
 template <class T, Device D, Coord coord, class... Args>
-void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
-                       const matrix::Distribution& distr, const SizeType* perm_arr,
-                       const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& in_tiles_fut,
-                       const std::vector<matrix::Tile<T, D>>& out_tiles,
-                       [[maybe_unused]] Args&&... args) {
+void applyPermutations(
+    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+    const matrix::Distribution& distr, const SizeType* perm_arr,
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles,
+    const std::vector<matrix::Tile<T, D>>& out_tiles, [[maybe_unused]] Args&&... args) {
   if constexpr (D == Device::CPU) {
     constexpr Coord orth_coord = orthogonal(coord);
     std::vector<SizeType> splits =
@@ -110,7 +107,7 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
         }
 
         TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
-        const auto& tile_in = in_tiles_fut[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))].get();
+        const auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))].get();
         TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
         auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
@@ -120,8 +117,8 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   }
   else if constexpr (D == Device::GPU) {
 #if defined(DLAF_WITH_GPU)
-    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles_fut,
-                                        out_tiles, args...);
+    applyPermutationsOnDevice<T, coord>(out_begin, sz, in_offset, distr, perm_arr, in_tiles, out_tiles,
+                                        args...);
 #endif
   }
 }
@@ -220,7 +217,8 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
       [len = sz_loc.get<orthogonal(
            C)>()](const comm::Communicator& comm, std::vector<int>& send_counts,
                   std::vector<int>& send_displs,
-                  const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& send_tiles_fut,
+                  const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>&
+                      send_tiles_fut,
                   std::vector<int>& recv_counts, std::vector<int>& recv_displs,
                   const std::vector<matrix::Tile<T, D>>& recv_tiles, MPI_Request* req) {
         // datatype to be sent to each rank

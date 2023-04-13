@@ -509,7 +509,7 @@ ReadOnlyTileSender<T, D> splitTile(ReadOnlyTileSender<T, D> tile, const SubTileS
 /// been ready. The next dependency in the dependency chain will become ready
 /// only when the returned tile goes out of scope.
 template <class T, Device D>
-ReadOnlyTileSender<T, D> shareReadwriteTile(ReadWriteTileSender<T, D>&& tile) {
+ReadOnlyTileSender<T, D> shareReadWriteTile(ReadWriteTileSender<T, D>&& tile) {
   return std::move(tile) | pika::execution::experimental::let_value([](Tile<T, D>& tile) {
            internal::TileAsyncRwMutex<T, D> tile_manager{std::move(tile)};
            return tile_manager.read();

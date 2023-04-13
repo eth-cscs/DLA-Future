@@ -839,7 +839,6 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       auto [tile_v_unshared, tile_w_unshared] =
           helperBackend.computeVW(indexing_helper.wsIndexHH(), helper, std::move(tile_hh), mat_v, mat_t,
                                   mat_w);
-      // TODO: make_unique_any_sender necessary?
       auto tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
 

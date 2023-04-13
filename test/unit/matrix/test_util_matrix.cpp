@@ -145,7 +145,6 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        // TODO: Try to emulate old structure with shared_futures etc. or ok like this?
         if (current_rank == owner_transposed) {
           auto tile_transposed = matrix.read(index_tile_transposed);
 

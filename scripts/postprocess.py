@@ -18,16 +18,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from parse import parse, with_pattern
+from pathlib import Path
 
 miny0 = False
-outpath = "."
+outpath = Path(".")
+
 
 def _str_nnodes(x):
-  if isinstance(x, float):
-    if x.is_integer():
-      return f"{x:.0f}"
-    return f"{x:.3f}"
-  return f"{x:d}"
+    if isinstance(x, float):
+        if x.is_integer():
+            return f"{x:.0f}"
+        return f"{x:.3f}"
+    return f"{x:d}"
+
 
 def _gen_nodes_plot(
     plt_type,
@@ -134,7 +137,7 @@ def _gen_nodes_plot(
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
 
         if miny0:
-          ax.set_ylim(0, ax.get_ylim()[1])
+            ax.set_ylim(0, ax.get_ylim()[1])
 
     return plotted, fig, ax
 
@@ -162,7 +165,7 @@ class NodePlotWriter:
     """
 
     def __init__(self, filename, plt_type, plt_routine, title, df, **gen_plot_args):
-        self.filename = outpath + "/" + filename
+        self.filename = outpath / filename
         self.plotted, self.fig, self.ax = _gen_nodes_plot(
             plt_type, plt_routine, title, df, **gen_plot_args
         )
@@ -387,12 +390,12 @@ def parse_jobs_cmdargs(description):
     parser.add_argument(
         "--out-path",
         default=".",
-        help="Path to save the plots (default \".\").",
+        help='Path to save the plots (default ".").',
     )
     args = parser.parse_args()
     paths = args.path
     miny0 = args.miny0
-    outpath = args.out_path
+    outpath = Path(args.out_path)
 
     os.makedirs(outpath, exist_ok=True)
 

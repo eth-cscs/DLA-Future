@@ -138,16 +138,12 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
   SizeType ntiles = i_end - i_begin + 1;
 
-  auto sender =
-      ex::when_all(ex::when_all_vector(
-                       matrix::selectRead(perms, common::iterate_range2d(LocalTileIndex(i_begin, 0),
-                                                                         LocalTileSize(ntiles, 1)))),
-                   ex::when_all_vector(
-                       matrix::select(mat_in, common::iterate_range2d(LocalTileIndex(i_begin, i_begin),
-                                                                      LocalTileSize(ntiles, ntiles)))),
-                   ex::when_all_vector(
-                       matrix::select(mat_out, common::iterate_range2d(LocalTileIndex(i_begin, i_begin),
-                                                                       LocalTileSize(ntiles, ntiles)))));
+  auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
+  auto mat_range =
+      common::iterate_range2d(LocalTileIndex(i_begin, i_begin), LocalTileSize(ntiles, ntiles));
+  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
+                             ex::when_all_vector(matrix::select(mat_in, mat_range)),
+                             ex::when_all_vector(matrix::select(mat_out, mat_range)));
 
   auto permute_fn = [subm_distr](const auto& index_tile_futs, const auto& mat_in_tiles,
                                  const auto& mat_out_tiles, auto&&... ts) {
@@ -408,9 +404,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 
   LocalTileIndex begin{i_begin, 0};
   LocalTileSize sz{i_end - i_begin + 1, 1};
-  auto sender =
-      ex::when_all(ex::when_all_vector(matrix::selectRead(in, common::iterate_range2d(begin, sz))),
-                   ex::when_all_vector(matrix::select(out, common::iterate_range2d(begin, sz))));
+  auto range = common::iterate_range2d(begin, sz);
+  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(in, range)),
+                             ex::when_all_vector(matrix::select(out, range)));
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 

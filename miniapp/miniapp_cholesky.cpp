@@ -40,6 +40,8 @@
 
 namespace {
 
+using pika::execution::experimental::just;
+using pika::execution::experimental::make_unique_any_sender;
 using pika::execution::experimental::start_detached;
 using pika::execution::experimental::when_all;
 using pika::this_thread::experimental::sync_wait;
@@ -261,7 +263,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 
   using dlaf::common::make_data;
   using HostTileType = typename Matrix<T, Device::CPU>::TileType;
-  using ConstHostTileType = typename Matrix<T, Device::CPU>::ConstTileType;
+  using ReadOnlySenderType = typename Matrix<T, Device::CPU>::ReadOnlySenderType;
 
   // compute tile * tile_to_transpose' with the option to cumulate the result
   // compute a = abs(a - b)
@@ -305,7 +307,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
       const auto owner_transposed = distribution.rankGlobalTile(transposed_wrt_global);
 
       // collect the 2nd operand, receving it from others if not available locally
-      pika::shared_future<ConstHostTileType> tile_to_transpose;
+      ReadOnlySenderType tile_to_transpose;
 
       if (owner_transposed == current_rank) {  // current rank already has what it needs
         tile_to_transpose = L.read(transposed_wrt_global);
@@ -313,7 +315,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         // if there are more than 1 rank for column, others will need the data from this one
         if (distribution.commGridSize().rows() > 1)
           dlaf::comm::sync::broadcast::send(comm_grid.colCommunicator(),
-                                            L.read(transposed_wrt_global).get());
+                                            sync_wait(L.read(transposed_wrt_global)).get());
       }
       else {  // current rank has to receive it
         // by construction: this rank has the 1st operand, so if it does not have the 2nd one,
@@ -328,7 +330,9 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
 
-        tile_to_transpose = pika::make_ready_future<ConstHostTileType>(std::move(workspace));
+        // tile_to_transpose = pika::make_ready_future<ConstHostTileType>(std::move(workspace));
+        tile_to_transpose =
+            dlaf::matrix::shareReadWriteTile(make_unique_any_sender(just(std::move(workspace))));
       }
 
       // compute the part of results available locally, for each row this rank has in local
@@ -337,12 +341,13 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         const LocalTileIndex tile_wrt_local{i_loc, j_loc};
 
         start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(1.0),
-                                                   L.read(tile_wrt_local),
-                                                   dlaf::internal::keepFuture(tile_to_transpose),
+                                                   L.read(tile_wrt_local), tile_to_transpose,
                                                    j_loc == 0 ? T(0.0) : T(1.0),
                                                    partial_result.readwrite(LocalTileIndex{i_loc, 0})) |
                        dlaf::tile::gemm(dlaf::internal::Policy<dlaf::Backend::MC>()));
       }
+
+      start_detached(std::move(tile_to_transpose));
     }
 
     // now that each rank has computed its partial result with the local data available

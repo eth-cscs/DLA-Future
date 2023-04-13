@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <algorithm>
+#include <cmath>
+
 #include <pika/runtime.hpp>
 
 #include "dlaf/common/assert.h"
@@ -19,11 +22,11 @@ namespace dlaf::eigensolver::internal {
 inline size_t getReductionToBandPanelNWorkers() noexcept {
   const size_t nworkers = getTuneParameters().red2band_panel_nworkers;
 
-  DLAF_ASSERT(nworkers >= 1 &&
-                  nworkers < pika::resource::get_thread_pool("default").get_os_thread_count(),
-              nworkers);
+  // Note: precautionarily we leave at least 1 thread "free" to do other stuff
+  const size_t max_workers = pika::resource::get_thread_pool("default").get_os_thread_count() - 1;
 
-  return nworkers;
+  // 1 <= number of workers < max_workers
+  return std::max<std::size_t>(1, std::min<std::size_t>(max_workers, nworkers));
 }
 
 }

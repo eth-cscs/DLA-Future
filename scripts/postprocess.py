@@ -19,6 +19,15 @@ import matplotlib.pyplot as plt
 
 from parse import parse, with_pattern
 
+miny0 = False
+outpath = "."
+
+def _str_nnodes(x):
+  if isinstance(x, float):
+    if x.is_integer():
+      return f"{x:.0f}"
+    return f"{x:.3f}"
+  return f"{x:d}"
 
 def _gen_nodes_plot(
     plt_type,
@@ -120,9 +129,12 @@ def _gen_nodes_plot(
 
         nodes = df["nodes"].sort_values().unique()
         ax.set_xticks(nodes)
-        ax.set_xticklabels([f"{x:f}" for x in nodes])
+        ax.set_xticklabels([_str_nnodes(x) for x in nodes])
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
+
+        if miny0:
+          ax.set_ylim(0, ax.get_ylim()[1])
 
     return plotted, fig, ax
 
@@ -150,7 +162,7 @@ class NodePlotWriter:
     """
 
     def __init__(self, filename, plt_type, plt_routine, title, df, **gen_plot_args):
-        self.filename = filename
+        self.filename = outpath + "/" + filename
         self.plotted, self.fig, self.ax = _gen_nodes_plot(
             plt_type, plt_routine, title, df, **gen_plot_args
         )
@@ -353,6 +365,9 @@ def parse_jobs(data_dirs, distinguish_dir=False):
 # and call parse_jobs on the given directories.
 # exit is called if no results are found.
 def parse_jobs_cmdargs(description):
+    global miny0
+    global outpath
+
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--path",
@@ -364,8 +379,23 @@ def parse_jobs_cmdargs(description):
         action="store_true",
         help="Add path name to bench name. Note it works better with short relative paths.",
     )
+    parser.add_argument(
+        "--miny0",
+        action="store_true",
+        help="Set min y limit to 0.",
+    )
+    parser.add_argument(
+        "--out-path",
+        default=".",
+        help="Path to save the plots (default \".\").",
+    )
     args = parser.parse_args()
     paths = args.path
+    miny0 = args.miny0
+    outpath = args.out_path
+
+    os.makedirs(outpath, exist_ok=True)
+
     if paths == None:
         paths = ["."]
 

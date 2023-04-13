@@ -54,11 +54,12 @@ namespace dlaf::eigensolver::internal {
 
 // Given a vector of vectors, reduce all vectors in the first one using sum operation
 template <class T>
-void reduceColumnVectors(std::vector<common::internal::vector<T>>& battery) {
-  for (std::size_t i = 1; i < battery.size(); ++i) {
-    DLAF_ASSERT_HEAVY(battery[0].size() == battery[i].size(), battery[0].size(), battery[i].size());
-    for (SizeType j = 0; j < battery[0].size(); ++j)
-      battery[0][j] += battery[i][j];
+void reduceColumnVectors(std::vector<common::internal::vector<T>>& columnVectors) {
+  for (std::size_t i = 1; i < columnVectors.size(); ++i) {
+    DLAF_ASSERT_HEAVY(columnVectors[0].size() == columnVectors[i].size(), columnVectors[0].size(),
+                      columnVectors[i].size());
+    for (SizeType j = 0; j < columnVectors[0].size(); ++j)
+      columnVectors[0][j] += columnVectors[i][j];
   }
 }
 

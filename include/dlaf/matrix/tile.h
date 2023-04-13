@@ -550,7 +550,6 @@ ReadWriteTileSender<T, D> splitTile(ReadWriteTileSender<T, D>&& tile, const SubT
 /// Create read-write subtiles of a given read-write tile.
 ///
 /// @pre specs are disjoint.
-/// @pre specs.size() >= 1
 ///
 /// The returned subtiles will get ready, at the same time as @p tile gets
 /// ready. The next dependency in the dependency chain will become ready only
@@ -558,15 +557,19 @@ ReadWriteTileSender<T, D> splitTile(ReadWriteTileSender<T, D>&& tile, const SubT
 template <class T, Device D>
 std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, D>&& tile,
                                                          const std::vector<SubTileSpec>& specs) {
-  // TODO: The alternative to this assertion is to start_detached the tile.
-  // Otherwise callers have to do it. What's clearest?
-  DLAF_ASSERT(specs.size() >= 1, specs.size());
+  // If there are no specs we still consume the tile by starting it.
+  if (specs.empty()) {
+    pika::execution::experimental::start_detached(std::move(tile));
+    return {};
+  }
 
   // If there is only one spec we can avoid calling execution::split on the
   // input tile (and thus avoid a heap allocation) and directly call the
   // single-spec splitTile instead.
   if (specs.size() == 1) {
-    return std::vector<ReadWriteTileSender<T, D>>(splitTile(std::move(tile), specs[0]));
+    auto subtiles = std::vector<ReadWriteTileSender<T, D>>();
+    subtiles.push_back(splitTile(std::move(tile), specs[0]));
+    return subtiles;
   }
 
 #ifdef DLAF_ASSERT_MODERATE_ENABLE

@@ -438,7 +438,7 @@ void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
   ASSERT_LE(1, specs.size());  // Need at least a subtile to create a subsubtile
   ASSERT_LE(last_dep, specs.size() + 1);
   // specs.size() -> subsubtile
-  // spec.size() + 1 -> full tile
+  // specs.size() + 1 -> full tile
 
   auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
   auto pipeline = createTilePipeline<T, D>(std::move(tile));
@@ -530,7 +530,6 @@ void testSubtile(std::string name, TileElementSize size, SizeType ld, const SubT
   checkFullTile(tile_ptr, std::move(third_tile).get(), size);
 }
 
-// TODO: This doesn't test the read-write disjoint splitter, but the read-only version. Change it.
 template <class T, Device D>
 void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
                           const std::vector<SubTileSpec>& specs, std::size_t last_dep) {
@@ -543,28 +542,22 @@ void testSubtilesDisjoint(std::string name, TileElementSize size, SizeType ld,
   auto pipeline = createTilePipeline<T, D>(std::move(tile));
 
   EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
-  auto second_tile_orig = pipeline.read();
-  EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
-  auto subtiles_orig = splitTile(second_tile_orig, specs);
-  std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
+  auto subtiles_orig = splitTileDisjoint(pipeline.readwrite(), specs);
+  std::vector<EagerReadWriteTileSender<T, D>> subtiles;
   subtiles.reserve(specs.size());
   for (auto& subtile : subtiles_orig) {
     subtiles.emplace_back(std::move(subtile));
   }
   subtiles_orig.clear();
-  second_tile_orig = {};
   EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
 
   ASSERT_TRUE(first_tile.is_ready());
-  ASSERT_FALSE(second_tile.is_ready());
   checkNonReady(subtiles);
   ASSERT_FALSE(third_tile.is_ready());
   checkFullTile(tile_ptr, std::move(first_tile).get(), size);
 
-  ASSERT_TRUE(second_tile.is_ready());
-  ASSERT_FALSE(third_tile.is_ready());
-  checkFullTile(tile_ptr, std::move(second_tile).get().get(), size);
   if (subtiles.size() > 0) {
+    ASSERT_FALSE(third_tile.is_ready());
     checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, third_tile);
   }
 

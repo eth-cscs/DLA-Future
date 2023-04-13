@@ -285,6 +285,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
   panel_tiles.reserve(
@@ -299,49 +300,49 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (internally required)
                       ex::just(common::internal::vector<T>{}),               // taus
                       ex::when_all_vector(std::move(panel_tiles))) |
-         ex::let_value([nthreads, nrefls, cols = panel_view.cols()](auto& barrier_ptr, auto& w,
-                                                                    auto& taus, auto& tiles) {
-           return ex::schedule(dlaf::internal::getBackendScheduler<Backend::MC>(
-                      pika::execution::thread_priority::high)) |
-                  ex::bulk(nthreads,
-                           [=, &barrier_ptr, &taus, &w, &tiles](const std::size_t index) {
-                             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                             const std::size_t begin = index * batch_size;
-                             const std::size_t end =
-                                 std::min(index * batch_size + batch_size, tiles.size());
+         ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+         ex::bulk(nthreads,
+                  [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
+                                                               auto& barrier_ptr, auto& w, auto& taus,
+                                                               auto& tiles) {
+                    const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+                    const std::size_t begin = index * batch_size;
+                    const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
 
-                             if (index == 0) {
-                               taus.reserve(nrefls);
-                               w.resize(nthreads);
-                             }
+                    if (index == 0) {
+                      taus.reserve(nrefls);
+                      w.resize(nthreads);
+                    }
 
-                             for (SizeType j = 0; j < nrefls; ++j) {
-                               // STEP1: compute tau and reflector (single-thread)
-                               if (index == 0)
-                                 taus.emplace_back(computeReflector(tiles, j));
-                               barrier_ptr->arrive_and_wait();
+                    for (SizeType j = 0; j < nrefls; ++j) {
+                      // STEP1: compute tau and reflector (single-thread)
+                      if (index == 0)
+                        taus.emplace_back(computeReflector(tiles, j));
+                      barrier_ptr->arrive_and_wait();
 
-                               // STEP2a: compute w (multi-threaded)
-                               const SizeType pt_cols = cols - (j + 1);
-                               if (pt_cols == 0)
-                                 break;
-                               const bool has_head = (index == 0);
+                      // STEP2a: compute w (multi-threaded)
+                      const SizeType pt_cols = cols - (j + 1);
+                      if (pt_cols == 0)
+                        break;
+                      const bool has_head = (index == 0);
 
-                               w[index] = common::internal::vector<T>(pt_cols, 0);
-                               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-                               barrier_ptr->arrive_and_wait();
+                      w[index] = common::internal::vector<T>(pt_cols, 0);
+                      computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
+                      barrier_ptr->arrive_and_wait();
 
-                               // STEP2b: reduce w results (single-threaded)
-                               if (index == 0)
-                                 dlaf::eigensolver::internal::reduceColumnVectors(w);
-                               barrier_ptr->arrive_and_wait();
+                      // STEP2b: reduce w results (single-threaded)
+                      if (index == 0)
+                        dlaf::eigensolver::internal::reduceColumnVectors(w);
+                      barrier_ptr->arrive_and_wait();
 
-                               // STEP3: update trailing panel (multi-threaded)
-                               updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
-                               barrier_ptr->arrive_and_wait();
-                             }
-                           }) |
-                  ex::then([&taus]() { return std::move(taus); });
+                      // STEP3: update trailing panel (multi-threaded)
+                      updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
+                      barrier_ptr->arrive_and_wait();
+                    }
+                  }) |
+         ex::then([](auto barrier_ptr, auto w, auto taus, auto tiles) {
+           di::silenceUnusedWarningFor(barrier_ptr, w, tiles);
+           return taus;
          }) |
          ex::make_future();
 }
@@ -618,6 +619,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
   panel_tiles.reserve(
@@ -634,57 +636,57 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                       ex::when_all_vector(std::move(panel_tiles)),
                       std::forward<CommSender>(mpi_col_chain_panel),
                       std::forward<TriggerSender>(trigger)) |
-         ex::let_value([nthreads, nrefls, rank_v0, cols = panel_view.cols()](auto& barrier_ptr, auto& w,
-                                                                             auto& taus, auto& tiles,
-                                                                             auto&& pcomm) {
-           const bool rankHasHead = rank_v0 == pcomm.ref().rank();
-           return ex::schedule(dlaf::internal::getBackendScheduler<Backend::MC>(
-                      pika::execution::thread_priority::high)) |
-                  ex::bulk(nthreads,
-                           [=, &barrier_ptr, &taus, &w, &tiles, &pcomm](const std::size_t index) {
-                             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                             const std::size_t begin = index * batch_size;
-                             const std::size_t end =
-                                 std::min(index * batch_size + batch_size, tiles.size());
+         ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+         ex::bulk(nthreads,
+                  [nthreads, nrefls, rank_v0,
+                   cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
+                                             auto& taus, auto& tiles, auto&& pcomm) {
+                    const bool rankHasHead = rank_v0 == pcomm.ref().rank();
 
-                             if (index == 0) {
-                               taus.reserve(nrefls);
-                               w.resize(nthreads);
-                             }
+                    const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+                    const std::size_t begin = index * batch_size;
+                    const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
 
-                             for (SizeType j = 0; j < nrefls; ++j) {
-                               // STEP1: compute tau and reflector (single-thread)
-                               if (index == 0) {
-                                 const bool has_head = rankHasHead;
-                                 taus.emplace_back(computeReflector(has_head, pcomm.ref(), tiles, j));
-                               }
-                               barrier_ptr->arrive_and_wait();
+                    if (index == 0) {
+                      taus.reserve(nrefls);
+                      w.resize(nthreads);
+                    }
 
-                               // STEP2a: compute w (multi-threaded)
-                               const SizeType pt_cols = cols - (j + 1);
-                               if (pt_cols == 0)
-                                 break;
+                    for (SizeType j = 0; j < nrefls; ++j) {
+                      // STEP1: compute tau and reflector (single-thread)
+                      if (index == 0) {
+                        const bool has_head = rankHasHead;
+                        taus.emplace_back(computeReflector(has_head, pcomm.ref(), tiles, j));
+                      }
+                      barrier_ptr->arrive_and_wait();
 
-                               const bool has_head = rankHasHead && (index == 0);
+                      // STEP2a: compute w (multi-threaded)
+                      const SizeType pt_cols = cols - (j + 1);
+                      if (pt_cols == 0)
+                        break;
 
-                               w[index] = common::internal::vector<T>(pt_cols, 0);
-                               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-                               barrier_ptr->arrive_and_wait();
+                      const bool has_head = rankHasHead && (index == 0);
 
-                               // STEP2b: reduce w results (single-threaded)
-                               if (index == 0) {
-                                 dlaf::eigensolver::internal::reduceColumnVectors(w);
-                                 comm::sync::allReduceInPlace(pcomm.ref(), MPI_SUM,
-                                                              common::make_data(w[0].data(), pt_cols));
-                               }
-                               barrier_ptr->arrive_and_wait();
+                      w[index] = common::internal::vector<T>(pt_cols, 0);
+                      computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
+                      barrier_ptr->arrive_and_wait();
 
-                               // STEP3: update trailing panel (multi-threaded)
-                               updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
-                               barrier_ptr->arrive_and_wait();
-                             }
-                           }) |
-                  ex::then([&taus]() { return std::move(taus); });
+                      // STEP2b: reduce w results (single-threaded)
+                      if (index == 0) {
+                        dlaf::eigensolver::internal::reduceColumnVectors(w);
+                        comm::sync::allReduceInPlace(pcomm.ref(), MPI_SUM,
+                                                     common::make_data(w[0].data(), pt_cols));
+                      }
+                      barrier_ptr->arrive_and_wait();
+
+                      // STEP3: update trailing panel (multi-threaded)
+                      updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
+                      barrier_ptr->arrive_and_wait();
+                    }
+                  }) |
+         ex::then([](auto barrier_ptr, auto w, auto taus, auto tiles, auto pcomm) {
+           di::silenceUnusedWarningFor(barrier_ptr, w, tiles, pcomm);
+           return taus;
          }) |
          ex::make_future();
 }

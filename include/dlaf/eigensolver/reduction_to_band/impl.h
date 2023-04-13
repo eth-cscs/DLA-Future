@@ -605,7 +605,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
-  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();

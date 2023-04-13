@@ -110,8 +110,6 @@ protected:
   pika::shared_future<ConstTileType> tile_shared_future_;
 };
 
-// TileFutureManager manages the futures and promises for tiles in the Matrix object.
-// See misc/synchronization.md for details.
 template <class T, Device D>
 class SplittedTileFutureManager {
 public:
@@ -173,7 +171,6 @@ public:
   }
 
   // Destroys the pipeline and when the work is completed triggers the original pipeline.
-  // and destroys the tile.
   // Note that this operation invalidates the internal state of the object,
   // which shouldn't be used anymore,
   // however it is safe to call clear() multiple times.

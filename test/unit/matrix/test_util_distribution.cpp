@@ -20,7 +20,7 @@ using namespace testing;
 
 struct Parameters {
   // Distribution settings
-  SizeType block_size;
+  SizeType tile_size;
   SizeType tiles_per_block;
   int rank;
   int grid_size;
@@ -36,7 +36,7 @@ struct Parameters {
 
 TEST(UtilDistribution, IndexConversion) {
   std::vector<Parameters> tests = {
-      // {block_size, tiles_per_block, rank, grid_size, src_rank, global_element, global_tile,
+      // {tile_size, tiles_per_block, rank, grid_size, src_rank, global_element, global_tile,
       // rank_tile, local_tile, local_tile_next, tile_element}
       {10, 1, 0, 1, 0, 31, 3, 0, 3, 3, 1},    {10, 1, 0, 5, 0, 102, 10, 0, 2, 2, 2},
       {10, 1, 1, 5, 0, 124, 12, 2, -1, 3, 4}, {10, 1, 4, 5, 3, 124, 12, 0, -1, 3, 4},
@@ -53,10 +53,10 @@ TEST(UtilDistribution, IndexConversion) {
   };
 
   for (const auto& test : tests) {
-    EXPECT_EQ(test.global_tile, tileFromElement(test.global_element, test.block_size));
-    EXPECT_EQ(test.tile_element, tileElementFromElement(test.global_element, test.block_size));
+    EXPECT_EQ(test.global_tile, tileFromElement(test.global_element, test.tile_size));
+    EXPECT_EQ(test.tile_element, tileElementFromElement(test.global_element, test.tile_size));
     EXPECT_EQ(test.global_element,
-              elementFromTileAndTileElement(test.global_tile, test.tile_element, test.block_size));
+              elementFromTileAndTileElement(test.global_tile, test.tile_element, test.tile_size));
     EXPECT_EQ(test.rank_tile,
               rankGlobalTile(test.global_tile, test.tiles_per_block, test.grid_size, test.src_rank));
     EXPECT_EQ(test.local_tile, localTileFromGlobalTile(test.global_tile, test.tiles_per_block,

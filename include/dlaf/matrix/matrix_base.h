@@ -29,11 +29,10 @@ public:
 
   MatrixBase(const Distribution& distribution, const LocalTileSize& tiles_per_block)
       : distribution_(std::make_shared<Distribution>(  //
-            distribution.size(),
+            distribution.size(), distribution.blockSize(),
             TileElementSize{distribution.blockSize().rows() / tiles_per_block.rows(),
                             distribution.blockSize().cols() / tiles_per_block.cols()},
-            tiles_per_block, distribution.commGridSize(), distribution.rankIndex(),
-            distribution.sourceRankIndex())) {
+            distribution.commGridSize(), distribution.rankIndex(), distribution.sourceRankIndex())) {
     DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
                 "distribution should be the distribution of the original Matrix.");
     DLAF_ASSERT(distribution.blockSize() == distribution_->blockSize(), distribution.blockSize(),
@@ -49,11 +48,11 @@ public:
   }
 
   /// Returns the block size of the matrix.
-  TileElementSize blockSize() const noexcept {
+  const TileElementSize& blockSize() const noexcept {
     return distribution_->blockSize();
   }
 
-  /// Returns the block size of the matrix.
+  /// Returns the complete tile size of the matrix.
   const TileElementSize& baseTileSize() const noexcept {
     return distribution_->baseTileSize();
   }

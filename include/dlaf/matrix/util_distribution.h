@@ -61,6 +61,7 @@ inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_eleme
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.
 ///
 /// @pre 0 <= global_tile,
+/// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= src_rank < grid_size.
 inline int rankGlobalTile(SizeType global_tile, SizeType tiles_per_block, int grid_size, int src_rank) {
@@ -77,6 +78,7 @@ inline int rankGlobalTile(SizeType global_tile, SizeType tiles_per_block, int gr
 ///
 /// If the tiles with @p global_tile index is not stored by @p rank it returns -1.
 /// @pre 0 <= global_tile,
+/// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
 /// @pre 0 <= src_rank < grid_size.
@@ -101,12 +103,14 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, SizeType tiles_per
 /// and which is stored in process @p rank.
 ///
 /// @pre 0 <= global_tile,
+/// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
 /// @pre 0 <= src_rank < grid_size.
 inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, SizeType tiles_per_block,
                                             int grid_size, int rank, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
+  DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
@@ -129,12 +133,14 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, SizeType tiles
 /// in the process with index @p rank.
 ///
 /// @pre 0 <= local_tile,
+/// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
 /// @pre 0 <= src_rank < grid_size.
 inline SizeType globalTileFromLocalTile(SizeType local_tile, SizeType tiles_per_block, int grid_size,
                                         int rank, int src_rank) {
   DLAF_ASSERT_HEAVY(0 <= local_tile, local_tile);
+  DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);

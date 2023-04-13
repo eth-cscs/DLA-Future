@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cmath>
+#include <cstddef>
 #include <vector>
 
 #include <pika/barrier.hpp>
@@ -54,7 +55,7 @@ namespace dlaf::eigensolver::internal {
 // Given a vector of vectors, reduce all vectors in the first one using sum operation
 template <class T>
 void reduceColumnVectors(std::vector<common::internal::vector<T>>& battery) {
-  for (size_t i = 1; i < battery.size(); ++i) {
+  for (std::size_t i = 1; i < battery.size(); ++i) {
     DLAF_ASSERT_HEAVY(battery[0].size() == battery[i].size(), battery[0].size(), battery[i].size());
     for (SizeType j = 0; j < battery[0].size(); ++j)
       battery[0][j] += battery[i][j];
@@ -126,7 +127,7 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
 template <Device D, class T>
 void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                            common::internal::vector<T>& w, SizeType j, const SizeType pt_cols,
-                           const size_t begin, const size_t end) {
+                           const std::size_t begin, const std::size_t end) {
   // for each tile in the panel, consider just the trailing panel
   // i.e. all rows (height = reflector), just columns to the right of the current reflector
   if (!(pt_cols > 0))
@@ -168,7 +169,8 @@ void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T
 
 template <Device D, class T>
 void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
-                         const std::vector<T>& w, const T tau, const size_t begin, const size_t end) {
+                         const std::vector<T>& w, const T tau, const std::size_t begin,
+                         const std::size_t end) {
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
@@ -292,7 +294,7 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  const size_t nthreads = getReductionToBandPanelNWorkers();
+  const std::size_t nthreads = getReductionToBandPanelNWorkers();
   return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (internally required)
                       ex::just(common::internal::vector<T>{}),               // taus
@@ -302,10 +304,11 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
            return ex::schedule(dlaf::internal::getBackendScheduler<Backend::MC>(
                       pika::execution::thread_priority::high)) |
                   ex::bulk(nthreads,
-                           [=, &barrier_ptr, &taus, &w, &tiles](const size_t index) {
-                             const size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                             const size_t begin = index * batch_size;
-                             const size_t end = std::min(index * batch_size + batch_size, tiles.size());
+                           [=, &barrier_ptr, &taus, &w, &tiles](const std::size_t index) {
+                             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+                             const std::size_t begin = index * batch_size;
+                             const std::size_t end =
+                                 std::min(index * batch_size + batch_size, tiles.size());
 
                              if (index == 0) {
                                taus.reserve(nrefls);
@@ -624,7 +627,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
     panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
   }
 
-  const size_t nthreads = getReductionToBandPanelNWorkers();
+  const std::size_t nthreads = getReductionToBandPanelNWorkers();
   return ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                       ex::just(std::vector<common::internal::vector<T>>{}),  // w (interally required)
                       ex::just(common::internal::vector<T>{}),               // taus
@@ -638,10 +641,11 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
            return ex::schedule(dlaf::internal::getBackendScheduler<Backend::MC>(
                       pika::execution::thread_priority::high)) |
                   ex::bulk(nthreads,
-                           [=, &barrier_ptr, &taus, &w, &tiles, &pcomm](const size_t index) {
-                             const size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                             const size_t begin = index * batch_size;
-                             const size_t end = std::min(index * batch_size + batch_size, tiles.size());
+                           [=, &barrier_ptr, &taus, &w, &tiles, &pcomm](const std::size_t index) {
+                             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+                             const std::size_t begin = index * batch_size;
+                             const std::size_t end =
+                                 std::min(index * batch_size + batch_size, tiles.size());
 
                              if (index == 0) {
                                taus.reserve(nrefls);

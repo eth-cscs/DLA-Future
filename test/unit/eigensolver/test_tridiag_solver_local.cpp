@@ -9,10 +9,12 @@
 //
 
 #include "dlaf/eigensolver/tridiag_solver.h"
-#include "dlaf/eigensolver/tridiag_solver/impl.h"
-#include "dlaf/matrix/matrix_mirror.h"
 
 #include "gtest/gtest.h"
+
+#include "dlaf/eigensolver/tridiag_solver/impl.h"
+#include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf_test/eigensolver/test_eigensolver_correctness.h"
 #include "dlaf_test/matrix/util_matrix.h"
 #include "dlaf_test/matrix/util_tile.h"
 #include "dlaf_test/util_types.h"
@@ -75,11 +77,10 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   matrix::util::set(tridiag, std::move(tridiag_fn));
 
   {
-    matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
     matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
-    eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiagSolver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
   }
   if (n == 0)
     return;
@@ -160,35 +161,25 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   tridiag.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
   {
-    matrix::MatrixMirror<RealParam, D, Device::CPU> tridiag_mirror(tridiag);
     matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
     // Find eigenvalues and eigenvectors of the tridiagonal matrix.
     //
     // Note: this modifies `tridiag`
-    eigensolver::tridiagSolver<B>(tridiag_mirror.get(), evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiagSolver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
   }
 
   if (n == 0)
     return;
 
-  // Check correctness with the following equation:
-  //
-  // A * E = E * D, where
-  //
-  // A - the tridiagonal matrix
-  // E - the eigenvector matrix
-  // D - the diagonal matrix of eigenvalues
+  // Check correctness
 
-  // Make a copy of the tridiagonal matrix but with explicit zeroes.
+  // Make a copy of the tridiagonal matrix (Lower) but with explicit zeroes.
   matrix::Matrix<T, Device::CPU> tridiag_full(LocalElementSize(n, n), TileElementSize(nb, nb));
   dlaf::matrix::util::set(tridiag_full, [&diag_arr, &offdiag_arr](GlobalElementIndex i) {
     if (i.row() == i.col()) {
       return T(diag_arr[to_sizet(i.row())]);
-    }
-    else if (i.row() == i.col() - 1) {
-      return T(offdiag_arr[to_sizet(i.row())]);
     }
     else if (i.row() == i.col() + 1) {
       return T(offdiag_arr[to_sizet(i.col())]);
@@ -199,36 +190,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
   });
   tridiag_full.waitLocalTiles();  // makes sure that diag_arr and offdiag_arr don't go out of scope
 
-  // Compute A * E
-  const matrix::Distribution& dist = evecs.distribution();
-  matrix::Matrix<T, Device::CPU> AE_gemm(LocalElementSize(n, n), TileElementSize(nb, nb));
-  dlaf::multiplication::generalSubMatrix<Backend::MC, Device::CPU, T>(0, dist.nrTiles().rows() - 1,
-                                                                      blas::Op::NoTrans,
-                                                                      blas::Op::NoTrans, T(1),
-                                                                      tridiag_full, evecs, T(0),
-                                                                      AE_gemm);
-
-  // Scale the columns of E by the corresponding eigenvalue of D to get E * D
-  for (auto tile_wrt_local : common::iterate_range2d(dist.localNrTiles())) {
-    auto scale_f = [](const matrix::Tile<const RealParam, Device::CPU>& evals_tile,
-                      const matrix::Tile<T, Device::CPU>& evecs_tile) {
-      for (auto el_idx_l : common::iterate_range2d(evecs_tile.size())) {
-        evecs_tile(el_idx_l) *= evals_tile(TileElementIndex(el_idx_l.col(), 0));
-      }
-    };
-
-    dlaf::internal::whenAllLift(evals.read(LocalTileIndex(tile_wrt_local.col(), 0)),
-                                evecs.readwrite(tile_wrt_local)) |
-        dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(scale_f));
-  }
-
-  // Check that A * E is equal to E * D
-  constexpr RealParam error = TypeUtilities<T>::error;
-  for (auto tile_wrt_local : common::iterate_range2d(dist.localNrTiles())) {
-    auto& ae_tile = sync_wait(AE_gemm.read(tile_wrt_local)).get();
-    auto& evecs_tile = sync_wait(evecs.read(tile_wrt_local)).get();
-    CHECK_TILE_NEAR(ae_tile, evecs_tile, error * n, error * n);
-  }
+  testEigensolverCorrectness(blas::Uplo::Lower, tridiag_full, evals, evecs);
 }
 
 // clang-format off

@@ -251,7 +251,7 @@ TYPED_TEST(MemoryViewTest, MoveConstructorMix) {
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, CopyAssignement) {
+TYPED_TEST(MemoryViewTest, CopyAssignment) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
@@ -268,7 +268,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignement) {
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, CopyAssignementConst) {
+TYPED_TEST(MemoryViewTest, CopyAssignmentConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
@@ -285,7 +285,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignementConst) {
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, CopyAssignementMix) {
+TYPED_TEST(MemoryViewTest, CopyAssignmentMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
@@ -302,7 +302,7 @@ TYPED_TEST(MemoryViewTest, CopyAssignementMix) {
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, MoveAssignement) {
+TYPED_TEST(MemoryViewTest, MoveAssignment) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);
@@ -320,7 +320,7 @@ TYPED_TEST(MemoryViewTest, MoveAssignement) {
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, MoveAssignementConst) {
+TYPED_TEST(MemoryViewTest, MoveAssignmentConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<const Type, Device::CPU> const_mem(mem0, 1, size);
@@ -338,7 +338,7 @@ TYPED_TEST(MemoryViewTest, MoveAssignementConst) {
     EXPECT_EQ(ptr + i, const_mem2(i));
 }
 
-TYPED_TEST(MemoryViewTest, MoveAssignementMix) {
+TYPED_TEST(MemoryViewTest, MoveAssignmentMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> mem0(size + 2);
   memory::MemoryView<Type, Device::CPU> mem(mem0, 1, size);

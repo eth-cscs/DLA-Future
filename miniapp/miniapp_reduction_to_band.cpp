@@ -136,14 +136,30 @@ struct reductionToBandMiniapp {
       }
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << block_size.rows() << ", "
+                    << "band_size, " << opts.b << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
@@ -176,9 +192,9 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>()  ->default_value(4096), "Matrix rows")
-    ("block-size",  value<SizeType>()  ->default_value(256),  "Block cyclic distribution size")
-    ("band-size",   value<SizeType>()  ->default_value(-1),   "Band size (a negative value implies band-size=block-size")
+    ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix rows")
+    ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
   ;
   // clang-format on
 

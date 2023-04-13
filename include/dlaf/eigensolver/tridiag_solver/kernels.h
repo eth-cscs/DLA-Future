@@ -88,47 +88,17 @@ T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, D
 DLAF_CPU_CUPPENS_DECOMP_ETI(extern, float);
 DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
 
-#ifdef DLAF_WITH_GPU
-
-template <class T>
-void cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                   T* host_offdiag_val_ptr, whip::stream_t stream);
-
-#define DLAF_GPU_CUPPENS_DECOMP_ETI(kword, Type)                                   \
-  kword template void cuppensDecomp(const matrix::Tile<Type, Device::GPU>& top,    \
-                                    const matrix::Tile<Type, Device::GPU>& bottom, \
-                                    Type* host_offdiag_val_ptr, whip::stream_t stream)
-
-DLAF_GPU_CUPPENS_DECOMP_ETI(extern, float);
-DLAF_GPU_CUPPENS_DECOMP_ETI(extern, double);
-
-#endif
-
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomp);
 
-template <class T, Device D, class TopTileSender, class BottomTileSender>
+template <class T, class TopTileSender, class BottomTileSender>
 auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+  constexpr auto backend = Backend::MC;
 
-  if constexpr (D == Device::CPU) {
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
-           di::transform(di::Policy<backend>(), cuppensDecomp_o);
-  }
-  else {
-#ifdef DLAF_WITH_GPU
-    using ElementType = dlaf::internal::SenderElementType<TopTileSender>;
-    return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom),
-                        ex::just(memory::MemoryChunk<ElementType, Device::CPU>{1})) |
-           ex::let_value([](auto& top, auto& bottom, auto& host_offdiag_val) {
-             return ex::just(std::ref(top), std::ref(bottom), host_offdiag_val()) |
-                    di::transform(di::Policy<backend>(), cuppensDecomp_o) |
-                    ex::then([&host_offdiag_val]() { return *host_offdiag_val(); });
-           });
-#endif
-  }
+  return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
+         di::transform(di::Policy<backend>(), cuppensDecomp_o);
 }
 
 template <class T>
@@ -146,13 +116,13 @@ DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
 #ifdef DLAF_WITH_GPU
 
 template <class T>
-void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
                                         whip::stream_t stream);
 
 #define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
   kword template void                                                                           \
-  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::GPU>& tridiag_tile, \
+  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::CPU>& tridiag_tile, \
                                      const matrix::Tile<Type, Device::GPU>& diag_tile,          \
                                      whip::stream_t stream)
 

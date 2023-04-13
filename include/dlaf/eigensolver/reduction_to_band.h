@@ -84,6 +84,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
+  DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
 
   return internal::groupTausFromBandsToTiles(internal::ReductionToBand<B, D, T>::call(mat_a, band_size),
@@ -144,6 +145,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
+  DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
 
   return internal::groupTausFromBandsToTiles(internal::ReductionToBand<B, D, T>::call(grid, mat_a,

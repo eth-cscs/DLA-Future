@@ -329,6 +329,45 @@ void checkNonReady(const std::vector<SenderWrapper>& subtiles) {
   }
 }
 
+template <class T, Device D>
+void testShareReadWriteTile(std::string name, TileElementSize size, SizeType ld) {
+  SCOPED_TRACE(name);
+
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
+
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  EagerReadOnlyTileSender<T, D> second_tile1 = shareReadWriteTile(pipeline.readwrite());
+  EagerReadOnlyTileSender<T, D> second_tile2 = second_tile1;
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
+
+  ASSERT_TRUE(first_tile.is_ready());
+  ASSERT_FALSE(second_tile1.is_ready());
+  ASSERT_FALSE(second_tile2.is_ready());
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
+
+  ASSERT_TRUE(second_tile1.is_ready());
+  ASSERT_TRUE(second_tile2.is_ready());
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(second_tile1).get().get(), size);
+
+  ASSERT_TRUE(second_tile2.is_ready());
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(second_tile2).get().get(), size);
+
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
+
+TYPED_TEST(TileTest, ShareReadWriteTile) {
+  using Type = TypeParam;
+
+  testShareReadWriteTile<Type, Device::CPU>("Test 1", {1, 1}, 8);
+  testShareReadWriteTile<Type, Device::CPU>("Test 2", {5, 7}, 8);
+  testShareReadWriteTile<Type, Device::CPU>("Test 3", {512, 256}, 512);
+}
+
 // TileFutureOrConstTileSharedFuture should be
 // either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
 // TileFuture should be pika::future<Tile<T, D>>
@@ -431,6 +470,44 @@ void testSubtilesConst(std::string name, TileElementSize size, SizeType ld,
 }
 
 template <class T, Device D>
+void testSubtilesConstShareReadWriteTile(std::string name, TileElementSize size, SizeType ld,
+                                         std::vector<SubTileSpec> specs, std::size_t last_dep) {
+  SCOPED_TRACE(name);
+  ASSERT_LE(last_dep, specs.size());
+
+  auto [tile, tile_ptr] = createTileAndPtrChecker<T, D>(size, ld);
+  auto pipeline = createTilePipeline<T, D>(std::move(tile));
+
+  EagerReadWriteTileSender<T, D> first_tile(pipeline.readwrite());
+  auto second_tile_orig = shareReadWriteTile(pipeline.readwrite());
+  EagerReadOnlyTileSender<T, D> second_tile(second_tile_orig);
+  auto subtiles_orig = splitTile(second_tile_orig, specs);
+  std::vector<EagerReadOnlyTileSender<T, D>> subtiles;
+  subtiles.reserve(specs.size());
+  for (auto& subtile : subtiles_orig) {
+    subtiles.emplace_back(std::move(subtile));
+  }
+  subtiles.push_back(std::move(second_tile));
+  specs.push_back({{0, 0}, size});
+  subtiles_orig.clear();
+  second_tile_orig = {};
+  EagerReadWriteTileSender<T, D> third_tile(pipeline.readwrite());
+
+  ASSERT_TRUE(first_tile.is_ready());
+  checkNonReady(subtiles);
+  ASSERT_FALSE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(first_tile).get(), size);
+
+  ASSERT_FALSE(third_tile.is_ready());
+  if (subtiles.size() > 0) {
+    checkReadyAndDependencyChain(tile_ptr, subtiles, specs, last_dep, third_tile);
+  }
+
+  ASSERT_TRUE(third_tile.is_ready());
+  checkFullTile(tile_ptr, std::move(third_tile).get(), size);
+}
+
+template <class T, Device D>
 void testSubOfSubtileConst(std::string name, TileElementSize size, SizeType ld,
                            std::vector<SubTileSpec> specs, const SubTileSpec& subspec,
                            std::size_t last_dep) {
@@ -492,6 +569,20 @@ TYPED_TEST(TileTest, SubtileConst) {
                                         {{0, 0}, {5, 7}}},
                                        2);
   testSubtilesConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
+                                       {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
+
+  testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector Empty", {5, 7}, 8, {}, 0);
+  testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector 1", {5, 7}, 8,
+                                                         {{{3, 4}, {2, 3}}}, 1);
+  testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector 2", {5, 7}, 8,
+                                                         {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 2);
+  testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector 3", {5, 7}, 8,
+                                                         {{{5, 7}, {0, 0}},
+                                                          {{2, 2}, {2, 2}},
+                                                          {{3, 0}, {2, 7}},
+                                                          {{0, 0}, {5, 7}}},
+                                                         2);
+  testSubtilesConst<Type, Device::CPU>("Test Share Vector 4", {5, 7}, 8,
                                        {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
   testSubOfSubtileConst<Type, Device::CPU>("Test SubSub 1", {6, 7}, 6,

@@ -38,7 +38,8 @@ namespace test {
 // templated on the tile and its template parameters.
 class EagerVoidSender {
 public:
-  template <typename Sender>
+  template <typename Sender,
+            typename Enable = std::enable_if_t<!std::is_same_v<std::decay_t<Sender>, EagerVoidSender>>>
   EagerVoidSender(Sender&& sender)
       : ready(std::make_shared<std::atomic<bool>>(false)),
         sender(std::forward<Sender>(sender) |
@@ -73,7 +74,8 @@ private:
 template <class T, Device D>
 class EagerReadOnlyTileSender {
 public:
-  template <typename Sender>
+  template <typename Sender, typename Enable = std::enable_if_t<
+                                 !std::is_same_v<std::decay_t<Sender>, EagerReadOnlyTileSender>>>
   EagerReadOnlyTileSender(Sender&& sender)
       : ready(std::make_shared<std::atomic<bool>>(false)),
         sender(std::forward<Sender>(sender) |
@@ -113,7 +115,8 @@ private:
 template <class T, Device D>
 class EagerReadWriteTileSender {
 public:
-  template <typename Sender>
+  template <typename Sender, typename Enable = std::enable_if_t<
+                                 !std::is_same_v<std::decay_t<Sender>, EagerReadWriteTileSender>>>
   EagerReadWriteTileSender(Sender&& sender)
       : ready(std::make_shared<std::atomic<bool>>(false)),
         sender(std::forward<Sender>(sender) |

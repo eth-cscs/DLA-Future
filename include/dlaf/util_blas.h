@@ -29,7 +29,8 @@ struct gemmSizes {
 
 template <typename T, Device D>
 gemmSizes getGemmSizes(const blas::Op op_a, const blas::Op op_b, const dlaf::matrix::Tile<const T, D>& a,
-                       const dlaf::matrix::Tile<const T, D>& b, const dlaf::matrix::Tile<T, D>& c) {
+                       const dlaf::matrix::Tile<const T, D>& b,
+                       [[maybe_unused]] const dlaf::matrix::Tile<T, D>& c) {
   SizeType m;
   SizeType n;
   SizeType k;
@@ -43,7 +44,7 @@ gemmSizes getGemmSizes(const blas::Op op_a, const blas::Op op_b, const dlaf::mat
     k = a.size().rows();
   }
 
-  SizeType k2;
+  [[maybe_unused]] SizeType k2;
   if (op_b == blas::Op::NoTrans) {
     k2 = b.size().rows();
     n = b.size().cols();
@@ -66,8 +67,9 @@ struct hemmSizes {
 };
 
 template <typename T, Device D>
-hemmSizes getHemmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, D>& a,
-                       const dlaf::matrix::Tile<const T, D>& b, const dlaf::matrix::Tile<T, D>& c) {
+hemmSizes getHemmSizes(const blas::Side side, [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& a,
+                       [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& b,
+                       const dlaf::matrix::Tile<T, D>& c) {
   const hemmSizes s{c.size().rows(), c.size().cols()};
 
   if (side == blas::Side::Left) {
@@ -91,7 +93,8 @@ struct her2kSizes {
 
 template <typename T, Device D>
 her2kSizes getHer2kSizes(blas::Op op, const dlaf::matrix::Tile<const T, D>& a,
-                         const dlaf::matrix::Tile<const T, D>& b, const dlaf::matrix::Tile<T, D>& c) {
+                         [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& b,
+                         [[maybe_unused]] const dlaf::matrix::Tile<T, D>& c) {
   const SizeType rows = a.size().rows();
   const SizeType cols = a.size().cols();
   const auto s = (op == blas::Op::NoTrans) ? her2kSizes{rows, cols} : her2kSizes{cols, rows};
@@ -112,7 +115,7 @@ struct herkSizes {
 
 template <typename T, Device D>
 herkSizes getHerkSizes(const blas::Op op, const dlaf::matrix::Tile<const T, D>& a,
-                       const dlaf::matrix::Tile<T, D>& c) {
+                       [[maybe_unused]] const dlaf::matrix::Tile<T, D>& c) {
   const SizeType rows = a.size().rows();
   const SizeType cols = a.size().cols();
   const auto s = (op == blas::Op::NoTrans) ? herkSizes{rows, cols} : herkSizes{cols, rows};
@@ -130,10 +133,10 @@ struct trmmSizes {
 };
 
 template <typename T, Device D>
-trmmSizes getTrmmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, D>& a,
+trmmSizes getTrmmSizes(const blas::Side side, [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& a,
                        const dlaf::matrix::Tile<T, D>& b) {
   trmmSizes s{b.size().rows(), b.size().cols()};
-  const auto b_side = (side == blas::Side::Left ? s.m : s.n);
+  [[maybe_unused]] const auto b_side = (side == blas::Side::Left ? s.m : s.n);
 
   DLAF_ASSERT(square_size(a), a);
   DLAF_ASSERT(a.size().rows() == b_side, a, side, b);
@@ -143,7 +146,8 @@ trmmSizes getTrmmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, 
 
 template <typename T, Device D>
 trmmSizes getTrmm3Sizes(const blas::Side side, const dlaf::matrix::Tile<const T, D>& a,
-                        const dlaf::matrix::Tile<const T, D>& b, const dlaf::matrix::Tile<T, D>& c) {
+                        [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& b,
+                        const dlaf::matrix::Tile<T, D>& c) {
   DLAF_ASSERT(b.size() == c.size(), b, c);
   return getTrmmSizes(side, a, c);
 }
@@ -154,13 +158,13 @@ struct trsmSizes {
 };
 
 template <typename T, Device D>
-trsmSizes getTrsmSizes(const blas::Side side, const dlaf::matrix::Tile<const T, D>& a,
+trsmSizes getTrsmSizes(const blas::Side side, [[maybe_unused]] const dlaf::matrix::Tile<const T, D>& a,
                        const dlaf::matrix::Tile<T, D>& b) {
   trsmSizes s{b.size().rows(), b.size().cols()};
 
   DLAF_ASSERT(square_size(a), a);
 
-  const auto left_side = (side == blas::Side::Left ? s.m : s.n);
+  [[maybe_unused]] const auto left_side = (side == blas::Side::Left ? s.m : s.n);
   DLAF_ASSERT(a.size().rows() == left_side, a, side, b);
 
   return s;

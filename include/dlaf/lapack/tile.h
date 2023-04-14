@@ -346,7 +346,8 @@ void hegst(const int itype, const blas::Uplo uplo, const Tile<T, Device::CPU>& a
   DLAF_ASSERT(a.size() == b.size(), a, b);
   DLAF_ASSERT(itype >= 1 && itype <= 3, itype);
 
-  auto info = lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
+  [[maybe_unused]] auto info =
+      lapack::hegst(itype, uplo, a.size().cols(), a.ptr(), a.ld(), b.ptr(), b.ld());
 
   DLAF_ASSERT(info == 0, info);
 }
@@ -363,7 +364,7 @@ long long potrfInfo(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) {
 
 template <class T>
 void potrf(const blas::Uplo uplo, const Tile<T, Device::CPU>& a) noexcept {
-  auto info = potrfInfo(uplo, a);
+  [[maybe_unused]] auto info = potrfInfo(uplo, a);
 
   DLAF_ASSERT(info == 0, info);
 }

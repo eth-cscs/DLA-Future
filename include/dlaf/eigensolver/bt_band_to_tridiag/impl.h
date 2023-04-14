@@ -117,8 +117,8 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
     matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t) {
   auto tile_v_c = setupVWellFormed(b, tile_hh, std::move(tile_v));
   for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
-    SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
-    SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
+    const SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
+    const SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
     auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
     auto subtile_hh = tile_hh.subTileReference({{0, j}, {1, jb}});
     auto subtile_v_c = tile_v_c.subTileReference({{j, j}, {ib, jb}});
@@ -138,8 +138,8 @@ std::tuple<matrix::Tile<const T, Device::CPU>, matrix::Tile<const T, Device::CPU
   auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, hhr_nb, std::move(tile_v), std::move(tile_t));
 
   for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
-    SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
-    SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
+    const SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
+    const SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
     auto subtile_t_c = tile_t_c.subTileReference({{j, j}, {jb, jb}});
     auto subtile_v_c = tile_v_c.subTileReference({{j, j}, {ib, jb}});
     auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
@@ -158,7 +158,7 @@ std::tuple<CTile, CTile, Tile, Tile> applyHHToSingleTileRowSubtileHelper(  //
   DLAF_ASSERT_HEAVY(tile_e.size().rows() - 1 == tile_v.size().rows(), tile_e, tile_v);
   DLAF_ASSERT_HEAVY(tile_e.size().cols() == tile_w2.size().cols(), tile_e, tile_w2);
 
-  SizeType ib = tile_v.size().rows() - j;
+  const SizeType ib = tile_v.size().rows() - j;
   auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
   auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
   auto subtile_w2 = tile_w2.subTileReference({{0, 0}, {jb, tile_w2.size().cols()}});
@@ -180,7 +180,7 @@ struct ApplyHHToSingleTileRow<Backend::MC, T> {
     using tile::internal::gemm;
 
     for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
-      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
+      const SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v, subtile_w, subtile_w2, subtile_e] =
           applyHHToSingleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e);
 
@@ -204,7 +204,7 @@ struct ApplyHHToSingleTileRow<Backend::GPU, T> {
     using tile::internal::gemm;
 
     for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
-      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
+      const SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v, subtile_w, subtile_w2, subtile_e] =
           applyHHToSingleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e);
 
@@ -262,7 +262,7 @@ struct ApplyHHToDoubleTileRow<Backend::MC, T> {
     using tile::internal::gemm;
 
     for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
-      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
+      const SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_w2, subtile_e_top,
             subtile_e_bottom] =
           applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e_top, tile_e_bottom);
@@ -290,7 +290,7 @@ struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
     using tile::internal::gemm;
 
     for (SizeType j = (util::ceilDiv(tile_v.size().cols(), hhr_nb) - 1) * hhr_nb; j >= 0; j -= hhr_nb) {
-      SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
+      const SizeType jb = std::min(hhr_nb, tile_v.size().cols() - j);
       auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_w2, subtile_e_top,
             subtile_e_bottom] =
           applyHHToDoubleTileRowSubtileHelper(j, jb, tile_v, tile_w, tile_w2, tile_e_top, tile_e_bottom);
@@ -563,8 +563,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
           // W = V . T
           using namespace blas;
           for (SizeType j = 0; j < tile_v_h.size().cols(); j += hhr_nb) {
-            SizeType jb = std::min(hhr_nb, tile_v_h.size().cols() - j);
-            SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
+            const SizeType jb = std::min(hhr_nb, tile_v_h.size().cols() - j);
+            const SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);
             auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
             auto subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});
             auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});

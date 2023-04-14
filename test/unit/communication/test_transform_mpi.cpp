@@ -98,7 +98,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
     // Note:
     // At this point we checked if everything went as expected in the posting phase. Let's signal
     // Rank 1 that it can send back the message that will unlock IRecv.
-    const int signal = 13;
+    int signal = 13;
     MPI_Send(&signal, 1, MPI_INT, 1, 0, world);
 
     // Note:

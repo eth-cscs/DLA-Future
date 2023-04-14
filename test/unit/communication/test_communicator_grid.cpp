@@ -29,7 +29,7 @@ void test_grid_communication(CommunicatorGrid& grid) {
   if (MPI_COMM_NULL == grid.rowCommunicator() || MPI_COMM_NULL == grid.colCommunicator())
     return;
 
-  const int buffer_send = 1;
+  int buffer_send = 1;
   int buffer, buffer_recv;
 
   // All Communication

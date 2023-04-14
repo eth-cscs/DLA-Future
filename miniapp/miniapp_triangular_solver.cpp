@@ -164,6 +164,25 @@ struct triangularSolverMiniapp {
                   << dlaf::internal::FormatShort{opts.op} << dlaf::internal::FormatShort{opts.diag}
                   << " " << bh.size() << " " << bh.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "size, " << dlaf::internal::FormatShort{opts.side}.value << ", "
+                    << "uplo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                    << "op, " << dlaf::internal::FormatShort{opts.op}.value << ", "
+                    << "diag, " << dlaf::internal::FormatShort{opts.diag}.value << ", "
+                    << "matrixsize, " << bh.size().rows() << ", "
+                    << "blocksize, " << bh.blockSize().rows() << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
       }
 
       b.copyTargetToSource();

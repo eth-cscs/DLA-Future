@@ -173,7 +173,7 @@ void applyPermutationsFiltered(
 
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+                                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 
@@ -474,7 +474,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
                   SizeType i_last, Matrix<const SizeType, Device::CPU>& perms,
-                  Matrix<T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
+                  Matrix<const T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
   using namespace dlaf::matrix;
@@ -609,7 +609,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_task_chain,
                                     SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-                                    Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+                                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   if constexpr (D == Device::GPU) {
     // This is a temporary placeholder which avoids diverging GPU API:
     DLAF_UNIMPLEMENTED("GPU implementation not available yet");

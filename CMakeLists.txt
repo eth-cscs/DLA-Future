@@ -24,13 +24,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
-endif()
-
 include(CMakeDependentOption)
 
-option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
@@ -40,6 +36,10 @@ option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
+
+if(BUILD_SHARED_LIBS)
+  set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
+endif()
 
 # Add color to ninja output
 if(CMAKE_GENERATOR MATCHES "Ninja")

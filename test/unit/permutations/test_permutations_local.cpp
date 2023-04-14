@@ -36,29 +36,37 @@ TYPED_TEST_SUITE(PermutationsTestGPU, RealMatrixElementTypes);
 // reverse order into the output matrix.
 template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end) {
-  Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
-  Matrix<T, Device::CPU> mat_in_h(LocalElementSize(n, n), TileElementSize(nb, nb));
-  Matrix<T, Device::CPU> mat_out_h(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-  const matrix::Distribution& distr = mat_out_h.distribution();
+  const matrix::Distribution distr({n, n}, {nb, nb});
 
   SizeType index_start = distr.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
   SizeType index_finish = distr.globalElementFromGlobalTileAndTileElement<C>(i_end, 0) +
                           distr.tileSize(GlobalTileIndex(i_end, i_end)).get<C>();
-  dlaf::matrix::util::set(perms_h, [index_start, index_finish](GlobalElementIndex i) {
-    if (index_start > i.row() || i.row() >= index_finish)
-      return SizeType(0);
 
-    return index_finish - 1 - i.row();
-  });
-  dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
-    return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
-  });
+  Matrix<const SizeType, Device::CPU> perms_h = [n, nb, index_start, index_finish]() {
+    Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
+    dlaf::matrix::util::set(perms_h, [index_start, index_finish](GlobalElementIndex i) {
+      if (index_start > i.row() || i.row() >= index_finish)
+        return SizeType(0);
+
+      return index_finish - 1 - i.row();
+    });
+    return perms_h;
+  }();
+
+  Matrix<T, Device::CPU> mat_in_h = [distr]() {
+    Matrix<T, Device::CPU> mat_in_h(distr);
+    dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
+      return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
+    });
+    return mat_in_h;
+  }();
+
+  Matrix<T, Device::CPU> mat_out_h(distr);
   dlaf::matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, mat_out_h);
 
   {
     matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
-    matrix::MatrixMirror<T, D, Device::CPU> mat_in(mat_in_h);
+    matrix::MatrixMirror<const T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
     permutations::permute<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());

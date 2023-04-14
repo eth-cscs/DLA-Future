@@ -22,7 +22,22 @@ namespace internal {
 class MatrixBase {
 public:
   MatrixBase(Distribution distribution)
-      : distribution_(std::make_shared<Distribution>(std::move(distribution))) {}
+      : distribution_(std::make_shared<Distribution>(std::move(distribution))) {
+    DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
+                "Multi Tile distribution block is not supperted by Matrix yet.");
+  }
+
+  MatrixBase(const Distribution& distribution, const LocalTileSize& tiles_per_block)
+      : distribution_(std::make_shared<Distribution>(  //
+            distribution.size(), distribution.blockSize(),
+            TileElementSize{distribution.blockSize().rows() / tiles_per_block.rows(),
+                            distribution.blockSize().cols() / tiles_per_block.cols()},
+            distribution.commGridSize(), distribution.rankIndex(), distribution.sourceRankIndex())) {
+    DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
+                "distribution should be the distribution of the original Matrix.");
+    DLAF_ASSERT(distribution.blockSize() == distribution_->blockSize(), distribution.blockSize(),
+                distribution_->blockSize());
+  }
 
   MatrixBase(const MatrixBase& rhs) = default;
   MatrixBase& operator=(const MatrixBase& rhs) = default;
@@ -35,6 +50,11 @@ public:
   /// Returns the block size of the matrix.
   const TileElementSize& blockSize() const noexcept {
     return distribution_->blockSize();
+  }
+
+  /// Returns the complete tile size of the matrix.
+  const TileElementSize& baseTileSize() const noexcept {
+    return distribution_->baseTileSize();
   }
 
   /// Returns the number of tiles of the global matrix (2D size).

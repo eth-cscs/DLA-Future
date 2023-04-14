@@ -47,7 +47,7 @@ public:
   using TileDataType = internal::TileData<const ElementType, D>;
 
   ///
-  /// @pre matrix.blockSize() is divisible by tiles_per_block.
+  /// @pre mat.blockSize() is divisible by tiles_per_block.
   RetiledMatrix(Matrix<T, D>& mat, const LocalTileSize& tiles_per_block)
       : MatrixBase(mat.distribution(), tiles_per_block),
         tile_managers_(to_sizet(distribution().localNrTiles().linear_size())) {

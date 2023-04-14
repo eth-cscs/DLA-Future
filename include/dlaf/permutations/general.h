@@ -36,9 +36,9 @@ namespace dlaf::permutations {
 template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
-  const matrix::Distribution& distr_perms = perms.distribution();
-  const matrix::Distribution& distr_in = mat_in.distribution();
-  const matrix::Distribution& distr_out = mat_out.distribution();
+  [[maybe_unused]] const matrix::Distribution& distr_perms = perms.distribution();
+  [[maybe_unused]] const matrix::Distribution& distr_in = mat_in.distribution();
+  [[maybe_unused]] const matrix::Distribution& distr_out = mat_out.distribution();
 
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
   DLAF_ASSERT(matrix::local_matrix(mat_in), mat_in);
@@ -84,8 +84,8 @@ template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& sub_task_chain,
              SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
-  const matrix::Distribution& distr_perms = perms.distribution();
-  const matrix::Distribution& distr_in = mat_in.distribution();
+  [[maybe_unused]] const matrix::Distribution& distr_perms = perms.distribution();
+  [[maybe_unused]] const matrix::Distribution& distr_in = mat_in.distribution();
 
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
 

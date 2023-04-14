@@ -25,9 +25,10 @@
 namespace dlaf::matrix::test {
 
 template <class T>
-auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b, const SizeType m,
-                                      const SizeType n, const SizeType k, const T alpha, const T beta,
-                                      const blas::Op opA, const blas::Op opB) {
+auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
+                                      [[maybe_unused]] const SizeType m,
+                                      [[maybe_unused]] const SizeType n, const SizeType k, const T alpha,
+                                      const T beta, const blas::Op opA, const blas::Op opB) {
   using dlaf::test::TypeUtilities;
 
   if (opA != blas::Op::NoTrans)

@@ -128,21 +128,13 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
                         GridIfDistributed... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
 
-  auto size = [&m]() -> auto{
-    if constexpr (isDistributed)
-      return GlobalElementSize(m, m);
-    else
-      return LocalElementSize(m, m);
-  }
-  ();
-
   const TileElementSize block_size(mb, mb);
 
   auto create_reference = [&]() -> auto{
     if constexpr (isDistributed)
-      return Matrix<T, Device::CPU>(size, block_size, grid...);
+      return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid...);
     else
-      return Matrix<T, Device::CPU>(size, block_size);
+      return Matrix<T, Device::CPU>(LocalElementSize(m, m), block_size);
   };
 
   Matrix<const T, Device::CPU> reference_a = [&]() {
@@ -177,23 +169,17 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       const SizeType size = mat_a_h.size().rows();
       Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
-      auto eigenvectors = [&]() -> auto{
-        if constexpr (isDistributed)
-          return Matrix<T, D>(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
-        else
-          return Matrix<T, D>(LocalElementSize(size, size), mat_a_h.blockSize());
-      }
-      ();
-
       if constexpr (isDistributed) {
+        Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
         eigensolver::genEigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
                                        eigenvectors);
+        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
+        Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
         eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
+        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
-
-      return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }
   }();
 

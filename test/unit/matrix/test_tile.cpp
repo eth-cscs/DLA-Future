@@ -188,7 +188,7 @@ TYPED_TEST(TileTest, MoveConstructorMix) {
   CHECK_TILE_PTR(ptr, const_tile);
 }
 
-TYPED_TEST(TileTest, MoveAssignement) {
+TYPED_TEST(TileTest, MoveAssignment) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
@@ -205,7 +205,7 @@ TYPED_TEST(TileTest, MoveAssignement) {
   CHECK_TILE_PTR(ptr, tile);
 }
 
-TYPED_TEST(TileTest, MoveAssignementConst) {
+TYPED_TEST(TileTest, MoveAssignmentConst) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 
@@ -222,7 +222,7 @@ TYPED_TEST(TileTest, MoveAssignementConst) {
   CHECK_TILE_PTR(ptr, const_tile);
 }
 
-TYPED_TEST(TileTest, MoveAssignementMix) {
+TYPED_TEST(TileTest, MoveAssignmentMix) {
   using Type = TypeParam;
   memory::MemoryView<Type, Device::CPU> memory_view(ld * n);
 

@@ -64,7 +64,7 @@ TYPED_TEST(MemoryChunkTest, MoveConstructor) {
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
-TYPED_TEST(MemoryChunkTest, MoveAssignement) {
+TYPED_TEST(MemoryChunkTest, MoveAssignment) {
   using Type = TypeParam;
   memory::MemoryChunk<Type, Device::CPU> mem(size);
   memory::MemoryChunk<Type, Device::CPU> mem2(size - 5);

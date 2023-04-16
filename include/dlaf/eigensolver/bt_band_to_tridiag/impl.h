@@ -39,6 +39,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/retiled_matrix.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/sender/traits.h"
@@ -140,14 +141,18 @@ struct ApplyHHToSingleTileRow;
 template <class T>
 struct ApplyHHToSingleTileRow<Backend::MC, T> {
   void operator()(const matrix::Tile<const T, Device::CPU>& tile_v,
-                  const matrix::Tile<const T, Device::CPU>& tile_w, matrix::Tile<T, Device::CPU> tile_w2,
+                  const matrix::Tile<const T, Device::CPU>& tile_w,
+                  const matrix::Tile<T, Device::CPU>& tile_w2,
                   const matrix::Tile<T, Device::CPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
+
+    auto subtile_e = tile_e.subTileReference({{1, 0}, tile_e.size() - TileElementSize{1, 0}});
+
     // W2 = V* . E
-    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v, subtile_e, T(0), tile_w2);
     // E -= W . W2
-    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), subtile_e);
   }
 };
 
@@ -160,67 +165,95 @@ struct ApplyHHToSingleTileRow<Backend::GPU, T> {
                   const matrix::Tile<T, Device::GPU>& tile_e) {
     using namespace blas;
     using tile::internal::gemm;
+
+    auto subtile_e = tile_e.subTileReference({{1, 0}, tile_e.size() - TileElementSize{1, 0}});
+
     // W2 = V* . E
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v, tile_e, T(0), tile_w2);
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v, subtile_e, T(0), tile_w2);
     // E -= W . W2
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), tile_e);
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w, tile_w2, T(1), subtile_e);
   }
 };
 #endif
+
+template <class Tile, class CTile>
+std::tuple<CTile, CTile, CTile, CTile, Tile> applyHHToDoubleTileRowSubtileHelper(  //
+    const CTile& tile_v, const CTile& tile_w, const Tile& tile_e_top, const Tile& tile_e_bottom) {
+  DLAF_ASSERT_HEAVY(tile_v.size() == tile_w.size(), tile_v, tile_w);
+  DLAF_ASSERT_HEAVY(tile_e_top.size().rows() + tile_e_bottom.size().rows() - 1 == tile_v.size().rows(),
+                    tile_e_top, tile_e_bottom, tile_v);
+
+  auto subtile_e_top = tile_e_top.subTileReference({{1, 0}, tile_e_top.size() - TileElementSize{1, 0}});
+
+  matrix::SubTileSpec spec_top{{0, 0}, {subtile_e_top.size().rows(), tile_v.size().cols()}};
+  matrix::SubTileSpec spec_bottom{{subtile_e_top.size().rows(), 0},
+                                  {tile_e_bottom.size().rows(), tile_v.size().cols()}};
+
+  auto subtile_v_top = tile_v.subTileReference(spec_top);
+  auto subtile_v_bottom = tile_v.subTileReference(spec_bottom);
+  auto subtile_w_top = tile_w.subTileReference(spec_top);
+  auto subtile_w_bottom = tile_w.subTileReference(spec_bottom);
+
+  return {std::move(subtile_v_top), std::move(subtile_v_bottom), std::move(subtile_w_top),
+          std::move(subtile_w_bottom), std::move(subtile_e_top)};
+}
 
 template <Backend B, class T>
 struct ApplyHHToDoubleTileRow;
 
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::MC, T> {
-  void operator()(const matrix::Tile<const T, Device::CPU>& tile_v0,
-                  const matrix::Tile<const T, Device::CPU>& tile_v1,
-                  const matrix::Tile<const T, Device::CPU>& tile_w0,
-                  const matrix::Tile<const T, Device::CPU>& tile_w1,
+  void operator()(const matrix::Tile<const T, Device::CPU>& tile_v,
+                  const matrix::Tile<const T, Device::CPU>& tile_w,
                   const matrix::Tile<T, Device::CPU>& tile_w2,
                   const matrix::Tile<T, Device::CPU>& tile_e_top,
                   const matrix::Tile<T, Device::CPU>& tile_e_bottom) {
     using namespace blas;
     using tile::internal::gemm;
+
+    auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_e_top] =
+        applyHHToDoubleTileRowSubtileHelper(tile_v, tile_w, tile_e_top, tile_e_bottom);
+
     // W2 = V* . E
-    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
-    gemm(Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), subtile_v_top, subtile_e_top, T(0), tile_w2);
+    gemm(Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, tile_e_bottom, T(1), tile_w2);
     // E -= W . W2
-    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
-    gemm(Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), subtile_w_top, tile_w2, T(1), subtile_e_top);
+    gemm(Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, tile_w2, T(1), tile_e_bottom);
   }
 };
 
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct ApplyHHToDoubleTileRow<Backend::GPU, T> {
-  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v0,
-                  const matrix::Tile<const T, Device::GPU>& tile_v1,
-                  const matrix::Tile<const T, Device::GPU>& tile_w0,
-                  const matrix::Tile<const T, Device::GPU>& tile_w1,
+  void operator()(cublasHandle_t handle, const matrix::Tile<const T, Device::GPU>& tile_v,
+                  const matrix::Tile<const T, Device::GPU>& tile_w,
                   const matrix::Tile<T, Device::GPU>& tile_w2,
                   const matrix::Tile<T, Device::GPU>& tile_e_top,
                   const matrix::Tile<T, Device::GPU>& tile_e_bottom) {
     using namespace blas;
     using tile::internal::gemm;
+
+    auto [subtile_v_top, subtile_v_bottom, subtile_w_top, subtile_w_bottom, subtile_e_top] =
+        applyHHToDoubleTileRowSubtileHelper(tile_v, tile_w, tile_e_top, tile_e_bottom);
+
     // W2 = V* . E
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v0, tile_e_top, T(0), tile_w2);
-    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), tile_v1, tile_e_bottom, T(1), tile_w2);
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_top, subtile_e_top, T(0), tile_w2);
+    gemm(handle, Op::ConjTrans, Op::NoTrans, T(1), subtile_v_bottom, tile_e_bottom, T(1), tile_w2);
     // E -= W . W2
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w0, tile_w2, T(1), tile_e_top);
-    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), tile_w1, tile_w2, T(1), tile_e_bottom);
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_top, tile_w2, T(1), subtile_e_top);
+    gemm(handle, Op::NoTrans, Op::NoTrans, T(-1), subtile_w_bottom, tile_w2, T(1), tile_e_bottom);
   }
 };
 #endif
 
 struct TileAccessHelper {
-  TileAccessHelper(const SizeType b, const SizeType nrefls, matrix::Distribution dist,
-                   const GlobalElementIndex offset)
-      : nrefls_(nrefls), input_spec_{dist.tileElementIndex(offset),
-                                     {std::min(b, dist.size().rows() - offset.row()),
-                                      std::min(b, dist.size().cols() - offset.col())}} {
-    const TileElementIndex& sub_offset = input_spec_.origin;
-
+  TileAccessHelper(const SizeType b, const SizeType nrefls, const matrix::Distribution& dist_hh,
+                   const matrix::Distribution& dist_e, const GlobalElementIndex offset)
+      : nrefls_(nrefls), input_spec_{dist_hh.tileElementIndex(offset),
+                                     {std::min(b, dist_hh.size().rows() - offset.row()),
+                                      std::min(b, dist_hh.size().cols() - offset.col())}},
+        index_e_(dist_e.globalTileFromGlobalElement<Coord::Row>(offset.row())) {
     // Note:
     // Next logic is about detecting the available application space for reflectors, which once
     // extracted they expands to a matrix with 2 * b - 1 height.
@@ -228,17 +261,13 @@ struct TileAccessHelper {
     // There are two main scenarios:
     // - reflectors involves rows of a single tile;
     // - reflectors involves rows across two different tiles.
-    //
-    // In both scenarios, it may happen that all reflectors cannot be fully applied to to matrix
-    // size constraint.
 
-    const SizeType fullsize = 2 * b - 1;
-    const SizeType mb = dist.blockSize().rows();
-    const SizeType rows_below = dist.size().rows() - offset.row();
+    rows_v_ = std::min(2 * b, dist_e.size().rows() - offset.row()) - 1;
+    rows_v_top_ = std::min(rows_v_, b - 1);
 
     // Note:
-    // In general, keep in mind that to sub_offset.row() is applied a + 1, to take into account the
-    // offset about how reflectors are actually applied.
+    // In general, keep in mind that the first row of the top tile_e should not be touched.
+    // The structs ApplyHHTo... take care of it.
     //
     // e.g. b = 4
     // reflectors   matrix
@@ -256,29 +285,23 @@ struct TileAccessHelper {
     // and how the reflectors on the left are going to be applied. In particular, the first row of
     // the upper tile is not affected.
 
-    acrossTiles_ = [&]() {
-      // Note:
-      // A single tile is involved if:
-      // - it is the last row tile, so by construction reflectors will be applied to a single tile;
-      // - applying reflectors falls entirely withing a single tile
-      const SizeType i_tile = dist.globalTileFromGlobalElement<Coord::Row>(offset.row());
-      const bool is_last_row_tile = i_tile == dist.nrTiles().rows() - 1;
-      return !(is_last_row_tile || sub_offset.row() + 1 + fullsize <= mb);
-    }();
+    // Note:
+    // A single tile is involved only if it is the last row tile, so by construction reflectors will be
+    // applied to a single tile;
+    across_tiles_ = !(index_e_ == dist_e.nrTiles().rows() - 1);
 
-    if (acrossTiles_) {
-      const auto part0_nrows = b - 1;
-      part_top_ = Part(sub_offset.row() + 1, part0_nrows, nrefls);
-      part_bottom_ = Part(0, std::min(b, rows_below - b), nrefls, part0_nrows);
-    }
-    else {
-      part_top_ = Part(sub_offset.row() + 1, std::min(fullsize, rows_below - 1), nrefls);
-    }
-  };
+    across_ranks_ = across_tiles_ && (dist_e.rankGlobalTile<Coord::Row>(index_e_) !=
+                                      dist_e.rankGlobalTile<Coord::Row>(index_e_ + 1));
+  }
 
   // Return true if the application of Householder reflectors involves multiple tiles
   bool affectsMultipleTiles() const noexcept {
-    return acrossTiles_;
+    return across_tiles_;
+  }
+
+  // Return true if the application of Householder reflectors involves multiple ranks
+  bool affectsMultipleRanks() const noexcept {
+    return across_ranks_;
   }
 
   // Return SubTileSpec to use for accessing Householder reflectors in compact form
@@ -295,7 +318,16 @@ struct TileAccessHelper {
 
   // Return SubTileSpec to use for accessing Householder reflectors in well formed form
   matrix::SubTileSpec specHH() const noexcept {
-    return {{0, 0}, {part_top_.rows() + part_bottom_.rows(), nrefls_}};
+    return {{0, 0}, {rows_v_, nrefls_}};
+  }
+
+  // Return SubTileSpec to use for accessing Householder reflectors in well formed form
+  // for the distributed case.
+  matrix::SubTileSpec specHH(bool is_top_rank) const noexcept {
+    if (is_top_rank)
+      return {{0, 0}, {rows_v_top_, nrefls_}};
+    DLAF_ASSERT_MODERATE(affectsMultipleTiles(), affectsMultipleTiles());
+    return {{rows_v_top_, 0}, {rows_v_ - rows_v_top_, nrefls_}};
   }
 
   // Return SubTileSpec to use for accessing T factor
@@ -307,51 +339,24 @@ struct TileAccessHelper {
     return {{0, 0}, {nrefls_, cols}};
   }
 
-  const auto& topPart() const noexcept {
-    return part_top_;
+  GlobalTileIndex topIndexE(const SizeType j) const noexcept {
+    return {index_e_, j};
   }
 
-  const auto& bottomPart() const noexcept {
+  GlobalTileIndex bottomIndexE(const SizeType j) const noexcept {
     DLAF_ASSERT_MODERATE(affectsMultipleTiles(), affectsMultipleTiles());
-    return part_bottom_;
+    return {index_e_ + 1, j};
   }
 
 private:
-  struct Part {
-    // Create an "empty" part
-    Part() = default;
-
-    Part(const SizeType origin, const SizeType nrows, const SizeType nrefls, const SizeType offset = 0)
-        : origin_(origin), nrows_(nrows), nrefls_(nrefls), offset_(offset) {}
-
-    // Return the number of rows that this part involves
-    SizeType rows() const noexcept {
-      return nrows_;
-    }
-
-    // Return the spec to use on well-formed HH
-    matrix::SubTileSpec specHH() const noexcept {
-      return {{offset_, 0}, {nrows_, nrefls_}};
-    }
-
-    // Return the spec to use on the matrix HH are applied to
-    matrix::SubTileSpec specEV(const SizeType cols) const noexcept {
-      return {{origin_, 0}, {nrows_, cols}};
-    }
-
-  private:
-    SizeType origin_;
-    SizeType nrows_ = 0;
-    SizeType nrefls_ = 0;
-    SizeType offset_;
-  };
-
   SizeType nrefls_;
   matrix::SubTileSpec input_spec_;
+  SizeType index_e_;
+  SizeType rows_v_;
+  SizeType rows_v_top_;
 
-  bool acrossTiles_;
-  Part part_top_;
-  Part part_bottom_;
+  bool across_tiles_;
+  bool across_ranks_;
 };
 
 /// Note:
@@ -383,8 +388,7 @@ struct DistIndexing {
   bool isInvolved() const {
     const bool isSameRow = rank.row() == rankHH.row();
     const bool isPartnerRow = rank.row() == rankRowPartner();
-    return isSameRow ||
-           (dist_hh.commGridSize().rows() > 1 && isPartnerRow && helper.affectsMultipleTiles());
+    return isSameRow || (isPartnerRow && helper.affectsMultipleRanks());
   }
 
   LocalTileIndex wsIndexHH() const {
@@ -396,8 +400,8 @@ struct DistIndexing {
         return dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row()) * n_ws_per_block + intra_idx;
       }
       else {
-        DLAF_ASSERT_HEAVY(helper.affectsMultipleTiles() && (rank.row() == rankRowPartner()),
-                          helper.affectsMultipleTiles(), rank.row(), rankRowPartner());
+        DLAF_ASSERT_HEAVY(helper.affectsMultipleRanks() && (rank.row() == rankRowPartner()),
+                          helper.affectsMultipleRanks(), rank.row(), rankRowPartner());
         return dist_hh.localNrTiles().isEmpty()
                    ? 0
                    : dist_hh.localTileFromGlobalTile<Coord::Row>(ij.row() + 1) * n_ws_per_block;
@@ -544,7 +548,11 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   const SizeType b = band_size;
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
+  const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
+  matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
+
   const auto& dist_hh = mat_hh.distribution();
+  const auto& dist_e_rt = mat_e_rt.distribution();
 
   // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
   // stored in compact form.
@@ -561,10 +569,10 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   //               0 0 0 d
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
-  const SizeType dist_w_rows = mat_e.nrTiles().rows() * w_tile_sz.rows();
+  const SizeType dist_w_rows = mat_e_rt.nrTiles().rows() * w_tile_sz.rows();
   const matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);
   const matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});
-  const matrix::Distribution dist_w2({b, mat_e.size().cols()}, {b, mat_e.blockSize().cols()});
+  const matrix::Distribution dist_w2({b, mat_e_rt.size().cols()}, {b, mat_e_rt.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
   RoundRobin<Panel<Coord::Col, T, D>> t_panels(n_workspaces, dist_t);
@@ -587,19 +595,19 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
     for (SizeType step = 0; step < steps; ++step) {
       const SizeType i = j + step;
 
-      const GlobalElementIndex ij_e(i * b, j * b);
-      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_e)));
+      const GlobalElementIndex ij_el(i * b, j * b);
+      const LocalTileIndex ij(dist_hh.localTileIndex(dist_hh.globalTileIndex(ij_el)));
 
       // Note:  reflector with size = 1 must be ignored, except for the last step of the last sweep
       //        with complex type
       const SizeType nrefls = [&]() {
         const bool allowSize1 = isComplex_v<T> && j == j_last_sweep && step == steps - 1;
-        const GlobalElementSize delta(dist_hh.size().rows() - ij_e.row() - 1,
-                                      std::min(b, dist_hh.size().cols() - ij_e.col()));
+        const GlobalElementSize delta(dist_hh.size().rows() - ij_el.row() - 1,
+                                      std::min(b, dist_hh.size().cols() - ij_el.col()));
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const TileAccessHelper helper(b, nrefls, mat_hh.distribution(), ij_e);
+      const TileAccessHelper helper(b, nrefls, dist_hh, dist_e_rt, ij_el);
 
       if (nrefls < b) {
         mat_t.setWidth(nrefls);
@@ -613,30 +621,23 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                                   keepFuture(splitTile(mat_hh.read(ij), helper.specHHCompact())), mat_v,
                                   mat_t, mat_w);
 
-      for (SizeType j_e = 0; j_e < mat_e.nrTiles().cols(); ++j_e) {
-        const LocalTileIndex idx_e(ij.row(), j_e);
-        const auto sz_e = mat_e.tileSize({ij.row(), j_e});
+      for (SizeType j_e = 0; j_e < dist_e_rt.nrTiles().cols(); ++j_e) {
+        const auto idx_e = helper.topIndexE(j_e);
 
         if (not helper.affectsMultipleTiles()) {
           ex::start_detached(
-              ex::when_all(keepFuture(splitTile(tile_v, helper.topPart().specHH())),
-                           keepFuture(splitTile(tile_w, helper.topPart().specHH())),
-                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
-                           splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols()))) |
+              ex::when_all(keepFuture(tile_v), keepFuture(tile_w),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e)) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                    thread_priority::normal),
                                                                ApplyHHToSingleTileRow<B, T>{}));
         }
         else {
-          auto tile_vs = splitTile(tile_v, {helper.topPart().specHH(), helper.bottomPart().specHH()});
-          auto tile_ws = splitTile(tile_w, {helper.topPart().specHH(), helper.bottomPart().specHH()});
           ex::start_detached(
-              ex::when_all(keepFuture(tile_vs[0]), keepFuture(tile_vs[1]), keepFuture(tile_ws[0]),
-                           keepFuture(tile_ws[1]), mat_w2.readwrite_sender(LocalTileIndex(0, j_e)),
-                           splitTile(mat_e(idx_e), helper.topPart().specEV(sz_e.cols())),
-                           splitTile(mat_e(LocalTileIndex{ij.row() + 1, j_e}),
-                                     helper.bottomPart().specEV(sz_e.cols()))) |
+              ex::when_all(keepFuture(tile_v), keepFuture(tile_w),
+                           mat_w2.readwrite_sender(LocalTileIndex(0, j_e)), mat_e_rt(idx_e),
+                           mat_e_rt(helper.bottomIndexE(j_e))) |
               dlaf::internal::transform<
                   dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                    thread_priority::normal),
@@ -674,8 +675,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   const SizeType b = band_size;
   const SizeType mb = mat_hh.blockSize().rows();
 
+  const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
+  matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
+
   const auto& dist_hh = mat_hh.distribution();
-  const auto& dist_e = mat_e.distribution();
+  const auto& dist_e_rt = mat_e_rt.distribution();
 
   // Note: w_tile_sz can store reflectors as they are actually applied, opposed to how they are
   // stored in compact form.
@@ -693,12 +697,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   const TileElementSize w_tile_sz(2 * b - 1, b);
 
   const SizeType nlocal_ws =
-      std::max<SizeType>(1, dist_hh.localNrTiles().rows() *
-                                to_SizeType(static_cast<SizeType>(std::ceil(mb / b / 2.0f)) + 1));
+      std::max<SizeType>(1, dist_hh.localNrTiles().rows() * (util::ceilDiv<SizeType>(mb / b, 2) + 1));
   const matrix::Distribution dist_ws_hh({nlocal_ws * b, b}, {b, b});
   const matrix::Distribution dist_ws_v({nlocal_ws * w_tile_sz.rows(), w_tile_sz.cols()}, w_tile_sz);
-  const matrix::Distribution dist_ws_w2({nlocal_ws * b, mat_e.size().cols()},
-                                        {b, mat_e.blockSize().cols()});
+  const matrix::Distribution dist_ws_w2({nlocal_ws * b, mat_e_rt.size().cols()},
+                                        {b, mat_e_rt.blockSize().cols()});
 
   constexpr std::size_t n_workspaces = 2;
 
@@ -784,7 +787,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         return std::min(b, std::min(delta.rows() - (allowSize1 ? 0 : 1), delta.cols()));
       }();
 
-      const TileAccessHelper helper(b, nrefls, dist_hh, ij_el);
+      const TileAccessHelper helper(b, nrefls, dist_hh, dist_e_rt, ij_el);
       const DistIndexing indexing_helper(helper, dist_hh, b, ij_g, i_b);
 
       if (!indexing_helper.isInvolved())
@@ -822,7 +825,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       }
 
       // Send P2P on col
-      if (helper.affectsMultipleTiles() && grid.size().rows() > 1) {
+      if (helper.affectsMultipleRanks()) {
         const comm::IndexT_MPI rank_src = rankHH.row();
         const comm::IndexT_MPI rank_dst = indexing_helper.rankRowPartner();
 
@@ -849,84 +852,81 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                                   mat_v, mat_t, mat_w);
 
       // UPDATE E
-      const SizeType ncols_local = dist_e.localNrTiles().cols();
+      const SizeType ncols_local = dist_e_rt.localNrTiles().cols();
       for (SizeType j_e = 0; j_e < ncols_local; ++j_e) {
-        const SizeType j_e_g = dist_e.template globalTileFromLocalTile<Coord::Col>(j_e);
+        const SizeType j_e_g = dist_e_rt.template globalTileFromLocalTile<Coord::Col>(j_e);
         const LocalTileIndex idx_w2(indexing_helper.wsIndexHH().row(), j_e);
 
-        // SINGLE RANK UPDATE
-        if (!helper.affectsMultipleTiles() || grid.size().rows() == 1) {
-          const SizeType i_e_g = ij_g.row();
-          const SizeType i_e = dist_e.template localTileFromGlobalTile<Coord::Row>(ij_g.row());
-          const LocalTileIndex idx_e(i_e, j_e);
-          const auto nb = mat_e.tileSize({i_e_g, j_e_g}).cols();
+        const GlobalTileIndex idx_e_top = helper.topIndexE(j_e_g);
+        const auto nb = mat_e_rt.tileSize(idx_e_top).cols();
+
+        // SINGLE ROW UPDATE
+        if (!helper.affectsMultipleTiles()) {
+          ex::start_detached(
+              ex::when_all(keepFuture(tile_v), keepFuture(tile_w),
+                           splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top)) |
+              dlaf::internal::transform<
+                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
+                                                                   thread_priority::normal),
+                                                               ApplyHHToSingleTileRow<B, T>{}));
+        }
+        // TWO ROWs
+        else {
+          const GlobalTileIndex idx_e_bottom = helper.bottomIndexE(j_e_g);
 
           // TWO ROWs (same RANK)
-          if (helper.affectsMultipleTiles()) {
-            const auto partsSpecs = {helper.topPart().specHH(), helper.bottomPart().specHH()};
-            const auto tile_vs = splitTile(tile_v, partsSpecs);
-            const auto tile_ws = splitTile(tile_w, partsSpecs);
-
+          if (!helper.affectsMultipleRanks()) {
             ex::start_detached(
-                ex::when_all(keepFuture(tile_vs[0]), keepFuture(tile_vs[1]), keepFuture(tile_ws[0]),
-                             keepFuture(tile_ws[1]), splitTile(mat_w2(idx_w2), helper.specW2(nb)),
-                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb)),
-                             splitTile(mat_e(LocalTileIndex{idx_e.row() + 1, j_e}),
-                                       helper.bottomPart().specEV(nb))) |
+                ex::when_all(keepFuture(tile_v), keepFuture(tile_w),
+                             splitTile(mat_w2(idx_w2), helper.specW2(nb)), mat_e_rt(idx_e_top),
+                             mat_e_rt(idx_e_bottom)) |
                 dlaf::internal::transform<
                     dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
                                                                      thread_priority::normal),
                                                                  ApplyHHToDoubleTileRow<B, T>{}));
           }
-          // SINGLE ROW (edge-case)
+          // TWO ROWs TWO RANKs UPDATE (MAIN + PARTNER)
           else {
+            const bool is_top_rank = rank.row() == rankHH.row();
+            const comm::IndexT_MPI rank_partner =
+                is_top_rank ? indexing_helper.rankRowPartner() : rankHH.row();
+
+            const comm::IndexT_MPI tag = to_int(j_e + i_b * ncols_local);
+
+            const matrix::SubTileSpec spec_vw = helper.specHH(is_top_rank);
+
+            const auto idx_e = is_top_rank ? idx_e_top : idx_e_bottom;
+            const auto sz_e = mat_e_rt.tileSize(idx_e);
+            const matrix::SubTileSpec spec_e{{(is_top_rank ? 1 : 0), 0},
+                                             {sz_e.rows() - (is_top_rank ? 1 : 0), sz_e.cols()}};
+
+            auto subtile_v = splitTile(tile_v, spec_vw);
+            auto subtile_w = splitTile(tile_w, spec_vw);
+            auto subtile_e_ro = splitTile(mat_e_rt.read(idx_e), spec_e);
+
+            // W2 = V* . E
             ex::start_detached(
-                ex::when_all(keepFuture(splitTile(tile_v, helper.topPart().specHH())),
-                             keepFuture(splitTile(tile_w, helper.topPart().specHH())),
-                             splitTile(mat_w2(idx_w2), helper.specW2(nb)),
-                             splitTile(mat_e(idx_e), helper.topPart().specEV(nb))) |
-                dlaf::internal::transform<
-                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                     thread_priority::normal),
-                                                                 ApplyHHToSingleTileRow<B, T>{}));
+                dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
+                                            keepFuture(subtile_v), keepFuture(std::move(subtile_e_ro)),
+                                            T(0), splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
+                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
+
+            // Compute final W2 by adding the contribution from the partner rank
+            ex::start_detached(  //
+                comm::scheduleAllSumP2P<B>(mpi_col_comm, rank_partner, tag,
+                                           keepFuture(
+                                               splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb))),
+                                           splitTile(mat_w2(idx_w2), helper.specW2(nb))));
+
+            auto subtile_e = splitTile(mat_e_rt(idx_e), spec_e);
+            // E -= W . W2
+            ex::start_detached(  //
+                dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),
+                                            keepFuture(subtile_w),
+                                            keepFuture(splitTile(mat_w2.read(idx_w2), helper.specW2(nb))),
+                                            T(1), std::move(subtile_e)) |
+                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
           }
-        }
-        // TWO RANKs UPDATE (MAIN + PARTNER) on TWO ROWS
-        else {
-          const bool isTopRank = rank.row() == rankHH.row();
-          const comm::IndexT_MPI rankPartner =
-              isTopRank ? indexing_helper.rankRowPartner() : rankHH.row();
-
-          const comm::IndexT_MPI tag = to_int(j_e + i_b * ncols_local);
-
-          const auto part = isTopRank ? helper.topPart() : helper.bottomPart();
-          const SizeType i_e_g = isTopRank ? ij_g.row() : (ij_g.row() + 1);
-          const SizeType i_e = dist_e.template localTileFromGlobalTile<Coord::Row>(i_e_g);
-          const LocalTileIndex idx_e(i_e, j_e);
-
-          const auto nb = mat_e.tileSize({i_e_g, j_e_g}).cols();
-
-          // W2 = V* . E
-          ex::start_detached(
-              dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
-                                          keepFuture(splitTile(tile_v, part.specHH())),
-                                          splitTile(mat_e(idx_e), part.specEV(nb)), T(0),
-                                          splitTile(mat_w2tmp(idx_w2), helper.specW2(nb))) |
-              dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
-
-          // Compute final W2 by adding the contribution from the partner rank
-          ex::start_detached(comm::scheduleAllSumP2P<B>(mpi_col_comm, rankPartner, tag,
-                                                        keepFuture(splitTile(mat_w2tmp.read(idx_w2),
-                                                                             helper.specW2(nb))),
-                                                        splitTile(mat_w2(idx_w2), helper.specW2(nb))));
-
-          // E -= W . W2
-          ex::start_detached(
-              dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),
-                                          keepFuture(splitTile(tile_w, part.specHH())),
-                                          keepFuture(splitTile(mat_w2.read(idx_w2), helper.specW2(nb))),
-                                          T(1), splitTile(mat_e(idx_e), part.specEV(nb))) |
-              dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
         }
       }
 

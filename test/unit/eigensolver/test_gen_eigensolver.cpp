@@ -123,19 +123,36 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   CHECK_MATRIX_NEAR(mat_be_local, workspace, m * TypeUtilities<T>::error, m * TypeUtilities<T>::error);
 }
 
-template <class T, Backend B, Device D, Allocation allocation>
-void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
-  const LocalElementSize size(m, m);
+template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
+void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
+                        GridIfDistributed... grid) {
+  constexpr bool isDistributed = (sizeof...(grid) == 1);
+
+  auto size = [&m]() -> auto{
+    if constexpr (isDistributed)
+      return GlobalElementSize(m, m);
+    else
+      return LocalElementSize(m, m);
+  }
+  ();
+
   const TileElementSize block_size(mb, mb);
 
+  auto create_reference = [&]() -> auto{
+    if constexpr (isDistributed)
+      return Matrix<T, Device::CPU>(size, block_size, grid...);
+    else
+      return Matrix<T, Device::CPU>(size, block_size);
+  };
+
   Matrix<const T, Device::CPU> reference_a = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
+    auto reference = create_reference();
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
   Matrix<const T, Device::CPU> reference_b = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size);
+    auto reference = create_reference();
     matrix::util::set_random_hermitian_positive_definite(reference);
     return reference;
   }();
@@ -149,15 +166,32 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
     if constexpr (allocation == Allocation::do_allocation) {
-      return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+      if constexpr (isDistributed) {
+        return eigensolver::genEigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
+      }
+      else {
+        return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+      }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
       const SizeType size = mat_a_h.size().rows();
       Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
-      Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
+      auto eigenvectors = [&]() -> auto{
+        if constexpr (isDistributed)
+          return Matrix<T, D>(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
+        else
+          return Matrix<T, D>(LocalElementSize(size, size), mat_a_h.blockSize());
+      }
+      ();
 
-      eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
+      if constexpr (isDistributed) {
+        eigensolver::genEigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                       eigenvectors);
+      }
+      else {
+        eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
+      }
 
       return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
     }
@@ -166,53 +200,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   if (mat_a_h.size().isEmpty())
     return;
 
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret);
-}
-
-template <class T, Backend B, Device D, Allocation allocation>
-void testGenEigensolver(CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
-                        const SizeType mb) {
-  const GlobalElementSize size(m, m);
-  const TileElementSize block_size(mb, mb);
-
-  Matrix<const T, Device::CPU> reference_a = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size, grid);
-    matrix::util::set_random_hermitian(reference);
-    return reference;
-  }();
-
-  Matrix<const T, Device::CPU> reference_b = [&]() {
-    Matrix<T, Device::CPU> reference(size, block_size, grid);
-    matrix::util::set_random_hermitian_positive_definite(reference);
-    return reference;
-  }();
-
-  Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
-  copy(reference_a, mat_a_h);
-  Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
-  copy(reference_b, mat_b_h);
-
-  eigensolver::EigensolverResult<T, D> ret = [&]() {
-    MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
-    if constexpr (allocation == Allocation::do_allocation) {
-      return eigensolver::genEigensolver<B>(grid, uplo, mat_a.get(), mat_b.get());
-    }
-    else if constexpr (allocation == Allocation::use_preallocated) {
-      const SizeType size = mat_a_h.size().rows();
-      Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
-                                         TileElementSize(mat_a_h.blockSize().rows(), 1));
-      Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid);
-
-      eigensolver::genEigensolver<B>(grid, uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
-      return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
-    }
-  }();
-
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
+  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid...);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
@@ -230,10 +218,10 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(grid, uplo, m,
-                                                                                           mb);
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(grid, uplo,
-                                                                                              m, mb);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                           grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m,
+                                                                                              mb, grid);
       }
     }
   }
@@ -256,11 +244,10 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(grid, uplo,
-                                                                                            m, mb);
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(grid,
-                                                                                               uplo, m,
-                                                                                               mb);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                            grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m,
+                                                                                               mb, grid);
       }
     }
   }

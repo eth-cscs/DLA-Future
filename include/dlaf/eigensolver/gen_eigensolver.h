@@ -85,7 +85,15 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
 
-  return internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b);
+  const SizeType size = mat_a.size().rows();
+
+  matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                             TileElementSize(mat_a.blockSize().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.blockSize());
+
+  genEigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors);
+
+  return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
 /// Generalized Eigensolver.
@@ -160,6 +168,14 @@ EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo u
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
 
-  return internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b);
+  const SizeType size = mat_a.size().rows();
+
+  matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
+                                             TileElementSize(mat_a.blockSize().rows(), 1));
+  matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.blockSize(), grid);
+
+  genEigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors);
+
+  return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 }

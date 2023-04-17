@@ -20,13 +20,18 @@ import systems
 
 system = systems.cscs["daint-mc"]
 
-dlafpath = "<path_to_dlaf>"
+dlafpath = "<path_to_dlaf_build_dir>"
 
 run_dir = f"~/ws/runs"
 
 time = 400  # minutes
 nruns = 5
-nodes_arr = [1, 2, 4]
+nodes_arr = [0.5, 1, 2, 4, 8, 16]
+
+rpn = 2
+m_szs = [10240, 20480, 30097, 40960]
+mb_szs = 512
+
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(
@@ -38,76 +43,92 @@ args = parser.parse_args()
 
 debug = args.debug
 
-run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
-run.add(
-    mp.chol,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512},
-    nruns,
-)
-run.add(
-    mp.gen2std,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512},
-    nruns,
-)
-run.add(
-    mp.red2band,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128},
-    nruns,
-)
-run.add(
-    mp.band2trid,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128},
-    nruns,
-)
-run.add(
-    mp.trid_evp,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512},
-    nruns,
-)
-run.add(
-    mp.bt_band2trid,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128, "n_sz": None},
-    nruns,
-)
-run.add(
-    mp.bt_red2band,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "band": 128, "n_sz": None},
-    nruns,
-)
-run.add(
-    mp.trsm,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "n_sz": None},
-    nruns,
-)
 
-run.add(
-    mp.evp,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "min_band": None},
-    nruns,
-)
-run.add(
-    mp.gevp,
-    "dlaf",
-    dlafpath,
-    {"rpn": 2, "m_sz": 10240, "mb_sz": 512, "min_band": None},
-    nruns,
-)
-run.submit(run_dir, debug=debug)
+def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
+    run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
+
+    run.add(
+        mp.chol,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.gen2std,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.red2band,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.band2trid,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.trid_evp,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.bt_band2trid,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.bt_red2band,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.trsm,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
+        nruns, **kwargs,
+    )
+
+    run.add(
+        mp.evp,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
+        nruns, **kwargs,
+    )
+    run.add(
+        mp.gevp,
+        "dlaf",
+        dlafpath,
+        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
+        nruns, **kwargs,
+    )
+
+    run.submit(run_dir, debug=debug)
+
+
+# actual benchmark
+createAndSubmitRun(
+        run_dir,
+        nodes_arr)
+
+# additional benchmark collecting "local" implementation results in <run_dir>/local sub-directory
+createAndSubmitRun(
+        run_dir + "/local",
+        [1 / rpn],
+        extra_flags="--local")

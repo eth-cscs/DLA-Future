@@ -65,8 +65,6 @@ using dlaf::common::Ordering;
 using dlaf::internal::transformDetach;
 using dlaf::matrix::MatrixMirror;
 
-// TODO: All remains of shared_futures need to be remooved from here.
-
 /// Check Cholesky Factorization results
 ///
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,

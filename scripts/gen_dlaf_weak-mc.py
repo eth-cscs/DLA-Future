@@ -20,18 +20,23 @@ import systems
 
 system = systems.cscs["daint-mc"]
 
-dlafpath = "<path_to_dlaf>"
+dlafpath = "<path_to_dlaf_build_dir>"
 
-run_dir = f"~/ws/runs_w"
+run_dir = f"~/ws/runs"
 
-time0 = 120  # minutes
-time = 0  # minutes
-# Note: job time is computed as time0 + sqrt(nodes) * time
 
-approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
+nodes_arr = [0.5, 1, 2, 4, 8, 16]
+rpn = 2
+m_szs = [10240, 20480, 30097, 40960]
+mb_szs = 512
 
 nruns = 5
-nodes_arr = [1, 2, 4]
+approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
+
+# Note: job time is computed as time0 + sqrt(nodes) * time
+time0 = 120  # minutes
+time = 0  # minutes
+
 
 parser = argparse.ArgumentParser(description="Run weak scaling benchmarks.")
 parser.add_argument(
@@ -43,13 +48,15 @@ args = parser.parse_args()
 
 debug = args.debug
 
+
 run = mp.WeakScaling(system, "DLAF_test_weak", "job_dlaf", nodes_arr, time0, time)
+
 run.add(
     mp.chol,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -57,8 +64,8 @@ run.add(
     mp.gen2std,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -66,8 +73,8 @@ run.add(
     mp.red2band,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": 128},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -75,8 +82,8 @@ run.add(
     mp.band2trid,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": 128},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -84,8 +91,8 @@ run.add(
     mp.trid_evp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -93,8 +100,8 @@ run.add(
     mp.bt_band2trid,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": 128, "n_sz": None},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -102,8 +109,8 @@ run.add(
     mp.bt_red2band,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": 128, "n_sz": None},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -111,8 +118,8 @@ run.add(
     mp.trsm,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "n_sz": None},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "n_sz": None},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -121,8 +128,8 @@ run.add(
     mp.evp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "min_band": None},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )
@@ -130,8 +137,8 @@ run.add(
     mp.gevp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "min_band": None},
-    {"m_sz": 10240},
+    {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+    {"m_sz": m_szs},
     approx,
     nruns,
 )

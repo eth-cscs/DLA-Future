@@ -26,8 +26,8 @@ run_dir = f"~/ws/runs"
 
 time = 400  # minutes
 nruns = 5
-nodes_arr = [0.5, 1, 2, 4, 8, 16]
 
+nodes_arr = [0.5, 1, 2, 4, 8, 16]
 rpn = 2
 m_szs = [10240, 20480, 30097, 40960]
 mb_szs = 512

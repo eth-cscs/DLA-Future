@@ -46,7 +46,6 @@ namespace dlaf::factorization::internal {
 /// @param taus array of taus, associated with the related elementary reflector
 /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
 /// TileElementSize(k, k)
-/// @param mpi_col_task_chain where internal communications are issued
 ///
 /// @pre hh_pane.getWidth() <= t.get().size().rows && hh_panel.size().getWidth() <= t.get().size().cols()
 template <Backend backend, Device device, class T>

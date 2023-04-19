@@ -121,7 +121,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
   // Update each column (in order) t = T . t
   // remember that T is upper triangular, so it is possible to use TRMV
-  static auto trmv_func(matrix::Tile<T, Device::CPU>&& tile_t) {
+  static void trmv_func(matrix::Tile<T, Device::CPU>& tile_t) {
     for (SizeType j = 0; j < tile_t.size().cols(); ++j) {
       const TileElementIndex t_start{0, j};
       const TileElementSize t_size{j, 1};
@@ -129,8 +129,6 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       blas::trmv(blas::Layout::ColMajor, blas::Uplo::Upper, blas::Op::NoTrans, blas::Diag::NonUnit,
                  t_size.rows(), tile_t.ptr(), tile_t.ld(), tile_t.ptr(t_start), 1);
     }
-    // TODO: Why return if the tile is unused?
-    return std::move(tile_t);
   }
 
   template <typename TSender>
@@ -335,7 +333,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(matrix::Panel<Coord::Col, T, 
                    // compute the T factor, by performing the last step on each column
                    // (single-threaded) each column depends on the previous part (all reflectors
                    // that comes before) so it is performed sequentially
-                   t = Helpers::trmv_func(std::move(t));
+                   Helpers::trmv_func(t);
                  }
                });
       }));
@@ -497,7 +495,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(
                    // compute the T factor, by performing the last step on each column
                    // (single-threaded) each column depends on the previous part (all reflectors
                    // that comes before) so it is performed sequentially
-                   t = Helpers::trmv_func(std::move(t));
+                   Helpers::trmv_func(t);
                  }
                });
       }));

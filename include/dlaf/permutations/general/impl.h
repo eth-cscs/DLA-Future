@@ -129,12 +129,13 @@ void applyPermutations(GlobalElementIndex out_begin, GlobalElementSize sz, SizeT
   }
 }
 
-template <class T, Device D, Coord C>
+// FilterFunc is a function with signature bool(*)(SizeType)
+template <class T, Device D, Coord C, class FilterFunc>
 void applyPermutationsFiltered(
     GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
     const matrix::Distribution& subm_dist, const SizeType* perm_arr,
     const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& in_tiles_fut,
-    const std::vector<matrix::Tile<T, D>>& out_tiles, std::function<bool(SizeType)> filter) {
+    const std::vector<matrix::Tile<T, D>>& out_tiles, FilterFunc&& filter) {
   constexpr auto OC = orthogonal(C);
   std::vector<SizeType> splits =
       dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),

@@ -145,7 +145,7 @@ void applyPermutationsFiltered(
 
   // Parallelized over the number of permutations
   pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-    if (filter(perm_arr[i_perm]))
+    if (!filter(perm_arr[i_perm]))
       return;
 
     for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
@@ -584,7 +584,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
     // [a, b)
     applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_offseted.data(), mat_in_tiles,
                                        mat_out_tiles,
-                                       [a, b](SizeType i_perm) { return i_perm < a || i_perm >= b; });
+                                       [a, b](SizeType i_perm) { return i_perm >= a && i_perm < b; });
   };
 
   ex::when_all(send_counts_sender, recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
@@ -609,11 +609,11 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
     // [0, a)
     applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
-                                       [a](SizeType i_perm) { return i_perm >= a; });
+                                       [a](SizeType i_perm) { return i_perm < a; });
 
     // [b, end)
     applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
-                                       [b](SizeType i_perm) { return i_perm < b; });
+                                       [b](SizeType i_perm) { return i_perm >= b; });
   };
 
   ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),

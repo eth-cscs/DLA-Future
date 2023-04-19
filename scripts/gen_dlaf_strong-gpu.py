@@ -139,5 +139,5 @@ def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
 # actual benchmark
 createAndSubmitRun(run_dir, nodes_arr, extra_flags=extra_flags)
 
-# additional benchmark collecting "local" implementation results in <run_dir>/local sub-directory
+# additional benchmark collecting "local" implementation results in <run_dir>-local directory
 createAndSubmitRun(run_dir + "-local", [1 / rpn], extra_flags=extra_flags + " --local")

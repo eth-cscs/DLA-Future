@@ -32,6 +32,7 @@ rpn = 1
 m_szs = [10240, 20480, 30097, 40960]
 mb_szs = 1024
 
+extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
 
 parser = argparse.ArgumentParser(description="Run strong scaling benchmarks.")
 parser.add_argument(
@@ -125,10 +126,11 @@ def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
 # actual benchmark
 createAndSubmitRun(
         run_dir,
-        nodes_arr)
+        nodes_arr,
+        extra_flags=extra_flags)
 
 # additional benchmark collecting "local" implementation results in <run_dir>/local sub-directory
 createAndSubmitRun(
         run_dir + "-local",
         [1 / rpn],
-        extra_flags="--local")
+        extra_flags=extra_flags + " --local")

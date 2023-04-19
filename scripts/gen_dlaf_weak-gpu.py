@@ -30,6 +30,8 @@ rpn = 1
 m_szs = [10240, 20480, 30097, 40960]
 mb_szs = 1024
 
+extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
+
 nruns = 5
 approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
 
@@ -59,6 +61,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.gen2std,
@@ -68,6 +71,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.red2band,
@@ -77,6 +81,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.band2trid,
@@ -86,6 +91,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.trid_evp,
@@ -95,6 +101,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.bt_band2trid,
@@ -104,6 +111,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.bt_red2band,
@@ -113,6 +121,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.trsm,
@@ -122,6 +131,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 
 run.add(
@@ -132,6 +142,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.add(
     mp.gevp,
@@ -141,5 +152,6 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
+    extra_flags=extra_flags,
 )
 run.submit(run_dir, debug=debug)

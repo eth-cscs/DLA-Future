@@ -106,9 +106,9 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
 
   const auto [index_start, index_end] = tileToElementRange(n, nb, i_begin, i_last + 1);
 
-  Matrix<const SizeType, Device::CPU> perms_h = [=]() {
+  Matrix<const SizeType, Device::CPU> perms_h = [=, index_start = index_start, index_end = index_end] {
     Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
-    dlaf::matrix::util::set(perms_h, [perms, index_start, index_end](GlobalElementIndex i) {
+    dlaf::matrix::util::set(perms_h, [=](GlobalElementIndex i) {
       if (index_start > i.row() || i.row() >= index_end)
         return SizeType(0);
 
@@ -138,8 +138,7 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
                                                         mat_out.get());
   }
 
-  auto expected_out = [dist, i_begin, i_last, index_start, index_end, perms, value_in,
-                       value_out](const GlobalElementIndex& i) {
+  auto expected_out = [=, index_start = index_start](const GlobalElementIndex& i) {
     const GlobalTileIndex i_tile = dist.globalTileIndex(i);
     if (i_begin <= i_tile.row() && i_tile.row() <= i_last && i_begin <= i_tile.col() &&
         i_tile.col() <= i_last) {

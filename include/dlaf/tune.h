@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <cstddef>
+
 #include <pika/runtime.hpp>
 #include <dlaf/types.h>
 
@@ -17,6 +19,7 @@ namespace dlaf {
 ///
 /// Holds the value of the parameters that can be used to tune DLA-Future.
 /// - red2band_panel_nworkers: number of threads to use for computing the panel in the reduction to band algorithm.
+/// - tfactor_nworkers: number of threads to use for computing the T factor
 /// - eigensolver_min_band: The minimun value to start looking for a divisor of the block size.
 ///                         Set with --dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.
 /// - band_to_tridiag_1d_block_size_base:
@@ -29,8 +32,11 @@ namespace dlaf {
 ///     DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE.
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by algorithms.
 struct TuneParameters {
-  size_t red2band_panel_nworkers =
-      std::max<size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
+  std::size_t red2band_panel_nworkers =
+      std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
+
+  std::size_t tfactor_nworkers =
+      std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
 
   SizeType eigensolver_min_band = 100;
   SizeType band_to_tridiag_1d_block_size_base = 8192;

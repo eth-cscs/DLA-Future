@@ -65,6 +65,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   eigensolver::tridiagSolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  pika::threads::get_thread_manager().wait();
   backTransformationReductionToBand<B>(grid, band_size, mat_e, mat_a, taus);
 }
 }

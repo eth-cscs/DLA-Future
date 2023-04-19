@@ -118,18 +118,16 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
     return perms_h;
   }();
 
-  Matrix<const T, Device::CPU> mat_in_h = [dist]() {
+  auto value_in = [](GlobalElementIndex i) { return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8); };
+  Matrix<const T, Device::CPU> mat_in_h = [dist, value_in]() {
     Matrix<T, Device::CPU> mat_in_h(dist);
-    dlaf::matrix::util::set(mat_in_h, [](GlobalElementIndex i) {
-      return T(i.get<C>()) - T(i.get<orthogonal(C)>()) / T(8);
-    });
+    dlaf::matrix::util::set(mat_in_h, value_in);
     return mat_in_h;
   }();
 
+  auto value_out = [](GlobalElementIndex i) { return T(i.get<orthogonal(C)>()) - T(i.get<C>()) / T(8); };
   Matrix<T, Device::CPU> mat_out_h(dist);
-  dlaf::matrix::util::set(mat_out_h, [](GlobalElementIndex i) {
-    return T(i.get<orthogonal(C)>()) - T(i.get<C>()) / T(8);
-  });
+  dlaf::matrix::util::set(mat_out_h, value_out);
 
   {
     matrix::MatrixMirror<const SizeType, D, Device::CPU> perms(perms_h);
@@ -140,8 +138,8 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
                                                         mat_out.get());
   }
 
-  auto expected_out = [dist, i_begin, i_last, index_start, index_end,
-                       perms](const GlobalElementIndex& i) {
+  auto expected_out = [dist, i_begin, i_last, index_start, index_end, perms, value_in,
+                       value_out](const GlobalElementIndex& i) {
     const GlobalTileIndex i_tile = dist.globalTileIndex(i);
     if (i_begin <= i_tile.row() && i_tile.row() <= i_last && i_begin <= i_tile.col() &&
         i_tile.col() <= i_last) {
@@ -150,9 +148,9 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
       if constexpr (C == Coord::Row)
         i_in.transpose();
 
-      return T(i_in.get<C>()) - T(i_in.get<orthogonal(C)>()) / T(8);
+      return value_in(i_in);
     }
-    return T(i.get<orthogonal(C)>()) - T(i.get<C>()) / T(8);
+    return value_out(i);
   };
 
   CHECK_MATRIX_EQ(expected_out, mat_out_h);

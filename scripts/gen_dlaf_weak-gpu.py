@@ -22,7 +22,7 @@ system = systems.cscs["daint-gpu"]
 
 dlafpath = "<path_to_dlaf_build_dir>"
 
-run_dir = f"~/ws/runs"
+run_dir = f"~/ws/runs/weak"
 
 
 nodes_arr = [1, 2, 4, 8, 16]

@@ -142,7 +142,7 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
-    extra_flags=extra_flags,
+    extra_flags=extra_flags + " --check=last",
 )
 run.add(
     mp.gevp,
@@ -152,6 +152,6 @@ run.add(
     {"m_sz": m_szs},
     approx,
     nruns,
-    extra_flags=extra_flags,
+    extra_flags=extra_flags + " --check=last",
 )
 run.submit(run_dir, debug=debug)

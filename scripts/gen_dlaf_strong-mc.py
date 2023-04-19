@@ -105,19 +105,22 @@ def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
         nruns, **kwargs,
     )
 
+    fullsolver_args = kwargs
+    fullsolver_args["extra_flags"] = kwargs.get("extra_flags", "") + " --check=last"
+
     run.add(
         mp.evp,
         "dlaf",
         dlafpath,
         {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns, **kwargs,
+        nruns, **fullsolver_args,
     )
     run.add(
         mp.gevp,
         "dlaf",
         dlafpath,
         {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns, **kwargs,
+        nruns, **fullsolver_args,
     )
 
     run.submit(run_dir, debug=debug)

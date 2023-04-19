@@ -285,7 +285,7 @@ void QR_Tfactor<Backend::MC, Device::CPU, T>::call(matrix::Panel<Coord::Col, T, 
   ex::start_detached(
       ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                    ex::when_all_vector(std::move(panel_tiles)), std::move(taus), std::move(t)) |
-      ex::let_value([=](auto& barrier_ptr, auto&& panel, const common::internal::vector<T>& taus,
+      ex::let_value([=](auto& barrier_ptr, auto& panel, const common::internal::vector<T>& taus,
                         matrix::Tile<T, D>& t) {
         matrix::Matrix<T, D> t_all({t.size().rows() * to_SizeType(nthreads - 1), t.size().cols()},
                                    t.size());

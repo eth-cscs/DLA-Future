@@ -129,6 +129,6 @@ createAndSubmitRun(
 
 # additional benchmark collecting "local" implementation results in <run_dir>/local sub-directory
 createAndSubmitRun(
-        run_dir + "/local",
+        run_dir + "-local",
         [1 / rpn],
         extra_flags="--local")

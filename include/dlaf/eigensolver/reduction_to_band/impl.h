@@ -338,7 +338,9 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
 
                       // STEP3: update trailing panel (multi-threaded)
                       updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
-                      barrier_ptr->arrive_and_wait();
+                      if (j + 1 < nrefls) {
+                        barrier_ptr->arrive_and_wait();
+                      }
                     }
                   }) |
          ex::then([](auto barrier_ptr, auto w, auto taus, auto tiles) {
@@ -682,7 +684,9 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
                       // STEP3: update trailing panel (multi-threaded)
                       updateTrailingPanel(has_head, tiles, j, w[0], taus.back(), begin, end);
-                      barrier_ptr->arrive_and_wait();
+                      if (j + 1 < nrefls) {
+                        barrier_ptr->arrive_and_wait();
+                      }
                     }
                   }) |
          ex::then([](auto barrier_ptr, auto w, auto taus, auto tiles, auto pcomm) {

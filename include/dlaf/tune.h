@@ -24,6 +24,9 @@ namespace dlaf {
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.
+/// - red2band_barrier_busy_wait_us:
+///     The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.
+///     Set with --dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.
 /// - tridiag_rank1_nworkers:
 ///     The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver
 ///     algorithm. Set with --dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.
@@ -44,6 +47,7 @@ namespace dlaf {
 struct TuneParameters {
   std::size_t red2band_panel_nworkers =
       std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
+  std::size_t red2band_barrier_busy_wait_us = 1000;
   std::size_t tridiag_rank1_nworkers =
       std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
 

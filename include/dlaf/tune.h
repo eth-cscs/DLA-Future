@@ -18,7 +18,7 @@ namespace dlaf {
 /// Holds the value of the parameters that can be used to tune DLA-Future.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
-/// - eigensolver_min_band: The minimun value to start looking for a divisor of the block size.
+/// - eigensolver_min_band: The minimum value to start looking for a divisor of the block size.
 ///                         Set with --dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.
 /// - band_to_tridiag_1d_block_size_base:
 ///     The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. The input matrix

@@ -104,8 +104,8 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   SizeType i_begin = 0;
-  SizeType i_end = 3;
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
+  SizeType i_last = 3;
+  auto k = stablePartitionIndexForDeflation(i_begin, i_last, c, in, out);
 
   ASSERT_TRUE(tt::sync_wait(std::move(k)) == 7);
 
@@ -154,16 +154,16 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   TypeParam tol = TypeParam(0.01);
   TypeParam rho = TypeParam(1);
   SizeType i_begin = 0;
-  SizeType i_end = 3;
-  auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_end, ex::just(rho), ex::just(tol),
+  SizeType i_last = 3;
+  auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_last, ex::just(rho), ex::just(tol),
                                                       index_mat, d_mat, z_mat, c_mat));
 
   Matrix<TypeParam, Device::CPU> d_mat_sorted(sz, bk);
   Matrix<TypeParam, Device::CPU> z_mat_sorted(sz, bk);
   Matrix<ColType, Device::CPU> c_mat_sorted(sz, bk);
-  applyIndex(i_begin, i_end, index_mat, d_mat, d_mat_sorted);
-  applyIndex(i_begin, i_end, index_mat, z_mat, z_mat_sorted);
-  applyIndex(i_begin, i_end, index_mat, c_mat, c_mat_sorted);
+  applyIndex(i_begin, i_last, index_mat, d_mat, d_mat_sorted);
+  applyIndex(i_begin, i_last, index_mat, z_mat, z_mat_sorted);
+  applyIndex(i_begin, i_last, index_mat, c_mat, c_mat_sorted);
 
   // Check sorted `d`
   std::vector<TypeParam> expected_d_arr{11, 11, 11, 13, 13, 17, 18, 18, 34, 34};

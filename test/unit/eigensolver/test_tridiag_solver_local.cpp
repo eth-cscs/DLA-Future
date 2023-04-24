@@ -35,7 +35,7 @@ TYPED_TEST_SUITE(TridiagEigensolverTestGPU, MatrixElementTypes);
 TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   SizeType n = 10;
   auto actual_indices = dlaf::eigensolver::internal::generateSubproblemIndices(n);
-  // i_begin, i_middle, i_end
+  // i_begin, i_middle, i_last
   std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 0, 1}, {0, 1, 2},
                                                                          {3, 3, 4}, {0, 2, 4},
                                                                          {5, 5, 6}, {5, 6, 7},

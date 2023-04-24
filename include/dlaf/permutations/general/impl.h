@@ -173,17 +173,17 @@ void applyPermutationsFiltered(
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_last, Matrix<const SizeType, D>& perms,
                                     Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& distr = mat_in.distribution();
-  TileElementSize sz_last_tile = distr.tileSize(GlobalTileIndex(i_end, i_end));
-  SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end) + sz_last_tile.rows();
-  SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end) + sz_last_tile.cols();
+  TileElementSize sz_last_tile = distr.tileSize(GlobalTileIndex(i_last, i_last));
+  SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_last) + sz_last_tile.rows();
+  SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_last) + sz_last_tile.cols();
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
-  SizeType ntiles = i_end - i_begin + 1;
+  SizeType ntiles = i_last - i_begin + 1;
 
   auto sender =
       ex::when_all(ex::when_all_vector(ut::collectReadTiles(LocalTileIndex(i_begin, 0),
@@ -444,9 +444,9 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
   }
 }
 
-// Inverts the the subset of tiles [ @p i_begin, @p i_end (including)] of the index map @p in and saves
+// Inverts the the subset of tiles [ @p i_begin, @p i_last (including)] of the index map @p in and saves
 // the result into @p out.
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
+inline void invertIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType, Device::CPU>& in,
                         Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -454,8 +454,8 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 
   const matrix::Distribution& dist = in.distribution();
   SizeType nb = dist.blockSize().rows();
-  SizeType nbr = dist.tileSize(GlobalTileIndex(i_end, 0)).rows();
-  SizeType n = (i_end - i_begin) * nb + nbr;
+  SizeType nbr = dist.tileSize(GlobalTileIndex(i_last, 0)).rows();
+  SizeType n = (i_last - i_begin) * nb + nbr;
   auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
     TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
@@ -466,7 +466,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
   };
 
   LocalTileIndex begin{i_begin, 0};
-  LocalTileSize sz{i_end - i_begin + 1, 1};
+  LocalTileSize sz{i_last - i_begin + 1, 1};
   auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
                              ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
@@ -494,7 +494,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   const LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                    dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  const LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end) - 1,
+  const LocalTileIndex i_loc_last{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end) - 1,
                                  dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end) - 1};
   // Note: the local shape of the permutation region may not be square if the process grid is not square
   const LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end),
@@ -543,7 +543,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Pack local rows or columns to be sent from this rank
   applyPackingIndex<T, D, C>(subm_dist, whenAllReadOnlyTilesArray(packing_index),
-                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_end, mat_in),
+                             whenAllReadOnlyTilesArray(i_loc_begin, i_loc_last, mat_in),
                              whenAllReadWriteTilesArray(mat_send));
 
   // Unpacking
@@ -590,7 +590,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   ex::when_all(send_counts_sender, recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
                whenAllReadOnlyTilesArray(mat_send),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+               whenAllReadWriteTilesArray(i_loc_begin, i_loc_last, mat_out)) |
       di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));
 
   // COMMUNICATION-dependent
@@ -619,22 +619,22 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
                whenAllReadOnlyTilesArray(mat_recv),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+               whenAllReadWriteTilesArray(i_loc_begin, i_loc_last, mat_out)) |
       di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f));
 }
 
 template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_task_chain,
-                                    SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+                                    SizeType i_begin, SizeType i_last, Matrix<const SizeType, D>& perms,
                                     Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   if constexpr (D == Device::GPU) {
     // This is a temporary placeholder which avoids diverging GPU API:
     DLAF_UNIMPLEMENTED("GPU implementation not available yet");
-    dlaf::internal::silenceUnusedWarningFor(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+    dlaf::internal::silenceUnusedWarningFor(sub_task_chain, i_begin, i_last, perms, mat_in, mat_out);
     return;
   }
   else {
-    permuteOnCPU<T, C>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+    permuteOnCPU<T, C>(sub_task_chain, i_begin, i_last, perms, mat_in, mat_out);
   }
 }
 }

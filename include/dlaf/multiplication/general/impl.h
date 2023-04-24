@@ -28,14 +28,16 @@ namespace dlaf::multiplication {
 namespace internal {
 
 template <Backend B, Device D, class T>
-void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
+void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_last, const blas::Op opA,
                                  const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  for (SizeType j = idx_begin; j <= idx_end; ++j) {
-    for (SizeType i = idx_begin; i <= idx_end; ++i) {
-      for (SizeType k = idx_begin; k <= idx_end; ++k) {
+  const SizeType idx_end = idx_last + 1;
+
+  for (SizeType j = idx_begin; j < idx_end; ++j) {
+    for (SizeType i = idx_begin; i < idx_end; ++i) {
+      for (SizeType k = idx_begin; k < idx_end; ++k) {
         ex::start_detached(dlaf::internal::whenAllLift(opA, opB, alpha,
                                                        mat_a.read_sender(GlobalTileIndex(i, k)),
                                                        mat_b.read_sender(GlobalTileIndex(k, j)),
@@ -60,15 +62,16 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
                                  Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
+  const SizeType idx_end = idx_last + 1;
+
   const auto& dist_a = mat_a.distribution();
   const auto rank = dist_a.rankIndex();
 
   // which rank has the last tile involved
-  const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
-  const bool rankHasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
+  const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_end - 1);
+  const bool rankHasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_end - 1);
 
   // translate from global to local indices
-  const SizeType idx_end = idx_last + 1;
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
 
@@ -98,11 +101,11 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_panel, panel_offset);
 
   // This loops over the global indices for k, because every rank have to participate in communication
-  for (SizeType k = idx_begin; k <= idx_last; ++k) {
+  for (SizeType k = idx_begin; k < idx_end; ++k) {
     auto& panelA = panelsA.nextResource();
     auto& panelB = panelsB.nextResource();
 
-    const bool isKPartial = k == idx_last && isEndRangePartial;
+    const bool isKPartial = k == idx_end - 1 && isEndRangePartial;
     const SizeType kSize = isKPartial ? partialSize : mb;
     if (isKPartial) {
       panelA.setWidth(kSize);

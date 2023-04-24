@@ -33,8 +33,8 @@
 
 namespace dlaf::eigensolver::internal {
 
-// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
-// 1, i_end] before saving the triad <i_begin, i_middle, i_end> into `indices`.
+// Splits [i_begin, i_last] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
+// 1, i_last] before saving the triad <i_begin, i_middle, i_last> into `indices`.
 //
 // The recursive calls span a binary tree which is traversed in depth first left-right-root order. That
 // is also the order of triads in `indices`.
@@ -42,13 +42,13 @@ namespace dlaf::eigensolver::internal {
 // Note: the intervals are all closed!
 //
 inline void splitIntervalInTheMiddleRecursively(
-    SizeType i_begin, SizeType i_end, std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
-  if (i_begin == i_end)
+    SizeType i_begin, SizeType i_last, std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+  if (i_begin == i_last)
     return;
-  SizeType i_middle = (i_begin + i_end) / 2;
+  SizeType i_middle = (i_begin + i_last) / 2;
   splitIntervalInTheMiddleRecursively(i_begin, i_middle, indices);
-  splitIntervalInTheMiddleRecursively(i_middle + 1, i_end, indices);
-  indices.emplace_back(i_begin, i_middle, i_end);
+  splitIntervalInTheMiddleRecursively(i_middle + 1, i_last, indices);
+  indices.emplace_back(i_begin, i_middle, i_last);
 }
 
 // Generates an array of triad indices. Each triad is composed of begin <= middle < end indices and
@@ -78,14 +78,14 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   if (tridiag.nrTiles().rows() == 0)
     return vector_type{};
 
-  const SizeType i_end = tridiag.nrTiles().rows() - 1;
+  const SizeType i_last = tridiag.nrTiles().rows() - 1;
   vector_type offdiag_vals;
-  offdiag_vals.reserve(to_sizet(i_end));
+  offdiag_vals.reserve(to_sizet(i_last));
 
-  for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+  for (SizeType i_prev_split = 0; i_prev_split < i_last; ++i_prev_split) {
     offdiag_vals.push_back(ex::split(ex::ensure_started(
-        cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_split, 0)),
-                              tridiag.readwrite_sender(LocalTileIndex(i_split + 1, 0))))));
+        cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_prev_split, 0)),
+                              tridiag.readwrite_sender(LocalTileIndex(i_prev_split + 1, 0))))));
   }
   return offdiag_vals;
 }
@@ -229,8 +229,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   offloadDiagonal(tridiag, ws_hm.evals);
 
   // Each triad represents two subproblems to be merged
-  for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals,
+  for (auto [i_begin, i_prev_split, i_last] : generateSubproblemIndices(distr.nrTiles().rows())) {
+    mergeSubproblems<B>(i_begin, i_prev_split, i_last, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals,
                         evecs);
   }
 
@@ -369,9 +369,9 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
-  for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
-                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals, evecs);
+  for (auto [i_begin, i_prev_split, i_last] : generateSubproblemIndices(nrtiles)) {
+    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_prev_split,
+                            i_last, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals, evecs);
   }
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);

@@ -168,11 +168,11 @@ Matrix<T, Device::CPU>& initMirrorMatrix(Matrix<T, Device::CPU>& mat) {
   return mat;
 }
 
-// Calculates the problem size in the tile range [i_begin, i_last]
-inline SizeType problemSize(SizeType i_begin, SizeType i_last, const matrix::Distribution& distr) {
-  SizeType nb = distr.blockSize().rows();
-  SizeType nbr = distr.tileSize(GlobalTileIndex(i_last, 0)).rows();
-  return (i_last - i_begin) * nb + nbr;
+// Calculates the problem size in the tile range [i_begin, i_end)
+inline SizeType problemSize(const SizeType i_begin, const SizeType i_end, const matrix::Distribution& distr) {
+  const SizeType nb = distr.blockSize().rows();
+  const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
+  return (i_end - i_begin - 1) * nb + nbr;
 }
 
 // The index starts at `0` for tiles in the range [i_begin, i_last].
@@ -274,8 +274,9 @@ void sortIndex(SizeType i_begin, SizeType i_last, KSender&& k, Matrix<const T, D
                Matrix<const SizeType, D>& in_index, Matrix<SizeType, D>& out_index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, vec.distribution());
+  const SizeType n = problemSize(i_begin, i_end, vec.distribution());
   auto sort_fn = [n](const auto& k, const auto& vec_futs, const auto& in_index_futs,
                      const auto& out_index, [[maybe_unused]] auto&&... ts) {
     DLAF_ASSERT(k <= n, k, n);
@@ -316,8 +317,9 @@ void applyIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType, D>& in
                 Matrix<const T, D>& in, Matrix<T, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, index.distribution());
+  const SizeType n = problemSize(i_begin, i_end, index.distribution());
   auto applyIndex_fn = [n](const auto& index_futs, const auto& in_futs, const auto& out,
                            [[maybe_unused]] auto&&... ts) {
     TileElementIndex zero_idx(0, 0);
@@ -350,8 +352,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType
                         Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, in.distribution());
+  const SizeType n = problemSize(i_begin, i_end, in.distribution());
   auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles, [[maybe_unused]] auto&&... ts) {
     TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
@@ -404,8 +407,9 @@ auto stablePartitionIndexForDeflation(SizeType i_begin, SizeType i_last, Matrix<
   namespace di = dlaf::internal;
 
   constexpr auto backend = dlaf::DefaultBackend_v<D>;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, in.distribution());
+  const SizeType n = problemSize(i_begin, i_end, in.distribution());
   if constexpr (D == Device::CPU) {
     auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles) {
       TileElementIndex zero_idx(0, 0);
@@ -533,8 +537,9 @@ auto applyDeflation(SizeType i_begin, SizeType i_last, RhoSender&& rho, TolSende
                     Matrix<T, Device::CPU>& z, Matrix<ColType, Device::CPU>& c) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, index.distribution());
+  const SizeType n = problemSize(i_begin, i_end, index.distribution());
 
   auto deflate_fn = [n](auto rho, auto tol, auto index_tiles_futs, auto d_tiles, auto z_tiles,
                         auto c_tiles) {
@@ -578,8 +583,9 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_last, Rots
 
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, mat.distribution());
+  const SizeType n = problemSize(i_begin, i_end, mat.distribution());
   SizeType nb = mat.distribution().blockSize().rows();
 
   auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {
@@ -619,8 +625,9 @@ void solveRank1Problem(SizeType i_begin, SizeType i_last, KSender&& k, RhoSender
                        Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
-  SizeType n = problemSize(i_begin, i_last, evals.distribution());
+  const SizeType n = problemSize(i_begin, i_end, evals.distribution());
   SizeType nb = evals.distribution().blockSize().rows();
 
   auto rank1_fn = [n, nb](auto k, auto rho, auto d_tiles_futs, auto z_tiles_futs, auto eval_tiles,
@@ -786,7 +793,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
-  SizeType n1 = problemSize(i_begin, i_prev_split, evecs.distribution());
+  const SizeType n1 = problemSize(i_begin, i_prev_split + 1, evecs.distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_prev_split, i_last, rho, evecs, ws.z);
@@ -1058,13 +1065,14 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_last, LocalTileIndex idx
                            Matrix<SizeType, Device::CPU>& i2, Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  const SizeType i_end = i_last + 1;
 
   const matrix::Distribution& dist = evecs.distribution();
-  auto rank1_fn = [i_begin, i_last, idx_loc_begin, sz_loc_tiles,
+  auto rank1_fn = [i_begin, i_end, idx_loc_begin, sz_loc_tiles,
                    dist](const auto& k, const auto& rho, const auto& d_sfut_tile_arr,
                          const auto& z_sfut_tile_arr, const auto& eval_tiles, const auto& delta_tile_arr,
                          const auto& i2_tile_arr, const auto& evec_tile_arr) {
-    const SizeType n = problemSize(i_begin, i_last, dist);
+    const SizeType n = problemSize(i_begin, i_end, dist);
     const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
     const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
     T* eval_ptr = eval_tiles[0].ptr();
@@ -1189,6 +1197,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           WorkSpaceHost<T>& ws_h, DistWorkSpaceHostMirror<T, D>& ws_hm,
                           Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
+  const SizeType i_end = i_last + 1;
 
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
@@ -1277,7 +1286,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   assembleDistEvalsVec(row_task_chain, i_begin, i_last, dist_evecs, ws_h.dtmp);
 
-  auto n = ex::just(problemSize(i_begin, i_last, evecs.distribution()));
+  auto n = ex::just(problemSize(i_begin, i_end, evecs.distribution()));
   // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
   // Note ws.z is used as continuous buffer workspace to store permuted values of evals and ws.ztmp
   applyIndex(i_begin, i_last, ws.i2, evals, ws.z);

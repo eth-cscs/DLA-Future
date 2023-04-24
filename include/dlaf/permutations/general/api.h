@@ -21,9 +21,9 @@ namespace dlaf::permutations::internal {
 template <Backend B, Device D, class T, Coord coord>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-                   Matrix<T, D>& mat_in, Matrix<T, D>& mat_out);
+                   Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out);
   static void call(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
-                   SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
+                   SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                    Matrix<T, D>& mat_out);
 };
 

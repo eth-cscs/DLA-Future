@@ -35,8 +35,6 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-#include "dlaf/matrix/print_csv.h"
-
 namespace dlaf::eigensolver::internal {
 
 // Auxiliary matrix and vectors used for the D&C algorithm

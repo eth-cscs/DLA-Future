@@ -444,9 +444,10 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
   }
 }
 
-// Inverts the the subset of tiles [ @p i_begin, @p i_last (including)] of the index map @p in and saves
+// Inverts the the subset of tiles [ @p i_begin, @p i_end ) of the index map @p in and saves
 // the result into @p out.
-inline void invertIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType, Device::CPU>& in,
+// TODO: duplicated?
+inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
                         Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -454,8 +455,8 @@ inline void invertIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType
 
   const matrix::Distribution& dist = in.distribution();
   SizeType nb = dist.blockSize().rows();
-  SizeType nbr = dist.tileSize(GlobalTileIndex(i_last, 0)).rows();
-  SizeType n = (i_last - i_begin) * nb + nbr;
+  SizeType nbr = dist.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
+  SizeType n = (i_end - i_begin - 1) * nb + nbr;
   auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
     TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
@@ -466,7 +467,7 @@ inline void invertIndex(SizeType i_begin, SizeType i_last, Matrix<const SizeType
   };
 
   LocalTileIndex begin{i_begin, 0};
-  LocalTileSize sz{i_last - i_begin + 1, 1};
+  LocalTileSize sz{i_end - i_begin, 1};
   auto sender = ex::when_all(ex::when_all_vector(ut::collectReadTiles(begin, sz, in)),
                              ex::when_all_vector(ut::collectReadWriteTiles(begin, sz, out)));
   ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
@@ -506,7 +507,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());
-  invertIndex(i_begin, i_last, perms, inverse_perms);
+  invertIndex(i_begin, i_end, perms, inverse_perms);
 
   // Local distribution used for packing and unpacking
   const Distribution subm_dist(sz_loc, blk);

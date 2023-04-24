@@ -71,7 +71,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   // Sort `vec` in ascending order
-  sortIndex(0, 3, ex::just(split), vec, in, out);
+  sortIndex(0, 4, ex::just(split), vec, in, out);
 
   // Merges the two sorted ranges in `vec` to get the indices of the sorted array [1, 2, 4, 6, 7, 8, 9, 12, 17, 32]
   std::vector<SizeType> expected_out_arr{5, 1, 2, 9, 0, 3, 8, 4, 6, 7};
@@ -104,8 +104,8 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   const SizeType i_begin = 0;
-  const SizeType i_last = 3;
-  auto k = stablePartitionIndexForDeflation(i_begin, i_last, c, in, out);
+  const SizeType i_end = 4;
+  auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
 
   ASSERT_TRUE(tt::sync_wait(std::move(k)) == 7);
 

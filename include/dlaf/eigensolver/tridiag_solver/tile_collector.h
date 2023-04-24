@@ -15,7 +15,7 @@
 
 namespace dlaf::eigensolver::internal {
 
-/// TileCollector is an helper that, given included boundaries of a range [idx_begin, idx_last],
+/// TileCollector is an helper that, given included boundaries of a range [idx_begin, idx_end),
 /// allows to obtain access to all tiles in that range for a matrix.
 ///
 /// The range specified is generally considered a square, i.e. the range is applied to both rows and
@@ -23,13 +23,13 @@ namespace dlaf::eigensolver::internal {
 /// Instead, if the matrix has a single column of tiles, the range is considered linear over rows.
 class TileCollector {
   SizeType idx_begin;
-  SizeType idx_last;
+  SizeType idx_end;
 
   auto iteratorLocal(const matrix::Distribution& dist) const {
     const bool is_col_matrix = dist.nrTiles().cols() == 1;
 
     const GlobalTileIndex g_begin(idx_begin, is_col_matrix ? 0 : idx_begin);
-    const GlobalTileIndex g_end(idx_last + 1, is_col_matrix ? 1 : idx_last + 1);
+    const GlobalTileIndex g_end(idx_end, is_col_matrix ? 1 : idx_end);
 
     const LocalTileIndex begin{
         dist.template nextLocalTileFromGlobalTile<Coord::Row>(g_begin.row()),
@@ -45,7 +45,7 @@ class TileCollector {
   }
 
 public:
-  TileCollector(SizeType i_begin, SizeType i_last) : idx_begin(i_begin), idx_last(i_last) {}
+  TileCollector(SizeType i_begin, SizeType i_end) : idx_begin(i_begin), idx_end(i_end) {}
 
   template <class T, Device D>
   auto read(Matrix<const T, D>& mat) const {

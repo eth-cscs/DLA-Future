@@ -39,7 +39,7 @@ namespace dlaf::eigensolver::internal {
 namespace wrapper {
 
 template <Device D, class T>
-void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag,
+void sendCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag,
              const T* col_data, const SizeType n, MPI_Request* req) {
   static_assert(D == Device::CPU, "This function works just with CPU memory.");
 
@@ -48,7 +48,7 @@ void sendCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_
 }
 
 template <Device D, class T>
-void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_MPI tag, T* col_data,
+void recvCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag, T* col_data,
              const SizeType n, MPI_Request* req) {
   static_assert(D == Device::CPU, "This function works just with CPU memory.");
 
@@ -57,7 +57,7 @@ void recvCol(comm::Communicator& comm, comm::IndexT_MPI rank_dest, comm::IndexT_
 }
 
 template <Device D, class T, class CommSender>
-auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag, const T* col_data,
+auto scheduleSendCol(CommSender&& comm, const comm::IndexT_MPI dest, const comm::IndexT_MPI tag, const T* col_data,
                      const SizeType n) {
   namespace di = dlaf::internal;
 
@@ -91,8 +91,8 @@ auto scheduleSendCol(CommSender&& comm, comm::IndexT_MPI dest, comm::IndexT_MPI 
 }
 
 template <Device D, class T, class CommSender>
-auto scheduleRecvCol(CommSender&& comm, comm::IndexT_MPI source, comm::IndexT_MPI tag, T* col_data,
-                     SizeType n) {
+auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const comm::IndexT_MPI tag, T* col_data,
+                     const SizeType n) {
   namespace di = dlaf::internal;
 
   if constexpr (D == Device::CPU) {
@@ -134,14 +134,75 @@ struct GivensRotation {
   T s;         // sine
 };
 
+//TODO Duplicate
+// Calculates the problem size in the tile range [i_begin, i_end)
+inline SizeType problemSize__(const SizeType i_begin, const SizeType i_end, const matrix::Distribution& distr) {
+  const SizeType nb = distr.blockSize().rows();
+  const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
+  return (i_end - i_begin - 1) * nb + nbr;
+}
+
+
+// Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_end).
+//
+// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
+// @param i_end global tile index for both row and column identifying the end of the sub-matrix
+// @param rots GivenRotations to apply (element column indices of rotations are relative to the sub-matrix)
+// @param mat matrix where the sub-matrix is located
+//
+// @pre mat is not distributed
+// @pre memory layout of @p mat is column major.
+template <class T, Device D, class RotsSender>
+void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType i_end, RotsSender&& rots,
+                                         Matrix<T, D>& mat) {
+  // Note:
+  // a column index may be paired to more than one other index, this may lead to a race
+  // condition if parallelized trivially. Current implementation is serial.
+
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  const SizeType n = problemSize__(i_begin, i_end, mat.distribution());
+  const SizeType nb = mat.distribution().blockSize().rows();
+
+  auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {
+    // Distribution of the merged subproblems
+    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+    for (const GivensRotation<T>& rot : rots) {
+      // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
+      const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
+      const SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
+      T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
+
+      // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
+      const SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
+      const SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
+      T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
+
+      // Apply Givens rotations
+      if constexpr (D == Device::CPU) {
+        blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+      }
+      else {
+        givensRotationOnDevice(n, x, y, rot.c, rot.s, ts...);
+      }
+    }
+  };
+
+  TileCollector tc{i_begin, i_end};
+
+  auto sender = ex::when_all(std::forward<RotsSender>(rots), ex::when_all_vector(tc.readwrite(mat)));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(givens_rots_fn), std::move(sender));
+}
+
 /// Apply GivenRotations to tiles of the distributed square sub-matrix identified by tile in range
-/// [i_begin, i_last].
+/// [i_begin, i_end).
 ///
 /// @param comm_row row communicator
 /// @param tag is used for all communications happening over @p comm_row
 /// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
-/// @param i_last global tile index for both row and column identifying the end of the sub-matrix
-/// (inclusive)
+/// @param i_end global tile index for both row and column identifying the end of the sub-matrix
 /// @param rots_fut GivenRotations to apply (element column indices of rotations are relative to the
 /// sub-matrix)
 /// @param mat distributed matrix where the sub-matrix is located
@@ -149,8 +210,8 @@ struct GivensRotation {
 /// @pre mat is distributed along rows the same way as comm_row
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
-void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::IndexT_MPI tag,
-                                         SizeType i_begin, SizeType i_last, GRSender&& rots_fut,
+void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm::IndexT_MPI tag,
+                                         const SizeType i_begin, const SizeType i_end, GRSender&& rots_fut,
                                          Matrix<T, D>& mat) {
   // Note:
   // a column index may be paired to more than one other index, this may lead to a race
@@ -167,13 +228,12 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
   const matrix::Distribution& dist = mat.distribution();
 
   const SizeType mb = dist.blockSize().rows();
-  const SizeType i_end = i_last + 1;
   const SizeType range_size_limit = std::min(dist.size().rows(), i_end * mb);
   const SizeType range_size = range_size_limit - i_begin * mb;
 
   // Note:
   // Some ranks might not participate to the application of given rotations. This logic checks which
-  // ranks are involved in order to operate in the range [i_begin, i_last].
+  // ranks are involved in order to operate in the range [i_begin, i_end).
   const bool isInRangeRow = [&]() {
     const SizeType begin = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin);
     const SizeType end = dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end);
@@ -192,7 +252,7 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
 
   // Note:
   // This is the distribution that will be used inside the task. Differently from the original one,
-  // this targets just the range defined by [i_begin, i_last], but keeping the same distribution over
+  // this targets just the range defined by [i_begin, i_end), but keeping the same distribution over
   // ranks.
   const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
@@ -310,12 +370,12 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, comm::Inde
 
   // Note:
   // Using a combination of shrinked distribution and an offset given to the panel, the workspace
-  // is allocated just for the part strictly needed by the range [i_begin, i_last]
+  // is allocated just for the part strictly needed by the range [i_begin, i_end)
   const matrix::Distribution dist_ws({range_size_limit, 1}, dist.blockSize(), dist.commGridSize(),
                                      dist.rankIndex(), dist.sourceRankIndex());
   matrix::Panel<Coord::Col, T, D> workspace(dist_ws, GlobalTileIndex(i_begin, i_begin));
 
-  const TileCollector tc(i_begin, i_last);
+  const TileCollector tc(i_begin, i_end);
 
   ex::when_all(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
                ex::when_all_vector(select(workspace, workspace.iteratorLocal()))) |

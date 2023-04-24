@@ -46,28 +46,28 @@ struct TridiagEigensolverRotTest : public TestWithCommGrids {
     SizeType m;
     SizeType mb;
     SizeType i_begin;
-    SizeType i_last;
+    SizeType i_end;
     std::vector<GRot> rots;
   };
 
   // Note:
-  // GivenRotation indices are relative to the range [i_begin, i_last]
+  // GivenRotation indices are relative to the range [i_begin, i_end)
   const std::vector<config_t> configs{
       // range with one-sided margin
-      {9, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}}},
-      {8, 3, 1, 2, {GRot{0, 2, rot_c, rot_s}}},  // incomplete tile
-      {9, 3, 0, 1, {GRot{2, 4, rot_c, rot_s}}},
+      {9, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}}},
+      {8, 3, 1, 3, {GRot{0, 2, rot_c, rot_s}}},  // incomplete tile
+      {9, 3, 0, 2, {GRot{2, 4, rot_c, rot_s}}},
       // range fully in-bound
-      {12, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}}},
-      {11, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}}},  // incomplete tile
+      {12, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}}},
+      {11, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}}},  // incomplete tile
       // full-range, multiple rotations
-      {9, 3, 0, 2, {GRot{0, 8, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},
-      {8, 3, 0, 2, {GRot{0, 7, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},  // incomplete tile
+      {9, 3, 0, 3, {GRot{0, 8, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},
+      {8, 3, 0, 3, {GRot{0, 7, rot_c, rot_s}, GRot{0, 2, rot_c, rot_s}}},  // incomplete tile
       // range fully in-bound, independent rotations from same tiles
-      {12, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}, GRot{1, 2, rot_c, rot_s}}},
+      {12, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}, GRot{1, 2, rot_c, rot_s}}},
       // range fully in-bound, non-independent rotations, between same pair of tiles
-      {12, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}, GRot{0, 4, rot_c, rot_s}}},
-      {12, 3, 1, 2, {GRot{0, 5, rot_c, rot_s}, GRot{1, 5, rot_c, rot_s}}},
+      {12, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}, GRot{0, 4, rot_c, rot_s}}},
+      {12, 3, 1, 3, {GRot{0, 5, rot_c, rot_s}, GRot{1, 5, rot_c, rot_s}}},
   };
 };
 
@@ -85,7 +85,7 @@ TYPED_TEST_SUITE(TridiagEigensolverRotGPUTest, RealMatrixElementTypes);
 
 template <class T, Device D>
 void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, const SizeType mb,
-                             const SizeType idx_begin, const SizeType idx_last,
+                             const SizeType idx_begin, const SizeType idx_end,
                              std::vector<di::GivensRotation<T>> rots) {
   using dlaf::eigensolver::internal::applyGivensRotationsToMatrixColumns;
 
@@ -99,12 +99,12 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, idx_begin, idx_last, ex::just(rots),
+    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, idx_begin, idx_end, ex::just(rots),
                                         mat.get());
   }
 
   // Apply Given Rotations
-  const SizeType n = std::min((idx_last + 1) * mb, m) - idx_begin * mb;
+  const SizeType n = std::min((idx_end) * mb, m) - idx_begin * mb;
   const GlobalElementSize offset(idx_begin * mb, idx_begin * mb);
 
   for (auto rot : rots) {
@@ -124,8 +124,8 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
 TYPED_TEST(TridiagEigensolverRotMCTest, ApplyGivenRotations) {
   for (const auto& grid : this->commGrids()) {
-    for (const auto& [m, mb, idx_begin, idx_last, rots] : this->configs) {
-      testApplyGivenRotations<TypeParam, Device::CPU>(grid, m, mb, idx_begin, idx_last, rots);
+    for (const auto& [m, mb, idx_begin, idx_end, rots] : this->configs) {
+      testApplyGivenRotations<TypeParam, Device::CPU>(grid, m, mb, idx_begin, idx_end, rots);
     }
   }
 }
@@ -133,8 +133,8 @@ TYPED_TEST(TridiagEigensolverRotMCTest, ApplyGivenRotations) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagEigensolverRotGPUTest, ApplyGivenRotations) {
   for (const auto& grid : this->commGrids()) {
-    for (const auto& [m, mb, idx_begin, idx_last, rots] : this->configs) {
-      testApplyGivenRotations<TypeParam, Device::GPU>(grid, m, mb, idx_begin, idx_last, rots);
+    for (const auto& [m, mb, idx_begin, idx_end, rots] : this->configs) {
+      testApplyGivenRotations<TypeParam, Device::GPU>(grid, m, mb, idx_begin, idx_end, rots);
     }
   }
 }

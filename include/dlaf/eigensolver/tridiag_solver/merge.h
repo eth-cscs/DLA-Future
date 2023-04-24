@@ -191,17 +191,17 @@ inline void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeT
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleZVec(SizeType i_begin, SizeType i_prev_split, SizeType i_last, RhoSender&& rho,
+void assembleZVec(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                   Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
-  for (SizeType i = i_begin; i <= i_last; ++i) {
+  for (SizeType i = i_begin; i < i_end; ++i) {
     // True if tile is in Q1
-    bool top_tile = i <= i_prev_split;
+    const bool top_tile = i < i_split;
     // Move to the row below `i_middle` for `Q2`
-    SizeType evecs_row = i_prev_split + ((top_tile) ? 0 : 1);
-    GlobalTileIndex idx_evecs(evecs_row, i);
+    const SizeType evecs_row = i_split - ((top_tile) ? 1 : 0);
+    const GlobalTileIndex idx_evecs(evecs_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
-    GlobalTileIndex z_idx(i, 0);
+    const GlobalTileIndex z_idx(i, 0);
 
     // Copy the row into the column vector `z`
     assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read_sender(idx_evecs),
@@ -219,17 +219,16 @@ auto scaleRho(RhoSender&& rho) {
          di::transform(di::Policy<Backend::MC>(), [](auto rho) { return 2 * std::abs(rho); });
 }
 
-// Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_last`
-// including.
+// Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
 //
 template <class T, Device D>
-auto maxVectorElement(SizeType i_begin, SizeType i_last, Matrix<const T, D>& vec) {
+auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   std::vector<ex::unique_any_sender<T>> tiles_max;
-  tiles_max.reserve(to_sizet(i_last - i_begin + 1));
-  for (SizeType i = i_begin; i <= i_last; ++i) {
+  tiles_max.reserve(to_sizet(i_end - i_begin));
+  for (SizeType i = i_begin; i < i_end; ++i) {
     tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read_sender(LocalTileIndex(i, 0))));
   }
 
@@ -245,12 +244,12 @@ auto maxVectorElement(SizeType i_begin, SizeType i_last, Matrix<const T, D>& vec
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
 template <class T, Device D>
-auto calcTolerance(SizeType i_begin, SizeType i_last, Matrix<const T, D>& d, Matrix<const T, D>& z) {
+auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& d, Matrix<const T, D>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  auto dmax = maxVectorElement(i_begin, i_last, d);
-  auto zmax = maxVectorElement(i_begin, i_last, z);
+  auto dmax = maxVectorElement(i_begin, i_end, d);
+  auto zmax = maxVectorElement(i_begin, i_end, z);
 
   auto tol_fn = [](T dmax, T zmax) {
     return 8 * std::numeric_limits<T>::epsilon() * std::max(dmax, zmax);
@@ -300,8 +299,7 @@ void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix
     }
   };
 
-  const auto i_last = i_end - 1;
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(std::forward<KSender>(k), ex::when_all_vector(tc.read<T, D>(vec)),
                              ex::when_all_vector(tc.read<SizeType, D>(in_index)),
@@ -338,8 +336,7 @@ void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeT
     }
   };
 
-  const auto i_last = i_end - 1;
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
@@ -369,8 +366,7 @@ inline void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<con
     }
   };
 
-  const auto i_last = i_end - 1;
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
   ex::start_detached(
       di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(inv_fn), std::move(sender)));
@@ -419,8 +415,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
       return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
     };
 
-    const auto i_last = i_end - 1;
-    TileCollector tc{i_begin, i_last};
+    TileCollector tc{i_begin, i_end};
     return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
                         ex::when_all_vector(tc.readwrite(out))) |
            di::transform(di::Policy<backend>(), std::move(part_fn));
@@ -439,8 +434,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
              ex::then([&host_k]() { return *host_k(); });
     };
 
-    const auto i_last = i_end - 1;
-    TileCollector tc{i_begin, i_last};
+    TileCollector tc{i_begin, i_end};
     return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
                         ex::when_all_vector(tc.readwrite(out)),
                         ex::just(memory::MemoryChunk<SizeType, Device::CPU>{1},
@@ -467,7 +461,7 @@ void initColTypes(SizeType i_begin, SizeType i_prev_split, SizeType i_last, Matr
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len, const SizeType* i_ptr,
+std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, const SizeType len, const SizeType* i_ptr,
                                                       T* d_ptr, T* z_ptr, ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
   rots.reserve(to_sizet(len));
@@ -475,8 +469,8 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
   SizeType i1 = 0;  // index of 1st element in the Givens rotation
   // Iterate over the indices of the sorted elements in pair (i1, i2) where i1 < i2 for every iteration
   for (SizeType i2 = 1; i2 < len; ++i2) {
-    SizeType i1s = i_ptr[i1];
-    SizeType i2s = i_ptr[i2];
+    const SizeType i1s = i_ptr[i1];
+    const SizeType i2s = i_ptr[i2];
     T& d1 = d_ptr[i1s];
     T& d2 = d_ptr[i2s];
     T& z1 = z_ptr[i1s];
@@ -533,18 +527,17 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, SizeType len
 }
 
 template <class T, class RhoSender, class TolSender>
-auto applyDeflation(SizeType i_begin, SizeType i_last, RhoSender&& rho, TolSender&& tol,
+auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rho, TolSender&& tol,
                     Matrix<const SizeType, Device::CPU>& index, Matrix<T, Device::CPU>& d,
                     Matrix<T, Device::CPU>& z, Matrix<ColType, Device::CPU>& c) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
-  const SizeType i_end = i_last + 1;
 
   const SizeType n = problemSize(i_begin, i_end, index.distribution());
 
   auto deflate_fn = [n](auto rho, auto tol, auto index_tiles_futs, auto d_tiles, auto z_tiles,
                         auto c_tiles) {
-    TileElementIndex zero_idx(0, 0);
+    const TileElementIndex zero_idx(0, 0);
     const SizeType* i_ptr = index_tiles_futs[0].get().ptr(zero_idx);
     T* d_ptr = d_tiles[0].ptr(zero_idx);
     T* z_ptr = z_tiles[0].ptr(zero_idx);
@@ -552,7 +545,7 @@ auto applyDeflation(SizeType i_begin, SizeType i_last, RhoSender&& rho, TolSende
     return applyDeflationToArrays(rho, tol, n, i_ptr, d_ptr, z_ptr, c_ptr);
   };
 
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(std::forward<RhoSender>(rho), std::forward<TolSender>(tol),
                              ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
@@ -564,60 +557,6 @@ auto applyDeflation(SizeType i_begin, SizeType i_last, RhoSender&& rho, TolSende
          // adaptor or different lifetime guarantees. This is tracked in
          // https://github.com/pika-org/pika/issues/479.
          ex::ensure_started();
-}
-
-// Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_last].
-//
-// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
-// @param i_last global tile index for both row and column identifying the end of the sub-matrix (inclusive)
-// @param rots GivenRotations to apply (element column indices of rotations are relative to the sub-matrix)
-// @param mat matrix where the sub-matrix is located
-//
-// @pre mat is not distributed
-// @pre memory layout of @p mat is column major.
-template <class T, Device D, class RotsSender>
-void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_last, RotsSender&& rots,
-                                         Matrix<T, D>& mat) {
-  // Note:
-  // a column index may be paired to more than one other index, this may lead to a race
-  // condition if parallelized trivially. Current implementation is serial.
-
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-  const SizeType i_end = i_last + 1;
-
-  const SizeType n = problemSize(i_begin, i_end, mat.distribution());
-  SizeType nb = mat.distribution().blockSize().rows();
-
-  auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {
-    // Distribution of the merged subproblems
-    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-    for (const GivensRotation<T>& rot : rots) {
-      // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
-      SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
-      SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
-      T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
-
-      // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
-      SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
-      SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
-      T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));
-
-      // Apply Givens rotations
-      if constexpr (D == Device::CPU) {
-        blas::rot(n, x, 1, y, 1, rot.c, rot.s);
-      }
-      else {
-        givensRotationOnDevice(n, x, y, rot.c, rot.s, ts...);
-      }
-    }
-  };
-
-  TileCollector tc{i_begin, i_last};
-
-  auto sender = ex::when_all(std::forward<RotsSender>(rots), ex::when_all_vector(tc.readwrite(mat)));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(givens_rots_fn), std::move(sender));
 }
 
 template <class T, class KSender, class RhoSender>
@@ -653,7 +592,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_last, KSender&& k, RhoSender
     });
   };
 
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
 
   auto sender =
       ex::when_all(std::forward<KSender>(k), std::forward<RhoSender>(rho),
@@ -784,6 +723,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
                       WorkSpaceHostMirror<T, device>& ws_hm, Matrix<T, device>& evals,
                       Matrix<T, device>& evecs) {
   namespace ex = pika::execution::experimental;
+  const SizeType i_split = i_prev_split + 1;
   const SizeType i_end = i_last + 1;
 
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -795,17 +735,17 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
-  const SizeType n1 = problemSize(i_begin, i_prev_split + 1, evecs.distribution());
+  const SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_prev_split, i_last, rho, evecs, ws.z);
+  assembleZVec(i_begin, i_split, i_end, rho, evecs, ws.z);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_hm.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   auto scaled_rho = scaleRho(std::move(rho)) | ex::split();
 
   // Calculate the tolerance used for deflation
-  auto tol = calcTolerance(i_begin, i_last, ws_hm.evals, ws_hm.z);
+  auto tol = calcTolerance(i_begin, i_end, ws_hm.evals, ws_hm.z);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_prev_split, i_last, ws_h.c);
@@ -822,11 +762,11 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
 
   auto rots =
-      applyDeflation(i_begin, i_last, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
+      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
 
   // ---
 
-  applyGivensRotationsToMatrixColumns(i_begin, i_last, std::move(rots), evecs);
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), evecs);
 
   // Step #2
   //
@@ -895,7 +835,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
 void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
-                      SizeType i_begin, SizeType i_prev_split, SizeType i_last, RhoSender&& rho,
+                      const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
 
@@ -903,13 +843,13 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   comm::Index2D this_rank = dist.rankIndex();
 
   // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
-  for (SizeType i = i_begin; i <= i_last; ++i) {
+  for (SizeType i = i_begin; i < i_end; ++i) {
     // True if tile is in Q1
-    bool top_tile = i <= i_prev_split;
-    // Move to the row below `i_middle` for `Q2`
-    SizeType evecs_row = i_prev_split + ((top_tile) ? 0 : 1);
-    GlobalTileIndex idx_evecs(evecs_row, i);
-    GlobalTileIndex z_idx(i, 0);
+    bool top_tile = i < i_split;
+    // Move to the row below `i_split` for `Q2`
+    const SizeType evecs_row = i_split - ((top_tile) ? 1 : 0);
+    const GlobalTileIndex idx_evecs(evecs_row, i);
+    const GlobalTileIndex z_idx(i, 0);
 
     // Copy the last row of a `Q1` tile or the first row of a `Q2` tile into a column vector `z` tile
     comm::Index2D evecs_tile_rank = dist.rankGlobalTile(idx_evecs);
@@ -921,7 +861,7 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
                                                  ex::make_unique_any_sender(z.read_sender(z_idx))));
     }
     else {
-      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
+      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
       ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
                                                  root_rank,
                                                  ex::make_unique_any_sender(z.readwrite_sender(z_idx))));
@@ -1154,7 +1094,7 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_last, LocalTileIndex idx
     }
   };
 
-  TileCollector tc{i_begin, i_last};
+  TileCollector tc{i_begin, i_end};
 
   auto sender =
       ex::when_all(std::forward<KSender>(k), std::forward<RhoSender>(rho),
@@ -1199,12 +1139,13 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           WorkSpaceHost<T>& ws_h, DistWorkSpaceHostMirror<T, D>& ws_hm,
                           Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
+  const SizeType i_split = i_prev_split + 1;
   const SizeType i_end = i_last + 1;
 
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
   // Calculate the size of the upper subproblem
-  SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_prev_split + 1);
+  const SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split);
 
   // The local size of the subproblem
   GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -1218,11 +1159,11 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   LocalTileSize sz_tiles_vec(i_last - i_begin + 1, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleDistZVec(grid, full_task_chain, i_begin, i_prev_split, i_last, rho, evecs, ws.z);
+  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, evecs, ws.z);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_hm.z);
 
   // Calculate the tolerance used for deflation
-  auto tol = calcTolerance(i_begin, i_last, ws_hm.evals, ws_hm.z);
+  auto tol = calcTolerance(i_begin, i_end, ws_hm.evals, ws_hm.z);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   auto scaled_rho = scaleRho(std::move(rho)) | ex::split();
@@ -1242,16 +1183,15 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
 
   auto rots =
-      applyDeflation(i_begin, i_last, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
+      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
 
   // ---
 
   // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
   //
-  // Note: this is unique because i_[begin|split|end] < nrtiles
-  SizeType nrtiles = dist_evecs.nrTiles().rows();
-  comm::IndexT_MPI tag = to_int(i_begin + i_prev_split * nrtiles + i_last * nrtiles * nrtiles);
-  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_last, std::move(rots),
+  // Note: i_split is unique
+  const comm::IndexT_MPI tag = to_int(i_split);
+  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),
                                       evecs);
 
   // Step #2

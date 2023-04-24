@@ -155,8 +155,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   const TypeParam rho = TypeParam(1);
   const SizeType i_begin = 0;
   const SizeType i_end = 4;
-  const SizeType i_last = i_end - 1;
-  auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_last, ex::just(rho), ex::just(tol),
+  auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_end, ex::just(rho), ex::just(tol),
                                                       index_mat, d_mat, z_mat, c_mat));
 
   Matrix<TypeParam, Device::CPU> d_mat_sorted(sz, bk);

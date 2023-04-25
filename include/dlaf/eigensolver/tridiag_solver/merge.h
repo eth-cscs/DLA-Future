@@ -809,7 +809,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
   dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_last, ws.i2, ws.mat1, ws.mat2);
-  dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_last, blas::Op::NoTrans,
+  dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
                                                              blas::Op::NoTrans, T(1), evecs, ws.mat2,
                                                              T(0), ws.mat1);
 
@@ -1229,7 +1229,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // prepared for the deflated system.
   //
 
-  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_last,
+  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
                                                   T(1), evecs, ws.mat1, T(0), ws.mat2);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors

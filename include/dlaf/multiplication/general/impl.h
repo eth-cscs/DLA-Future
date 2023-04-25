@@ -28,12 +28,10 @@ namespace dlaf::multiplication {
 namespace internal {
 
 template <Backend B, Device D, class T>
-void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_last, const blas::Op opA,
+void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
                                  const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
-
-  const SizeType idx_end = idx_last + 1;
 
   for (SizeType j = idx_begin; j < idx_end; ++j) {
     for (SizeType i = idx_begin; i < idx_end; ++i) {
@@ -57,12 +55,13 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_la
 template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_chain,
                                  common::Pipeline<comm::Communicator>& col_task_chain,
-                                 const SizeType idx_begin, const SizeType idx_last, const T alpha,
+                                 const SizeType idx_begin, const SizeType idx_end, const T alpha,
                                  Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                  Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  const SizeType idx_end = idx_last + 1;
+  if (idx_begin == idx_end)
+    return;
 
   const auto& dist_a = mat_a.distribution();
   const auto rank = dist_a.rankIndex();
@@ -87,10 +86,10 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
   const SizeType partialSize = (nrefls % mb);
 
   // Note:
-  // Workspace needed is limited to the range [i_begin:i_last]. Its allocation is obtained by creating an
+  // Workspace needed is limited to the range [i_begin:i_end). Its allocation is obtained by creating an
   // ad hoc distribution that starts in the origin of the matrix and with a size covering all needed
-  // elements. This would lead to a [0:i_last] range, but by using panel offset at initialization, the
-  // part before the range will be left out from allocation, actually getting [i_begin:i_last]
+  // elements. This would lead to a [0:i_end) range, but by using panel offset at initialization, the
+  // part before the range will be left out from allocation, actually getting [i_begin:i_end)
   const GlobalTileIndex panel_offset(idx_begin, idx_begin);
   const matrix::Distribution dist_panel({lastTileElement + 1, lastTileElement + 1}, dist_a.blockSize(),
                                         dist_a.commGridSize(), dist_a.rankIndex(),

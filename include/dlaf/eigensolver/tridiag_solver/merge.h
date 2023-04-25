@@ -193,11 +193,11 @@ inline void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeT
 template <class T, Device D, class RhoSender>
 void assembleZVec(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                   Matrix<const T, D>& evecs, Matrix<T, D>& z) {
-  // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
+  // Iterate over tiles of Q1 and Q2 around the split row `i_split`.
   for (SizeType i = i_begin; i < i_end; ++i) {
     // True if tile is in Q1
     const bool top_tile = i < i_split;
-    // Move to the row below `i_middle` for `Q2`
+    // Move to the row below `i_split` for `Q2`
     const SizeType evecs_row = i_split - ((top_tile) ? 1 : 0);
     const GlobalTileIndex idx_evecs(evecs_row, i);
     // Take the last row of a `Q1` tile or the first row of a `Q2` tile
@@ -839,7 +839,7 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   const matrix::Distribution& dist = evecs.distribution();
   comm::Index2D this_rank = dist.rankIndex();
 
-  // Iterate over tiles of Q1 and Q2 around the split row `i_middle`.
+  // Iterate over tiles of Q1 and Q2 around the split row `i_split`.
   for (SizeType i = i_begin; i < i_end; ++i) {
     // True if tile is in Q1
     bool top_tile = i < i_split;

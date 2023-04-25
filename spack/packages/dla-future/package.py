@@ -31,8 +31,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("mkl", default='seq', values=('seq', 'omp', 'tbb'), description="MKL variant to use.", when="^intel-mkl")
-
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
@@ -111,9 +109,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
+            vmap = {"none": "seq", "openmp": "omp", "tbb": "tbb"} # Map MKL variants to LAPACK target name
+            # TODO: Generalise for intel-oneapi-mkl
             args += [
                 self.define("DLAF_WITH_MKL", True),
-                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(self.spec.variants["mkl"].value)),
+                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(vmap[spec["intel-mkl"].variants["threads"].value])),
             ]
         else:
             args.append(self.define("DLAF_WITH_MKL", False))

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -49,7 +49,9 @@ void Matrix<const T, D>::waitLocalTiles() noexcept {
   };
 
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
-  pika::wait_all(internal::selectGeneric(readwrite_f, range_local));
+  for (auto& f : internal::selectGeneric(readwrite_f, range_local)) {
+    f.get();
+  }
 }
 
 template <class T, Device D>

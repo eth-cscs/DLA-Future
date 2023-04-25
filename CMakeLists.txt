@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -24,10 +24,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build Type" FORCE)
 endif()
 
-if(BUILD_SHARED_LIBS)
-  set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
-endif()
-
 include(CMakeDependentOption)
 
 set(DLAF_WITH_OPENMP_DESCRIPTION "Enable OpenMP support")
@@ -36,7 +32,7 @@ if(APPLE AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
   set(DLAF_WITH_OPENMP_DEFAULT OFF)
 endif()
 
-option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(DLAF_WITH_OPENMP "${DLAF_WITH_OPENMP_DESCRIPTION}" ${DLAF_WITH_OPENMP_DEFAULT})
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
@@ -57,6 +53,10 @@ elseif(NOT DLAF_WITH_OPENMP)
     WARNING
       "DLAF_WITH_OPENMP is disabled. If you are using a threaded BLAS/LAPACK implementation DLA-Future will not be able to set the number of threads to 1 for BLAS/LAPACK calls. It is your responsibility to ensure that you are either using a sequential BLAS/LAPACK implementation or that you are e.g. setting OMP_NUM_THREADS to 1."
   )
+endif()
+
+if(BUILD_SHARED_LIBS)
+  set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
 endif()
 
 # Add color to ninja output
@@ -150,8 +150,8 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.11.0 REQUIRED)
-find_package(pika-algorithms 0.1.0 REQUIRED)
+find_package(pika 0.12.0 REQUIRED)
+find_package(pika-algorithms 0.1.1 REQUIRED)
 
 # ----- BLASPP/LAPACKPP
 find_package(blaspp REQUIRED)
@@ -172,6 +172,16 @@ add_subdirectory(src)
 # mini Apps
 # ---------------------------------------------------------------------------
 if(DLAF_BUILD_MINIAPPS)
+  # Create a "do-nothing" DLAFConfig.cmake, and make it usable by find_package
+  # by adding it in CMAKE_PREFIX_PATH.
+  # In this way any call to `find_package(DLAF)` is a no-op. Indeed, nothing
+  # is necessary to be done, since we are in-project and targets are still
+  # available thanks to manually created aliases for exported targets.
+  set(FAKE_INSTALL_DIR ${PROJECT_BINARY_DIR}/fake)
+  file(MAKE_DIRECTORY ${FAKE_INSTALL_DIR})
+  file(TOUCH ${FAKE_INSTALL_DIR}/DLAFConfig.cmake)
+  list(PREPEND CMAKE_PREFIX_PATH ${FAKE_INSTALL_DIR})
+
   add_subdirectory(miniapp)
 endif()
 

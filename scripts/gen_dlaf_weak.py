@@ -3,7 +3,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -80,7 +80,15 @@ run.add(
     approx,
     nruns,
 )
-# TODO trid_evp
+run.add(
+    mp.trid_evp,
+    "dlaf",
+    dlafpath,
+    {"rpn": 2, "mb_sz": 512},
+    {"m_sz": 10240},
+    approx,
+    nruns,
+)
 run.add(
     mp.bt_band2trid,
     "dlaf",
@@ -113,7 +121,7 @@ run.add(
     mp.evp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": None},
+    {"rpn": 2, "mb_sz": 512, "min_band": None},
     {"m_sz": 10240},
     approx,
     nruns,
@@ -122,7 +130,7 @@ run.add(
     mp.gevp,
     "dlaf",
     dlafpath,
-    {"rpn": 2, "mb_sz": 512, "band": None},
+    {"rpn": 2, "mb_sz": 512, "min_band": None},
     {"m_sz": 10240},
     approx,
     nruns,

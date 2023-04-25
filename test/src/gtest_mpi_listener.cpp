@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -160,7 +160,8 @@ void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const 
 
 namespace internal {
 void mpi_send_string(const std::string& message, int to_rank) {
-  MPI_Send(message.c_str(), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
+  MPI_Send(const_cast<char*>(message.c_str()), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank,
+           0, MPI_COMM_WORLD);
 }
 
 std::string mpi_receive_string(int from_rank) {

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -490,13 +490,9 @@ class CusolverInfo {
   memory::MemoryView<int, Device::GPU> info_;
 
 public:
-  CusolverInfo(int workspace_size)
-      :
 #ifdef DLAF_WITH_CUDA
-        workspace_(workspace_size),
+  CusolverInfo(int workspace_size) : workspace_(workspace_size), info_(1) {}
 #endif
-        info_(1) {
-  }
   CusolverInfo() : info_(1) {}
 
 #ifdef DLAF_WITH_CUDA

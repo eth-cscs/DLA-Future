@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -80,8 +80,6 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
 )
 
-target_compile_options(test_broadcast_panel PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
-
 DLAF_addTest(
   test_comm_sender
   SOURCES test_comm_sender.cpp
@@ -105,8 +103,6 @@ DLAF_addTest(
   MPIRANKS 2
   USE_MAIN MPIPIKA
 )
-
-target_compile_options(test_collective_async PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>)
 
 DLAF_addTest(
   test_transform_mpi

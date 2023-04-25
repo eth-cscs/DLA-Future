@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,7 +19,7 @@ struct ReductionToBand {
   static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
       Matrix<T, D>& mat_a, const SizeType band_size);
   static common::internal::vector<pika::shared_future<common::internal::vector<T>>> call(
-      comm::CommunicatorGrid grid, Matrix<T, D>& mat_a);
+      comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size);
 };
 
 /// ---- ETI

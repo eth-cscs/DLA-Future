@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -44,70 +44,9 @@ void testHemm(const blas::Side side, const blas::Uplo uplo, const SizeType m, co
 
   const T alpha = TypeUtilities<T>::element(1.2, .7);
   const T beta = TypeUtilities<T>::element(1.1, .4);
-  const BaseType<T> gamma = 1.3f;
 
-  // Note: The tile elements are chosen such that:
-  // Cij = 1.2 * i / (j+1) * exp(I * (j-i))
-  // where I is the imaginary number
-  //
-  // if side == Left
-  // Aik = 0.9 * (i+1) * (k+1) * exp(gamma * I * (i-k))
-  // Bkj = 0.7 / ((j+1) * (k+1)) * exp(gamma * I * (k+j))
-  //
-  // if side == Right
-  // Bik = 0.7 / ((i+1) * (k+1)) * exp(gamma * I * (i+k))
-  // Akj = 0.9 * (j+1) * (k+1) * exp(gamma * I * (j-k))
-  //
-  // Hence the solution (S) will be
-  // if side == Left
-  // Sij = beta * Cij + 0.63 * k * gamma * (i+1)/(j+1) exp(I * alpha * (i+j))
-  // if side == Right
-  // Sij = beta * Cij + 0.63 * k * gamma * (j+1)/(i+1) exp(I * alpha * (i+j))
-  auto el_a = [side, gamma](const TileElementIndex& index) {
-    if (side == blas::Side::Left) {
-      const double i = index.row();
-      const double k = index.col();
-      return TypeUtilities<T>::polar(.9 * (i + 1) * (k + 1), gamma * (i - k));
-    }
-    else {
-      const double k = index.row();
-      const double j = index.col();
-      return TypeUtilities<T>::polar(.9 * (j + 1) * (k + 1), gamma * (j - k));
-    }
-  };
-
-  auto el_b = [side, gamma](const TileElementIndex& index) {
-    if (side == blas::Side::Left) {
-      const double k = index.row();
-      const double j = index.col();
-      return TypeUtilities<T>::polar(.7 / ((j + 1) * (k + 1)), gamma * (k + j));
-    }
-    else {
-      const double i = index.row();
-      const double k = index.col();
-      return TypeUtilities<T>::polar(.7 / ((i + 1) * (k + 1)), gamma * (i + k));
-    }
-  };
-
-  auto el_c = [](const TileElementIndex& index) {
-    const double i = index.row();
-    const double j = index.col();
-    return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
-  };
-
-  auto res_c = [side, k, alpha, beta, gamma, el_c](const TileElementIndex& index) {
-    const double i = index.row();
-    const double j = index.col();
-
-    if (side == blas::Side::Left) {
-      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
-                                      TypeUtilities<T>::polar((i + 1) / (j + 1), gamma * (i + j));
-    }
-    else {
-      return beta * el_c(index) + TypeUtilities<T>::element(0.63 * k, 0) * alpha *
-                                      TypeUtilities<T>::polar((j + 1) / (i + 1), gamma * (i + j));
-    }
-  };
+  auto [el_a, el_b, el_c, res_c] =
+      getHermitianMatrixMultiplication<TileElementIndex, T>(side, uplo, k, alpha, beta);
 
   // Read-only tiles become constant if CT is const T.
   auto a = createTile<CT, D>(el_a, size_a, lda);

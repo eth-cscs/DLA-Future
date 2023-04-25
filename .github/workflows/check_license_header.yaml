@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -24,7 +24,7 @@ jobs:
         if: always()          # needed so that it runs even if previous one fails
         run: |
           # highlight if in these folders there are files with other extensions
-          find src include test miniapp -type f                                   \
+          find src include test -type f                                           \
                ! '('                                                              \
                        -name '*.cpp'                                              \
                    -o  -name '*.h'                                                \
@@ -70,7 +70,7 @@ jobs:
           # Generate header license CMake/Python compliant (with hashes)
           sed 's|^//|#|g' misc/HEADER > HEADER_HASH
 
-          # Check license in files that should the license at the very beginning
+          # Check license in files that should have the license at the very beginning
           find  '(' -type f ! -path './misc*' ')'                                 \
                 '('                                                               \
                         -name 'CMakeLists.txt'                                    \

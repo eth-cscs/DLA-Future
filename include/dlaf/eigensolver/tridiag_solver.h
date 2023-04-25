@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -34,7 +34,7 @@ namespace eigensolver {
 /// @pre evecs is a square matrix with number of rows equal to the number of rows of @p tridiag and @p evals
 /// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, device>& evals,
+void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>, device>& evals,
                    Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
@@ -76,7 +76,7 @@ void tridiagSolver(Matrix<BaseType<T>, device>& tridiag, Matrix<BaseType<T>, dev
 /// @pre evecs is a square matrix with global number of rows equal to the number of rows of @p tridiag and @p evals
 /// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
 template <Backend B, Device D, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, D>& tridiag,
+void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);

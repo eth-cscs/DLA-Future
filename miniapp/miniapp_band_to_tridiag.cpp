@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -115,8 +115,14 @@ struct BandToTridiagMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        auto [trid, hhr] =
-            dlaf::eigensolver::bandToTridiag<Backend::MC>(comm_grid, opts.uplo, opts.b, matrix.get());
+        auto bench = [&]() {
+          if (opts.local)
+            return dlaf::eigensolver::bandToTridiag<Backend::MC>(opts.uplo, opts.b, matrix.get());
+          else
+            return dlaf::eigensolver::bandToTridiag<Backend::MC>(comm_grid, opts.uplo, opts.b,
+                                                                 matrix.get());
+        };
+        auto [trid, hhr] = bench();
 
         // wait and barrier for all ranks
         trid.waitLocalTiles();

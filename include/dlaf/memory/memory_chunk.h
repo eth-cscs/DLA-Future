@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -83,12 +83,19 @@ public:
 
   MemoryChunk(const MemoryChunk&) = delete;
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
   /// Move constructor.
   MemoryChunk(MemoryChunk&& rhs) : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {
     rhs.ptr_ = nullptr;
     rhs.size_ = 0;
     rhs.allocated_ = false;
   }
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
   MemoryChunk& operator=(const MemoryChunk&) = delete;
 

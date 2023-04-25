@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -19,9 +19,10 @@
 
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
-#include <thrust/extrema.h>
+#include <thrust/functional.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
+#include <thrust/reduce.h>
 #include <pika/cuda.hpp>
 #include <whip.hpp>
 #include "dlaf/gpu/blas/api.h"
@@ -73,55 +74,14 @@ DLAF_GPU_CAST_TO_COMPLEX_ETI(, float);
 DLAF_GPU_CAST_TO_COMPLEX_ETI(, double);
 
 template <class T>
-__global__ void cuppensDecompOnDevice(const T* offdiag_val, T* top_diag_val, T* bottom_diag_val) {
-  const T offdiag = *offdiag_val;
-  T& top_diag = *top_diag_val;
-  T& bottom_diag = *bottom_diag_val;
-
-  if constexpr (std::is_same<T, float>::value) {
-    top_diag -= fabsf(offdiag);
-    bottom_diag -= fabsf(offdiag);
-  }
-  else {
-    top_diag -= fabs(offdiag);
-    bottom_diag -= fabs(offdiag);
-  }
-}
-
-// Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
-//
-template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::GPU>& top, const matrix::Tile<T, Device::GPU>& bottom,
-                whip::stream_t stream) {
-  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
-  TileElementIndex top_idx{top.size().rows() - 1, 0};
-  TileElementIndex bottom_idx{0, 0};
-  const T* d_offdiag_val = top.ptr(offdiag_idx);
-  T* d_top_diag_val = top.ptr(top_idx);
-  T* d_bottom_diag_val = bottom.ptr(bottom_idx);
-
-  cuppensDecompOnDevice<<<1, 1, 0, stream>>>(d_offdiag_val, d_top_diag_val, d_bottom_diag_val);
-
-  // TODO: this is a peformance pessimization, the value is on device
-  T h_offdiag_val;
-  whip::memcpy_async(&h_offdiag_val, d_offdiag_val, sizeof(T), whip::memcpy_device_to_host, stream);
-
-  return h_offdiag_val;
-}
-
-DLAF_GPU_CUPPENS_DECOMP_ETI(, float);
-DLAF_GPU_CUPPENS_DECOMP_ETI(, double);
-
-template <class T>
-void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::GPU>& tridiag_tile,
+void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
                                         whip::stream_t stream) {
   SizeType len = tridiag_tile.size().rows();
   const T* tridiag_ptr = tridiag_tile.ptr();
   T* diag_ptr = diag_tile.ptr();
 
-  whip::memcpy_async(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len), whip::memcpy_device_to_device,
-                     stream);
+  whip::memcpy_async(diag_ptr, tridiag_ptr, sizeof(T) * to_sizet(len), whip::memcpy_default, stream);
 }
 
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(, float);
@@ -171,20 +131,29 @@ DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
 template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, whip::stream_t stream) {
-  SizeType len = tile.size().rows();
-  const T* arr = tile.ptr();
-
+__global__ void maxElementInColumnTileOnDevice(const T* begin_ptr, const T* end_ptr,
+                                               T* device_max_el_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = ::thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = ::thrust::hip::par;
 #endif
-  auto d_max_ptr = thrust::max_element(par.on(stream), arr, arr + len);
-  T max_el;
-  // TODO: this is a performance pessimization, the value is on device
-  whip::memcpy_async(&max_el, d_max_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
-  return max_el;
+
+  // NOTE: This could also use max_element. However, it fails to compile with
+  // HIP, so we use reduce as an alternative which works with both HIP and CUDA.
+  *device_max_el_ptr = thrust::reduce(par, begin_ptr, end_ptr, *begin_ptr, thrust::maximum<T>());
+}
+
+template <class T>
+void maxElementInColumnTile(const matrix::Tile<const T, Device::GPU>& tile, T* host_max_el_ptr,
+                            T* device_max_el_ptr, whip::stream_t stream) {
+  SizeType len = tile.size().rows();
+  const T* arr = tile.ptr();
+
+  DLAF_ASSERT(len > 0, len);
+
+  maxElementInColumnTileOnDevice<<<1, 1, 0, stream>>>(arr, arr + len, device_max_el_ptr);
+  whip::memcpy_async(host_max_el_ptr, device_max_el_ptr, sizeof(T), whip::memcpy_device_to_host, stream);
 }
 
 DLAF_GPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
@@ -258,16 +227,17 @@ struct Row2ColMajor {
 };
 
 template <class T>
-void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el,
+                           const SizeType& j_subm_el,
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
                            const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (i_subm_el >= k || j_subm_el >= k)
+  if (i_subm_el >= k_row || j_subm_el >= k_col)
     return;
 
-  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - j_subm_el, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* d_rows = diag_rows.ptr();
@@ -285,7 +255,7 @@ void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const S
   // Multiply along rows
   //
   // Note: the output of the reduction is saved in the first column.
-  auto mult_op = [] __device__(const T& a, const T& b) { return a * b; };
+  auto mult_op = [] __host__ __device__(const T& a, const T& b) { return a * b; };
   size_t temp_storage_bytes;
 
   using OffsetIterator =
@@ -331,13 +301,13 @@ __global__ void multiplyColumns(SizeType len, const T* in, T* out) {
 }
 
 template <class T>
-void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, in.size().rows());
+  SizeType nrows = std::min(k_row - row, in.size().rows());
 
   const T* in_ptr = in.ptr();
   T* out_ptr = out.ptr();
@@ -365,24 +335,26 @@ __global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType 
   T z_el = rank1_vec[i];
   T& el_evec = evecs[i + j * ld];
 
-  if constexpr (std::is_same<T, float>::value) {
-    el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
-  }
-  else {
-    el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
+  if (el_evec != 0) {
+    if constexpr (std::is_same<T, float>::value) {
+      el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
+    }
+    else {
+      el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
+    }
   }
 }
 
 template <class T>
-void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
-                            const matrix::Tile<const T, Device::GPU>& z_tile,
+void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                            const SizeType& col, const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
                             const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - col, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* rank1_vec = z_tile.ptr();
@@ -416,14 +388,14 @@ __global__ void sqTile(SizeType nrows, SizeType ncols, SizeType ld, const T* in,
 }
 
 template <class T>
-void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
                const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - col, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* in = evecs_tile.ptr();
@@ -472,13 +444,13 @@ __global__ void addFirstRows(SizeType len, SizeType ld, const T* in, T* out) {
 }
 
 template <class T>
-void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& in, const matrix::Tile<T, Device::GPU>& out,
                   whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType ncols = std::min(k - col, in.size().cols());
+  SizeType ncols = std::min(k_col - col, in.size().cols());
 
   SizeType ld = in.ld();
   const T* in_ptr = in.ptr();
@@ -515,14 +487,14 @@ __global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld,
 }
 
 template <class T>
-void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, out.size().rows());
-  SizeType ncols = std::min(k - col, out.size().cols());
+  SizeType nrows = std::min(k_row - row, out.size().rows());
+  SizeType ncols = std::min(k_col - col, out.size().cols());
 
   SizeType in_ld = in.ld();
   const T* in_ptr = in.ptr();
@@ -574,10 +546,11 @@ DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
 
 // Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
 template <class T>
-void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
-            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
-            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
-  if (row >= k || col >= k)
+void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+            const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::GPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::GPU>& out_tile) {
+  if (row >= k_row || col >= k_col)
     return;
 
   const T* in_ptr = in_tile.ptr();
@@ -587,12 +560,12 @@ void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const
   int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
 
   // if `in_tile` is the column buffer
-  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
-                                           : std::min(out_tile.size().cols(), k - col);
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k_row - row)
+                                           : std::min(out_tile.size().cols(), k_col - col);
   // if out_tile is the column buffer
   if (out_tile.size().cols() == 1) {
-    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
-                                   : std::min(in_tile.size().cols(), k - col);
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k_row - row)
+                                   : std::min(in_tile.size().cols(), k_col - col);
   }
 
   if constexpr (std::is_same<T, float>::value) {
@@ -607,43 +580,58 @@ DLAF_GPU_COPY_1D_ETI(, float);
 DLAF_GPU_COPY_1D_ETI(, double);
 
 // -----------------------------------------
+// This is a separate struct with a call operator instead of a lambda, because
+// nvcc does not compile the file with a lambda.
+struct PartitionIndicesPredicate {
+  const ColType* c_ptr;
+  __device__ bool operator()(const SizeType i) {
+    return c_ptr[i] != ColType::Deflated;
+  }
+};
 
-// Note: that this blocks the thread until the kernels complete
-SizeType stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                      SizeType* out_ptr, whip::stream_t stream) {
-  // The number of non-deflated values
+__global__ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                             SizeType* out_ptr, SizeType* device_k_ptr) {
 #ifdef DLAF_WITH_CUDA
   constexpr auto par = thrust::cuda::par;
 #elif defined(DLAF_WITH_HIP)
   constexpr auto par = thrust::hip::par;
 #endif
-  SizeType k = n - thrust::count(par.on(stream), c_ptr, c_ptr + n, ColType::Deflated);
+
+  SizeType& k = *device_k_ptr;
+
+  // The number of non-deflated values
+  k = n - thrust::count(par, c_ptr, c_ptr + n, ColType::Deflated);
 
   // Partition while preserving relative order such that deflated entries are at the end
-  auto cmp = [c_ptr] __device__(const SizeType& i) { return c_ptr[i] != ColType::Deflated; };
-  thrust::stable_partition_copy(par.on(stream), in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-                                std::move(cmp));
-  return k;
+  thrust::stable_partition_copy(par, in_ptr, in_ptr + n, out_ptr, out_ptr + k,
+                                PartitionIndicesPredicate{c_ptr});
 }
 
-// https://github.com/NVIDIA/thrust/issues/1515
-//
+void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
+                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
+                                  whip::stream_t stream) {
+  stablePartitionIndexOnDevice<<<1, 1, 0, stream>>>(n, c_ptr, in_ptr, out_ptr, device_k_ptr);
+  whip::memcpy_async(host_k_ptr, device_k_ptr, sizeof(SizeType), whip::memcpy_device_to_host, stream);
+}
+
+template <class T>
+__global__ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr,
+                                     const SizeType* end_ptr, SizeType* out_ptr, const T* v_ptr) {
+  auto cmp = [v_ptr](const SizeType& i1, const SizeType& i2) { return v_ptr[i1] < v_ptr[i2]; };
+
+#ifdef DLAF_WITH_CUDA
+  constexpr auto par = thrust::cuda::par;
+#elif defined(DLAF_WITH_HIP)
+  constexpr auto par = thrust::hip::par;
+#endif
+
+  thrust::merge(par, begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
+}
+
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
                           SizeType* out_ptr, const T* v_ptr, whip::stream_t stream) {
-  auto cmp = [v_ptr] __device__(const SizeType& i1, const SizeType& i2) {
-    return v_ptr[i1] < v_ptr[i2];
-  };
-  // NOTE: The call may be synchronous, to avoid that either wrap in a __global__ function as shown in
-  // thrust's `examples/cuda/async_reduce.cu` or use the policy `thrust::cuda::par_nosync.on(stream)` in
-  // Thrust >= 1.16 (not shipped with the most recent CUDA Toolkit yet).
-  //
-#ifdef DLAF_WITH_CUDA
-  constexpr auto par = thrust::cuda::par;
-#elif defined(DLAF_WITH_HIP)
-  constexpr auto par = thrust::hip::par;
-#endif
-  thrust::merge(par.on(stream), begin_ptr, split_ptr, split_ptr, end_ptr, out_ptr, std::move(cmp));
+  mergeIndicesOnDevice<<<1, 1, 0, stream>>>(begin_ptr, split_ptr, end_ptr, out_ptr, v_ptr);
 }
 
 DLAF_CUDA_MERGE_INDICES_ETI(, float);

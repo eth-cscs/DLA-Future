@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -25,6 +25,7 @@ struct vector : public std::vector<T> {
   using std::vector<T>::vector;
 
   vector(SizeType size) : std::vector<T>(to_sizet(size)) {}
+  vector(SizeType size, T value) : std::vector<T>(to_sizet(size), value) {}
 
   void reserve(SizeType size) {
     std::vector<T>::reserve(to_sizet(size));

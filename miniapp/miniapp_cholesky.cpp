@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -27,6 +27,7 @@
 #include "dlaf/communication/error.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/communication/sync/broadcast.h"
+#include "dlaf/communication/sync/reduce.h"
 #include "dlaf/factorization/cholesky.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
@@ -136,8 +137,11 @@ struct choleskyMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                            matrix.get());
+        if (opts.local)
+          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix.get());
+        else
+          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
+                                                                              matrix.get());
 
         // wait and barrier for all ranks
         matrix.get().waitLocalTiles();
@@ -154,7 +158,7 @@ struct choleskyMiniapp {
       }
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
@@ -162,7 +166,23 @@ struct choleskyMiniapp {
                   << dlaf::internal::FormatShort{opts.uplo} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "UpLo, " << dlaf::internal::FormatShort{opts.uplo}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << block_size.rows() << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
@@ -196,8 +216,8 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix size")
+    ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

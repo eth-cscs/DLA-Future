@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -96,10 +96,17 @@ template <class T, Device D>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
   auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceRecvInPlace_o);
   };
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
   // The input tile must be copied to the temporary tile to participate in the
   // reduction. The temporary tile is also copied back so that the reduced

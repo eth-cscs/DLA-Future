@@ -17,7 +17,7 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 7efcb5ae73bdaa85886079ccfd5ff0f44b838508
+    SPACK_SHA: 0ce548a850eda4b742260dc63afcb7104a44b08c
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
@@ -172,6 +172,7 @@ cpu debug build clang12:
 #     THREADS_PER_NODE: 72
 #     USE_CODECOV: "false"
 
+<<<<<<< HEAD
 # cpu codecov build gcc11:
 #   extends: .build_spack_common
 #   variables:
@@ -254,6 +255,28 @@ cpu debug build clang12:
 #     SLURM_CONSTRAINT: mc
 #     THREADS_PER_NODE: 64
 #     USE_CODECOV: "false"
+=======
+rocm release build clang14+rocm-5.3.3:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    EXTRA_APTGET: "clang-14 rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: clang@14.0.0
+    CXXSTD: 17
+    USE_MKL: "OFF"
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 64
+    USE_CODECOV: "false"
+>>>>>>> master
 
 
 ##

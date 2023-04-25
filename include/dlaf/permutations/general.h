@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -34,8 +34,8 @@ namespace dlaf::permutations {
 ///        the closed range [i_begin,i_end] are accessed in write-only mode.
 ///
 template <Backend B, Device D, class T, Coord coord>
-void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
-             Matrix<T, D>& mat_out) {
+void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+             Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   const matrix::Distribution& distr_perms = perms.distribution();
   const matrix::Distribution& distr_in = mat_in.distribution();
   const matrix::Distribution& distr_out = mat_out.distribution();
@@ -82,8 +82,8 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 ///
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& sub_task_chain,
-             SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in,
-             Matrix<T, D>& mat_out) {
+             SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
+             Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   const matrix::Distribution& distr_perms = perms.distribution();
   const matrix::Distribution& distr_in = mat_in.distribution();
 
@@ -110,7 +110,7 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
 ///
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
-             Matrix<const SizeType, D>& perms, Matrix<T, D>& mat_in, Matrix<T, D>& mat_out) {
+             Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)).clone());
   permute<B, D, T, coord>(grid, sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }

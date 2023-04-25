@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -11,7 +11,7 @@
 #include <dlaf/memory/memory_chunk.h>
 
 #include <umpire/ResourceManager.hpp>
-#include <umpire/strategy/DynamicPool.hpp>
+#include <umpire/strategy/QuickPool.hpp>
 #include <umpire/strategy/ThreadSafeAllocator.hpp>
 
 namespace dlaf {
@@ -43,8 +43,9 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
   if (!initialized) {
     auto host_allocator = umpire::ResourceManager::getInstance().getAllocator("PINNED");
     auto pooled_host_allocator =
-        umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::DynamicPool>("PINNED_pool", host_allocator, initial_bytes);
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>("PINNED_pool",
+                                                                                          host_allocator,
+                                                                                          initial_bytes);
     auto thread_safe_pooled_host_allocator =
         umpire::ResourceManager::getInstance()
             .makeAllocator<umpire::strategy::ThreadSafeAllocator>("PINNED_thread_safe_pool",
@@ -71,8 +72,7 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
     auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
     auto pooled_device_allocator =
         umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::DynamicPool>("DEVICE_pool", device_allocator,
-                                                          initial_bytes);
+            .makeAllocator<umpire::strategy::QuickPool>("DEVICE_pool", device_allocator, initial_bytes);
     auto thread_safe_pooled_device_allocator =
         umpire::ResourceManager::getInstance()
             .makeAllocator<umpire::strategy::ThreadSafeAllocator>("DEVICE_thread_safe_pool",

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -67,12 +67,12 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
   return indices;
 }
 
-template <class T, Device D>
-auto cuppensDecomposition(Matrix<T, D>& tridiag) {
+template <class T>
+auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   namespace ex = pika::execution::experimental;
-  using sender_type = decltype(
-      ex::split(cuppensDecompAsync<T, D>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
-                                         tridiag.readwrite_sender(std::declval<LocalTileIndex>()))));
+  using sender_type = decltype(ex::split(ex::ensure_started(
+      cuppensDecompAsync<T>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
+                            tridiag.readwrite_sender(std::declval<LocalTileIndex>())))));
   using vector_type = std::vector<sender_type>;
 
   if (tridiag.nrTiles().rows() == 0)
@@ -83,26 +83,47 @@ auto cuppensDecomposition(Matrix<T, D>& tridiag) {
   offdiag_vals.reserve(to_sizet(i_end));
 
   for (SizeType i_split = 0; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(
-        ex::split(cuppensDecompAsync<T, D>(tridiag.readwrite_sender(LocalTileIndex(i_split, 0)),
-                                           tridiag.readwrite_sender(LocalTileIndex(i_split + 1, 0)))));
+    offdiag_vals.push_back(ex::split(ex::ensure_started(
+        cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_split, 0)),
+                              tridiag.readwrite_sender(LocalTileIndex(i_split + 1, 0))))));
   }
   return offdiag_vals;
 }
 
 // Solve leaf eigensystem with stedc
-template <class T, Device D>
-void solveLeaf(Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
+template <class T>
+void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    stedcAsync<D>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
-                  evecs.readwrite_sender(LocalTileIndex(i, i)));
+    stedcAsync<Device::CPU>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
+                            evecs.readwrite_sender(LocalTileIndex(i, i)));
   }
 }
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
+               Matrix<T, Device::CPU>& h_evecs) {
+  namespace ex = pika::execution::experimental;
+  using matrix::copy;
+  const auto cp_policy =
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+
+  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    const auto id_tr = LocalTileIndex(i, 0);
+    const auto id_ev = LocalTileIndex(i, i);
+
+    stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(id_ev));
+    ex::start_detached(ex::when_all(h_evecs.read_sender(id_ev), evecs.readwrite_sender(id_ev)) |
+                       copy(cp_policy));
+  }
+}
+#endif
+
 // Copy the first column of @p tridiag (n x 2) into the column matrix @p evals (n x 1).
 template <class T, Device D>
-void offloadDiagonal(Matrix<const T, D>& tridiag, Matrix<T, D>& evals) {
+void offloadDiagonal(Matrix<const T, Device::CPU>& tridiag, Matrix<T, D>& evals) {
   for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
     copyDiagonalFromCompactTridiagonalAsync<D>(tridiag.read_sender(GlobalTileIndex(i, 0)),
                                                evals.readwrite_sender(GlobalTileIndex(i, 0)));
@@ -167,30 +188,27 @@ void offloadDiagonal(Matrix<const T, D>& tridiag, Matrix<T, D>& evals) {
 //    column vector of Q2.
 //
 template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>& evals,
+                                  Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
   LocalElementSize vec_size(distr.size().rows(), 1);
   TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  WorkSpace<T, D> ws{Matrix<T, D>(distr),                           // mat1
-                     Matrix<T, D>(distr),                           // mat2
-                     Matrix<T, D>(vec_size, vec_tile_size),         // dtmp
-                     Matrix<T, D>(vec_size, vec_tile_size),         // z
-                     Matrix<T, D>(vec_size, vec_tile_size),         // ztmp
-                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i1
-                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i2
-                     Matrix<SizeType, D>(vec_size, vec_tile_size),  // i3
-                     Matrix<ColType, D>(vec_size, vec_tile_size)};  // c
+  WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // mat1
+                     Matrix<T, D>(distr),                            // mat2
+                     Matrix<T, D>(vec_size, vec_tile_size),          // z
+                     Matrix<T, D>(vec_size, vec_tile_size),          // ztmp
+                     Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i2
+
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // dtmp
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
+                        Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
 
   // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, D> ws_h{initMirrorMatrix(evals), initMirrorMatrix(ws.mat1),
-                                 initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
-                                 initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
-                                 initMirrorMatrix(ws.c),
-                                 // TODO: Not needed: for local version (appease warning)
-                                 initMirrorMatrix(evecs), initMirrorMatrix(ws.mat2)
-
-  };
+  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(evals), initMirrorMatrix(ws.mat1),
+                                  initMirrorMatrix(ws.z), initMirrorMatrix(ws.ztmp),
+                                  initMirrorMatrix(ws.i2)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
@@ -200,21 +218,28 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals, Ma
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveLeaf(tridiag, evecs);
+  if constexpr (D == Device::CPU) {
+    solveLeaf(tridiag, evecs);
+  }
+  else {
+    solveLeaf(tridiag, evecs, ws_hm.mat1);
+  }
 
   // Offload the diagonal from `tridiag` to `evals`
-  offloadDiagonal(tridiag, evals);
+  offloadDiagonal(tridiag, ws_hm.evals);
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals,
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals,
                         evecs);
   }
+
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
 }
 
 // Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
 template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals,
+void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>& evals,
                                   Matrix<std::complex<T>, D>& evecs) {
   Matrix<T, D> real_evecs(evecs.distribution());
   TridiagSolver<B, D, T>::call(tridiag, evals, real_evecs);
@@ -233,9 +258,9 @@ void TridiagSolver<B, D, T>::call(Matrix<T, D>& tridiag, Matrix<T, D>& evals,
 // @p tridiag is a local matrix of size (n x 2)
 // @p evecs is a distributed matrix of size (n x n)
 //
-template <class T, Device D>
+template <class T>
 void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
-                   Matrix<T, D>& tridiag, Matrix<T, D>& evecs) {
+                   Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
 
@@ -244,47 +269,81 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   for (SizeType i = 0; i < ntiles; ++i) {
     GlobalTileIndex ii_tile(i, i);
     comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex idx_trd(i, 0);
+    GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<D>(tridiag.readwrite_sender(idx_trd), evecs.readwrite_sender(ii_tile));
+      stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), evecs.readwrite_sender(ii_tile));
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                  ex::make_unique_any_sender(tridiag.read_sender(idx_trd))));
+                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(tridiag.readwrite_sender(idx_trd))));
+                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
     }
   }
 }
 
+#ifdef DLAF_WITH_GPU
+template <class T>
+void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
+                   Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
+                   Matrix<T, Device::CPU>& h_evecs) {
+  const matrix::Distribution& dist = evecs.distribution();
+  namespace ex = pika::execution::experimental;
+  using matrix::copy;
+  const auto cp_policy =
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+
+  comm::Index2D this_rank = dist.rankIndex();
+  SizeType ntiles = dist.nrTiles().rows();
+  for (SizeType i = 0; i < ntiles; ++i) {
+    GlobalTileIndex ii_tile(i, i);
+    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    GlobalTileIndex id_tr(i, 0);
+    if (ii_rank == this_rank) {
+      stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(ii_tile));
+      ex::start_detached(ex::when_all(h_evecs.read_sender(ii_tile), evecs.readwrite_sender(ii_tile)) |
+                         copy(cp_policy));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
+                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
+    }
+    else {
+      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      ex::start_detached(
+          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
+                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
+    }
+  }
+}
+#endif
+
 // Distributed tridiagonal eigensolver
 //
 template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
 
-  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),         // mat1
-                     Matrix<T, D>(dist_evecs),         // mat2
-                     Matrix<T, D>(dist_evals),         // dtmp
-                     Matrix<T, D>(dist_evals),         // z
-                     Matrix<T, D>(dist_evals),         // ztmp
-                     Matrix<SizeType, D>(dist_evals),  // i1
-                     Matrix<SizeType, D>(dist_evals),  // i2
-                     Matrix<SizeType, D>(dist_evals),  // i3
-                     Matrix<ColType, D>(dist_evals)};  // c
+  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),          // mat1
+                     Matrix<T, D>(dist_evecs),          // mat2
+                     Matrix<T, D>(dist_evals),          // z
+                     Matrix<T, D>(dist_evals),          // ztmp
+                     Matrix<SizeType, D>(dist_evals)};  // i2
 
-  // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, D> ws_h{initMirrorMatrix(evals),   initMirrorMatrix(ws.mat1),
-                                 initMirrorMatrix(ws.dtmp), initMirrorMatrix(ws.z),
-                                 initMirrorMatrix(ws.ztmp), initMirrorMatrix(ws.i2),
-                                 initMirrorMatrix(ws.c),    initMirrorMatrix(evecs),
-                                 initMirrorMatrix(ws.mat2)};
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),         // dtmp
+                        Matrix<SizeType, Device::CPU>(dist_evals),  // i1
+                        Matrix<SizeType, Device::CPU>(dist_evals),  // i3
+                        Matrix<ColType, Device::CPU>(dist_evals)};  // c
+
+  DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(evals),   initMirrorMatrix(evecs),
+                                      initMirrorMatrix(ws.mat1), initMirrorMatrix(ws.mat2),
+                                      initMirrorMatrix(ws.z),    initMirrorMatrix(ws.ztmp),
+                                      initMirrorMatrix(ws.i2)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
@@ -298,17 +357,24 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
-  solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+  if constexpr (D == Device::CPU) {
+    solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+  }
+  else {
+    solveDistLeaf(grid, full_task_chain, tridiag, evecs, ws_hm.evecs);
+  }
 
   // Offload the diagonal from `tridiag` to `evals`
-  offloadDiagonal(tridiag, evals);
+  offloadDiagonal(tridiag, ws_hm.evals);
 
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
     mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
-                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, evals, evecs);
+                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals, evecs);
   }
+
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
 }
 
 // \overload TridiagSolver<B, D, T>::call()
@@ -317,7 +383,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tri
 // as complex values where the imaginery part is set to zero.
 //
 template <Backend B, Device D, class T>
-void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& tridiag,
+void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<std::complex<T>, D>& evecs) {
   Matrix<T, D> real_evecs(evecs.distribution());
   TridiagSolver<B, D, T>::call(grid, tridiag, evals, real_evecs);

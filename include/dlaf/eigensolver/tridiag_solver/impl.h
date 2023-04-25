@@ -93,7 +93,7 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
 // Solve leaf eigensystem with stedc
 template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
-  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     stedcAsync<Device::CPU>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
                             evecs.readwrite_sender(LocalTileIndex(i, i)));
@@ -109,7 +109,7 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
   const auto cp_policy =
       dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
 
-  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     const auto id_tr = LocalTileIndex(i, 0);
     const auto id_ev = LocalTileIndex(i, i);
@@ -192,8 +192,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                                   Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
-  LocalElementSize vec_size(distr.size().rows(), 1);
-  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  const LocalElementSize vec_size(distr.size().rows(), 1);
+  const TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
   WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // mat1
                      Matrix<T, D>(distr),                            // mat2
                      Matrix<T, D>(vec_size, vec_tile_size),          // z
@@ -230,7 +230,9 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_prev_split, i_last] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_prev_split, i_last, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals,
+    const SizeType i_split = i_prev_split + 1;
+    const SizeType i_end = i_last + 1;
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals,
                         evecs);
   }
 
@@ -264,12 +266,12 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
 
-  comm::Index2D this_rank = dist.rankIndex();
-  SizeType ntiles = dist.nrTiles().rows();
+  const comm::Index2D this_rank = dist.rankIndex();
+  const SizeType ntiles = dist.nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    GlobalTileIndex ii_tile(i, i);
-    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex id_tr(i, 0);
+    const GlobalTileIndex ii_tile(i, i);
+    const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), evecs.readwrite_sender(ii_tile));
       ex::start_detached(
@@ -277,7 +279,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
                                   ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
     }
     else {
-      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
                                   ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
@@ -296,12 +298,12 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   const auto cp_policy =
       dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
 
-  comm::Index2D this_rank = dist.rankIndex();
-  SizeType ntiles = dist.nrTiles().rows();
+  const comm::Index2D this_rank = dist.rankIndex();
+  const SizeType ntiles = dist.nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    GlobalTileIndex ii_tile(i, i);
-    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex id_tr(i, 0);
+    const GlobalTileIndex ii_tile(i, i);
+    const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(ii_tile));
       ex::start_detached(ex::when_all(h_evecs.read_sender(ii_tile), evecs.readwrite_sender(ii_tile)) |
@@ -311,7 +313,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
                                   ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
     }
     else {
-      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(
           comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
                                   ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
@@ -370,8 +372,10 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_prev_split, i_last] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_prev_split,
-                            i_last, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals, evecs);
+    const SizeType i_split = i_prev_split + 1;
+    const SizeType i_end = i_last + 1;
+    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
+                            i_end, offdiag_vals[to_sizet(i_prev_split)], ws, ws_h, ws_hm, evals, evecs);
   }
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);

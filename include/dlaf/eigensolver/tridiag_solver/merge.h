@@ -717,21 +717,19 @@ void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matr
 }
 
 template <Backend backend, Device device, class T, class RhoSender>
-void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, RhoSender&& rho,
+void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       WorkSpace<T, device>& ws, WorkSpaceHost<T>& ws_h,
                       WorkSpaceHostMirror<T, device>& ws_hm, Matrix<T, device>& evals,
                       Matrix<T, device>& evecs) {
   namespace ex = pika::execution::experimental;
-  const SizeType i_split = i_prev_split + 1;
-  const SizeType i_end = i_last + 1;
 
-  GlobalTileIndex idx_gl_begin(i_begin, i_begin);
-  LocalTileIndex idx_loc_begin(i_begin, i_begin);
-  SizeType nrtiles = i_last - i_begin + 1;
-  LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
+  const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
+  const LocalTileIndex idx_loc_begin(i_begin, i_begin);
+  const SizeType nrtiles = i_end - i_begin;
+  const LocalTileSize sz_loc_tiles(nrtiles, nrtiles);
 
-  LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
-  LocalTileSize sz_tiles_vec(nrtiles, 1);
+  const LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
+  const LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
   const SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
@@ -1116,13 +1114,11 @@ template <Backend B, class T, Device D, class RhoSender>
 void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& full_task_chain,
                           common::Pipeline<comm::Communicator>& row_task_chain,
-                          common::Pipeline<comm::Communicator>& col_task_chain, SizeType i_begin,
-                          SizeType i_prev_split, SizeType i_last, RhoSender&& rho, WorkSpace<T, D>& ws,
+                          common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
+                          const SizeType i_split, const SizeType i_end, RhoSender&& rho, WorkSpace<T, D>& ws,
                           WorkSpaceHost<T>& ws_h, DistWorkSpaceHostMirror<T, D>& ws_hm,
                           Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
-  const SizeType i_split = i_prev_split + 1;
-  const SizeType i_end = i_last + 1;
 
   const matrix::Distribution& dist_evecs = evecs.distribution();
 
@@ -1130,15 +1126,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   const SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split);
 
   // The local size of the subproblem
-  GlobalTileIndex idx_gl_begin(i_begin, i_begin);
-  LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
-                               dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  LocalTileIndex idx_loc_last{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_last + 1) - 1,
-                             dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_last + 1) - 1};
-  LocalTileSize sz_loc_tiles{idx_loc_last.row() - idx_loc_begin.row() + 1,
-                             idx_loc_last.col() - idx_loc_begin.col() + 1};
-  LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
-  LocalTileSize sz_tiles_vec(i_last - i_begin + 1, 1);
+  const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
+  const LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
+                                     dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
+  const LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile<Coord::Row>(i_end),
+                                   dist_evecs.nextLocalTileFromGlobalTile<Coord::Col>(i_end)};
+  const LocalTileSize sz_loc_tiles = idx_loc_end - idx_loc_begin;
+  const LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
+  const LocalTileSize sz_tiles_vec(i_end - i_begin, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, evecs, ws.z);

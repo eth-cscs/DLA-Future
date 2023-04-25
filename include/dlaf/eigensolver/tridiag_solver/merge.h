@@ -87,15 +87,15 @@ namespace dlaf::eigensolver::internal {
 //   that bring them in matrix multiplication form.
 //
 
-template <class T, Device device>
+template <class T, Device D>
 struct WorkSpace {
-  Matrix<T, device> mat1;
-  Matrix<T, device> mat2;
+  Matrix<T, D> mat1;
+  Matrix<T, D> mat2;
 
-  Matrix<T, device> z;
-  Matrix<T, device> ztmp;
+  Matrix<T, D> z;
+  Matrix<T, D> ztmp;
 
-  Matrix<SizeType, device> i2;
+  Matrix<SizeType, D> i2;
 };
 
 template <class T>
@@ -402,7 +402,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+  constexpr auto B = dlaf::DefaultBackend_v<D>;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
   if constexpr (D == Device::CPU) {
@@ -418,7 +418,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
     TileCollector tc{i_begin, i_end};
     return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
                         ex::when_all_vector(tc.readwrite(out))) |
-           di::transform(di::Policy<backend>(), std::move(part_fn));
+           di::transform(di::Policy<B>(), std::move(part_fn));
   }
   else {
 #ifdef DLAF_WITH_GPU
@@ -430,7 +430,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
       SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
 
       return ex::just(n, c_ptr, in_ptr, out_ptr, host_k(), device_k()) |
-             di::transform(di::Policy<backend>(), stablePartitionIndexOnDevice) |
+             di::transform(di::Policy<B>(), stablePartitionIndexOnDevice) |
              ex::then([&host_k]() { return *host_k(); });
     };
 
@@ -716,11 +716,11 @@ void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matr
   }
 }
 
-template <Backend backend, Device device, class T, class RhoSender>
+template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                      WorkSpace<T, device>& ws, WorkSpaceHost<T>& ws_h,
-                      WorkSpaceHostMirror<T, device>& ws_hm, Matrix<T, device>& evals,
-                      Matrix<T, device>& evecs) {
+                      WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+                      WorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals,
+                      Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -806,8 +806,8 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
-  dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
+  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
+  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
                                                              blas::Op::NoTrans, T(1), evecs, ws.mat2,
                                                              T(0), ws.mat1);
 
@@ -823,7 +823,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
   applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
+  dlaf::permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
 }
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.

@@ -93,6 +93,10 @@ const std::vector<testcase_t> params = {
     // each process has multiple tiles
     mirrorPermutation(31, 6, 1, 4),
     mirrorPermutation(50, 4, 1, 9),
+    // empty range
+    mirrorPermutation(10, 3, 0, 0),
+    mirrorPermutation(10, 3, 1, 1),
+    mirrorPermutation(10, 3, 3, 3),
 };
 
 template <class T, Device D, Coord C>
@@ -134,8 +138,7 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
     matrix::MatrixMirror<const T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
-    const SizeType i_last = i_end - 1;
-    permutations::permute<DefaultBackend_v<D>, D, T, C>(grid, i_begin, i_last, perms.get(), mat_in.get(),
+    permutations::permute<DefaultBackend_v<D>, D, T, C>(grid, i_begin, i_end, perms.get(), mat_in.get(),
                                                         mat_out.get());
   }
 

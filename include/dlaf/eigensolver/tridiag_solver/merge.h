@@ -808,7 +808,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_last, ws.i2, ws.mat1, ws.mat2);
+  dlaf::permutations::permute<backend, device, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
   dlaf::multiplication::generalSubMatrix<backend, device, T>(i_begin, i_end, blas::Op::NoTrans,
                                                              blas::Op::NoTrans, T(1), evecs, ws.mat2,
                                                              T(0), ws.mat1);
@@ -825,7 +825,7 @@ void mergeSubproblems(SizeType i_begin, SizeType i_prev_split, SizeType i_last, 
   sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
   applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_last, ws.i2, ws.mat1, evecs);
+  dlaf::permutations::permute<backend, device, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
 }
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
@@ -1246,7 +1246,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   copy(idx_loc_begin, sz_loc_tiles, ws.mat2, ws_hm.mat2);
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, i_begin,
-                                                                       i_last, ws_hm.i2, ws_hm.mat2,
+                                                                       i_end, ws_hm.i2, ws_hm.mat2,
                                                                        ws_hm.evecs);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.evecs, evecs);
 }

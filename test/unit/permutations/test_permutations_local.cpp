@@ -68,8 +68,7 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
     matrix::MatrixMirror<const T, D, Device::CPU> mat_in(mat_in_h);
     matrix::MatrixMirror<T, D, Device::CPU> mat_out(mat_out_h);
 
-    const SizeType i_last = i_end - 1;
-    permutations::permute<B, D, T, C>(i_begin, i_last, perms.get(), mat_in.get(), mat_out.get());
+    permutations::permute<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
   }
 
   auto expected_out = [i_begin, i_end, index_start, index_end, &distr](const GlobalElementIndex i) {
@@ -93,7 +92,12 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     {10, 3, 1, 3},
     {10, 3, 1, 2},
     {10, 10, 0, 1},
-    {10, 5, 1, 2}};
+    {10, 5, 1, 2},
+    // Empty range
+    {10, 5, 0, 0},
+    {10, 5, 1, 1},
+    {10, 5, 2, 2},
+};
 
 TYPED_TEST(PermutationsTestCPU, Columns) {
   for (auto [n, nb, i_begin, i_end] : sizes) {

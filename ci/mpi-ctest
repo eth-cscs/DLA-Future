@@ -12,10 +12,10 @@ pushd /DLA-Future-build > /dev/null
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    strace -e clone3 ctest --repeat-until-fail 50 -V $@
+    ctest -V $@
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
-    ctest -Q --repeat-until-fail 50 $@
+    ctest -Q $@
 fi
 
 # Create coverage reports for code run

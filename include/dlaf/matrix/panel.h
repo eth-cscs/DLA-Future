@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -533,7 +533,7 @@ public:
 
   auto read_sender(LocalTileIndex index) {
     index.transpose();
-    return pika::execution::experimental::keep_future(BaseT::read(index));
+    return BaseT::read_sender(index);
   }
 
   using BaseT::reset;

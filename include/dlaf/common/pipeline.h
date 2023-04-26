@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -82,9 +82,16 @@ public:
     pika::lcos::local::promise<T> promise_next;
     sender_ = promise_next.get_future();
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
     auto make_promise_guard = [promise_next = std::move(promise_next)](T object) mutable {
       return PromiseGuard<T>{std::move(object), std::move(promise_next)};
     };
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
     namespace ex = pika::execution::experimental;
     return std::move(before_last) | ex::then(std::move(make_promise_guard));

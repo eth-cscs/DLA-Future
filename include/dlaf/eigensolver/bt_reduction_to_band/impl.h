@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -137,7 +137,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
   const SizeType n = mat_c.nrTiles().cols();
   const SizeType mb = mat_v.blockSize().rows();
 
-  if (m <= 1 || n == 0)
+  if (m == 0 || n == 0)
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
@@ -188,9 +188,12 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       const SizeType j_diag =
           std::max<SizeType>(0, i.row() * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
-      if (j_diag < mb) {
+      if (j_diag < nr_reflectors) {
         auto tile_v = splitTile(mat_v.read(i), panel_view(i));
         copyAndSetHHUpperTiles<backend>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(i));
+      }
+      else if (j_diag < mb) {
+        panelV.setTile(i, splitTile(mat_v.read(i), panel_view(i)));
       }
       else {
         panelV.setTile(i, mat_v.read(i));
@@ -230,7 +233,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(
-    const SizeType b, comm::CommunicatorGrid grid, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
+    comm::CommunicatorGrid grid, const SizeType b, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
@@ -253,7 +256,7 @@ void BackTransformationReductionToBand<B, D, T>::call(
 
   const comm::Index2D this_rank = grid.rank();
 
-  if (m <= 1 || n == 0)
+  if (m == 0 || n == 0)
     return;
 
   // Note: "-1" added to deal with size 1 reflector.
@@ -308,9 +311,12 @@ void BackTransformationReductionToBand<B, D, T>::call(
         const SizeType j_diag =
             std::max<SizeType>(0, i_row_g * mat_v.blockSize().rows() - panel_view.offsetElement().row());
 
-        if (j_diag < mb) {
+        if (j_diag < nr_reflectors) {
           auto tile_v = splitTile(mat_v.read(ik), panel_view(ik));
           copyAndSetHHUpperTiles<B>(j_diag, keepFuture(tile_v), panelV.readwrite_sender(ik));
+        }
+        else if (j_diag < mb) {
+          panelV.setTile(ik, splitTile(mat_v.read(ik), panel_view(ik)));
         }
         else {
           panelV.setTile(ik, mat_v.read(ik));

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -519,7 +519,7 @@ TYPED_TEST(MatrixTest, Dependencies) {
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingGlobalIndex(mat);
-      EXPECT_TRUE(checkFuturesStep(0, fut3));
+      EXPECT_TRUE(checkFuturesStep(0, fut5));
 
       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
@@ -600,7 +600,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingLocalIndex(mat);
-      EXPECT_TRUE(checkFuturesStep(0, fut3));
+      EXPECT_TRUE(checkFuturesStep(0, fut5));
 
       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);
@@ -660,7 +660,7 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       EXPECT_TRUE(checkFuturesStep(shfut4b.size(), shfut4b));
 
       auto fut5 = getFuturesUsingGlobalIndex(mat);
-      EXPECT_TRUE(checkFuturesStep(0, fut3));
+      EXPECT_TRUE(checkFuturesStep(0, fut5));
 
       CHECK_MATRIX_FUTURES(false, fut5, shfut4a);
       CHECK_MATRIX_FUTURES(true, fut5, shfut4b);

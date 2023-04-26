@@ -1,0 +1,26 @@
+--- /opt/rocm-5.3.3/lib/cmake/hip/hip-config.cmake	2023-01-11 14:11:41.461621974 +0000
++++ /opt/rocm-5.3.3/lib/cmake/hip/hip-config.cmake	2023-01-11 14:11:47.489566322 +0000
+@@ -186,14 +186,16 @@
+       set(HIP_CLANG_PATCH_LEVEL ${CMAKE_MATCH_3})
+     endif()
+   endif()
+-  if(HIP_CXX_COMPILER MATCHES ".*hipcc")
+-    if(HIP_CXX_COMPILER_VERSION_OUTPUT MATCHES "InstalledDir:[ \t]*([^\n]*)")
+-      get_filename_component(HIP_CLANG_ROOT "${CMAKE_MATCH_1}" DIRECTORY)
++  if(NOT HIP_CLANG_ROOT)
++    if(HIP_CXX_COMPILER MATCHES ".*hipcc")
++      if(HIP_CXX_COMPILER_VERSION_OUTPUT MATCHES "InstalledDir:[ \t]*([^\n]*)")
++        get_filename_component(HIP_CLANG_ROOT "${CMAKE_MATCH_1}" DIRECTORY)
++      endif()
++    elseif (HIP_CXX_COMPILER MATCHES ".*clang\\+\\+")
++      get_filename_component(_HIP_CLANG_REAL_PATH "${HIP_CXX_COMPILER}" REALPATH)
++      get_filename_component(_HIP_CLANG_BIN_PATH "${_HIP_CLANG_REAL_PATH}" DIRECTORY)
++      get_filename_component(HIP_CLANG_ROOT "${_HIP_CLANG_BIN_PATH}" DIRECTORY)
+     endif()
+-  elseif (HIP_CXX_COMPILER MATCHES ".*clang\\+\\+")
+-    get_filename_component(_HIP_CLANG_REAL_PATH "${HIP_CXX_COMPILER}" REALPATH)
+-    get_filename_component(_HIP_CLANG_BIN_PATH "${_HIP_CLANG_REAL_PATH}" DIRECTORY)
+-    get_filename_component(HIP_CLANG_ROOT "${_HIP_CLANG_BIN_PATH}" DIRECTORY)
+   endif()
+   file(GLOB HIP_CLANG_INCLUDE_SEARCH_PATHS ${HIP_CLANG_ROOT}/lib/clang/*/include)
+   find_path(HIP_CLANG_INCLUDE_PATH stddef.h

@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -64,7 +64,7 @@ TYPED_TEST(MemoryChunkTest, MoveConstructor) {
     EXPECT_EQ(ptr + i, mem2(i));
 }
 
-TYPED_TEST(MemoryChunkTest, MoveAssignement) {
+TYPED_TEST(MemoryChunkTest, MoveAssignment) {
   using Type = TypeParam;
   memory::MemoryChunk<Type, Device::CPU> mem(size);
   memory::MemoryChunk<Type, Device::CPU> mem2(size - 5);

@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -18,6 +18,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from parse import parse, with_pattern
+from pathlib import Path
+
+miny0 = False
+outpath = Path(".")
+
+
+def _str_nnodes(x):
+    if isinstance(x, float):
+        if x.is_integer():
+            return f"{x:.0f}"
+        return f"{x:.3f}"
+    return f"{x:d}"
 
 
 def _gen_nodes_plot(
@@ -35,7 +47,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
-        plt_routine:    chol | hegst | red2band | band2trid | bt_band2trid |bt_red2band | trsm | evp | gevp It is used to filter data.
+        plt_routine:    chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | bt_red2band | trsm | evp | gevp It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -104,9 +116,9 @@ def _gen_nodes_plot(
 
         if fill_area:
             ax.fill_between(
-                lib_data["nodes"],
-                lib_data[f"{plt_type}_min"],
-                lib_data[f"{plt_type}_max"],
+                lib_data["nodes"].values,
+                lib_data[f"{plt_type}_min"].values,
+                lib_data[f"{plt_type}_max"].values,
                 alpha=0.2,
                 color=line_color,
             )
@@ -120,9 +132,12 @@ def _gen_nodes_plot(
 
         nodes = df["nodes"].sort_values().unique()
         ax.set_xticks(nodes)
-        ax.set_xticklabels([f"{x:d}" for x in nodes])
+        ax.set_xticklabels([_str_nnodes(x) for x in nodes])
 
         ax.grid(axis="y", linewidth=0.5, alpha=0.5)
+
+        if miny0:
+            ax.set_ylim(0, ax.get_ylim()[1])
 
     return plotted, fig, ax
 
@@ -150,7 +165,7 @@ class NodePlotWriter:
     """
 
     def __init__(self, filename, plt_type, plt_routine, title, df, **gen_plot_args):
-        self.filename = filename
+        self.filename = outpath / filename
         self.plotted, self.fig, self.ax = _gen_nodes_plot(
             plt_type, plt_routine, title, df, **gen_plot_args
         )
@@ -166,20 +181,23 @@ class NodePlotWriter:
 
 # Calculate mean,max,avg perf and time
 def _calc_metrics(cols, df):
+    perf_agg_functions = dict(
+        p_mean=("perf", "mean"),
+        p_min=("perf", "min"),
+        p_max=("perf", "max"),
+        ppn_mean=("perf_per_node", "mean"),
+        ppn_min=("perf_per_node", "min"),
+        ppn_max=("perf_per_node", "max"),
+    )
     return (
         df.loc[df["run_index"] != 0]
         .groupby(cols)
         .agg(
-            p_mean=("perf", "mean"),
-            p_min=("perf", "min"),
-            p_max=("perf", "max"),
-            ppn_mean=("perf_per_node", "mean"),
-            ppn_min=("perf_per_node", "min"),
-            ppn_max=("perf_per_node", "max"),
+            **(perf_agg_functions if "perf" in df.columns else {}),
             time_mean=("time", "mean"),
             time_min=("time", "min"),
             time_max=("time", "max"),
-            measures=("perf", "count"),
+            measures=("time", "count"),
         )
         .reset_index()
     )
@@ -223,8 +241,10 @@ def _parse_line_based(fout, bench_name, nodes):
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
-        if alg_name in ["evp", "gevp"]:
+        if alg_name in ["trid_evp"]:
             pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
+        if alg_name in ["evp", "gevp"]:
+            pstr_res = "[{run_index:d}] {time:g}s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
     elif bench_name.startswith("chol_slate"):
         pstr_arr = ["input:{}potrf"]
         pstr_res = "d {} {} column lower {matrix_rows:d} {:d} {block_rows:d} {grid_rows:d} {grid_cols:d} {:d} NA {time:g} {perf:g} NA NA no check"
@@ -249,6 +269,17 @@ def _parse_line_based(fout, bench_name, nodes):
     elif bench_name.startswith("chol_scalapack"):
         pstr_arr = ["PROBLEM PARAMETERS:"]
         pstr_res = "{time_ms:g}ms {perf:g}GFlop/s {matrix_rows:d} ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_scalapack"):
+        pstr_arr = []
+        pstr_res = "[{run_index:d}] Scalapack {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+    elif bench_name.startswith("evp_elpa"):
+        stages = bench_name[8]
+        pstr_arr = []
+        pstr_res = (
+            "[{run_index:d}] Elpa"
+            + stages
+            + " {time:g}s {matrix_type} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d})"
+        )
     else:
         raise ValueError("Unknown bench_name: " + bench_name)
 
@@ -322,7 +353,7 @@ def parse_jobs(data_dirs, distinguish_dir=False):
         for subdir, dirs, files in os.walk(os.path.expanduser(data_dir)):
             for f in files:
                 if f.endswith(".out"):
-                    nodes = int(os.path.basename(subdir))
+                    nodes = float(os.path.basename(subdir))
                     benchname = f[:-4]
                     if distinguish_dir:
                         benchname += "@" + data_dir
@@ -337,6 +368,9 @@ def parse_jobs(data_dirs, distinguish_dir=False):
 # and call parse_jobs on the given directories.
 # exit is called if no results are found.
 def parse_jobs_cmdargs(description):
+    global miny0
+    global outpath
+
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--path",
@@ -348,8 +382,23 @@ def parse_jobs_cmdargs(description):
         action="store_true",
         help="Add path name to bench name. Note it works better with short relative paths.",
     )
+    parser.add_argument(
+        "--miny0",
+        action="store_true",
+        help="Set min y limit to 0.",
+    )
+    parser.add_argument(
+        "--out-path",
+        default=".",
+        help='Path to save the plots (default ".").',
+    )
     args = parser.parse_args()
     paths = args.path
+    miny0 = args.miny0
+    outpath = Path(args.out_path)
+
+    os.makedirs(outpath, exist_ok=True)
+
     if paths == None:
         paths = ["."]
 
@@ -381,6 +430,10 @@ def calc_band2trid_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
+def calc_trid_evp_metrics(df):
+    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+
+
 def calc_bt_band2trid_metrics(df):
     return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "band", "nodes", "bench_name"], df)
 
@@ -390,11 +443,11 @@ def calc_bt_red2band_metrics(df):
 
 
 def calc_evp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 def calc_gevp_metrics(df):
-    return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
+    return _calc_metrics(["matrix_rows", "block_rows", "band", "nodes", "bench_name"], df)
 
 
 # Customization that add a simple legend
@@ -409,7 +462,7 @@ def add_basic_legend(fig, ax):
 
 def _gen_plot(
     scaling,
-    title,
+    name,
     routine,
     filename,
     size_type,
@@ -428,8 +481,8 @@ def _gen_plot(
     """
     Args:
         scaling         strong | weak
-        title:          name of the routine to be included in the title
-        routine:        chol | hegst | red2band | band2trid | bt_band2trid | trsm | evp | gevp
+        name:           name of the routine to be included in the title
+        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | evp | gevp
         combine_mb:     bool indicates if different mb has to be included in the same plot
         size_type:      m | mn It indicates which sizes are relevant.
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -503,7 +556,7 @@ def _gen_plot(
                     b = int(x[i])
                     i += 1
 
-        title = f"{title}: {scaling} scaling"
+        title = f"{name}: {scaling} scaling"
         filename_ppn = f"{filename}_{scaling}_ppn"
         filename_time = f"{filename}_{scaling}_time"
         if size_type == "m":
@@ -575,7 +628,7 @@ def gen_chol_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="Cholesky",
+        name="Cholesky",
         routine="chol",
         filename="chol",
         size_type="m",
@@ -609,7 +662,7 @@ def gen_chol_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="Cholesky",
+        name="Cholesky",
         routine="chol",
         filename="chol",
         size_type="m",
@@ -643,7 +696,7 @@ def gen_trsm_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="TRSM",
+        name="TRSM",
         routine="trsm",
         filename="trsm",
         size_type="mn",
@@ -677,7 +730,7 @@ def gen_trsm_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="TRSM",
+        name="TRSM",
         routine="trsm",
         filename="trsm",
         size_type="mn",
@@ -711,7 +764,7 @@ def gen_gen2std_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="HEGST",
+        name="HEGST",
         routine="hegst",
         filename="gen2std",
         size_type="m",
@@ -745,7 +798,7 @@ def gen_gen2std_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="HEGST",
+        name="HEGST",
         routine="hegst",
         filename="gen2std",
         size_type="m",
@@ -779,7 +832,7 @@ def gen_red2band_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="RED2B",
+        name="RED2B",
         routine="red2band",
         filename="red2band",
         size_type="m",
@@ -814,7 +867,7 @@ def gen_red2band_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="RED2B",
+        name="RED2B",
         routine="red2band",
         filename="red2band",
         size_type="m",
@@ -849,7 +902,7 @@ def gen_band2trid_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="B2T",
+        name="B2T",
         routine="band2trid",
         filename="band2trid",
         size_type="m",
@@ -884,7 +937,7 @@ def gen_band2trid_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="B2T",
+        name="B2T",
         routine="band2trid",
         filename="band2trid",
         size_type="m",
@@ -898,6 +951,72 @@ def gen_band2trid_plots_weak(
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
         has_band=True,
+        **proxy_args,
+    )
+
+
+def gen_trid_evp_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="strong",
+        name="TridiagSolver",
+        routine="trid_evp",
+        filename="trid_evp",
+        size_type="m",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=False,
+        time_plot=True,
+        customize_time=customize_time,
+        **proxy_args,
+    )
+
+
+def gen_trid_evp_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="weak",
+        name="TridiagSolver",
+        routine="trid_evp",
+        filename="trid_evp",
+        size_type="m",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=False,
+        time_plot=True,
+        customize_time=customize_time,
+        weak_rt_approx=weak_rt_approx,
         **proxy_args,
     )
 
@@ -919,7 +1038,7 @@ def gen_bt_band2trid_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="BT_B2T",
+        name="BT_B2T",
         routine="bt_band2trid",
         filename="bt_band2trid",
         size_type="mn",
@@ -954,7 +1073,7 @@ def gen_bt_band2trid_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="BT_B2T",
+        name="BT_B2T",
         routine="bt_band2trid",
         filename="bt_band2trid",
         size_type="mn",
@@ -989,7 +1108,7 @@ def gen_bt_red2band_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="BT_RED2B",
+        name="BT_RED2B",
         routine="bt_red2band",
         filename="bt_red2band",
         size_type="mn",
@@ -1024,7 +1143,7 @@ def gen_bt_red2band_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="BT_RED2B",
+        name="BT_RED2B",
         routine="bt_red2band",
         filename="bt_red2band",
         size_type="mn",
@@ -1059,7 +1178,7 @@ def gen_evp_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="EVP",
+        name="EVP",
         routine="evp",
         filename="evp",
         size_type="m",
@@ -1070,6 +1189,7 @@ def gen_evp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1092,7 +1212,7 @@ def gen_evp_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="EVP",
+        name="EVP",
         routine="evp",
         filename="evp",
         size_type="m",
@@ -1104,6 +1224,7 @@ def gen_evp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1125,7 +1246,7 @@ def gen_gevp_plots_strong(
     """
     _gen_plot(
         scaling="strong",
-        title="GEVP",
+        name="GEVP",
         routine="gevp",
         filename="gevp",
         size_type="m",
@@ -1136,6 +1257,7 @@ def gen_gevp_plots_strong(
         ppn_plot=False,
         time_plot=True,
         customize_time=customize_time,
+        has_band=True,
         **proxy_args,
     )
 
@@ -1158,7 +1280,7 @@ def gen_gevp_plots_weak(
     """
     _gen_plot(
         scaling="weak",
-        title="GEVP",
+        name="GEVP",
         routine="gevp",
         filename="gevp",
         size_type="m",
@@ -1170,5 +1292,6 @@ def gen_gevp_plots_weak(
         time_plot=True,
         customize_time=customize_time,
         weak_rt_approx=weak_rt_approx,
+        has_band=True,
         **proxy_args,
     )

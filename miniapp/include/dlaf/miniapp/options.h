@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -203,18 +203,24 @@ struct MiniappOptions {
   ElementType type;
   int grid_rows;
   int grid_cols;
+  bool local;
   int64_t nruns;
   int64_t nwarmups;
   CheckIterFreq do_check;
+  bool csv_output;
+  std::string info;
 
   MiniappOptions(const pika::program_options::variables_map& vm)
       : backend(parseBackend(vm["backend"].as<std::string>())),
         type(parseElementType<support_real, support_complex>(vm["type"].as<std::string>())),
         grid_rows(vm["grid-rows"].as<int>()), grid_cols(vm["grid-cols"].as<int>()),
-        nruns(vm["nruns"].as<int64_t>()), nwarmups(vm["nwarmups"].as<int64_t>()),
-        do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())) {
+        local(vm["local"].as<bool>()), nruns(vm["nruns"].as<int64_t>()),
+        nwarmups(vm["nwarmups"].as<int64_t>()),
+        do_check(parseCheckIterFreq(vm["check-result"].as<std::string>())),
+        csv_output(vm["csv"].as<bool>()), info(vm["pp-info"].as<std::string>()) {
     DLAF_ASSERT(grid_rows > 0, grid_rows);
     DLAF_ASSERT(grid_cols > 0, grid_cols);
+    DLAF_ASSERT(!local || grid_cols * grid_rows == 1, local, grid_rows, grid_cols);
     DLAF_ASSERT(nruns > 0, nruns);
     DLAF_ASSERT(nwarmups >= 0, nwarmups);
   }
@@ -238,13 +244,18 @@ inline pika::program_options::options_description getMiniappOptionsDescription()
                      "Number of row processes in the 2D communicator");
   desc.add_options()("grid-cols", pika::program_options::value<int>()->default_value(1),
                      "Number of column processes in the 2D communicator");
+  desc.add_options()("local", pika::program_options::bool_switch()->default_value(false),
+                     "Use the local implementation if available. (Requires a (1x1) communicator)");
   desc.add_options()("nruns", pika::program_options::value<int64_t>()->default_value(1),
                      "Number of runs");
   desc.add_options()("nwarmups", pika::program_options::value<int64_t>()->default_value(1),
                      "Number of warmup runs");
   desc.add_options()("check-result", pika::program_options::value<std::string>()->default_value("none"),
                      "Enable result checking ('none', 'all', 'last')");
-
+  desc.add_options()("csv", pika::program_options::bool_switch()->default_value(false),
+                     "Enable CSV output of values");
+  desc.add_options()("pp-info", pika::program_options::value<std::string>()->default_value(""),
+                     "Info for postprocessing scripts appended to csv output (if enabled)");
   return desc;
 }
 

@@ -31,8 +31,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("mkl", default='seq', values=('seq', 'omp', 'tbb'), description="MKL variant to use.", when="^intel-mkl")
-
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
@@ -45,12 +43,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
     depends_on("umpire+rocm~shared", when="+rocm")
+    depends_on("umpire@4.1.0:")
 
-    # https://github.com/eth-cscs/DLA-Future/issues/420
-    conflicts("umpire@6:")
-
-    depends_on("pika@0.11:")
-    depends_on("pika-algorithms@0.1:")
+    depends_on("pika@0.12:")
+    depends_on("pika-algorithms@0.1.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
@@ -89,6 +85,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 when="amdgpu_target={0}".format(val))
             depends_on("rocblas amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
+            depends_on("rocprim amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("rocthrust amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
+            depends_on("whip amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val))
             depends_on("umpire amdgpu_target={0}".format(val),
                 when="amdgpu_target={0}".format(val))
 
@@ -107,13 +109,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
+            vmap = {"none": "seq", "openmp": "omp", "tbb": "tbb"} # Map MKL variants to LAPACK target name
+            # TODO: Generalise for intel-oneapi-mkl
             args += [
                 self.define("DLAF_WITH_MKL", True),
-                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(self.spec.variants["mkl"].value)),
+                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(vmap[spec["intel-mkl"].variants["threads"].value])),
             ]
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
-            args.append(self.define("LAPACK_TYPE", "Custom"))
             args.append(self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
@@ -136,11 +139,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        if '+ci-test' in self.spec:
+        if "+ci-test" in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
-            args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
-            args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
+            if "+cuda":
+                args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
+            if "+rocm":
+                args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))

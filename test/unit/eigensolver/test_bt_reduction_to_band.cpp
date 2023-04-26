@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -64,6 +64,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType>> 
         {3, 3, 2, 2, 2}, {3, 27, 2, 4, 2}, {3, 3, 2, 2, 2},   {3, 3, 2, 2, 2},    // m = b + 1
         {3, 3, 1, 1, 1}, {4, 4, 2, 2, 4},  {12, 2, 4, 4, 2},  {24, 36, 6, 6, 4},  // mb = nb
         {5, 8, 3, 2, 3}, {8, 27, 5, 4, 3}, {15, 34, 4, 6, 6},                     // mb != nb
+        {3, 3, 3, 3, 2}, {8, 6, 8, 6, 3},  {9, 5, 4, 3, 1},   {5, 8, 2, 3, 1},    // PR #824
 };
 
 template <class T>
@@ -164,6 +165,9 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
 
+  mat_c_h.waitLocalTiles();
+  SCOPED_TRACE(::testing::Message() << "m = " << m << ", n = " << n << ", mb = " << mb << ", nb = " << nb
+                                    << ", b = " << b);
   const auto error = (mat_c_h.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(result, mat_c_h, error, error);
 }
@@ -210,11 +214,14 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(b, grid, mat_c.get(), mat_v.get(), taus);
+    eigensolver::backTransformationReductionToBand<B, D, T>(grid, b, mat_c.get(), mat_v.get(), taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
 
+  mat_c_h.waitLocalTiles();
+  SCOPED_TRACE(::testing::Message() << grid << ", m = " << m << ", n = " << n << ", mb = " << mb
+                                    << ", nb = " << nb << ", b = " << b);
   const auto error = (mat_c_h.size().rows() + 1) * dlaf::test::TypeUtilities<T>::error;
   CHECK_MATRIX_NEAR(result, mat_c_h, error, error);
 }

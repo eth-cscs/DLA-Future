@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -45,8 +45,6 @@ struct Options
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
         b(vm["band-size"].as<SizeType>()) {
-    const bool isDistributed = (grid_rows * grid_cols) > 1;
-
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
 
@@ -55,21 +53,10 @@ struct Options
 
     DLAF_ASSERT(b > 0 && (mb % b == 0), b, mb);
 
-    if (isDistributed && mb != b) {
-      std::cerr << "Warning! "
-                   "At the moment distributed variant does not support band-size != block-size."
-                << std::endl;
-      b = mb;
-    }
-
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
       do_check = dlaf::miniapp::CheckIterFreq::None;
     }
-
-    DLAF_ASSERT(backend == dlaf::Backend::MC || !isDistributed,
-                "Error! At the moment the GPU backend is supported just with local runs. "
-                "Please rerun with --backend=mc or with both --grid-rows and --grid-cols set to 1");
   }
 
   Options(Options&&) = default;
@@ -90,9 +77,6 @@ struct reductionToBandMiniapp {
     using MatrixMirrorType = matrix::MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU>;
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstMatrixType = Matrix<const T, Device::CPU>;
-
-    if (backend == dlaf::Backend::GPU && (opts.grid_rows * opts.grid_cols) != 1)
-      DLAF_UNIMPLEMENTED("Distributed reduction to band is not implemented on GPU yet.");
 
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
@@ -128,12 +112,13 @@ struct reductionToBandMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        auto taus = [&]() {
-          if constexpr (Backend::GPU == backend)
+        auto bench = [&]() {
+          if (opts.local)
             return dlaf::eigensolver::reductionToBand<backend>(matrix, opts.b);
           else
-            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix);
-        }();
+            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix, opts.b);
+        };
+        auto taus = bench();
 
         // wait and barrier for all ranks
         matrix.waitLocalTiles();
@@ -151,14 +136,30 @@ struct reductionToBandMiniapp {
       }
 
       // print benchmark results
-      if (0 == world.rank() && run_index >= 0)
+      if (0 == world.rank() && run_index >= 0) {
         std::cout << "[" << run_index << "]"
                   << " " << elapsed_time << "s"
                   << " " << gigaflops << "GFlop/s"
                   << " " << dlaf::internal::FormatShort{opts.type} << " " << matrix_host.size() << " "
                   << matrix_host.blockSize() << " " << opts.b << " " << comm_grid.size() << " "
                   << pika::get_os_thread_count() << " " << backend << std::endl;
-
+        if (opts.csv_output) {
+          // CSV formatted output with column names that can be read by pandas to simplify
+          // post-processing CSVData{-version}, value_0, title_0, value_1, title_1
+          std::cout << "CSVData-2, "
+                    << "run, " << run_index << ", "
+                    << "time, " << elapsed_time << ", "
+                    << "GFlops, " << gigaflops << ", "
+                    << "type, " << dlaf::internal::FormatShort{opts.type}.value << ", "
+                    << "matrixsize, " << matrix_host.size().rows() << ", "
+                    << "blocksize, " << block_size.rows() << ", "
+                    << "band_size, " << opts.b << ", "
+                    << "comm_rows, " << comm_grid.size().rows() << ", "
+                    << "comm_cols, " << comm_grid.size().cols() << ", "
+                    << "threads, " << pika::get_os_thread_count() << ", "
+                    << "backend, " << backend << ", " << opts.info << std::endl;
+        }
+      }
       // (optional) run test
       if ((opts.do_check == dlaf::miniapp::CheckIterFreq::Last && run_index == (opts.nruns - 1)) ||
           opts.do_check == dlaf::miniapp::CheckIterFreq::All) {
@@ -191,9 +192,9 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size", value<SizeType>()  ->default_value(4096), "Matrix rows")
-    ("block-size",  value<SizeType>()  ->default_value(256),  "Block cyclic distribution size")
-    ("band-size",   value<SizeType>()  ->default_value(-1),   "Band size (a negative value implies band-size=block-size")
+    ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix rows")
+    ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
   ;
   // clang-format on
 

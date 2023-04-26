@@ -1,7 +1,7 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
@@ -21,8 +21,4 @@ DLAF_addTest(
   LIBRARIES dlaf.permutations dlaf.core
   USE_MAIN MPIPIKA
   MPIRANKS 6
-)
-
-target_compile_options(
-  test_permutations_distributed PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wno-error=array-bounds>
 )

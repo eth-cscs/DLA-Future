@@ -1,7 +1,7 @@
 //
 // Distributed Linear Algebra with Future (DLAF)
 //
-// Copyright (c) 2018-2022, ETH Zurich
+// Copyright (c) 2018-2023, ETH Zurich
 // All rights reserved.
 //
 // Please, refer to the LICENSE file in the root directory.
@@ -69,7 +69,7 @@ void backTransformationReductionToBand(
 /// @pre mat_v is distributed according to grid.
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(
-    const SizeType b, comm::CommunicatorGrid grid, Matrix<T, device>& mat_c,
+    comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
     Matrix<const T, device>& mat_v,
     common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
@@ -87,7 +87,7 @@ void backTransformationReductionToBand(
   };
   DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(b, grid, mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, taus);
 }
 }
 }

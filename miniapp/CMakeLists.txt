@@ -1,40 +1,46 @@
 #
 # Distributed Linear Algebra with Future (DLAF)
 #
-# Copyright (c) 2018-2022, ETH Zurich
+# Copyright (c) 2018-2023, ETH Zurich
 # All rights reserved.
 #
 # Please, refer to the LICENSE file in the root directory.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+cmake_minimum_required(VERSION 3.22)
+project(DLAF-miniapps)
+
+list(PREPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+find_package(DLAF REQUIRED)
+find_package(pika 0.11.0 REQUIRED)
+
+include(DLAF_AddMiniapp)
+include(DLAF_AddTargetWarnings)
+
 add_library(DLAF_miniapp INTERFACE)
-target_link_libraries(DLAF_miniapp INTERFACE DLAF pika::pika)
+target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF pika::pika)
 target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
 
-if(DLAF_BUILD_TESTING)
-  # TODO it depends on DLAF_TEST exclusively for the check part (uses CHECK_MATRIX_NEAR)
-  DLAF_addMiniapp(
-    miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp LIBRARIES DLAF DLAF_test
-  )
-endif()
+DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp)
 
-DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp)
 
-DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_band_to_tridiag SOURCES miniapp_band_to_tridiag.cpp)
 
-DLAF_addMiniapp(miniapp_band_to_tridiag SOURCES miniapp_band_to_tridiag.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_tridiag_solver SOURCES miniapp_tridiag_solver.cpp)
 
-DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp)
 
-DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp)
 
-# Note:
-# HIP is not yet supported. Disabling this miniapp for HIP means that we don't have also the MC one...
-# ...but it is a shortcut in the meanwhile we get HIP support.
-DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp LIBRARIES DLAF)
-DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp LIBRARIES DLAF)
+DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp)
+
+DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
+
+DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)
 
 add_subdirectory(kernel)

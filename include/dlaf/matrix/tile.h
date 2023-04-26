@@ -382,6 +382,12 @@ public:
     return data_.ptr(index);
   }
 
+  /// Returns a subtile.
+  /// Note: to avoid segfaults or race conditions, the original tile must be kept in scope.
+  Tile subTileReference(const SubTileSpec& spec) const noexcept {
+    return Tile(*this, spec);
+  }
+
 private:
   Tile(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
       : Tile<const T, D>(tile_wrapper.get(), spec) {

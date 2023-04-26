@@ -18,10 +18,11 @@
 namespace dlaf::eigensolver::internal {
 template <Backend backend, Device device, class T>
 struct GenEigensolver {
-  static EigensolverResult<T, device> call(blas::Uplo uplo, Matrix<T, device>& mat_a,
-                                           Matrix<T, device>& mat_b);
-  static EigensolverResult<T, device> call(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                           Matrix<T, device>& mat_a, Matrix<T, device>& mat_b);
+  static void call(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b,
+                   Matrix<BaseType<T>, device>& eigenvalues, Matrix<T, device>& eigenvectors);
+  static void call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
+                   Matrix<T, device>& mat_b, Matrix<BaseType<T>, device>& eigenvalues,
+                   Matrix<T, device>& eigenvectors);
 };
 
 /// ---- ETI

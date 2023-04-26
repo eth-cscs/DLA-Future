@@ -276,6 +276,12 @@ public:
     return data_.ld() == data_.size().rows();
   }
 
+  /// Returns a subtile.
+  /// Note: to avoid segfaults or race conditions, the original tile must be kept in scope.
+  Tile subTileReference(const SubTileSpec& spec) const noexcept {
+    return Tile(*this, spec);
+  }
+
   /// Prints information about the tile.
   friend std::ostream& operator<<(std::ostream& out, const Tile& tile) {
     return out << "size=" << tile.size() << ", ld=" << tile.ld();

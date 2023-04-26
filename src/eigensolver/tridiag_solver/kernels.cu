@@ -227,16 +227,17 @@ struct Row2ColMajor {
 };
 
 template <class T>
-void divideEvecsByDiagonal(const SizeType& k, const SizeType& i_subm_el, const SizeType& j_subm_el,
+void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const SizeType& i_subm_el,
+                           const SizeType& j_subm_el,
                            const matrix::Tile<const T, Device::GPU>& diag_rows,
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
                            const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (i_subm_el >= k || j_subm_el >= k)
+  if (i_subm_el >= k_row || j_subm_el >= k_col)
     return;
 
-  SizeType nrows = std::min(k - i_subm_el, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - j_subm_el, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - i_subm_el, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - j_subm_el, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* d_rows = diag_rows.ptr();
@@ -300,13 +301,13 @@ __global__ void multiplyColumns(SizeType len, const T* in, T* out) {
 }
 
 template <class T>
-void multiplyFirstColumns(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, in.size().rows());
+  SizeType nrows = std::min(k_row - row, in.size().rows());
 
   const T* in_ptr = in.ptr();
   T* out_ptr = out.ptr();
@@ -334,24 +335,26 @@ __global__ void calcEvecsFromWeightVec(SizeType nrows, SizeType ncols, SizeType 
   T z_el = rank1_vec[i];
   T& el_evec = evecs[i + j * ld];
 
-  if constexpr (std::is_same<T, float>::value) {
-    el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
-  }
-  else {
-    el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
+  if (el_evec != 0) {
+    if constexpr (std::is_same<T, float>::value) {
+      el_evec = copysignf(sqrtf(fabsf(ws_el)), z_el) / el_evec;
+    }
+    else {
+      el_evec = copysign(sqrt(fabs(ws_el)), z_el) / el_evec;
+    }
   }
 }
 
 template <class T>
-void calcEvecsFromWeightVec(const SizeType& k, const SizeType& row, const SizeType& col,
-                            const matrix::Tile<const T, Device::GPU>& z_tile,
+void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                            const SizeType& col, const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
                             const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - col, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* rank1_vec = z_tile.ptr();
@@ -385,14 +388,14 @@ __global__ void sqTile(SizeType nrows, SizeType ncols, SizeType ld, const T* in,
 }
 
 template <class T>
-void sumsqCols(const SizeType& k, const SizeType& row, const SizeType& col,
+void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
                const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, evecs_tile.size().rows());
-  SizeType ncols = std::min(k - col, evecs_tile.size().cols());
+  SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
+  SizeType ncols = std::min(k_col - col, evecs_tile.size().cols());
 
   SizeType ld = evecs_tile.ld();
   const T* in = evecs_tile.ptr();
@@ -441,13 +444,13 @@ __global__ void addFirstRows(SizeType len, SizeType ld, const T* in, T* out) {
 }
 
 template <class T>
-void addFirstRows(const SizeType& k, const SizeType& row, const SizeType& col,
+void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& in, const matrix::Tile<T, Device::GPU>& out,
                   whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType ncols = std::min(k - col, in.size().cols());
+  SizeType ncols = std::min(k_col - col, in.size().cols());
 
   SizeType ld = in.ld();
   const T* in_ptr = in.ptr();
@@ -484,14 +487,14 @@ __global__ void scaleTileWithRow(SizeType nrows, SizeType ncols, SizeType in_ld,
 }
 
 template <class T>
-void divideColsByFirstRow(const SizeType& k, const SizeType& row, const SizeType& col,
-                          const matrix::Tile<const T, Device::GPU>& in,
+void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+                          const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k || col >= k)
+  if (row >= k_row || col >= k_col)
     return;
 
-  SizeType nrows = std::min(k - row, out.size().rows());
-  SizeType ncols = std::min(k - col, out.size().cols());
+  SizeType nrows = std::min(k_row - row, out.size().rows());
+  SizeType ncols = std::min(k_col - col, out.size().cols());
 
   SizeType in_ld = in.ld();
   const T* in_ptr = in.ptr();
@@ -543,10 +546,11 @@ DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
 
 // Reference to CUBLAS 1D copy(): https://docs.nvidia.com/cuda/cublas/index.html#cublas-lt-t-gt-copy
 template <class T>
-void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const SizeType& col,
-            const Coord& in_coord, const matrix::Tile<const T, Device::GPU>& in_tile,
-            const Coord& out_coord, const matrix::Tile<T, Device::GPU>& out_tile) {
-  if (row >= k || col >= k)
+void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col, const SizeType& row,
+            const SizeType& col, const Coord& in_coord,
+            const matrix::Tile<const T, Device::GPU>& in_tile, const Coord& out_coord,
+            const matrix::Tile<T, Device::GPU>& out_tile) {
+  if (row >= k_row || col >= k_col)
     return;
 
   const T* in_ptr = in_tile.ptr();
@@ -556,12 +560,12 @@ void copy1D(cublasHandle_t handle, const SizeType& k, const SizeType& row, const
   int out_ld = (out_coord == Coord::Col) ? 1 : to_int(out_tile.ld());
 
   // if `in_tile` is the column buffer
-  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k - row)
-                                           : std::min(out_tile.size().cols(), k - col);
+  SizeType len = (out_coord == Coord::Col) ? std::min(out_tile.size().rows(), k_row - row)
+                                           : std::min(out_tile.size().cols(), k_col - col);
   // if out_tile is the column buffer
   if (out_tile.size().cols() == 1) {
-    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k - row)
-                                   : std::min(in_tile.size().cols(), k - col);
+    len = (in_coord == Coord::Col) ? std::min(in_tile.size().rows(), k_row - row)
+                                   : std::min(in_tile.size().cols(), k_col - col);
   }
 
   if constexpr (std::is_same<T, float>::value) {

@@ -21,31 +21,28 @@
 namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                                      Matrix<T, D>& mat_b) {
+void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                   Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   factorization::cholesky<B>(uplo, mat_b);
   eigensolver::genToStd<B>(uplo, mat_a, mat_b);
 
-  auto ret = eigensolver::eigensolver<B>(uplo, mat_a);
+  eigensolver::eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors);
 
   solver::triangular<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
-                        ret.eigenvectors);
-
-  return ret;
+                        eigenvectors);
 }
 
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                                      Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
+void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
+                                   Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
+                                   Matrix<T, D>& eigenvectors) {
   factorization::cholesky<B>(grid, uplo, mat_b);
   eigensolver::genToStd<B>(grid, uplo, mat_a, mat_b);
 
-  auto ret = eigensolver::eigensolver<B>(grid, uplo, mat_a);
+  eigensolver::eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors);
 
   solver::triangular<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
-                        mat_b, ret.eigenvectors);
-
-  return ret;
+                        mat_b, eigenvectors);
 }
 
 }

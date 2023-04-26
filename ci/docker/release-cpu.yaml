@@ -10,7 +10,7 @@
 
 spack:
   specs:
-    - dla-future@develop +miniapps +ci-test mkl=omp ^intel-mkl ^mpich
+    - dla-future@develop +miniapps +ci-test ^intel-mkl threads=openmp ^mpich
   view: false
   concretizer:
     unify:

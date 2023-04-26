@@ -199,6 +199,7 @@ TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
       testGeneralSubMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, a, b, alpha, beta, m,
+      pika::threads::get_thread_manager().wait();
                                                                         mb);
     }
   }
@@ -212,6 +213,7 @@ TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
       testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, a, b, alpha, beta, m,
                                                                          mb);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }

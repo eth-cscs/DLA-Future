@@ -22,7 +22,7 @@ system = systems.cscs["daint-mc"]
 
 dlafpath = "<path_to_dlaf_build_dir>"
 
-run_dir = f"~/ws/runs/strong"
+run_dir = "~/ws/runs/strong"
 
 time = 400  # minutes
 nruns = 5

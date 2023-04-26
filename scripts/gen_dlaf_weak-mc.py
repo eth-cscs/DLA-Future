@@ -22,7 +22,7 @@ system = systems.cscs["daint-mc"]
 
 dlafpath = "<path_to_dlaf_build_dir>"
 
-run_dir = f"~/ws/runs/weak"
+run_dir = "~/ws/runs/weak"
 
 
 nodes_arr = [0.5, 1, 2, 4, 8, 16]

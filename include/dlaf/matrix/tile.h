@@ -145,16 +145,13 @@ using TileAsyncRwMutex =
     pika::execution::experimental::async_rw_mutex<Tile<T, D>, const Tile<const T, D>>;
 
 template <class T, Device D>
-using TileAsyncRwMutexReadWriteWrapper =
-    pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
-        Tile<T, D>, const Tile<const T, D>,
-        pika::execution::experimental::detail::async_rw_mutex_access_type::readwrite>;
+using TileAsyncRwMutexReadWriteWrapper = pika::execution::experimental::async_rw_mutex_access_wrapper<
+    Tile<T, D>, const Tile<const T, D>,
+    pika::execution::experimental::async_rw_mutex_access_type::readwrite>;
 
 template <class T, Device D>
-using TileAsyncRwMutexReadOnlyWrapper =
-    pika::execution::experimental::detail::async_rw_mutex_access_wrapper<
-        Tile<T, D>, const Tile<const T, D>,
-        pika::execution::experimental::detail::async_rw_mutex_access_type::read>;
+using TileAsyncRwMutexReadOnlyWrapper = pika::execution::experimental::async_rw_mutex_access_wrapper<
+    Tile<T, D>, const Tile<const T, D>, pika::execution::experimental::async_rw_mutex_access_type::read>;
 }
 
 template <class T, Device D>

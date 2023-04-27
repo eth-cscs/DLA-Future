@@ -12,6 +12,11 @@ spack:
   include:
   - common.yaml
 
+  view: false
+  concretizer:
+    unify:
+      true
+
   specs:
   - dla-future@develop +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
 

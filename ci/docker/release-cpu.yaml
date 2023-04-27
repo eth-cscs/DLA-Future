@@ -12,6 +12,11 @@ spack:
   include:
   - common.yaml
 
+  view: false
+  concretizer:
+    unify:
+      true
+
   specs:
     - dla-future@develop +miniapps +ci-test ^intel-mkl ^mpich
 

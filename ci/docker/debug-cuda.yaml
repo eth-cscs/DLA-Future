@@ -12,6 +12,11 @@ spack:
   include:
   - common.yaml
 
+  view: false
+  concretizer:
+    unify:
+      true
+
   specs:
     - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich
 

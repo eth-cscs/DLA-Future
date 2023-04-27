@@ -368,13 +368,12 @@ TYPED_TEST(TileTest, ShareReadWriteTile) {
   testShareReadWriteTile<Type, Device::CPU>("Test 3", {512, 256}, 512);
 }
 
-// TileFutureOrConstTileSharedFuture should be
-// either pika::future<Tile<T, D>> or pika::shared_future<Tile<const T, D>>
-// TileFuture should be pika::future<Tile<T, D>>
-template <class F, class TileFutureOrConstTileSharedFuture, class TileFuture>
-void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileFutureOrConstTileSharedFuture>& subtiles,
+// TileSender should be an Eager*Sender. NextTileSender should be an
+// EagerReadWriteTileSender.
+template <class F, class TileSender, class NextTileSender>
+void checkReadyAndDependencyChain(F&& tile_ptr, std::vector<TileSender>& subtiles,
                                   const std::vector<SubTileSpec>& specs, std::size_t last_dep,
-                                  TileFuture& next_tile) {
+                                  NextTileSender& next_tile) {
   ASSERT_EQ(subtiles.size(), specs.size());
   ASSERT_GT(subtiles.size(), last_dep);
 

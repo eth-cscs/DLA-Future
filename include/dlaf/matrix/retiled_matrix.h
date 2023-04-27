@@ -88,9 +88,7 @@ public:
         auto s =
             ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[to_sizet(j)])) |
             ex::then([](internal::TileAsyncRwMutexReadWriteWrapper<T, D> empty_tile_wrapper,
-                        Tile<T, D> sub_tile) {
-              empty_tile_wrapper.get() = std::move(sub_tile);
-            });
+                        Tile<T, D> sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });
         ex::start_detached(std::move(s));
       }
 

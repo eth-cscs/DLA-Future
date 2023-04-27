@@ -344,7 +344,6 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
         dlaf::comm::sync::broadcast::receive_from(owner_transposed.row(), comm_grid.colCommunicator(),
                                                   workspace);
 
-        // tile_to_transpose = pika::make_ready_future<ConstHostTileType>(std::move(workspace));
         tile_to_transpose =
             dlaf::matrix::shareReadWriteTile(make_unique_any_sender(just(std::move(workspace))));
       }

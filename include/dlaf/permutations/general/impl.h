@@ -131,7 +131,7 @@ template <class T, Device D, Coord C, class FilterFunc>
 void applyPermutationsFiltered(
     GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
     const matrix::Distribution& subm_dist, const SizeType* perm_arr,
-    const std::vector<pika::shared_future<matrix::Tile<const T, D>>>& in_tiles_fut,
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles_fut,
     const std::vector<matrix::Tile<T, D>>& out_tiles, FilterFunc&& filter) {
   constexpr auto OC = orthogonal(C);
   std::vector<SizeType> splits =
@@ -244,63 +244,63 @@ void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nrank
   using dlaf::common::DataDescriptor;
 
   const SizeType vec_size = sz_loc.get<orthogonal(C)>();
-  auto sendrecv_f =
-      [vec_size](comm::Communicator& comm, std::vector<int> send_counts, std::vector<int> send_displs,
-                 const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>>& send_tiles_fut,
-                 std::vector<int> recv_counts, std::vector<int> recv_displs,
-                 const std::vector<matrix::Tile<T, D>>& recv_tiles) {
-        // Note: both guaranteed to be column-major on allocation
-        const T* send_ptr = send_tiles_fut[0].get().ptr();
-        T* recv_ptr = recv_tiles[0].ptr();
+  auto sendrecv_f = [vec_size](comm::Communicator& comm, std::vector<int> send_counts,
+                               std::vector<int> send_displs,
+                               const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>&
+                                   send_tiles_fut,
+                               std::vector<int> recv_counts, std::vector<int> recv_displs,
+                               const std::vector<matrix::Tile<T, D>>& recv_tiles) {
+    // Note: both guaranteed to be column-major on allocation
+    const T* send_ptr = send_tiles_fut[0].get().ptr();
+    T* recv_ptr = recv_tiles[0].ptr();
 
-        const SizeType send_ld = send_tiles_fut[0].get().ld();
-        const SizeType recv_ld = recv_tiles[0].ld();
+    const SizeType send_ld = send_tiles_fut[0].get().ld();
+    const SizeType recv_ld = recv_tiles[0].ld();
 
-        const SizeType send_perm_stride = (C == Coord::Col) ? send_ld : 1;
-        const SizeType recv_perm_stride = (C == Coord::Col) ? recv_ld : 1;
+    const SizeType send_perm_stride = (C == Coord::Col) ? send_ld : 1;
+    const SizeType recv_perm_stride = (C == Coord::Col) ? recv_ld : 1;
 
-        // cumulative sum for computing rank data displacements in packed vectors
-        std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
-        std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
+    // cumulative sum for computing rank data displacements in packed vectors
+    std::exclusive_scan(send_counts.begin(), send_counts.end(), send_displs.begin(), 0);
+    std::exclusive_scan(recv_counts.begin(), recv_counts.end(), recv_displs.begin(), 0);
 
-        std::vector<ex::unique_any_sender<>> all_comms;
-        all_comms.reserve(to_sizet(comm.size() - 1) * 2);
-        const comm::IndexT_MPI rank = comm.rank();
-        for (comm::IndexT_MPI rank_partner = 0; rank_partner < comm.size(); ++rank_partner) {
-          if (rank == rank_partner)
-            continue;
+    std::vector<ex::unique_any_sender<>> all_comms;
+    all_comms.reserve(to_sizet(comm.size() - 1) * 2);
+    const comm::IndexT_MPI rank = comm.rank();
+    for (comm::IndexT_MPI rank_partner = 0; rank_partner < comm.size(); ++rank_partner) {
+      if (rank == rank_partner)
+        continue;
 
-          const auto rank_partner_index = to_sizet(rank_partner);
+      const auto rank_partner_index = to_sizet(rank_partner);
 
-          if (send_counts[rank_partner_index])
-            all_comms.push_back(
-                ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                  const SizeType nperms = send_counts[rank_partner_index];
-                  auto message = dlaf::comm::make_message(
-                      DataDescriptor<const T>(send_ptr +
-                                                  send_displs[rank_partner_index] * send_perm_stride,
-                                              C == Coord::Col ? nperms : vec_size,
-                                              C == Coord::Col ? vec_size : nperms, send_ld));
+      if (send_counts[rank_partner_index])
+        all_comms.push_back(
+            ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+              const SizeType nperms = send_counts[rank_partner_index];
+              auto message = dlaf::comm::make_message(
+                  DataDescriptor<const T>(send_ptr + send_displs[rank_partner_index] * send_perm_stride,
+                                          C == Coord::Col ? nperms : vec_size,
+                                          C == Coord::Col ? vec_size : nperms, send_ld));
 
-                  DLAF_MPI_CHECK_ERROR(MPI_Isend(message.data(), message.count(), message.mpi_type(),
-                                                 rank_partner, 0, comm, req));
-                }));
-          if (recv_counts[rank_partner_index])
-            all_comms.push_back(
-                ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
-                  const SizeType nperms = recv_counts[rank_partner_index];
-                  auto message = dlaf::comm::make_message(
-                      DataDescriptor<T>(recv_ptr + recv_displs[rank_partner_index] * recv_perm_stride,
-                                        C == Coord::Col ? nperms : vec_size,
-                                        C == Coord::Col ? vec_size : nperms, recv_ld));
+              DLAF_MPI_CHECK_ERROR(MPI_Isend(message.data(), message.count(), message.mpi_type(),
+                                             rank_partner, 0, comm, req));
+            }));
+      if (recv_counts[rank_partner_index])
+        all_comms.push_back(
+            ex::just() | dlaf::comm::internal::transformMPI([=](MPI_Request* req) {
+              const SizeType nperms = recv_counts[rank_partner_index];
+              auto message = dlaf::comm::make_message(
+                  DataDescriptor<T>(recv_ptr + recv_displs[rank_partner_index] * recv_perm_stride,
+                                    C == Coord::Col ? nperms : vec_size,
+                                    C == Coord::Col ? vec_size : nperms, recv_ld));
 
-                  DLAF_MPI_CHECK_ERROR(MPI_Irecv(message.data(), message.count(), message.mpi_type(),
-                                                 rank_partner, 0, comm, req));
-                }));
-        }
+              DLAF_MPI_CHECK_ERROR(MPI_Irecv(message.data(), message.count(), message.mpi_type(),
+                                             rank_partner, 0, comm, req));
+            }));
+    }
 
-        pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
-      };
+    pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
+  };
 
   ex::when_all(sub_task_chain(), std::forward<SendCountsSender>(send_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
@@ -375,9 +375,8 @@ void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribut
 
   for (const LocalTileIndex i : common::iterate_range2d(local_index.distribution().localNrTiles())) {
     const GlobalTileIndex i_global(dist.globalTileFromLocalTile<C>(i_loc_begin + i.row()), 0);
-    ex::start_detached(
-        ex::when_all(global_index.read(i_global), local_index.readwrite(i)) |
-        dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
+    ex::start_detached(ex::when_all(global_index.read(i_global), local_index.readwrite(i)) |
+                       dlaf::matrix::copy(dlaf::internal::Policy<DefaultBackend_v<D>>{}));
   }
 }
 

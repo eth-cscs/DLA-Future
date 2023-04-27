@@ -38,6 +38,7 @@ namespace test {
 // templated on the tile and its template parameters.
 class EagerVoidSender {
 public:
+  EagerVoidSender() = default;
   template <typename Sender,
             typename Enable = std::enable_if_t<!std::is_same_v<std::decay_t<Sender>, EagerVoidSender>>>
   EagerVoidSender(Sender&& sender)

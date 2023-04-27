@@ -15,7 +15,7 @@
 #include <pika/future.hpp>
 
 #include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/internal/tile_future_manager.h"
+#include "dlaf/matrix/internal/tile_pipeline.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
@@ -47,9 +47,17 @@ public:
 
   /// @pre mat.blockSize() is divisible by tiles_per_block.
   RetiledMatrix(Matrix<T, D>& mat, const LocalTileSize& tiles_per_block)
-      : MatrixBase(mat.distribution(), tiles_per_block),
-        tile_managers_(to_sizet(distribution().localNrTiles().linear_size())) {
+      : MatrixBase(mat.distribution(), tiles_per_block) {
     using common::internal::vector;
+    namespace ex = pika::execution::experimental;
+
+    // TODO: Can this be done more cleanly? Without creating empty tiles?
+    const auto n = to_sizet(distribution().localNrTiles().linear_size());
+    tile_managers_.reserve(n);
+    for (std::decay_t<decltype(n)> i = 0; i < n; ++i) {
+      tile_managers_.emplace_back(Tile<T, D>(TileElementSize{0, 0}, memory::MemoryView<T, D>(), 1));
+    }
+
     const auto tile_size = distribution().baseTileSize();
     vector<SubTileSpec> specs;
     vector<LocalTileIndex> indices;
@@ -74,12 +82,15 @@ public:
       for (SizeType j = 0; j < specs.size(); ++j) {
         const auto i = tileLinearIndex(indices[j]);
 
-        // Move subtile to be managed by the tile manager of RetiledMatrix
-        auto s = ex::when_all(tile_managers_[i].readwrite(), std::move(sub_tiles[to_sizet(j)])) |
-                 ex::then([](TileAsyncRwMutexReadWriteWrapper<T, D> empty_tile_wrapper,
-                             Tile<T, D> sub_tile_wrapper) {
-                   empty_tile_wrapper.get() = std::move(sub_tile_wrapper.get());
-                 });
+        // Move subtile to be managed by the tile manager of RetiledMatrix. We
+        // use readwrite_with_wrapper to get access to the original tile managed
+        // by the underlying async_rw_mutex.
+        auto s =
+            ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[to_sizet(j)])) |
+            ex::then([](internal::TileAsyncRwMutexReadWriteWrapper<T, D> empty_tile_wrapper,
+                        Tile<T, D> sub_tile) {
+              empty_tile_wrapper.get() = std::move(sub_tile);
+            });
         ex::start_detached(std::move(s));
       }
 
@@ -118,7 +129,6 @@ public:
   /// involving any of the locally available tiles are completed.
   void waitLocalTiles() noexcept {
     auto readwrite_f = [this](const LocalTileIndex& index) {
-      const auto i = tileLinearIndex(index);
       return this->tile_managers_[tileLinearIndex(index)].readwrite();
     };
 
@@ -133,7 +143,7 @@ public:
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadWriteTileSender<T, D> readwrite(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    return tile_managers_[i].getRWTileFuture();
+    return tile_managers_[i].readwrite();
   }
 
   /// Returns a sender of the Tile with global index @p index.
@@ -142,12 +152,13 @@ public:
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadWriteTileSender<T, D> readwrite(const GlobalTileIndex& index) noexcept {
-    return operator()(distribution().localTileIndex(index));
+    return readwrite(distribution().localTileIndex(index));
   }
 
   void done(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    tile_managers_[i].clear();
+    tile_managers_[i] =
+        internal::TilePipeline<T, D>(Tile<T, D>(TileElementSize{0, 0}, memory::MemoryView<T, D>(), 1));
   }
 
   void done(const GlobalTileIndex& index) noexcept {

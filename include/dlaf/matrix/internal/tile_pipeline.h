@@ -30,6 +30,10 @@ public:
     return pipeline.readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
   }
 
+  auto readwrite_with_wrapper() {
+    return pipeline.readwrite();
+  }
+
 private:
   TileAsyncRwMutex<T, D> pipeline;
 };

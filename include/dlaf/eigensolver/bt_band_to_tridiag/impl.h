@@ -115,17 +115,16 @@ template <class T>
 std::tuple<matrix::Tile<T, Device::CPU>, matrix::Tile<T, Device::CPU>> computeVT(
     const SizeType b, const matrix::Tile<const T, Device::CPU>& tile_hh, const SizeType hhr_nb,
     matrix::Tile<T, Device::CPU> tile_v, matrix::Tile<T, Device::CPU> tile_t) {
-  auto tile_v_c = setupVWellFormed(b, tile_hh, std::move(tile_v));
-  for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
-    const SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
-    const SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
+  auto tile_v2 = setupVWellFormed(b, tile_hh, std::move(tile_v));
+  for (SizeType j = 0; j < tile_v2.size().cols(); j += hhr_nb) {
+    const SizeType jb = std::min(hhr_nb, tile_v2.size().cols() - j);
+    const SizeType ib = std::min(jb + b - 1, tile_v2.size().rows() - j);
     auto subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});
     auto subtile_hh = tile_hh.subTileReference({{0, j}, {1, jb}});
-    auto subtile_v_c = tile_v_c.subTileReference({{j, j}, {ib, jb}});
-    computeTFactor(subtile_hh, subtile_v_c, subtile_t);
+    auto subtile_v = tile_v2.subTileReference({{j, j}, {ib, jb}});
+    computeTFactor(subtile_hh, subtile_v, subtile_t);
   }
-  auto tile_t_c = matrix::Tile<const T, Device::CPU>(std::move(tile_t));
-  return std::make_tuple(std::move(tile_v_c), std::move(tile_t_c));
+  return std::make_tuple(std::move(tile_v2), std::move(tile_t));
 }
 
 template <class T>
@@ -135,19 +134,19 @@ std::tuple<matrix::Tile<T, Device::CPU>, matrix::Tile<T, Device::CPU>> computeVW
     matrix::Tile<T, Device::CPU> tile_w) {
   using namespace blas;
 
-  auto [tile_v_c, tile_t_c] = computeVT(b, tile_hh, hhr_nb, std::move(tile_v), std::move(tile_t));
+  auto [tile_v2, tile_t2] = computeVT(b, tile_hh, hhr_nb, std::move(tile_v), std::move(tile_t));
 
-  for (SizeType j = 0; j < tile_v_c.size().cols(); j += hhr_nb) {
-    const SizeType jb = std::min(hhr_nb, tile_v_c.size().cols() - j);
-    const SizeType ib = std::min(jb + b - 1, tile_v_c.size().rows() - j);
-    auto subtile_t_c = tile_t_c.subTileReference({{j, j}, {jb, jb}});
-    auto subtile_v_c = tile_v_c.subTileReference({{j, j}, {ib, jb}});
+  for (SizeType j = 0; j < tile_v2.size().cols(); j += hhr_nb) {
+    const SizeType jb = std::min(hhr_nb, tile_v2.size().cols() - j);
+    const SizeType ib = std::min(jb + b - 1, tile_v2.size().rows() - j);
+    auto subtile_t = tile_t2.subTileReference({{j, j}, {jb, jb}});
+    auto subtile_v = tile_v2.subTileReference({{j, j}, {ib, jb}});
     auto subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});
 
-    dlaf::tile::internal::trmm3(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), subtile_t_c,
-                                subtile_v_c, subtile_w);
+    dlaf::tile::internal::trmm3(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit, T(1), subtile_t,
+                                subtile_v, subtile_w);
   }
-  return std::make_tuple(std::move(tile_v_c), std::move(tile_w));
+  return std::make_tuple(std::move(tile_v2), std::move(tile_w));
 }
 
 template <class Tile, class CTile>
@@ -497,9 +496,9 @@ struct HHManager<Backend::MC, Device::CPU, T> {
   HHManager(const SizeType b, const std::size_t, matrix::Distribution, matrix::Distribution) : b(b) {}
 
   template <class SenderHH>
-  auto computeVW(const LocalTileIndex ij, const TileAccessHelper& helper, SenderHH&& tile_hh,
-                 matrix::Panel<Coord::Col, T, D>& mat_v, matrix::Panel<Coord::Col, T, D>& mat_t,
-                 matrix::Panel<Coord::Col, T, D>& mat_w) {
+  auto computeVW(const SizeType nb_apply, const LocalTileIndex ij, const TileAccessHelper& helper,
+                 SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), nb_apply,
@@ -525,9 +524,9 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
       : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}
 
   template <class SenderHH>
-  computeVW(const SizeType hhr_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
-            SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
-            matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+  auto computeVW(const SizeType hhr_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
+                 SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
+                 matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();

@@ -9,8 +9,8 @@
 //
 #pragma once
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
-#include <pika/synchronization/async_rw_mutex.hpp>
 
 #include <functional>
 

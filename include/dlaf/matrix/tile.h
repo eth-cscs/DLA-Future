@@ -15,9 +15,9 @@
 #include <tuple>
 #include <type_traits>
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
-#include <pika/synchronization/async_rw_mutex.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"

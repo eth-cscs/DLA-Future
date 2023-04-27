@@ -9,9 +9,9 @@
 //
 #pragma once
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
-#include <pika/synchronization/async_rw_mutex.hpp>
 
 namespace dlaf::internal {
 template <typename...>

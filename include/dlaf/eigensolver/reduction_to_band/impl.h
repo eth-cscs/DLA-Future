@@ -614,13 +614,12 @@ template <class MatrixLike, class TriggerSender, class CommSender>
 auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                             CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
                             const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+  static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  using panel_tile_type = decltype(matrix::splitTile(mat_a.readwrite(std::declval<LocalTileIndex>()),
-                                                     std::declval<matrix::SubTileSpec>()));
-  std::vector<panel_tile_type> panel_tiles;
+  std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {

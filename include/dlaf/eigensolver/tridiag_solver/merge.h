@@ -679,8 +679,8 @@ void initWeightVector(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     // Divide the eigenvectors of the rank1 update problem `evecs` by it's diagonal matrix `diag` and
     // reduce multiply into the first column of each tile of the workspace matrix `ws`
-    divideEvecsByDiagonalAsync<D>(k_row, k_col, , sz_gl_el.rows(), sz_gl_el.cols(),
-                                  diag.read(GlobalTileIndex(idx_gl_tile.row(), 0)),
+    divideEvecsByDiagonalAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
+                                  diag_i2.read(GlobalTileIndex(idx_gl_tile.row(), 0)),
                                   diag.read(GlobalTileIndex(idx_gl_tile.col(), 0)),
                                   evecs.read(idx_loc_tile), ws.readwrite(idx_loc_tile));
 

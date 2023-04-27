@@ -389,6 +389,8 @@ public:
   }
 
 private:
+  Tile(const Tile& tile, const SubTileSpec& spec) noexcept : Tile<const T, D>(tile, spec) {}
+
   Tile(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
       : Tile<const T, D>(tile_wrapper.get(), spec) {
     dep_tracker_ = std::move(tile_wrapper);
@@ -405,7 +407,7 @@ private:
     dep_tracker_ = std::move(tile_wrapper);
   }
 
-  Tile(Tile tile, const SubTileSpec& spec) : ConstTileType(tile, spec) {
+  Tile(Tile&& tile, const SubTileSpec& spec) : ConstTileType(tile, spec) {
     dep_tracker_ = std::move(tile.dep_tracker_);
   }
 

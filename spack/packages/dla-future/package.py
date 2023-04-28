@@ -31,8 +31,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("ci-test", default=False, description="Build for CI (Advanced usage).")
-    conflicts('~miniapps', when='+ci-test')
+    variant("cmakeflags", values=str, default="none", description="Additional CMake flags to add to the build.")
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -134,21 +133,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
-        if "+ci-test" in self.spec:
-            # Enable TESTS and setup CI specific parameters
-            args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
-            if "+cuda":
-                args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
-            if "+rocm":
-                args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
-            args.append(self.define("BUILD_TESTING", True))
-            args.append(self.define("DLAF_BUILD_TESTING", True))
-            args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-        else:
-            # TEST
-            args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
+        # TEST
+        args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))
+
+        # Additional flags
+        if spec.variants["cmakeflags"].value != "none":
+            args.append(self.cmakeflags)
 
         return args

@@ -20,6 +20,7 @@ COPY . ${SOURCE}
 SHELL ["/bin/bash", "-c"]
 
 # Inject the coverage option in the spack package
+# TODO: Can cmakeflags actually replace this? cmakeflags=-DDLAF_WITH_COVERAGE=ON should not override other flags...
 RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
 
 ARG NUM_PROCS

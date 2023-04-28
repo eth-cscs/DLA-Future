@@ -11,6 +11,8 @@
 packages:
   all:
     target: [x86_64]
+  dla-future:
+    require: "+miniapps"
   blaspp:
     variants:
       - '~cuda'

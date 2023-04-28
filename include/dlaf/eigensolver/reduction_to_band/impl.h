@@ -267,19 +267,6 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   return tau;
 }
 
-template <Device D, class T>
-void updateTrailingPanelWithReflector(const std::vector<matrix::Tile<T, D>>& panel, const SizeType j,
-                                      const SizeType pt_cols, const T tau) {
-  if (pt_cols == 0)
-    return;
-
-  constexpr bool has_head = true;
-  common::internal::vector<T> w(pt_cols, 0);
-  computeWTrailingPanel(has_head, panel, w, j, pt_cols, 0, panel.size());
-
-  updateTrailingPanel(has_head, panel, j, w, tau, 0, panel.size());
-}
-
 template <class MatrixLike>
 auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel_view,
                             const SizeType nrefls) {
@@ -596,21 +583,6 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   auto tau = computeReflectorAndTau(has_head, panel, j, std::move(x0_and_squares));
 
   return tau;
-}
-
-template <Device D, class T>
-void updateTrailingPanelWithReflector(const bool has_head, comm::Communicator& communicator,
-                                      const std::vector<matrix::Tile<T, D>>& panel, SizeType j,
-                                      const SizeType pt_cols, const T tau) {
-  if (pt_cols == 0)
-    return;
-
-  common::internal::vector<T> w(pt_cols, 0);
-  computeWTrailingPanel(has_head, panel, w, j, pt_cols, 0, panel.size());
-
-  comm::sync::allReduceInPlace(communicator, MPI_SUM, common::make_data(w.data(), pt_cols));
-
-  updateTrailingPanel(has_head, panel, j, w, tau, 0, panel.size());
 }
 
 template <class MatrixLike, class TriggerSender, class CommSender>

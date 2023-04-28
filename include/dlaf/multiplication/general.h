@@ -63,7 +63,7 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   DLAF_ASSERT(equal_size(mat_a, mat_b), mat_a, mat_b);
   DLAF_ASSERT(equal_size(mat_a, mat_c), mat_a, mat_c);
 
-  const SizeType m = mat_a.nrTiles().rows();
+  [[maybe_unused]] const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
   DLAF_ASSERT(a >= 0 && a < m, a, m);
 
@@ -91,7 +91,8 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 /// @pre mat_a, mat_b and mat_c have the same size,
 /// @pre a <= b < mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
-void generalSubMatrix(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& row_task_chain,
+void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
+                      common::Pipeline<comm::Communicator>& row_task_chain,
                       common::Pipeline<comm::Communicator>& col_task_chain, const SizeType a,
                       const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
@@ -113,7 +114,7 @@ void generalSubMatrix(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   DLAF_ASSERT(equal_size(mat_a, mat_b), mat_a, mat_b);
   DLAF_ASSERT(equal_size(mat_a, mat_c), mat_a, mat_c);
 
-  const SizeType m = mat_a.nrTiles().rows();
+  [[maybe_unused]] const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
   DLAF_ASSERT(a >= 0 && a < m, a, m);
 

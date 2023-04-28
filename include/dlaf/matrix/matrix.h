@@ -51,9 +51,6 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
 /// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
 /// therefore some tiles are stored locally on this rank,
 /// while the others are available on other ranks.
-/// More details are available in misc/matrix_distribution.md.
-/// Details about the Tile synchronization mechanism can be found in misc/synchronization.md.
-
 template <class T, Device D>
 class Matrix : public Matrix<const T, D> {
 public:
@@ -120,7 +117,6 @@ public:
 
   /// Returns a sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
     return tile_managers_[tileLinearIndex(index)].readwrite();
@@ -128,7 +124,6 @@ public:
 
   /// Returns a sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
@@ -173,7 +168,6 @@ public:
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
     return tile_managers_[tileLinearIndex(index)].read();
@@ -181,7 +175,6 @@ public:
 
   /// Returns a read-only sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadOnlySenderType read(const GlobalTileIndex& index) {

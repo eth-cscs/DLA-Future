@@ -33,8 +33,6 @@ namespace dlaf::matrix {
 /// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
 /// therefore some tiles are stored locally on this rank,
 /// while the others are available on other ranks.
-/// More details are available in misc/matrix_distribution.md.
-/// Details about the Tile synchronization mechanism can be found in misc/synchronization.md.
 template <class T, Device D>
 class RetiledMatrix : public internal::MatrixBase {
 public:
@@ -105,7 +103,6 @@ public:
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadOnlyTileSender<T, D> read(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
@@ -114,7 +111,6 @@ public:
 
   /// Returns a read-only sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadOnlyTileSender<T, D> read(const GlobalTileIndex& index) noexcept {
@@ -137,7 +133,6 @@ public:
 
   /// Returns a sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadWriteTileSender<T, D> readwrite(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
@@ -146,7 +141,6 @@ public:
 
   /// Returns a sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadWriteTileSender<T, D> readwrite(const GlobalTileIndex& index) noexcept {

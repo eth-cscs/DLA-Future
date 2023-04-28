@@ -688,7 +688,6 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
         const auto idx_e = helper.topIndexE(j_e);
 
         if (!helper.affectsMultipleTiles()) {
-          // TODO: Check this against master...
           ex::start_detached(
               ex::when_all(ex::just(group_size), tile_v, tile_w,
                            mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e)) |

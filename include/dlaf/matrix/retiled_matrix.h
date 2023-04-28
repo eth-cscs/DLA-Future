@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 #include <pika/future.hpp>
@@ -52,7 +53,7 @@ public:
     // TODO: Can this be done more cleanly? Without creating empty tiles?
     const auto n = to_sizet(distribution().localNrTiles().linear_size());
     tile_managers_.reserve(n);
-    for (std::decay_t<decltype(n)> i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < n; ++i) {
       tile_managers_.emplace_back(Tile<T, D>(TileElementSize{0, 0}, memory::MemoryView<T, D>(), 1));
     }
 

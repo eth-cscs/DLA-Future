@@ -62,7 +62,7 @@ void print(format::csv, std::string sym, Matrix<const T, Device::CPU>& mat,
       SizeType elcol = icol % blockcol;
 
       const LocalTileIndex idx = {tilerow, tilecol};
-      auto const tile = pika::this_thread::experimental::sync_wait(mat.read(idx));
+      const auto tile = pika::this_thread::experimental::sync_wait(mat.read(idx));
 
       os << tile.get()({elrow, elcol}) << ",";
     }

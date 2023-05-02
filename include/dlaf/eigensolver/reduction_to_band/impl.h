@@ -35,6 +35,7 @@
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"
+#include "dlaf/matrix/extra_buffers.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
@@ -496,20 +497,24 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
 
   namespace ex = pika::execution::experimental;
 
-  // Note:
-  // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
-  // the column are going to participate to the reduce. For them, it is important to set the
-  // partial result W2 to zero.
-  ex::start_detached(w2.readwrite_sender(LocalTileIndex(0, 0)) |
-                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high)));
+  ExtraBuffers<T, D> buffers(w2.blockSize(), 6);
+
+  //// Note:
+  //// Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
+  //// the column are going to participate to the reduce. For them, it is important to set the
+  //// partial result W2 to zero.
 
   using namespace blas;
   // GEMM W2 = W* . X
-  for (const auto& index_tile : w.iteratorLocal())
+  for (const auto& index_tile : w.iteratorLocal()) {
     ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1),
                                                    w.read_sender(index_tile), x.read_sender(index_tile),
-                                                   T(1), w2.readwrite_sender(LocalTileIndex(0, 0))) |
+                                                   T(1), buffers.readwrite_sender(index_tile.row())) |
                        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
+  }
+
+  ex::start_detached(tile::set0(dlaf::internal::Policy<B>(), w2.readwrite_sender(LocalTileIndex(0, 0))));
+  ex::start_detached(buffers.reduce(w2.readwrite_sender(LocalTileIndex(0, 0))));
 }
 
 template <Backend B, Device D, class T>
@@ -1026,7 +1031,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
-    Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
+    Matrix<T, D> t({nrefls_block, nrefls_block}, {nrefls_block, nrefls_block});
 
     computeTFactor<B>(v, taus.back(), t.readwrite_sender(t_idx));
 
@@ -1174,7 +1179,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO or we can keep just the sh_future and allocate just inside if (is_panel_rank_col)
-    matrix::Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
+    matrix::Matrix<T, D> t({nrefls_block, nrefls_block}, {nrefls_block, nrefls_block});
 
     // PANEL
     const matrix::SubPanelView panel_view(dist, ij_offset, band_size);

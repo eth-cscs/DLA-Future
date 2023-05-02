@@ -106,7 +106,7 @@ void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp
             ADD_FAILURE_AT(file, line)
                 << "Error at index (" << i << ", " << j
                 << "): " << err_message(expected({i, j}), tile({ii, jj})) << std::endl;
-            //return;
+            return;
           }
         }
       }
@@ -132,7 +132,7 @@ void check(ElementGetter&& expected, MatrixLocal<const T>& mat, ComparisonOp com
     if (!comp(expected(index), mat(index))) {
       ADD_FAILURE_AT(file, line) << "Error at index (" << index
                                  << "): " << err_message(expected(index), mat(index)) << std::endl;
-      //return;
+      return;
     }
   }
 }

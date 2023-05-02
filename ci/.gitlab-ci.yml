@@ -200,7 +200,7 @@ rocm release build clang14+rocm-5.3.3:
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
     BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
     DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
-    EXTRA_APTGET: "clang-14 rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
+    EXTRA_APTGET: "clang-14 libomp-14-dev rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@14.0.0

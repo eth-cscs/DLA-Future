@@ -9,36 +9,22 @@
 #
 
 spack:
-  specs:
-    - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich
+  include:
+  - common.yaml
+
   view: false
   concretizer:
     unify:
       true
 
+  specs:
+    - dla-future@develop build_type=Debug +cuda +miniapps +ci-test ^openblas ^mpich
+
   packages:
     all:
-      target: [x86_64]
       variants:
         - 'build_type=Release'
-    blaspp:
-      variants:
-        - '~cuda'
-        - '~openmp'
     pika:
       variants:
         - 'build_type=Debug'
         - 'malloc=system'
-    mpich:
-      version:
-        - 3.4.2
-      variants:
-        - '~fortran'
-        - '~libxml2'
-    hwloc:
-      variants:
-        - '~libxml2'
-    git:
-      # Force git as non-buildable to allow deprecated versions in environments
-      # https://github.com/spack/spack/pull/30040
-      buildable: false

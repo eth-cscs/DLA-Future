@@ -225,7 +225,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                         Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)}; // i3
 
   // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e1), initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
+  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
                                   initMirrorMatrix(ws.z0), initMirrorMatrix(ws.z1),
                                   initMirrorMatrix(ws.i2)};
 

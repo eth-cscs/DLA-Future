@@ -45,9 +45,9 @@ namespace dlaf::eigensolver::internal {
 //     In: Holds the eigenvectors of the two subproblems TODO in ascending order.
 //     Out: Holds the eigenvectors of the merged problems TODO in ascending order.
 // - e1: (matrix)
-//     Holds the rank-1 eigenvectors.
+//     Holds the deflated eigenvectors.
 // - e2: (matrix)
-//     The original evecs matrix used as workspace. (Holds the deflated eigenvectors.)
+//     (The original evecs matrix used as workspace) Holds the rank-1 eigenvectors.
 //
 // - d0: (vector)
 //     In: Holds the eigenvalues of the two subproblems TODO in ascending order.
@@ -114,7 +114,6 @@ struct WorkSpaceHost {
 // forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct WorkSpaceHostMirror {
-  Matrix<T, Device::CPU> e1;
   Matrix<T, Device::CPU> e2;
 
   Matrix<T, Device::CPU> d1;
@@ -127,7 +126,6 @@ struct WorkSpaceHostMirror {
 
 template <class T>
 struct WorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& e1;
   Matrix<T, Device::CPU>& e2;
 
   Matrix<T, Device::CPU>& d1;
@@ -603,10 +601,6 @@ template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                       WorkSpaceHostMirror<T, D>& ws_hm) {
-  auto& evecs = ws.e0;
-  auto& ws_mat1 = ws.e1;
-  auto& ws_hm_mat1 = ws_hm.e1;
-  auto& ws_mat2 = ws.e2;
   namespace ex = pika::execution::experimental;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -618,10 +612,10 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   const LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
-  const SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
+  const SizeType n1 = problemSize(i_begin, i_split, ws.e0.distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_split, i_end, rho, evecs, ws.z0);
+  assembleZVec(i_begin, i_split, i_end, rho, ws.e0, ws.z0);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
@@ -655,7 +649,10 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 
   // ---
 
-  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), evecs);
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), ws.e0);
+  // Placeholder for rearranging the eigenvectors: (local permutation)
+  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
+
 
   // Step #2
   //
@@ -673,20 +670,20 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws_h.d0);
 
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
-                                  ws_hm_mat1);
-  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm_mat1);
+                                  ws_hm.e2);
+  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);
 
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm_mat1, ws_mat1);
+  copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
   // ---
 
-  // formEvecs(i_begin, i_end, k, evals, ws.z1, ws_mat2, ws_mat1);
-  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.d1, ws.d1, ws_mat1, ws_mat2);
-  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.z1, ws_mat2, ws_mat1);
-  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws_mat1, ws_mat2);
-  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws_mat2, ws_mat1);
-  setUnitDiag(i_begin, i_end, k, ws_mat1);
+  // formEvecs(i_begin, i_end, k, evals, ws.z1, ws.e0, ws.e2);
+  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.d1, ws.d1, ws.e2, ws.e0);
+  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.z1, ws.e0, ws.e2);
+  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e2, ws.e0);
+  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e0, ws.e2);
+  setUnitDiag(i_begin, i_end, k, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
@@ -698,27 +695,22 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws_mat1, ws_mat2);
+  // The following permutation will be removed in the future.
+  // (The copy is needed to simplify the removal)
+  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.e2, ws.e0);
+  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
-                                                             blas::Op::NoTrans, T(1), evecs, ws_mat2,
-                                                             T(0), ws_mat1);
+                                                             blas::Op::NoTrans, T(1), ws.e1, ws.e2,
+                                                             T(0), ws.e0);
 
-  // Step #4: Final sorting of eigenvalues and eigenvectors
+  // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
   //    i2 (out) : deflated <--- post_sorted
   //
-  // TODO REMOVE
-  // - reorder `d0 -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
-  //   ascending order
-  // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
-  //
   initIndex(i_begin, i_end, ws_h.i1);
   sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_h.i1, ws_hm.i2);
-
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
-
-  copy(idx_loc_begin, sz_loc_tiles, ws_mat1, evecs);
 }
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.

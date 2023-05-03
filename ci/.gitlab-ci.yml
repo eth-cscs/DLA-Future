@@ -134,6 +134,28 @@ cpu release build clang13 cxx20:
     THREADS_PER_NODE: 72
     USE_CODECOV: "false"
 
+cpu release build clang16 cxx20:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: docker.io/ubuntu:23.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:23.04
+    EXTRA_APTGET: clang-16
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:23.04
+    COMPILER: clang@16.0.0
+    CXXSTD: 20
+    USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang16-20/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang16-20/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+    USE_CODECOV: "false"
+
 cpu codecov build gcc11:
   extends: .build_spack_common
   variables:
@@ -258,6 +280,15 @@ cpu release test clang13 cxx20:
     include:
       - artifact: pipeline.yml
         job: cpu release build clang13 cxx20
+
+cpu release test clang16 cxx20:
+  extends: .run_common
+  needs:
+    - cpu release build clang16 cxx20
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build clang16 cxx20
 
 cpu codecov test gcc11:
   extends: .run_common

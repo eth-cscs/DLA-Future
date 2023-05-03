@@ -211,8 +211,9 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   const matrix::Distribution& distr = evecs.distribution();
   const LocalElementSize vec_size(distr.size().rows(), 1);
   const TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
-  WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // mat1
-                     Matrix<T, D>(distr),                            // mat2
+  WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // e0
+                     Matrix<T, D>(distr),                            // e1
+                     evecs,                                          // e2
                      evals,                                          // d1
                      Matrix<T, D>(vec_size, vec_tile_size),          // z0
                      Matrix<T, D>(vec_size, vec_tile_size),          // z1
@@ -223,7 +224,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                         Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
                         Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)}; // i3
 
-  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.mat1), initMirrorMatrix(ws.d1),
+  // Mirror workspace on host memory for CPU-only kernels
+  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e1), initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
                                   initMirrorMatrix(ws.z0), initMirrorMatrix(ws.z1),
                                   initMirrorMatrix(ws.i2)};
 
@@ -239,7 +241,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
     solveLeaf(tridiag, evecs);
   }
   else {
-    solveLeaf(tridiag, evecs, ws_hm.mat1);
+    solveLeaf(tridiag, evecs, ws_hm.e2);
   }
 
   // Offload the diagonal from `tridiag` to `d0`
@@ -247,15 +249,14 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm,
-                        evecs);
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm);
   }
 
   const SizeType n = evecs.nrTiles().rows();
-  copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws.mat1);
+  copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws.e0);
 
   applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);  // ws_hm.d1 is the mirror of ws.d1 which is evals
-  dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.mat1, evecs);
+  dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.e0, evecs);
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.d1, evals);
 }

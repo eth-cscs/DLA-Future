@@ -403,48 +403,6 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(permute_fn), std::move(sender)));
 }
 
-// Tranposes two tiles of compatible dimensions
-template <class InTileSender, class OutTileSender>
-void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-
-  auto transpose_fn = [](const auto& in_tile, const auto& out_tile) {
-    for (TileElementIndex idx : common::iterate_range2d(out_tile.size())) {
-      out_tile(idx) = in_tile(transposed(idx));
-    }
-  };
-
-  ex::start_detached(
-      di::transform(di::Policy<Backend::MC>(), std::move(transpose_fn), std::move(sender)));
-}
-
-// Transposes a local matrix @p mat_in into the local part of the distributed matrix @p mat_out.
-template <class T>
-void transposeFromLocalToDistributedMatrix(const LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
-    const LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(),
-                                    i_loc_begin.col() + i_in_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
-// Transposes the local part of the distributed matrix @p mat_in into the local matrix @p mat_out.
-template <class T>
-void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
-    const LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(),
-                                   i_loc_begin.col() + i_out_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,

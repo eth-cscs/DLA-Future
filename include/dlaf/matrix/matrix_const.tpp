@@ -57,7 +57,7 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
   const auto& nr_tiles = layout.nrTiles();
 
   DLAF_ASSERT(tile_managers_.empty(), "");
-  tile_managers_.reserve(static_cast<std::size_t>(nr_tiles.linear_size()));
+  tile_managers_.reserve(to_sizet(nr_tiles.linear_size()));
 
   using MemView = memory::MemoryView<T, D>;
 

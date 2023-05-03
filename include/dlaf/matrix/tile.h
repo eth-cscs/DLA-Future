@@ -311,9 +311,9 @@ private:
   std::variant<
       // No dependency
       std::monostate,
-      // Read-write access
-      internal::TileAsyncRwMutexReadOnlyWrapper<T, D>,
       // Read-only access
+      internal::TileAsyncRwMutexReadOnlyWrapper<T, D>,
+      // Read-write access
       internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
       // Disjoint read-write access
       std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>

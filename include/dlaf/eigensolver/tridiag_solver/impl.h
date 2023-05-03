@@ -213,18 +213,18 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   const TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
   WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // mat1
                      Matrix<T, D>(distr),                            // mat2
-                     Matrix<T, D>(vec_size, vec_tile_size),          // z
-                     Matrix<T, D>(vec_size, vec_tile_size),          // ztmp
+                     evals,                                          // d1
+                     Matrix<T, D>(vec_size, vec_tile_size),          // z0
+                     Matrix<T, D>(vec_size, vec_tile_size),          // z1
                      Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i2
 
-  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // dtmp
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // d0
+                        Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),   // c
                         Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
-                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i3
-                        Matrix<ColType, Device::CPU>(vec_size, vec_tile_size)};  // c
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)}; // i3
 
-  // Mirror workspace on host memory for CPU-only kernels
-  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(evals), initMirrorMatrix(ws.mat1),
-                                  initMirrorMatrix(ws.z), initMirrorMatrix(ws.ztmp),
+  WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.mat1), initMirrorMatrix(ws.d1),
+                                  initMirrorMatrix(ws.z0), initMirrorMatrix(ws.z1),
                                   initMirrorMatrix(ws.i2)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
@@ -242,23 +242,22 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
     solveLeaf(tridiag, evecs, ws_hm.mat1);
   }
 
-  // Offload the diagonal from `tridiag` to `evals`
-  offloadDiagonal(tridiag, ws_hm.evals);
+  // Offload the diagonal from `tridiag` to `d0`
+  offloadDiagonal(tridiag, ws_h.d0);
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
     mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm,
-                        evals, evecs);
+                        evecs);
   }
 
   const SizeType n = evecs.nrTiles().rows();
-  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, ws_h.dtmp);
   copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws.mat1);
 
-  applyIndex(0, n, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
+  applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);  // ws_hm.d1 is the mirror of ws.d1 which is evals
   dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.mat1, evecs);
 
-  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.d1, evals);
 }
 
 // Overload which provides the eigenvector matrix as complex values where the imaginery part is set to zero.
@@ -344,7 +343,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<T, D>& evecs) {
-
+  /*
   common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
 
   // Quick return for empty matrix
@@ -423,6 +422,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
 
   copy({0, 0}, evecs.distribution().localNrTiles(), ws_hm.evecs, evecs);
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
+  */
 }
 
 // \overload TridiagSolver<B, D, T>::call()

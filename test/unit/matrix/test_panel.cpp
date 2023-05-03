@@ -245,7 +245,7 @@ void testAccess(const GlobalElementSize size, const TileElementSize blocksize,
 
   // rw-access
   for (const auto& idx : panel.iteratorLocal()) {
-    start_detached(panel.readwrite(idx) | then([idx](auto&& tile) {
+    start_detached(panel.readwrite(idx) | then([idx](auto const& tile) {
                      matrix::test::set(tile, TypeUtil::element(idx.get(coord), 26));
                    }));
   }

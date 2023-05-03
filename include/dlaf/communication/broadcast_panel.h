@@ -14,7 +14,7 @@
 
 #include <type_traits>
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/communication/kernels/broadcast.h"

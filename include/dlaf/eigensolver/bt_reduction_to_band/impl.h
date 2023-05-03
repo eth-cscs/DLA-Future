@@ -34,7 +34,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/views.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/util_matrix.h"
 
 namespace dlaf::eigensolver::internal {

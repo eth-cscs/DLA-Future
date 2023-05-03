@@ -10,7 +10,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -26,7 +25,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/util_matrix.h"
 

@@ -13,7 +13,6 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"

@@ -21,7 +21,6 @@
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 #include "dlaf/common/range2d.h"

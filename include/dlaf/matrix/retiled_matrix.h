@@ -13,14 +13,11 @@
 #include <cstddef>
 #include <vector>
 
-#include <pika/future.hpp>
-
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/internal/tile_pipeline.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 #include "dlaf/common/range2d.h"

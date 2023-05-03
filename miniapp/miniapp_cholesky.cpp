@@ -13,7 +13,6 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <pika/future.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
@@ -34,7 +33,6 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/miniapp/dispatch.h"
 #include "dlaf/miniapp/options.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 

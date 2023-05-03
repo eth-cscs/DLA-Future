@@ -41,7 +41,6 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/schedulers.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"

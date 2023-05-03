@@ -34,7 +34,6 @@
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/sender/transform_mpi.h"
 #include "dlaf/traits.h"

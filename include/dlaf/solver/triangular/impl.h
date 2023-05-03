@@ -10,7 +10,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 #include <pika/thread.hpp>
 
 #include "dlaf/blas/tile.h"

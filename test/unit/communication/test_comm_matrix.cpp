@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/future.hpp>
-
 #include <gtest/gtest.h>
 #include <mpi.h>
 

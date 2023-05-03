@@ -9,8 +9,7 @@
 //
 #pragma once
 
-#include <pika/future.hpp>
-#include <pika/unwrap.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -23,7 +22,6 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 namespace dlaf {

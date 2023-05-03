@@ -14,7 +14,6 @@
 
 #include <vector>
 
-#include <pika/future.hpp>
 #include <whip.hpp>
 
 #include "dlaf/matrix/distribution.h"

@@ -14,7 +14,6 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/internal/tile_pipeline.h"
@@ -29,7 +28,6 @@ using namespace dlaf::test;
 using namespace testing;
 using dlaf::common::internal::unwrap;
 
-using pika::execution::experimental::make_future;
 using pika::execution::experimental::then;
 using pika::this_thread::experimental::sync_wait;
 

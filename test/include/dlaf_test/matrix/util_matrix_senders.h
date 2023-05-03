@@ -16,7 +16,6 @@
 #include <vector>
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "gtest/gtest.h"
 #include "dlaf/matrix/matrix.h"

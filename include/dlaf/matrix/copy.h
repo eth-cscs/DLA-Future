@@ -11,7 +11,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix/copy_tile.h"

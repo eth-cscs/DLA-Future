@@ -34,7 +34,6 @@
 
 #include <mpi.h>
 #include <numeric>
-#include <pika/future.hpp>
 #include "pika/algorithm.hpp"
 
 namespace dlaf::permutations::internal {

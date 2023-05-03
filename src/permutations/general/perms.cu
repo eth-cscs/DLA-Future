@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/future.hpp>
 #include <whip.hpp>
 
 #include "dlaf/permutations/general/perms.h"

@@ -14,13 +14,11 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/basic.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
-#include "dlaf/sender/keep_future.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"

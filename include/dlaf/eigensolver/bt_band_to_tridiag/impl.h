@@ -14,7 +14,6 @@
 #include <type_traits>
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 #include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_GPU

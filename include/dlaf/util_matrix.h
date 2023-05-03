@@ -19,7 +19,7 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"

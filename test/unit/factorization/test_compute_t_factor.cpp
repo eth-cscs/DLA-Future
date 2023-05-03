@@ -13,7 +13,6 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
-#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"

@@ -25,6 +25,8 @@
 #include "dlaf/eigensolver/tridiag_solver/merge.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
+#include "dlaf/permutations/general.h"
+#include "dlaf/permutations/general/impl.h"
 #include "dlaf/sender/make_sender_algorithm_overloads.h"
 #include "dlaf/sender/policy.h"
 #include "dlaf/types.h"
@@ -188,6 +190,23 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& tridiag, Matrix<T, D>& evals)
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>& evals,
                                   Matrix<T, D>& evecs) {
+  // Quick return for empty matrix
+  if (evecs.size().isEmpty())
+    return;
+
+  // If the matrix is composed by a single tile simply call stedc.
+  if (evecs.nrTiles().linear_size() == 1) {
+    if constexpr (D == Device::CPU) {
+      solveLeaf(tridiag, evecs);
+    }
+    else {
+      Matrix<T, Device::CPU> h_evecs{evecs.distribution()};
+      solveLeaf(tridiag, evecs, h_evecs);
+    }
+    offloadDiagonal(tridiag, evals);
+    return;
+  }
+
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
   const LocalElementSize vec_size(distr.size().rows(), 1);
@@ -231,6 +250,13 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
     mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm,
                         evals, evecs);
   }
+
+  const SizeType n = evecs.nrTiles().rows();
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, ws_h.dtmp);
+  copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws.mat1);
+
+  applyIndex(0, n, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
+  dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.mat1, evecs);
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
 }
@@ -318,6 +344,26 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+
+  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
+
+  // Quick return for empty matrix
+  if (evecs.size().isEmpty())
+    return;
+
+  // If the matrix is composed by a single tile simply call stedc.
+  if (evecs.nrTiles().linear_size() == 1) {
+    if constexpr (D == Device::CPU) {
+      solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+    }
+    else {
+      Matrix<T, Device::CPU> h_evecs{evecs.distribution()};
+      solveDistLeaf(grid, full_task_chain, tridiag, evecs, h_evecs);
+    }
+    offloadDiagonal(tridiag, evals);
+    return;
+  }
+
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
@@ -344,7 +390,6 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   // Cuppen's decomposition
   auto offdiag_vals = cuppensDecomposition(tridiag);
 
-  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
   common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
   common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
 
@@ -367,6 +412,16 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
                             i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm, evals, evecs);
   }
 
+  const SizeType n = evecs.nrTiles().rows();
+  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, ws_h.dtmp);
+  copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws_hm.mat1);
+
+  applyIndex(0, n, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, 0, n,
+                                                                       ws_hm.i2, ws_hm.mat1,
+                                                                       ws_hm.evecs);
+
+  copy({0, 0}, evecs.distribution().localNrTiles(), ws_hm.evecs, evecs);
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
 }
 

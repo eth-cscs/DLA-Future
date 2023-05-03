@@ -632,7 +632,13 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `evecs`
   //
-  initIndex(i_begin, i_end, ws_h.i1);
+  if (i_split == i_begin + 1) {
+    initIndex(i_begin, i_split, ws_h.i1);
+  }
+  if (i_split + 1 == i_end) {
+    initIndex(i_split, i_end, ws_h.i1);
+  }
+  addIndex(i_split, i_end, n1, ws_h.i1);
   sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
 
   auto rots =
@@ -696,10 +702,14 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //   ascending order
   // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
   //
+  initIndex(i_begin, i_end, ws_h.i1);
   sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
-  applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
+
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
+
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws_hm.evals);
+  copy(idx_loc_begin, sz_loc_tiles, ws.mat1, evecs);
 }
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
@@ -1026,7 +1036,13 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `evecs`
   //
-  initIndex(i_begin, i_end, ws_h.i1);
+  if (i_split == i_begin + 1) {
+    initIndex(i_begin, i_split, ws_h.i1);
+  }
+  if (i_split + 1 == i_end) {
+    initIndex(i_split, i_end, ws_h.i1);
+  }
+  addIndex(i_split, i_end, n1, ws_h.i1);
   sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
 
   auto rots =
@@ -1106,14 +1122,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //   ascending order
   // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
   //
+  initIndex(i_begin, i_end, ws_h.i1);
   sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
-  applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
 
-  copy(idx_loc_begin, sz_loc_tiles, ws.mat2, ws_hm.mat2);
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, i_begin,
-                                                                       i_end, ws_hm.i2, ws_hm.mat2,
-                                                                       ws_hm.evecs);
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm.evecs, evecs);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
+
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws_hm.evals);
+  copy(idx_loc_begin, sz_loc_tiles, ws.mat2, evecs);
 }
 
 }

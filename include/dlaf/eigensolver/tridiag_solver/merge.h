@@ -603,10 +603,10 @@ template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                       WorkSpaceHostMirror<T, D>& ws_hm) {
-  auto& evecs = ws.e2;
+  auto& evecs = ws.e0;
   auto& ws_mat1 = ws.e1;
   auto& ws_hm_mat1 = ws_hm.e1;
-  auto& ws_mat2 = ws.e0;
+  auto& ws_mat2 = ws.e2;
   namespace ex = pika::execution::experimental;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -717,7 +717,6 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_h.i1, ws_hm.i2);
 
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_mat1, evecs);
 }

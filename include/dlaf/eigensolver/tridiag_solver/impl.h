@@ -230,7 +230,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                                   initMirrorMatrix(ws.i2)};
 
   // Set `evecs` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, evecs);
+  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, ws.e0);
 
   // Cuppen's decomposition
   auto offdiag_vals = cuppensDecomposition(tridiag);
@@ -238,10 +238,10 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
   if constexpr (D == Device::CPU) {
-    solveLeaf(tridiag, evecs);
+    solveLeaf(tridiag, ws.e0);
   }
   else {
-    solveLeaf(tridiag, evecs, ws_hm.e2);
+    solveLeaf(tridiag, ws.e0, ws_hm.e2);
   }
 
   // Offload the diagonal from `tridiag` to `d0`
@@ -253,7 +253,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   }
 
   const SizeType n = evecs.nrTiles().rows();
-  copy({0, 0}, evecs.distribution().localNrTiles(), evecs, ws.e0);
+  copy({0, 0}, ws.i2.distribution().localNrTiles(), ws_hm.i2, ws.i2);
 
   applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);  // ws_hm.d1 is the mirror of ws.d1 which is evals
   dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.e0, evecs);

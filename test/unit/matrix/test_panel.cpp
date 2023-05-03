@@ -245,7 +245,7 @@ void testAccess(const GlobalElementSize size, const TileElementSize blocksize,
 
   // rw-access
   for (const auto& idx : panel.iteratorLocal()) {
-    start_detached(panel.readwrite(idx) | then([idx](auto const& tile) {
+    start_detached(panel.readwrite(idx) | then([idx](const auto& tile) {
                      matrix::test::set(tile, TypeUtil::element(idx.get(coord), 26));
                    }));
   }
@@ -350,7 +350,7 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
   // - Even indexed, i.e. the one using panel memory, are set to a different value
   for (auto idx : panel.iteratorLocal()) {
     if (idx.template get<coord>() % 2 == 0)
-      panel.readwrite(idx) | transformDetach(Policy<Backend::MC>{}, [idx](auto&& tile) {
+      panel.readwrite(idx) | transformDetach(Policy<Backend::MC>{}, [idx](const auto& tile) {
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 13));
       });
     else
@@ -371,7 +371,7 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
   // Invert the "logic" of external tiles: even are linked to matrix, odd are in-panel
   for (const auto& idx : panel.iteratorLocal()) {
     if (idx.template get<coord>() % 2 == 0)
-      panel.readwrite(idx) | transformDetach(Policy<Backend::MC>{}, [idx](auto&& tile) {
+      panel.readwrite(idx) | transformDetach(Policy<Backend::MC>{}, [idx](const auto& tile) {
         matrix::test::set(tile, TypeUtil::element(-idx.get(coord), 5));
       });
     else

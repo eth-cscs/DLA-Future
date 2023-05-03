@@ -95,7 +95,7 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
     return;
   }
 
-  tt::sync_wait(checkTileEq(input_tile, matrix.readwrite(idx)));
+  tt::sync_wait(checkTileEq(input_tile, matrix.read(idx)));
 }
 
 TEST_F(P2PTestMC, SendRecv) {

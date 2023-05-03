@@ -136,18 +136,18 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = sync_wait(matrix.read(index_tile_original)).get();
-        const auto size_tile_transposed = transposed(tile_original.size());
+        const auto tile_original = sync_wait(matrix.read(index_tile_original));
+        const auto size_tile_transposed = transposed(tile_original.get().size());
 
-        auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
+        auto transposed_conj_tile = [&tile_original =
+                                         tile_original.get()](const TileElementIndex& index) {
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
         if (current_rank == owner_transposed) {
-          auto tile_transposed = matrix.read(index_tile_transposed);
-
-          CHECK_TILE_NEAR(transposed_conj_tile, sync_wait(std::move(tile_transposed)).get(),
-                          TypeUtilities<T>::error, TypeUtilities<T>::error);
+          auto tile_transposed = sync_wait(matrix.read(index_tile_transposed));
+          CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), TypeUtilities<T>::error,
+                          TypeUtilities<T>::error);
         }
         else {
           Tile<T, Device::CPU> tile_transposed(size_tile_transposed,
@@ -165,9 +165,9 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
       }
       else if (current_rank == owner_transposed) {
         // send to owner_original
+        auto tile_transposed = sync_wait(matrix.read(index_tile_transposed));
         auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
-        comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
-                            sync_wait(matrix.read(index_tile_transposed)).get());
+        comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(), tile_transposed.get());
       }
     }
   }

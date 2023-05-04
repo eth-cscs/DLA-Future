@@ -449,7 +449,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
   const SizeType nvecs = sz_loc.get<C>();
-  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.rows(), 1));
+  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.get<C>(), 1));
   Matrix<SizeType, D> local2global_index(index_dist);
   Matrix<SizeType, D> packing_index(index_dist);
   Matrix<SizeType, D> unpacking_index(index_dist);

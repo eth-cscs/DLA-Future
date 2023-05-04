@@ -47,7 +47,6 @@ public:
     using common::internal::vector;
     namespace ex = pika::execution::experimental;
 
-    // TODO: Can this be done more cleanly? Without creating empty tiles?
     const auto n = to_sizet(distribution().localNrTiles().linear_size());
     tile_managers_.reserve(n);
     for (std::size_t i = 0; i < n; ++i) {

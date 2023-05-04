@@ -162,8 +162,6 @@ using ReadOnlyTileSender =
     pika::execution::experimental::any_sender<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>;
 
 namespace internal {
-// TODO: Do these need to be free functions or could they be hidden inside Tile?
-// They're already friends.
 template <class T, Device D>
 Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
                                      const SubTileSpec& spec);

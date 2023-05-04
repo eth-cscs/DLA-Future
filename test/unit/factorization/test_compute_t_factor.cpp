@@ -13,7 +13,6 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
-#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -37,6 +36,8 @@ using namespace dlaf::matrix;
 using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
+
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -254,7 +255,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   for (SizeType i = v_start.row(); i < v_start.row() + k && i < m; ++i) {
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
-    auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+    auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
     auto ij_tile = dist_v.tileElementIndex(ij);
     tile(ij_tile) = T{1};
     for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -285,7 +286,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx));
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx));
   }
 
   // Note:
@@ -297,7 +298,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  const auto& t = t_output_h.read(t_idx).get();
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
+  const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);
@@ -329,7 +331,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
     if (dist_v.rankIndex() == dist_v.rankGlobalTile(dist_v.globalTileIndex(ij))) {
-      auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+      auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
       auto ij_tile = dist_v.tileElementIndex(ij);
       tile(ij_tile) = T{1};
       for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -367,7 +369,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx), serial_comm);
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx), serial_comm);
   }
 
   // Note:
@@ -379,7 +381,8 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  const auto& t = t_output_h.read(t_idx).get();
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
+  const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);

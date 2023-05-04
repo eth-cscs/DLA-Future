@@ -67,9 +67,9 @@ inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemI
 template <class T>
 auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   namespace ex = pika::execution::experimental;
-  using sender_type = decltype(ex::split(ex::ensure_started(
-      cuppensDecompAsync<T>(tridiag.readwrite_sender(std::declval<LocalTileIndex>()),
-                            tridiag.readwrite_sender(std::declval<LocalTileIndex>())))));
+  using sender_type = decltype(ex::split(
+      ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(std::declval<LocalTileIndex>()),
+                                               tridiag.readwrite(std::declval<LocalTileIndex>())))));
   using vector_type = std::vector<sender_type>;
 
   if (tridiag.nrTiles().rows() == 0)
@@ -79,10 +79,10 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   vector_type offdiag_vals;
   offdiag_vals.reserve(to_sizet(i_end - 1));
 
-  for (SizeType i_split = 1; i_split < i_end; ++i_split) {
-    offdiag_vals.push_back(ex::split(ex::ensure_started(
-        cuppensDecompAsync<T>(tridiag.readwrite_sender(LocalTileIndex(i_split - 1, 0)),
-                              tridiag.readwrite_sender(LocalTileIndex(i_split, 0))))));
+  for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+    offdiag_vals.push_back(ex::split(
+        ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(LocalTileIndex(i_split - 1, 0)),
+                                                 tridiag.readwrite(LocalTileIndex(i_split, 0))))));
   }
   return offdiag_vals;
 }
@@ -92,8 +92,8 @@ template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    stedcAsync<Device::CPU>(tridiag.readwrite_sender(LocalTileIndex(i, 0)),
-                            evecs.readwrite_sender(LocalTileIndex(i, i)));
+    stedcAsync<Device::CPU>(tridiag.readwrite(LocalTileIndex(i, 0)),
+                            evecs.readwrite(LocalTileIndex(i, i)));
   }
 }
 
@@ -111,9 +111,8 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
     const auto id_tr = LocalTileIndex(i, 0);
     const auto id_ev = LocalTileIndex(i, i);
 
-    stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(id_ev));
-    ex::start_detached(ex::when_all(h_evecs.read_sender(id_ev), evecs.readwrite_sender(id_ev)) |
-                       copy(cp_policy));
+    stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(id_ev));
+    ex::start_detached(ex::when_all(h_evecs.read(id_ev), evecs.readwrite(id_ev)) | copy(cp_policy));
   }
 }
 #endif
@@ -122,8 +121,8 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
 template <class T, Device D>
 void offloadDiagonal(Matrix<const T, Device::CPU>& tridiag, Matrix<T, D>& evals) {
   for (SizeType i = 0; i < evals.distribution().nrTiles().rows(); ++i) {
-    copyDiagonalFromCompactTridiagonalAsync<D>(tridiag.read_sender(GlobalTileIndex(i, 0)),
-                                               evals.readwrite_sender(GlobalTileIndex(i, 0)));
+    copyDiagonalFromCompactTridiagonalAsync<D>(tridiag.read(GlobalTileIndex(i, 0)),
+                                               evals.readwrite(GlobalTileIndex(i, 0)));
   }
 }
 
@@ -244,8 +243,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<D>(real_evecs.read_sender(tile_wrt_local),
-                          evecs.readwrite_sender(tile_wrt_local));
+    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
   }
 }
 
@@ -268,16 +266,14 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), evecs.readwrite_sender(ii_tile));
+      stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
       ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read(id_tr)));
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
-      ex::start_detached(
-          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
+      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 root_rank, tridiag.readwrite(id_tr)));
     }
   }
 }
@@ -300,18 +296,16 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<Device::CPU>(tridiag.readwrite_sender(id_tr), h_evecs.readwrite_sender(ii_tile));
-      ex::start_detached(ex::when_all(h_evecs.read_sender(ii_tile), evecs.readwrite_sender(ii_tile)) |
+      stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
+      ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
                          copy(cp_policy));
       ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                  ex::make_unique_any_sender(tridiag.read_sender(id_tr))));
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read(id_tr)));
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
-      ex::start_detached(
-          comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()), root_rank,
-                                  ex::make_unique_any_sender(tridiag.readwrite_sender(id_tr))));
+      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
+                                                 root_rank, tridiag.readwrite(id_tr)));
     }
   }
 }
@@ -388,8 +382,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   // Convert real to complex numbers
   const matrix::Distribution& dist = evecs.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    castToComplexAsync<D>(real_evecs.read_sender(tile_wrt_local),
-                          evecs.readwrite_sender(tile_wrt_local));
+    castToComplexAsync<D>(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));
   }
 }
 

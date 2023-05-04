@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/execution.hpp>
+#include <pika/thread.hpp>
+
 namespace dlaf {
 namespace matrix {
 
@@ -32,26 +35,20 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
 }
 
 template <class T, Device D>
-pika::shared_future<Tile<const T, D>> Matrix<const T, D>::read(const LocalTileIndex& index) noexcept {
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getReadTileSharedFuture();
-}
-
-template <class T, Device D>
 void Matrix<const T, D>::waitLocalTiles() noexcept {
   // Note:
   // Using a readwrite access to the tile ensures that the access is exclusive and not shared
   // among multiple tasks.
 
-  auto readwrite_f = [this](const LocalTileIndex& index) {
-    const auto i = tileLinearIndex(index);
-    return this->tile_managers_[i].getRWTileFuture();
-  };
-
   const auto range_local = common::iterate_range2d(distribution().localNrTiles());
-  for (auto& f : internal::selectGeneric(readwrite_f, range_local)) {
-    f.get();
-  }
+
+  auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
+               [this](const LocalTileIndex& index) {
+                 return this->tile_managers_[tileLinearIndex(index)].readwrite();
+               },
+               range_local)) |
+           pika::execution::experimental::drop_value();
+  pika::this_thread::experimental::sync_wait(std::move(s));
 }
 
 template <class T, Device D>
@@ -59,8 +56,8 @@ void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& me
                                     const LayoutInfo& layout) noexcept {
   const auto& nr_tiles = layout.nrTiles();
 
-  tile_managers_.clear();
-  tile_managers_.reserve(futureVectorSize(nr_tiles));
+  DLAF_ASSERT(tile_managers_.empty(), "");
+  tile_managers_.reserve(to_sizet(nr_tiles.linear_size()));
 
   using MemView = memory::MemoryView<T, D>;
 

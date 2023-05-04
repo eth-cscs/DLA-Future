@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 
 #include <functional>
@@ -36,6 +37,14 @@ struct Unwrapper<pika::shared_future<T>> {
 
 template <typename T>
 struct Unwrapper<std::reference_wrapper<T>> {
+  template <typename U>
+  static decltype(auto) unwrap(U&& u) {
+    return u.get();
+  }
+};
+
+template <typename T1, typename T2, pika::execution::experimental::async_rw_mutex_access_type at>
+struct Unwrapper<pika::execution::experimental::async_rw_mutex_access_wrapper<T1, T2, at>> {
   template <typename U>
   static decltype(auto) unwrap(U&& u) {
     return u.get();

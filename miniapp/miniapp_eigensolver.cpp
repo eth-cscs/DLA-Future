@@ -48,6 +48,7 @@ using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 using dlaf::matrix::MatrixMirror;
+using pika::this_thread::experimental::sync_wait;
 
 /// Check results of the eigensolver
 template <typename T>
@@ -210,8 +211,8 @@ void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const 
   const GlobalElementIndex last_ev(evalues.size().rows() - 1, 0);
   const GlobalTileIndex last_ev_tile = evalues.distribution().globalTileIndex(last_ev);
   const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
-  const auto norm_A = std::max(std::norm(evalues.read(GlobalTileIndex{0, 0}).get()({0, 0})),
-                               std::norm(evalues.read(last_ev_tile).get()(last_ev_el_tile)));
+  const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
+                               std::norm(sync_wait(evalues.read(last_ev_tile)).get()(last_ev_el_tile)));
 
   // 2.
   // Compute C = E D - A E

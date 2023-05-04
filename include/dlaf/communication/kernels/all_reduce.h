@@ -19,7 +19,9 @@
 
 #include "dlaf/common/pipeline.h"
 #include "dlaf/communication/communicator.h"
+#include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/tile.h"
+#include "dlaf/sender/traits.h"
 
 namespace dlaf::comm {
 /// Schedule an all reduce.
@@ -29,26 +31,20 @@ namespace dlaf::comm {
 /// be writable so that the received and reduced data can be written to it. The
 /// output tile is sent by the returned sender.
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
-        tile_in,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out);
+    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
+    dlaf::matrix::ReadWriteTileSender<T, D> tile_out);
 
-#define DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(kword, Type, Device)                                 \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>    \
-  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                            \
-                        dlaf::common::PromiseGuard<Communicator>>                                \
-                        pcomm,                                                                   \
-                    MPI_Op reduce_op,                                                            \
-                    pika::execution::experimental::unique_any_sender<                            \
-                        pika::shared_future<matrix::Tile<const Type, Device>>>                   \
-                        tile_in,                                                                 \
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-                        tile_out)
+#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                     \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                              \
+  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                         \
+                        dlaf::common::PromiseGuard<Communicator>>                             \
+                        pcomm,                                                                \
+                    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in, \
+                    dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
 
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, int, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, int, Device::CPU);
 
 /// Schedule an in-place all reduce.
 ///
@@ -56,18 +52,16 @@ DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(extern, int, Device::CPU);
 /// sender tile must be writable so that the received and reduced data can be
 /// written to it. The tile is sent by the returned sender.
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduceInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
+    MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)                                      \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>>           \
-  scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender<                            \
-                               dlaf::common::PromiseGuard<Communicator>>                                \
-                               pcomm,                                                                   \
-                           MPI_Op reduce_op,                                                            \
-                           pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-                               tile)
+#define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)           \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>             \
+  scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender< \
+                               dlaf::common::PromiseGuard<Communicator>>     \
+                               pcomm,                                        \
+                           MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);

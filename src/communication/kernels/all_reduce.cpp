@@ -106,23 +106,20 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 }
 
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduce(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>>
-        tile_in,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile_out) {
+    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
+    dlaf::matrix::ReadWriteTileSender<T, D> tile_out) {
   return internal::scheduleAllReduce(std::move(pcomm), reduce_op, std::move(tile_in),
                                      std::move(tile_out));
 }
 
-// TODO: This is only for a test (test_collective_async)
-DLAF_SCHEDULE_ALL_REDUCE_SFTILE_ETI(, int, Device::CPU);
+DLAF_SCHEDULE_ALL_REDUCE_ETI(, int, Device::CPU);
 
 template <class T, Device D>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleAllReduceInPlace(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(
     pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
-    MPI_Op reduce_op, pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile) {
+    MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::CommunicationDevice_v;
   using dlaf::comm::internal::allReduceInPlace_o;
   using dlaf::comm::internal::transformMPI;

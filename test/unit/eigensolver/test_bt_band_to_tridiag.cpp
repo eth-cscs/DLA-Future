@@ -110,7 +110,9 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
-                                            b, k, splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
+                                            b, k,
+                                            splitTile(mat_hh.readwrite(ij_tile),
+                                                      {sub_origin, sub_size}));
       }
     }
 
@@ -185,7 +187,7 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
                                             b, k,
-                                            splitTile(mat_hh(LocalTileIndex{i, j}),
+                                            splitTile(mat_hh.readwrite(LocalTileIndex{i, j}),
                                                       {sub_origin, sub_size}));
       }
     }
@@ -255,6 +257,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -272,6 +275,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -294,6 +298,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -311,6 +316,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }

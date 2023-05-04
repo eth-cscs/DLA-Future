@@ -37,10 +37,10 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
     for (SizeType i = idx_begin; i < idx_end; ++i) {
       for (SizeType k = idx_begin; k < idx_end; ++k) {
         ex::start_detached(dlaf::internal::whenAllLift(opA, opB, alpha,
-                                                       mat_a.read_sender(GlobalTileIndex(i, k)),
-                                                       mat_b.read_sender(GlobalTileIndex(k, j)),
+                                                       mat_a.read(GlobalTileIndex(i, k)),
+                                                       mat_b.read(GlobalTileIndex(k, j)),
                                                        k == idx_begin ? beta : T(1),
-                                                       mat_c.readwrite_sender(GlobalTileIndex(i, j))) |
+                                                       mat_c.readwrite(GlobalTileIndex(i, j))) |
                            tile::gemm(dlaf::internal::Policy<B>()));
       }
     }
@@ -156,12 +156,11 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
         const SizeType ncols = isColPartial ? partialSize : mb;
 
         ex::start_detached(
-            dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                        panelA.read_sender(ij), panelB.read_sender(ij),
-                                        k == idx_begin ? beta : T(1),
+            dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, panelA.read(ij),
+                                        panelB.read(ij), k == idx_begin ? beta : T(1),
                                         (isRowPartial || isColPartial)
-                                            ? splitTile(mat_c(ij), {{0, 0}, {nrows, ncols}})
-                                            : mat_c.readwrite_sender(ij)) |
+                                            ? splitTile(mat_c.readwrite(ij), {{0, 0}, {nrows, ncols}})
+                                            : mat_c.readwrite(ij)) |
             tile::gemm(dlaf::internal::Policy<B>()));
       }
     }

@@ -21,6 +21,7 @@
 
 using namespace dlaf;
 using namespace dlaf::test;
+using pika::this_thread::experimental::sync_wait;
 
 template <typename Type>
 class TridiagEigensolverTestCPU : public ::testing::Test {};
@@ -103,7 +104,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
   const auto& dist = evecs.distribution();
   for (SizeType i_tile = 0; i_tile < dist.nrTiles().cols(); ++i_tile) {
     SizeType i_gl_el = dist.template globalElementFromGlobalTileAndTileElement<Coord::Col>(i_tile, 0);
-    auto tile = evecs(GlobalTileIndex(0, i_tile)).get();
+    auto tile = sync_wait(evecs.readwrite(GlobalTileIndex(0, i_tile)));
     for (SizeType i_tile_el = 0; i_tile_el < tile.size().cols(); ++i_tile_el) {
       if (dlaf::util::sameSign(std::real(expected_evecs_fn(GlobalElementIndex(0, i_gl_el + i_tile_el))),
                                std::real(tile(TileElementIndex(0, i_tile_el)))))
@@ -118,7 +119,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
 
     // Iterate over all tiles on the `j_tile` tile column
     for (SizeType i_tile = 0; i_tile < dist.nrTiles().rows(); ++i_tile) {
-      auto tile = evecs(GlobalTileIndex(i_tile, j_tile)).get();
+      auto tile = sync_wait(evecs.readwrite(GlobalTileIndex(i_tile, j_tile)));
       tile::internal::scaleCol(T(-1), j_tile_el, tile);
     }
   }

@@ -72,7 +72,7 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
         return el(GlobalElementIndex(tile_base_index.row() + tile_index.row(),
                                      tile_base_index.col() + tile_index.col()));
       };
-      set(mat(tile_index).get(), el_tile);
+      set(pika::this_thread::experimental::sync_wait(mat.readwrite(tile_index)), el_tile);
     }
   }
 }
@@ -97,7 +97,9 @@ void check(ElementGetter expected, MatrixType<T, Device::CPU>& mat, ComparisonOp
   const matrix::Distribution& dist = mat.distribution();
   for (SizeType tile_j = 0; tile_j < dist.localNrTiles().cols(); ++tile_j) {
     for (SizeType tile_i = 0; tile_i < dist.localNrTiles().rows(); ++tile_i) {
-      auto& tile = mat.read(LocalTileIndex(tile_i, tile_j)).get();
+      auto wrapper =
+          pika::this_thread::experimental::sync_wait(mat.read(LocalTileIndex(tile_i, tile_j)));
+      auto& tile = wrapper.get();
       for (SizeType jj = 0; jj < tile.size().cols(); ++jj) {
         SizeType j = dist.globalElementFromLocalTileAndTileElement<Coord::Col>(tile_j, jj);
         for (SizeType ii = 0; ii < tile.size().rows(); ++ii) {

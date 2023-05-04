@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "dlaf/common/assert.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/permutations/general/api.h"
 #include "dlaf/permutations/general/perms.h"
@@ -339,6 +340,8 @@ auto initPackingIndex(comm::IndexT_MPI nranks, SizeType offset_sub, const matrix
 
       for (SizeType perm_index_local = 0; perm_index_local < nperms; ++perm_index_local) {
         const SizeType perm_index_global = offset_sub + loc2sub[perm_index_local];
+        DLAF_ASSERT_HEAVY(perm_index_local >= 0 && perm_index_local < nperms, perm_index_local, nperms);
+        DLAF_ASSERT_HEAVY(perm_index_global >= 0 && perm_index_global < dist.size().get<C>(), perm_index_global, dist.size());
         if (dist.rankGlobalElement<C>(perm_index_global) == rank) {
           const SizeType perm_index_packed = rank_displacement + nperms_local;
 

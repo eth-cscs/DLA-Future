@@ -81,7 +81,7 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   vector_type offdiag_vals;
   offdiag_vals.reserve(to_sizet(i_end - 1));
 
-  for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+  for (SizeType i_split = 1; i_split < i_end; ++i_split) {
     offdiag_vals.push_back(ex::split(
         ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(LocalTileIndex(i_split - 1, 0)),
                                                  tridiag.readwrite(LocalTileIndex(i_split, 0))))));

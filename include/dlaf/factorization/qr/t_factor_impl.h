@@ -29,6 +29,7 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
@@ -59,9 +60,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class TSender>
-  static auto gemvColumnT(SizeType first_row_tile,
-                          pika::shared_future<matrix::Tile<const T, Device::CPU>> tile_vi,
+  template <class VISender, class TSender>
+  static auto gemvColumnT(SizeType first_row_tile, VISender tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
@@ -102,8 +102,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
                                      std::move(gemv_func),
-                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
-                                                  dlaf::internal::keepFuture(taus),
+                                     ex::when_all(tile_vi, dlaf::internal::keepFuture(taus),
                                                   std::forward<TSender>(tile_t)));
   }
 
@@ -146,9 +145,8 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         std::forward<TSender>(t));
   }
 
-  template <class TSender>
-  static auto gemvColumnT(SizeType first_row_tile,
-                          pika::shared_future<matrix::Tile<const T, Device::GPU>> tile_vi,
+  template <class VISender, class TSender>
+  static auto gemvColumnT(SizeType first_row_tile, VISender&& tile_vi,
                           pika::shared_future<common::internal::vector<T>>& taus,
                           TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
@@ -200,7 +198,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
                                                          pika::execution::thread_priority::high),
                                                      std::move(gemv_func),
-                                                     ex::when_all(dlaf::internal::keepFuture(tile_vi),
+                                                     ex::when_all(std::forward<VISender>(tile_vi),
                                                                   dlaf::internal::keepFuture(taus),
                                                                   std::forward<TSender>(tile_t)));
   }
@@ -237,7 +235,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                                           pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t) {
+                                          matrix::ReadWriteTileSender<T, device> t) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -247,7 +245,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
   const auto v_start = hh_panel.offsetElement();
 
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column
@@ -287,7 +285,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                                           pika::shared_future<common::internal::vector<T>> taus,
-                                          pika::future<matrix::Tile<T, device>> t,
+                                          matrix::ReadWriteTileSender<T, device> t,
                                           common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
@@ -300,7 +298,7 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
   const auto v_start = hh_panel.offsetElement();
   auto dist = hh_panel.parentDistribution();
 
-  ex::unique_any_sender<matrix::Tile<T, device>> t_local = Helpers::set0(std::move(t));
+  matrix::ReadWriteTileSender<T, device> t_local = Helpers::set0(std::move(t));
 
   // Note:
   // T factor is an upper triangular square matrix, built column by column

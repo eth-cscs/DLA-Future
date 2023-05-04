@@ -56,11 +56,5 @@ Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout, Elemen
 template <class T, Device D>
 Matrix<T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr) : Matrix<const T, D>(layout, ptr) {}
 
-template <class T, Device D>
-pika::future<Tile<T, D>> Matrix<T, D>::operator()(const LocalTileIndex& index) noexcept {
-  const auto i = tileLinearIndex(index);
-  return tile_managers_[i].getRWTileFuture();
-}
-
 }
 }

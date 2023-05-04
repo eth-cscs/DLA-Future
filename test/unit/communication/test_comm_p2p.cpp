@@ -83,19 +83,19 @@ void testSendRecv(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   const auto input_tile = fixedValueTile<T>(input_value);
 
   if (rank_src == world.rank()) {
-    tt::sync_wait(setTileTo(matrix.readwrite_sender(idx), input_value));
+    ex::start_detached(setTileTo(matrix.readwrite(idx), input_value));
     ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, tag,
-                                          ex::make_unique_any_sender(matrix.read_sender(idx))));
+                                          matrix.read(idx)));
   }
   else if (rank_dst == world.rank()) {
     ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, tag,
-                                          ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
+                                          matrix.readwrite(idx)));
   }
   else {
     return;
   }
 
-  tt::sync_wait(checkTileEq(input_tile, matrix.read_sender(idx)));
+  tt::sync_wait(checkTileEq(input_tile, matrix.read(idx)));
 }
 
 TEST_F(P2PTestMC, SendRecv) {
@@ -134,9 +134,10 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
       for (SizeType r = 0; r < matrix.nrTiles().rows(); ++r) {
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-        matrix::test::set(matrix(idx).get(), fixedValueTile(id));
+        auto tile = tt::sync_wait(matrix.readwrite(idx));
+        matrix::test::set(tile, fixedValueTile(id));
         ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(ex::just(world)), rank_dst, id,
-                                              ex::make_unique_any_sender(matrix.read_sender(idx))));
+                                              matrix.read(idx)));
       }
     }
   }
@@ -150,7 +151,7 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
         ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(ex::just(world)), rank_src, id,
-                                              ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
+                                              matrix.readwrite(idx)));
       }
     }
   }
@@ -165,7 +166,8 @@ void testSendRecvMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix) 
   // check that overall this mechanism work also with unordered tagged communications.
   for (const GlobalTileIndex idx : common::iterate_range2d(matrix.nrTiles())) {
     const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-    CHECK_TILE_EQ(fixedValueTile(id), matrix.read(idx).get());
+    auto tile = tt::sync_wait(matrix.read(idx));
+    CHECK_TILE_EQ(fixedValueTile(id), tile.get());
   }
 }
 
@@ -189,25 +191,23 @@ void testP2PAllSum(comm::Communicator world, matrix::Matrix<T, D> matrix) {
   constexpr comm::IndexT_MPI tag = 13;
 
   const T input_value = 13;
-  tt::sync_wait(setTileTo(matrix.readwrite_sender(idx), input_value));
+  tt::sync_wait(setTileTo(matrix.readwrite(idx), input_value));
 
   matrix::Matrix<T, D> tmp(matrix.distribution().localSize(), matrix.blockSize());
 
   if (rank_src == world.rank()) {
-    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, tag,
-                                                  matrix.read_sender(idx),
-                                                  tmp.readwrite_sender(LocalTileIndex{0, 0})));
+    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, tag, matrix.read(idx),
+                                                  tmp.readwrite(LocalTileIndex{0, 0})));
   }
   else if (rank_dst == world.rank()) {
-    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, tag,
-                                                  matrix.read_sender(idx),
-                                                  tmp.readwrite_sender(LocalTileIndex{0, 0})));
+    ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, tag, matrix.read(idx),
+                                                  tmp.readwrite(LocalTileIndex{0, 0})));
   }
   else {
     return;
   }
 
-  tt::sync_wait(checkTileEq(fixedValueTile(26), tmp.read_sender(idx)));
+  tt::sync_wait(checkTileEq(fixedValueTile(26), tmp.read(idx)));
 }
 
 TEST_F(P2PTestMC, AllSum) {
@@ -248,10 +248,10 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
       for (SizeType r = 0; r < matrix.nrTiles().rows(); ++r) {
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-        matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, id,
-                                                      matrix.read_sender(idx),
-                                                      tmp.readwrite_sender(idx)));
+        auto tile = tt::sync_wait(matrix.readwrite(idx));
+        matrix::test::set(tile, fixedValueTile(id));
+        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_dst, id, matrix.read(idx),
+                                                      tmp.readwrite(idx)));
       }
     }
   }
@@ -264,10 +264,10 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
       for (SizeType c = matrix.nrTiles().cols() - 1; c >= 0; --c) {
         const GlobalTileIndex idx(r, c);
         const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-        matrix::test::set(matrix(idx).get(), fixedValueTile(id));
-        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, id,
-                                                      matrix.read_sender(idx),
-                                                      tmp.readwrite_sender(idx)));
+        auto tile = tt::sync_wait(matrix.readwrite(idx));
+        matrix::test::set(tile, fixedValueTile(id));
+        ex::start_detached(comm::scheduleAllSumP2P<B>(ex::just(world), rank_src, id, matrix.read(idx),
+                                                      tmp.readwrite(idx)));
       }
     }
   }
@@ -282,7 +282,8 @@ void testP2PAllSumMixTags(comm::Communicator world, matrix::Matrix<T, D> matrix)
   // check that overall this mechanism work also with unordered tagged communications.
   for (const GlobalTileIndex idx : common::iterate_range2d(matrix.nrTiles())) {
     const auto id = common::computeLinearIndexColMajor<comm::IndexT_MPI>(idx, matrix.nrTiles());
-    CHECK_TILE_EQ(fixedValueTile(2 * id), tmp.read(idx).get());
+    auto tile = tt::sync_wait(tmp.read(idx));
+    CHECK_TILE_EQ(fixedValueTile(2 * id), tile.get());
   }
 }
 

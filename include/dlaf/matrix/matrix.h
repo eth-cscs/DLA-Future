@@ -13,15 +13,14 @@
 #include <exception>
 #include <vector>
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/internal/tile_future_manager.h"
+#include "dlaf/matrix/internal/tile_pipeline.h"
 #include "dlaf/matrix/layout_info.h"
 #include "dlaf/matrix/matrix_base.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 #include "dlaf/common/range2d.h"
@@ -51,9 +50,6 @@ auto selectGeneric(Func&& f, common::IterableRange2D<SizeType, LocalTile_TAG> ra
 /// The tiles are distributed according to a distribution (see @c Matrix::distribution()),
 /// therefore some tiles are stored locally on this rank,
 /// while the others are available on other ranks.
-/// More details are available in misc/matrix_distribution.md.
-/// Details about the Tile synchronization mechanism can be found in misc/synchronization.md.
-
 template <class T, Device D>
 class Matrix : public Matrix<const T, D> {
 public:
@@ -63,6 +59,7 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<const ElementType, D>;
+  using ReadWriteSenderType = ReadWriteTileSender<T, D>;
   friend Matrix<const ElementType, D>;
 
   /// Create a non distributed matrix of size @p size and block size @p block_size.
@@ -117,28 +114,19 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  /// Returns a future of the Tile with local index @p index.
+  /// Returns a sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  pika::future<TileType> operator()(const LocalTileIndex& index) noexcept;
+  ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].readwrite();
+  }
 
-  /// Returns a future of the Tile with global index @p index.
+  /// Returns a sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::future<TileType> operator()(const GlobalTileIndex& index) {
-    return operator()(this->distribution().localTileIndex(index));
-  }
-
-  auto readwrite_sender(const LocalTileIndex& index) noexcept {
-    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
-    return this->operator()(index);
-  }
-
-  auto readwrite_sender(const GlobalTileIndex& index) {
-    return readwrite_sender(this->distribution().localTileIndex(index));
+  ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
+    return readwrite(this->distribution().localTileIndex(index));
   }
 
 protected:
@@ -158,6 +146,7 @@ public:
   using TileType = Tile<ElementType, D>;
   using ConstTileType = Tile<const ElementType, D>;
   using TileDataType = internal::TileData<ElementType, D>;
+  using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   friend Matrix<ElementType, D>;
 
   Matrix(const LayoutInfo& layout, ElementType* ptr);
@@ -176,29 +165,19 @@ public:
   Matrix& operator=(const Matrix& rhs) = delete;
   Matrix& operator=(Matrix&& rhs) = default;
 
-  /// Returns a read-only shared_future of the Tile with local index @p index.
+  /// Returns a read-only sender of the Tile with local index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre index.isIn(distribution().localNrTiles()).
-  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) noexcept;
+  ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
+    return tile_managers_[tileLinearIndex(index)].read();
+  }
 
-  /// Returns a read-only shared_future of the Tile with global index @p index.
+  /// Returns a read-only sender of the Tile with global index @p index.
   ///
-  /// See misc/synchronization.md for the synchronization details.
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
-  pika::shared_future<ConstTileType> read(const GlobalTileIndex& index) {
+  ReadOnlySenderType read(const GlobalTileIndex& index) {
     return read(distribution().localTileIndex(index));
-  }
-
-  auto read_sender(const LocalTileIndex& index) noexcept {
-    // We want to explicitly deal with the shared_future, not the const& to the
-    // value.
-    return dlaf::internal::keepFuture(read(index));
-  }
-
-  auto read_sender(const GlobalTileIndex& index) {
-    return read_sender(distribution().localTileIndex(index));
   }
 
   /// Synchronization barrier for all local tiles in the matrix
@@ -212,7 +191,7 @@ protected:
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
 
-  std::vector<internal::TileFutureManager<T, D>> tile_managers_;
+  std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
 
 // Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
@@ -384,8 +363,7 @@ Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileEleme
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<pika::shared_future<typename MatrixLike::ConstTileType>> selectRead(
-    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+auto selectRead(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
   return internal::selectGeneric([&](auto index) { return matrix.read(index); }, range);
 }
 
@@ -393,9 +371,8 @@ std::vector<pika::shared_future<typename MatrixLike::ConstTileType>> selectRead(
 ///
 /// @pre @p range must be a valid range for @p matrix
 template <class MatrixLike>
-std::vector<pika::future<typename MatrixLike::TileType>> select(
-    MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
-  return internal::selectGeneric([&](auto index) { return matrix(index); }, range);
+auto select(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG> range) {
+  return internal::selectGeneric([&](auto index) { return matrix.readwrite(index); }, range);
 }
 
 /// ---- ETI

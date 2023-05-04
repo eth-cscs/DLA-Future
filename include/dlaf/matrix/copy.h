@@ -11,7 +11,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -46,7 +45,7 @@ void copy(LocalTileSize sz, LocalTileIndex idx_source_begin, Matrix<const T, Sou
   namespace ex = pika::execution::experimental;
   for (auto idx_dest : common::iterate_range2d(idx_dest_begin, sz)) {
     LocalTileIndex idx_source = idx_source_begin + (idx_dest - idx_dest_begin);
-    ex::start_detached(ex::when_all(source.read_sender(idx_source), dest.readwrite_sender(idx_dest)) |
+    ex::start_detached(ex::when_all(source.read(idx_source), dest.readwrite(idx_dest)) |
                        copy(dlaf::internal::Policy<internal::CopyBackend_v<Source, Destination>>{}));
   }
 }

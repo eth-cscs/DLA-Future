@@ -45,7 +45,8 @@ auto newBlockMatrixContiguous() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_TRUE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+  auto tile = tt::sync_wait(matrix.read(LocalTileIndex(0, 0)));
+  EXPECT_TRUE(data_iscontiguous(common::make_data(tile.get())));
 
   return matrix;
 }
@@ -57,7 +58,8 @@ auto newBlockMatrixStrided() {
 
   auto matrix = matrix::Matrix<T, D>(dist, layout);
 
-  EXPECT_FALSE(data_iscontiguous(common::make_data(matrix.read(LocalTileIndex(0, 0)).get())));
+  auto tile = tt::sync_wait(matrix.read(LocalTileIndex(0, 0)));
+  EXPECT_FALSE(data_iscontiguous(common::make_data(tile.get())));
 
   return matrix;
 }
@@ -70,35 +72,30 @@ void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, st
   const LocalTileIndex idx(0, 0);
 
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(matrix(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(matrix.readwrite(idx)), input_tile);
 
   std::function<T(TileElementIndex)> exp_tile;
   if (root_rank == world.rank()) {
     // use -> read
-    ex::start_detached(
-        dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM,
-                                              ex::make_unique_any_sender(matrix.readwrite_sender(idx))));
+    ex::start_detached(dlaf::comm::scheduleReduceRecvInPlace(chain(), MPI_SUM, matrix.readwrite(idx)));
 
     exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
   }
   else {
     // use -> read -> set -> read
-    ex::start_detached(
-        dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM,
-                                       ex::make_unique_any_sender(matrix.read_sender(idx))));
+    ex::start_detached(dlaf::comm::scheduleReduceSend(chain(), root_rank, MPI_SUM, matrix.read(idx)));
 
-    CHECK_TILE_EQ(input_tile, matrix.read(idx).get());
+    CHECK_TILE_EQ(input_tile, tt::sync_wait(matrix.read(idx)).get());
 
     auto new_tile = fixedValueTile(26);
-    matrix::test::set(matrix(idx).get(), new_tile);
+    matrix::test::set(tt::sync_wait(matrix.readwrite(idx)), new_tile);
 
     exp_tile = new_tile;
   }
-
-  const auto& tile = matrix.read(idx).get();
+  auto tile = tt::sync_wait(matrix.read(idx));
   SCOPED_TRACE(test_name);
 
-  CHECK_TILE_EQ(exp_tile, tile);
+  CHECK_TILE_EQ(exp_tile, tile.get());
 }
 
 TEST_F(CollectiveTest, ReduceInPlace) {
@@ -114,11 +111,9 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(matrix(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(matrix.readwrite(idx)), input_tile);
 
-  auto after =
-      dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM,
-                                           ex::make_unique_any_sender(matrix.readwrite_sender(idx)));
+  auto after = dlaf::comm::scheduleAllReduceInPlace(chain(), MPI_SUM, matrix.readwrite(idx));
 
   // Note:
   // The call `sync_wait(after)` waits for any scheduled task with the aim to ensure that no other task
@@ -134,7 +129,7 @@ void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix,
     CHECK_TILE_EQ(exp_tile, tile);
   }
 
-  CHECK_TILE_EQ(exp_tile, matrix.read(idx).get());
+  CHECK_TILE_EQ(exp_tile, tt::sync_wait(matrix.read(idx)).get());
 }
 
 TEST_F(CollectiveTest, AllReduceInPlace) {
@@ -155,21 +150,19 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
 
   // set -> use -> read
   auto input_tile = fixedValueTile(world.rank() + 1);
-  matrix::test::set(mat_in(idx).get(), input_tile);
+  matrix::test::set(tt::sync_wait(mat_in.readwrite(idx)), input_tile);
 
   ex::start_detached(
-      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM,
-                                    ex::make_unique_any_sender(mat_in.read_sender(idx)),
-                                    ex::make_unique_any_sender(mat_out.readwrite_sender(idx))));
+      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out.readwrite(idx)));
 
-  const auto& tile_in = mat_in.read(idx).get();
-  const auto& tile_out = mat_out.read(idx).get();
+  auto tile_in = tt::sync_wait(mat_in.read(idx));
+  auto tile_out = tt::sync_wait(mat_out.read(idx));
   SCOPED_TRACE(test_name);
 
-  CHECK_TILE_EQ(input_tile, tile_in);
+  CHECK_TILE_EQ(input_tile, tile_in.get());
 
   auto exp_tile = fixedValueTile(world.size() * (world.size() + 1) / 2);
-  CHECK_TILE_EQ(exp_tile, tile_out);
+  CHECK_TILE_EQ(exp_tile, tile_out.get());
 }
 
 TEST_F(CollectiveTest, AllReduce) {

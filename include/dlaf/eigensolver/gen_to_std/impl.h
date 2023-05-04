@@ -10,7 +10,6 @@
 #pragma once
 
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/index2d.h"
@@ -26,7 +25,6 @@
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
 #include "dlaf/matrix/tile.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/util_matrix.h"
 
@@ -208,8 +206,7 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
     const LocalTileIndex kk{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
-                           mat_l.readwrite_sender(kk));
+    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite(kk), mat_l.readwrite(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -217,9 +214,8 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ik{i, k};
-      trsmPanelTile<backend>(thread_priority::high, mat_l.read_sender(kk), mat_a.readwrite_sender(ik));
-      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_l.read_sender(ik),
-                             mat_a.readwrite_sender(ik));
+      trsmPanelTile<backend>(thread_priority::high, mat_l.read(kk), mat_a.readwrite(ik));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read(kk), mat_l.read(ik), mat_a.readwrite(ik));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
@@ -229,36 +225,34 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
       const auto trailing_matrix_priority =
           (j == k + 1) ? thread_priority::high : thread_priority::normal;
 
-      her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(jk),
-                                     mat_l.read_sender(jk), mat_a.readwrite_sender(jj));
+      her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read(jk), mat_l.read(jk),
+                                     mat_a.readwrite(jj));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         const LocalTileIndex ik{i, k};
         const LocalTileIndex ij{i, j};
-        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_a.read_sender(ik),
-                                        mat_l.read_sender(jk), mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_l.read_sender(ik),
-                                        mat_a.read_sender(jk), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_a.read(ik), mat_l.read(jk),
+                                        mat_a.readwrite(ij));
+        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_l.read(ik), mat_a.read(jk),
+                                        mat_a.readwrite(ij));
       }
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ik{i, k};
-      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_l.read_sender(ik),
-                             mat_a.readwrite_sender(ik));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read(kk), mat_l.read(ik), mat_a.readwrite(ik));
     }
 
     for (SizeType j = k + 1; j < nrtile; ++j) {
       const LocalTileIndex jj{j, j};
       const LocalTileIndex jk{j, k};
-      trsmPanelUpdateTile<backend>(thread_priority::high, mat_l.read_sender(jj),
-                                   mat_a.readwrite_sender(jk));
+      trsmPanelUpdateTile<backend>(thread_priority::high, mat_l.read(jj), mat_a.readwrite(jk));
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
         const LocalTileIndex ij{i, j};
         const LocalTileIndex ik{i, k};
-        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_l.read_sender(ij),
-                                     mat_a.read_sender(jk), mat_a.readwrite_sender(ik));
+        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_l.read(ij), mat_a.read(jk),
+                                     mat_a.readwrite(ik));
       }
     }
   }
@@ -269,6 +263,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
                                           Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
   using pika::execution::thread_priority;
+  namespace ex = pika::execution::experimental;
 
   // Set up MPI executor pipelines
   common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
@@ -336,8 +331,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex kj(kk_offset.rows(), j_local);
 
-        trsmPanelUpdateTile<backend>(thread_priority::high, l_panel.read_sender(kk_panel),
-                                     mat_a.readwrite_sender(kj));
+        trsmPanelUpdateTile<backend>(thread_priority::high, l_panel.read(kk_panel), mat_a.readwrite(kj));
 
         a_panelT.setTile(kj_panelT, mat_a.read(kj));
       }
@@ -353,8 +347,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
           const LocalTileIndex kj_panelT{Coord::Col, j_local};
           const LocalTileIndex ij{i_local, j_local};
 
-          gemmPanelUpdateTile<backend>(thread_priority::normal, l_panel.read_sender(ik_panel),
-                                       a_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
+          gemmPanelUpdateTile<backend>(thread_priority::normal, l_panel.read(ik_panel),
+                                       a_panelT.read(kj_panelT), mat_a.readwrite(ij));
         }
       }
     }
@@ -363,8 +357,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     if (kk_rank == this_rank)
-      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
-                             mat_l.readwrite_sender(kk));
+      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite(kk), mat_l.readwrite(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -374,7 +367,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    pika::shared_future<matrix::Tile<const T, device>> a_diag;
+    matrix::ReadOnlyTileSender<T, device> a_diag;
     if (kk_rank.col() == this_rank.col()) {
       // Note:
       // [a,l]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -391,15 +384,16 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ik_panel(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        trsmPanelTile<backend>(thread_priority::high, l_panelT.read_sender(diag_wp_idx),
-                               mat_a.readwrite_sender(ik));
-        hemmPanelTile<backend>(thread_priority::high, a_panelT.read_sender(diag_wp_idx),
-                               mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
-
-        // keep diagonal tile for later.
-        a_diag = a_panelT.read(diag_wp_idx);
+        trsmPanelTile<backend>(thread_priority::high, l_panelT.read(diag_wp_idx), mat_a.readwrite(ik));
+        hemmPanelTile<backend>(thread_priority::high, a_panelT.read(diag_wp_idx), mat_l.read(ik),
+                               mat_a.readwrite(ik));
 
         a_panel.setTile(ik_panel, mat_a.read(ik));
+      }
+
+      // keep diagonal tile for later.
+      if (at_offset.rows() < distr.localNrTiles().rows()) {
+        a_diag = a_panelT.read(diag_wp_idx);
       }
 
       // row panel has been used for temporary storage of diagonal panel for column update
@@ -424,10 +418,9 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
       if (this_rank.row() == owner.row()) {
         const auto i_local = distr.localTileFromGlobalTile<Coord::Row>(j);
 
-        her2kTrailingDiagTile<backend>(trailing_matrix_priority,
-                                       a_panel.read_sender({Coord::Row, i_local}),
-                                       l_panel.read_sender({Coord::Row, i_local}),
-                                       mat_a.readwrite_sender(LocalTileIndex{i_local, j_local}));
+        her2kTrailingDiagTile<backend>(trailing_matrix_priority, a_panel.read({Coord::Row, i_local}),
+                                       l_panel.read({Coord::Row, i_local}),
+                                       mat_a.readwrite(LocalTileIndex{i_local, j_local}));
       }
 
       for (SizeType i = j + 1; i < nrtile; ++i) {
@@ -441,10 +434,10 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
 
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panel.read_sender(ik_panel),
-                                        l_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, l_panel.read_sender(ik_panel),
-                                        a_panelT.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panel.read(ik_panel),
+                                        l_panelT.read(kj_panelT), mat_a.readwrite(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, l_panel.read(ik_panel),
+                                        a_panelT.read(kj_panelT), mat_a.readwrite(ij));
       }
     }
 
@@ -459,8 +452,7 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Row, i_local);
         const LocalTileIndex ik(i_local, distr.localTileFromGlobalTile<Coord::Col>(k));
 
-        hemmPanelTile<backend>(thread_priority::high, dlaf::internal::keepFuture(a_diag),
-                               mat_l.read_sender(ik), mat_a.readwrite_sender(ik));
+        hemmPanelTile<backend>(thread_priority::high, a_diag, mat_l.read(ik), mat_a.readwrite(ik));
       }
     }
   }
@@ -478,8 +470,7 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
     const LocalTileIndex kk{k, k};
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
-    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
-                           mat_u.readwrite_sender(kk));
+    hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -487,9 +478,8 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
-      trsmPanelTile<backend>(thread_priority::high, mat_u.read_sender(kk), mat_a.readwrite_sender(ki));
-      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_u.read_sender(ki),
-                             mat_a.readwrite_sender(ki));
+      trsmPanelTile<backend>(thread_priority::high, mat_u.read(kk), mat_a.readwrite(ki));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
@@ -499,36 +489,34 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
       const auto trailing_matrix_priority =
           (i == k + 1) ? thread_priority::high : thread_priority::normal;
 
-      her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read_sender(ki),
-                                     mat_u.read_sender(ki), mat_a.readwrite_sender(ii));
+      her2kTrailingDiagTile<backend>(trailing_matrix_priority, mat_a.read(ki), mat_u.read(ki),
+                                     mat_a.readwrite(ii));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
         const LocalTileIndex kj{k, j};
         const LocalTileIndex ij{i, j};
-        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_a.read_sender(ki),
-                                        mat_u.read_sender(kj), mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_u.read_sender(ki),
-                                        mat_a.read_sender(kj), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_a.read(ki), mat_u.read(kj),
+                                        mat_a.readwrite(ij));
+        gemmTrailingMatrixTile<backend>(trailing_matrix_priority, mat_u.read(ki), mat_a.read(kj),
+                                        mat_a.readwrite(ij));
       }
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ki{k, i};
-      hemmPanelTile<backend>(thread_priority::high, mat_a.read_sender(kk), mat_u.read_sender(ki),
-                             mat_a.readwrite_sender(ki));
+      hemmPanelTile<backend>(thread_priority::high, mat_a.read(kk), mat_u.read(ki), mat_a.readwrite(ki));
     }
 
     for (SizeType i = k + 1; i < nrtile; ++i) {
       const LocalTileIndex ii{i, i};
       const LocalTileIndex ki{k, i};
-      trsmPanelUpdateTile<backend>(thread_priority::high, mat_u.read_sender(ii),
-                                   mat_a.readwrite_sender(ki));
+      trsmPanelUpdateTile<backend>(thread_priority::high, mat_u.read(ii), mat_a.readwrite(ki));
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
         const LocalTileIndex ij{i, j};
         const LocalTileIndex kj{k, j};
-        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_a.read_sender(ki),
-                                     mat_u.read_sender(ij), mat_a.readwrite_sender(kj));
+        gemmPanelUpdateTile<backend>(thread_priority::normal, mat_a.read(ki), mat_u.read(ij),
+                                     mat_a.readwrite(kj));
       }
     }
   }
@@ -607,8 +595,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex ki_panelT{Coord::Row, i_local};
         const LocalTileIndex ik(i_local, kk_offset.cols());
 
-        trsmPanelUpdateTile<backend>(thread_priority::high, u_panel.read_sender(kk_panel),
-                                     mat_a.readwrite_sender(ik));
+        trsmPanelUpdateTile<backend>(thread_priority::high, u_panel.read(kk_panel), mat_a.readwrite(ik));
 
         a_panelT.setTile(ki_panelT, mat_a.read(ik));
       }
@@ -624,8 +611,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
           const LocalTileIndex ik_panelT{Coord::Row, i_local};
           const LocalTileIndex ij{i_local, j_local};
 
-          gemmPanelUpdateTile<backend>(thread_priority::normal, a_panelT.read_sender(ik_panelT),
-                                       u_panel.read_sender(kj_panel), mat_a.readwrite_sender(ij));
+          gemmPanelUpdateTile<backend>(thread_priority::normal, a_panelT.read(ik_panelT),
+                                       u_panel.read(kj_panel), mat_a.readwrite(ij));
         }
       }
     }
@@ -634,8 +621,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     // Direct transformation to standard eigenvalue problem of the diagonal tile
     if (kk_rank == this_rank)
-      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite_sender(kk),
-                             mat_u.readwrite_sender(kk));
+      hegstDiagTile<backend>(thread_priority::high, mat_a.readwrite(kk), mat_u.readwrite(kk));
 
     // If there is no trailing matrix
     if (k == nrtile - 1)
@@ -645,7 +631,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
 
     a_panel.setRangeStart(at);
 
-    pika::shared_future<matrix::Tile<const T, device>> a_diag;
+    matrix::ReadOnlyTileSender<T, device> a_diag;
     if (kk_rank.row() == this_rank.row()) {
       // Note:
       // [a,u]_panelT shrinked to a single tile for temporarly storing and communicating the diagonal
@@ -662,15 +648,16 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panel(Coord::Col, j_local);
         const LocalTileIndex kj(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        trsmPanelTile<backend>(thread_priority::high, u_panelT.read_sender(diag_wp_idx),
-                               mat_a.readwrite_sender(kj));
-        hemmPanelTile<backend>(thread_priority::high, a_panelT.read_sender(diag_wp_idx),
-                               mat_u.read_sender(kj), mat_a.readwrite_sender(kj));
-
-        // keep diagonal tile for later.
-        a_diag = a_panelT.read(diag_wp_idx);
+        trsmPanelTile<backend>(thread_priority::high, u_panelT.read(diag_wp_idx), mat_a.readwrite(kj));
+        hemmPanelTile<backend>(thread_priority::high, a_panelT.read(diag_wp_idx), mat_u.read(kj),
+                               mat_a.readwrite(kj));
 
         a_panel.setTile(kj_panel, mat_a.read(kj));
+      }
+
+      // keep diagonal tile for later.
+      if (at_offset.cols() < distr.localNrTiles().cols()) {
+        a_diag = a_panelT.read(diag_wp_idx);
       }
 
       // col panel has been used for temporary storage of diagonal panel for row update
@@ -695,10 +682,9 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
       if (this_rank.col() == owner.col()) {
         const auto j_local = distr.localTileFromGlobalTile<Coord::Col>(i);
 
-        her2kTrailingDiagTile<backend>(trailing_matrix_priority,
-                                       a_panel.read_sender({Coord::Col, j_local}),
-                                       u_panel.read_sender({Coord::Col, j_local}),
-                                       mat_a.readwrite_sender(LocalTileIndex{i_local, j_local}));
+        her2kTrailingDiagTile<backend>(trailing_matrix_priority, a_panel.read({Coord::Col, j_local}),
+                                       u_panel.read({Coord::Col, j_local}),
+                                       mat_a.readwrite(LocalTileIndex{i_local, j_local}));
       }
 
       for (SizeType j = i + 1; j < nrtile; ++j) {
@@ -712,10 +698,10 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex kj_panelT{Coord::Col, j_local};
         const LocalTileIndex ij{i_local, j_local};
 
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panelT.read_sender(ki_panel),
-                                        u_panel.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
-        gemmTrailingMatrixTile<backend>(thread_priority::normal, u_panelT.read_sender(ki_panel),
-                                        a_panel.read_sender(kj_panelT), mat_a.readwrite_sender(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, a_panelT.read(ki_panel),
+                                        u_panel.read(kj_panelT), mat_a.readwrite(ij));
+        gemmTrailingMatrixTile<backend>(thread_priority::normal, u_panelT.read(ki_panel),
+                                        a_panel.read(kj_panelT), mat_a.readwrite(ij));
       }
     }
 
@@ -730,8 +716,7 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
         const LocalTileIndex local_idx(Coord::Col, j_local);
         const LocalTileIndex ki(distr.localTileFromGlobalTile<Coord::Row>(k), j_local);
 
-        hemmPanelTile<backend>(thread_priority::high, dlaf::internal::keepFuture(a_diag),
-                               mat_u.read_sender(ki), mat_a.readwrite_sender(ki));
+        hemmPanelTile<backend>(thread_priority::high, a_diag, mat_u.read(ki), mat_a.readwrite(ki));
       }
     }
   }

@@ -15,34 +15,24 @@
 #include <tuple>
 #include <type_traits>
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/common/data_descriptor.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/when_all_lift.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
 
-namespace dlaf {
-/// Exception used to notify a continuation task that an exception has been thrown in a dependency task.
-///
-/// It is mainly used to enable exception propagation in the automatic-continuation mechanism.
-struct ContinuationException final : public std::runtime_error {
-  ContinuationException()
-      : std::runtime_error("An exception has been thrown during the execution of the previous task.") {}
-};
-
-namespace matrix {
+namespace dlaf::matrix {
 namespace internal {
 
 template <class T, Device D>
 class TileData {
 public:
-  TileData(const TileElementSize& size, memory::MemoryView<T, D>&& memory_view, SizeType ld) noexcept
+  TileData(const TileElementSize& size, memory::MemoryView<T, D> memory_view, SizeType ld) noexcept
       : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
     DLAF_ASSERT(size_.isValid(), size_);
     DLAF_ASSERT(ld_ >= std::max<SizeType>(1, size_.rows()), ld, size_.rows());
@@ -117,6 +107,31 @@ struct SubTileSpec {
   TileElementSize size;
 };
 
+namespace internal {
+inline bool subTileSpecsOverlap(const SubTileSpec& spec1, const SubTileSpec& spec2) {
+  // no overlap if either of the sizes is empty.
+  if (spec1.size.isEmpty() || spec2.size.isEmpty()) {
+    return false;
+  }
+
+  const auto& start1 = spec1.origin;
+  const auto end1 = start1 + spec1.size;
+  const auto& start2 = spec2.origin;
+  const auto end2 = start2 + spec2.size;
+
+  // no overlap if rows do not overlap.
+  if (end1.row() <= start2.row() || end2.row() <= start1.row()) {
+    return false;
+  }
+  // no overlap if cols do not overlap.
+  if (end1.col() <= start2.col() || end2.col() <= start1.col()) {
+    return false;
+  }
+
+  return true;
+}
+}
+
 // forward declarations
 template <class T, Device D>
 class Tile;
@@ -126,15 +141,46 @@ class Tile<const T, D>;
 
 namespace internal {
 template <class T, Device D>
-pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile);
+using TileAsyncRwMutex =
+    pika::execution::experimental::async_rw_mutex<Tile<T, D>, const Tile<const T, D>>;
 
 template <class T, Device D>
-pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
-                                       const SubTileSpec& spec);
+using TileAsyncRwMutexReadWriteWrapper = pika::execution::experimental::async_rw_mutex_access_wrapper<
+    Tile<T, D>, const Tile<const T, D>,
+    pika::execution::experimental::async_rw_mutex_access_type::readwrite>;
 
-// Forward declaration for friend
 template <class T, Device D>
-class SplittedTileFutureManager;
+using TileAsyncRwMutexReadOnlyWrapper = pika::execution::experimental::async_rw_mutex_access_wrapper<
+    Tile<T, D>, const Tile<const T, D>, pika::execution::experimental::async_rw_mutex_access_type::read>;
+}
+
+template <class T, Device D>
+using ReadWriteTileSender = pika::execution::experimental::unique_any_sender<Tile<T, D>>;
+
+template <class T, Device D>
+using ReadOnlyTileSender =
+    pika::execution::experimental::any_sender<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>;
+
+namespace internal {
+template <class T, Device D>
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
+                                     const SubTileSpec& spec);
+
+template <class T, Device D>
+Tile<T, D> createTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
+
+template <class T, Device D>
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
+                                     const SubTileSpec& spec);
+
+template <class T, Device D>
+Tile<T, D> createSubTileAsyncRwMutex(Tile<T, D> tile, const SubTileSpec& spec);
+
+template <class T, Device D>
+Tile<T, D> prepareDisjointTile(Tile<T, D>&& tile);
+
+template <class T, Device D>
+Tile<T, D> createDisjointSubTile(const Tile<T, D>& tile, const SubTileSpec& spec);
 }
 
 /// The Tile object aims to provide an effective way to access the memory as a two dimensional
@@ -153,13 +199,8 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using TileDataType = internal::TileData<T, D>;
-  using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend TileType;
-  friend pika::future<Tile<const T, D>> internal::createSubTile<>(
-      const pika::shared_future<Tile<const T, D>>& tile, const SubTileSpec& spec);
-  friend internal::SplittedTileFutureManager<T, D>;
-
   using ElementType = T;
   static constexpr Device device = D;
 
@@ -183,17 +224,8 @@ public:
 
   /// Destroys the Tile.
   ///
-  /// If a promise was set using @c setPromise its value is set to a Tile
-  /// which has the same size and which references the same memory as @p *this.
-  ~Tile() {
-    if (std::holds_alternative<TilePromise>(dep_tracker_)) {
-      auto& p_ = std::get<TilePromise>(dep_tracker_);
-      if (std::uncaught_exceptions() > 0)
-        p_.set_exception(std::make_exception_ptr(ContinuationException{}));
-      else
-        p_.set_value(std::move(this->data_));
-    }
-  }
+  /// If the tile holds a tracker, the tracker is released.
+  ~Tile() = default;
 
   Tile& operator=(const Tile&) = delete;
 
@@ -263,22 +295,26 @@ private:
                                     tile.data_.linearSize(spec.size, tile.ld()));
   };
 
+  Tile(const TileElementSize& size, const memory::MemoryView<ElementType, D>& memory_view,
+       SizeType ld) noexcept
+      : data_(size, memory_view, ld) {}
+
   // Creates an untracked subtile.
   // Dependencies are not influenced by the new created object therefore race-conditions
   // might happen if used improperly.
   Tile(const Tile& tile, const SubTileSpec& spec) noexcept
       : Tile(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
-  // Creates a read-only subtile keeping the dependencies.
-  // It calls tile.get(), therefore it should be used when tile is guaranteed to be ready:
-  // e.g. in dataflow, .then, ...
-  Tile(pika::shared_future<ConstTileType> tile, const SubTileSpec& spec) : Tile(tile.get(), spec) {
-    dep_tracker_ = std::move(tile);
-  }
-
   TileDataType data_;
-  std::variant<std::monostate, TilePromise, pika::shared_future<TileType>,
-               pika::shared_future<ConstTileType>>
+  std::variant<
+      // No dependency
+      std::monostate,
+      // Read-only access
+      internal::TileAsyncRwMutexReadOnlyWrapper<T, D>,
+      // Read-write access
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
+      // Disjoint read-write access
+      std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>
       dep_tracker_;
 };
 
@@ -288,14 +324,17 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using TileDataType = internal::TileData<T, D>;
-  using TilePromise = pika::lcos::local::promise<TileDataType>;
 
   friend ConstTileType;
-  friend pika::future<Tile<T, D>> internal::createSubTile<>(const pika::shared_future<Tile<T, D>>& tile,
-                                                            const SubTileSpec& spec);
-  friend pika::shared_future<Tile<T, D>> internal::splitTileInsertFutureInChain<>(
-      pika::future<Tile<T, D>>& tile);
-  friend internal::SplittedTileFutureManager<T, D>;
+  friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(
+      internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
+  friend Tile<T, D> internal::createTileAsyncRwMutex<>(
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper);
+  friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(
+      internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec);
+  friend Tile<T, D> internal::createSubTileAsyncRwMutex<>(Tile<T, D> tile, const SubTileSpec& spec);
+  friend Tile<T, D> internal::prepareDisjointTile<>(Tile<T, D>&& tile);
+  friend Tile<T, D> internal::createDisjointSubTile<>(const Tile<T, D>& tile, const SubTileSpec& spec);
 
   using ElementType = T;
 
@@ -338,19 +377,6 @@ public:
     return data_.ptr(index);
   }
 
-  /// Sets the promise to which this Tile will be moved on destruction.
-  ///
-  /// @c setPromise can be called only once per object.
-  /// @pre this Tile should not be a subtile.
-  Tile& setPromise(TilePromise&& p) {
-    DLAF_ASSERT(!std::holds_alternative<TilePromise>(dep_tracker_),
-                "setPromise has been already used on this object!");
-    DLAF_ASSERT(std::holds_alternative<std::monostate>(dep_tracker_),
-                "setPromise cannot be used on subtiles!");
-    dep_tracker_ = std::move(p);
-    return *this;
-  }
-
   /// Returns a subtile.
   /// Note: to avoid segfaults or race conditions, the original tile must be kept in scope.
   Tile subTileReference(const SubTileSpec& spec) const noexcept {
@@ -358,16 +384,63 @@ public:
   }
 
 private:
-  // Creates an untracked subtile.
-  // Dependencies are not influenced by the new created object therefore race-conditions
-  // might happen if used improperly.
   Tile(const Tile& tile, const SubTileSpec& spec) noexcept : Tile<const T, D>(tile, spec) {}
 
-  // Creates a writable subtile keeping the dependencies.
-  // It calls old_tile.get(), therefore it should be used when old_tile is guaranteed to be ready:
-  // e.g. in dataflow, .then, ...
-  Tile(pika::shared_future<TileType> tile, const SubTileSpec& spec) : ConstTileType(tile.get(), spec) {
-    dep_tracker_ = std::move(tile);
+  Tile(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
+      : Tile<const T, D>(tile_wrapper.get(), spec) {
+    dep_tracker_ = std::move(tile_wrapper);
+  }
+
+  Tile(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper)
+      : ConstTileType(tile_wrapper.get().size(), tile_wrapper.get().data_.memoryView(),
+                      tile_wrapper.get().ld()) {
+    dep_tracker_ = std::move(tile_wrapper);
+  }
+
+  Tile(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper, const SubTileSpec& spec)
+      : ConstTileType(tile_wrapper.get(), spec) {
+    dep_tracker_ = std::move(tile_wrapper);
+  }
+
+  Tile(Tile&& tile, const SubTileSpec& spec) : ConstTileType(tile, spec) {
+    dep_tracker_ = std::move(tile.dep_tracker_);
+  }
+
+  void prepareDisjointTile() {
+    // We only expect read-write tiles for disjoint access. That means that the
+    // dependency tracker holds anything but a read-only wrapper.
+    DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_)),
+                "");
+
+    // If a tile is untracked (std::monostate), or already a disjoint subtile
+    // (std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>) we don't do
+    // anything. If a tile is in read-write mode we upgrade it to allow shared,
+    // but disjoint, access.
+    if (std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)) {
+      dep_tracker_ = std::make_shared<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(
+          std::get<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(std::move(dep_tracker_)));
+    }
+  }
+
+  Tile createDisjointSubTile(const SubTileSpec& spec) const& {
+    // We only expect read-write tiles for disjoint access. They should be
+    // either untracked or disjoint tracked read-write access.
+    DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_)),
+                "");
+    DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)),
+                "");
+
+    Tile subtile(spec.size, ConstTileType::createMemoryViewForSubtile(*this, spec), this->ld());
+    // Not all possible states of the dependency tracker are copyable. This
+    // means that we can't copy the variant as a whole, but only copy the states
+    // that are copyable, if they are active.
+    if (std::holds_alternative<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(
+            dep_tracker_)) {
+      subtile.dep_tracker_ =
+          std::get<std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>(dep_tracker_);
+    }
+
+    return subtile;
   }
 
   using ConstTileType::data_;
@@ -382,196 +455,153 @@ auto create_data(const Tile<T, D>& tile) {
 
 namespace internal {
 template <class T, Device D>
-pika::future<Tile<T, D>> createSubTile(const pika::shared_future<Tile<T, D>>& tile,
-                                       const SubTileSpec& spec) {
-  namespace ex = pika::execution::experimental;
-  auto f = [spec](pika::shared_future<Tile<T, D>>&& tile) { return Tile<T, D>(std::move(tile), spec); };
-  return dlaf::internal::keepFuture(tile) | ex::then(std::move(f)) | ex::make_future();
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadOnlyWrapper<T, D> tile_wrapper,
+                                     const SubTileSpec& spec) {
+  return {std::move(tile_wrapper), spec};
 }
 
 template <class T, Device D>
-std::vector<pika::future<Tile<T, D>>> createSubTilesDisjoint(const pika::shared_future<Tile<T, D>>& tile,
-                                                             const std::vector<SubTileSpec>& specs) {
-  if (specs.size() == 0)
-    return {};
-
-#ifdef DLAF_ASSERT_MODERATE_ENABLE
-  // Check if subtiles overlap.
-  auto overlap = [](const auto& spec1, const auto& spec2) {
-    // no overlap if either of the sizes is empty.
-    if (spec1.size.isEmpty() || spec2.size.isEmpty())
-      return false;
-
-    const auto& start1 = spec1.origin;
-    const auto end1 = start1 + spec1.size;
-    const auto& start2 = spec2.origin;
-    const auto end2 = start2 + spec2.size;
-
-    // no overlap if rows do not overlap.
-    if (end1.row() <= start2.row() || end2.row() <= start1.row())
-      return false;
-    // no overlap if cols do not overlap.
-    if (end1.col() <= start2.col() || end2.col() <= start1.col())
-      return false;
-
-    return true;
-  };
-  for (auto it = std::cbegin(specs); it < std::cend(specs); ++it) {
-    // no overlap possible if size is empty.
-    if (it->size.isEmpty())
-      continue;
-
-    for (auto it2 = std::cbegin(specs); it2 < it; ++it2) {
-      DLAF_ASSERT_MODERATE(!overlap(*it, *it2), it->origin, it->size, it2->origin, it2->size);
-    }
-  }
-#endif
-
-  std::vector<pika::future<Tile<T, D>>> ret;
-  ret.reserve(specs.size());
-  for (const auto& spec : specs) {
-    ret.emplace_back(internal::createSubTile(tile, spec));
-  }
-
-  return ret;
+Tile<T, D> createTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper) {
+  return {std::move(tile_wrapper)};
 }
 
 template <class T, Device D>
-pika::shared_future<Tile<T, D>> splitTileInsertFutureInChain(pika::future<Tile<T, D>>& tile) {
-  namespace ex = pika::execution::experimental;
+Tile<T, D> createSubTileAsyncRwMutex(internal::TileAsyncRwMutexReadWriteWrapper<T, D> tile_wrapper,
+                                     const SubTileSpec& spec) {
+  return {std::move(tile_wrapper), spec};
+}
 
-  // Insert a Tile in the tile dependency chains. 3 different cases are supported:
-  // 1)  F1(P2)  F2(P3) ...      =>  F1(PN)  FN(P2)  F2(P3) ...
-  // 2)  F1(SF(P2))  F2(P3) ...  =>  F1(PN)  FN(SF(P2))  F2(P3) ...
-  // 3)  F1()                    =>  F1(PN)  FN()
-  // where Pi, Fi is a promise future pair (Pi sets Fi),
-  // F1(P2) means that the Tile in F1 will set promise P2.
-  // and F1(SF(P2)) means that the shared future which will set promise P2 will be released.
-  // On input tile is F1(*), on output tile is FN(*).
-  // The shared future F1(PN) is returned and will be used to create subtiles.
-  using TileType = Tile<T, D>;
-  using PromiseType = pika::lcos::local::promise<typename TileType::TileDataType>;
+template <class T, Device D>
+Tile<T, D> createSubTileAsyncRwMutex(Tile<T, D> tile, const SubTileSpec& spec) {
+  return {std::move(tile), spec};
+}
 
-  // 1. Create a new promise + tile pair PN, FN
-  PromiseType p;
-  auto tmp_tile = p.get_future();
-  // 2. Break the dependency chain inserting PN and storing P2 or SF(P2):  F1(PN)  FN()  F2(P3)
-  auto swap_promise = [promise = std::move(p)](TileType&& tile) mutable {
-    // The dep_tracker cannot be a const Tile (can happen only for const Tiles).
-    DLAF_ASSERT_HEAVY((!std::holds_alternative<pika::shared_future<Tile<const T, D>>>(tile.dep_tracker_)),
-                      "Internal Dependency Error");
+template <class T, Device D>
+Tile<T, D> prepareDisjointTile(Tile<T, D>&& tile) {
+  tile.prepareDisjointTile();
+  return std::move(tile);
+}
 
-    auto dep_tracker = std::move(tile.dep_tracker_);
-    tile.dep_tracker_ = std::move(promise);
-
-    return std::make_tuple(std::move(tile), std::move(dep_tracker));
-  };
-  // old_tile = F1(PN) and will be used to create the subtiles
-  auto [old_tile, dep_tracker] =
-      pika::split_future(std::move(tile) | ex::then(std::move(swap_promise)) | ex::make_future());
-  // 3. Set P2 or SF(P2) into FN to restore the chain:  F1(PN)  FN(*) ...
-  auto set_promise_or_shfuture = [](auto tile_data, auto dep_tracker) {
-    TileType tile(std::move(tile_data));
-    tile.dep_tracker_ = std::move(dep_tracker);
-    return tile;
-  };
-  // tile = FN(*) (out argument) can be used to access the full tile after the subtiles tasks completed.
-  tile = ex::when_all(std::move(tmp_tile), std::move(dep_tracker)) |
-         ex::then(std::move(set_promise_or_shfuture)) | ex::make_future();
-
-  return std::move(old_tile);
+template <class T, Device D>
+Tile<T, D> createDisjointSubTile(const Tile<T, D>& tile, const SubTileSpec& spec) {
+  return tile.createDisjointSubTile(spec);
 }
 }
 
 /// Create a read-only subtile of a given read-only tile.
 ///
 /// The returned subtile will get ready, at the same time as @p tile gets ready.
-/// The next dependency in the dependency chain will become ready only when @p tile
-/// and the returned subtile go out of scope.
+/// The next dependency in the dependency chain will become ready only when @p
+/// tile and the returned subtile go out of scope.
 template <class T, Device D>
-pika::shared_future<Tile<const T, D>> splitTile(const pika::shared_future<Tile<const T, D>>& tile,
-                                                const SubTileSpec& spec) {
-  return internal::createSubTile(tile, spec);
+ReadOnlyTileSender<T, D> splitTile(ReadOnlyTileSender<T, D> tile, const SubTileSpec& spec) {
+  return std::move(tile) |
+         pika::execution::experimental::let_value(
+             [spec](internal::TileAsyncRwMutexReadOnlyWrapper<T, D>& tile_wrapper) {
+               internal::TileAsyncRwMutex<T, D> tile_manager{
+                   internal::createSubTileAsyncRwMutex<T, D>(std::move(tile_wrapper), spec)};
+               return tile_manager.read();
+             }) |
+         pika::execution::experimental::split();
+}
+
+/// Create a read-only tile from a given read-write tile.
+///
+/// The returned tile will get ready, at the same time as @p tile would have
+/// been ready. The next dependency in the dependency chain will become ready
+/// only when the returned tile goes out of scope.
+template <class T, Device D>
+ReadOnlyTileSender<T, D> shareReadWriteTile(ReadWriteTileSender<T, D>&& tile) {
+  return std::move(tile) | pika::execution::experimental::let_value([](Tile<T, D>& tile) {
+           internal::TileAsyncRwMutex<T, D> tile_manager{std::move(tile)};
+           return tile_manager.read();
+         }) |
+         pika::execution::experimental::split();
 }
 
 /// Create read-only subtiles of a given read-only tile.
 ///
-/// The returned subtiles will get ready, at the same time as @p tile gets ready.
-/// The next dependency in the dependency chain will become ready only when @p tile
-/// and all the returned subtiles go out of scope.
+/// The returned subtiles will get ready, at the same time as @p tile gets
+/// ready. The next dependency in the dependency chain will become ready only
+/// when @p tile and the returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<pika::shared_future<Tile<const T, D>>> splitTile(
-    const pika::shared_future<Tile<const T, D>>& tile, const std::vector<SubTileSpec>& specs) {
-  std::vector<pika::shared_future<Tile<const T, D>>> ret;
-  ret.reserve(specs.size());
+std::vector<ReadOnlyTileSender<T, D>> splitTile(ReadOnlyTileSender<T, D> tile,
+                                                const std::vector<SubTileSpec>& specs) {
+  std::vector<ReadOnlyTileSender<T, D>> senders;
+  senders.reserve(specs.size());
+
   for (const auto& spec : specs) {
-    ret.emplace_back(internal::createSubTile(tile, spec));
+    senders.push_back(splitTile(tile, spec));
   }
 
-  return ret;
+  return senders;
 }
 
-/// Create a writeable subtile of a given tile.
+/// Create a read-write subtile of a given read-write tile.
 ///
-/// The returned subtile will get ready, when the original tile was supposed to get ready.
-/// @p tile is replaced with the (full) tile which will get ready when the subtile goes out of scope.
-/// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
+/// The returned subtile will get ready, at the same time as @p tile would have
+/// been ready. The next dependency in the dependency chain will become ready
+/// only when the returned subtile goes out of scope.
 template <class T, Device D>
-pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>& tile, const SubTileSpec& spec) {
-  auto old_tile = internal::splitTileInsertFutureInChain(tile);
-  // tile is now the new element of the dependency chain which will be ready
-  // when the subtile will go out of scope.
-
-  return internal::createSubTile(old_tile, spec);
+ReadWriteTileSender<T, D> splitTile(ReadWriteTileSender<T, D>&& tile, const SubTileSpec& spec) {
+  return std::move(tile) | pika::execution::experimental::then([spec](Tile<T, D> tile) {
+           return internal::createSubTileAsyncRwMutex<T, D>(std::move(tile), spec);
+         });
 }
 
-/// Create a writeable subtile of a given tile.
+/// Create read-write subtiles of a given read-write tile.
 ///
-/// The returned subtile will get ready, when the original tile was supposed to get ready.
-/// This variant does not provide access to the (full) tile which will get ready when the subtile goes
-/// out of scope.
-/// The next dependency in the dependency chain will become ready only when the subtile goes
-/// out of scope.
-template <class T, Device D>
-pika::future<Tile<T, D>> splitTile(pika::future<Tile<T, D>>&& tile, const SubTileSpec& spec) {
-  return internal::createSubTile(tile.share(), spec);
-}
-
-/// Create a writeable subtile of a given tile.
+/// @pre specs are disjoint.
 ///
-/// All the returned subtiles will get ready, when the original tile was supposed to get ready
-/// (therefore the returned subtiles should be disjoint, otherwise race conditions might occour).
-/// @p tile is replaced with the (full) tile which will get ready when the all the subtiles go out of scope.
-/// The next dependency in the dependency chain will become ready only when @p tile goes out of scope.
-/// @pre The subtiles described with specs should be disjoint
-///      (i.e. two different subtile cannot access the same element).
+/// The returned subtiles will get ready, at the same time as @p tile gets
+/// ready. The next dependency in the dependency chain will become ready only
+/// when returned subtiles go out of scope.
 template <class T, Device D>
-std::vector<pika::future<Tile<T, D>>> splitTileDisjoint(pika::future<Tile<T, D>>& tile,
-                                                        const std::vector<SubTileSpec>& specs) {
-  if (specs.size() == 0)
+std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, D>&& tile,
+                                                         const std::vector<SubTileSpec>& specs) {
+  // If there are no specs we still consume the tile by starting it.
+  if (specs.empty()) {
+    pika::execution::experimental::start_detached(std::move(tile));
     return {};
+  }
 
-  auto old_tile = internal::splitTileInsertFutureInChain(tile);
-  // tile is now the new element of the dependency chain which will be ready
-  // when all subtiles will go out of scope.
+  // If there is only one spec we can avoid calling execution::split on the
+  // input tile (and thus avoid a heap allocation) and directly call the
+  // single-spec splitTile instead.
+  if (specs.size() == 1) {
+    auto subtiles = std::vector<ReadWriteTileSender<T, D>>();
+    subtiles.push_back(splitTile(std::move(tile), specs[0]));
+    return subtiles;
+  }
 
-  return internal::createSubTilesDisjoint(old_tile, specs);
-}
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+  for (auto it1 = specs.cbegin(); it1 < specs.cend(); ++it1) {
+    for (auto it2 = specs.cbegin(); it2 < it1; ++it2) {
+      DLAF_ASSERT_MODERATE(!internal::subTileSpecsOverlap(*it1, *it2), it1->origin, it1->size,
+                           it2->origin, it2->size);
+    }
+  }
+#endif
 
-/// Create a writeable subtile of a given tile.
-///
-/// All the returned subtiles will get ready, when the original tile was supposed to get ready
-/// (therefore the returned subtiles should be disjoint, otherwise race conditions might occour).
-/// This variant does not provide access to the (full) tile which will get ready when the subtile goes
-/// out of scope.
-/// The next dependency in the dependency chain will become ready only when the all the subtiles go
-/// out of scope.
-/// @pre The subtiles described with specs should be disjoint
-///      (i.e. two different subtile cannot access the same element).
-template <class T, Device D>
-std::vector<pika::future<Tile<T, D>>> splitTileDisjoint(pika::future<Tile<T, D>>&& tile,
-                                                        const std::vector<SubTileSpec>& specs) {
-  return internal::createSubTilesDisjoint(tile.share(), specs);
+  std::vector<ReadWriteTileSender<T, D>> senders;
+  senders.reserve(specs.size());
+
+  // We first need mutable access to extract a dependency manager, if one exists
+  auto prepared_tile = std::move(tile) |
+                       pika::execution::experimental::then(&internal::prepareDisjointTile<T, D>) |
+                       pika::execution::experimental::split();
+
+  for (const auto& spec : specs) {
+    // Once the tile has been prepared for disjoint access, we can then actually
+    // extract the subtiles
+    auto disjoint_tile =
+        prepared_tile | pika::execution::experimental::then([spec](const Tile<T, D>& tile) {
+          return internal::createDisjointSubTile(tile, spec);
+        });
+    senders.push_back(std::move(disjoint_tile));
+  }
+
+  return senders;
 }
 
 /// ---- ETI
@@ -591,5 +621,4 @@ DLAF_TILE_ETI(extern, double, Device::GPU)
 DLAF_TILE_ETI(extern, std::complex<float>, Device::GPU)
 DLAF_TILE_ETI(extern, std::complex<double>, Device::GPU)
 #endif
-}
 }

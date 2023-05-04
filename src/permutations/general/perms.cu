@@ -8,7 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/future.hpp>
 #include <whip.hpp>
 
 #include "dlaf/permutations/general/perms.h"
@@ -51,7 +50,7 @@ MatrixLayout getMatrixLayout(const matrix::Distribution& distr,
 template <class T>
 MatrixLayout getMatrixLayout(
     const matrix::Distribution& distr,
-    const std::vector<pika::shared_future<matrix::Tile<const T, Device::GPU>>>& tiles) {
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& tiles) {
   const LocalTileSize tile_sz = distr.localNrTiles();
   MatrixLayout layout;
   layout.nb = distr.blockSize().rows();
@@ -102,11 +101,11 @@ template <class T, Coord coord>
 void applyPermutationsOnDevice(
     GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
     const matrix::Distribution& distr, const SizeType* perms,
-    const std::vector<pika::shared_future<matrix::Tile<const T, Device::GPU>>>& in_tiles_fut,
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& in_tiles,
     const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, whip::stream_t stream) {
-  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles_fut);
+  MatrixLayout in_layout = getMatrixLayout(distr, in_tiles);
   MatrixLayout out_layout = getMatrixLayout(distr, out_tiles);
-  const T* in = in_tiles_fut[0].get().ptr();
+  const T* in = in_tiles[0].get().ptr();
   T* out = out_tiles[0].ptr();
 
   constexpr Coord orth_coord = orthogonal(coord);

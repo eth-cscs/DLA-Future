@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
 
@@ -41,6 +42,20 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
 template <typename T>
 struct SenderSingleValueTypeImpl<TypeList<TypeList<std::reference_wrapper<T>>>> {
   using type = T;
+};
+
+template <typename RWType, typename RType>
+struct SenderSingleValueTypeImpl<
+    TypeList<TypeList<pika::execution::experimental::async_rw_mutex_access_wrapper<
+        RWType, RType, pika::execution::experimental::async_rw_mutex_access_type::readwrite>>>> {
+  using type = RWType;
+};
+
+template <typename RWType, typename RType>
+struct SenderSingleValueTypeImpl<
+    TypeList<TypeList<pika::execution::experimental::async_rw_mutex_access_wrapper<
+        RWType, RType, pika::execution::experimental::async_rw_mutex_access_type::read>>>> {
+  using type = RType;
 };
 
 // The type sent by Sender, if Sender sends exactly one type.

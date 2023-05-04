@@ -89,7 +89,7 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
 
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
 
-  // TODO: @ialberto can you please revise the asserts? To me they look too restrictive.
+  // TODO: assert revision (PR#854)
   DLAF_ASSERT(matrix::square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in, mat_out);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);

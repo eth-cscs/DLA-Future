@@ -21,6 +21,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/datatypes.h"
 #include "dlaf/communication/kernels/p2p.h"
+#include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -134,15 +135,6 @@ struct GivensRotation {
   T s;         // sine
 };
 
-// TODO Duplicate
-// Calculates the problem size in the tile range [i_begin, i_end)
-inline SizeType problemSize__(const SizeType i_begin, const SizeType i_end,
-                              const matrix::Distribution& distr) {
-  const SizeType nb = distr.blockSize().rows();
-  const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
-  return (i_end - i_begin - 1) * nb + nbr;
-}
-
 // Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_end).
 //
 // @param i_begin global tile index for both row and column identifying the start of the sub-matrix
@@ -162,7 +154,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  const SizeType n = problemSize__(i_begin, i_end, mat.distribution());
+  const SizeType n = problemSize(i_begin, i_end, mat.distribution());
   const SizeType nb = mat.distribution().blockSize().rows();
 
   auto givens_rots_fn = [n, nb](const auto& rots, const auto& tiles, [[maybe_unused]] auto&&... ts) {

@@ -20,6 +20,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -444,36 +445,6 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
   }
 }
 
-// Inverts the the subset of tiles [ @p i_begin, @p i_end ) of the index map @p in and saves
-// the result into @p out.
-// TODO: duplicated?
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
-                        Matrix<SizeType, Device::CPU>& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-  namespace ut = matrix::util;
-
-  const matrix::Distribution& dist = in.distribution();
-  const SizeType nb = dist.blockSize().rows();
-  const SizeType nbr = dist.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
-  const SizeType n = (i_end - i_begin - 1) * nb + nbr;
-  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
-    const TileElementIndex zero(0, 0);
-    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
-    SizeType* out_ptr = out_tiles[0].ptr(zero);
-    for (SizeType i = 0; i < n; ++i) {
-      out_ptr[in_ptr[i]] = i;
-    }
-  };
-
-  const LocalTileIndex begin{i_begin, 0};
-  const LocalTileSize sz{i_end - i_begin, 1};
-  auto range = common::iterate_range2d(begin, sz);
-  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(in, range)),
-                             ex::when_all_vector(matrix::select(out, range)));
-  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
-}
-
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
@@ -509,7 +480,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());
-  invertIndex(i_begin, i_end, perms, inverse_perms);
+  eigensolver::internal::invertIndex(i_begin, i_end, perms, inverse_perms);
 
   // Local distribution used for packing and unpacking
   const Distribution subm_dist(sz_loc, blk);

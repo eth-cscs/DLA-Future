@@ -47,8 +47,8 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   // Note:
   // These are not implementation constraints, but more logic constraints. Indeed, these ensure that
   // the range [i_begin, i_end] is square in terms of elements (it would not make sense to have it square
-  // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same shape,
-  // it is ensured that range [i_begin, i_end] is actually the same on both sides.
+  // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
+  // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
   DLAF_ASSERT(square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
@@ -102,8 +102,8 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
   // Note:
   // These are not implementation constraints, but more logic constraints. Indeed, these ensure that
   // the range [i_begin, i_end] is square in terms of elements (it would not make sense to have it square
-  // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same shape,
-  // it is ensured that range [i_begin, i_end] is actually the same on both sides.
+  // in terms of number of tiles). Moreover, by requiring mat_in and mat_out matrices to have the same
+  // shape, it is ensured that range [i_begin, i_end] is actually the same on both sides.
   DLAF_ASSERT(square_size(mat_in), mat_in);
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);

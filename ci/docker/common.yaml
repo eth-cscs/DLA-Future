@@ -1,0 +1,31 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2023, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+packages:
+  all:
+    target: [x86_64]
+  blaspp:
+    variants:
+      - '~cuda'
+      - '~openmp'
+      - '~rocm'
+  mpich:
+    version:
+      - 3.4.2
+    variants:
+      - '~fortran'
+      - '~libxml2'
+  hwloc:
+    variants:
+      - '~libxml2'
+  git:
+    # Force git as non-buildable to allow deprecated versions in environments
+    # https://github.com/spack/spack/pull/30040
+    buildable: false

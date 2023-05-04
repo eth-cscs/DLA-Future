@@ -9,14 +9,19 @@
 #
 
 spack:
-  specs:
-  - dla-future@develop +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
+  include:
+  - common.yaml
+
   view: false
   concretizer:
-    unify: true
+    unify:
+      true
+
+  specs:
+  - dla-future@develop +rocm amdgpu_target=gfx90a:xnack- +miniapps +ci-test
+
   packages:
     all:
-      target: [x86_64]
       variants:
       - build_type=Release
       - cxxstd=17
@@ -26,17 +31,7 @@ spack:
     lapack:
       require: openblas
     mpi:
-      require: mpich ~fortran ~rocm device=ch3 netmod=tcp ~libxml2
-    blaspp:
-      require: ~cuda ~rocm ~openmp
-    pika:
-      require: malloc=mimalloc
-    hwloc:
-      require: ~libxml2
-    git:
-      # Force git as non-buildable to allow deprecated versions in environments
-      # https://github.com/spack/spack/pull/30040
-      buildable: false
+      require: mpich ~rocm device=ch3 netmod=tcp
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.3.3 ~rocm-device-libs

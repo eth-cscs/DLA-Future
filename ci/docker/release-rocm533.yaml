@@ -37,10 +37,6 @@ spack:
       # Force git as non-buildable to allow deprecated versions in environments
       # https://github.com/spack/spack/pull/30040
       buildable: false
-    umpire:
-      require: "@4.1.2"
-    blt:
-      require: "@0.4.1"
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.3.3 ~rocm-device-libs

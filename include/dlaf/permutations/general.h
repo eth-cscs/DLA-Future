@@ -48,7 +48,8 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 
   DLAF_ASSERT(i_end <= distr_perms.nrTiles().rows(), i_end, perms);
   DLAF_ASSERT(i_end <= distr_in.nrTiles().rows() && i_end <= distr_in.nrTiles().cols(), i_end, mat_in);
-  DLAF_ASSERT(i_end <= distr_out.nrTiles().rows() && i_end <= distr_out.nrTiles().cols(), i_end, mat_out);
+  DLAF_ASSERT(i_end <= distr_out.nrTiles().rows() && i_end <= distr_out.nrTiles().cols(), i_end,
+              mat_out);
 
   DLAF_ASSERT(perms.size().cols() == 1, perms);
 

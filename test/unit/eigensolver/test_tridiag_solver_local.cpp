@@ -37,9 +37,9 @@ TEST(MatrixIndexPairsGeneration, IndexPairsGeneration) {
   SizeType n = 10;
   auto actual_indices = dlaf::eigensolver::internal::generateSubproblemIndices(n);
   // i_begin, i_split, i_end
-  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2}, {0, 2, 3},
-                                                                         {3, 4, 5}, {0, 3, 5},
-                                                                         {5, 6, 7}, {5, 7, 8},
+  std::vector<std::tuple<SizeType, SizeType, SizeType>> expected_indices{{0, 1, 2},  {0, 2, 3},
+                                                                         {3, 4, 5},  {0, 3, 5},
+                                                                         {5, 6, 7},  {5, 7, 8},
                                                                          {8, 9, 10}, {5, 8, 10},
                                                                          {0, 5, 10}};
   ASSERT_TRUE(actual_indices == expected_indices);

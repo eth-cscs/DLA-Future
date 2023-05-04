@@ -33,13 +33,15 @@
 
 namespace dlaf::eigensolver::internal {
 
-// Splits [i_begin, i_end) in the middle and waits for all splits on [i_begin, i_split] and [i_split, i_end) before saving the triad <i_begin, i_split, i_end> into `indices`.
+// Splits [i_begin, i_end) in the middle and waits for all splits on [i_begin, i_split] and [i_split,
+// i_end) before saving the triad <i_begin, i_split, i_end> into `indices`.
 //
 // The recursive calls span a binary tree which is traversed in depth first left-right-root order. That
 // is also the order of triads in `indices`.
 //
 inline void splitIntervalInTheMiddleRecursively(
-    const SizeType i_begin, const SizeType i_end, std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+    const SizeType i_begin, const SizeType i_end,
+    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
   if (i_begin + 1 == i_end)
     return;
   const SizeType i_split = util::ceilDiv<SizeType>(i_begin + i_end, 2);
@@ -226,8 +228,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm, evals,
-                        evecs);
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm,
+                        evals, evecs);
   }
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);

@@ -48,8 +48,8 @@ void sendCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const c
 }
 
 template <Device D, class T>
-void recvCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag, T* col_data,
-             const SizeType n, MPI_Request* req) {
+void recvCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag,
+             T* col_data, const SizeType n, MPI_Request* req) {
   static_assert(D == Device::CPU, "This function works just with CPU memory.");
 
   DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
@@ -57,8 +57,8 @@ void recvCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const c
 }
 
 template <Device D, class T, class CommSender>
-auto scheduleSendCol(CommSender&& comm, const comm::IndexT_MPI dest, const comm::IndexT_MPI tag, const T* col_data,
-                     const SizeType n) {
+auto scheduleSendCol(CommSender&& comm, const comm::IndexT_MPI dest, const comm::IndexT_MPI tag,
+                     const T* col_data, const SizeType n) {
   namespace di = dlaf::internal;
 
   if constexpr (D == Device::CPU) {
@@ -91,8 +91,8 @@ auto scheduleSendCol(CommSender&& comm, const comm::IndexT_MPI dest, const comm:
 }
 
 template <Device D, class T, class CommSender>
-auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const comm::IndexT_MPI tag, T* col_data,
-                     const SizeType n) {
+auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const comm::IndexT_MPI tag,
+                     T* col_data, const SizeType n) {
   namespace di = dlaf::internal;
 
   if constexpr (D == Device::CPU) {
@@ -134,14 +134,14 @@ struct GivensRotation {
   T s;         // sine
 };
 
-//TODO Duplicate
+// TODO Duplicate
 // Calculates the problem size in the tile range [i_begin, i_end)
-inline SizeType problemSize__(const SizeType i_begin, const SizeType i_end, const matrix::Distribution& distr) {
+inline SizeType problemSize__(const SizeType i_begin, const SizeType i_end,
+                              const matrix::Distribution& distr) {
   const SizeType nb = distr.blockSize().rows();
   const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
   return (i_end - i_begin - 1) * nb + nbr;
 }
-
 
 // Apply GivenRotations to tiles of the square sub-matrix identified by tile in range [i_begin, i_end).
 //
@@ -211,8 +211,8 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
 void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm::IndexT_MPI tag,
-                                         const SizeType i_begin, const SizeType i_end, GRSender&& rots_fut,
-                                         Matrix<T, D>& mat) {
+                                         const SizeType i_begin, const SizeType i_end,
+                                         GRSender&& rots_fut, Matrix<T, D>& mat) {
   // Note:
   // a column index may be paired to more than one other index, this may lead to a race
   // condition if parallelized trivially. Current implementation is serial.

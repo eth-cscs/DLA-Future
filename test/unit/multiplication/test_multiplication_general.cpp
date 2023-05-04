@@ -63,14 +63,14 @@ GlobalElementSize globalTestSize(const LocalElementSize& size) {
 }
 
 template <class T, Backend B, Device D>
-void testGeneralMultiplication(const SizeType a, const SizeType b,
-                               const T alpha, const T beta, const SizeType m,
-                               const SizeType mb) {
+void testGeneralMultiplication(const SizeType a, const SizeType b, const T alpha, const T beta,
+                               const SizeType m, const SizeType mb) {
   const SizeType a_el = a * mb;
   const SizeType b_el = std::min(b * mb, m);
 
   auto [refA, refB, refC, refResult] =
-      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, m, alpha, beta, blas::Op::NoTrans, blas::Op::NoTrans);
+      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, m, alpha, beta, blas::Op::NoTrans,
+                                                     blas::Op::NoTrans);
 
   auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
     Matrix<T, Device::CPU> matrix(size, block_size);
@@ -87,8 +87,8 @@ void testGeneralMultiplication(const SizeType a, const SizeType b,
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::generalSubMatrix<B>(a, b, blas::Op::NoTrans, blas::Op::NoTrans, alpha, mat_a.get(), mat_b.get(), beta,
-                                        mat_c.get());
+    multiplication::generalSubMatrix<B>(a, b, blas::Op::NoTrans, blas::Op::NoTrans, alpha, mat_a.get(),
+                                        mat_b.get(), beta, mat_c.get());
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
@@ -99,8 +99,7 @@ TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
   for (const auto& [m, mb, a, b] : sizes) {
     const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
     const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-    testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(a, b, alpha, beta, m,
-                                                                   mb);
+    testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(a, b, alpha, beta, m, mb);
   }
 }
 
@@ -109,8 +108,7 @@ TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
   for (const auto& [m, mb, a, b] : sizes) {
     const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
     const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, alpha, beta, m,
-                                                                    mb);
+    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, alpha, beta, m, mb);
   }
 }
 #endif
@@ -141,8 +139,8 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
   const SizeType b_el = std::min(b * mb, m);
 
   auto [refA, refB, refC, refResult] =
-      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, m, alpha, beta,
-                                                     blas::Op::NoTrans, blas::Op::NoTrans);
+      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, m, alpha, beta, blas::Op::NoTrans,
+                                                     blas::Op::NoTrans);
 
   auto distributedMatrixFrom = [&dist](auto elSetter) {
     Matrix<T, Device::CPU> matrix(dist);

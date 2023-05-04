@@ -169,7 +169,8 @@ Matrix<T, Device::CPU>& initMirrorMatrix(Matrix<T, Device::CPU>& mat) {
 }
 
 // Calculates the problem size in the tile range [i_begin, i_end)
-inline SizeType problemSize(const SizeType i_begin, const SizeType i_end, const matrix::Distribution& distr) {
+inline SizeType problemSize(const SizeType i_begin, const SizeType i_end,
+                            const matrix::Distribution& distr) {
   const SizeType nb = distr.blockSize().rows();
   const SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();
   return (i_end - i_begin - 1) * nb + nbr;
@@ -243,7 +244,8 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
 template <class T, Device D>
-auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& d, Matrix<const T, D>& z) {
+auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& d,
+                   Matrix<const T, D>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -396,8 +398,9 @@ inline SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const C
 }
 
 template <Device D>
-auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_end, Matrix<const ColType, D>& c,
-                                      Matrix<const SizeType, D>& in, Matrix<SizeType, D>& out) {
+auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_end,
+                                      Matrix<const ColType, D>& c, Matrix<const SizeType, D>& in,
+                                      Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -444,7 +447,8 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
 }
 
 template <Device D>
-void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end, Matrix<ColType, D>& coltypes) {
+void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                  Matrix<ColType, D>& coltypes) {
   for (SizeType i = i_begin; i < i_end; ++i) {
     ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
     setColTypeTileAsync<D>(val, coltypes.readwrite(LocalTileIndex(i, 0)));
@@ -460,8 +464,9 @@ void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType
 //
 // Returns an array of Given's rotations used to update the colunmns of the eigenvector matrix Q
 template <class T>
-std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, const SizeType len, const SizeType* i_ptr,
-                                                      T* d_ptr, T* z_ptr, ColType* c_ptr) {
+std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, const SizeType len,
+                                                      const SizeType* i_ptr, T* d_ptr, T* z_ptr,
+                                                      ColType* c_ptr) {
   std::vector<GivensRotation<T>> rots;
   rots.reserve(to_sizet(len));
 
@@ -637,8 +642,7 @@ void initWeightVector(const GlobalTileIndex idx_gl_begin, const LocalTileIndex i
     // reduce-multiply the first column of each local tile of the workspace matrix into the first local
     // column of the matrix
     const LocalTileIndex idx_ws_first_col_tile(idx_loc_tile.row(), idx_loc_begin.col());
-    multiplyFirstColumnsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
-                                 ws.read(idx_loc_tile),
+    multiplyFirstColumnsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), ws.read(idx_loc_tile),
                                  ws.readwrite(idx_ws_first_col_tile));
   }
 }
@@ -666,8 +670,9 @@ void formEvecsUsingWeightVec(const GlobalTileIndex idx_gl_begin, const LocalTile
 
 // Sum of squares of columns of @p evecs into the first row of @p ws
 template <class T, Device D, class KRSender, class KCSender>
-void sumsqEvecs(const GlobalTileIndex idx_gl_begin, const LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                KRSender&& k_row, KCSender&& k_col, Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
+void sumsqEvecs(const GlobalTileIndex idx_gl_begin, const LocalTileIndex idx_loc_begin,
+                LocalTileSize sz_loc_tiles, KRSender&& k_row, KCSender&& k_col,
+                Matrix<const T, D>& evecs, Matrix<T, D>& ws) {
   const matrix::Distribution& dist = evecs.distribution();
 
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
@@ -714,10 +719,9 @@ void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matr
 }
 
 template <Backend B, Device D, class T, class RhoSender>
-void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                      WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
-                      WorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals,
-                      Matrix<T, D>& evecs) {
+void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                      RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+                      WorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals, Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -804,9 +808,8 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
   dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
-  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
-                                                             blas::Op::NoTrans, T(1), evecs, ws.mat2,
-                                                             T(0), ws.mat1);
+  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
+                                                  T(1), evecs, ws.mat2, T(0), ws.mat1);
 
   // Step #4: Final sorting of eigenvalues and eigenvectors
   //
@@ -829,8 +832,8 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
 void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
-                      const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                      Matrix<const T, D>& evecs, Matrix<T, D>& z) {
+                      const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                      RhoSender&& rho, Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& dist = evecs.distribution();
@@ -864,8 +867,9 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
 // (All)Reduce-multiply row-wise the first local columns of the distributed matrix @p mat of size (n, n).
 // The local column on each rank is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
 template <class T, Device D, class KRSender, class KCSender>
-void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain, const SizeType i_begin,
-                                const SizeType i_end, const LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
+void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_chain,
+                                const SizeType i_begin, const SizeType i_end,
+                                const LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
                                 KRSender&& k_row, KCSender&& k_col, Matrix<T, D>& mat,
                                 Matrix<T, D>& comm_vec) {
   namespace ex = pika::execution::experimental;
@@ -919,9 +923,9 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
 // The local row on each rank is first offloaded to a local communication buffer @p comm_vec of size (n, 1).
 template <class T, Device D, class KRSender, class KCSender>
 void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
-                            const SizeType i_end, const LocalTileIndex idx_loc_begin, LocalTileSize sz_loc_tiles,
-                            KRSender&& k_row, KCSender&& k_col, Matrix<T, D>& mat,
-                            Matrix<T, D>& comm_vec) {
+                            const SizeType i_end, const LocalTileIndex idx_loc_begin,
+                            LocalTileSize sz_loc_tiles, KRSender&& k_row, KCSender&& k_col,
+                            Matrix<T, D>& mat, Matrix<T, D>& comm_vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -967,11 +971,12 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
 }
 
 template <class T, class KSender, class RhoSender>
-void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end, const LocalTileIndex idx_loc_begin,
-                           const LocalTileSize sz_loc_tiles, KSender&& k, RhoSender&& rho,
-                           Matrix<const T, Device::CPU>& d, Matrix<const T, Device::CPU>& z,
-                           Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& delta,
-                           Matrix<SizeType, Device::CPU>& i2, Matrix<T, Device::CPU>& evecs) {
+void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
+                           const LocalTileIndex idx_loc_begin, const LocalTileSize sz_loc_tiles,
+                           KSender&& k, RhoSender&& rho, Matrix<const T, Device::CPU>& d,
+                           Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
+                           Matrix<T, Device::CPU>& delta, Matrix<SizeType, Device::CPU>& i2,
+                           Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -1043,7 +1048,8 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end, const L
     if (n == k)
       return;
 
-    const GlobalElementIndex origin{i_begin * dist.blockSize().rows(), i_begin * dist.blockSize().cols()};
+    const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
+                                    i_begin * dist.blockSize().cols()};
     for (SizeType i = 0; i < n; ++i) {
       const SizeType j = i2_ptr[i];
       if (j >= k) {
@@ -1052,7 +1058,7 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end, const L
         if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
           const LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);
           const SizeType i_subm_evec_arr = i_tile_l.row() - idx_loc_begin.row() +
-                                     (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
+                                           (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
           const TileElementIndex i = dist.tileElementIndex(i_g);
           evec_tile_arr[to_sizet(i_subm_evec_arr)](i) = T{1};
         }
@@ -1074,7 +1080,8 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end, const L
 // Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.
 template <class T, Device D>
 void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, const SizeType i_begin,
-                          const SizeType i_end, const matrix::Distribution& dist_evecs, Matrix<T, D>& evals) {
+                          const SizeType i_end, const matrix::Distribution& dist_evecs,
+                          Matrix<T, D>& evals) {
   namespace ex = pika::execution::experimental;
 
   comm::Index2D this_rank = dist_evecs.rankIndex();
@@ -1099,9 +1106,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& full_task_chain,
                           common::Pipeline<comm::Communicator>& row_task_chain,
                           common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
-                          const SizeType i_split, const SizeType i_end, RhoSender&& rho, WorkSpace<T, D>& ws,
-                          WorkSpaceHost<T>& ws_h, DistWorkSpaceHostMirror<T, D>& ws_hm,
-                          Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+                          const SizeType i_split, const SizeType i_end, RhoSender&& rho,
+                          WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+                          DistWorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals,
+                          Matrix<T, D>& evecs) {
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& dist_evecs = evecs.distribution();

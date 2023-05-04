@@ -104,7 +104,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
   }
 
   // Apply Given Rotations
-  const SizeType n = std::min((idx_end) * mb, m) - idx_begin * mb;
+  const SizeType n = std::min((idx_end) *mb, m) - idx_begin * mb;
   const GlobalElementSize offset(idx_begin * mb, idx_begin * mb);
 
   for (auto rot : rots) {

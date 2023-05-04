@@ -169,8 +169,9 @@ void applyPermutationsFiltered(
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& perms,
-                                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
+void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
+                                    Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
+                                    Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 
@@ -425,7 +426,8 @@ void transposeFromLocalToDistributedMatrix(const LocalTileIndex i_loc_begin,
                                            Matrix<const T, Device::CPU>& mat_in,
                                            Matrix<T, Device::CPU>& mat_out) {
   for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
-    const LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(), i_loc_begin.col() + i_in_tile.row());
+    const LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(),
+                                    i_loc_begin.col() + i_in_tile.row());
     transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
   }
 }
@@ -436,7 +438,8 @@ void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
                                            Matrix<const T, Device::CPU>& mat_in,
                                            Matrix<T, Device::CPU>& mat_out) {
   for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
-    const LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(), i_loc_begin.col() + i_out_tile.row());
+    const LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(),
+                                   i_loc_begin.col() + i_out_tile.row());
     transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
   }
 }
@@ -472,9 +475,9 @@ inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType,
 }
 
 template <class T, Coord C>
-void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
-                  SizeType i_end, Matrix<const SizeType, Device::CPU>& perms,
-                  Matrix<const T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
+void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
+                  Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
+                  Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
   using namespace dlaf::matrix;

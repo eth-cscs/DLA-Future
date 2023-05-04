@@ -247,7 +247,6 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
          ex::ensure_started();
 }
 
-
 // The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that
 // ColType::Deflated entries are moved to the end. The `c_ptr` array is implicitly ordered according to
 // `in_ptr` on entry.

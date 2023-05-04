@@ -43,7 +43,7 @@ endif()
 find_dependency(MPI)
 
 # ----- OpenMP
-if(DLAF_WITH_MKL)
+if(DLAF_WITH_OPENMP)
   find_dependency(OpenMP)
 endif()
 

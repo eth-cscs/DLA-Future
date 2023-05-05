@@ -37,10 +37,10 @@ DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::CPU, Communicator);
 
-DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_SEND_ETI(extern, float, Device::GPU, Communicator);
@@ -48,10 +48,10 @@ DLAF_SCHEDULE_SEND_ETI(extern, double, Device::GPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::GPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::GPU, Communicator);
 
-DLAF_SCHEDULE_SEND_ETI(extern, float, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, double, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(extern, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(extern, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 
 template <class T, Device D, class Comm>
@@ -69,10 +69,10 @@ DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::CPU, Communicator);
 
-DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_RECV_ETI(extern, float, Device::GPU, Communicator);
@@ -80,9 +80,9 @@ DLAF_SCHEDULE_RECV_ETI(extern, double, Device::GPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::GPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::GPU, Communicator);
 
-DLAF_SCHEDULE_RECV_ETI(extern, float, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, double, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(extern, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(extern, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 }

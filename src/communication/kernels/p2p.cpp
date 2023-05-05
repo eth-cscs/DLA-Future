@@ -90,10 +90,10 @@ DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, Communicator);
 
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, Communicator);
@@ -101,10 +101,10 @@ DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, Communicator);
 
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 
 template <class T, Device D, class Comm>
@@ -136,10 +136,10 @@ DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, Communicator);
 
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, Communicator);
@@ -147,9 +147,9 @@ DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, Communicator);
 
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 }

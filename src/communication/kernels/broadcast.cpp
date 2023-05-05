@@ -30,8 +30,6 @@ namespace dlaf::comm {
 namespace internal {
 template <class CommSender, class TileSender>
 [[nodiscard]] auto scheduleSendBcast(CommSender&& pcomm, TileSender&& tile) {
-  using dlaf::comm::internal::sendBcast_o;
-  using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
   using dlaf::internal::RequireContiguous;
@@ -61,22 +59,18 @@ template <class T, Device D, class Comm>
   return internal::scheduleSendBcast(std::move(pcomm), std::move(tile));
 }
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::CPU,
-                             dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::CPU,
-                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::GPU,
-                             dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::GPU,
-                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 
 template <class T, Device D, class Comm>
@@ -84,7 +78,6 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recvBcast_o;
-  using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
   using dlaf::internal::CopyToDestination;
   using dlaf::internal::RequireContiguous;
@@ -114,21 +107,17 @@ template <class T, Device D, class Comm>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::CPU,
-                             dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::CPU,
-                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::CPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::CPU, internal::CommunicatorWrapper);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::GPU,
-                             dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::GPU,
-                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::GPU, internal::CommunicatorWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::GPU, internal::CommunicatorWrapper);
 #endif
 }

@@ -86,7 +86,7 @@ template <class CommSender, class TileSender>
 
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleReduceRecvInPlace(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    pika::execution::experimental::unique_any_sender<dlaf::comm::internal::CommunicatorWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::reduceRecvInPlace_o;
   using dlaf::comm::internal::transformMPI;
@@ -132,7 +132,7 @@ DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<double>, Device::GPU);
 
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
-    pika::execution::experimental::unique_any_sender<dlaf::common::PromiseGuard<Communicator>> pcomm,
+    pika::execution::experimental::unique_any_sender<dlaf::comm::internal::CommunicatorWrapper> pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }

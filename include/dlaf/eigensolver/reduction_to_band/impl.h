@@ -524,7 +524,6 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
-  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist = a.distribution();
 
@@ -619,7 +618,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                   [nthreads, nrefls, rank_v0,
                    cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
                                              auto& taus, auto& tiles, auto&& pcomm) {
-                    const bool rankHasHead = rank_v0 == pcomm.ref().rank();
+                    const bool rankHasHead = rank_v0 == pcomm.get().rank();
 
                     const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
                     const std::size_t begin = index * batch_size;
@@ -634,7 +633,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                       // STEP1: compute tau and reflector (single-thread)
                       if (index == 0) {
                         const bool has_head = rankHasHead;
-                        taus.emplace_back(computeReflector(has_head, pcomm.ref(), tiles, j));
+                        taus.emplace_back(computeReflector(has_head, pcomm.get(), tiles, j));
                       }
                       barrier_ptr->arrive_and_wait();
 
@@ -652,7 +651,7 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                       // STEP2b: reduce w results (single-threaded)
                       if (index == 0) {
                         dlaf::eigensolver::internal::reduceColumnVectors(w);
-                        comm::sync::allReduceInPlace(pcomm.ref(), MPI_SUM,
+                        comm::sync::allReduceInPlace(pcomm.get(), MPI_SUM,
                                                      common::make_data(w[0].data(), pt_cols));
                       }
                       barrier_ptr->arrive_and_wait();
@@ -791,7 +790,6 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
-  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist = a.distribution();
 
@@ -925,7 +923,6 @@ protected:
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
-    using pika::execution::experimental::make_unique_any_sender;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
@@ -952,7 +949,6 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
-  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist_a = mat_a.distribution();
   const matrix::Distribution dist({mat_a.size().rows(), band_size},
@@ -1337,13 +1333,11 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(
-                comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()), xt.read(at)));
+            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain(), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()),
-                                                       owner, xt.readwrite(at)));
+            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain(), owner, xt.readwrite(at)));
         }
       }
 

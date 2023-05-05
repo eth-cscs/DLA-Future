@@ -10,105 +10,42 @@
 
 #pragma once
 
-#include <pika/future.hpp>
-
-#include <dlaf/common/unwrap.h>
+#include <pika/async_rw_mutex.hpp>
+#include <pika/execution.hpp>
 
 namespace dlaf::common {
 
-/// A `promise` like type which is set upon destruction. The type separates the placement of data
-/// (T) into the promise from notifying the corresponding `pika::future`.
-///
-/// Note: The type is non-copiable.
-template <class T>
-class PromiseGuard {
-public:
-  /// Create a wrapper.
-  /// @param object the resource to wrap (the wrapper becomes the owner of the resource),
-  /// @param next the promise that has to be set on destruction.
-  PromiseGuard(T object, pika::lcos::local::promise<T> next)
-      : object_(std::move(object)), promise_(std::move(next)) {}
-
-  PromiseGuard(PromiseGuard&&) = default;
-  PromiseGuard& operator=(PromiseGuard&&) = default;
-
-  PromiseGuard(const PromiseGuard&) = delete;
-  PromiseGuard& operator=(const PromiseGuard&) = delete;
-
-  /// This is where the "magic" happens!
-  ///
-  /// If the wrapper is still valid, set the promise to unlock the next future.
-  ~PromiseGuard() {
-    if (promise_.valid())
-      promise_.set_value(std::move(object_));
-  }
-
-  /// Get a reference to the internal object.
-  T& ref() {
-    return object_;
-  }
-
-  const T& ref() const {
-    return object_;
-  };
-
-private:
-  T object_;                               /// the object owned by the wrapper.
-  pika::lcos::local::promise<T> promise_;  /// the shared state that will unlock the next user.
-};
-
 /// Pipeline takes ownership of a given object and manages the access to this resource by serializing
-/// calls. Anyone that requires access to the underlying resource will get an pika::future, which is the
+/// calls. Anyone that requires access to the underlying resource will get a sender, which is the
 /// way to register to the queue. All requests are serialized and served in the same order they arrive.
 /// On destruction it does not wait for the queued requests for the resource and exits immediately.
 ///
 /// The mechanism for auto-releasing the resource and passing it to the next user works thanks to the
-/// internal PromiseGuard object. This PromiseGuard contains the real resource, and it will do what is
-/// needed to unlock the next user as soon as the PromiseGuard is destroyed.
+/// internal wrapper object. The wrapper contains the real resource, and it will do what is
+/// needed to unlock the next user as soon as the wrapper is destroyed.
 template <class T>
 class Pipeline {
+  using AsyncRwMutex = pika::execution::experimental::async_rw_mutex<T>;
+
 public:
+  using PipelineSender =
+      pika::execution::experimental::unique_any_sender<typename AsyncRwMutex::readwrite_access_type>;
+
   /// Create a Pipeline by moving in the resource (it takes the ownership).
-  Pipeline(T object) {
-    sender_ = pika::execution::experimental::just(std::move(object));
-  }
+  explicit Pipeline(T object) : pipeline(std::move(object)) {}
+  Pipeline(Pipeline&&) = default;
+  Pipeline& operator=(Pipeline&&) = default;
+  Pipeline(const Pipeline&) = delete;
+  Pipeline& operator=(const Pipeline&) = delete;
 
   /// Enqueue for the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
-  auto operator()() {
-    auto before_last = std::move(sender_);
-
-    pika::lcos::local::promise<T> promise_next;
-    sender_ = promise_next.get_future();
-
-#if defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
-    auto make_promise_guard = [promise_next = std::move(promise_next)](T object) mutable {
-      return PromiseGuard<T>{std::move(object), std::move(promise_next)};
-    };
-#if defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
-    namespace ex = pika::execution::experimental;
-    return std::move(before_last) | ex::then(std::move(make_promise_guard));
+  PipelineSender operator()() {
+    return pipeline.readwrite();
   }
 
 private:
-  pika::execution::experimental::unique_any_sender<T>
-      sender_;  ///< This contains always the "tail" of the queue of senders.
-};
-}
-
-namespace dlaf::common::internal {
-template <typename T>
-struct Unwrapper<dlaf::common::PromiseGuard<T>> {
-  template <typename U>
-  static decltype(auto) unwrap(U&& u) {
-    return u.ref();
-  }
+  AsyncRwMutex pipeline;
 };
 }

@@ -100,7 +100,7 @@ allocate:
   extends: .daint_alloc
   variables:
     PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '2:00:00'
+    SLURM_TIMELIMIT: '40:00'
 
 {{JOBS}}
 

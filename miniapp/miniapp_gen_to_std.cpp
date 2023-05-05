@@ -13,7 +13,6 @@
 #include <iostream>
 
 #include <mpi.h>
-#include <pika/future.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>

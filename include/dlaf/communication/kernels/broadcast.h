@@ -63,37 +63,29 @@ DLAF_MAKE_CALLABLE_OBJECT(recvBcast);
 template <class T, Device D, class Comm>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSendBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
-    pika::execution::experimental::unique_any_sender<pika::shared_future<matrix::Tile<const T, D>>> tile);
+    dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(kword, Type, Device, Comm)            \
+#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                   \
   kword template pika::execution::experimental::unique_any_sender<>               \
   scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
-                    pika::execution::experimental::unique_any_sender<             \
-                        pika::shared_future<matrix::Tile<const Type, Device>>>    \
-                        tile)
+                    dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<float>, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::CPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, double, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<float>, Device::CPU,
+                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<double>, Device::CPU,
+                             dlaf::common::PromiseGuard<Communicator>);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, SizeType, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, float, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, double, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<float>, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
-DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::GPU,
-                                    dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, float, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, double, Device::GPU, dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<float>, Device::GPU,
+                             dlaf::common::PromiseGuard<Communicator>);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, std::complex<double>, Device::GPU,
+                             dlaf::common::PromiseGuard<Communicator>);
 #endif
 
 /// Schedule a broadcast receive.
@@ -102,15 +94,14 @@ DLAF_SCHEDULE_SEND_BCAST_SFTILE_ETI(extern, std::complex<double>, Device::GPU,
 /// sender tile must be writable so that the received data can be written to it.
 /// The input tile is sent by the returned sender.
 template <class T, Device D, class Comm>
-[[nodiscard]] pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> scheduleRecvBcast(
+[[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecvBcast(
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
-    pika::execution::experimental::unique_any_sender<matrix::Tile<T, D>> tile);
+    dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                               \
-  kword template pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> \
-  scheduleRecvBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm,             \
-                    comm::IndexT_MPI root_rank,                                               \
-                    pika::execution::experimental::unique_any_sender<matrix::Tile<Type, Device>> tile)
+#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                   \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                  \
+  scheduleRecvBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
+                    comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, dlaf::common::PromiseGuard<Communicator>);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, float, Device::CPU, dlaf::common::PromiseGuard<Communicator>);

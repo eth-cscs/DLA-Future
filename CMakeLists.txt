@@ -150,7 +150,7 @@ else()
 endif()
 
 # ----- pika
-find_package(pika 0.12.0 REQUIRED)
+find_package(pika 0.15.0 REQUIRED)
 find_package(pika-algorithms 0.1.1 REQUIRED)
 
 # ----- BLASPP/LAPACKPP

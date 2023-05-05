@@ -278,7 +278,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  constexpr auto B = dlaf::DefaultBackend_v<D>;
+  constexpr auto backend = dlaf::DefaultBackend_v<D>;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
   if constexpr (D == Device::CPU) {
@@ -294,7 +294,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
     TileCollector tc{i_begin, i_end};
     return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
                         ex::when_all_vector(tc.readwrite(out))) |
-           di::transform(di::Policy<B>(), std::move(part_fn));
+           di::transform(di::Policy<backend>(), std::move(part_fn));
   }
   else {
 #ifdef DLAF_WITH_GPU
@@ -306,7 +306,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
       SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
 
       return ex::just(n, c_ptr, in_ptr, out_ptr, host_k(), device_k()) |
-             di::transform(di::Policy<B>(), stablePartitionIndexOnDevice) |
+             di::transform(di::Policy<backend>(), stablePartitionIndexOnDevice) |
              ex::then([&host_k]() { return *host_k(); });
     };
 

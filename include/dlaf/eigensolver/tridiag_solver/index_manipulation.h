@@ -34,7 +34,7 @@ inline SizeType problemSize(const SizeType i_begin, const SizeType i_end,
 
 // The index starts at `0` for tiles in the range [i_begin, i_end)
 template <Device D>
-inline void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeType, D>& index) {
+void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeType, D>& index) {
   const SizeType nb = index.distribution().blockSize().rows();
   for (SizeType i = i_begin; i < i_end; ++i) {
     const GlobalTileIndex tile_idx(i, 0);
@@ -124,8 +124,8 @@ void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeT
 }
 
 template <Device D>
-inline void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& in,
-                        Matrix<SizeType, D>& out) {
+void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& in,
+                 Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 

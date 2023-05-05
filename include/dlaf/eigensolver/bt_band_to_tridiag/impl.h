@@ -15,7 +15,6 @@
 
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
-#include "dlaf/common/single_threaded_blas.h"
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>

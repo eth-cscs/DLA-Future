@@ -17,6 +17,7 @@
 #include <blas.hh>
 
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"

@@ -45,13 +45,13 @@ void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeType, D>
 
 // Add val to the indices of `index`.
 //
-inline void addIndex(SizeType i_begin, SizeType i_end, SizeType val, Matrix<SizeType, Device::CPU>& index) {
+inline void addIndex(SizeType i_begin, SizeType i_end, SizeType val,
+                     Matrix<SizeType, Device::CPU>& index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   SizeType n = problemSize(i_begin, i_end, index.distribution());
   auto add_fn = [val, n](const auto& index) {
-
     TileElementIndex zero_idx(0, 0);
     SizeType* index_ptr = index[0].ptr(zero_idx);
 

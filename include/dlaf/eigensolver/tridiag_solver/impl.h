@@ -219,10 +219,10 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                      Matrix<T, D>(vec_size, vec_tile_size),          // z1
                      Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i2
 
-  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),         // d0
-                        Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),   // c
-                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),  // i1
-                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)}; // i3
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),          // d0
+                        Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),    // c
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),   // i1
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)};  // i3
 
   // Mirror workspace on host memory for CPU-only kernels
   WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
@@ -368,23 +368,23 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   const matrix::Distribution& dist_evecs = evecs.distribution();
   const matrix::Distribution& dist_evals = evals.distribution();
 
-  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),                            // e0
-                     Matrix<T, D>(dist_evecs),                            // e1
-                     evecs,                                          // e2
-                     evals,                                          // d1
+  WorkSpace<T, D> ws{Matrix<T, D>(dist_evecs),          // e0
+                     Matrix<T, D>(dist_evecs),          // e1
+                     evecs,                             // e2
+                     evals,                             // d1
                      Matrix<T, D>(dist_evals),          // z0
                      Matrix<T, D>(dist_evals),          // z1
                      Matrix<SizeType, D>(dist_evals)};  // i2
 
-  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),         // d0
-                        Matrix<ColType, Device::CPU>(dist_evals),   // c
-                        Matrix<SizeType, Device::CPU>(dist_evals),  // i1
-                        Matrix<SizeType, Device::CPU>(dist_evals)}; // i3
+  WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),          // d0
+                        Matrix<ColType, Device::CPU>(dist_evals),    // c
+                        Matrix<SizeType, Device::CPU>(dist_evals),   // i1
+                        Matrix<SizeType, Device::CPU>(dist_evals)};  // i3
 
   // Mirror workspace on host memory for CPU-only kernels
-  DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
-                                  initMirrorMatrix(ws.z0), initMirrorMatrix(ws.z1),
-                                  initMirrorMatrix(ws.i2)};
+  DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2),
+                                      initMirrorMatrix(ws.d1), initMirrorMatrix(ws.z0),
+                                      initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, ws.e0);
@@ -423,8 +423,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
 
   // Note: ws_hm.e2 is the mirror of ws.e2 which is evecs
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, 0, n,
-                                                                       ws_hm.i2, ws_hm.e0,
-                                                                       ws_hm.e2);
+                                                                       ws_hm.i2, ws_hm.e0, ws_hm.e2);
   copy({0, 0}, evecs.distribution().localNrTiles(), ws_hm.e2, evecs);
 }
 

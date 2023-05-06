@@ -91,9 +91,9 @@ template <class T, Device D>
 struct WorkSpace {
   Matrix<T, D> e0;
   Matrix<T, D> e1;
-  Matrix<T, D>& e2; // Reference to reuse evecs
+  Matrix<T, D>& e2;  // Reference to reuse evecs
 
-  Matrix<T, D>& d1; // Reference to reuse evals
+  Matrix<T, D>& d1;  // Reference to reuse evals
 
   Matrix<T, D> z0;
   Matrix<T, D> z1;
@@ -598,8 +598,8 @@ void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matr
 }
 
 template <Backend B, Device D, class T, class RhoSender>
-void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                      WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                      RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                       WorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
 
@@ -653,7 +653,6 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // Placeholder for rearranging the eigenvectors: (local permutation)
   copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 
-
   // Step #2
   //
   //    i2 (in)  : initial <--- pre_sorted
@@ -701,9 +700,8 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // (The copy is needed to simplify the removal)
   dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.e2, ws.e0);
   copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e2);
-  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
-                                                             blas::Op::NoTrans, T(1), ws.e1, ws.e2,
-                                                             T(0), ws.e0);
+  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
+                                                  T(1), ws.e1, ws.e2, T(0), ws.e0);
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
@@ -997,8 +995,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& full_task_chain,
                           common::Pipeline<comm::Communicator>& row_task_chain,
                           common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
-                          const SizeType i_split, const SizeType i_end, RhoSender&& rho, WorkSpace<T, D>& ws,
-                          WorkSpaceHost<T>& ws_h, DistWorkSpaceHostMirror<T, D>& ws_hm) {
+                          const SizeType i_split, const SizeType i_end, RhoSender&& rho,
+                          WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+                          DistWorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& dist_evecs = ws.e0.distribution();
@@ -1084,8 +1083,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho),
-                        ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2, ws_hm.e2);
+  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1,
+                        ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2, ws_hm.e2);
 
   assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws_h.d0);
 
@@ -1094,7 +1093,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
   // ---
-
 
   auto n = ex::just(problemSize(i_begin, i_end, dist_evecs));
   // Eigenvector formation: `ws.e2` stores the eigenvectors, `ws.e0` is used as an additional workspace

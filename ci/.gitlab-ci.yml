@@ -163,7 +163,7 @@ cpu release build clang16 cxx20:
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
     BASE_IMAGE: docker.io/ubuntu:23.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:23.04
-    EXTRA_APTGET: clang-16
+    EXTRA_APTGET: "clang-16 libomp-16-dev"
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     # glibc-tools is needed for libSegFault on ubuntu:23.04
     COMPILER: clang@16.0.0

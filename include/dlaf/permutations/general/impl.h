@@ -96,7 +96,11 @@ void applyPermutations(
                                distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
     // Parallelized over the number of permuted columns or rows
-    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
+    const SizeType nperms = sz.get<coord>();
+    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+      DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
       for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
         const SizeType split = splits[i_split];
 

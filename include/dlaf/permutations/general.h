@@ -49,15 +49,16 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
+  DLAF_ASSERT(perms.size().rows() == mat_in.size().rows(), perms, mat_in);
 
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
 
   DLAF_ASSERT(i_end <= perms.nrTiles().rows(), i_end, perms);
-  DLAF_ASSERT(i_end <= mat_in.nrTiles().rows() && i_end <= mat_in.nrTiles().cols(), i_end, mat_in);
-  DLAF_ASSERT(i_end <= mat_out.nrTiles().rows() && i_end <= mat_out.nrTiles().cols(), i_end, mat_out);
+  DLAF_ASSERT(i_end <= mat_in.nrTiles().rows(), i_end, mat_in);
+  DLAF_ASSERT(i_end <= mat_out.nrTiles().rows(), i_end, mat_out);
 
   DLAF_ASSERT(perms.size().cols() == 1, perms);
-  DLAF_ASSERT(mat_in.blockSize().template get<coord>() == perms.blockSize().rows(), mat_in, perms);
+  DLAF_ASSERT(perms.blockSize().rows() == mat_in.blockSize().rows(), mat_in, perms);
 
   internal::Permutations<B, D, T, coord>::call(i_begin, i_end, perms, mat_in, mat_out);
 }
@@ -99,14 +100,15 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
   DLAF_ASSERT(matrix::square_blocksize(mat_in), mat_in);
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
+  DLAF_ASSERT(perms.size().rows() == mat_in.size().rows(), perms, mat_in);
 
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
   DLAF_ASSERT(i_end <= perms.nrTiles().rows(), i_end, perms);
-  DLAF_ASSERT(i_end <= mat_in.nrTiles().rows() && i_end <= mat_in.nrTiles().cols(), i_end, mat_in);
-  DLAF_ASSERT(i_end <= mat_out.nrTiles().rows() && i_end <= mat_out.nrTiles().cols(), i_end, mat_out);
+  DLAF_ASSERT(i_end <= mat_in.nrTiles().rows(), i_end, mat_in);
+  DLAF_ASSERT(i_end <= mat_out.nrTiles().rows(), i_end, mat_out);
 
   DLAF_ASSERT(perms.size().cols() == 1, perms);
-  DLAF_ASSERT(mat_in.blockSize().template get<coord>() == perms.blockSize().rows(), mat_in, perms);
+  DLAF_ASSERT(perms.blockSize().rows() == mat_in.blockSize().rows(), mat_in, perms);
 
   internal::Permutations<B, D, T, coord>::call(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }

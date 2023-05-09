@@ -21,7 +21,7 @@ SHELL ["/bin/bash", "-c"]
 
 # Inject the coverage option in the spack package
 # TODO: Can cmakeflags actually replace this? cmakeflags=-DDLAF_WITH_COVERAGE=ON should not override other flags...
-RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
+# RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
 
 ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
@@ -31,7 +31,8 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
+    spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose \
+      dla-future cxxflags="-O0 -fprofile-arcs -ftest-coverage" ldflags="-fprofile-arcs -ftest-coverage"
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \

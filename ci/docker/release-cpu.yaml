@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@develop cmakeflags="-DCMAKE_CXX_FLAGS=-Werror -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN" ^intel-mkl ^mpich
+    - 'dla-future@develop cmakeflags=''-DCMAKE_CXX_FLAGS=-Werror -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN'' ^intel-mkl ^mpich'
 
   packages:
     all:

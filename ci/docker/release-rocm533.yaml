@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-  - dla-future@develop +rocm amdgpu_target=gfx90a:xnack- cmakeflags="-DCMAKE_CXX_FLAGS=-Werror -DCMAKE_HIP_FLAGS=-Werror -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN"
+  - "dla-future@develop +rocm amdgpu_target=gfx90a:xnack- cmakeflags=\'-DCMAKE_CXX_FLAGS=-Werror -DCMAKE_HIP_FLAGS=-Werror -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN\'"
 
   packages:
     all:

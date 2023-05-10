@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@develop +cuda cmakeflags="-DCMAKE_CXX_FLAGS=-Werror -DCMAKE_CUDA_FLAGS=-Werror=all-warnings -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN" ^intel-mkl ^mpich
+    - "dla-future@develop +cuda cmakeflags=\'-DCMAKE_CXX_FLAGS=-Werror -DCMAKE_CUDA_FLAGS=-Werror=all-warnings -DBUILD_TESTING=ON -DDLAF_BUILD_TESTING=ON -DDLAF_CI_RUNNER_USES_MPIRUN\' ^intel-mkl ^mpich"
 
   packages:
     all:

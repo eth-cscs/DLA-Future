@@ -109,6 +109,7 @@ deallocate:
   extends: .daint_dealloc
 "
 
+# TODO: Make separate template with MINIAPP label
 JOB_TEMPLATE="
 {{LABEL}}:
   stage: test
@@ -120,7 +121,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: mpi-ctest -L {{LABEL}}"
+  script: mpi-ctest -L {{LABEL}} -L MINIAPP"
 fi
 
 JOBS=""

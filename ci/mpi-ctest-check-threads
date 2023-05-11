@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 
-#pushd /DLA-Future-build > /dev/null
+pushd /DLA-Future-build > /dev/null
 
 # Get commands of all tests, since we will run the commands directly under
 # strace.

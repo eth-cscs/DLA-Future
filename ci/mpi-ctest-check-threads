@@ -1,4 +1,8 @@
-#!/bin/bash -eux
+#!/bin/bash -eu
+
+if [[ $SLURM_PROCID == "0" ]]; then
+    set -x
+fi
 
 pushd /DLA-Future-build > /dev/null
 

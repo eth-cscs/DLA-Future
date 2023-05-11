@@ -1,0 +1,42 @@
+#!/bin/bash -eux
+
+#pushd /DLA-Future-build > /dev/null
+
+# Get commands of all tests, since we will run the commands directly under
+# strace.
+ctest -N $@
+IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | map(.command) | .[] | join(" ")'))
+
+num_failed_tests=0
+
+for test in "${all_tests[@]}"; do
+    # Run the tests, only output on the first rank
+    if [[ $SLURM_PROCID == "0" ]]; then
+        # Start the test once to get the number of threads that the pika
+        # runtime is using. All ranks must start the test since MPI may be
+        # initialized.  Only the first rank needs to check the number of
+        # threads.
+        num_threads=$(bash -c $test --pika:exit --pika:print-bind | grep 'PU L' | wc -l)
+        echo "Using $num_threads threads"
+
+        output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
+
+        TZ=CET date +"Run started at: %H:%M:%S %z"
+        strace -e clone bash -c $test |& tee $output_file
+        TZ=CET date +"Run finished at: %H:%M:%S %z"
+
+        num_threads_spawned=$(cat $output_file | grep '^clone' | wc -l)
+        echo "$num_threads_spawned actually spawned"
+
+        if (( num_threads_spawned != num_threads + 1 )); then
+            num_failed_tests=$(( num_failed_tests + 1 ))
+        fi
+    else
+        bash -c $test --pika:exit
+        bash -c $test > /dev/null
+    fi
+done
+
+popd > /dev/null
+
+exit $num_failed_tests

@@ -121,7 +121,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: mpi-ctest -L {{LABEL}} -L MINIAPP"
+  script: mpi-ctest-check-threads -L {{LABEL}} -L MINIAPP"
 fi
 
 JOBS=""

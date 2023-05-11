@@ -73,6 +73,7 @@ target_link_libraries(
   dlaf.prop
   INTERFACE
     MPI::MPI_CXX
+    $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
     pika::pika
     pika-algorithms::pika_algorithms
@@ -94,6 +95,8 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_ASSERT_MODERATE_ENABLE}>:DLAF_ASSERT_MODERATE_ENABLE>
             $<$<BOOL:${DLAF_ASSERT_HEAVY_ENABLE}>:DLAF_ASSERT_HEAVY_ENABLE>
             DLAF_FUNCTION_NAME=$<IF:$<BOOL:is_pretty_function_available>,__PRETTY_FUNCTION__,__func__>
+            $<$<BOOL:${DLAF_WITH_MKL}>:DLAF_WITH_MKL>
+            $<$<BOOL:${DLAF_WITH_OPENMP}>:DLAF_WITH_OPENMP>
             $<$<BOOL:${DLAF_WITH_GPU}>:DLAF_WITH_GPU>
             $<$<BOOL:${DLAF_WITH_CUDA}>:DLAF_WITH_CUDA>
             $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
@@ -179,6 +182,7 @@ endfunction()
 DLAF_addSublibrary(
   core
   SOURCES blas/scal.cpp
+          common/single_threaded_blas.cpp
           communication/communicator_impl.cpp
           communication/communicator.cpp
           communication/communicator_grid.cpp

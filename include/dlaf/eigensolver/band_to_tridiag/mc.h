@@ -22,6 +22,7 @@
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/round_robin.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -47,6 +48,7 @@ void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
   using dlaf::util::size_t::mul;
 
   // compute the reflector in-place
+  common::internal::SingleThreadedBlasScope single;
   lapack::larfg(n, vec, vec + 1, 1, &tau);
 
   // copy the HH reflector to v and set the elements annihilated by the HH transf. to 0.
@@ -62,6 +64,8 @@ void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const
 
   constexpr auto Lower = blas::Uplo::Lower;
   constexpr auto ColMaj = blas::Layout::ColMajor;
+
+  common::internal::SingleThreadedBlasScope single;
 
   blas::hemv(ColMaj, Lower, n, tau, a, lda, v, 1, 0., w, 1);
 
@@ -79,6 +83,8 @@ void applyHHLeft(const SizeType m, const SizeType n, const T tau, const T* v, T*
   constexpr auto ConjTrans = blas::Op::ConjTrans;
   constexpr auto ColMaj = blas::Layout::ColMajor;
 
+  common::internal::SingleThreadedBlasScope single;
+
   blas::gemv(ColMaj, ConjTrans, m, n, 1., a, lda, v, 1, 0., w, 1);
   blas::ger(ColMaj, m, n, -dlaf::conj(tau), v, 1, w, 1, a, lda);
 }
@@ -91,6 +97,8 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
 
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ColMaj = blas::Layout::ColMajor;
+
+  common::internal::SingleThreadedBlasScope single;
 
   blas::gemv(ColMaj, NoTrans, m, n, 1., a, lda, v, 1, 0., w, 1);
   blas::ger(ColMaj, m, n, -tau, w, 1, v, 1, a, lda);
@@ -110,6 +118,8 @@ void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, con
   constexpr auto ColMaj = blas::Layout::ColMajor;
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ConjTrans = blas::Op::ConjTrans;
+
+  common::internal::SingleThreadedBlasScope single;
 
   blas::hemv(ColMaj, Lower, n1, tau, a1, lda, v, 1, 0., w, 1);
   blas::hemv(ColMaj, Lower, n2, tau, a2, lda, v + n1, 1, 0., w + n1, 1);
@@ -140,6 +150,8 @@ void applyHHRight(const SizeType m, const SizeType n1, const SizeType n2, const 
 
   constexpr auto NoTrans = blas::Op::NoTrans;
   constexpr auto ColMaj = blas::Layout::ColMajor;
+
+  common::internal::SingleThreadedBlasScope single;
 
   blas::gemv(ColMaj, NoTrans, m, n1, 1., a1, lda, v, 1, 0., w, 1);
   blas::gemv(ColMaj, NoTrans, m, n2, 1., a2, lda, v + n1, 1, 1., w, 1);
@@ -228,6 +240,8 @@ public:
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
+            common::internal::SingleThreadedBlasScope single;
+
             // First set the diagonals from b+2 to 2b to 0.
             lapack::laset(General, band_size_ - 1, source.size().cols(), T(0), T(0),
                           ptr(band_size_ + 1, j), ld() + 1);
@@ -303,6 +317,9 @@ public:
           [=](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
+
+            common::internal::SingleThreadedBlasScope single;
+
             // The elements are copied in the following way:
             // (a: copied with first lacpy (Upper), b: copied with second lacpy (General))
             // (copied when j = n)
@@ -461,6 +478,7 @@ public:
 
   void compactCopyToTile(matrix::Tile<T, Device::CPU>& tile_v, TileElementIndex index) const noexcept {
     tile_v(index) = tau();
+    common::internal::SingleThreadedBlasScope single;
     blas::copy(sizeHHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
   }
 
@@ -729,6 +747,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         // skip imaginary part if Complex.
         inc *= 2;
 
+      common::internal::SingleThreadedBlasScope single;
       blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
       blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
     };
@@ -1200,6 +1219,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       if (isComplex_v<T>)
         // skip imaginary part if Complex.
         inc *= 2;
+
+      common::internal::SingleThreadedBlasScope single;
 
       if (auto n1 = a_block->nextSplit(start); n1 < n_d) {
         blas::copy(n1, (BaseType<T>*) a_block->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);

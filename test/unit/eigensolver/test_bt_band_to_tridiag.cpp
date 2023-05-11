@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
@@ -60,12 +61,16 @@ TYPED_TEST_SUITE(BacktransformationBandToTridiagTestGPU, MatrixElementTypes);
 struct calculateTau {
   template <class T>
   static T call(const T* v, const SizeType size) {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     const T dotprod = blas::dot(size, v, 1, v, 1) + 1;
     return 2 / dotprod;
   }
 
   template <class T>
   static std::complex<T> call(const std::complex<T>* v, const SizeType size) {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     const T dotprod = std::real(blas::dot(size, v, 1, v, 1)) + 1;
     return {T(1) / dotprod, T(1) / dotprod};
   }
@@ -128,6 +133,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   if (m == 0 || n == 0)
     return;
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   using eigensolver::internal::nrStepsForSweep;
   using eigensolver::internal::nrSweeps;
@@ -204,6 +211,8 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 
   if (m == 0 || n == 0)
     return;
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   using eigensolver::internal::nrStepsForSweep;
   using eigensolver::internal::nrSweeps;

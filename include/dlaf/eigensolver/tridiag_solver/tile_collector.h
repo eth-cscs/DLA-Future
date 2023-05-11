@@ -50,13 +50,13 @@ public:
   template <class T, Device D>
   auto read(Matrix<const T, D>& mat) const {
     auto [begin, size] = iteratorLocal(mat.distribution());
-    return matrix::util::collectReadTiles(begin, size, mat);
+    return matrix::selectRead(mat, common::iterate_range2d(begin, size));
   }
 
   template <class T, Device D>
   auto readwrite(Matrix<T, D>& mat) const {
     auto [begin, size] = iteratorLocal(mat.distribution());
-    return matrix::util::collectReadWriteTiles(begin, size, mat);
+    return matrix::select(mat, common::iterate_range2d(begin, size));
   }
 };
 

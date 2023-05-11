@@ -13,6 +13,7 @@
 #include <pika/execution.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
@@ -182,7 +183,7 @@ inline void initIndex(SizeType i_begin, SizeType i_end, Matrix<SizeType, D>& ind
   for (SizeType i = i_begin; i <= i_end; ++i) {
     GlobalTileIndex tile_idx(i, 0);
     SizeType tile_row = (i - i_begin) * nb;
-    initIndexTileAsync<D>(tile_row, index.readwrite_sender(tile_idx));
+    initIndexTileAsync<D>(tile_row, index.readwrite(tile_idx));
   }
 }
 
@@ -204,8 +205,7 @@ void assembleZVec(SizeType i_begin, SizeType i_split, SizeType i_end, RhoSender&
     GlobalTileIndex z_idx(i, 0);
 
     // Copy the row into the column vector `z`
-    assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read_sender(idx_evecs),
-                                             z.readwrite_sender(z_idx));
+    assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
   }
 }
 
@@ -230,7 +230,7 @@ auto maxVectorElement(SizeType i_begin, SizeType i_end, Matrix<const T, D>& vec)
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin + 1));
   for (SizeType i = i_begin; i <= i_end; ++i) {
-    tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read_sender(LocalTileIndex(i, 0))));
+    tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read(LocalTileIndex(i, 0))));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -449,7 +449,7 @@ template <Device D>
 void initColTypes(SizeType i_begin, SizeType i_split, SizeType i_end, Matrix<ColType, D>& coltypes) {
   for (SizeType i = i_begin; i <= i_end; ++i) {
     ColType val = (i <= i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    setColTypeTileAsync<D>(val, coltypes.readwrite_sender(LocalTileIndex(i, 0)));
+    setColTypeTileAsync<D>(val, coltypes.readwrite(LocalTileIndex(i, 0)));
   }
 }
 
@@ -586,6 +586,8 @@ void applyGivensRotationsToMatrixColumns(SizeType i_begin, SizeType i_end, RotsS
     // Distribution of the merged subproblems
     matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+    common::internal::SingleThreadedBlasScope single;
+
     for (const GivensRotation<T>& rot : rots) {
       // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
       SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
@@ -641,6 +643,7 @@ void solveRank1Problem(SizeType i_begin, SizeType i_end, KSender&& k, RhoSender&
       SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
       T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
 
+      common::internal::SingleThreadedBlasScope single;
       lapack::laed4(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho, &eigenval);
     });
   };
@@ -681,9 +684,9 @@ void initWeightVector(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin
     // Divide the eigenvectors of the rank1 update problem `evecs` by it's diagonal matrix `diag` and
     // reduce multiply into the first column of each tile of the workspace matrix `ws`
     divideEvecsByDiagonalAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
-                                  diag_i2.read_sender(GlobalTileIndex(idx_gl_tile.row(), 0)),
-                                  diag.read_sender(GlobalTileIndex(idx_gl_tile.col(), 0)),
-                                  evecs.read_sender(idx_loc_tile), ws.readwrite_sender(idx_loc_tile));
+                                  diag_i2.read(GlobalTileIndex(idx_gl_tile.row(), 0)),
+                                  diag.read(GlobalTileIndex(idx_gl_tile.col(), 0)),
+                                  evecs.read(idx_loc_tile), ws.readwrite(idx_loc_tile));
 
     // skip the first local column
     if (idx_loc_tile.col() == idx_loc_begin.col())
@@ -692,9 +695,8 @@ void initWeightVector(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin
     // reduce-multiply the first column of each local tile of the workspace matrix into the first local
     // column of the matrix
     LocalTileIndex idx_ws_first_col_tile(idx_loc_tile.row(), idx_loc_begin.col());
-    multiplyFirstColumnsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
-                                 ws.read_sender(idx_loc_tile),
-                                 ws.readwrite_sender(idx_ws_first_col_tile));
+    multiplyFirstColumnsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), ws.read(idx_loc_tile),
+                                 ws.readwrite(idx_ws_first_col_tile));
   }
 }
 
@@ -714,9 +716,8 @@ void formEvecsUsingWeightVec(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_lo
     LocalTileIndex idx_ws_first_local_column(idx_loc_tile.row(), idx_loc_begin.col());
 
     calcEvecsFromWeightVecAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
-                                   z.read_sender(GlobalTileIndex(idx_gl_tile.row(), 0)),
-                                   ws.read_sender(idx_ws_first_local_column),
-                                   evecs.readwrite_sender(idx_loc_tile));
+                                   z.read(GlobalTileIndex(idx_gl_tile.row(), 0)),
+                                   ws.read(idx_ws_first_local_column), evecs.readwrite(idx_loc_tile));
   }
 }
 
@@ -729,16 +730,16 @@ void sumsqEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin, Loca
   for (auto idx_loc_tile : common::iterate_range2d(idx_loc_begin, sz_loc_tiles)) {
     auto idx_gl_tile = dist.globalTileIndex(idx_loc_tile);
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
-    sumsqColsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), evecs.read_sender(idx_loc_tile),
-                      ws.readwrite_sender(idx_loc_tile));
+    sumsqColsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), evecs.read(idx_loc_tile),
+                      ws.readwrite(idx_loc_tile));
 
     // skip the first local row
     if (idx_loc_tile.row() == idx_loc_begin.row())
       continue;
 
     LocalTileIndex idx_ws_first_row_tile(idx_loc_begin.row(), idx_loc_tile.col());
-    addFirstRowsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), ws.read_sender(idx_loc_tile),
-                         ws.readwrite_sender(idx_ws_first_row_tile));
+    addFirstRowsAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(), ws.read(idx_loc_tile),
+                         ws.readwrite(idx_ws_first_row_tile));
   }
 }
 
@@ -754,8 +755,7 @@ void normalizeEvecs(GlobalTileIndex idx_gl_begin, LocalTileIndex idx_loc_begin,
     auto sz_gl_el = dist.globalTileElementDistance(idx_gl_begin, idx_gl_tile);
     LocalTileIndex idx_ws_first_local_row(idx_loc_begin.row(), idx_loc_tile.col());
     divideColsByFirstRowAsync<D>(k_row, k_col, sz_gl_el.rows(), sz_gl_el.cols(),
-                                 ws.read_sender(idx_ws_first_local_row),
-                                 evecs.readwrite_sender(idx_loc_tile));
+                                 ws.read(idx_ws_first_local_row), evecs.readwrite(idx_loc_tile));
   }
 }
 
@@ -766,7 +766,7 @@ void setUnitDiag(SizeType i_begin, SizeType i_end, KSender&& k, Matrix<T, D>& ma
   for (SizeType i_tile = i_begin; i_tile <= i_end; ++i_tile) {
     SizeType tile_begin = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
 
-    setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite_sender(GlobalTileIndex(i_tile, i_tile)));
+    setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite(GlobalTileIndex(i_tile, i_tile)));
   }
 }
 
@@ -906,16 +906,14 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
     comm::Index2D evecs_tile_rank = dist.rankGlobalTile(idx_evecs);
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
-      assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read_sender(idx_evecs),
-                                               z.readwrite_sender(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()),
-                                                 ex::make_unique_any_sender(z.read_sender(z_idx))));
+      assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
+      ex::start_detached(
+          comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), z.read(z_idx)));
     }
     else {
       comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
       ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
-                                                 root_rank,
-                                                 ex::make_unique_any_sender(z.readwrite_sender(z_idx))));
+                                                 root_rank, z.readwrite(z_idx)));
     }
   }
 }
@@ -931,7 +929,7 @@ void setUnitDiagDist(SizeType i_begin, SizeType i_end, KSender&& k, Matrix<T, D>
     if (diag_tile_rank == this_rank) {
       SizeType tile_begin = dist.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
 
-      setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite_sender(ii_tile));
+      setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite(ii_tile));
     }
   }
 }
@@ -956,12 +954,10 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
       if (this_rank.row() == dist.rankGlobalTile<Coord::Row>(i_tile)) {
         GlobalTileIndex idx_gl_comm(i_tile, 0);
         auto laset_sender =
-            di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm));
+            di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm));
         ex::start_detached(tile::laset(di::Policy<DefaultBackend_v<D>>(), std::move(laset_sender)));
         ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()),
-                                                          MPI_PROD,
-                                                          ex::make_unique_any_sender(
-                                                              comm_vec.readwrite_sender(idx_gl_comm))));
+                                                          MPI_PROD, comm_vec.readwrite(idx_gl_comm)));
       }
     }
     return;
@@ -976,21 +972,19 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
 
     // set buffer to 1
     ex::start_detached(
-        di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite_sender(idx_gl_comm)) |
+        di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm)) |
         tile::laset(di::Policy<DefaultBackend_v<D>>()));
 
     // copy the first column of the matrix tile into the column tile of the buffer
-    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col,
-                   mat.read_sender(idx_loc_tile), Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
+    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, mat.read(idx_loc_tile),
+                   Coord::Col, comm_vec.readwrite(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(row_task_chain()),
-                                                      MPI_PROD,
-                                                      ex::make_unique_any_sender(
-                                                          comm_vec.readwrite_sender(idx_gl_comm))));
+                                                      MPI_PROD, comm_vec.readwrite(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
-    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col,
-                   comm_vec.read_sender(idx_gl_comm), Coord::Col, mat.readwrite_sender(idx_loc_tile));
+    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),
+                   Coord::Col, mat.readwrite(idx_loc_tile));
   }
 }
 
@@ -1014,11 +1008,9 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
       if (this_rank.col() == dist.rankGlobalTile<Coord::Col>(i_tile)) {
         GlobalTileIndex idx_gl_comm(i_tile, 0);
         ex::start_detached(
-            tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite_sender(idx_gl_comm)));
+            tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite(idx_gl_comm)));
         ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()),
-                                                          MPI_SUM,
-                                                          ex::make_unique_any_sender(
-                                                              comm_vec.readwrite_sender(idx_gl_comm))));
+                                                          MPI_SUM, comm_vec.readwrite(idx_gl_comm)));
       }
     }
     return;
@@ -1032,21 +1024,18 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     GlobalTileIndex idx_gl_comm(idx_gl_tile.col(), 0);
 
     // set buffer to zero
-    ex::start_detached(comm_vec.readwrite_sender(idx_gl_comm) |
-                       tile::set0(di::Policy<DefaultBackend_v<D>>()));
+    ex::start_detached(comm_vec.readwrite(idx_gl_comm) | tile::set0(di::Policy<DefaultBackend_v<D>>()));
 
     // copy the first row of the matrix tile into the column tile of the buffer
-    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Row,
-                   mat.read_sender(idx_loc_tile), Coord::Col, comm_vec.readwrite_sender(idx_gl_comm));
+    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read(idx_loc_tile),
+                   Coord::Col, comm_vec.readwrite(idx_gl_comm));
 
     ex::start_detached(comm::scheduleAllReduceInPlace(ex::make_unique_any_sender(col_task_chain()),
-                                                      MPI_SUM,
-                                                      ex::make_unique_any_sender(
-                                                          comm_vec.readwrite_sender(idx_gl_comm))));
+                                                      MPI_SUM, comm_vec.readwrite(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
-    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col,
-                   comm_vec.read_sender(idx_gl_comm), Coord::Row, mat.readwrite_sender(idx_loc_tile));
+    copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),
+                   Coord::Row, mat.readwrite(idx_loc_tile));
   }
 }
 
@@ -1064,6 +1053,8 @@ void solveRank1ProblemDist(SizeType i_begin, SizeType i_end, LocalTileIndex idx_
                    dist](const auto& k, const auto& rho, const auto& d_sfut_tile_arr,
                          const auto& z_sfut_tile_arr, const auto& eval_tiles, const auto& delta_tile_arr,
                          const auto& i2_tile_arr, const auto& evec_tile_arr) {
+    common::internal::SingleThreadedBlasScope single;
+
     const SizeType n = problemSize(i_begin, i_end, dist);
     const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
     const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
@@ -1168,13 +1159,11 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
     comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
     if (evecs_tile_rank == this_rank.col()) {
       ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(row_task_chain()),
-                                  ex::make_unique_any_sender(evals.read_sender(evals_idx))));
+          comm::scheduleSendBcast(ex::make_unique_any_sender(row_task_chain()), evals.read(evals_idx)));
     }
     else {
-      ex::start_detached(
-          comm::scheduleRecvBcast(ex::make_unique_any_sender(row_task_chain()), evecs_tile_rank,
-                                  ex::make_unique_any_sender(evals.readwrite_sender(evals_idx))));
+      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(row_task_chain()),
+                                                 evecs_tile_rank, evals.readwrite(evals_idx)));
     }
   }
 }

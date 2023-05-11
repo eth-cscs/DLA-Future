@@ -14,6 +14,7 @@
 #include "dlaf/blas/scal.h"
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -24,6 +25,7 @@ using matrix::Tile;
 
 template <typename T>
 void scaleTile(const Tile<const BaseType<T>, Device::CPU>& lambda, const Tile<T, Device::CPU>& tile) {
+  common::internal::SingleThreadedBlasScope single;
   for (SizeType j = 0; j < tile.size().cols(); ++j) {
     blas::scal(tile.size().rows(), lambda({j, 0}), tile.ptr({0, j}), 1);
   }
@@ -40,8 +42,7 @@ void scaleEigenvectors(Matrix<const BaseType<T>, Device::CPU>& evalues,
   for (const auto& ij : iterate_range2d(dist.localNrTiles())) {
     SizeType j = dist.template globalTileFromLocalTile<Coord::Col>(ij.col());
     pika::execution::experimental::start_detached(
-        dlaf::internal::whenAllLift(evalues.read_sender(GlobalTileIndex{j, 0}),
-                                    result.readwrite_sender(ij)) |
+        dlaf::internal::whenAllLift(evalues.read(GlobalTileIndex{j, 0}), result.readwrite(ij)) |
         dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_priority::normal),
                                   scaleTile<T>));
   }

@@ -13,12 +13,12 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
+#include "dlaf_test/matrix/util_matrix_senders.h"
 #include "dlaf_test/util_types.h"
 
 using namespace std::chrono_literals;
@@ -124,6 +124,7 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
       CHECK_MATRIX_EQ(el1, rt_mat);
 
       set(rt_mat, el2);
+      CHECK_MATRIX_EQ(el2, rt_mat);
     }
     CHECK_MATRIX_EQ(el2, mat);
   }
@@ -177,55 +178,53 @@ TYPED_TEST(RetiledMatrixTest, Dependencies) {
     ASSERT_GE(size.cols(), block_size.cols());
 
     // Dependencies graph:
-    // fut0 - fut1 - shfut2a - fut3 - fut4
-    //             \ shfut2b /
+    // rw0 - rw1 - ro2a - rw3 - rw4
+    //           \ ro2b /
 
     Matrix<Type, Device::CPU> mat(size, block_size);
-    auto fut0 = mat(LocalTileIndex{0, 0});
-    EXPECT_TRUE(fut0.is_ready());
+    EagerVoidSender rwsender0 = mat.readwrite(LocalTileIndex{0, 0});
+    EXPECT_TRUE(rwsender0.is_ready());
 
-    decltype(fut0) fut4;
+    EagerVoidSender rwsender4;
     {
       RetiledMatrix<Type, Device::CPU> rt_mat(mat, tiles_per_block);
 
-      fut4 = mat(LocalTileIndex{0, 0});
-      EXPECT_FALSE(fut4.is_ready());
+      rwsender4 = mat.readwrite(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rwsender4.is_ready());
 
-      auto fut1 = rt_mat(LocalTileIndex{0, 0});
-      EXPECT_FALSE(fut1.is_ready());
+      EagerVoidSender rwsender1 = rt_mat.readwrite(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rwsender1.is_ready());
 
-      auto shfut2a = rt_mat.read(LocalTileIndex{0, 0});
-      EXPECT_FALSE(shfut2a.is_ready());
-      auto shfut2b = rt_mat.read(LocalTileIndex{0, 0});
-      EXPECT_FALSE(shfut2b.is_ready());
+      EagerVoidSender rosender2a = rt_mat.read(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rosender2a.is_ready());
+      EagerVoidSender rosender2b = rt_mat.read(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rosender2b.is_ready());
 
-      auto fut3 = rt_mat(LocalTileIndex{0, 0});
-      EXPECT_FALSE(fut3.is_ready());
+      EagerVoidSender rwsender3 = rt_mat.readwrite(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rwsender3.is_ready());
 
       rt_mat.done(LocalTileIndex{0, 0});
-      EXPECT_FALSE(fut4.is_ready());
+      EXPECT_FALSE(rwsender4.is_ready());
 
-      fut0.get();
-      EXPECT_TRUE(fut1.is_ready());
-      EXPECT_FALSE(shfut2a.is_ready());
-      EXPECT_FALSE(shfut2b.is_ready());
-      fut1.get();
-      EXPECT_TRUE(shfut2a.is_ready());
-      EXPECT_TRUE(shfut2b.is_ready());
-      shfut2b.get();
-      shfut2b = {};
-      EXPECT_FALSE(fut3.is_ready());
-      shfut2a.get();
-      shfut2a = {};
-      EXPECT_TRUE(fut3.is_ready());
-      fut3.get();
+      std::move(rwsender0).get();
+      EXPECT_TRUE(rwsender1.is_ready());
+      EXPECT_FALSE(rosender2a.is_ready());
+      EXPECT_FALSE(rosender2b.is_ready());
+      std::move(rwsender1).get();
+      EXPECT_TRUE(rosender2a.is_ready());
+      EXPECT_TRUE(rosender2b.is_ready());
+      std::move(rosender2b).get();
+      EXPECT_FALSE(rwsender3.is_ready());
+      std::move(rosender2a).get();
+      EXPECT_TRUE(rwsender3.is_ready());
+      std::move(rwsender3).get();
 
       if (tiles_per_block == LocalTileSize(1, 1))
-        EXPECT_TRUE(fut4.is_ready());
+        EXPECT_TRUE(rwsender4.is_ready());
       else
-        EXPECT_FALSE(fut4.is_ready());
+        EXPECT_FALSE(rwsender4.is_ready());
     }
 
-    EXPECT_TRUE(fut4.is_ready());
+    EXPECT_TRUE(rwsender4.is_ready());
   }
 }

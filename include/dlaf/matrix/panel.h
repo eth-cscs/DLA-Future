@@ -9,8 +9,7 @@
 //
 #pragma once
 
-#include <pika/future.hpp>
-#include <pika/unwrap.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
@@ -23,7 +22,6 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_base.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/types.h"
 
 namespace dlaf {
@@ -51,6 +49,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
   using BaseT = Matrix<T, D>;
+  using ReadOnlySenderType = typename BaseT::ReadOnlySenderType;
 
   Panel(Panel&&) = default;
 
@@ -80,7 +79,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// - has not been already set to an external tile
   ///
   /// @pre @p index must be a valid index for the current panel size
-  void setTile(const LocalTileIndex& index, pika::shared_future<ConstTileType> new_tile_fut) {
+  void setTile(const LocalTileIndex& index, ReadOnlySenderType new_tile_sender) {
     DLAF_ASSERT(internal_.count(linearIndex(index)) == 0, "internal tile have been already used", index);
     DLAF_ASSERT(!isExternal(index), "already set to external", index);
     // Note assertion on index done by linearIndex method.
@@ -92,15 +91,15 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
       namespace ex = pika::execution::experimental;
 
       const auto panel_tile_size = tileSize(index);
-      auto assert_tile_size = pika::unwrapping([panel_tile_size](ConstTileType const& tile) {
-        DLAF_ASSERT_MODERATE(panel_tile_size == tile.size(), panel_tile_size, tile.size());
-      });
-      ex::start_detached(dlaf::internal::keepFuture(new_tile_fut) |
-                         ex::then(std::move(assert_tile_size)));
+      auto assert_tile_size = [panel_tile_size](auto tile_wrapper) {
+        DLAF_ASSERT_MODERATE(panel_tile_size == tile_wrapper.get().size(), panel_tile_size,
+                             tile_wrapper.get().size());
+      };
+      ex::start_detached(new_tile_sender | ex::then(std::move(assert_tile_size)));
     }
 #endif
 
-    external_[linearIndex(index)] = std::move(new_tile_fut);
+    external_[linearIndex(index)] = std::move(new_tile_sender);
   }
 
   /// Access a Tile of the panel in read-only mode
@@ -108,7 +107,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// This method is very similar to the one available in dlaf::Matrix.
   ///
   /// @pre @p index must be a valid index for the current panel size
-  pika::shared_future<ConstTileType> read(const LocalTileIndex& index) {
+  ReadOnlySenderType read(const LocalTileIndex& index) {
     // Note assertion on index done by linearIndex method.
 
     has_been_used_ = true;
@@ -121,15 +120,13 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
       internal_.insert(internal_linear_idx);
       auto tile = data_.read(fullIndex(index));
 
-      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
+      if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull())) {
         return tile;
-      else
-        return splitTile(tile, {{0, 0}, tileSize(index)});
+      }
+      else {
+        return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
+      }
     }
-  }
-
-  auto read_sender(const LocalTileIndex& index) {
-    return dlaf::internal::keepFuture(read(index));
   }
 
   /// Set the panel to enable access to the range of tiles [start, end)
@@ -292,14 +289,20 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// - external tiles references are dropped and internal ones are set back
   /// - The width (Col Panel) or the height (Row panel) are reset.
   void reset() noexcept {
-    for (auto& e : external_)
-      e = {};
+    for (auto& e : external_) {
+      if (e) {
+        pika::execution::experimental::start_detached(std::move(e));
+      }
+    }
+
     internal_.clear();
     dim_ = -1;
     has_been_used_ = false;
   }
 
 protected:
+  using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
+
   bool isFirstGlobalTileFull() const {
     return start_offset_ == 0;
   }
@@ -403,7 +406,7 @@ protected:
 
   /// Given a matrix index, check if the corresponding tile in the panel is external or not
   bool isExternal(const LocalTileIndex idx_matrix) const noexcept {
-    return external_[linearIndex(idx_matrix)].valid();
+    return !external_[linearIndex(idx_matrix)].empty();
   }
 
   bool hasBeenUsed() const noexcept {
@@ -434,7 +437,7 @@ protected:
   bool has_been_used_ = false;
 
   ///> Container for references to external tiles
-  common::internal::vector<pika::shared_future<ConstTileType>> external_;
+  common::internal::vector<ReadOnlySenderType> external_;
   ///> Keep track of usage status of internal tiles (accessed or not)
   std::set<SizeType> internal_;
 };
@@ -458,6 +461,7 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
+  using ReadOnlySenderType = typename BaseT::ReadOnlySenderType;
 
   Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : BaseT(transposeDist(distribution), common::transposed(start)),
@@ -521,19 +525,14 @@ public:
 
   using BaseT::offsetElement;
 
-  void setTile(LocalTileIndex index, pika::shared_future<ConstTileType> new_tile_fut) {
+  void setTile(LocalTileIndex index, ReadOnlySenderType new_tile_sender) {
     index.transpose();
-    BaseT::setTile(index, std::move(new_tile_fut));
+    BaseT::setTile(index, std::move(new_tile_sender));
   }
 
-  pika::shared_future<ConstTileType> read(LocalTileIndex index) {
+  ReadOnlySenderType read(LocalTileIndex index) {
     index.transpose();
     return BaseT::read(index);
-  }
-
-  auto read_sender(LocalTileIndex index) {
-    index.transpose();
-    return BaseT::read_sender(index);
   }
 
   using BaseT::reset;
@@ -556,6 +555,7 @@ public:
   using TileType = Tile<T, D>;
   using ConstTileType = Tile<const T, D>;
   using ElementType = T;
+  using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
 
   Panel(matrix::Distribution distribution, GlobalTileIndex start = {0, 0})
       : Panel<axis, const T, D, Storage>(distribution, start) {}
@@ -565,7 +565,7 @@ public:
   /// It is possible to access just internal tiles in RW mode.
   ///
   /// @pre index must point to a tile which is internally managed by the panel
-  pika::future<TileType> operator()(LocalTileIndex index) {
+  ReadWriteSenderType readwrite(LocalTileIndex index) {
     if constexpr (StoreTransposed::Yes == Storage)
       index.transpose();
 
@@ -575,16 +575,11 @@ public:
     has_been_used_ = true;
 
     BaseT::internal_.insert(BaseT::linearIndex(index));
-    auto tile = BaseT::data_(BaseT::fullIndex(index));
+    auto tile = BaseT::data_.readwrite(BaseT::fullIndex(index));
     if (dim_ < 0 && (isFirstGlobalTile(index) && isFirstGlobalTileFull()))
       return tile;
     else
-      return splitTile(tile, {{0, 0}, tileSize(index)});
-  }
-
-  auto readwrite_sender(const LocalTileIndex& index) {
-    // Note: do not use `keep_future`, otherwise dlaf::transform will not handle the lifetime correctly
-    return this->operator()(index);
+      return splitTile(std::move(tile), {{0, 0}, tileSize(index)});
   }
 
 private:

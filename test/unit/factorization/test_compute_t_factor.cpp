@@ -13,9 +13,9 @@
 
 #include <gtest/gtest.h>
 #include <blas.hh>
-#include <pika/future.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
 #include "dlaf/matrix/copy.h"
@@ -37,6 +37,8 @@ using namespace dlaf::matrix;
 using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
+
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -67,14 +69,18 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 
   // ortho = matrix . matrix*
   // clang-format off
-  blas::gemm(blas::Layout::ColMajor,
-      blas::Op::NoTrans, blas::Op::ConjTrans,
-      matrix.size().rows(), matrix.size().cols(), matrix.size().rows(),
-      1,
-      matrix.ptr(), matrix.ld(),
-      matrix.ptr(), matrix.ld(),
-      0,
-      ortho.ptr(), ortho.ld());
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
+    blas::gemm(blas::Layout::ColMajor,
+               blas::Op::NoTrans, blas::Op::ConjTrans,
+               matrix.size().rows(), matrix.size().cols(), matrix.size().rows(),
+               1,
+               matrix.ptr(), matrix.ld(),
+               matrix.ptr(), matrix.ld(),
+               0,
+               ortho.ptr(), ortho.ld());
+  }
   // clang-format on
 
   MatrixLocal<const T> eye = [&]() {
@@ -94,6 +100,8 @@ template <class T>
 std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor(
     const SizeType k, const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
   // PRE: m >= k
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 
@@ -151,6 +159,8 @@ template <class T>
 MatrixLocal<T> computeHFromTFactor(const SizeType k, const Tile<const T, Device::CPU>& t,
                                    const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
   // PRE: m >= k
+  dlaf::common::internal::SingleThreadedBlasScope single;
+
   const SizeType m = v.size().rows() - v_start.row();
   const TileElementSize block_size = v.blockSize();
 
@@ -254,7 +264,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   for (SizeType i = v_start.row(); i < v_start.row() + k && i < m; ++i) {
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
-    auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+    auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
     auto ij_tile = dist_v.tileElementIndex(ij);
     tile(ij_tile) = T{1};
     for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -285,7 +295,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx));
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx));
   }
 
   // Note:
@@ -297,7 +307,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  const auto& t = t_output_h.read(t_idx).get();
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
+  const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);
@@ -329,7 +340,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     SizeType j = i - v_start.row() + v_start.col();
     GlobalElementIndex ij(i, j);
     if (dist_v.rankIndex() == dist_v.rankGlobalTile(dist_v.globalTileIndex(ij))) {
-      auto tile = v_h(dist_v.globalTileIndex(ij)).get();
+      auto tile = sync_wait(v_h.readwrite(dist_v.globalTileIndex(ij)));
       auto ij_tile = dist_v.tileElementIndex(ij);
       tile(ij_tile) = T{1};
       for (SizeType jj = j + 1; jj < v_start.col() + k; ++jj) {
@@ -367,7 +378,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get()(t_idx), serial_comm);
+    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx), serial_comm);
   }
 
   // Note:
@@ -379,7 +390,8 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
   // H_res = I - V T V*
   //
   // is computed and compared to the one previously obtained by applying reflectors sequentially
-  const auto& t = t_output_h.read(t_idx).get();
+  auto t_holder = sync_wait(t_output_h.read(t_idx));
+  const auto& t = t_holder.get();
   MatrixLocal<T> h_result = computeHFromTFactor(k, t, v_local, v_start);
 
   is_orthogonal(h_result);

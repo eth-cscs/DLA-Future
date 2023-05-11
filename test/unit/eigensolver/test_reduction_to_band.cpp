@@ -19,6 +19,7 @@
 
 #include "dlaf/common/index2d.h"
 #include "dlaf/common/pipeline.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/functions_sync.h"
@@ -45,6 +46,8 @@ using namespace dlaf::test;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
+
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -121,6 +124,8 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
 
   DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
   DLAF_ASSERT(square_size(matrix), matrix.blockSize());
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   // 0-diagonal: mirror band
   // note: diagonal subtiles are correctly set just in the lower part by the algorithm
@@ -267,9 +272,9 @@ auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
     const bool is_in_upper = index.row() < index.col();
 
     if (!is_in_upper)
-      return matrix_a.read(ij_tile).get()(ij_element_wrt_tile);
+      return sync_wait(matrix_a.read(ij_tile)).get()(ij_element_wrt_tile);
     else
-      return reference.read(ij_tile).get()(ij_element_wrt_tile);
+      return sync_wait(reference.read(ij_tile)).get()(ij_element_wrt_tile);
   };
   CHECK_MATRIX_NEAR(merged_matrices, matrix_a, 0, TypeUtilities<T>::error);
 }
@@ -291,6 +296,8 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
     // Q B Q* = A
     // Q = H1 H2 ... Hn
     // H1 H2 ... Hn B Hn* ... H2* H1*
+
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
     // apply from left...
     const GlobalElementIndex left_offset = offset;

@@ -29,6 +29,10 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 
+using pika::execution::experimental::start_detached;
+using pika::execution::experimental::then;
+using pika::this_thread::experimental::sync_wait;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
@@ -62,14 +66,14 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   const auto rank = dist.rankIndex().get(panel_axis);
 
   // set all panels
-  for (const auto i_w : panel.iteratorLocal())
-    pika::dataflow(unwrapping(
-                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                   panel(i_w));
+  for (const auto i_w : panel.iteratorLocal()) {
+    start_detached(panel.readwrite(i_w) |
+                   then([rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }));
+  }
 
   // check that all panels have been set
   for (const auto i_w : panel.iteratorLocal())
-    CHECK_TILE_EQ(TypeUtil::element(rank, 26), panel.read(i_w).get());
+    CHECK_TILE_EQ(TypeUtil::element(rank, 26), sync_wait(panel.read(i_w)).get());
 
   // test it!
   constexpr Coord comm_dir = orthogonal(panel_axis);
@@ -79,7 +83,7 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
 
   // check all panel are equal on all ranks
   for (const auto i_w : panel.iteratorLocal())
-    CHECK_TILE_EQ(TypeUtil::element(root, 26), panel.read(i_w).get());
+    CHECK_TILE_EQ(TypeUtil::element(root, 26), sync_wait(panel.read(i_w)).get());
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol) {
@@ -126,10 +130,10 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_gri
   Panel<AxisSrc, TypeParam, dlaf::Device::CPU> panel_src(dist, cfg.offset);
   Panel<AxisDst, TypeParam, dlaf::Device::CPU, storageT> panel_dst(dist, cfg.offset);
 
-  for (const auto i_w : panel_src.iteratorLocal())
-    pika::dataflow(unwrapping(
-                       [rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }),
-                   panel_src(i_w));
+  for (const auto i_w : panel_src.iteratorLocal()) {
+    start_detached(panel_src.readwrite(i_w) |
+                   then([rank](auto&& tile) { matrix::test::set(tile, TypeUtil::element(rank, 26)); }));
+  }
 
   // test it!
   common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
@@ -145,14 +149,14 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_gri
   // while the destination panels will have access to the corresponding "transposed" tile, except
   // for the last global tile in the range.
   for (const auto idx : panel_src.iteratorLocal())
-    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_src.read(idx).get());
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), sync_wait(panel_src.read(idx)).get());
 
   for (const auto idx : panel_dst.iteratorLocal()) {
     constexpr auto CT = decltype(panel_dst)::coord;
     const auto i = dist.template globalTileFromLocalTile<CT>(idx.get(CT));
     if (i == panel_dst.rangeEnd() - 1)
       continue;
-    CHECK_TILE_EQ(TypeUtil::element(owner, 26), panel_dst.read(idx).get());
+    CHECK_TILE_EQ(TypeUtil::element(owner, 26), sync_wait(panel_dst.read(idx)).get());
   }
 }
 

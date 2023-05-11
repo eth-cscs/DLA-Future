@@ -15,6 +15,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/types.h"
 
@@ -51,7 +52,7 @@ struct QR_Tfactor {
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
                    pika::shared_future<common::internal::vector<T>> taus,
-                   pika::future<matrix::Tile<T, device>> t);
+                   matrix::ReadWriteTileSender<T, device> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.
@@ -80,7 +81,7 @@ struct QR_Tfactor {
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    pika::shared_future<common::internal::vector<T>> taus,
-                   pika::future<matrix::Tile<T, device>> t,
+                   matrix::ReadWriteTileSender<T, device> t,
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 

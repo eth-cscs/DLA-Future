@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 #include <blas.hh>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
@@ -54,6 +55,8 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   }();
 
   MatrixLocal<T> workspace({m, m}, reference.blockSize());
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   // Check eigenvectors orthogonality (E^H E == Id)
   blas::gemm(blas::Layout::ColMajor, blas::Op::ConjTrans, blas::Op::NoTrans, m, m, m, T{1},

@@ -23,6 +23,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
@@ -41,7 +42,6 @@
 #include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/schedulers.h"
-#include "dlaf/sender/keep_future.h"
 #include "dlaf/sender/traits.h"
 #include "dlaf/types.h"
 #include "dlaf/util_math.h"
@@ -73,6 +73,8 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matr
   auto it_begin = panel.begin();
   auto it_end = panel.end();
 
+  common::internal::SingleThreadedBlasScope single;
+
   if (has_head) {
     auto& tile_v0 = *it_begin++;
 
@@ -103,6 +105,8 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
 
   auto it_begin = panel.begin();
   auto it_end = panel.end();
+
+  common::internal::SingleThreadedBlasScope single;
 
   if (has_head) {
     const auto& tile_v0 = *it_begin++;
@@ -136,6 +140,8 @@ void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T
 
   const TileElementIndex index_el_x0(j, j);
   bool has_first_component = has_head;
+
+  common::internal::SingleThreadedBlasScope single;
 
   // W = Pt* . V
   for (auto index = begin; index < end; ++index) {
@@ -175,6 +181,8 @@ void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, 
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
+
+  common::internal::SingleThreadedBlasScope single;
 
   // GER Pt = Pt - tau . v . w*
   for (auto index = begin; index < end; ++index) {
@@ -275,12 +283,12 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
+  std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
+    panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
   }
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
@@ -341,7 +349,6 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
                           bool force_copy = false) {
   namespace ex = pika::execution::experimental;
 
-  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   // Note:
@@ -367,12 +374,10 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
     // single task doing both.
     const auto p = dlaf::internal::Policy<B>(thread_priority::high);
-    ex::start_detached(
-        dlaf::internal::whenAllLift(keepFuture(splitTile(mat_a.read(i), spec)), v.readwrite_sender(i)) |
-        matrix::copy(p));
-    ex::start_detached(
-        dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite_sender(i)) |
-        tile::laset(p));
+    ex::start_detached(dlaf::internal::whenAllLift(splitTile(mat_a.read(i), spec), v.readwrite(i)) |
+                       matrix::copy(p));
+    ex::start_detached(dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite(i)) |
+                       tile::laset(p));
 
     ++it_begin;
   }
@@ -390,9 +395,8 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        tile, memory provided internally by the panel is used as support. In this way, the two
     //        subtiles used in the operation belong to different tiles.
     if (force_copy)
-      ex::start_detached(
-          ex::when_all(keepFuture(matrix::splitTile(mat_a.read(idx), spec)), v.readwrite_sender(idx)) |
-          matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
+      ex::start_detached(ex::when_all(matrix::splitTile(mat_a.read(idx), spec), v.readwrite(idx)) |
+                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -400,19 +404,23 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
 
 template <Backend B, Device D, class T>
 void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, T, D>& v,
-                  pika::shared_future<matrix::Tile<const T, D>> tile_t) {
+                  matrix::ReadOnlyTileSender<T, D> tile_t) {
   namespace ex = pika::execution::experimental;
-
-  using dlaf::internal::keepFuture;
 
   using pika::execution::thread_priority;
   using namespace blas;
 
-  for (const auto& index_i : w.iteratorLocal())
+  auto it = w.iteratorLocal();
+
+  for (const auto& index_i : it) {
     ex::start_detached(dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
-                                                   T(1), keepFuture(tile_t), v.read_sender(index_i),
-                                                   w.readwrite_sender(index_i)) |
+                                                   T(1), tile_t, v.read(index_i), w.readwrite(index_i)) |
                        tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)));
+  }
+
+  if (it.empty()) {
+    ex::start_detached(std::move(tile_t));
+  }
 }
 
 template <Backend B, Device D, class T>
@@ -425,10 +433,9 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5),
-                                                   v.read_sender(index_i),
-                                                   w2.read_sender(LocalTileIndex(0, 0)), T(1),
-                                                   x.readwrite_sender(index_i)) |
+    ex::start_detached(dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read(index_i),
+                                                   w2.read(LocalTileIndex(0, 0)), T(1),
+                                                   x.readwrite(index_i)) |
                        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
 }
 
@@ -437,7 +444,6 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
                   matrix::Matrix<const T, D>& a, matrix::Panel<Coord::Col, const T, D>& w) {
   namespace ex = pika::execution::experimental;
 
-  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
@@ -460,8 +466,7 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
       const auto& tile_a = splitTile(a.read(ij), view(ij));
 
       if (is_diagonal_tile) {
-        hemmDiag<B>(thread_priority::high, keepFuture(tile_a), w.read_sender(ij),
-                    x.readwrite_sender(ij));
+        hemmDiag<B>(thread_priority::high, tile_a, w.read(ij), x.readwrite(ij));
       }
       else {
         // Note:
@@ -473,16 +478,16 @@ void hemmComputeX(matrix::Panel<Coord::Col, T, D>& x, const matrix::SubMatrixVie
         {
           const LocalTileIndex index_x(Coord::Row, ij.row());
           const LocalTileIndex index_w(Coord::Row, ij.col());
-          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, keepFuture(tile_a),
-                         w.read_sender(index_w), x.readwrite_sender(index_x));
+          hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, tile_a, w.read(index_w),
+                         x.readwrite(index_x));
         }
 
         {
           const LocalTileIndex index_pretended = transposed(ij);
           const LocalTileIndex index_x(Coord::Row, index_pretended.row());
           const LocalTileIndex index_w(Coord::Row, index_pretended.col());
-          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
-                         w.read_sender(index_w), x.readwrite_sender(index_x));
+          hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, tile_a, w.read(index_w),
+                         x.readwrite(index_x));
         }
       }
     }
@@ -500,15 +505,15 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
   // Not all ranks in the column always hold at least a tile in the panel Ai, but all ranks in
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
-  ex::start_detached(w2.readwrite_sender(LocalTileIndex(0, 0)) |
+  ex::start_detached(w2.readwrite(LocalTileIndex(0, 0)) |
                      tile::set0(dlaf::internal::Policy<B>(thread_priority::high)));
 
   using namespace blas;
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1),
-                                                   w.read_sender(index_tile), x.read_sender(index_tile),
-                                                   T(1), w2.readwrite_sender(LocalTileIndex(0, 0))) |
+    ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read(index_tile),
+                                                   x.read(index_tile), T(1),
+                                                   w2.readwrite(LocalTileIndex(0, 0))) |
                        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
 }
 
@@ -519,6 +524,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
+  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist = a.distribution();
 
@@ -533,24 +539,23 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, matrix::Matrix
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      auto tile_a = a(ij_local);
-      auto getSubA = [&view, ij_local](auto& tile_a) { return splitTile(tile_a, view(ij_local)); };
+      auto getSubA = [&a, &view, ij_local]() {
+        return splitTile(a.readwrite(ij_local), view(ij_local));
+      };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
       const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA(tile_a));
+        her2kDiag<B>(priority, v.read(ij_local), x.read(ij_local), getSubA());
       }
       else {
         // A -= X . V*
-        her2kOffDiag<B>(priority, x.read_sender(ij_local), v.read_sender(transposed(ij_local)),
-                        getSubA(tile_a));
+        her2kOffDiag<B>(priority, x.read(ij_local), v.read(transposed(ij_local)), getSubA());
 
         // A -= V . X*
-        her2kOffDiag<B>(priority, v.read_sender(ij_local), x.read_sender(transposed(ij_local)),
-                        getSubA(tile_a));
+        her2kOffDiag<B>(priority, v.read(ij_local), x.read(transposed(ij_local)), getSubA());
       }
     }
   }
@@ -594,12 +599,12 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  std::vector<pika::future<matrix::Tile<T, D>>> panel_tiles;
+  std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
   panel_tiles.reserve(
       to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
-    panel_tiles.emplace_back(matrix::splitTile(mat_a(i), spec));
+    panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
   }
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
@@ -674,7 +679,6 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   common::Pipeline<comm::Communicator>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
-  using dlaf::internal::keepFuture;
   using pika::execution::thread_priority;
 
   const auto dist = a.distribution();
@@ -698,11 +702,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      const auto& tile_a = splitTile(a.read(ij), view(ij_local));
+      auto tile_a = splitTile(a.read(ij), view(ij_local));
 
       if (is_diagonal_tile) {
-        hemmDiag<B>(thread_priority::high, keepFuture(tile_a), w.read_sender(ij_local),
-                    x.readwrite_sender(ij_local));
+        hemmDiag<B>(thread_priority::high, std::move(tile_a), w.read(ij_local), x.readwrite(ij_local));
       }
       else {
         // Note:
@@ -711,8 +714,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         // support panel Wt.
         // However, since we are still computing the "straight" part, the result can be stored
         // in the "local" panel X.
-        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, keepFuture(tile_a),
-                       wt.read_sender(ij_local), x.readwrite_sender(ij_local));
+        hemmOffDiag<B>(thread_priority::high, blas::Op::NoTrans, tile_a, wt.read(ij_local),
+                       x.readwrite(ij_local));
 
         // Note:
         // Here we are considering the hermitian part of A, so coordinates have to be "mirrored".
@@ -727,11 +730,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
         const LocalTileIndex index_x{dist.template localTileFromGlobalTile<Coord::Row>(ij.col()), 0};
         const LocalTileIndex index_xt{0, ij_local.col()};
 
-        auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite_sender(index_x)
-                                                        : xt.readwrite_sender(index_xt);
+        auto tile_x = (dist.rankIndex().row() == owner) ? x.readwrite(index_x) : xt.readwrite(index_xt);
 
-        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, keepFuture(tile_a),
-                       w.read_sender(ij_local), std::move(tile_x));
+        hemmOffDiag<B>(thread_priority::high, blas::Op::ConjTrans, std::move(tile_a), w.read(ij_local),
+                       std::move(tile_x));
       }
     }
   }
@@ -758,13 +760,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM,
-                                          ex::make_unique_any_sender(x.readwrite_sender({i, 0}))));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite({i, 0})));
     }
     else {
-      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
-                                                  ex::make_unique_any_sender(xt.read_sender(index_xt))));
+      ex::start_detached(
+          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read(index_xt)));
     }
   }
 
@@ -775,11 +775,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
       ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
-                                          ex::make_unique_any_sender(x.readwrite_sender(index_x))));
+          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite(index_x)));
     else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
-                                                  ex::make_unique_any_sender(x.read_sender(index_x))));
+      ex::start_detached(
+          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read(index_x)));
   }
 }
 
@@ -792,6 +791,7 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
   static_assert(std::is_signed_v<BaseType<T>>, "alpha in computations requires to be -1");
 
   using pika::execution::thread_priority;
+  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist = a.distribution();
 
@@ -806,22 +806,23 @@ void her2kUpdateTrailingMatrix(const matrix::SubMatrixView& view, Matrix<T, D>& 
 
       const bool is_diagonal_tile = (ij.row() == ij.col());
 
-      auto tile_a = a(ij_local);
-      auto getSubA = [&view, ij_local](auto& tile_a) { return splitTile(tile_a, view(ij_local)); };
+      auto getSubA = [&a, &view, ij_local]() {
+        return splitTile(a.readwrite(ij_local), view(ij_local));
+      };
 
       // The first column of the trailing matrix (except for the very first global tile) has to be
       // updated first, in order to unlock the next iteration as soon as possible.
       const auto priority = (j == at_start.col()) ? thread_priority::high : thread_priority::normal;
 
       if (is_diagonal_tile) {
-        her2kDiag<B>(priority, v.read_sender(ij_local), x.read_sender(ij_local), getSubA(tile_a));
+        her2kDiag<B>(priority, v.read(ij_local), x.read(ij_local), getSubA());
       }
       else {
         // A -= X . V*
-        her2kOffDiag<B>(priority, x.read_sender(ij_local), vt.read_sender(ij_local), getSubA(tile_a));
+        her2kOffDiag<B>(priority, x.read(ij_local), vt.read(ij_local), getSubA());
 
         // A -= V . X*
-        her2kOffDiag<B>(priority, v.read_sender(ij_local), xt.read_sender(ij_local), getSubA(tile_a));
+        her2kOffDiag<B>(priority, v.read(ij_local), xt.read(ij_local), getSubA());
       }
     }
   }
@@ -904,16 +905,15 @@ protected:
                  matrix::Panel<Coord::Col, T, Device::CPU>& v) {
     namespace ex = pika::execution::experimental;
 
-    using dlaf::internal::keepFuture;
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
-      auto tmp_tile = v.readwrite_sender(i);
+      auto tmp_tile = v.readwrite(i);
       ex::start_detached(
-          ex::when_all(keepFuture(splitTile(mat_a.read(i), spec)), splitTile(tmp_tile, spec)) |
+          ex::when_all(splitTile(mat_a.read(i), spec), splitTile(std::move(tmp_tile), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
     }
   }
@@ -922,16 +922,16 @@ protected:
                    matrix::Matrix<T, Device::GPU>& mat_a) {
     namespace ex = pika::execution::experimental;
 
-    using dlaf::internal::keepFuture;
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
+    using pika::execution::experimental::make_unique_any_sender;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
-      auto tile_a = mat_a.readwrite_sender(i);
+      auto tile_a = mat_a.readwrite(i);
       ex::start_detached(
-          ex::when_all(keepFuture(splitTile(v.read(i), spec)), splitTile(tile_a, spec)) |
+          ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
           matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
     }
   }
@@ -952,6 +952,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   using common::iterate_range2d;
   using factorization::internal::computeTFactor;
+  using pika::execution::experimental::make_unique_any_sender;
 
   const auto dist_a = mat_a.distribution();
   const matrix::Distribution dist({mat_a.size().rows(), band_size},
@@ -1028,7 +1029,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
 
-    computeTFactor<B>(v, taus.back(), t.readwrite_sender(t_idx));
+    computeTFactor<B>(v, taus.back(), t.readwrite(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1190,7 +1191,7 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       // deadlock due to tile shared between panel and trailing matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
                                                      nrefls_block, v, mat_a, !is_full_band);
-      computeTFactor<B>(v, taus.back(), t.readwrite_sender(t_idx), mpi_col_chain);
+      computeTFactor<B>(v, taus.back(), t.readwrite(t_idx), mpi_col_chain);
     }
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
@@ -1252,9 +1253,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
-                                                        ex::make_unique_any_sender(
-                                                            w2.readwrite_sender(LocalTileIndex(0, 0)))));
+      ex::start_detached(
+          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2.readwrite(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }
@@ -1337,14 +1337,13 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()),
-                                                       ex::make_unique_any_sender(xt.read_sender(at))));
+            ex::start_detached(
+                comm::scheduleSendBcast(ex::make_unique_any_sender(mpi_col_chain()), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(
-                comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()), owner,
-                                        ex::make_unique_any_sender(xt.readwrite_sender(at))));
+            ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(mpi_col_chain()),
+                                                       owner, xt.readwrite(at)));
         }
       }
 
@@ -1353,14 +1352,14 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
         // if there is no need for additional buffers, we can just wait that xt[0] is ready for
         // reading.
         if (rank.row() == rank_v0.row()) {
-          trigger_panel = xt.read_sender(at) | ex::drop_value();
+          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();
         }
         else {
           // Note:
           // Conservatively ensure that xt[0] needed for updating the first column has been
           // received. Just wait for xt because communication of x happens over rows, while the
           // pivot rank can just block rank in the same column.
-          trigger_panel = xt.read_sender(at) | ex::drop_value();
+          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();
         }
       }
       else {
@@ -1373,14 +1372,14 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
           // since we will wait not just for the communication to be complete (which is already more
           // than what needed), but we will also wait till xt[0] will be released, so after all local
           // communication and computation on the first column of the trailing matrix will be completed.
-          trigger_panel = x.readwrite_sender(at) | ex::drop_value();
+          trigger_panel = x.readwrite(at) | ex::drop_value() | ex::ensure_started();
         }
         else {
           // Note:
           // Conservatively ensure that xt[0] needed for updating the first column has been
           // received. Just wait for xt because communication of x happens over rows, while the
           // pivot rank can just block rank in the same column.
-          trigger_panel = xt.read_sender(at) | ex::drop_value();
+          trigger_panel = xt.read(at) | ex::drop_value() | ex::ensure_started();
         }
       }
     }

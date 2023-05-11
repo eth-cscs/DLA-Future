@@ -29,6 +29,8 @@ using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
 
+using pika::this_thread::experimental::sync_wait;
+
 template <class T>
 T value_preset(const GlobalElementIndex& index) {
   const auto i = index.row();
@@ -210,10 +212,10 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
           if (isTileToSkip(gather_type, ij_global))
             continue;
 
-          const auto& tile_src = source.read(ij_local).get();
+          const auto tile_src = sync_wait(source.read(ij_local));
           const auto& tile_dst = dest.tile_read(ij_global);
 
-          CHECK_TILE_NEAR(tile_src, tile_dst, error, error);
+          CHECK_TILE_NEAR(tile_src.get(), tile_dst, error, error);
         }
       }
     }

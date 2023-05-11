@@ -45,8 +45,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+rocm~shared", when="+rocm")
     depends_on("umpire@4.1.0:")
 
-    depends_on("pika@0.12:")
-    depends_on("pika-algorithms@0.1.1:")
+    depends_on("pika@0.15:")
+    depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
@@ -109,7 +109,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-            args.append(self.define("DLAF_WITH_MKL", True))
+            vmap = {"none": "seq", "openmp": "omp", "tbb": "tbb"} # Map MKL variants to LAPACK target name
+            # TODO: Generalise for intel-oneapi-mkl
+            args += [
+                self.define("DLAF_WITH_MKL", True),
+                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(vmap[spec["intel-mkl"].variants["threads"].value])),
+            ]
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(self.define(

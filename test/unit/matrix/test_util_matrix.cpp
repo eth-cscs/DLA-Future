@@ -14,13 +14,11 @@
 
 #include <gtest/gtest.h>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/sync/basic.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
-#include "dlaf/sender/keep_future.h"
 
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
@@ -138,39 +136,38 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
         continue;
 
       if (current_rank == owner_original) {
-        const auto& tile_original = sync_wait(matrix.read_sender(index_tile_original)).get();
-        pika::shared_future<Tile<const T, Device::CPU>> tile_transposed;
-        const auto size_tile_transposed = transposed(tile_original.size());
+        const auto tile_original = sync_wait(matrix.read(index_tile_original));
+        const auto size_tile_transposed = transposed(tile_original.get().size());
 
-        if (current_rank == owner_transposed) {
-          tile_transposed = matrix.read(index_tile_transposed);
-        }
-        else {
-          Tile<T, Device::CPU> workspace(size_tile_transposed,
-                                         memory::MemoryView<T, Device::CPU>(
-                                             size_tile_transposed.linear_size()),
-                                         size_tile_transposed.rows());
-
-          // recv from owner_transposed
-          const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
-          comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), workspace);
-
-          tile_transposed = pika::make_ready_future<Tile<const T, Device::CPU>>(std::move(workspace));
-        }
-
-        auto transposed_conj_tile = [&tile_original](const TileElementIndex& index) {
+        auto transposed_conj_tile = [&tile_original =
+                                         tile_original.get()](const TileElementIndex& index) {
           return dlaf::conj(tile_original({index.col(), index.row()}));
         };
 
-        CHECK_TILE_NEAR(transposed_conj_tile,
-                        sync_wait(dlaf::internal::keepFuture(tile_transposed)).get(),
-                        TypeUtilities<T>::error, TypeUtilities<T>::error);
+        if (current_rank == owner_transposed) {
+          auto tile_transposed = sync_wait(matrix.read(index_tile_transposed));
+          CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed.get(), TypeUtilities<T>::error,
+                          TypeUtilities<T>::error);
+        }
+        else {
+          Tile<T, Device::CPU> tile_transposed(size_tile_transposed,
+                                               memory::MemoryView<T, Device::CPU>(
+                                                   size_tile_transposed.linear_size()),
+                                               size_tile_transposed.rows());
+
+          // recv from owner_transposed
+          const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);
+          comm::sync::receive_from(sender_rank, comm_grid.fullCommunicator(), tile_transposed);
+
+          CHECK_TILE_NEAR(transposed_conj_tile, tile_transposed, TypeUtilities<T>::error,
+                          TypeUtilities<T>::error);
+        }
       }
       else if (current_rank == owner_transposed) {
         // send to owner_original
+        auto tile_transposed = sync_wait(matrix.read(index_tile_transposed));
         auto receiver_rank = comm_grid.rankFullCommunicator(owner_original);
-        comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(),
-                            matrix.read(index_tile_transposed).get());
+        comm::sync::send_to(receiver_rank, comm_grid.fullCommunicator(), tile_transposed.get());
       }
     }
   }
@@ -244,13 +241,13 @@ void testSet0(const config_t& cfg, const comm::CommunicatorGrid& comm_grid) {
 
     for (const auto& idx : panel.iteratorLocal())
       start_detached(dlaf::internal::whenAllLift(blas::Uplo::General, TypeParam(1), TypeParam(1),
-                                                 panel.readwrite_sender(idx)) |
+                                                 panel.readwrite(idx)) |
                      tile::laset(dlaf::internal::Policy<dlaf::Backend::MC>()));
 
     matrix::util::set0<Backend::MC>(thread_priority::normal, panel);
 
     for (const auto& idx : panel.iteratorLocal())
-      CHECK_TILE_EQ(null_tile, sync_wait(panel.read_sender(idx)).get());
+      CHECK_TILE_EQ(null_tile, sync_wait(panel.read(idx)).get());
 
     panel.reset();
   }

@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
@@ -60,12 +61,16 @@ TYPED_TEST_SUITE(BacktransformationBandToTridiagTestGPU, MatrixElementTypes);
 struct calculateTau {
   template <class T>
   static T call(const T* v, const SizeType size) {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     const T dotprod = blas::dot(size, v, 1, v, 1) + 1;
     return 2 / dotprod;
   }
 
   template <class T>
   static std::complex<T> call(const std::complex<T>* v, const SizeType size) {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     const T dotprod = std::real(blas::dot(size, v, 1, v, 1)) + 1;
     return {T(1) / dotprod, T(1) / dotprod};
   }
@@ -110,7 +115,9 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
-                                            b, k, splitTile(mat_hh(ij_tile), {sub_origin, sub_size}));
+                                            b, k,
+                                            splitTile(mat_hh.readwrite(ij_tile),
+                                                      {sub_origin, sub_size}));
       }
     }
 
@@ -126,6 +133,8 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 
   if (m == 0 || n == 0)
     return;
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   using eigensolver::internal::nrStepsForSweep;
   using eigensolver::internal::nrSweeps;
@@ -185,7 +194,7 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 
         dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
                                             b, k,
-                                            splitTile(mat_hh(LocalTileIndex{i, j}),
+                                            splitTile(mat_hh.readwrite(LocalTileIndex{i, j}),
                                                       {sub_origin, sub_size}));
       }
     }
@@ -202,6 +211,8 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
 
   if (m == 0 || n == 0)
     return;
+
+  dlaf::common::internal::SingleThreadedBlasScope single;
 
   using eigensolver::internal::nrStepsForSweep;
   using eigensolver::internal::nrSweeps;
@@ -255,6 +266,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -272,6 +284,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -294,6 +307,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }
@@ -311,6 +325,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
+      pika::threads::get_thread_manager().wait();
     }
   }
 }

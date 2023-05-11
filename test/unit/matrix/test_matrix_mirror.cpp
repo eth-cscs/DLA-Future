@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/matrix_view.h"
-
 #include <vector>
 #include "gtest/gtest.h"
 #include "dlaf/communication/communicator_grid.h"
@@ -17,7 +15,7 @@
 #include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf_test/comm_grids/grids_6_ranks.h"
 #include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_futures.h"
+#include "dlaf_test/matrix/util_matrix_senders.h"
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
@@ -26,6 +24,8 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::comm;
 using namespace dlaf::test;
 using namespace testing;
+
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -275,7 +275,7 @@ void sameDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_EQ(mat.read(idx).get().ptr(), mat_mirror.get().read(idx).get().ptr());
+      EXPECT_EQ(sync_wait(mat.read(idx)).get().ptr(), sync_wait(mat_mirror.get().read(idx)).get().ptr());
     }
   }
 }
@@ -308,7 +308,7 @@ void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& tes
   for (SizeType j = 0; j < local_tile_cols; ++j) {
     for (SizeType i = 0; i < local_tile_rows; ++i) {
       LocalTileIndex idx(i, j);
-      EXPECT_NE(mat.read(idx).get().ptr(), mat_mirror.get().read(idx).get().ptr());
+      EXPECT_NE(sync_wait(mat.read(idx)).get().ptr(), sync_wait(mat_mirror.get().read(idx)).get().ptr());
     }
   }
 }

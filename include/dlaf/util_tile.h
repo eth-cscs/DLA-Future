@@ -19,7 +19,6 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
-#include <pika/future.hpp>
 
 #include "dlaf/common/assert.h"
 #include "dlaf/common/index2d.h"

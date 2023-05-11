@@ -42,7 +42,7 @@ RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest addr2line) && \
-    cp -L ${SOURCE}/ci/mpi-ctest ${DEPLOY}/usr/bin && \
+    cp -L ${SOURCE}/ci/mpi-ctest{,-check-threads} ${DEPLOY}/usr/bin && \
     echo "$TEST_BINARIES" | xargs -I{file} find -samefile {file} -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     find -name CTestTestfile.cmake -exec cp --parents '{}' ${BUILD}-tmp ';' && \
     rm -rf ${BUILD} && \

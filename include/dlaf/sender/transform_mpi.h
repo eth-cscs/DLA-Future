@@ -11,7 +11,6 @@
 
 #include <type_traits>
 
-#include <pika/async_rw_mutex.hpp>
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/unwrap.h"
 #include "dlaf/communication/communicator.h"
@@ -20,13 +19,10 @@
 
 namespace dlaf::comm::internal {
 
-using CommunicatorWrapper =
-    typename pika::execution::experimental::async_rw_mutex<Communicator>::readwrite_access_type;
-
-/// This helper "consumes" a CommunicatorWrapper ensuring that after this call
+/// This helper "consumes" a Pipeline<Communicator>::Wrapper ensuring that after this call
 /// the one passed as argument gets destroyed. All other types left as they are
 /// by the second overload.
-inline void consumeCommunicatorWrapper(CommunicatorWrapper& comm_wrapper) {
+inline void consumeCommunicatorWrapper(common::Pipeline<Communicator>::Wrapper& comm_wrapper) {
   [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
 }
 
@@ -61,7 +57,7 @@ struct MPICallHelper {
     // Callables passed to transformMPI have their arguments passed by reference, but doing so
     // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
     // whereas we are only looking to guard the submission of the MPI operation. We therefore
-    // explicitly release CommunicatorWrapper after submitting the MPI operation with
+    // explicitly release Pipeline<Communicator>::Wrapper after submitting the MPI operation with
     // consumeCommunicatorWrapper.
     //
     // We also use unwrap various types passed to the MPI operation, including PromiseGuards of

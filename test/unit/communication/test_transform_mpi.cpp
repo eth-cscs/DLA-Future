@@ -73,10 +73,10 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
 
     // Note:
     // At this point IRecv is (getting) posted but it won't complete until this Rank 0 will trigger
-    // Rank 1 to send the message. So, here we can check that CommunicatorWrapper gets
+    // Rank 1 to send the message. So, here we can check that the communicator wrapper gets
     // consumed just after MPI operation is posted.
     //
-    // For checking it gets released, we ask the Pipeline for the next CommunicatorWrapper in
+    // For checking it gets released, we ask the Pipeline for the next communicator wrapper in
     // the chain. Indeed, if the previous one is released, this one will be unlocked.
     //
     // Let's use a guard + try_waiting_guard, so that in case something goes wrong it does not end

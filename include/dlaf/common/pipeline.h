@@ -28,8 +28,8 @@ class Pipeline {
   using AsyncRwMutex = pika::execution::experimental::async_rw_mutex<T>;
 
 public:
-  using PipelineSender =
-      pika::execution::experimental::unique_any_sender<typename AsyncRwMutex::readwrite_access_type>;
+  using Wrapper = typename AsyncRwMutex::readwrite_access_type;
+  using Sender = pika::execution::experimental::unique_any_sender<Wrapper>;
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
@@ -41,7 +41,7 @@ public:
   /// Enqueue for the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
-  PipelineSender operator()() {
+  Sender operator()() {
     return pipeline.readwrite();
   }
 

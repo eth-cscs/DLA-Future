@@ -43,6 +43,7 @@ option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
+set(DLAF_BUILD_MINIAPPS OFF CACHE BOOL "" FORCE)
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with

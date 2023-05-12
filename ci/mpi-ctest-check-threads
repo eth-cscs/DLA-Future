@@ -13,6 +13,9 @@ IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | 
 
 num_failed_tests=0
 
+export MKL_NUM_THREADS=5
+export OMP_NUM_THREADS=5
+
 for test in "${all_tests[@]}"; do
     # Run the tests, only output on the first rank
     if [[ $SLURM_PROCID == "0" ]]; then

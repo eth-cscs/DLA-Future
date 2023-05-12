@@ -20,7 +20,11 @@ for test in "${all_tests[@]}"; do
         # runtime is using. All ranks must start the test since MPI may be
         # initialized.  Only the first rank needs to check the number of
         # threads.
+        set +e
         bash -c "$test --pika:exit --pika:print-bind"
+        exit_code=$?
+        [[ $exit_code -eq 1 ]] || exit $exit_code
+        set -e
         num_threads=$(bash -c "$test --pika:exit --pika:print-bind" | grep 'PU L' | wc -l)
         echo "Using $num_threads threads"
 
@@ -37,8 +41,16 @@ for test in "${all_tests[@]}"; do
             num_failed_tests=$(( num_failed_tests + 1 ))
         fi
     else
+        # --pika:exit exits the application with exit code 1. We only exit if
+        # the error code is different than 1.
+        set +e
         bash -c "$test --pika:exit" > /dev/null
+        exit_code=$?
+        [[ $exit_code -eq 1 ]] || exit $exit_code
         bash -c "$test --pika:exit" > /dev/null
+        exit_code=$?
+        [[ $exit_code -eq 1 ]] || exit $exit_code
+        set -e
         bash -c $test > /dev/null
     fi
 done

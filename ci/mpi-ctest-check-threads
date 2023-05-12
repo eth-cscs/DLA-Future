@@ -27,7 +27,7 @@ for test in "${all_tests[@]}"; do
         output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
 
         TZ=CET date +"Run started at: %H:%M:%S %z"
-        strace bash -c "$test" |& tee $output_file
+        strace -e clone3 bash -c "$test" |& tee $output_file
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 
         num_threads_spawned=$(cat $output_file | grep '^clone' | wc -l)

@@ -37,6 +37,9 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
+// TODO: Remove
+#include <mkl_service.h>
+
 namespace {
 
 using pika::execution::experimental::just;
@@ -199,6 +202,11 @@ int pika_main(pika::program_options::variables_map& vm) {
   pika::scoped_finalize pika_finalizer;
   dlaf::ScopedInitializer init(vm);
 
+  std::cerr << "pika_main: mkl_get_max_threads=" << mkl_get_max_threads() << '\n';
+  std::cerr << "pika_main: setting num threads to 4\n";
+  mkl_set_num_threads(4);
+  std::cerr << "pika_main: mkl_get_max_threads=" << mkl_get_max_threads() << '\n';
+
   const Options opts(vm);
   dlaf::miniapp::dispatchMiniapp<choleskyMiniapp>(opts);
 
@@ -226,6 +234,9 @@ int main(int argc, char** argv) {
   pika::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
+
+  std::cerr << "main: mkl_get_max_threads=" << mkl_get_max_threads() << '\n';
+
   return pika::init(pika_main, argc, argv, p);
 }
 

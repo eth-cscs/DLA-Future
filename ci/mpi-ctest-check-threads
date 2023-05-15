@@ -12,6 +12,8 @@ num_failed_tests=0
 for test in "${all_tests[@]}"; do
     # Run the tests, only output on the first rank
     if [[ $SLURM_PROCID == "0" ]]; then
+        echo "# Testing \"$test\""
+
         # Start the test once to get the number of threads that the pika
         # runtime is using. All ranks must start the test since MPI may be
         # initialized.  Only the first rank needs to check the number of
@@ -33,11 +35,8 @@ for test in "${all_tests[@]}"; do
         echo "Spawned $num_threads_spawned threads"
 
         if (( num_threads_spawned != num_threads_expected )); then
-            echo "Spawned $(( num_threads_spawned - num_threads_expected ))"
+            echo "Spawned $(( num_threads_spawned - num_threads_expected )) more threads than expected"
             num_failed_tests=$(( num_failed_tests + 1 ))
-
-            echo "Full test output:"
-            cat "$output_file"
         fi
     else
         # --pika:exit exits the application with exit code 1. We only exit if
@@ -47,10 +46,15 @@ for test in "${all_tests[@]}"; do
         exit_code=$?
         [[ $exit_code -eq 1 ]] || exit $exit_code
         set -e
+
         bash -c $test > /dev/null
     fi
 done
 
 popd > /dev/null
+
+if [[ $SLURM_PROCID == "0" ]]; then
+        echo "$num_failed_tests test(s) failed"
+fi
 
 exit $num_failed_tests

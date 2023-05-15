@@ -33,22 +33,21 @@
 
 namespace dlaf::eigensolver::internal {
 
-// Splits [i_begin, i_end] in the middle and waits for all splits on [i_begin, i_middle] and [i_middle +
-// 1, i_end] before saving the triad <i_begin, i_middle, i_end> into `indices`.
+// Splits [i_begin, i_end) in the middle and waits for all splits on [i_begin, i_split] and [i_split,
+// i_end) before saving the triad <i_begin, i_split, i_end> into `indices`.
 //
 // The recursive calls span a binary tree which is traversed in depth first left-right-root order. That
 // is also the order of triads in `indices`.
 //
-// Note: the intervals are all closed!
-//
 inline void splitIntervalInTheMiddleRecursively(
-    SizeType i_begin, SizeType i_end, std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
-  if (i_begin == i_end)
+    const SizeType i_begin, const SizeType i_end,
+    std::vector<std::tuple<SizeType, SizeType, SizeType>>& indices) {
+  if (i_begin + 1 == i_end)
     return;
-  SizeType i_middle = (i_begin + i_end) / 2;
-  splitIntervalInTheMiddleRecursively(i_begin, i_middle, indices);
-  splitIntervalInTheMiddleRecursively(i_middle + 1, i_end, indices);
-  indices.emplace_back(i_begin, i_middle, i_end);
+  const SizeType i_split = util::ceilDiv<SizeType>(i_begin + i_end, 2);
+  splitIntervalInTheMiddleRecursively(i_begin, i_split, indices);
+  splitIntervalInTheMiddleRecursively(i_split, i_end, indices);
+  indices.emplace_back(i_begin, i_split, i_end);
 }
 
 // Generates an array of triad indices. Each triad is composed of begin <= middle < end indices and
@@ -57,13 +56,13 @@ inline void splitIntervalInTheMiddleRecursively(
 //
 // Note: the intervals are all closed!
 //
-inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemIndices(SizeType n) {
+inline std::vector<std::tuple<SizeType, SizeType, SizeType>> generateSubproblemIndices(const SizeType n) {
   if (n == 0)
     return {};
 
   std::vector<std::tuple<SizeType, SizeType, SizeType>> indices;
   indices.reserve(to_sizet(n));
-  splitIntervalInTheMiddleRecursively(0, n - 1, indices);
+  splitIntervalInTheMiddleRecursively(0, n, indices);
   return indices;
 }
 
@@ -78,14 +77,14 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
   if (tridiag.nrTiles().rows() == 0)
     return vector_type{};
 
-  const SizeType i_end = tridiag.nrTiles().rows() - 1;
+  const SizeType i_end = tridiag.nrTiles().rows();
   vector_type offdiag_vals;
-  offdiag_vals.reserve(to_sizet(i_end));
+  offdiag_vals.reserve(to_sizet(i_end - 1));
 
-  for (SizeType i_split = 0; i_split < i_end; ++i_split) {
+  for (SizeType i_split = 1; i_split < i_end; ++i_split) {
     offdiag_vals.push_back(ex::split(
-        ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(LocalTileIndex(i_split, 0)),
-                                                 tridiag.readwrite(LocalTileIndex(i_split + 1, 0))))));
+        ex::ensure_started(cuppensDecompAsync<T>(tridiag.readwrite(LocalTileIndex(i_split - 1, 0)),
+                                                 tridiag.readwrite(LocalTileIndex(i_split, 0))))));
   }
   return offdiag_vals;
 }
@@ -93,7 +92,7 @@ auto cuppensDecomposition(Matrix<T, Device::CPU>& tridiag) {
 // Solve leaf eigensystem with stedc
 template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
-  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     stedcAsync<Device::CPU>(tridiag.readwrite(LocalTileIndex(i, 0)),
                             evecs.readwrite(LocalTileIndex(i, i)));
@@ -109,7 +108,7 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
   const auto cp_policy =
       dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
 
-  SizeType ntiles = tridiag.distribution().nrTiles().rows();
+  const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
     const auto id_tr = LocalTileIndex(i, 0);
     const auto id_ev = LocalTileIndex(i, i);
@@ -191,8 +190,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                                   Matrix<T, D>& evecs) {
   // Auxiliary matrix used for the D&C algorithm
   const matrix::Distribution& distr = evecs.distribution();
-  LocalElementSize vec_size(distr.size().rows(), 1);
-  TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
+  const LocalElementSize vec_size(distr.size().rows(), 1);
+  const TileElementSize vec_tile_size(distr.blockSize().rows(), 1);
   WorkSpace<T, D> ws{Matrix<T, D>(distr),                            // mat1
                      Matrix<T, D>(distr),                            // mat2
                      Matrix<T, D>(vec_size, vec_tile_size),          // z
@@ -229,8 +228,8 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 
   // Each triad represents two subproblems to be merged
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(distr.nrTiles().rows())) {
-    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals,
-                        evecs);
+    mergeSubproblems<B>(i_begin, i_split, i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm,
+                        evals, evecs);
   }
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);
@@ -262,19 +261,19 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
 
-  comm::Index2D this_rank = dist.rankIndex();
-  SizeType ntiles = dist.nrTiles().rows();
+  const comm::Index2D this_rank = dist.rankIndex();
+  const SizeType ntiles = dist.nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    GlobalTileIndex ii_tile(i, i);
-    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex id_tr(i, 0);
+    const GlobalTileIndex ii_tile(i, i);
+    const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
       ex::start_detached(
           comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read(id_tr)));
     }
     else {
-      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
                                                  root_rank, tridiag.readwrite(id_tr)));
     }
@@ -292,12 +291,12 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   const auto cp_policy =
       dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
 
-  comm::Index2D this_rank = dist.rankIndex();
-  SizeType ntiles = dist.nrTiles().rows();
+  const comm::Index2D this_rank = dist.rankIndex();
+  const SizeType ntiles = dist.nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    GlobalTileIndex ii_tile(i, i);
-    comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
-    GlobalTileIndex id_tr(i, 0);
+    const GlobalTileIndex ii_tile(i, i);
+    const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
+    const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
       ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
@@ -306,7 +305,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
           comm::scheduleSendBcast(ex::make_unique_any_sender(full_task_chain()), tridiag.read(id_tr)));
     }
     else {
-      comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(full_task_chain()),
                                                  root_rank, tridiag.readwrite(id_tr)));
     }
@@ -365,7 +364,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
     mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
-                            i_end, offdiag_vals[to_sizet(i_split)], ws, ws_h, ws_hm, evals, evecs);
+                            i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm, evals, evecs);
   }
 
   copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.evals, evals);

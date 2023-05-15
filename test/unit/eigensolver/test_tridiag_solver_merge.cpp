@@ -28,34 +28,34 @@ class TridiagEigensolverMergeTest : public ::testing::Test {};
 TYPED_TEST_SUITE(TridiagEigensolverMergeTest, RealMatrixElementTypes);
 
 TYPED_TEST(TridiagEigensolverMergeTest, ApplyIndex) {
-  SizeType n = 10;
-  SizeType nb = 3;
+  const SizeType n = 10;
+  const SizeType nb = 3;
 
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
+  const LocalElementSize sz(n, 1);
+  const TileElementSize bk(nb, 1);
 
   Matrix<SizeType, Device::CPU> index(sz, bk);
   Matrix<TypeParam, Device::CPU> in(sz, bk);
   Matrix<TypeParam, Device::CPU> out(sz, bk);
   // reverse order: n-1, n-2, ... ,0
-  dlaf::matrix::util::set(index, [n](GlobalElementIndex i) { return n - i.row() - 1; });
+  dlaf::matrix::util::set(index, [](GlobalElementIndex i) { return n - i.row() - 1; });
   // n, n+1, n+2, ..., 2*n - 1
-  dlaf::matrix::util::set(in, [n](GlobalElementIndex i) { return TypeParam(n + i.row()); });
+  dlaf::matrix::util::set(in, [](GlobalElementIndex i) { return TypeParam(n + i.row()); });
 
-  applyIndex(0, 3, index, in, out);
+  applyIndex(0, 4, index, in, out);
 
   // 2*n - 1, 2*n - 2, ..., n
-  auto expected_out = [n](GlobalElementIndex i) { return TypeParam(2 * n - 1 - i.row()); };
+  auto expected_out = [](GlobalElementIndex i) { return TypeParam(2 * n - 1 - i.row()); };
   CHECK_MATRIX_EQ(expected_out, out);
 }
 
 TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
-  SizeType n = 10;
-  SizeType nb = 3;
-  SizeType split = 4;
+  const SizeType n = 10;
+  const SizeType nb = 3;
+  const SizeType split = 4;
 
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
+  const LocalElementSize sz(n, 1);
+  const TileElementSize bk(nb, 1);
 
   Matrix<TypeParam, Device::CPU> vec(sz, bk);
   Matrix<SizeType, Device::CPU> in(sz, bk);
@@ -71,7 +71,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   // Sort `vec` in ascending order
-  sortIndex(0, 3, ex::just(split), vec, in, out);
+  sortIndex(0, 4, ex::just(split), vec, in, out);
 
   // Merges the two sorted ranges in `vec` to get the indices of the sorted array [1, 2, 4, 6, 7, 8, 9, 12, 17, 32]
   std::vector<SizeType> expected_out_arr{5, 1, 2, 9, 0, 3, 8, 4, 6, 7};
@@ -82,11 +82,11 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
 }
 
 TEST(StablePartitionIndexOnDeflated, FullRange) {
-  SizeType n = 10;
-  SizeType nb = 3;
+  const SizeType n = 10;
+  const SizeType nb = 3;
 
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
+  const LocalElementSize sz(n, 1);
+  const TileElementSize bk(nb, 1);
 
   Matrix<ColType, Device::CPU> c(sz, bk);
   Matrix<SizeType, Device::CPU> in(sz, bk);
@@ -103,8 +103,8 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   std::vector<SizeType> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
-  SizeType i_begin = 0;
-  SizeType i_end = 3;
+  const SizeType i_begin = 0;
+  const SizeType i_end = 4;
   auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, in, out);
 
   ASSERT_TRUE(tt::sync_wait(std::move(k)) == 7);
@@ -118,11 +118,11 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
 }
 
 TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
-  SizeType n = 10;
-  SizeType nb = 3;
+  const SizeType n = 10;
+  const SizeType nb = 3;
 
-  LocalElementSize sz(n, 1);
-  TileElementSize bk(nb, 1);
+  const LocalElementSize sz(n, 1);
+  const TileElementSize bk(nb, 1);
 
   constexpr ColType deflated = ColType::Deflated;
   constexpr ColType up = ColType::UpperHalf;
@@ -151,10 +151,10 @@ TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {
   std::vector<ColType> c_arr{up, up, up, up, up, low, low, low, low, low};
   dlaf::matrix::util::set(c_mat, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
 
-  TypeParam tol = TypeParam(0.01);
-  TypeParam rho = TypeParam(1);
-  SizeType i_begin = 0;
-  SizeType i_end = 3;
+  const TypeParam tol = TypeParam(0.01);
+  const TypeParam rho = TypeParam(1);
+  const SizeType i_begin = 0;
+  const SizeType i_end = 4;
   auto rots = tt::sync_wait(applyDeflation<TypeParam>(i_begin, i_end, ex::just(rho), ex::just(tol),
                                                       index_mat, d_mat, z_mat, c_mat));
 

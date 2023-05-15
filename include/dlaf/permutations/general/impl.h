@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "dlaf/common/assert.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/permutations/general/api.h"
 #include "dlaf/permutations/general/perms.h"
@@ -95,7 +96,11 @@ void applyPermutations(
                                distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
     // Parallelized over the number of permuted columns or rows
-    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
+    const SizeType nperms = sz.get<coord>();
+    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+      DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
       for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
         const SizeType split = splits[i_split];
 
@@ -339,6 +344,9 @@ auto initPackingIndex(comm::IndexT_MPI nranks, SizeType offset_sub, const matrix
 
       for (SizeType perm_index_local = 0; perm_index_local < nperms; ++perm_index_local) {
         const SizeType perm_index_global = offset_sub + loc2sub[perm_index_local];
+        DLAF_ASSERT_HEAVY(perm_index_local >= 0 && perm_index_local < nperms, perm_index_local, nperms);
+        DLAF_ASSERT_HEAVY(perm_index_global >= 0 && perm_index_global < dist.size().get<C>(),
+                          perm_index_global, dist.size());
         if (dist.rankGlobalElement<C>(perm_index_global) == rank) {
           const SizeType perm_index_packed = rank_displacement + nperms_local;
 
@@ -403,48 +411,6 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(permute_fn), std::move(sender)));
 }
 
-// Tranposes two tiles of compatible dimensions
-template <class InTileSender, class OutTileSender>
-void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-
-  auto transpose_fn = [](const auto& in_tile, const auto& out_tile) {
-    for (TileElementIndex idx : common::iterate_range2d(out_tile.size())) {
-      out_tile(idx) = in_tile(transposed(idx));
-    }
-  };
-
-  ex::start_detached(
-      di::transform(di::Policy<Backend::MC>(), std::move(transpose_fn), std::move(sender)));
-}
-
-// Transposes a local matrix @p mat_in into the local part of the distributed matrix @p mat_out.
-template <class T>
-void transposeFromLocalToDistributedMatrix(const LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
-    const LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(),
-                                    i_loc_begin.col() + i_in_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
-// Transposes the local part of the distributed matrix @p mat_in into the local matrix @p mat_out.
-template <class T>
-void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
-    const LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(),
-                                   i_loc_begin.col() + i_out_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
@@ -488,7 +454,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
   const SizeType nvecs = sz_loc.get<C>();
-  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.rows(), 1));
+  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.get<C>(), 1));
   Matrix<SizeType, D> local2global_index(index_dist);
   Matrix<SizeType, D> packing_index(index_dist);
   Matrix<SizeType, D> unpacking_index(index_dist);

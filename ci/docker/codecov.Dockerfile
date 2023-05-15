@@ -35,6 +35,9 @@ RUN spack repo rm --scope site dlaf && \
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \
+    echo "Binary sizes:" && \
+    ls -lh ${TEST_BINARIES} && \
+    ls -lh src/lib* && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \

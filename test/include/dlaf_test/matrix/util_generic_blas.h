@@ -36,14 +36,14 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
   if (opB != blas::Op::NoTrans)
     DLAF_UNIMPLEMENTED(opB);
 
-  const auto sub = b - a + 1;
+  const auto sub = b - a;
 
-  DLAF_ASSERT(a >= 0 and a < m and a < n, a, m, n);
-  DLAF_ASSERT(b >= 0 and b < m and b < n, b, m, n);
+  DLAF_ASSERT(a >= 0 and a <= m and a <= n, a, m, n);
+  DLAF_ASSERT(b >= 0 and b <= m and b <= n, b, m, n);
   DLAF_ASSERT(a <= b, a, b);
 
   auto elA = [a, b](const GlobalElementIndex ik) {
-    if (ik.row() < a || ik.row() > b || ik.col() < a || ik.col() > b)
+    if (ik.row() < a || ik.row() >= b || ik.col() < a || ik.col() >= b)
       return TypeUtilities<T>::polar(13, -26);
 
     const double i = ik.row();
@@ -53,7 +53,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
   };
 
   auto elB = [a, b](const GlobalElementIndex kj) {
-    if (kj.row() < a || kj.row() > b || kj.col() < a || kj.col() > b)
+    if (kj.row() < a || kj.row() >= b || kj.col() < a || kj.col() >= b)
       return TypeUtilities<T>::polar(13, -26);
 
     const double k = kj.row();
@@ -63,7 +63,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
   };
 
   auto elC = [a, b, k](const GlobalElementIndex ij) {
-    if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
+    if (ij.row() < a || ij.row() >= b || ij.col() < a || ij.col() >= b)
       return -TypeUtilities<T>::polar(99, 99);
 
     const double i = ij.row();
@@ -73,7 +73,7 @@ auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
   };
 
   auto elR = [a, b, sub, k, alpha, beta](const GlobalElementIndex ij) {
-    if (ij.row() < a || ij.row() > b || ij.col() < a || ij.col() > b)
+    if (ij.row() < a || ij.row() >= b || ij.col() < a || ij.col() >= b)
       return -TypeUtilities<T>::polar(99, 99);
 
     const double i = ij.row();

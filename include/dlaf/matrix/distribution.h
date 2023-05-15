@@ -362,8 +362,13 @@ public:
   template <Coord rc>
   SizeType globalTileElementDistance(SizeType i_begin, SizeType i_end) const noexcept {
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
-    return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) -
-           globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+
+    const SizeType el_begin = globalElementFromGlobalTileAndTileElement<rc>(i_begin, 0);
+
+    if (i_end == nrTiles().get<rc>())
+      return size().get<rc>() - el_begin;
+
+    return globalElementFromGlobalTileAndTileElement<rc>(i_end, 0) - el_begin;
   }
 
   GlobalElementSize globalTileElementDistance(GlobalTileIndex begin,

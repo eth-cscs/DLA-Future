@@ -23,6 +23,7 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/round_robin.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator.h"
@@ -72,6 +73,8 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matr
   auto it_begin = panel.begin();
   auto it_end = panel.end();
 
+  common::internal::SingleThreadedBlasScope single;
+
   if (has_head) {
     auto& tile_v0 = *it_begin++;
 
@@ -102,6 +105,8 @@ T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, 
 
   auto it_begin = panel.begin();
   auto it_end = panel.end();
+
+  common::internal::SingleThreadedBlasScope single;
 
   if (has_head) {
     const auto& tile_v0 = *it_begin++;
@@ -135,6 +140,8 @@ void computeWTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T
 
   const TileElementIndex index_el_x0(j, j);
   bool has_first_component = has_head;
+
+  common::internal::SingleThreadedBlasScope single;
 
   // W = Pt* . V
   for (auto index = begin; index < end; ++index) {
@@ -174,6 +181,8 @@ void updateTrailingPanel(const bool has_head, const std::vector<matrix::Tile<T, 
   const TileElementIndex index_el_x0(j, j);
 
   bool has_first_component = has_head;
+
+  common::internal::SingleThreadedBlasScope single;
 
   // GER Pt = Pt - tau . v . w*
   for (auto index = begin; index < end; ++index) {

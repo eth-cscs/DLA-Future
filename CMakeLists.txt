@@ -26,7 +26,14 @@ endif()
 
 include(CMakeDependentOption)
 
+set(DLAF_WITH_OPENMP_DESCRIPTION "Enable OpenMP support")
+set(DLAF_WITH_OPENMP_DEFAULT ON)
+if(APPLE AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"))
+  set(DLAF_WITH_OPENMP_DEFAULT OFF)
+endif()
+
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
+option(DLAF_WITH_OPENMP "${DLAF_WITH_OPENMP_DESCRIPTION}" ${DLAF_WITH_OPENMP_DEFAULT})
 option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
@@ -36,6 +43,17 @@ option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
+
+if(DLAF_WITH_MKL)
+  # When using MKL there is no need to set the number of threads with
+  # omp_set_num_threads; it's sufficient to use MKL's own mechanisms.
+  set(DLAF_WITH_OPENMP OFF CACHE BOOL "${DLAF_WITH_OPENMP_DESCRIPTION}" FORCE)
+elseif(NOT DLAF_WITH_OPENMP)
+  message(
+    WARNING
+      "DLAF_WITH_OPENMP is disabled. If you are using a threaded BLAS/LAPACK implementation DLA-Future will not be able to set the number of threads to 1 for BLAS/LAPACK calls. It is your responsibility to ensure that you are either using a sequential BLAS/LAPACK implementation or that you are e.g. setting OMP_NUM_THREADS to 1."
+  )
+endif()
 
 if(BUILD_SHARED_LIBS)
   set(CMAKE_POSITION_INDEPENDENT_CODE "ON" CACHE BOOL "Enable position independent code" FORCE)
@@ -103,6 +121,11 @@ endif()
 # ---------------------------------------------------------------------------
 # ----- MPI
 find_package(MPI REQUIRED)
+
+# ----- OpenMP
+if(DLAF_WITH_OPENMP)
+  find_package(OpenMP REQUIRED)
+endif()
 
 # ----- LAPACK/SCALAPACK
 if(DLAF_WITH_MKL)

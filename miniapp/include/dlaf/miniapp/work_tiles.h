@@ -12,6 +12,7 @@
 
 #include <limits>
 
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/vector.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/memory/memory_view.h"
@@ -81,6 +82,8 @@ public:
 private:
   template <class F>
   static auto checkTile(F&& f, const matrix::Tile<T, Device::CPU>& tile) noexcept {
+    dlaf::common::internal::SingleThreadedBlasScope single;
+
     auto norm =
         lapack::lange(lapack::Norm::Max, tile.size().rows(), tile.size().cols(), tile.ptr(), tile.ld());
     for (const auto& index : iterate_range2d(tile.size())) {

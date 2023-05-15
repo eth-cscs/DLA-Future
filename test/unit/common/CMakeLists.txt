@@ -38,3 +38,9 @@ DLAF_addTest(
   LIBRARIES dlaf.core
   USE_MAIN PIKA
 )
+DLAF_addTest(
+  test_single_threaded_blas
+  SOURCES test_single_threaded_blas.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PLAIN
+)

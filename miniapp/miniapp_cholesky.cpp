@@ -20,6 +20,7 @@
 #include "dlaf/auxiliary/norm.h"
 #include "dlaf/blas/tile.h"
 #include "dlaf/common/format_short.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/common/timer.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
@@ -249,9 +250,11 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
       continue;
 
     auto tile_set = [](const typename Matrix<T, Device::CPU>::TileType& tile) {
-      if (tile.size().rows() > 1)
+      if (tile.size().rows() > 1) {
+        dlaf::common::internal::SingleThreadedBlasScope single;
         lapack::laset(blas::Uplo::Upper, tile.size().rows() - 1, tile.size().cols() - 1, T{0}, T{0},
                       tile.ptr({0, 1}), tile.ld());
+      }
     };
 
     matrix.readwrite(diag_tile) |

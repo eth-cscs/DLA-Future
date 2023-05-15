@@ -13,6 +13,7 @@
 #include <pika/execution.hpp>
 
 #include "dlaf/common/range2d.h"
+#include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
@@ -465,6 +466,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       const SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
       T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
 
+      common::internal::SingleThreadedBlasScope single;
       lapack::laed4(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho, &eigenval);
     });
   };
@@ -859,6 +861,8 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
                    dist](const auto& k, const auto& rho, const auto& d_sfut_tile_arr,
                          const auto& z_sfut_tile_arr, const auto& eval_tiles, const auto& delta_tile_arr,
                          const auto& i2_tile_arr, const auto& evec_tile_arr) {
+    common::internal::SingleThreadedBlasScope single;
+
     const SizeType n = problemSize(i_begin, i_end, dist);
     const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
     const T* z_ptr = z_sfut_tile_arr[0].get().ptr();

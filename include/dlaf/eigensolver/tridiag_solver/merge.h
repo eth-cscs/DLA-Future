@@ -733,8 +733,7 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(),
-                                                 root_rank, z.readwrite(z_idx)));
+      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(), root_rank, z.readwrite(z_idx)));
     }
   }
 }

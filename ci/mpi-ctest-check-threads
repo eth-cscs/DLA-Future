@@ -1,9 +1,5 @@
 #!/bin/bash -eu
 
-if [[ $SLURM_PROCID == "0" ]]; then
-    set -x
-fi
-
 pushd /DLA-Future-build > /dev/null
 
 # Get commands of all tests, since we will run the commands directly under
@@ -13,9 +9,6 @@ IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | 
 
 num_failed_tests=0
 
-export MKL_NUM_THREADS=5
-export OMP_NUM_THREADS=5
-
 for test in "${all_tests[@]}"; do
     # Run the tests, only output on the first rank
     if [[ $SLURM_PROCID == "0" ]]; then
@@ -23,33 +16,33 @@ for test in "${all_tests[@]}"; do
         # runtime is using. All ranks must start the test since MPI may be
         # initialized.  Only the first rank needs to check the number of
         # threads.
-        set +e
-        bash -c "$test --pika:exit --pika:print-bind"
-        exit_code=$?
-        [[ $exit_code -eq 1 ]] || exit $exit_code
-        set -e
-        num_threads=$(bash -c "$test --pika:exit --pika:print-bind" | grep 'PU L' | wc -l)
-        echo "Using $num_threads threads"
+        num_threads=$(bash -c "$test --pika:exit --pika:print-bind" | grep -c 'PU L')
+        echo "pika runtime using $num_threads threads"
+
+        # We expect pika to spawn one additional thread outside of thread pools
+        num_threads_expected=$(( num_threads + 1 ))
+        echo "Expecting $num_threads_expected threads to be spawned"
 
         output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
 
         TZ=CET date +"Run started at: %H:%M:%S %z"
-        strace -f -e clone3 bash -c "$test" |& tee $output_file
+        strace -f -e clone3 bash -c "$test" >& "$output_file"
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 
-        num_threads_spawned=$(cat $output_file | grep 'clone3(' | wc -l)
-        echo "$num_threads_spawned actually spawned"
+        num_threads_spawned=$(cat $output_file | grep -c 'clone3(')
+        echo "Spawned $num_threads_spawned threads"
 
-        if (( num_threads_spawned != num_threads + 1 )); then
+        if (( num_threads_spawned != num_threads_expected )); then
+            echo "Spawned $(( num_threads_spawned - num_threads_expected ))"
             num_failed_tests=$(( num_failed_tests + 1 ))
+
+            echo "Full test output:"
+            cat "$output_file"
         fi
     else
         # --pika:exit exits the application with exit code 1. We only exit if
         # the error code is different than 1.
         set +e
-        bash -c "$test --pika:exit" > /dev/null
-        exit_code=$?
-        [[ $exit_code -eq 1 ]] || exit $exit_code
         bash -c "$test --pika:exit" > /dev/null
         exit_code=$?
         [[ $exit_code -eq 1 ]] || exit $exit_code

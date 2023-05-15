@@ -37,7 +37,7 @@ for test in "${all_tests[@]}"; do
         strace -f -e clone3 bash -c "$test" |& tee $output_file
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 
-        num_threads_spawned=$(cat $output_file | grep '^clone' | wc -l)
+        num_threads_spawned=$(cat $output_file | grep 'clone3(' | wc -l)
         echo "$num_threads_spawned actually spawned"
 
         if (( num_threads_spawned != num_threads + 1 )); then

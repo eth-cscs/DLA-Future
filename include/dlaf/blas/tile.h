@@ -327,7 +327,7 @@ template <class T>
 void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, Device::CPU>& a,
           const Tile<const T, Device::CPU>& b, const T beta, const Tile<T, Device::CPU>& c) noexcept {
   auto s = tile::internal::getGemmSizes(op_a, op_b, a, b, c);
-  common::internal::SingleThreadedBlasScope single;
+  // common::internal::SingleThreadedBlasScope single;
   blas::gemm(blas::Layout::ColMajor, op_a, op_b, s.m, s.n, s.k, alpha, a.ptr(), a.ld(), b.ptr(), b.ld(),
              beta, c.ptr(), c.ld());
 }

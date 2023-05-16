@@ -16,9 +16,6 @@ packages:
       - '~cuda'
       - '~openmp'
       - '~rocm'
-  fmt:
-    version:
-      - 9.1.0
   git:
     # Force git as non-buildable to allow deprecated versions in environments
     # https://github.com/spack/spack/pull/30040

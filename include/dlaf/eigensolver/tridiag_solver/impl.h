@@ -253,11 +253,11 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
   }
 
   const SizeType n = evecs.nrTiles().rows();
-  copy({0, 0}, ws.i2.distribution().localNrTiles(), ws_hm.i2, ws.i2);
+  copy(ws_hm.i2, ws.i2);
 
   // Note: ws_hm.d1 is the mirror of ws.d1 which is evals
   applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);
-  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.d1, evals);
+  copy(ws_hm.d1, evals);
 
   dlaf::permutations::permute<B, D, T, Coord::Col>(0, n, ws.i2, ws.e0, evecs);
 }
@@ -415,16 +415,16 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   }
 
   const SizeType n = evecs.nrTiles().rows();
-  copy({0, 0}, evecs.distribution().localNrTiles(), ws.e0, ws_hm.e0);
+  copy(ws.e0, ws_hm.e0);
 
   // Note: ws_hm.d1 is the mirror of ws.d1 which is evals
   applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);
-  copy({0, 0}, evals.distribution().localNrTiles(), ws_hm.d1, evals);
+  copy(ws_hm.d1, evals);
 
   // Note: ws_hm.e2 is the mirror of ws.e2 which is evecs
   dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, 0, n,
                                                                        ws_hm.i2, ws_hm.e0, ws_hm.e2);
-  copy({0, 0}, evecs.distribution().localNrTiles(), ws_hm.e2, evecs);
+  copy(ws_hm.e2, evecs);
 }
 
 // \overload TridiagSolver<B, D, T>::call()

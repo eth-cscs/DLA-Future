@@ -43,7 +43,7 @@ namespace dlaf::eigensolver::internal {
 //
 // - e0: (matrix)
 //     In: Holds the eigenvectors of the two subproblems (same order as d0).
-//     Out: Holds the eigenvectors of the merged problems (same order as d0).
+//     Out: Holds the eigenvectors of the merged problem (same order as d0).
 // - e1: (matrix)
 //     Holds the deflated eigenvectors.
 // - e2: (matrix)
@@ -51,14 +51,14 @@ namespace dlaf::eigensolver::internal {
 //
 // - d0: (vector)
 //     In: Holds the eigenvalues of the two subproblems (in ascending order if permuted with i1).
-//     Out: Holds the eigenvalues of the merged problems (in ascending order if permuted with i1).
+//     Out: Holds the eigenvalues of the merged problem (in ascending order if permuted with i1).
 // - d1: (vector)
 //     Holds the values of the deflated diagonal sorted in ascending order
 // - z0: (vector)
 //     Holds the values of Cuppen's rank-1 vector
 //     Also used as temporary workspace
 // - z1: (vector)
-//     Holds the values of the rank-1 update vector sorted as d1
+//     Holds the values of the rank-1 update vector (same order as d1)
 //
 // - c:
 //     Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
@@ -66,9 +66,9 @@ namespace dlaf::eigensolver::internal {
 //
 // - i1, i2, i3: (vectors of indices)
 //     Hold the permutation indices.
-//     In: i1 contains the permutation to sort d0 of the two subproblems in ascenting order.
+//     In: i1 contains the permutation to sort d0 of the two subproblems in ascending order.
 //         If the subproblem involves a single tile the values of i1 are replaced with an identity permutation.
-//     Out: i1 and i2(Device::CPU) contain the permutation to sort d0 of the merged problem in ascenting
+//     Out: i1 and i2(Device::CPU) contain the permutation to sort d0 of the merged problem in ascending
 //          order.
 //
 // Steps:
@@ -1082,7 +1082,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //    i2 (out) : initial ---> deflated
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
-  //////
 
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,

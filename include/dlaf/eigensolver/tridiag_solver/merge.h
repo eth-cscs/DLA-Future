@@ -41,29 +41,35 @@ namespace dlaf::eigensolver::internal {
 
 // Auxiliary matrix and vectors used for the D&C algorithm
 //
-// - mat1 and mat2: (matrices)
-//   Extra workspace for Q1', Q2' and U1' if n2 > n1 or U2' if n1 >= n2 which are packed as follows:
+// - e0: (matrix)
+//     In: Holds the eigenvectors of the two subproblems (same order as d0).
+//     Out: Holds the eigenvectors of the merged problem (same order as d0).
+// - e1: (matrix)
+//     Holds the deflated eigenvectors.
+// - e2: (matrix)
+//     (The original evecs matrix used as workspace) Holds the rank-1 eigenvectors.
 //
-//   ┌──────┬──────┬───┐
-//   │  Q1' │  Q2' │   │
-//   │      │      │   │
-//   ├──────┤      │   │
-//   │      └──────┘   │
-//   │                 │
-//   ├────────────┐    │
-//   │     U1'    │    │
-//   │            │    │
-//   └────────────┴────┘
+// - d0: (vector)
+//     In: Holds the eigenvalues of the two subproblems (in ascending order if permuted with i1).
+//     Out: Holds the eigenvalues of the merged problem (in ascending order if permuted with i1).
+// - d1: (vector)
+//     Holds the values of the deflated diagonal sorted in ascending order
+// - z0: (vector)
+//     Holds the values of Cuppen's rank-1 vector
+//     Also used as temporary workspace
+// - z1: (vector)
+//     Holds the values of the rank-1 update vector (same order as d1)
 //
-// - dtmp: (vector)
-//   Holds the values of the deflated diagonal sorted in ascending order
-// - z: (vector)
-//   Holds the values of Cuppen's rank-1 vector
-// - ztmp: (vector)
-//   Holds the values of the rank-1 update vector sorted corresponding to `d_defl`
+// - c:
+//     Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
+//     that bring them in matrix multiplication form.
 //
-// - i1, i2, i3: (vectors if indices)
-//   Hold the permutation indices.
+// - i1, i2, i3: (vectors of indices)
+//     Hold the permutation indices.
+//     In: i1 contains the permutation to sort d0 of the two subproblems in ascending order.
+//         If the subproblem involves a single tile the values of i1 are replaced with an identity permutation.
+//     Out: i1 and i2(Device::CPU) contain the permutation to sort d0 of the merged problem in ascending
+//          order.
 //
 // Steps:
 //
@@ -84,51 +90,52 @@ namespace dlaf::eigensolver::internal {
 //
 //        post_sorted <--- matmul
 //
-// - c
-//   Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
-//   that bring them in matrix multiplication form.
-//
 
 template <class T, Device D>
 struct WorkSpace {
-  Matrix<T, D> mat1;
-  Matrix<T, D> mat2;
+  Matrix<T, D> e0;
+  Matrix<T, D> e1;
+  Matrix<T, D>& e2;  // Reference to reuse evecs
 
-  Matrix<T, D> z;
-  Matrix<T, D> ztmp;
+  Matrix<T, D>& d1;  // Reference to reuse evals
+
+  Matrix<T, D> z0;
+  Matrix<T, D> z1;
 
   Matrix<SizeType, D> i2;
 };
 
 template <class T>
 struct WorkSpaceHost {
-  Matrix<T, Device::CPU> dtmp;
+  Matrix<T, Device::CPU> d0;
+
+  Matrix<ColType, Device::CPU> c;
 
   Matrix<SizeType, Device::CPU> i1;
   Matrix<SizeType, Device::CPU> i3;
-
-  Matrix<ColType, Device::CPU> c;
 };
 
 // forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct WorkSpaceHostMirror {
-  Matrix<T, Device::CPU> evals;
-  Matrix<T, Device::CPU> mat1;
+  Matrix<T, Device::CPU> e2;
 
-  Matrix<T, Device::CPU> z;
-  Matrix<T, Device::CPU> ztmp;
+  Matrix<T, Device::CPU> d1;
+
+  Matrix<T, Device::CPU> z0;
+  Matrix<T, Device::CPU> z1;
 
   Matrix<SizeType, Device::CPU> i2;
 };
 
 template <class T>
 struct WorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& evals;
-  Matrix<T, Device::CPU>& mat1;
+  Matrix<T, Device::CPU>& e2;
 
-  Matrix<T, Device::CPU>& z;
-  Matrix<T, Device::CPU>& ztmp;
+  Matrix<T, Device::CPU>& d1;
+
+  Matrix<T, Device::CPU>& z0;
+  Matrix<T, Device::CPU>& z1;
 
   Matrix<SizeType, Device::CPU>& i2;
 };
@@ -136,26 +143,26 @@ struct WorkSpaceHostMirror<T, Device::CPU> {
 // forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct DistWorkSpaceHostMirror {
-  Matrix<T, Device::CPU> evals;
-  Matrix<T, Device::CPU> evecs;
-  Matrix<T, Device::CPU> mat1;
-  Matrix<T, Device::CPU> mat2;
+  Matrix<T, Device::CPU> e0;
+  Matrix<T, Device::CPU> e2;
 
-  Matrix<T, Device::CPU> z;
-  Matrix<T, Device::CPU> ztmp;
+  Matrix<T, Device::CPU> d1;
+
+  Matrix<T, Device::CPU> z0;
+  Matrix<T, Device::CPU> z1;
 
   Matrix<SizeType, Device::CPU> i2;
 };
 
 template <class T>
 struct DistWorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& evals;
-  Matrix<T, Device::CPU>& evecs;
-  Matrix<T, Device::CPU>& mat1;
-  Matrix<T, Device::CPU>& mat2;
+  Matrix<T, Device::CPU>& e0;
+  Matrix<T, Device::CPU>& e2;
 
-  Matrix<T, Device::CPU>& z;
-  Matrix<T, Device::CPU>& ztmp;
+  Matrix<T, Device::CPU>& d1;
+
+  Matrix<T, Device::CPU>& z0;
+  Matrix<T, Device::CPU>& z1;
 
   Matrix<SizeType, Device::CPU>& i2;
 };
@@ -597,7 +604,7 @@ void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matr
 template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
                       RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
-                      WorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+                      WorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
@@ -609,17 +616,17 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   const LocalTileSize sz_tiles_vec(nrtiles, 1);
 
   // Calculate the size of the upper subproblem
-  const SizeType n1 = problemSize(i_begin, i_split, evecs.distribution());
+  const SizeType n1 = problemSize(i_begin, i_split, ws.e0.distribution());
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleZVec(i_begin, i_split, i_end, rho, evecs, ws.z);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_hm.z);
+  assembleZVec(i_begin, i_split, i_end, rho, ws.e0, ws.z0);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   auto scaled_rho = scaleRho(std::move(rho)) | ex::split();
 
   // Calculate the tolerance used for deflation
-  auto tol = calcTolerance(i_begin, i_end, ws_hm.evals, ws_hm.z);
+  auto tol = calcTolerance(i_begin, i_end, ws_h.d0, ws_hm.z0);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws_h.c);
@@ -632,74 +639,82 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `evecs`
   //
-  initIndex(i_begin, i_end, ws_h.i1);
-  sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
+  if (i_split == i_begin + 1) {
+    initIndex(i_begin, i_split, ws_h.i1);
+  }
+  if (i_split + 1 == i_end) {
+    initIndex(i_split, i_end, ws_h.i1);
+  }
+  addIndex(i_split, i_end, n1, ws_h.i1);
+  sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);
 
   auto rots =
-      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
+      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);
 
   // ---
 
-  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), evecs);
+  applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), ws.e0);
+  // Placeholder for rearranging the eigenvectors: (local permutation)
+  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 
   // Step #2
   //
   //    i2 (in)  : initial <--- pre_sorted
   //    i3 (out) : initial <--- deflated
   //
-  // - reorder `d -> dtmp`, `z -> ztmp`, using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
+  // - reorder `d0 -> d1`, `z0 -> z1`, using `i3` such that deflated entries are at the bottom.
+  // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_hm.i2, ws_h.i3) | ex::split();
 
-  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.evals, ws_h.dtmp);
-  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z, ws_hm.ztmp);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws_hm.evals);
+  applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
+  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws_h.d0);
 
-  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
-                                  ws_hm.mat1);
-  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.evals, ws_hm.ztmp, ws_h.dtmp, ws_hm.mat1);
-
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm.mat1, ws.mat1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.ztmp, ws.ztmp);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.evals, evals);
-  // ---
-
-  // formEvecs(i_begin, i_end, k, evals, ws.ztmp, ws.mat2, ws.mat1);
-  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, evals, evals, ws.mat1, ws.mat2);
-  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.ztmp, ws.mat2, ws.mat1);
-  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.mat1, ws.mat2);
-  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.mat2, ws.mat1);
-  setUnitDiag(i_begin, i_end, k, ws.mat1);
-
-  // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
   //    i3 (in)  : initial <--- deflated
   //    i2 (out) : initial ---> deflated
   //
+  invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
+
+  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
+                                  ws_hm.e2);
+  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);
+
+  copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
+  // ---
+
+  // formEvecs(i_begin, i_end, k, evals, ws.z1, ws.e0, ws.e2);
+  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.d1, ws.d1, ws.e2, ws.e0);
+  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.z1, ws.e0, ws.e2);
+  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e2, ws.e0);
+  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e0, ws.e2);
+  setUnitDiag(i_begin, i_end, k, ws.e2);
+
+  // Step #3: Eigenvectors of the tridiagonal system: Q * U
+  //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   //
-  invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.mat1, ws.mat2);
+  // The following permutation will be removed in the future.
+  // (The copy is needed to simplify the removal)
+  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.e2, ws.e0);
+  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
-                                                  T(1), evecs, ws.mat2, T(0), ws.mat1);
+                                                  T(1), ws.e1, ws.e2, T(0), ws.e0);
 
-  // Step #4: Final sorting of eigenvalues and eigenvectors
+  // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
   //    i2 (out) : deflated <--- post_sorted
   //
-  // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
-  //   ascending order
-  // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
-  //
-  sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
-  applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  dlaf::permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i2, ws.mat1, evecs);
+  initIndex(i_begin, i_end, ws_h.i1);
+  sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_h.i1, ws_hm.i2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
 }
 
 // The bottom row of Q1 and the top row of Q2. The bottom row of Q1 is negated if `rho < 0`.
@@ -983,11 +998,10 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
                           const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                           WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
-                          DistWorkSpaceHostMirror<T, D>& ws_hm, Matrix<T, D>& evals,
-                          Matrix<T, D>& evecs) {
+                          DistWorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
 
-  const matrix::Distribution& dist_evecs = evecs.distribution();
+  const matrix::Distribution& dist_evecs = ws.e0.distribution();
 
   // Calculate the size of the upper subproblem
   const SizeType n1 = dist_evecs.globalTileElementDistance<Coord::Row>(i_begin, i_split);
@@ -1003,14 +1017,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   const LocalTileSize sz_tiles_vec(i_end - i_begin, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, evecs, ws.z);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z, ws_hm.z);
-
-  // Calculate the tolerance used for deflation
-  auto tol = calcTolerance(i_begin, i_end, ws_hm.evals, ws_hm.z);
+  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
   auto scaled_rho = scaleRho(std::move(rho)) | ex::split();
+
+  // Calculate the tolerance used for deflation
+  auto tol = calcTolerance(i_begin, i_end, ws_h.d0, ws_hm.z0);
 
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws_h.c);
@@ -1023,11 +1037,17 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `evecs`
   //
-  initIndex(i_begin, i_end, ws_h.i1);
-  sortIndex(i_begin, i_end, ex::just(n1), ws_hm.evals, ws_h.i1, ws_hm.i2);
+  if (i_split == i_begin + 1) {
+    initIndex(i_begin, i_split, ws_h.i1);
+  }
+  if (i_split + 1 == i_end) {
+    initIndex(i_split, i_end, ws_h.i1);
+  }
+  addIndex(i_split, i_end, n1, ws_h.i1);
+  sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);
 
   auto rots =
-      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_hm.evals, ws_hm.z, ws_h.c);
+      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);
 
   // ---
 
@@ -1036,21 +1056,23 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: i_split is unique
   const comm::IndexT_MPI tag = to_int(i_split);
   applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),
-                                      evecs);
+                                      ws.e0);
+  // Placeholder for rearranging the eigenvectors: (local permutation)
+  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 
   // Step #2
   //
   //    i2 (in)  : initial <--- pre_sorted
   //    i3 (out) : initial <--- deflated
   //
-  // - reorder `d -> dtmp`, `z -> ztmp`, using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `dtmp` and eigenvectors in `mat1`.
+  // - reorder `d0 -> d1`, `z0 -> z1`, using `i3` such that deflated entries are at the bottom.
+  // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
   auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_hm.i2, ws_h.i3) | ex::split();
-  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.evals, ws_h.dtmp);
-  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z, ws_hm.ztmp);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_h.dtmp, ws_hm.evals);
+  applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
+  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws_h.d0);
 
   //
   //    i3 (in)  : initial <--- deflated
@@ -1058,59 +1080,51 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
 
-  // Note: here ws_hm.z is used as a contiguous buffer for the laed4 call
+  // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
-                                  ws_hm.mat1);
-  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho),
-                        ws_hm.evals, ws_hm.ztmp, ws_h.dtmp, ws_hm.z, ws_hm.i2, ws_hm.mat1);
+                                  ws_hm.e2);
+  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1,
+                        ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2, ws_hm.e2);
 
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm.mat1, ws.mat1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.ztmp, ws.ztmp);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.evals, evals);
+  assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws_h.d0);
+
+  copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
   // ---
 
-  assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws_h.dtmp);
-
-  auto n = ex::just(problemSize(i_begin, i_end, evecs.distribution()));
-  // Eigenvector formation: `ws.mat1` stores the eigenvectors, `ws.mat2` is used as an additional workspace
-  // Note ws.z is used as continuous buffer workspace to store permuted values of evals and ws.ztmp
-  applyIndex(i_begin, i_end, ws.i2, evals, ws.z);
-  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, evals, ws.z, ws.mat1, ws.mat2);
-  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, n, k, ws.mat2,
-                             ws.z);
-  applyIndex(i_begin, i_end, ws.i2, ws.ztmp, ws.z);
-  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.z, ws.mat2, ws.mat1);
-  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.mat1, ws.mat2);
-  reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, n, k, ws.mat2,
-                         ws.z);
-  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.mat2, ws.mat1);
+  auto n = ex::just(problemSize(i_begin, i_end, dist_evecs));
+  // Eigenvector formation: `ws.e2` stores the eigenvectors, `ws.e0` is used as an additional workspace
+  // Note ws.z0 is used as continuous buffer workspace to store permuted values of evals and ws.z1
+  applyIndex(i_begin, i_end, ws.i2, ws.d1, ws.z0);
+  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.d1, ws.z0, ws.e2, ws.e0);
+  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, n, k, ws.e0,
+                             ws.z0);
+  applyIndex(i_begin, i_end, ws.i2, ws.z1, ws.z0);
+  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.z0, ws.e0, ws.e2);
+  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.e2, ws.e0);
+  reduceSumScalingVector(col_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, n, k, ws.e0,
+                         ws.z0);
+  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.e0, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
+  //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   //
 
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
-                                                  T(1), evecs, ws.mat1, T(0), ws.mat2);
+                                                  T(1), ws.e1, ws.e2, T(0), ws.e0);
 
-  // Step #4: Final sorting of eigenvalues and eigenvectors
+  // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
   //    i1 (in)  : deflated <--- deflated  (identity map)
   //    i2 (out) : deflated <--- post_sorted
   //
-  // - reorder `dtmp -> d` using the `i2` such that `d` values (eigenvalues and deflated values) are in
-  //   ascending order
-  // - reorder columns in `evecs` using `i2` such that eigenvectors match eigenvalues
-  //
-  sortIndex(i_begin, i_end, std::move(k), ws_h.dtmp, ws_h.i1, ws_hm.i2);
-  applyIndex(i_begin, i_end, ws_hm.i2, ws_h.dtmp, ws_hm.evals);
-
-  copy(idx_loc_begin, sz_loc_tiles, ws.mat2, ws_hm.mat2);
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, i_begin,
-                                                                       i_end, ws_hm.i2, ws_hm.mat2,
-                                                                       ws_hm.evecs);
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm.evecs, evecs);
+  initIndex(i_begin, i_end, ws_h.i1);
+  sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_h.i1, ws_hm.i2);
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
 }
 
 }

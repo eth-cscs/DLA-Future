@@ -1422,11 +1422,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only rank0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(comm_bcast()), mat_trid.read(index)));
+      ex::start_detached(comm::scheduleSendBcast(comm_bcast(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(comm_bcast()), 0,
-                                                 mat_trid.readwrite(index)));
+      ex::start_detached(comm::scheduleRecvBcast(comm_bcast(), 0, mat_trid.readwrite(index)));
   }
 
   return {std::move(mat_trid), std::move(mat_v)};

@@ -52,6 +52,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocsolver", when="+rocm")
     depends_on("rocthrust", when="+rocm")
 
+    depends_on("hdf5 +cxx+hl+mpi+threadsafe", when="+miniapps")
+
     conflicts("+cuda", when="+rocm")
 
     with when("+rocm"):
@@ -148,6 +150,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             if "none" not in archs:
                 arch_str = ";".join(archs)
                 args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
+
+        # HDF5 support
+        if "^hdf5" in spec:
+            args.append(self.define("DLAF_WITH_HDF5", True))
 
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))

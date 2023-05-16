@@ -38,6 +38,7 @@ option(DLAF_WITH_MKL "Enable MKL as provider for LAPACK" OFF)
 option(DLAF_WITH_CUDA "Enable CUDA support" OFF)
 option(DLAF_WITH_HIP "Enable HIP support" OFF)
 cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_WITH_CUDA" OFF)
+option(DLAF_WITH_HDF5 "Enable HDF5 support" OFF)
 option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
@@ -161,6 +162,11 @@ find_package(lapackpp REQUIRED)
 # ----- UMPIRE
 find_package(Umpire REQUIRED)
 
+# ----- HDF5
+if (DLAF_WITH_HDF5)
+  find_package(HDF5 CONFIG REQUIRED COMPONENTS shared CXX CXX_HL)
+endif()
+
 # ----- EXTERNAL
 add_subdirectory(external)
 
@@ -198,4 +204,13 @@ endif()
 # ---------------------------------------------------------------------------
 if(DLAF_BUILD_DOC)
   add_subdirectory(doc)
+endif()
+
+if(DLAF_WITH_HDF5)
+  add_executable(matrix-rw matrix-rw.cpp)
+  target_link_libraries(matrix-rw
+    PRIVATE
+    dlaf.core
+    hdf5_cpp-shared
+    hdf5_hl_cpp-shared)
 endif()

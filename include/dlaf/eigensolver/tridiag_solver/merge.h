@@ -42,16 +42,16 @@ namespace dlaf::eigensolver::internal {
 // Auxiliary matrix and vectors used for the D&C algorithm
 //
 // - e0: (matrix)
-//     In: Holds the eigenvectors of the two subproblems TODO in ascending order.
-//     Out: Holds the eigenvectors of the merged problems TODO in ascending order.
+//     In: Holds the eigenvectors of the two subproblems (same order as d0).
+//     Out: Holds the eigenvectors of the merged problems (same order as d0).
 // - e1: (matrix)
 //     Holds the deflated eigenvectors.
 // - e2: (matrix)
 //     (The original evecs matrix used as workspace) Holds the rank-1 eigenvectors.
 //
 // - d0: (vector)
-//     In: Holds the eigenvalues of the two subproblems TODO in ascending order.
-//     Out: Holds the eigenvalues of the merged problems TODO in ascending order.
+//     In: Holds the eigenvalues of the two subproblems (in ascending order if permuted with i1).
+//     Out: Holds the eigenvalues of the merged problems (in ascending order if permuted with i1).
 // - d1: (vector)
 //     Holds the values of the deflated diagonal sorted in ascending order
 // - z0: (vector)
@@ -64,8 +64,12 @@ namespace dlaf::eigensolver::internal {
 //     Assigns a type to each column of Q which is used to calculate the permutation indices for Q and U
 //     that bring them in matrix multiplication form.
 //
-// - i1, i2, i3: (vectors if indices)
-//   Hold the permutation indices.
+// - i1, i2, i3: (vectors of indices)
+//     Hold the permutation indices.
+//     In: i1 contains the permutation to sort d0 of the two subproblems in ascenting order.
+//         If the subproblem involves a single tile the values of i1 are replaced with an identity permutation.
+//     Out: i1 and i2(Device::CPU) contain the permutation to sort d0 of the merged problem in ascenting
+//          order.
 //
 // Steps:
 //

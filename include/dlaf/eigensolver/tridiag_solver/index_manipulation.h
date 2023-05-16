@@ -62,7 +62,7 @@ inline void addIndex(SizeType i_begin, SizeType i_end, SizeType val,
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender = ex::when_all(ex::when_all_vector(tc.readwrite<SizeType, Device::CPU>(index)));
+  auto sender = ex::when_all_vector(tc.readwrite<SizeType, Device::CPU>(index));
 
   ex::start_detached(
       di::transform(di::Policy<DefaultBackend_v<Device::CPU>>(), std::move(add_fn), std::move(sender)));

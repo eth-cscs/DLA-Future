@@ -15,6 +15,7 @@ from os.path import expanduser, isfile
 from time import sleep
 from pathlib import Path
 
+
 # Finds two factors of `n` that are as close to each other as possible.
 #
 # Note: the second factor is larger or equal to the first factor
@@ -61,7 +62,6 @@ def _err_msg(lib):
 
 
 class JobText:
-
     # creates the preamble of a job script and store it in self.job_text
     # The preamble is created using the template in system["Batch preamble"] where the
     # following parameters are replaced with their actual value (using python format command):

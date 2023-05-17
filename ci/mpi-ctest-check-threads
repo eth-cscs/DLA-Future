@@ -19,12 +19,15 @@ for test in "${all_tests[@]}"; do
         TZ=CET date +"Run started at: %H:%M:%S %z"
         # We check here for clone3 syscalls. Not all systems use clone3 when
         # spawning threads. clone may be used on some systems.
+        set +e
         strace \
                 --output="$strace_output_file" \
                 --follow-forks \
                 -e clone3 \
                 bash -c "$test --pika:print-bind" |&\
                 tee "$test_output_file"
+        test_exit_code=${PIPESTATUS[0]}
+        set -e
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 
         num_threads=$(cat "$test_output_file" | grep -c 'PU L')
@@ -39,6 +42,8 @@ for test in "${all_tests[@]}"; do
             echo "Spawned $(( num_threads_spawned - num_threads_expected )) more threads than expected"
             num_failed_tests=$(( num_failed_tests + 1 ))
         fi
+
+        [[ $test_exit_code ]] || num_failed_tests=$(( num_failed_tests + 1 ))
     else
         bash -c "$test" > /dev/null
     fi

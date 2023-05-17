@@ -109,7 +109,6 @@ deallocate:
   extends: .daint_dealloc
 "
 
-# TODO: Make separate template with MINIAPP label
 JOB_TEMPLATE="
 {{LABEL}}:
   stage: test

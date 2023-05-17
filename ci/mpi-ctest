@@ -12,8 +12,7 @@ pushd /DLA-Future-build > /dev/null
 # Run the tests, only output on the first rank
 if [[ $SLURM_PROCID == "0" ]]; then
     TZ=CET date +"Run started at: %H:%M:%S %z"
-    # TODO: Check if it's ok to wrap ctest in strace, or if individual commands should be wrapped?
-    strace -e clone ctest -V $@
+    ctest -V $@
     TZ=CET date +"Run finished at: %H:%M:%S %z"
 else
     ctest -Q $@

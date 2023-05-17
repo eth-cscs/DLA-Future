@@ -11,7 +11,6 @@ pushd /DLA-Future-build > /dev/null
 
 # Get commands of all tests, since we will run the commands directly under
 # strace.
-ctest -N
 IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | map(.command) | .[] | join(" ")'))
 
 num_failed_tests=0

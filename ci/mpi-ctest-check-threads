@@ -1,5 +1,12 @@
 #!/bin/bash -eu
 
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
+    REPORT_NAME=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+
+    mkdir -p "$SHARED_REPORTS"
+fi;
+
 pushd /DLA-Future-build > /dev/null
 
 # Get commands of all tests, since we will run the commands directly under
@@ -49,10 +56,21 @@ for test in "${all_tests[@]}"; do
     fi
 done
 
-popd > /dev/null
-
 if [[ $SLURM_PROCID == "0" ]]; then
         echo "$num_failed_tests test(s) failed"
 fi
+
+# Create coverage reports for code run
+if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
+    TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
+
+    fastcov --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
+
+    cp "$LOCAL_REPORTS/run.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
+
+    TZ=CET date +"Done creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
+fi
+
+popd > /dev/null
 
 exit $num_failed_tests

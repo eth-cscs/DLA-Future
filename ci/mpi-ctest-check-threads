@@ -17,6 +17,8 @@ for test in "${all_tests[@]}"; do
         strace_output_file=$(mktemp -u -t dlaf-strace-output.tmp.XXXXXXXXXX)
         test_output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
         TZ=CET date +"Run started at: %H:%M:%S %z"
+        # We check here for clone3 syscalls. Not all systems use clone3 when
+        # spawning threads. clone may be used on some systems.
         strace --output="$strace_output_file" -f -e clone3 bash -c "$test --pika:print-bind" |& tee "$test_output_file"
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 

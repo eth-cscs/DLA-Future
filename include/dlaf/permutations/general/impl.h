@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "dlaf/common/assert.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/permutations/general/api.h"
 #include "dlaf/permutations/general/perms.h"
@@ -20,6 +21,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/message.h"
 #include "dlaf/communication/rdma.h"
+#include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
@@ -82,7 +84,7 @@ namespace dlaf::permutations::internal {
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
 template <class T, Device D, Coord coord, class... Args>
 void applyPermutations(
-    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+    const GlobalElementIndex out_begin, const GlobalElementSize sz, const SizeType in_offset,
     const matrix::Distribution& distr, const SizeType* perm_arr,
     const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles,
     const std::vector<matrix::Tile<T, D>>& out_tiles, [[maybe_unused]] Args&&... args) {
@@ -94,9 +96,13 @@ void applyPermutations(
                                distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
     // Parallelized over the number of permuted columns or rows
-    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(sz.get<coord>()), [&](SizeType i_perm) {
+    const SizeType nperms = sz.get<coord>();
+    pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+      DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
       for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-        SizeType split = splits[i_split];
+        const SizeType split = splits[i_split];
 
         GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
         GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
@@ -108,9 +114,9 @@ void applyPermutations(
           i_split_gl_out.transpose();
         }
 
-        TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
+        const TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
         const auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))].get();
-        TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
+        const TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
         auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
 
         dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
@@ -128,7 +134,7 @@ void applyPermutations(
 // FilterFunc is a function with signature bool(*)(SizeType)
 template <class T, Device D, Coord C, class FilterFunc>
 void applyPermutationsFiltered(
-    GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,
+    const GlobalElementIndex out_begin, const GlobalElementSize sz, const SizeType in_offset,
     const matrix::Distribution& subm_dist, const SizeType* perm_arr,
     const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles_fut,
     const std::vector<matrix::Tile<T, D>>& out_tiles, FilterFunc&& filter) {
@@ -169,17 +175,20 @@ void applyPermutationsFiltered(
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-                                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
+void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
+                                    Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
+                                    Matrix<T, D>& mat_out) {
   namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 
+  if (i_begin == i_end)
+    return;
+
   const matrix::Distribution& distr = mat_in.distribution();
-  TileElementSize sz_last_tile = distr.tileSize(GlobalTileIndex(i_end, i_end));
-  SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end) + sz_last_tile.rows();
-  SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end) + sz_last_tile.cols();
+  const SizeType m = distr.globalTileElementDistance<Coord::Row>(i_begin, i_end);
+  const SizeType n = distr.globalTileElementDistance<Coord::Col>(i_begin, i_end);
   matrix::Distribution subm_distr(LocalElementSize(m, n), distr.blockSize());
-  SizeType ntiles = i_end - i_begin + 1;
+  const SizeType ntiles = i_end - i_begin;
 
   auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
   auto mat_range =
@@ -201,7 +210,7 @@ void Permutations<B, D, T, C>::call(SizeType i_begin, SizeType i_end, Matrix<con
 
 template <class T, Device D>
 auto whenAllReadWriteTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix<T, D>& matrix) {
-  LocalTileSize sz{end.row() - begin.row() + 1, end.col() - begin.col() + 1};
+  const LocalTileSize sz{end.row() - begin.row(), end.col() - begin.col()};
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
   return ex::when_all_vector(matrix::select(matrix, common::iterate_range2d(begin, sz)));
@@ -218,7 +227,7 @@ auto whenAllReadWriteTilesArray(Matrix<T, D>& matrix) {
 
 template <class T, Device D>
 auto whenAllReadOnlyTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix<const T, D>& matrix) {
-  LocalTileSize sz{end.row() - begin.row() + 1, end.col() - begin.col() + 1};
+  const LocalTileSize sz{end.row() - begin.row(), end.col() - begin.col()};
   namespace ex = pika::execution::experimental;
   namespace ut = matrix::util;
   return ex::when_all_vector(matrix::selectRead(matrix, common::iterate_range2d(begin, sz)));
@@ -335,6 +344,9 @@ auto initPackingIndex(comm::IndexT_MPI nranks, SizeType offset_sub, const matrix
 
       for (SizeType perm_index_local = 0; perm_index_local < nperms; ++perm_index_local) {
         const SizeType perm_index_global = offset_sub + loc2sub[perm_index_local];
+        DLAF_ASSERT_HEAVY(perm_index_local >= 0 && perm_index_local < nperms, perm_index_local, nperms);
+        DLAF_ASSERT_HEAVY(perm_index_global >= 0 && perm_index_global < dist.size().get<C>(),
+                          perm_index_global, dist.size());
         if (dist.rankGlobalElement<C>(perm_index_global) == rank) {
           const SizeType perm_index_packed = rank_displacement + nperms_local;
 
@@ -367,7 +379,7 @@ auto initPackingIndex(comm::IndexT_MPI nranks, SizeType offset_sub, const matrix
 // Copies index tiles belonging to the current process from the complete index @p global_index into the
 // partial index containing only the local parts @p local_index.
 template <Device D, Coord C>
-void copyLocalPartsFromGlobalIndex(SizeType i_loc_begin, const matrix::Distribution& dist,
+void copyLocalPartsFromGlobalIndex(const SizeType i_loc_begin, const matrix::Distribution& dist,
                                    Matrix<const SizeType, D>& global_index,
                                    Matrix<SizeType, D>& local_index) {
   namespace ex = pika::execution::experimental;
@@ -399,79 +411,10 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(permute_fn), std::move(sender)));
 }
 
-// Tranposes two tiles of compatible dimensions
-template <class InTileSender, class OutTileSender>
-void transposeTileSenders(InTileSender&& in, OutTileSender&& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-
-  auto transpose_fn = [](const auto& in_tile, const auto& out_tile) {
-    for (TileElementIndex idx : common::iterate_range2d(out_tile.size())) {
-      out_tile(idx) = in_tile(transposed(idx));
-    }
-  };
-
-  ex::start_detached(
-      di::transform(di::Policy<Backend::MC>(), std::move(transpose_fn), std::move(sender)));
-}
-
-// Transposes a local matrix @p mat_in into the local part of the distributed matrix @p mat_out.
-template <class T>
-void transposeFromLocalToDistributedMatrix(LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_in_tile : common::iterate_range2d(mat_in.distribution().localNrTiles())) {
-    LocalTileIndex i_out_tile(i_loc_begin.row() + i_in_tile.col(), i_loc_begin.col() + i_in_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
-// Transposes the local part of the distributed matrix @p mat_in into the local matrix @p mat_out.
-template <class T>
-void transposeFromDistributedToLocalMatrix(LocalTileIndex i_loc_begin,
-                                           Matrix<const T, Device::CPU>& mat_in,
-                                           Matrix<T, Device::CPU>& mat_out) {
-  for (auto i_out_tile : common::iterate_range2d(mat_out.distribution().localNrTiles())) {
-    LocalTileIndex i_in_tile(i_loc_begin.row() + i_out_tile.col(), i_loc_begin.col() + i_out_tile.row());
-    transposeTileSenders(mat_in.read(i_in_tile), mat_out.readwrite(i_out_tile));
-  }
-}
-
-// Inverts the the subset of tiles [ @p i_begin, @p i_end (including)] of the index map @p in and saves
-// the result into @p out.
-inline void invertIndex(SizeType i_begin, SizeType i_end, Matrix<const SizeType, Device::CPU>& in,
-                        Matrix<SizeType, Device::CPU>& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-  namespace ut = matrix::util;
-
-  const matrix::Distribution& dist = in.distribution();
-  SizeType nb = dist.blockSize().rows();
-  SizeType nbr = dist.tileSize(GlobalTileIndex(i_end, 0)).rows();
-  SizeType n = (i_end - i_begin) * nb + nbr;
-  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
-    TileElementIndex zero(0, 0);
-    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
-    SizeType* out_ptr = out_tiles[0].ptr(zero);
-    for (SizeType i = 0; i < n; ++i) {
-      out_ptr[in_ptr[i]] = i;
-    }
-  };
-
-  LocalTileIndex begin{i_begin, 0};
-  LocalTileSize sz{i_end - i_begin + 1, 1};
-  auto range = common::iterate_range2d(begin, sz);
-  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(in, range)),
-                             ex::when_all_vector(matrix::select(out, range)));
-  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
-}
-
 template <class T, Coord C>
-void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
-                  SizeType i_last, Matrix<const SizeType, Device::CPU>& perms,
-                  Matrix<const T, Device::CPU>& mat_in, Matrix<T, Device::CPU>& mat_out) {
+void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
+                  Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
+                  Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
 
   using namespace dlaf::matrix;
@@ -479,19 +422,20 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
+  if (i_begin == i_end)
+    return;
+
   const Distribution& dist = mat_in.distribution();
   const comm::IndexT_MPI nranks = to_int(dist.commGridSize().get<C>());
 
-  const SizeType i_end = i_last + 1;
-
-  // Local size and index of subproblem [i_begin, i_last]
+  // Local size and index of subproblem [i_begin, i_end)
   const SizeType offset_sub = dist.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
   const TileElementSize blk = dist.blockSize();
 
   const LocalTileIndex i_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
                                    dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  const LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end) - 1,
-                                 dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end) - 1};
+  const LocalTileIndex i_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end),
+                                 dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end)};
   // Note: the local shape of the permutation region may not be square if the process grid is not square
   const LocalElementSize sz_loc{dist.localElementDistanceFromGlobalTile<Coord::Row>(i_begin, i_end),
                                 dist.localElementDistanceFromGlobalTile<Coord::Col>(i_begin, i_end)};
@@ -502,7 +446,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 
   // Create a map from send indices to receive indices (inverse of perms)
   Matrix<SizeType, D> inverse_perms(perms.distribution());
-  invertIndex(i_begin, i_last, perms, inverse_perms);
+  eigensolver::internal::invertIndex(i_begin, i_end, perms, inverse_perms);
 
   // Local distribution used for packing and unpacking
   const Distribution subm_dist(sz_loc, blk);
@@ -510,7 +454,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // Local single tile column matrices representing index maps used for packing and unpacking of
   // communication data
   const SizeType nvecs = sz_loc.get<C>();
-  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.rows(), 1));
+  const Distribution index_dist(LocalElementSize(nvecs, 1), TileElementSize(blk.get<C>(), 1));
   Matrix<SizeType, D> local2global_index(index_dist);
   Matrix<SizeType, D> packing_index(index_dist);
   Matrix<SizeType, D> unpacking_index(index_dist);

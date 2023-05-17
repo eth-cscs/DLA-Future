@@ -30,11 +30,14 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci install --jobs ${NUM_PROCS} --keep-stage --verbose
+    spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \
     export TEST_BINARIES=`ctest --show-only=json-v1 | jq '.tests | map(.command[0]) | .[]' | tr -d \"` && \
+    echo "Binary sizes:" && \
+    ls -lh ${TEST_BINARIES} && \
+    ls -lh src/lib* && \
     libtree -d ${DEPLOY} ${TEST_BINARIES} && \
     rm -rf ${DEPLOY}/usr/bin && \
     libtree -d ${DEPLOY} $(which ctest gcov addr2line) && \

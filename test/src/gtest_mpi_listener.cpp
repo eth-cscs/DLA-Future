@@ -160,8 +160,16 @@ void MPIListener::OnTestEndAllRanks(const ::testing::TestInfo& test_info) const 
 
 namespace internal {
 void mpi_send_string(const std::string& message, int to_rank) {
-  MPI_Send(const_cast<char*>(message.c_str()), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank,
-           0, MPI_COMM_WORLD);
+// -Wtype-safety disabled because of false positive warning in clang:
+// https://github.com/llvm/llvm-project/issues/62512
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtype-safety"
+#endif
+  MPI_Send(message.c_str(), static_cast<int>(message.size()) + 1, MPI_CHAR, to_rank, 0, MPI_COMM_WORLD);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 std::string mpi_receive_string(int from_rank) {

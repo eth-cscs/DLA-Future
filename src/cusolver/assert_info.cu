@@ -25,7 +25,7 @@
 #else
 
 #define DLAF_DEFINE_CUSOLVER_ASSERT_INFO(func) \
-  void assertInfo##func(whip::stream_t stream, int* info) {}
+  void assertInfo##func(whip::stream_t, int*) {}
 
 #endif
 

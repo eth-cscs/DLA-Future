@@ -33,9 +33,9 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  for (SizeType j = idx_begin; j <= idx_end; ++j) {
-    for (SizeType i = idx_begin; i <= idx_end; ++i) {
-      for (SizeType k = idx_begin; k <= idx_end; ++k) {
+  for (SizeType j = idx_begin; j < idx_end; ++j) {
+    for (SizeType i = idx_begin; i < idx_end; ++i) {
+      for (SizeType k = idx_begin; k < idx_end; ++k) {
         ex::start_detached(
             dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read(GlobalTileIndex(i, k)),
                                         mat_b.read(GlobalTileIndex(k, j)), k == idx_begin ? beta : T(1),
@@ -54,20 +54,22 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_chain,
                                  common::Pipeline<comm::Communicator>& col_task_chain,
-                                 const SizeType idx_begin, const SizeType idx_last, const T alpha,
+                                 const SizeType idx_begin, const SizeType idx_end, const T alpha,
                                  Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                  Matrix<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
+
+  if (idx_begin == idx_end)
+    return;
 
   const auto& dist_a = mat_a.distribution();
   const auto rank = dist_a.rankIndex();
 
   // which rank has the last tile involved
-  const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_last);
-  const bool rankHasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_last);
+  const bool rankHasLastRow = rank.row() == dist_a.template rankGlobalTile<Coord::Row>(idx_end - 1);
+  const bool rankHasLastCol = rank.col() == dist_a.template rankGlobalTile<Coord::Col>(idx_end - 1);
 
   // translate from global to local indices
-  const SizeType idx_end = idx_last + 1;
   const SizeType i_beg = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_begin);
   const SizeType i_end = dist_a.template nextLocalTileFromGlobalTile<Coord::Row>(idx_end);
 
@@ -83,10 +85,10 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
   const SizeType partialSize = (nrefls % mb);
 
   // Note:
-  // Workspace needed is limited to the range [i_begin:i_last]. Its allocation is obtained by creating an
+  // Workspace needed is limited to the range [i_begin:i_end). Its allocation is obtained by creating an
   // ad hoc distribution that starts in the origin of the matrix and with a size covering all needed
-  // elements. This would lead to a [0:i_last] range, but by using panel offset at initialization, the
-  // part before the range will be left out from allocation, actually getting [i_begin:i_last]
+  // elements. This would lead to a [0:i_end) range, but by using panel offset at initialization, the
+  // part before the range will be left out from allocation, actually getting [i_begin:i_end)
   const GlobalTileIndex panel_offset(idx_begin, idx_begin);
   const matrix::Distribution dist_panel({lastTileElement + 1, lastTileElement + 1}, dist_a.blockSize(),
                                         dist_a.commGridSize(), dist_a.rankIndex(),
@@ -97,11 +99,11 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_panel, panel_offset);
 
   // This loops over the global indices for k, because every rank have to participate in communication
-  for (SizeType k = idx_begin; k <= idx_last; ++k) {
+  for (SizeType k = idx_begin; k < idx_end; ++k) {
     auto& panelA = panelsA.nextResource();
     auto& panelB = panelsB.nextResource();
 
-    const bool isKPartial = k == idx_last && isEndRangePartial;
+    const bool isKPartial = k == idx_end - 1 && isEndRangePartial;
     const SizeType kSize = isKPartial ? partialSize : mb;
     if (isKPartial) {
       panelA.setWidth(kSize);

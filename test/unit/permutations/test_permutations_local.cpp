@@ -38,17 +38,16 @@ template <Backend B, Device D, class T, Coord C>
 void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end) {
   const matrix::Distribution distr({n, n}, {nb, nb});
 
-  SizeType index_start = distr.globalElementFromGlobalTileAndTileElement<C>(i_begin, 0);
-  SizeType index_finish = distr.globalElementFromGlobalTileAndTileElement<C>(i_end, 0) +
-                          distr.tileSize(GlobalTileIndex(i_end, i_end)).get<C>();
+  SizeType index_start = i_begin * nb;
+  SizeType index_end = std::min(n, i_end * nb);
 
-  Matrix<const SizeType, Device::CPU> perms_h = [n, nb, index_start, index_finish]() {
+  Matrix<const SizeType, Device::CPU> perms_h = [n, nb, index_start, index_end]() {
     Matrix<SizeType, Device::CPU> perms_h(LocalElementSize(n, 1), TileElementSize(nb, 1));
-    dlaf::matrix::util::set(perms_h, [index_start, index_finish](GlobalElementIndex i) {
-      if (index_start > i.row() || i.row() >= index_finish)
+    dlaf::matrix::util::set(perms_h, [index_start, index_end](GlobalElementIndex i) {
+      if (i.row() < index_start || i.row() >= index_end)
         return SizeType(0);
 
-      return index_finish - 1 - i.row();
+      return index_end - 1 - i.row();
     });
     return perms_h;
   }();
@@ -72,11 +71,11 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
     permutations::permute<B, D, T, C>(i_begin, i_end, perms.get(), mat_in.get(), mat_out.get());
   }
 
-  auto expected_out = [i_begin, i_end, index_start, index_finish, &distr](const GlobalElementIndex i) {
+  auto expected_out = [i_begin, i_end, index_start, index_end, &distr](const GlobalElementIndex i) {
     GlobalTileIndex i_tile = distr.globalTileIndex(i);
-    if (i_begin <= i_tile.row() && i_tile.row() <= i_end && i_begin <= i_tile.col() &&
-        i_tile.col() <= i_end) {
-      GlobalElementIndex i_in(i.get<orthogonal(C)>(), index_finish + index_start - 1 - i.get<C>());
+    if (i_begin <= i_tile.row() && i_tile.row() < i_end && i_begin <= i_tile.col() &&
+        i_tile.col() < i_end) {
+      GlobalElementIndex i_in(i.get<orthogonal(C)>(), index_end + index_start - 1 - i.get<C>());
       if constexpr (C == Coord::Row)
         i_in.transpose();
       return T(i_in.get<C>()) - T(i_in.get<orthogonal(C)>()) / T(8);
@@ -89,11 +88,16 @@ void testPermutations(SizeType n, SizeType nb, SizeType i_begin, SizeType i_end)
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     // n, nb, i_begin, i_end
-    {10, 3, 0, 3},
+    {10, 3, 0, 4},
+    {10, 3, 1, 3},
     {10, 3, 1, 2},
-    {10, 3, 1, 1},
-    {10, 10, 0, 0},
-    {10, 5, 1, 1}};
+    {10, 10, 0, 1},
+    {10, 5, 1, 2},
+    // Empty range
+    {10, 5, 0, 0},
+    {10, 5, 1, 1},
+    {10, 5, 2, 2},
+};
 
 TYPED_TEST(PermutationsTestCPU, Columns) {
   for (auto [n, nb, i_begin, i_end] : sizes) {

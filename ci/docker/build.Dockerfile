@@ -31,17 +31,6 @@ RUN mkdir -p /opt/libtree && \
     curl -Lfso /opt/libtree/libtree https://github.com/haampie/libtree/releases/download/v2.0.0/libtree_x86_64 && \
     chmod +x /opt/libtree/libtree
 
-# Install clang from LLVM repositories
-ARG INSTALL_CLANG_FROM_LLVM_REPO=""
-ARG LLVM_REPO=""
-ARG CLANG_APTGET=""
-RUN if [ "$INSTALL_CLANG_FROM_LLVM_REPO" = "ON" ]; then \
-      wget -qO - https://apt.llvm.org/llvm-snapshot.gpg.key 2>/dev/null | apt-key add - && \
-      apt-add-repository "$LLVM_REPO" && \
-      apt-get install -y -qq --no-install-recommends $CLANG_APTGET && \
-      rm -rf /var/lib/apt/lists/* ; \
-    fi
-
 # Install MKL and remove static libs (to keep image smaller)
 ARG USE_MKL=ON
 ARG MKL_VERSION=2020.4-912

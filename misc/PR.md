@@ -20,5 +20,23 @@ The review consists of checking:
 ## Merging a PR
 
 A PR is ready to merge when all the reviewers (at least one review is required) approve the changes and the CI tests pass.
-To avoid a long history with commits which do not pass a review the "Squash and Merge" method is used.
-The title of the PR (with its reference number) has to be used as commit title (this is default on GitHub), and the PR message (updated if needed) as commit message (has to be done manually).
+To avoid a long history with commits which have not been reviewed and tested, the "Squash and Merge" method is used.
+When merging the title and message must be completed manually:
+
+The title should reflect the title of the PR and its reference number.
+This is the default behaviour in GitHub if the PR contains more than one commits. Warning: if the PR containg only one commit the commit message is used, please update it.
+E.g.
+```
+scripts: create scripts for all miniapps {strong, weak} x {gpu, mc} + include local benchmarks (#840)
+```
+
+The message contains by default a list of the commits and has to be changed.
+It can be left empty if the title is self-explanatory, or it should contain extra information. The first PR comment should contain the needed information and can be used (some editing might be required).
+E.g.
+```
+Along gen_dlaf_{strong,weak}, this PR introduces a new pair of generator scripts in order to have a "template" for both {mc,gpu} (specifically it is PizDaint defaults).
+Main changes:
+- now we have 4 generator scripts for all miniapps gen_dlaf_{strong,weak}-{mc,gpu}
+- the strong version of the generator scripts includes an additional "local" benchmark, which runs a set of benchmarks with --local flag; these are useful as reference for distributed single-rank implementations
+- all scripts have the main parameters in the beginning, so it is easier to customise the benchmark runs
+```

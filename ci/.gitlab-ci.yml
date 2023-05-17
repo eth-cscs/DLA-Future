@@ -43,6 +43,9 @@ stages:
            --build-arg SPACK_SHA
            --build-arg EXTRA_APTGET
            --build-arg COMPILER
+           --build-arg INSTALL_CLANG_FROM_LLVM_REPO
+           --build-arg LLVM_REPO
+           --build-arg CLANG_APTGET
            --build-arg CXXSTD
            --build-arg SPACK_ENVIRONMENT
            --build-arg COMMON_SPACK_ENVIRONMENT
@@ -161,12 +164,18 @@ cpu release build clang16 cxx20:
   variables:
     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:23.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:23.04
-    EXTRA_APTGET: "clang-16 libomp-16-dev"
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:23.04
-    COMPILER: clang@16.0.0
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: clang@16.0.4
+    # Use LLVM's package repository instead of Ubuntu's repository because
+    # library paths are not correctly configured to find libomp in Ubuntu's
+    # repository
+    INSTALL_CLANG_FROM_LLVM_REPO: "ON"
+    LLVM_REPO: "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main"
+    CLANG_APTGET: "clang-16 libomp-16-dev"
     CXXSTD: 20
     USE_MKL: "ON"
     USE_ROCBLAS: "OFF"

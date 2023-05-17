@@ -14,15 +14,16 @@ for test in "${all_tests[@]}"; do
     if [[ $SLURM_PROCID == "0" ]]; then
         echo "# Testing \"$test\""
 
+        strace_output_file=$(mktemp -u -t dlaf-strace-output.tmp.XXXXXXXXXX)
         test_output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
         TZ=CET date +"Run started at: %H:%M:%S %z"
-        strace -f -e clone3 bash -c "$test --pika:print-bind" >& "$test_output_file"
+        strace --output="$strace_output_file" -f -e clone3 bash -c "$test --pika:print-bind" |& tee "$test_output_file"
         TZ=CET date +"Run finished at: %H:%M:%S %z"
 
-        num_threads=$(cat $test_output_file | grep -c 'PU L')
+        num_threads=$(cat "$test_output_file" | grep -c 'PU L')
         # We expect pika to spawn one additional thread outside of thread pools
         num_threads_expected=$(( num_threads + 1 ))
-        num_threads_spawned=$(cat $test_output_file | grep -c 'clone3(')
+        num_threads_spawned=$(cat "$strace_output_file" | grep -c 'clone3(')
         echo "pika runtime used $num_threads threads"
         echo "Expected $num_threads_expected threads to be spawned in total"
         echo "Actually spawned $num_threads_spawned threads"

@@ -381,7 +381,7 @@ void trmm3(const blas::Side side, const blas::Uplo uplo, const blas::Op op, cons
   DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
   matrix::internal::copy(b, c);
-  // common::internal::SingleThreadedBlasScope single;
+  common::internal::SingleThreadedBlasScope single;
   blas::trmm(blas::Layout::ColMajor, side, uplo, op, diag, s.m, s.n, alpha, a.ptr(), a.ld(), c.ptr(),
              c.ld());
 }

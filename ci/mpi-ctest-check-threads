@@ -15,10 +15,6 @@ IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | 
 
 num_failed_tests=0
 
-if [[ $SLURM_PROCID == "0" ]]; then
-    set -x
-fi
-
 for test in "${all_tests[@]}"; do
     # Run the tests, only output on the first rank
     if [[ $SLURM_PROCID == "0" ]]; then
@@ -50,18 +46,14 @@ for test in "${all_tests[@]}"; do
         set -e
 
         if (( num_threads > 0 )); then
-            echo "pika runtime used $num_threads threads"
-            echo "Expected $num_threads_expected threads to be spawned in total"
-            echo "Actually spawned $num_threads_spawned threads"
+            echo "Expected $num_threads_expected threads to be spawned by pika; actually spawned $num_threads_spawned"
 
             if (( num_threads_spawned != num_threads_expected )); then
                 echo "Spawned $(( num_threads_spawned - num_threads_expected )) more threads than expected"
                 num_failed_tests=$(( num_failed_tests + 1 ))
             fi
         else
-            echo "Not using pika for this test"
-            echo "Expected no threads to be spawned"
-            echo "Actually spawned $num_threads_spawned threads"
+            echo "Expected no threads to be spawned; actually spawned $num_threads_spawned"
 
             if (( num_threads_spawned > 0 )); then
                 num_failed_tests=$(( num_failed_tests + 1 ))

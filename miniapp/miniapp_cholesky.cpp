@@ -226,7 +226,6 @@ int main(int argc, char** argv) {
   pika::init_params p;
   p.desc_cmdline = desc_commandline;
   p.rp_callback = dlaf::initResourcePartitionerHandler;
-
   return pika::init(pika_main, argc, argv, p);
 }
 

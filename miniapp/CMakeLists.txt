@@ -23,24 +23,24 @@ add_library(DLAF_miniapp INTERFACE)
 target_link_libraries(DLAF_miniapp INTERFACE DLAF::DLAF pika::pika)
 target_include_directories(DLAF_miniapp INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
-DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp TEST)
+DLAF_addMiniapp(miniapp_cholesky SOURCES miniapp_cholesky.cpp)
 
-DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp TEST)
+DLAF_addMiniapp(miniapp_gen_to_std SOURCES miniapp_gen_to_std.cpp)
 
-DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp TEST)
+DLAF_addMiniapp(miniapp_reduction_to_band SOURCES miniapp_reduction_to_band.cpp)
 
-DLAF_addMiniapp(miniapp_band_to_tridiag SOURCES miniapp_band_to_tridiag.cpp TEST)
+DLAF_addMiniapp(miniapp_band_to_tridiag SOURCES miniapp_band_to_tridiag.cpp)
 
-DLAF_addMiniapp(miniapp_tridiag_solver SOURCES miniapp_tridiag_solver.cpp TEST)
+DLAF_addMiniapp(miniapp_tridiag_solver SOURCES miniapp_tridiag_solver.cpp)
 
-DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp TEST)
+DLAF_addMiniapp(miniapp_bt_band_to_tridiag SOURCES miniapp_bt_band_to_tridiag.cpp)
 
-DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp TEST)
+DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_band.cpp)
 
-DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp TEST)
+DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp)
 
-DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp TEST)
+DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 
-DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp TEST)
+DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)
 
 add_subdirectory(kernel)

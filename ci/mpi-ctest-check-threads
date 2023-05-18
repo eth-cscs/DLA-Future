@@ -49,7 +49,7 @@ for test in "${all_tests[@]}"; do
             if ((num_threads_spawned == num_threads_expected)); then
                 echo "Expected $num_threads_expected threads to be spawned by pika; correct number spawned"
             else
-                echo "Expected $num_threads_expected threads to be spawned by pika; actually spawned $num_threads_spawned"
+                echo "ERROR: Expected $num_threads_expected threads to be spawned by pika; actually spawned $num_threads_spawned"
                 echo "Spawned $((num_threads_spawned - num_threads_expected)) more threads than expected"
                 num_failed_tests=$((num_failed_tests + 1))
             fi
@@ -57,7 +57,7 @@ for test in "${all_tests[@]}"; do
             if ((num_threads_spawned == 0)); then
                 echo "Expected no threads to be spawned; none spawned"
             else
-                echo "Expected no threads to be spawned; actually spawned $num_threads_spawned"
+                echo "ERROR: Expected no threads to be spawned; actually spawned $num_threads_spawned"
                 num_failed_tests=$((num_failed_tests + 1))
             fi
         fi

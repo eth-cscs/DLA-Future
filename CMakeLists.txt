@@ -163,7 +163,7 @@ find_package(lapackpp REQUIRED)
 find_package(Umpire REQUIRED)
 
 # ----- HDF5
-if (DLAF_WITH_HDF5)
+if(DLAF_WITH_HDF5)
   find_package(HDF5 CONFIG REQUIRED COMPONENTS shared CXX)
 endif()
 

@@ -120,7 +120,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: mpi-ctest-check-threads -L {{LABEL}}"
+  script: mpi-ctest -L {{LABEL}}"
 fi
 
 JOBS=""

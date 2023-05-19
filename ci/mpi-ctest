@@ -2,31 +2,87 @@
 
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     SHARED_REPORTS="$CI_PROJECT_DIR/codecov-reports"
-    REPORT_NAME=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1`
+    REPORT_NAME=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
 
     mkdir -p "$SHARED_REPORTS"
-fi;
+fi
 
-pushd /DLA-Future-build > /dev/null
+pushd /DLA-Future-build >/dev/null
 
-# Run the tests, only output on the first rank
+# Get commands of all tests, since we will run the commands directly under
+# strace.
+IFS=$'\n' all_tests=($(ctest $@ --show-only=json-v1 | jq --raw-output '.tests | map(.command) | .[] | join(" ")'))
+
+num_failed_tests=0
+
+for test in "${all_tests[@]}"; do
+    # Run the tests, only output on the first rank
+    if [[ $SLURM_PROCID == "0" ]]; then
+        echo "# Testing \"$test\""
+
+        strace_output_file=$(mktemp -u -t dlaf-strace-output.tmp.XXXXXXXXXX)
+        test_output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
+        TZ=CET date +"Run started at: %H:%M:%S %z"
+        # We check here for clone3 syscalls. Not all systems use clone3 when
+        # spawning threads. clone may be used on some systems.
+        set +e
+        strace \
+            --output="$strace_output_file" \
+            --follow-forks \
+            -e clone3 \
+            bash -c "$test --pika:print-bind" |&
+            tee "$test_output_file"
+        test_exit_code=${PIPESTATUS[0]}
+        TZ=CET date +"Run finished at: %H:%M:%S %z"
+
+        # grep -c exits with code 0 if there are matches, 1 if there are no
+        # matches, and 2 if there was an error. We only exit on 2.
+        num_threads=$(cat "$test_output_file" | grep -c 'PU L')
+        ((PIPESTATUS[1] < 2)) || exit 1
+        # We expect pika to spawn one additional thread outside of thread pools
+        num_threads_expected=$((num_threads + 1))
+        num_threads_spawned=$(cat "$strace_output_file" | grep -c 'clone3(')
+        ((PIPESTATUS[1] < 2)) || exit 1
+        set -e
+
+        if ((num_threads > 0)); then
+            if ((num_threads_spawned == num_threads_expected)); then
+                echo "Expected $num_threads_expected threads to be spawned by pika; correct number spawned"
+            else
+                echo "ERROR: Expected $num_threads_expected threads to be spawned by pika; actually spawned $num_threads_spawned"
+                echo "Spawned $((num_threads_spawned - num_threads_expected)) more threads than expected"
+                num_failed_tests=$((num_failed_tests + 1))
+            fi
+        else
+            if ((num_threads_spawned == 0)); then
+                echo "Expected no threads to be spawned; none spawned"
+            else
+                echo "ERROR: Expected no threads to be spawned; actually spawned $num_threads_spawned"
+                num_failed_tests=$((num_failed_tests + 1))
+            fi
+        fi
+
+        [[ $test_exit_code ]] || num_failed_tests=$((num_failed_tests + 1))
+    else
+        bash -c "$test" >/dev/null
+    fi
+done
+
 if [[ $SLURM_PROCID == "0" ]]; then
-    TZ=CET date +"Run started at: %H:%M:%S %z"
-    ctest -V $@
-    TZ=CET date +"Run finished at: %H:%M:%S %z"
-else
-    ctest -Q $@
+    echo "$num_failed_tests test(s) failed"
 fi
 
 # Create coverage reports for code run
 if [[ "$ENABLE_COVERAGE" == "YES" ]]; then
     TZ=CET date +"Start creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 
-    fastcov --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &> /dev/null
+    fastcov --gcov gcov --process-gcno --branch-coverage --include /DLA-Future/ --exclude /DLA-Future/test/ /DLA-Future/miniapp/ --lcov -o "$LOCAL_REPORTS/run.info" &>/dev/null
 
     cp "$LOCAL_REPORTS/run.info" "$SHARED_REPORTS/codecov-$REPORT_NAME.info"
 
     TZ=CET date +"Done creating codecov reports from rank $SLURM_PROCID at: %H:%M:%S %z"
 fi
 
-popd > /dev/null
+popd >/dev/null
+
+exit $num_failed_tests

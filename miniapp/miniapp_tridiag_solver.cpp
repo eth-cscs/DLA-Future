@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <optional>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
@@ -25,6 +26,8 @@
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/hdf5.h>
+#include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/miniapp/dispatch.h>
@@ -51,11 +54,26 @@ struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
   SizeType m;
   SizeType mb;
+#ifdef DLAF_WITH_HDF5
+  std::optional<dlaf::matrix::FileHDF5> input_file;
+#endif
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()) {
     DLAF_ASSERT(m > 0, m);
     DLAF_ASSERT(mb > 0, mb);
+
+#ifdef DLAF_WITH_HDF5
+    if (vm.count("input-file") == 1) {
+      input_file = dlaf::matrix::FileHDF5(vm["input-file"].as<std::string>());
+
+      if (!vm["matrix-size"].defaulted()) {
+        std::cerr << "Warning! "
+                     "Specified matrix size will be ignored because an input file has been specified."
+                  << std::endl;
+      }
+    }
+#endif
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -76,21 +94,29 @@ struct TridiagSolverMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    // Allocate the tridiagonal, eigenvalues and eigenvectors matrices
-    const Distribution dist_trd(LocalElementSize(opts.m, 2), TileElementSize(opts.mb, 2));
-    const Distribution dist_evals(LocalElementSize(opts.m, 1), TileElementSize(opts.mb, 1));
-    const Distribution dist_evecs(GlobalElementSize(opts.m, opts.m), TileElementSize(opts.mb, opts.mb),
-                                  comm_grid.size(), comm_grid.rank(), {0, 0});
-
-    Matrix<T, Device::CPU> tridiag(dist_trd);
-    Matrix<T, Device::CPU> evals(dist_evals);
-    Matrix<T, Device::CPU> evecs(dist_evecs);
-
-    Matrix<const T, Device::CPU> tridiag_ref = [dist_trd]() {
+    Matrix<const T, Device::CPU> tridiag_ref = [&opts]() {
+#ifdef DLAF_WITH_HDF5
+      if (opts.input_file) {
+        Matrix<T, Device::CPU> tridiag = opts.input_file->read<T>("/tridiag", {opts.mb, 2});
+        return tridiag;
+      }
+#endif
+      const Distribution dist_trd(LocalElementSize(opts.m, 2), TileElementSize(opts.mb, 2));
       Matrix<T, Device::CPU> tridiag(dist_trd);
       dlaf::matrix::util::set_random(tridiag);
       return tridiag;
     }();
+
+    const Distribution dist_evals(LocalElementSize(tridiag_ref.size().rows(), 1),
+                                  TileElementSize(opts.mb, 1));
+    const Distribution dist_evecs(GlobalElementSize(tridiag_ref.size().rows(),
+                                                    tridiag_ref.size().rows()),
+                                  TileElementSize(opts.mb, opts.mb), comm_grid.size(), comm_grid.rank(),
+                                  {0, 0});
+
+    Matrix<T, Device::CPU> tridiag(tridiag_ref.distribution());
+    Matrix<T, Device::CPU> evals(dist_evals);
+    Matrix<T, Device::CPU> evecs(dist_evecs);
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -166,6 +192,7 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

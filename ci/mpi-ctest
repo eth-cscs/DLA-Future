@@ -44,8 +44,10 @@ for test in "${all_tests[@]}"; do
         set -e
 
         if ((num_threads > 0)); then
-            # We expect pika to spawn one additional thread outside of thread pools
-            num_threads_expected=$((num_threads + 1))
+            # We expect pika to spawn one additional thread outside of thread
+            # pools each time the runtime is started
+            num_extra_threads=$(cat "$test_output_file" | grep -c ' 0: PU L')
+            num_threads_expected=$((num_threads + num_extra_threads))
 
             if ((num_threads_spawned == num_threads_expected)); then
                 echo "Expected $num_threads_expected threads to be spawned by pika; correct number spawned"

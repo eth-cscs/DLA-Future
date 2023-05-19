@@ -29,6 +29,8 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
+#include "dlaf/matrix/hdf5.h"
+
 namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
@@ -61,7 +63,18 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   auto mat_taus = reductionToBand<B>(grid, mat_a, band_size);
   auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
+#ifdef DLAF_WITH_HDF5
+  matrix::FileHDF5 file(grid.fullCommunicator(), "trid-ref.h5");
+
+  file.write(ret.tridiagonal, "/tridiag");
+#endif
+
   eigensolver::tridiagSolver<B>(grid, ret.tridiagonal, evals, mat_e);
+
+#ifdef DLAF_WITH_HDF5
+  file.write(evals, "/evals");
+  file.write(mat_e, "/evecs");
+#endif
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(grid, band_size, mat_e, mat_a, mat_taus);

@@ -164,7 +164,7 @@ find_package(Umpire REQUIRED)
 
 # ----- HDF5
 if (DLAF_WITH_HDF5)
-  find_package(HDF5 CONFIG REQUIRED COMPONENTS shared CXX CXX_HL)
+  find_package(HDF5 CONFIG REQUIRED COMPONENTS shared CXX)
 endif()
 
 # ----- EXTERNAL
@@ -204,13 +204,4 @@ endif()
 # ---------------------------------------------------------------------------
 if(DLAF_BUILD_DOC)
   add_subdirectory(doc)
-endif()
-
-if(DLAF_WITH_HDF5)
-  add_executable(matrix-rw matrix-rw.cpp)
-  target_link_libraries(matrix-rw
-    PRIVATE
-    dlaf.core
-    hdf5_cpp-shared
-    hdf5_hl_cpp-shared)
 endif()

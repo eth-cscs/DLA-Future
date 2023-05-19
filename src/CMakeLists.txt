@@ -88,7 +88,7 @@ target_link_libraries(
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
     $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
     $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
-    $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared hdf5_hl_cpp-shared>
+    $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared>
 )
 target_compile_definitions(
   dlaf.prop

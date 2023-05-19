@@ -21,6 +21,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("shared", default=True, description="Build shared libraries.")
 
+    variant("hdf5", default=False, description="HDF5 support for dealing with matrices on disk.")
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -52,7 +54,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocsolver", when="+rocm")
     depends_on("rocthrust", when="+rocm")
 
-    depends_on("hdf5 +cxx+hl+mpi+threadsafe", when="+miniapps")
+    depends_on("hdf5 +cxx+mpi+threadsafe", when="+hdf5")
 
     conflicts("+cuda", when="+rocm")
 
@@ -152,7 +154,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 args.append(self.define("CMAKE_CUDA_ARCHITECTURES", arch_str))
 
         # HDF5 support
-        if "^hdf5" in spec:
+        if "+hdf5" in spec:
             args.append(self.define("DLAF_WITH_HDF5", True))
 
         # DOC

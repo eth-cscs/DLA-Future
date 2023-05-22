@@ -98,7 +98,7 @@ cpu release build gcc12 cxx20:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@12.1.0
     CXXSTD: 20

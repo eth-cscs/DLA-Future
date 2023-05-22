@@ -192,7 +192,9 @@ int main(int argc, char** argv) {
   desc_commandline.add_options()
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+#ifdef DLAF_WITH_HDF5
     ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
+#endif
   ;
   // clang-format on
   dlaf::miniapp::addUploOption(desc_commandline);

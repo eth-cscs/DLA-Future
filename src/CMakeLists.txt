@@ -121,7 +121,6 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
       <mpi.h>
       $<$<BOOL:${DLAF_WITH_CUDA}>:<pika/cuda.hpp$<ANGLE-R>>
       <pika/execution.hpp>
-      <pika/future.hpp>
       <pika/mutex.hpp>
       <pika/program_options.hpp>
       <pika/runtime.hpp>

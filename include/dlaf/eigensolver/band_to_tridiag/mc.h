@@ -236,7 +236,7 @@ public:
     if constexpr (D == Device::CPU) {
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source) {
+          [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
@@ -270,7 +270,7 @@ public:
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
+          [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
@@ -314,7 +314,7 @@ public:
     if constexpr (D == Device::CPU) {
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source) {
+          [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
 
@@ -347,7 +347,7 @@ public:
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
+          [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
             // The elements are copied in the following way:
@@ -1422,11 +1422,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only rank0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(
-          comm::scheduleSendBcast(ex::make_unique_any_sender(comm_bcast()), mat_trid.read(index)));
+      ex::start_detached(comm::scheduleSendBcast(comm_bcast(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(ex::make_unique_any_sender(comm_bcast()), 0,
-                                                 mat_trid.readwrite(index)));
+      ex::start_detached(comm::scheduleRecvBcast(comm_bcast(), 0, mat_trid.readwrite(index)));
   }
 
   return {std::move(mat_trid), std::move(mat_v)};

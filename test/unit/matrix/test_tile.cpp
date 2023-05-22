@@ -47,6 +47,20 @@ TileSizes getSizes(const Tile<T, D>& tile) {
   return TileSizes(tile.size(), tile.ld());
 }
 
+TEST(TilePipeline, ResetValid) {
+  // The pipeline is valid after construction
+  dlaf::matrix::internal::TilePipeline<float, Device::CPU> pipeline({});
+  ASSERT_TRUE(pipeline.valid());
+
+  // The pipeline can be reset and is invalid afterwards
+  pipeline.reset();
+  ASSERT_FALSE(pipeline.valid());
+
+  // The pipeline can be reset multiple times and remains invalid
+  pipeline.reset();
+  ASSERT_FALSE(pipeline.valid());
+}
+
 template <typename Type>
 class TileTest : public ::testing::Test {};
 

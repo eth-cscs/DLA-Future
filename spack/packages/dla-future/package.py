@@ -45,7 +45,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+rocm~shared", when="+rocm")
     depends_on("umpire@4.1.0:")
 
-    depends_on("pika@0.15:")
+    depends_on("pika@0.15.1:")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
@@ -142,9 +142,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         if "+ci-test" in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
-            if "+cuda":
+            if "+cuda" in self.spec:
                 args.append(self.define("CMAKE_CUDA_FLAGS", "-Werror=all-warnings"))
-            if "+rocm":
+            if "+rocm" in self.spec:
                 args.append(self.define("CMAKE_HIP_FLAGS", "-Werror"))
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))

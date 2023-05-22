@@ -25,7 +25,7 @@ namespace dlaf::multiplication {
 
 /// General sub-matrix multiplication implementation on local memory, computing
 /// C[a:b][a:b] = alpha * opA(A[a:b][a:b]) * opB(B[a:b][a:b]) + beta * C[a:b][a:b]
-/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (included)
+/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (excluded)
 ///
 /// @param  opA specifies the form of opA(A) to be used in the matrix multiplication:
 ///         \a NoTrans, \a Trans, \a ConjTrans,
@@ -41,7 +41,7 @@ namespace dlaf::multiplication {
 /// @pre mat_a, mat_b and mat_c have the same square block size,
 /// @pre mat_a, mat_b and mat_c have the same size,
 /// @pre mat_a, mat_b and mat_c are not distributed,
-/// @pre a <= b < mat_a.nrTiles().rows()
+/// @pre a <= b <= mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
 void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB,
                       const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
@@ -56,16 +56,18 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 
   // Note:
   // This is an over-constraint, since the algorithm just cares about the sub-matrix size.
-  // It simplifies next check about [a,b] range validity, that otherwise would require it to be
+  // It simplifies next check about [a,b) range validity, that otherwise would require it to be
   // validated against every single sub-matrix in a, b and c that might have different element sizes.
   //
   // At the moment, we don't have this use-case, so let's keep it simple.
+  DLAF_ASSERT(dlaf::matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(equal_size(mat_a, mat_b), mat_a, mat_b);
   DLAF_ASSERT(equal_size(mat_a, mat_c), mat_a, mat_c);
 
-  const SizeType m = mat_a.nrTiles().rows();
+  [[maybe_unused]] const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
-  DLAF_ASSERT(a >= 0 && a < m, a, m);
+  DLAF_ASSERT(a >= 0 && a <= m, a, m);
+  DLAF_ASSERT(b >= 0 && b <= m, b, m);
 
   using namespace blas;
 
@@ -77,7 +79,7 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 
 /// General sub-matrix distributed multiplication, computing
 /// C[a:b][a:b] = alpha * A[a:b][a:b] * B[a:b][a:b] + beta * C[a:b][a:b]
-/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (included)
+/// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (excluded)
 ///
 /// @param  mat_a contains the input matrix A. Only tiles whose both row and col tile coords are in
 ///         the closed range [a,b] are accessed in read-only mode (elements are not modified)
@@ -89,9 +91,10 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 /// @pre mat_a, mat_b and mat_c are distributed in the same way,
 /// @pre mat_a, mat_b and mat_c have the same square block size,
 /// @pre mat_a, mat_b and mat_c have the same size,
-/// @pre a <= b < mat_a.nrTiles().rows()
+/// @pre a <= b <= mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
-void generalSubMatrix(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& row_task_chain,
+void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
+                      common::Pipeline<comm::Communicator>& row_task_chain,
                       common::Pipeline<comm::Communicator>& col_task_chain, const SizeType a,
                       const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
@@ -106,16 +109,18 @@ void generalSubMatrix(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   // Note:
   // This is an over-constraint, since the algorithm just cares about the sub-matrix size (and its
   // distribution).
-  // It simplifies next check about [a,b] range validity, that otherwise would require it to be
+  // It simplifies next check about [a,b) range validity, that otherwise would require it to be
   // validated against every single sub-matrix in a, b and c that might have different element sizes.
   //
   // At the moment, we don't have this use-case, so let's keep it simple.
+  DLAF_ASSERT(dlaf::matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(equal_size(mat_a, mat_b), mat_a, mat_b);
   DLAF_ASSERT(equal_size(mat_a, mat_c), mat_a, mat_c);
 
-  const SizeType m = mat_a.nrTiles().rows();
+  [[maybe_unused]] const SizeType m = mat_a.nrTiles().rows();
   DLAF_ASSERT(a <= b, a, b);
-  DLAF_ASSERT(a >= 0 && a < m, a, m);
+  DLAF_ASSERT(a >= 0 && a <= m, a, m);
+  DLAF_ASSERT(b >= 0 && b <= m, b, m);
 
   internal::GeneralSub<B, D, T>::callNN(row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta,
                                         mat_c);

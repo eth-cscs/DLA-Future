@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "dlaf/common/assert.h"
 #include "dlaf/matrix/tile.h"
 
 namespace dlaf::matrix::internal {
@@ -22,19 +23,58 @@ public:
   TilePipeline(const TilePipeline&) = delete;
   TilePipeline& operator=(const TilePipeline&) = delete;
 
+  /// Get a read-only sender to a wrapped tile.
+  ///
+  /// The returned sender will send its value when the previous access to the
+  /// tile has completed. If the previous access is read-only concurrent access
+  /// to the tile will be provided.
+  ///
+  /// @return A sender to a read-only tile wrapper.
+  /// @pre valid()
   ReadOnlyTileSender<T, D> read() {
-    return pipeline.read();
+    DLAF_ASSERT(valid(), "");
+    return pipeline->read();
   }
 
+  /// Get a read-write sender to a tile.
+  ///
+  /// The returned sender will send its value when the previous access to the
+  /// tile has completed.
+  ///
+  /// @return A sender to a read-write tile.
+  /// @pre valid()
   ReadWriteTileSender<T, D> readwrite() {
-    return pipeline.readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
+    DLAF_ASSERT(valid(), "");
+    return pipeline->readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
   }
 
+  /// Get a read-write sender to a wrapped tile.
+  ///
+  /// The returned sender will send its value when the previous access to the
+  /// tile has completed.
+  ///
+  /// @return A sender to a read-write tile wrapper.
+  /// @pre valid()
   auto readwrite_with_wrapper() {
-    return pipeline.readwrite();
+    DLAF_ASSERT(valid(), "");
+    return pipeline->readwrite();
+  }
+
+  /// Check if the pipeline is valid.
+  ///
+  /// @return true if the pipeline hasn't been reset, otherwise false.
+  bool valid() const noexcept {
+    return pipeline.has_value();
+  }
+
+  /// Reset the pipeline.
+  ///
+  /// @post !valid()
+  void reset() noexcept {
+    pipeline.reset();
   }
 
 private:
-  TileAsyncRwMutex<T, D> pipeline;
+  std::optional<TileAsyncRwMutex<T, D>> pipeline;
 };
 }

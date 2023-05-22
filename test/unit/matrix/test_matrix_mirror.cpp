@@ -58,7 +58,7 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 }
 
 template <typename T, Device Target, Device Source>
-void basicsTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void basicsTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
   MatrixMirror<T, Target, Source> mat_mirror(mat);
@@ -79,7 +79,7 @@ TYPED_TEST(MatrixMirrorTest, Basics) {
 }
 
 template <typename T, Device Target, Device Source>
-void getTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void getTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
@@ -122,7 +122,7 @@ TYPED_TEST(MatrixMirrorTest, Get) {
 }
 
 template <typename T, Device Target, Device Source>
-void getSourceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void getSourceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
@@ -153,7 +153,7 @@ TYPED_TEST(MatrixMirrorTest, GetSource) {
 }
 
 template <typename T, Device Target, Device Source>
-void copyTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void copyTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   BaseType<T> offset = 0.0;
   auto el = [&offset](const GlobalElementIndex& index) {
     SizeType i = index.row();
@@ -221,7 +221,7 @@ TYPED_TEST(MatrixMirrorTest, Copy) {
 }
 
 template <typename T, Device Target, Device Source>
-void copyConstTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void copyConstTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   BaseType<T> offset = 0.0;
   auto el = [&offset](const GlobalElementIndex& index) {
     SizeType i = index.row();
@@ -263,7 +263,7 @@ TYPED_TEST(MatrixMirrorTest, CopyConst) {
 }
 
 template <typename T, Device Target, Device Source>
-void sameDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void sameDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);
@@ -296,7 +296,7 @@ TYPED_TEST(MatrixMirrorTest, SameDevicesSameMemory) {
 
 #ifdef DLAF_WITH_GPU
 template <typename T, Device Target, Device Source>
-void differentDeviceTest(CommunicatorGrid const& comm_grid, TestSizes const& test) {
+void differentDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
   Matrix<T, Source> mat(size, test.block_size, comm_grid);

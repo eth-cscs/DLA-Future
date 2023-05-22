@@ -47,9 +47,8 @@ void initializeUmpireHostAllocator(std::size_t initial_bytes) {
                                                                                           host_allocator,
                                                                                           initial_bytes);
     auto thread_safe_pooled_host_allocator =
-        umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::ThreadSafeAllocator>("PINNED_thread_safe_pool",
-                                                                  pooled_host_allocator);
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
+            "PINNED_thread_safe_pool", pooled_host_allocator);
 
     memory::internal::getUmpireHostAllocator() = thread_safe_pooled_host_allocator;
 
@@ -71,12 +70,11 @@ void initializeUmpireDeviceAllocator(std::size_t initial_bytes) {
   if (!initialized) {
     auto device_allocator = umpire::ResourceManager::getInstance().getAllocator("DEVICE");
     auto pooled_device_allocator =
-        umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::QuickPool>("DEVICE_pool", device_allocator, initial_bytes);
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::QuickPool>(
+            "DEVICE_pool", device_allocator, initial_bytes);
     auto thread_safe_pooled_device_allocator =
-        umpire::ResourceManager::getInstance()
-            .makeAllocator<umpire::strategy::ThreadSafeAllocator>("DEVICE_thread_safe_pool",
-                                                                  pooled_device_allocator);
+        umpire::ResourceManager::getInstance().makeAllocator<umpire::strategy::ThreadSafeAllocator>(
+            "DEVICE_thread_safe_pool", pooled_device_allocator);
 
     memory::internal::getUmpireDeviceAllocator() = thread_safe_pooled_device_allocator;
 

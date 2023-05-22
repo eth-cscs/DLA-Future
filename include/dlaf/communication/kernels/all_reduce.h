@@ -37,13 +37,11 @@ template <class T, Device D>
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out);
 
-#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                     \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                              \
-  scheduleAllReduce(pika::execution::experimental::unique_any_sender<                         \
-                        common::Pipeline<Communicator>::Wrapper>                              \
-                        pcomm,                                                                \
-                    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in, \
-                    dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
+#define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                              \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleAllReduce(                    \
+      pika::execution::experimental::unique_any_sender<common::Pipeline<Communicator>::Wrapper> pcomm, \
+      MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in,                        \
+      dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
 
 DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, int, Device::CPU);
 
@@ -57,12 +55,10 @@ template <class T, Device D>
     pika::execution::experimental::unique_any_sender<common::Pipeline<Communicator>::Wrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)           \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>             \
-  scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender< \
-                               common::Pipeline<Communicator>::Wrapper>      \
-                               pcomm,                                        \
-                           MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
+#define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)                                     \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleAllReduceInPlace(             \
+      pika::execution::experimental::unique_any_sender<common::Pipeline<Communicator>::Wrapper> pcomm, \
+      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::CPU);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);

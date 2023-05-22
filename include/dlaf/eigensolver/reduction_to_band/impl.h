@@ -283,8 +283,8 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
   namespace di = dlaf::internal;
 
   std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
-  panel_tiles.reserve(
-      to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
+  panel_tiles.reserve(to_sizet(std::distance(panel_view.iteratorLocal().begin(),
+                                             panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
     panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
@@ -297,9 +297,8 @@ auto computePanelReflectors(MatrixLike& mat_a, const matrix::SubPanelView& panel
                       ex::when_all_vector(std::move(panel_tiles))) |
          ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
          ex::bulk(nthreads,
-                  [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
-                                                               auto& barrier_ptr, auto& w, auto& taus,
-                                                               auto& tiles) {
+                  [nthreads, nrefls, cols = panel_view.cols()](
+                      const std::size_t index, auto& barrier_ptr, auto& w, auto& taus, auto& tiles) {
                     const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
                     const std::size_t begin = index * batch_size;
                     const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
@@ -598,8 +597,8 @@ auto computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   namespace di = dlaf::internal;
 
   std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
-  panel_tiles.reserve(
-      to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
+  panel_tiles.reserve(to_sizet(std::distance(panel_view.iteratorLocal().begin(),
+                                             panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
     panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
@@ -761,8 +760,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite({i, 0})));
     }
     else {
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read(index_xt)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
+                                                  xt.read(index_xt)));
     }
   }
 
@@ -772,11 +771,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite(index_x)));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
+                                                         x.readwrite(index_x)));
     else
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read(index_x)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
+                                                  x.read(index_x)));
   }
 }
 
@@ -1119,16 +1118,16 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_vt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_vt(
+      n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_wt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_wt(
+      n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_xt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_xt(
+      n_workspaces, dist);
 
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
@@ -1248,8 +1247,8 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> Reduc
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(
-          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2.readwrite(LocalTileIndex(0, 0))));
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+                                                        w2.readwrite(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

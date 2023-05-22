@@ -320,11 +320,9 @@ void testExternalTile(const GlobalElementSize size, const TileElementSize blocks
   // For this reason we have to conditionally (depending on StoreTransposed value) use:
   // - dist_t
   // - correctIndex helper
-  [[maybe_unused]] const matrix::Distribution dist_t(common::transposed(size),
-                                                     common::transposed(blocksize),
-                                                     common::transposed(comm_grid.size()),
-                                                     common::transposed(comm_grid.rank()),
-                                                     common::transposed(src_rank_idx));
+  [[maybe_unused]] const matrix::Distribution dist_t(
+      common::transposed(size), common::transposed(blocksize), common::transposed(comm_grid.size()),
+      common::transposed(comm_grid.rank()), common::transposed(src_rank_idx));
 
   const auto correctIndex = [](LocalTileIndex panel_ij) {
     if constexpr (StoreTransposed::Yes == Storage)

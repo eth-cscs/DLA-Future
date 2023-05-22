@@ -74,11 +74,10 @@ void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
   namespace ex = pika::execution::experimental;
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
-  ex::start_detached(
-      dlaf::internal::transform(dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
-                                Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
-                                dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src),
-                                                            std::forward<DstSender>(dst))));
+  ex::start_detached(dlaf::internal::transform(
+      dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
+      Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
+      dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src), std::forward<DstSender>(dst))));
 }
 
 template <Backend backend, class TSender, class SourcePanelSender, class PanelTileSender>

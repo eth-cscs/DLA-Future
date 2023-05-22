@@ -73,5 +73,5 @@ struct Unwrapping {
 };
 
 template <typename F>
-Unwrapping(F &&) -> Unwrapping<std::decay_t<F>>;
+Unwrapping(F&&) -> Unwrapping<std::decay_t<F>>;
 }

@@ -230,9 +230,8 @@ template <Coord rc>
 void testIndex(const Distribution& obj, const ParametersIndices& test) {
   SizeType local_tile = rc == Coord::Row ? test.local_tile[0] : test.local_tile[1];
 
-  EXPECT_EQ(test.global_element.get<rc>(),
-            obj.globalElementFromGlobalTileAndTileElement<rc>(test.global_tile.get<rc>(),
-                                                              test.tile_element.get<rc>()));
+  EXPECT_EQ(test.global_element.get<rc>(), obj.globalElementFromGlobalTileAndTileElement<rc>(
+                                               test.global_tile.get<rc>(), test.tile_element.get<rc>()));
   EXPECT_EQ(test.rank_tile.get<rc>(), obj.rankGlobalElement<rc>(test.global_element.get<rc>()));
   EXPECT_EQ(test.rank_tile.get<rc>(), obj.rankGlobalTile<rc>(test.global_tile.get<rc>()));
 

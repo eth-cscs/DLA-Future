@@ -116,9 +116,9 @@ auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const com
 
              return di::whenAllLift(std::move(recv), col_data, mem_view(), to_sizet(n) * sizeof(T),
                                     whip::memcpy_host_to_device) |
-                    di::transform(di::Policy<
-                                      CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high},
-                                  whip::memcpy_async);
+                    di::transform(
+                        di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high},
+                        whip::memcpy_async);
            });
   }
 #endif
@@ -313,10 +313,10 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
         // Note:
         // These communications use raw pointers, so correct lifetime management of related tiles
         // is up to the caller.
-        comm_checkpoints.emplace_back(
-            wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, tag, col_send, m));
-        comm_checkpoints.emplace_back(
-            wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, tag, col_recv, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, tag,
+                                                                     col_send, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, tag,
+                                                                     col_recv, m));
       }
 
       // Note:
@@ -342,25 +342,25 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
       // together beforehand, and with them, also temporary buffers for the GPU case. If this assumption
       // will drop, it is relevant to highlight that there is nothing that would stop to schedule and,
       // more importantly, allocate all of them together.
-      tt::sync_wait(
-          ex::when_all_vector(std::move(comm_checkpoints)) |
-          di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x, col_y](auto&&... ts) {
-            // Note:
-            // each one computes his own, but just stores either x or y (or both if on the same rank)
-            if constexpr (D == Device::CPU) {
-              static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
-              dlaf::common::internal::SingleThreadedBlasScope single;
-              blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
-            }
+      tt::sync_wait(ex::when_all_vector(std::move(comm_checkpoints)) |
+                    di::transform(di::Policy<DefaultBackend_v<D>>(), [rot, m, col_x,
+                                                                      col_y](auto&&... ts) {
+                      // Note:
+                      // each one computes his own, but just stores either x or y (or both if on the same rank)
+                      if constexpr (D == Device::CPU) {
+                        static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
+                        dlaf::common::internal::SingleThreadedBlasScope single;
+                        blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
+                      }
 #ifdef DLAF_WITH_GPU
-            else if constexpr (D == Device::GPU) {
-              givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
-            }
+                      else if constexpr (D == Device::GPU) {
+                        givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
+                      }
 #endif
-            else {
-              DLAF_STATIC_UNIMPLEMENTED(T);
-            }
-          }));
+                      else {
+                        DLAF_STATIC_UNIMPLEMENTED(T);
+                      }
+                    }));
     }
   };
 

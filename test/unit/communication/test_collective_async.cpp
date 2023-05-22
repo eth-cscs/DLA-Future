@@ -152,8 +152,8 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(tt::sync_wait(mat_in.readwrite(idx)), input_tile);
 
-  ex::start_detached(
-      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out.readwrite(idx)));
+  ex::start_detached(dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx),
+                                                   mat_out.readwrite(idx)));
 
   auto tile_in = tt::sync_wait(mat_in.read(idx));
   auto tile_out = tt::sync_wait(mat_out.read(idx));

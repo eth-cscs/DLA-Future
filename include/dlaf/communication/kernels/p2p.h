@@ -28,10 +28,10 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, Comm)                                     \
-  kword template pika::execution::experimental::unique_any_sender<>                           \
-  scheduleSend(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, \
-               IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
+#define DLAF_SCHEDULE_SEND_ETI(kword, Type, Device, Comm)                                            \
+  kword template pika::execution::experimental::unique_any_sender<> scheduleSend(                    \
+      pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag, \
+      dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_SEND_ETI(extern, float, Device::CPU, Communicator);
 DLAF_SCHEDULE_SEND_ETI(extern, double, Device::CPU, Communicator);
@@ -64,10 +64,10 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag,
     dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, Comm)                                       \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                                \
-  scheduleRecv(pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, \
-               IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
+#define DLAF_SCHEDULE_RECV_ETI(kword, Type, Device, Comm)                                              \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleRecv(                         \
+      pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag, \
+      dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_RECV_ETI(extern, float, Device::CPU, Communicator);
 DLAF_SCHEDULE_RECV_ETI(extern, double, Device::CPU, Communicator);

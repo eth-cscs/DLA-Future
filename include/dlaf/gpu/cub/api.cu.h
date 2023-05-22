@@ -131,11 +131,10 @@ struct DeviceSegmentedReduce {
                                     OffsetIteratorT d_begin_offsets, OffsetIteratorT d_end_offsets,
                                     ReductionOp reduction_op, T initial_value, whip::stream_t stream = 0,
                                     bool debug_synchronous = false) {
-    return ::rocprim::segmented_reduce(d_temp_storage, temp_storage_bytes, d_in, d_out,
-                                       to_uint(num_segments), d_begin_offsets, d_end_offsets,
-                                       detail::convert_result_type<InputIteratorT, OutputIteratorT>(
-                                           reduction_op),
-                                       initial_value, stream, debug_synchronous);
+    return ::rocprim::segmented_reduce(
+        d_temp_storage, temp_storage_bytes, d_in, d_out, to_uint(num_segments), d_begin_offsets,
+        d_end_offsets, detail::convert_result_type<InputIteratorT, OutputIteratorT>(reduction_op),
+        initial_value, stream, debug_synchronous);
   }
 };
 

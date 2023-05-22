@@ -97,8 +97,8 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void transformDetach(const Policy<B> policy, F&& f, Sender&& sender) {
-  pika::execution::experimental::start_detached(
-      transform<Tag>(policy, std::forward<F>(f), std::forward<Sender>(sender)));
+  pika::execution::experimental::start_detached(transform<Tag>(policy, std::forward<F>(f),
+                                                               std::forward<Sender>(sender)));
 }
 
 /// Lazy transform. This does not submit the work and returns a sender. First
@@ -115,8 +115,8 @@ template <TransformDispatchType Tag, Backend B, typename F, typename... Ts>
 template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = Backend::MC,
           typename F = void, typename... Ts>
 void transformLiftDetach(const Policy<B> policy, F&& f, Ts&&... ts) {
-  pika::execution::experimental::start_detached(
-      transformLift<Tag>(policy, std::forward<F>(f), std::forward<Ts>(ts)...));
+  pika::execution::experimental::start_detached(transformLift<Tag>(policy, std::forward<F>(f),
+                                                                   std::forward<Ts>(ts)...));
 }
 
 template <TransformDispatchType Tag, Backend B, typename F>
@@ -135,9 +135,9 @@ public:
   PartialTransform(const Policy<B> policy, F_&& f)
       : PartialTransformBase<Tag, B, F>{policy, std::forward<F_>(f)} {}
   PartialTransform(PartialTransform&&) = default;
-  PartialTransform(PartialTransform const&) = default;
+  PartialTransform(const PartialTransform&) = default;
   PartialTransform& operator=(PartialTransform&&) = default;
-  PartialTransform& operator=(PartialTransform const&) = default;
+  PartialTransform& operator=(const PartialTransform&) = default;
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransform pa) {
@@ -160,9 +160,9 @@ public:
   PartialTransformDetach(const Policy<B> policy, F_&& f)
       : PartialTransformBase<Tag, B, F>{policy, std::forward<F_>(f)} {}
   PartialTransformDetach(PartialTransformDetach&&) = default;
-  PartialTransformDetach(PartialTransformDetach const&) = default;
+  PartialTransformDetach(const PartialTransformDetach&) = default;
   PartialTransformDetach& operator=(PartialTransformDetach&&) = default;
-  PartialTransformDetach& operator=(PartialTransformDetach const&) = default;
+  PartialTransformDetach& operator=(const PartialTransformDetach&) = default;
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {

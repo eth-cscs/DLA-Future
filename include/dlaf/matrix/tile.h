@@ -437,8 +437,8 @@ private:
     // either untracked or disjoint tracked read-write access.
     DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_)),
                 "");
-    DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)),
-                "");
+    DLAF_ASSERT(
+        (!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)), "");
 
     Tile subtile(spec.size, ConstTileType::createMemoryViewForSubtile(*this, spec), this->ld());
     // Not all possible states of the dependency tracker are copyable. This

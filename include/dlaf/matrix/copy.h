@@ -38,11 +38,10 @@ void copy(LocalTileSize sz, LocalTileIndex idx_source_begin, Matrix<const T, Sou
 
   // Given that `sz` is the same for both `source` and `dest` it is sufficient to only check if the local
   // length of the copied region is the same.
-  DLAF_ASSERT(source.distribution().localElementDistanceFromLocalTile(idx_source_begin,
-                                                                      idx_source_begin + sz) ==
-                  dest.distribution().localElementDistanceFromLocalTile(idx_dest_begin,
-                                                                        idx_dest_begin + sz),
-              source, dest);
+  DLAF_ASSERT(
+      source.distribution().localElementDistanceFromLocalTile(idx_source_begin, idx_source_begin + sz) ==
+          dest.distribution().localElementDistanceFromLocalTile(idx_dest_begin, idx_dest_begin + sz),
+      source, dest);
 
   namespace ex = pika::execution::experimental;
   for (auto idx_dest : common::iterate_range2d(idx_dest_begin, sz)) {

@@ -876,8 +876,8 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
         auto laset_sender =
             di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm));
         ex::start_detached(tile::laset(di::Policy<DefaultBackend_v<D>>(), std::move(laset_sender)));
-        ex::start_detached(
-            comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, comm_vec.readwrite(idx_gl_comm)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
+                                                          comm_vec.readwrite(idx_gl_comm)));
       }
     }
     return;
@@ -891,16 +891,16 @@ void reduceMultiplyWeightVector(common::Pipeline<comm::Communicator>& row_task_c
     const GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);
 
     // set buffer to 1
-    ex::start_detached(
-        di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm)) |
-        tile::laset(di::Policy<DefaultBackend_v<D>>()));
+    ex::start_detached(di::whenAllLift(blas::Uplo::General, T(1), T(1),
+                                       comm_vec.readwrite(idx_gl_comm)) |
+                       tile::laset(di::Policy<DefaultBackend_v<D>>()));
 
     // copy the first column of the matrix tile into the column tile of the buffer
     copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, mat.read(idx_loc_tile),
                    Coord::Col, comm_vec.readwrite(idx_gl_comm));
 
-    ex::start_detached(
-        comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, comm_vec.readwrite(idx_gl_comm)));
+    ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,
+                                                      comm_vec.readwrite(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),
@@ -927,10 +927,10 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     for (SizeType i_tile = i_begin; i_tile < i_end; ++i_tile) {
       if (this_rank.col() == dist.rankGlobalTile<Coord::Col>(i_tile)) {
         const GlobalTileIndex idx_gl_comm(i_tile, 0);
-        ex::start_detached(
-            tile::set0(di::Policy<DefaultBackend_v<D>>(), comm_vec.readwrite(idx_gl_comm)));
-        ex::start_detached(
-            comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, comm_vec.readwrite(idx_gl_comm)));
+        ex::start_detached(tile::set0(di::Policy<DefaultBackend_v<D>>(),
+                                      comm_vec.readwrite(idx_gl_comm)));
+        ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
+                                                          comm_vec.readwrite(idx_gl_comm)));
       }
     }
     return;
@@ -950,8 +950,8 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
     copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read(idx_loc_tile),
                    Coord::Col, comm_vec.readwrite(idx_gl_comm));
 
-    ex::start_detached(
-        comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, comm_vec.readwrite(idx_gl_comm)));
+    ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,
+                                                      comm_vec.readwrite(idx_gl_comm)));
 
     // copy the column tile of the buffer into the first column of the matrix tile
     copy1DAsync<D>(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),
@@ -1084,8 +1084,8 @@ void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, 
       ex::start_detached(comm::scheduleSendBcast(row_task_chain(), evals.read(evals_idx)));
     }
     else {
-      ex::start_detached(
-          comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank, evals.readwrite(evals_idx)));
+      ex::start_detached(comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank,
+                                                 evals.readwrite(evals_idx)));
     }
   }
 }

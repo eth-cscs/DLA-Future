@@ -68,8 +68,8 @@ public:
           indices.emplace_back(
               LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),
                              orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});
-          specs.emplace_back(
-              SubTileSpec{{i, j}, tileSize(distribution().globalTileIndex(indices.back()))});
+          specs.emplace_back(SubTileSpec{{i, j},
+                                         tileSize(distribution().globalTileIndex(indices.back()))});
         }
 
       auto sub_tiles = splitTileDisjoint(mat.readwrite(orig_tile_index), specs);

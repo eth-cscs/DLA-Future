@@ -32,21 +32,21 @@
 ///
 /// The function name is wrapped in parentheses in the last overload to disable
 /// ADL. We are only interested in forwarding to the first overload.
-#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                 \
-  template <Backend B, typename Sender,                                                            \
-            typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>       \
-  auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                      \
-    return dlaf::internal::transform<tag>(p, callable, std::forward<Sender>(s));                   \
-  }                                                                                                \
-                                                                                                   \
-  template <Backend B>                                                                             \
-  auto fname(const dlaf::internal::Policy<B> p) {                                                  \
-    return dlaf::internal::makePartialTransform<tag>(p, callable);                                 \
-  }                                                                                                \
-                                                                                                   \
-  template <Backend B, typename T1, typename T2, typename... Ts>                                   \
-  void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                    \
-    pika::this_thread::experimental::sync_wait(                                                    \
-        (fname)(p, pika::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
-                                                       std::forward<Ts>(ts)...)));                 \
+#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                  \
+  template <Backend B, typename Sender,                                                             \
+            typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>        \
+  auto fname(const dlaf::internal::Policy<B> p, Sender&& s) {                                       \
+    return dlaf::internal::transform<tag>(p, callable, std::forward<Sender>(s));                    \
+  }                                                                                                 \
+                                                                                                    \
+  template <Backend B>                                                                              \
+  auto fname(const dlaf::internal::Policy<B> p) {                                                   \
+    return dlaf::internal::makePartialTransform<tag>(p, callable);                                  \
+  }                                                                                                 \
+                                                                                                    \
+  template <Backend B, typename T1, typename T2, typename... Ts>                                    \
+  void fname(const dlaf::internal::Policy<B> p, T1&& t1, T2&& t2, Ts&&... ts) {                     \
+    pika::this_thread::experimental::sync_wait(                                                     \
+        (fname) (p, pika::execution::experimental::just(std::forward<T1>(t1), std::forward<T2>(t2), \
+                                                        std::forward<Ts>(ts)...)));                 \
   }

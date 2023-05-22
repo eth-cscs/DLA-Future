@@ -150,10 +150,10 @@ void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::Communicator
                           TypeUtilities<T>::error);
         }
         else {
-          Tile<T, Device::CPU> tile_transposed(size_tile_transposed,
-                                               memory::MemoryView<T, Device::CPU>(
-                                                   size_tile_transposed.linear_size()),
-                                               size_tile_transposed.rows());
+          Tile<T, Device::CPU> tile_transposed(
+              size_tile_transposed,
+              memory::MemoryView<T, Device::CPU>(size_tile_transposed.linear_size()),
+              size_tile_transposed.rows());
 
           // recv from owner_transposed
           const auto sender_rank = comm_grid.rankFullCommunicator(owner_transposed);

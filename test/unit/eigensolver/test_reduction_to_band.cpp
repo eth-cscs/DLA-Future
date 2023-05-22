@@ -280,7 +280,7 @@ auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
 
 template <class T>
 auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
-                 MatrixLocal<T> const& mat_v, MatrixLocal<T> const& mat_b, std::vector<T> const& taus) {
+                 const MatrixLocal<T>& mat_v, const MatrixLocal<T>& mat_b, const std::vector<T>& taus) {
   const GlobalElementIndex offset(band_size, 0);
   // Now that all input are collected locally, it's time to apply the transformation,
   // ...but just if there is any

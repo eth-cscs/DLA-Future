@@ -52,7 +52,7 @@ template <class CommSender, class Sender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
@@ -120,7 +120,7 @@ template <class T, Device D, class Comm>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto recv = [source, tag, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
+  auto recv = [source, tag, pcomm = std::move(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 

@@ -29,14 +29,12 @@ void applyPermutationsOnDevice(
     const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::GPU>>& in_tiles,
     const std::vector<matrix::Tile<T, Device::GPU>>& out_tiles, whip::stream_t stream);
 
-#define DLAF_CUDA_PERMUTE_ON_DEVICE(kword, Type, Coord)                                                 \
-  kword template void applyPermutationsOnDevice<                                                        \
-      Type, Coord>(GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,              \
-                   const matrix::Distribution& distr, const SizeType* perms,                            \
-                   const std::vector<                                                                   \
-                       matrix::internal::TileAsyncRwMutexReadOnlyWrapper<Type, Device::GPU>>& in_tiles, \
-                   const std::vector<matrix::Tile<Type, Device::GPU>>& out_tiles,                       \
-                   whip::stream_t stream)
+#define DLAF_CUDA_PERMUTE_ON_DEVICE(kword, Type, Coord)                                                  \
+  kword template void applyPermutationsOnDevice<Type, Coord>(                                            \
+      GlobalElementIndex out_begin, GlobalElementSize sz, SizeType in_offset,                            \
+      const matrix::Distribution& distr, const SizeType* perms,                                          \
+      const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<Type, Device::GPU>>& in_tiles, \
+      const std::vector<matrix::Tile<Type, Device::GPU>>& out_tiles, whip::stream_t stream)
 
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, float, Coord::Col);
 DLAF_CUDA_PERMUTE_ON_DEVICE(extern, double, Coord::Col);

@@ -134,7 +134,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
   const TileElementSize block_size(mb, mb);
 
-  auto create_reference = [&]() -> auto {
+  auto create_reference = [&]() -> auto{
     if constexpr (isDistributed)
       return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid...);
     else

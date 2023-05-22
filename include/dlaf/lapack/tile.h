@@ -460,8 +460,8 @@ inline void extendROCSolverWorkspace(cusolverDnHandle_t handle,
     template <typename... Args>                                                       \
     static void call(cusolverDnHandle_t handle, Args&&... args) {                     \
       auto workspace = DLAF_GET_ROCSOLVER_WORKSPACE(f);                               \
-      DLAF_GPULAPACK_CHECK_ERROR(                                                     \
-          rocblas_set_workspace(handle, workspace(), to_sizet(workspace.size())));    \
+      DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, workspace(),           \
+                                                       to_sizet(workspace.size())));  \
       DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...)); \
       DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, nullptr, 0));          \
       extendROCSolverWorkspace(handle, std::move(workspace));                         \

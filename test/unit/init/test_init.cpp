@@ -64,9 +64,9 @@ struct InitializeTester {
   }
 
   InitializeTester(InitializeTester&&) = delete;
-  InitializeTester(InitializeTester const&) = delete;
+  InitializeTester(const InitializeTester&) = delete;
   InitializeTester& operator=(InitializeTester&&) = delete;
-  InitializeTester& operator=(InitializeTester const&) = delete;
+  InitializeTester& operator=(const InitializeTester&) = delete;
 };
 
 static InitializerType current_initializer_type;

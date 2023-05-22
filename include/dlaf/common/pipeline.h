@@ -42,8 +42,9 @@ public:
   /// Enqueue for the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
+  /// @pre valid()
   Sender operator()() {
-    DLAF_ASSERT(pipeline.has_value(), "");
+    DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();
   }
 

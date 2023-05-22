@@ -30,6 +30,7 @@ public:
   /// to the tile will be provided.
   ///
   /// @return A sender to a read-only tile wrapper.
+  /// @pre valid()
   ReadOnlyTileSender<T, D> read() {
     DLAF_ASSERT(valid(), "");
     return pipeline->read();
@@ -41,6 +42,7 @@ public:
   /// tile has completed.
   ///
   /// @return A sender to a read-write tile.
+  /// @pre valid()
   ReadWriteTileSender<T, D> readwrite() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
@@ -52,6 +54,7 @@ public:
   /// til has completed.
   ///
   /// @return A sender to a read-write tile wrapper.
+  /// @pre valid()
   auto readwrite_with_wrapper() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();

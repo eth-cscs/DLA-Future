@@ -51,7 +51,7 @@ public:
   /// Get a read-write sender to a wrapped tile.
   ///
   /// The returned sender will send its value when the previous access to the
-  /// til has completed.
+  /// tile has completed.
   ///
   /// @return A sender to a read-write tile wrapper.
   /// @pre valid()

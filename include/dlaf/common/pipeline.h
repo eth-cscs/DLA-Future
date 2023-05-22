@@ -12,6 +12,7 @@
 
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
+#include <dlaf/common/assert.h>
 
 namespace dlaf::common {
 
@@ -42,10 +43,25 @@ public:
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   Sender operator()() {
-    return pipeline.readwrite();
+    DLAF_ASSERT(pipeline.has_value(), "");
+    return pipeline->readwrite();
+  }
+
+  /// Check if the pipeline is valid.
+  ///
+  /// @return true if the pipeline hasn't been reset, otherwise false.
+  bool valid() const noexcept {
+    return pipeline.has_value();
+  }
+
+  /// Reset the pipeline.
+  ///
+  /// @post !valid()
+  void reset() noexcept {
+    pipeline.reset();
   }
 
 private:
-  AsyncRwMutex pipeline;
+  std::optional<AsyncRwMutex> pipeline = std::nullopt;
 };
 }

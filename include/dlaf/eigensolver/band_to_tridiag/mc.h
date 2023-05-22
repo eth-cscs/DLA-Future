@@ -236,7 +236,7 @@ public:
     if constexpr (D == Device::CPU) {
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source) {
+          [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
@@ -270,7 +270,7 @@ public:
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
+          [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
 
@@ -314,7 +314,7 @@ public:
     if constexpr (D == Device::CPU) {
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source) {
+          [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
 
@@ -347,7 +347,7 @@ public:
       DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
-          [=](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
+          [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
             // The elements are copied in the following way:

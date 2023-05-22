@@ -146,8 +146,7 @@ public:
 
   void done(const LocalTileIndex& index) noexcept {
     const auto i = tileLinearIndex(index);
-    tile_managers_[i] =
-        internal::TilePipeline<T, D>(Tile<T, D>(TileElementSize{0, 0}, memory::MemoryView<T, D>(), 1));
+    tile_managers_[i].reset();
   }
 
   void done(const GlobalTileIndex& index) noexcept {

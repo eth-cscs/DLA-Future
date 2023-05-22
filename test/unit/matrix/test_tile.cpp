@@ -48,10 +48,8 @@ TileSizes getSizes(const Tile<T, D>& tile) {
 }
 
 TEST(TilePipeline, ResetValid) {
-  Tile<float, Device::CPU> tile(TileElementSize{0, 0}, memory::MemoryView<float, Device::CPU>(), 1);
-
   // The pipeline is valid after construction
-  dlaf::matrix::internal::TilePipeline<float, Device::CPU> pipeline(std::move(tile));
+  dlaf::matrix::internal::TilePipeline<float, Device::CPU> pipeline({});
   ASSERT_TRUE(pipeline.valid());
 
   // The pipeline can be reset and is invalid afterwards

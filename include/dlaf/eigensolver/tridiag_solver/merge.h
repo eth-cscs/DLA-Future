@@ -10,11 +10,13 @@
 #pragma once
 
 #include <pika/algorithm.hpp>
+#include <pika/barrier.hpp>
 #include <pika/execution.hpp>
 
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/kernels.h"
+#include "dlaf/eigensolver/get_tridiag_rank1_nworkers.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"
@@ -445,9 +447,10 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
          ex::ensure_started();
 }
 
+// z is an input whose values are destroyed by this call (input + workspace)
 template <class T, class KSender, class RhoSender>
 void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k, RhoSender&& rho,
-                       Matrix<const T, Device::CPU>& d, Matrix<const T, Device::CPU>& z,
+                       Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
                        Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
@@ -455,37 +458,116 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
   const SizeType n = problemSize(i_begin, i_end, evals.distribution());
   const SizeType nb = evals.distribution().blockSize().rows();
 
-  auto rank1_fn = [n, nb](auto k, auto rho, auto d_tiles_futs, auto z_tiles_futs, auto eval_tiles,
-                          auto evec_tiles) {
-    const TileElementIndex zero(0, 0);
-    const T* d_ptr = d_tiles_futs[0].get().ptr(zero);
-    const T* z_ptr = z_tiles_futs[0].get().ptr(zero);
-    T* eval_ptr = eval_tiles[0].ptr(zero);
-
-    matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
-
-    std::vector<SizeType> loop_arr(to_sizet(k));
-    std::iota(std::begin(loop_arr), std::end(loop_arr), 0);
-    pika::for_each(pika::execution::par, std::begin(loop_arr), std::end(loop_arr), [&](const SizeType i) {
-      T& eigenval = eval_ptr[to_sizet(i)];
-
-      const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, i));
-      const SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(i);
-      T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
-
-      common::internal::SingleThreadedBlasScope single;
-      lapack::laed4(static_cast<int>(k), static_cast<int>(i), d_ptr, z_ptr, delta, rho, &eigenval);
-    });
-  };
-
   TileCollector tc{i_begin, i_end};
 
-  auto sender =
-      ex::when_all(std::forward<KSender>(k), std::forward<RhoSender>(rho),
-                   ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.read(z)),
-                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.readwrite(evecs)));
+  const std::size_t nthreads = getTridiagRank1NWorkers();
+  ex::start_detached(
+      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
+                   std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
+                   ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
+                   ex::when_all_vector(tc.readwrite(evecs)),
+                   ex::just(std::vector<common::internal::vector<T>>())) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::bulk(nthreads, [n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
+                                 auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles, auto& evec_tiles,
+                                 auto& ws_vecs) {
+        common::internal::SingleThreadedBlasScope single;
 
-  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
+        const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+        const std::size_t batch_size = util::ceilDiv(to_sizet(k), nthreads);
+        const std::size_t begin = thread_idx * batch_size;
+        const std::size_t end = std::min(thread_idx * batch_size + batch_size, to_sizet(k));
+
+        // STEP 0: Initialize workspaces (single-thread)
+        if (thread_idx == 0)
+          ws_vecs.resize(nthreads);
+
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 1: LAED4 (multi-thread)
+        const T* d_ptr = d_tiles_futs[0].get().ptr();
+        const T* z_ptr = z_tiles[0].ptr();
+        T* eval_ptr = eval_tiles[0].ptr();
+
+        for (std::size_t i = begin; i < end; ++i) {
+          T& eigenval = eval_ptr[i];
+
+          const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, to_SizeType(i)));
+          const SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(to_SizeType(i));
+          T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
+
+          lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 2a Compute weights
+        auto& q = evec_tiles;
+        auto& w = ws_vecs[thread_idx];
+
+        // - copy diagonal from q -> w (or just initialize with 1)
+        w.resize(k, 1);
+        if (thread_idx == 0) {
+          for (auto i = 0; i < k; ++i) {
+            const GlobalElementIndex kk(i, i);
+            const auto diag_tile = distr.globalTileLinearIndex(kk);
+            const auto diag_element = distr.tileElementIndex(kk);
+
+            w[i] = q[to_sizet(diag_tile)](diag_element);
+          }
+        }
+
+        // - compute productorial (thread-local)
+        for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+          for (auto i = 0; i < k; ++i) {
+            if (i == j)
+              continue;
+
+            const auto q_tile = distr.globalTileLinearIndex({i, j});
+            const auto q_ij = distr.tileElementIndex({i, j});
+
+            w[i] *= q[to_sizet(q_tile)](q_ij) / (d_ptr[to_sizet(i)] - d_ptr[to_sizet(j)]);
+          }
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
+        if (thread_idx == 0) {
+          for (int i = 0; i < k; ++i) {
+            for (std::size_t tidx = 1; tidx < nthreads; ++tidx)
+              w[i] *= ws_vecs[tidx][i];
+            z_tiles[0].ptr()[i] = std::copysign(std::sqrt(-w[i]), z_ptr[to_sizet(i)]);
+          }
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
+        {
+          const T* w = z_ptr;
+          auto& s = ws_vecs[thread_idx];
+
+          for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+            for (int i = 0; i < k; ++i) {
+              const auto q_tile = distr.globalTileLinearIndex({i, j});
+              const auto q_ij = distr.tileElementIndex({i, j});
+
+              s[i] = w[i] / q[to_sizet(q_tile)](q_ij);
+            }
+
+            const auto vec_norm = blas::nrm2(k, s.data(), 1);
+
+            for (auto i = 0; i < k; ++i) {
+              const auto q_tile = distr.globalTileLinearIndex({i, j});
+              const auto q_ij = distr.tileElementIndex({i, j});
+
+              q[to_sizet(q_tile)](q_ij) = s[i] / vec_norm;
+            }
+          }
+        }
+      }));
 }
 
 // Initializes a weight vector in the first local column of the local or distributed workspace matrix @p `ws`.
@@ -683,15 +765,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
-  // ---
 
-  // formEvecs(i_begin, i_end, k, evals, ws.z1, ws.e0, ws.e2);
-  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.d1, ws.d1, ws.e2, ws.e0);
-  formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.z1, ws.e0, ws.e2);
-  sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e2, ws.e0);
-  normalizeEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, k, k, ws.e0, ws.e2);
   setUnitDiag(i_begin, i_end, k, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U

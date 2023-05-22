@@ -109,6 +109,12 @@ deallocate:
   extends: .daint_dealloc
 "
 
+if [ "$SLURM_CONSTRAINT" = "mc" ]; then
+ctest_wrapper="mpi-ctest-check-threads"
+else
+ctest_wrapper="mpi-ctest"
+fi
+
 JOB_TEMPLATE="
 {{LABEL}}:
   stage: test
@@ -120,7 +126,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'NO'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
-  script: mpi-ctest -L {{LABEL}}"
+  script: {{CTEST_WRAPPER}} -L {{LABEL}}"
 fi
 
 JOBS=""
@@ -130,6 +136,7 @@ for label in `ctest --print-labels | egrep -o "RANK_[1-9][0-9]?"`; do
     C=$(( THREADS_PER_NODE / N ))
 
     JOB=`echo "$JOB_TEMPLATE" | sed "s|{{LABEL}}|$label|g" \
+                              | sed "s|{{CTEST_WRAPPER}}|$ctest_wrapper|g" \
                               | sed "s|{{NTASKS}}|$N|g" \
                               | sed "s|{{CPUS_PER_TASK}}|$C|g"`
 

@@ -46,6 +46,12 @@ public:
     return pipeline->readwrite() | pika::execution::experimental::then(&createTileAsyncRwMutex<T, D>);
   }
 
+  /// Get a read-write sender to a wrapped tile.
+  ///
+  /// The returned sender will send its value when the previous access to the
+  /// til has completed.
+  ///
+  /// @return A sender to a read-write tile wrapper.
   auto readwrite_with_wrapper() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();

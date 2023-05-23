@@ -170,13 +170,17 @@ public:
     rank_ = comm.rank();
   }
 
-  template <class T>
-  void write(const std::string& name, matrix::Matrix<const T, Device::CPU>& matrix) const {
-    const bool is_local_matrix = matrix::local_matrix(matrix);
+  template <class T, Device D>
+  void write(const std::string& name, matrix::Matrix<const T, D>& matrix) const {
+    matrix::MatrixMirror<const T, Device::CPU, D> matrix_mirror(matrix);
+
+    matrix::Matrix<const T, Device::CPU>& matrix_host = matrix_mirror.get();
+
+    const bool is_local_matrix = matrix::local_matrix(matrix_host);
 
     const hsize_t dims_file[3] = {
-        dlaf::to_sizet(matrix.size().cols()),
-        dlaf::to_sizet(matrix.size().rows()),
+        dlaf::to_sizet(matrix_host.size().cols()),
+        dlaf::to_sizet(matrix_host.size().rows()),
         internal::hdf5_datatype<T>::dims,
     };
     H5::DataSpace dataspace_file(3, dims_file);
@@ -185,7 +189,7 @@ public:
     H5::DataSet dataset = file_.createDataSet(name, internal::hdf5_datatype<T>::type, dataspace_file);
 
     if (!is_local_matrix || rank_ == 0)
-      internal::to_dataset<T>(matrix, dataset);
+      internal::to_dataset<T>(matrix_host, dataset);
   }
 
   template <class T>

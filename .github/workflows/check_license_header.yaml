@@ -14,7 +14,7 @@ on: [pull_request]
 
 jobs:
   check-licenses:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/javascript-action@v1
@@ -23,8 +23,9 @@ jobs:
       - name: Check file extensions
         if: always()          # needed so that it runs even if previous one fails
         run: |
-          # highlight if in these folders there are files with other extensions
-          find src include test -type f                                           \
+          # Highlight if in these folders there are files with other extensions.
+          # Hidden files are excluded from the check.
+          find src include test miniapp -type f                                   \
                ! '('                                                              \
                        -name '*.cpp'                                              \
                    -o  -name '*.h'                                                \
@@ -32,6 +33,7 @@ jobs:
                    -o  -name '*.tpp'                                              \
                    -o  -name '*.cu'                                               \
                    -o  -name 'CMakeLists.txt'                                     \
+                   -o  -name '.*'                                                 \
                ')'                                                                \
             > result-extension.check
           # Generate an error message for each file with an unkown extension

@@ -32,6 +32,8 @@ namespace internal {
 template <class T, Device D>
 class TileData {
 public:
+  TileData() = default;
+
   TileData(const TileElementSize& size, memory::MemoryView<T, D> memory_view, SizeType ld) noexcept
       : size_(size), memory_view_(std::move(memory_view)), ld_(ld) {
     DLAF_ASSERT(size_.isValid(), size_);
@@ -95,9 +97,9 @@ private:
     ld_ = 1;
   }
 
-  TileElementSize size_;
-  memory::MemoryView<T, D> memory_view_;
-  SizeType ld_;
+  TileElementSize size_{0, 0};
+  memory::MemoryView<T, D> memory_view_{};
+  SizeType ld_{1};
 };
 }
 
@@ -204,6 +206,9 @@ public:
   using ElementType = T;
   static constexpr Device device = D;
 
+  /// Constructs an empty Tile.
+  Tile() = default;
+
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///
   /// @pre size.isValid(),
@@ -305,7 +310,7 @@ private:
   Tile(const Tile& tile, const SubTileSpec& spec) noexcept
       : Tile(spec.size, Tile::createMemoryViewForSubtile(tile, spec), tile.ld()) {}
 
-  TileDataType data_;
+  TileDataType data_{};
   std::variant<
       // No dependency
       std::monostate,
@@ -315,7 +320,7 @@ private:
       internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
       // Disjoint read-write access
       std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>
-      dep_tracker_;
+      dep_tracker_{};
 };
 
 template <class T, Device D>
@@ -337,6 +342,9 @@ public:
   friend Tile<T, D> internal::createDisjointSubTile<>(const Tile<T, D>& tile, const SubTileSpec& spec);
 
   using ElementType = T;
+
+  /// Constructs an empty Tile.
+  Tile() = default;
 
   /// Constructs a (@p size.rows() x @p size.cols()) Tile.
   ///

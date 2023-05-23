@@ -199,6 +199,7 @@ DLAF_addSublibrary(
           matrix/tile.cpp
           matrix.cpp
           matrix_mirror.cpp
+          matrix/hdf5.cpp
           memory/memory_view.cpp
           memory/memory_chunk.cpp
           tune.cpp

@@ -24,14 +24,14 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/index.h"
+#include "dlaf/matrix/matrix.h"
+#include "dlaf/matrix/matrix_mirror.h"
 #include "dlaf/types.h"
+#include "dlaf/util_matrix.h"
 
 namespace dlaf::matrix {
 
 namespace internal {
-
-template <class T>
-struct hdf5_datatype;
 
 template <class T>
 struct hdf5_datatype {
@@ -46,13 +46,10 @@ struct hdf5_datatype<std::complex<T>> {
 };
 
 template <class T>
-struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
+const H5::PredType& hdf5_datatype<std::complex<T>>::type = hdf5_datatype<T>::type;
 
-// clang-format off
-template <>         const H5::PredType& hdf5_datatype<float>::type            = H5::PredType::NATIVE_FLOAT;
-template <>         const H5::PredType& hdf5_datatype<double>::type           = H5::PredType::NATIVE_DOUBLE;
-template <class T>  const H5::PredType& hdf5_datatype<std::complex<T>>::type  = hdf5_datatype<T>::type;
-// clang-format on
+template <class T>
+struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
 template <class T>
 void from_dataset(const H5::DataSet& dataset, dlaf::Matrix<T, Device::CPU>& matrix) {

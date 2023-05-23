@@ -25,7 +25,7 @@ jobs:
         run: |
           # Highlight if in these folders there are files with other extensions.
           # Hidden files are excluded from the check.
-          find src include test miniapp ! -path './miniapp/cmake/*' -type f       \
+          find src include test miniapp ! -path 'miniapp/cmake/*' -type f         \
                ! '('                                                              \
                        -name '*.cpp'                                              \
                    -o  -name '*.h'                                                \

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -eo pipefail
+
+strace_output_file=$(mktemp -u -t dlaf-strace-output.tmp.XXXXXXXXXX)
+test_output_file=$(mktemp -u -t dlaf-test-output.tmp.XXXXXXXXXX)
+
+# We check here for clone3 syscalls. Not all systems use clone3 when
+# spawning threads. clone may be used on some systems.
+strace \
+    --output="$strace_output_file" \
+    --follow-forks \
+    -e clone3 \
+    "$@" --pika:print-bind |&
+    tee "$test_output_file"
+
+# grep -c exits with code 0 if there are matches, 1 if there are no
+# matches, and 2 if there was an error. We only exit on 2.
+set +e
+num_threads=$(cat "$test_output_file" | grep -c 'PU L')
+((PIPESTATUS[1] < 2)) || exit 1
+num_threads_spawned=$(cat "$strace_output_file" | grep -c 'clone3(')
+((PIPESTATUS[1] < 2)) || exit 1
+set -e
+
+if ((num_threads > 0)); then
+    # We expect pika to spawn one additional thread outside of thread
+    # pools each time the runtime is started
+    num_extra_threads=$(cat "$test_output_file" | grep -c ' 0: PU L')
+    num_threads_expected=$((num_threads + num_extra_threads))
+
+    if ((num_threads_spawned == num_threads_expected)); then
+        echo "Expected $num_threads_expected threads to be spawned by pika; correct number spawned"
+    else
+        echo "ERROR: Expected $num_threads_expected threads to be spawned by pika; actually spawned $num_threads_spawned"
+        num_failed_tests=$((num_failed_tests + 1))
+    fi
+else
+    if ((num_threads_spawned == 0)); then
+        echo "Expected no threads to be spawned; none spawned"
+    else
+        echo "ERROR: Expected no threads to be spawned; actually spawned $num_threads_spawned"
+        num_failed_tests=$((num_failed_tests + 1))
+    fi
+fi

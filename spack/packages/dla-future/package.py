@@ -149,6 +149,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
+
+            if "~cuda" in self.spec and "~rocm" in self.spec:
+                args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))

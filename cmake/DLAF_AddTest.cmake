@@ -141,19 +141,20 @@ function(DLAF_addTest test_target_name)
     endif()
 
     if(DLAF_CI_RUNNER_USES_MPIRUN)
-      set(_TEST_COMMAND $<TARGET_FILE:${test_target_name}>)
+      set(_TEST_COMMAND ${DLAF_TEST_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${DLAF_TEST_POSTFLAGS})
     else()
       separate_arguments(MPIEXEC_PREFLAGS)
       set(_TEST_COMMAND
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${DLAF_AT_MPIRANKS} ${_MPI_CORE_ARGS}
-          ${MPIEXEC_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${MPIEXEC_POSTFLAGS}
+          ${MPIEXEC_PREFLAGS} ${DLAF_TEST_PREFLAGS} $<TARGET_FILE:${test_target_name}>
+          ${DLAF_TEST_POSTFLAGS} ${MPIEXEC_POSTFLAGS}
       )
     endif()
     set(_TEST_LABEL "RANK_${DLAF_AT_MPIRANKS}")
 
   else()
     # ----- Classic test
-    set(_TEST_COMMAND ${test_target_name})
+    set(_TEST_COMMAND ${DLAF_TEST_PREFLAGS} ${test_target_name} ${DLAF_TEST_POSTFLAGS})
     set(_TEST_LABEL "RANK_1")
   endif()
 

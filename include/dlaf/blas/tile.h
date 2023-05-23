@@ -16,22 +16,22 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
-#include "dlaf/util_blas.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/make_sender_algorithm_overloads.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
+#include <dlaf/util_blas.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/util_cublas.h"
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/util_cublas.h>
 
 #ifdef DLAF_WITH_HIP
 

@@ -12,15 +12,15 @@
 
 /// @file
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/data.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf {
 namespace comm {

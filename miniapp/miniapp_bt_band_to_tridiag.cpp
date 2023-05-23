@@ -17,20 +17,20 @@
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/format_short.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/timer.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/init.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag.h"
-#include "dlaf/init.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/miniapp/dispatch.h"
-#include "dlaf/miniapp/options.h"
-#include "dlaf/types.h"
+#include <dlaf/common/format_short.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/timer.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/init.h>
+#include <dlaf/eigensolver/bt_band_to_tridiag.h>
+#include <dlaf/init.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/miniapp/dispatch.h>
+#include <dlaf/miniapp/options.h>
+#include <dlaf/types.h>
 
 namespace {
 using dlaf::Backend;

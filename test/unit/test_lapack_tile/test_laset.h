@@ -12,14 +12,17 @@
 
 #include <functional>
 #include <sstream>
-#include "gtest/gtest.h"
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf_test/blas/invoke.h"
-#include "dlaf_test/matrix/util_generic_lapack.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/tile.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/blas/invoke.h>
+#include <dlaf_test/matrix/util_generic_lapack.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf {
 namespace test {

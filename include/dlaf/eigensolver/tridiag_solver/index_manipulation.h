@@ -12,15 +12,15 @@
 #include <pika/algorithm.hpp>
 #include <pika/execution.hpp>
 
-#include "dlaf/eigensolver/tridiag_solver/kernels.h"
-#include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver/tile_collector.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 

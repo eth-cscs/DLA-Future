@@ -8,22 +8,22 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/util_matrix.h"
-
 #include <vector>
 
-#include <gtest/gtest.h>
 #include <pika/execution.hpp>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/sync/basic.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/sync/basic.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/util_matrix.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

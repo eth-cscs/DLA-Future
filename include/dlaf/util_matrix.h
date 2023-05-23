@@ -19,17 +19,18 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
 
 /// @file
 

@@ -13,28 +13,28 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/datatypes.h"
-#include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
-#include "dlaf/eigensolver/tridiag_solver/kernels.h"
-#include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/when_all_lift.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
+#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver/tile_collector.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/when_all_lift.h>
 
 namespace dlaf::eigensolver::internal {
 

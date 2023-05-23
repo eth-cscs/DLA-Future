@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/bt_reduction_to_band/impl.h"
+#include <dlaf/eigensolver/bt_reduction_to_band/impl.h>
 
 namespace dlaf::eigensolver::internal {
 

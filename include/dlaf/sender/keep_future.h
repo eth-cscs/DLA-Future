@@ -9,11 +9,11 @@
 //
 #pragma once
 
-#include <pika/execution.hpp>
-
 #include <utility>
 
-#include "dlaf/sender/traits.h"
+#include <pika/execution.hpp>
+
+#include <dlaf/sender/traits.h>
 
 namespace dlaf {
 namespace internal {

@@ -8,38 +8,37 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/reduction_to_band.h"
-
 #include <cmath>
 
-#include <gtest/gtest.h>
-#include <lapack/util.hh>
 #include <pika/future.hpp>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/functions_sync.h>
+#include <dlaf/communication/sync/broadcast.h>
+#include <dlaf/eigensolver/reduction_to_band.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
+#include <dlaf/util_matrix.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

@@ -15,13 +15,14 @@
 #include <complex>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/traits.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/traits.h>
 
 namespace dlaf::comm {
 /// Schedule an all reduce.

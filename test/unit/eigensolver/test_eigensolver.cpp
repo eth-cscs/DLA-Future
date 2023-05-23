@@ -8,26 +8,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/eigensolver.h"
-
 #include <functional>
 #include <tuple>
 
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/eigensolver.h>
+#include <dlaf/eigensolver/eigensolver/api.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/tune.h>
+#include <dlaf/types.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/eigensolver/api.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/tune.h"
-#include "dlaf/types.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/eigensolver/test_eigensolver_correctness.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

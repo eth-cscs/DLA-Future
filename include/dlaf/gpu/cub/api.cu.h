@@ -40,8 +40,8 @@
 
 #if defined(DLAF_WITH_HIP)
 
+#include <rocprim/rocprim.hpp>
 #include <whip.hpp>
-#include "rocprim/rocprim.hpp"
 
 namespace dlaf::gpucub {
 

@@ -11,4 +11,4 @@
 
 /// @file
 
-#include "dlaf/solver/triangular.h"
+#include <dlaf/solver/triangular.h>

@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
@@ -15,10 +19,6 @@
 #include <dlaf/init.h>
 #include <dlaf/memory/memory_chunk.h>
 #include <dlaf/tune.h>
-
-#include <cstdlib>
-#include <iostream>
-#include <memory>
 
 namespace dlaf {
 std::ostream& operator<<(std::ostream& os, configuration const& cfg) {

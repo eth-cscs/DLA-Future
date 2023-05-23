@@ -10,8 +10,8 @@
 
 #include <whip.hpp>
 
-#include "dlaf/lapack/tile.h"
-#include "dlaf/util_cuda.h"
+#include <dlaf/lapack/tile.h>
+#include <dlaf/util_cuda.h>
 
 namespace dlaf::tile::internal {
 

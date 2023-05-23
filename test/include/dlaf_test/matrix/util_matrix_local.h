@@ -13,21 +13,20 @@
 /// @file
 
 #include <functional>
-#include <lapack/util.hh>
 #include <type_traits>
+
+#include <dlaf/common/range2d.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/functions_sync.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/print_numpy.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/range2d.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/print_numpy.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/matrix/matrix_local.h"
+#include <dlaf_test/matrix/matrix_local.h>
 
 namespace dlaf {
 namespace matrix {

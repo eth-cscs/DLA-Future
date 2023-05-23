@@ -8,14 +8,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/with_temporary_tile.h>
+#include <dlaf/types.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/with_temporary_tile.h"
-#include "dlaf/types.h"
-#include "dlaf_test/matrix/util_tile.h"
+#include <dlaf_test/matrix/util_tile.h>
 
 using namespace dlaf;
 namespace ex = pika::execution::experimental;

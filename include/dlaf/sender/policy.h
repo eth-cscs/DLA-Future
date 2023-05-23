@@ -9,10 +9,10 @@
 //
 #pragma once
 
-#include <pika/execution.hpp>
-
 #include <type_traits>
 #include <utility>
+
+#include <pika/execution.hpp>
 
 #include <dlaf/types.h>
 

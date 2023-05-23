@@ -15,13 +15,14 @@
 #include <complex>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/tile.h"
+#include <dlaf/common/data.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::comm {
 /// Schedule an in-place reduction receive.

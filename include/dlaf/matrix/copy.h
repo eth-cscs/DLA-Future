@@ -14,10 +14,10 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/common/range2d.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::matrix {
 

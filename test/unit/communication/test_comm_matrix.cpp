@@ -8,13 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <gtest/gtest.h>
 #include <mpi.h>
 
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/kernels.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/transform_mpi.h"
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/transform_mpi.h>
+
+#include <gtest/gtest.h>
 
 using pika::execution::experimental::just;
 using pika::execution::experimental::start_detached;

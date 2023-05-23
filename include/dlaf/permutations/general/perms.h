@@ -16,9 +16,9 @@
 
 #include <whip.hpp>
 
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf::permutations::internal {
 

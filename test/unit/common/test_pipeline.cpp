@@ -8,16 +8,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-
 #include <atomic>
 #include <chrono>
 
-#include <gtest/gtest.h>
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
+
+#include <dlaf/common/pipeline.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+
+#include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace std::chrono_literals;

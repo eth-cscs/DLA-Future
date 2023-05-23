@@ -8,11 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/distribution.h"
-
 #include <array>
 #include <stdexcept>
-#include "gtest/gtest.h"
+
+#include <dlaf/matrix/distribution.h>
+
+#include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

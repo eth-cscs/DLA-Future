@@ -16,11 +16,13 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include "gtest/gtest.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/traits.h"
-#include "dlaf/util_math.h"
+
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/traits.h>
+#include <dlaf/util_math.h>
+
+#include <gtest/gtest.h>
 
 namespace dlaf {
 namespace matrix {

@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include "dlaf/common/range2d.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 

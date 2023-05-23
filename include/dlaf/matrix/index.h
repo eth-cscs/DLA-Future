@@ -12,8 +12,8 @@
 
 /// @file
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/types.h"
+#include <dlaf/common/index2d.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace matrix {

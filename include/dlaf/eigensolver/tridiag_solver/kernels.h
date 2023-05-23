@@ -10,20 +10,20 @@
 
 #pragma once
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/eigensolver/tridiag_solver/coltype.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_chunk.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/eigensolver/tridiag_solver/coltype.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_chunk.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
-#include "dlaf/gpu/lapack/api.h"
+#include <dlaf/gpu/lapack/api.h>
 #endif
 
 namespace dlaf::eigensolver::internal {

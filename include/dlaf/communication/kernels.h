@@ -12,8 +12,8 @@
 
 /// @file
 
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/communication/kernels/broadcast.h"
-#include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/communication/kernels/p2p_allsum.h"
-#include "dlaf/communication/kernels/reduce.h"
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/kernels/p2p_allsum.h>
+#include <dlaf/communication/kernels/reduce.h>

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/factorization/qr/t_factor_impl.h"
+#include <dlaf/factorization/qr/t_factor_impl.h>
 
 namespace dlaf::factorization::internal {
 

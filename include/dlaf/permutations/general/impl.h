@@ -10,33 +10,34 @@
 
 #pragma once
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/permutations/general/api.h"
-#include "dlaf/permutations/general/perms.h"
-
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/communication/rdma.h"
-#include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
-#include "dlaf/lapack/gpu/lacpy.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/schedulers.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <numeric>
 
 #include <mpi.h>
-#include <numeric>
-#include "pika/algorithm.hpp"
+
+#include <pika/algorithm.hpp>
+
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/communication/rdma.h>
+#include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
+#include <dlaf/lapack/gpu/lacpy.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/permutations/general/api.h>
+#include <dlaf/permutations/general/perms.h>
+#include <dlaf/schedulers.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::permutations::internal {
 

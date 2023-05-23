@@ -14,7 +14,7 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/sender/lift_non_sender.h"
+#include <dlaf/sender/lift_non_sender.h>
 
 namespace dlaf {
 namespace internal {

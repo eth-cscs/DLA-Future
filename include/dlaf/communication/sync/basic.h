@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/common/data.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/communication/message.h"
+#include <dlaf/common/data.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/communication/message.h>
 
 namespace dlaf {
 namespace comm {

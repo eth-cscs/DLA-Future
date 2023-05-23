@@ -8,12 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/gpu/assert.cu.h"
-#include "dlaf/lapack/gpu/laset.h"
-#include "dlaf/util_cublas.h"
-#include "dlaf/util_math.h"
-
 #include <whip.hpp>
+
+#include <dlaf/gpu/assert.cu.h>
+#include <dlaf/lapack/gpu/laset.h>
+#include <dlaf/util_cublas.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf::gpulapack {
 namespace kernels {

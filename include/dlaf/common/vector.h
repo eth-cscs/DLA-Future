@@ -13,7 +13,8 @@
 /// @file
 
 #include <vector>
-#include "dlaf/types.h"
+
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace common {

@@ -21,12 +21,12 @@
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 
-#include "dlaf/common/data_descriptor.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/data_descriptor.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf::matrix {
 namespace internal {

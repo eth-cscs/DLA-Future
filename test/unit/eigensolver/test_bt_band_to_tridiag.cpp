@@ -8,25 +8,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/band_to_tridiag.h>  // for nrSweeps/nrStepsForSweep
+#include <dlaf/eigensolver/bt_band_to_tridiag.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/tune.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/tune.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

@@ -10,9 +10,10 @@
 
 #pragma once
 
-#include "gtest/gtest.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/error.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/error.h>
+
+#include <gtest/gtest.h>
 
 namespace dlaf {
 namespace test {

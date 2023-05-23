@@ -8,11 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <dlaf/memory/memory_chunk.h>
-
 #include <umpire/ResourceManager.hpp>
 #include <umpire/strategy/QuickPool.hpp>
 #include <umpire/strategy/ThreadSafeAllocator.hpp>
+
+#include <dlaf/memory/memory_chunk.h>
 
 namespace dlaf {
 namespace memory {

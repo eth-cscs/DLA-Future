@@ -16,26 +16,26 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/broadcast_panel.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/kernels.h"
-#include "dlaf/eigensolver/bt_reduction_to_band/api.h"
-#include "dlaf/factorization/qr.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/layout_info.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/broadcast_panel.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels.h>
+#include <dlaf/eigensolver/bt_reduction_to_band/api.h>
+#include <dlaf/factorization/qr.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/layout_info.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 

@@ -38,8 +38,8 @@
 #include <cstddef>
 #include <iterator>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
 
 namespace dlaf {
 namespace common {

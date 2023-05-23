@@ -10,34 +10,32 @@
 
 #pragma once
 
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
-
 #include <pika/future.hpp>
+
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels.h>
+#include <dlaf/eigensolver/band_to_tridiag/api.h>
+#include <dlaf/eigensolver/internal/get_1d_block_size.h>
+#include <dlaf/lapack/gpu/lacpy.h>
+#include <dlaf/lapack/gpu/laset.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/traits.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 #endif
-
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/kernels.h"
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
-#include "dlaf/eigensolver/internal/get_1d_block_size.h"
-#include "dlaf/lapack/gpu/lacpy.h"
-#include "dlaf/lapack/gpu/laset.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/traits.h"
 
 namespace dlaf::eigensolver::internal {
 

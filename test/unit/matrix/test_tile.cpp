@@ -8,18 +8,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/tile.h"
-
-#include <stdexcept>
-
-#include <gtest/gtest.h>
 #include <pika/execution.hpp>
 
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/internal/tile_pipeline.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/internal/tile_pipeline.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

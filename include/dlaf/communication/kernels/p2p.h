@@ -15,11 +15,12 @@
 #include <complex>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/matrix/tile.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::comm {
 template <class T, Device D, class Comm>

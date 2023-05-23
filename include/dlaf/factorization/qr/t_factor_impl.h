@@ -10,34 +10,31 @@
 
 #pragma once
 
+#include <blas.hh>
+
 #include <pika/future.hpp>
 
-#include <blas.hh>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/factorization/qr/api.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/sender/keep_future.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
-#endif
 
-#include "dlaf/factorization/qr/api.h"
-
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/sender/keep_future.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
-
-#ifdef DLAF_WITH_GPU
-#include "dlaf/blas/tile.h"
+#include <dlaf/blas/tile.h>
 #endif
 
 namespace dlaf::factorization::internal {

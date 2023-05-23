@@ -11,19 +11,19 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/common/unwrap.h"
-#include "dlaf/init.h"
-#include "dlaf/schedulers.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/typelist.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
+#include <dlaf/common/unwrap.h>
+#include <dlaf/init.h>
+#include <dlaf/schedulers.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/typelist.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/lapack/api.h"
-
 #include <pika/cuda.hpp>
+
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/lapack/api.h>
 #endif
 
 #include <type_traits>

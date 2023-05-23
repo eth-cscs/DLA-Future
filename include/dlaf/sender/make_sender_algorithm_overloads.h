@@ -14,8 +14,8 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
 
 /// Helper macro for generating overloads of algorithms that work with senders. The overloads will be
 /// named fname. callable is the callable object that will be used internall for the transform. It

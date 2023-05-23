@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/init.h"
-
 #include <cstdlib>
 
-#include <gtest/gtest.h>
-
 #include <pika/init.hpp>
+
+#include <dlaf/init.h>
+
+#include <gtest/gtest.h>
 
 static const char* binary_name = "init_test";
 static const char* env_var_name = "DLAF_NUM_HP_GPU_STREAMS_PER_THREAD";

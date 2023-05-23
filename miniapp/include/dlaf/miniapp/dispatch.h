@@ -10,12 +10,12 @@
 
 #pragma once
 
-#include <dlaf/miniapp/options.h>
-#include <dlaf/types.h>
-
 #include <complex>
 #include <exception>
 #include <iostream>
+
+#include <dlaf/miniapp/options.h>
+#include <dlaf/types.h>
 
 namespace dlaf::miniapp {
 namespace internal {

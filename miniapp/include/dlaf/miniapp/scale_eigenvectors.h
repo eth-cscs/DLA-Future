@@ -9,15 +9,16 @@
 //
 
 #include <blas.hh>
+
 #include <pika/runtime.hpp>
 
-#include "dlaf/blas/scal.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/blas/scal.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::miniapp {
 using common::Ordering;

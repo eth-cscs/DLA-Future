@@ -18,7 +18,7 @@
 
 #include <mpi.h>
 
-#include "dlaf/common/source_location.h"
+#include <dlaf/common/source_location.h>
 
 namespace dlaf {
 namespace internal {

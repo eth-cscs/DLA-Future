@@ -26,6 +26,8 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"
+#include "dlaf/sender/policy.h"
+#include "dlaf/sender/transform.h"
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
@@ -51,72 +53,74 @@ const H5::PredType& hdf5_datatype<std::complex<T>>::type = hdf5_datatype<T>::typ
 template <class T>
 struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
-template <class T, Device D>
-H5::DataSpace mapFileToMemory(const GlobalElementIndex tl, const matrix::Tile<const T, D>& tile,
-                              const H5::DataSpace& file) {
-  const hsize_t file_counts[3] = {
-      to_sizet(tile.size().cols()),
-      to_sizet(tile.size().rows()),
-      internal::hdf5_datatype<T>::dims,
-  };
-  const hsize_t file_offsets[3] = {
-      to_sizet(tl.col()),
-      to_sizet(tl.row()),
-      0,
-  };
-  file.selectHyperslab(H5S_SELECT_SET, file_counts, file_offsets);
+// Helper function that for each local tile index in @p dist, gets a sender of a tile with
+// @p get_tile and sends it to a function that takes care of the mapping between file and memory.
+// Then, this function, passes all required arguments to @p dataset_op which is either dataset.read
+// or dataste.write, so it has the following signature
+//    dataset_op(memory_ptr, type, dataspace_file, dataspace_mem)
+template <class T, class TileGetter, class DatasetOp>
+void for_each_local_and_map(Distribution dist, const H5::DataSet& dataset, TileGetter&& get_tile,
+                            DatasetOp&& dataset_op) {
+  namespace tt = pika::this_thread::experimental;
+  namespace di = dlaf::internal;
 
-  const hsize_t memory_dims[3] = {
-      to_sizet(tile.size().cols()),
-      to_sizet(tile.ld()),
-      internal::hdf5_datatype<T>::dims,
-  };
-  H5::DataSpace memory(3, memory_dims);
+  const H5::DataSpace& ds_file = dataset.getSpace();
 
-  const hsize_t memory_counts[3] = {
-      to_sizet(tile.size().cols()),
-      to_sizet(tile.size().rows()),
-      internal::hdf5_datatype<T>::dims,
-  };
-  const hsize_t memory_offsets[3] = {0, 0, 0};
-  memory.selectHyperslab(H5S_SELECT_SET, memory_counts, memory_offsets);
+  for (const auto ij : common::iterate_range2d(dist.localNrTiles())) {
+    auto map_ds_tile = [&](auto&& tile) {
+      const GlobalElementIndex tl = dist.globalElementIndex(dist.globalTileIndex(ij), {0, 0});
 
-  return memory;
+      const hsize_t file_counts[3] = {
+          to_sizet(tile.size().cols()),
+          to_sizet(tile.size().rows()),
+          internal::hdf5_datatype<T>::dims,
+      };
+      const hsize_t file_offsets[3] = {
+          to_sizet(tl.col()),
+          to_sizet(tl.row()),
+          0,
+      };
+      ds_file.selectHyperslab(H5S_SELECT_SET, file_counts, file_offsets);
+
+      const hsize_t memory_dims[3] = {
+          to_sizet(tile.size().cols()),
+          to_sizet(tile.ld()),
+          internal::hdf5_datatype<T>::dims,
+      };
+      H5::DataSpace ds_memory(3, memory_dims);
+
+      const hsize_t memory_counts[3] = {
+          to_sizet(tile.size().cols()),
+          to_sizet(tile.size().rows()),
+          internal::hdf5_datatype<T>::dims,
+      };
+      const hsize_t memory_offsets[3] = {0, 0, 0};
+      ds_memory.selectHyperslab(H5S_SELECT_SET, memory_counts, memory_offsets);
+
+      dataset_op(tile.ptr(), internal::hdf5_datatype<T>::type, ds_memory, ds_file);
+    };
+
+    tt::sync_wait(get_tile(ij) | di::transform(di::Policy<Backend::MC>(), std::move(map_ds_tile)));
+  }
 }
 
 template <class T>
 void from_dataset(const H5::DataSet& dataset, dlaf::Matrix<T, Device::CPU>& matrix) {
-  namespace tt = pika::this_thread::experimental;
-
-  const H5::DataSpace& dataspace_file = dataset.getSpace();
-
-  const auto& dist = matrix.distribution();
-  for (const auto ij : common::iterate_range2d(dist.localNrTiles())) {
-    auto tile = tt::sync_wait(matrix.readwrite(ij));
-
-    const GlobalElementIndex topleft = dist.globalElementIndex(dist.globalTileIndex(ij), {0, 0});
-    const H5::DataSpace dataspace_mem = mapFileToMemory(topleft, tile, dataspace_file);
-
-    dataset.read(tile.ptr(), internal::hdf5_datatype<T>::type, dataspace_mem, dataspace_file);
-  }
+  auto tile_rw = [&matrix](LocalTileIndex ij) { return matrix.readwrite(ij); };
+  auto dataset_read = [&dataset](auto&&... args) {
+    dataset.read(std::forward<decltype(args)>(args)...);
+  };
+  for_each_local_and_map<T>(matrix.distribution(), dataset, std::move(tile_rw), std::move(dataset_read));
 }
 
 template <class T>
-void to_dataset(dlaf::Matrix<const T, Device::CPU>& mat, const H5::DataSet& dataset) {
-  namespace tt = pika::this_thread::experimental;
-
-  const auto& dist = mat.distribution();
-  const H5::DataSpace& dataspace_file = dataset.getSpace();
-
-  for (const auto ij : dlaf::common::iterate_range2d(dist.localNrTiles())) {
-    auto tile_holder = tt::sync_wait(mat.read(ij));
-    const auto& tile = tile_holder.get();
-
-    const GlobalElementIndex topleft = dist.globalElementIndex(dist.globalTileIndex(ij), {0, 0});
-    const H5::DataSpace dataspace_mem = mapFileToMemory(topleft, tile, dataspace_file);
-
-    dataset.write(tile.ptr(), internal::hdf5_datatype<T>::type, dataspace_mem, dataspace_file);
-  }
+void to_dataset(dlaf::Matrix<const T, Device::CPU>& matrix, const H5::DataSet& dataset) {
+  auto tile_ro = [&matrix](LocalTileIndex ij) { return matrix.read(ij); };
+  auto dataset_write = [&dataset](auto&&... args) {
+    dataset.write(std::forward<decltype(args)>(args)...);
+  };
+  for_each_local_and_map<T>(matrix.distribution(), dataset, std::move(tile_ro),
+                            std::move(dataset_write));
 }
 
 }

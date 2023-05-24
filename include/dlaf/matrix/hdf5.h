@@ -163,25 +163,45 @@ enum class HDF5_FILE_MODE {
 
 class FileHDF5 final {
 public:
-  // This call implies that no other rank are running the same code
+  /// Create/open a local file.
+  ///
+  /// Depending on @p mode
+  /// - READONLY, the file will be opened (if should already exist)
+  /// - READWRITE, the file will be created (if should not exist)
+  ///
+  /// @pre @p filepath should not exist if mode == READWRITE
+  /// @pre @p filepath should exist if mode == READONLY
+  /// @post local file that will not support parallel-write
   FileHDF5(const std::string& filepath, const HDF5_FILE_MODE& mode = HDF5_FILE_MODE::READONLY) {
     file_ = H5::H5File(filepath, mode2flags(mode));
   }
 
-  FileHDF5(comm::Communicator comm, const std::string& filepath, const HDF5_FILE_MODE& mode) {
+  /// Create a file that supports writing in parallel from different ranks.
+  ///
+  /// @pre @p filepath should not exist
+  /// @post file created will support parallel-write
+  FileHDF5(comm::Communicator comm, const std::string& filepath) {
     H5::FileAccPropList fapl;
     DLAF_ASSERT(H5Pset_fapl_mpio(fapl.getId(), comm, MPI_INFO_NULL) >= 0, "Problem setting up MPI-IO.");
-    file_ = H5::H5File(filepath, mode2flags(mode), {}, fapl);
+    file_ = H5::H5File(filepath, mode2flags(HDF5_FILE_MODE::READWRITE), {}, fapl);
+    has_mpio_ = true;
     rank_ = comm.rank();
   }
 
+  /// Write @p matrix into dataset @p dataset_name
+  ///
+  /// @pre if @p matrix is distributed, the file should support parallel-write
   template <class T, Device D>
-  void write(const std::string& name, matrix::Matrix<const T, D>& matrix) const {
+  void write(matrix::Matrix<const T, D>& matrix, const std::string& dataset_name) const {
     matrix::MatrixMirror<const T, Device::CPU, D> matrix_mirror(matrix);
 
     matrix::Matrix<const T, Device::CPU>& matrix_host = matrix_mirror.get();
 
     const bool is_local_matrix = matrix::local_matrix(matrix_host);
+
+    DLAF_ASSERT(is_local_matrix || has_mpio_,
+                "You are trying to store a distributed matrix using a local only file", is_local_matrix,
+                has_mpio_);
 
     const hsize_t dims_file[3] = {
         dlaf::to_sizet(matrix_host.size().cols()),
@@ -191,15 +211,17 @@ public:
     H5::DataSpace dataspace_file(3, dims_file);
 
     // TODO it might be needed to wait all pika tasks
-    H5::DataSet dataset = file_.createDataSet(name, internal::hdf5_datatype<T>::type, dataspace_file);
+    H5::DataSet dataset =
+        file_.createDataSet(dataset_name, internal::hdf5_datatype<T>::type, dataspace_file);
 
     if (!is_local_matrix || rank_ == 0)
       internal::to_dataset<T>(matrix_host, dataset);
   }
 
+  /// Read dataset @p dataset_name in a local matrix with given @p blocksize.
   template <class T, Device D = Device::CPU>
-  auto read(const std::string& name, const TileElementSize blocksize) const {
-    const H5::DataSet dataset = file_.openDataSet(name);
+  auto read(const std::string& dataset_name, const TileElementSize blocksize) const {
+    const H5::DataSet dataset = file_.openDataSet(dataset_name);
 
     DLAF_ASSERT(dataset.getDataType() == internal::hdf5_datatype<BaseType<T>>::type,
                 "HDF5 Type mismatch");
@@ -216,10 +238,11 @@ public:
     return mat;
   }
 
+  /// Read dataset @p dataset_name in the matrix distributed accordingly to given parameters.
   template <class T, Device D = Device::CPU>
-  auto read(const std::string& name, const TileElementSize blocksize, comm::CommunicatorGrid grid,
-            const dlaf::comm::Index2D src_rank_index = {0, 0}) const {
-    const H5::DataSet dataset = file_.openDataSet(name);
+  auto read(const std::string& dataset_name, const TileElementSize blocksize,
+            comm::CommunicatorGrid grid, const dlaf::comm::Index2D src_rank_index = {0, 0}) const {
+    const H5::DataSet dataset = file_.openDataSet(dataset_name);
 
     DLAF_ASSERT(dataset.getDataType() == internal::hdf5_datatype<BaseType<T>>::type,
                 "HDF5 type mismatch");
@@ -259,6 +282,7 @@ private:
   }
 
   H5::H5File file_;
+  bool has_mpio_ = false;
   comm::IndexT_MPI rank_ = 0;
 };
 }

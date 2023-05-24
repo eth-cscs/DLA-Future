@@ -154,7 +154,7 @@ function(DLAF_addTest test_target_name)
 
   else()
     # ----- Classic test
-    set(_TEST_COMMAND ${DLAF_TEST_PREFLAGS} ${test_target_name} ${DLAF_TEST_POSTFLAGS})
+    set(_TEST_COMMAND ${DLAF_TEST_PREFLAGS} $<TARGET_FILE:${test_target_name}> ${DLAF_TEST_POSTFLAGS})
     set(_TEST_LABEL "RANK_1")
   endif()
 

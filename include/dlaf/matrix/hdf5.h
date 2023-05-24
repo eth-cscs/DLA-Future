@@ -51,6 +51,39 @@ const H5::PredType& hdf5_datatype<std::complex<T>>::type = hdf5_datatype<T>::typ
 template <class T>
 struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
+template <class T, Device D>
+H5::DataSpace mapFileToMemory(const GlobalElementIndex tl, const matrix::Tile<const T, D>& tile,
+                              const H5::DataSpace& file) {
+  const hsize_t file_counts[3] = {
+      to_sizet(tile.size().cols()),
+      to_sizet(tile.size().rows()),
+      internal::hdf5_datatype<T>::dims,
+  };
+  const hsize_t file_offsets[3] = {
+      to_sizet(tl.col()),
+      to_sizet(tl.row()),
+      0,
+  };
+  file.selectHyperslab(H5S_SELECT_SET, file_counts, file_offsets);
+
+  const hsize_t memory_dims[3] = {
+      to_sizet(tile.size().cols()),
+      to_sizet(tile.ld()),
+      internal::hdf5_datatype<T>::dims,
+  };
+  H5::DataSpace memory(3, memory_dims);
+
+  const hsize_t memory_counts[3] = {
+      to_sizet(tile.size().cols()),
+      to_sizet(tile.size().rows()),
+      internal::hdf5_datatype<T>::dims,
+  };
+  const hsize_t memory_offsets[3] = {0, 0, 0};
+  memory.selectHyperslab(H5S_SELECT_SET, memory_counts, memory_offsets);
+
+  return memory;
+}
+
 template <class T>
 void from_dataset(const H5::DataSet& dataset, dlaf::Matrix<T, Device::CPU>& matrix) {
   namespace tt = pika::this_thread::experimental;
@@ -61,43 +94,9 @@ void from_dataset(const H5::DataSet& dataset, dlaf::Matrix<T, Device::CPU>& matr
   for (const auto ij : common::iterate_range2d(dist.localNrTiles())) {
     auto tile = tt::sync_wait(matrix.readwrite(ij));
 
-    const GlobalTileIndex ij_g = dist.globalTileIndex(ij);
-    const GlobalElementIndex ij_e = dist.globalElementIndex(ij_g, {0, 0});
+    const GlobalElementIndex topleft = dist.globalElementIndex(dist.globalTileIndex(ij), {0, 0});
+    const H5::DataSpace dataspace_mem = mapFileToMemory(topleft, tile, dataspace_file);
 
-    // FILE DATASPACE
-    {
-      const hsize_t counts[3] = {
-          to_sizet(tile.size().cols()),
-          to_sizet(tile.size().rows()),
-          internal::hdf5_datatype<T>::dims,
-      };
-      const hsize_t offsets[3] = {
-          to_sizet(ij_e.col()),
-          to_sizet(ij_e.row()),
-          0,
-      };
-      dataspace_file.selectHyperslab(H5S_SELECT_SET, counts, offsets);
-    }
-
-    // MEMORY DATASPACE
-    const hsize_t dims_mem[3] = {
-        to_sizet(tile.size().cols()),
-        to_sizet(tile.ld()),
-        internal::hdf5_datatype<T>::dims,
-    };
-    H5::DataSpace dataspace_mem(3, dims_mem);
-
-    {
-      const hsize_t counts[3] = {
-          to_sizet(tile.size().cols()),
-          to_sizet(tile.size().rows()),
-          internal::hdf5_datatype<T>::dims,
-      };
-      const hsize_t offsets[3] = {0, 0, 0};
-      dataspace_mem.selectHyperslab(H5S_SELECT_SET, counts, offsets);
-    }
-
-    // read dataset
     dataset.read(tile.ptr(), internal::hdf5_datatype<T>::type, dataspace_mem, dataspace_file);
   }
 }
@@ -113,43 +112,9 @@ void to_dataset(dlaf::Matrix<const T, Device::CPU>& mat, const H5::DataSet& data
     auto tile_holder = tt::sync_wait(mat.read(ij));
     const auto& tile = tile_holder.get();
 
-    const GlobalTileIndex ij_g = dist.globalTileIndex(ij);
-    const GlobalElementIndex ij_e = dist.globalElementIndex(ij_g, {0, 0});
+    const GlobalElementIndex topleft = dist.globalElementIndex(dist.globalTileIndex(ij), {0, 0});
+    const H5::DataSpace dataspace_mem = mapFileToMemory(topleft, tile, dataspace_file);
 
-    // FILE DATASPACE
-    {
-      const hsize_t counts[3] = {
-          to_sizet(tile.size().cols()),
-          to_sizet(tile.size().rows()),
-          internal::hdf5_datatype<T>::dims,
-      };
-      const hsize_t offsets[3] = {
-          to_sizet(ij_e.col()),
-          to_sizet(ij_e.row()),
-          0,
-      };
-      dataspace_file.selectHyperslab(H5S_SELECT_SET, counts, offsets);
-    }
-
-    // MEMORY DATASPACE
-    const hsize_t dims_mem[3] = {
-        to_sizet(tile.size().cols()),
-        to_sizet(tile.ld()),
-        internal::hdf5_datatype<T>::dims,
-    };
-    H5::DataSpace dataspace_mem(3, dims_mem);
-
-    {
-      const hsize_t counts[3] = {
-          to_sizet(tile.size().cols()),
-          to_sizet(tile.size().rows()),
-          internal::hdf5_datatype<T>::dims,
-      };
-      const hsize_t offsets[3] = {0, 0, 0};
-      dataspace_mem.selectHyperslab(H5S_SELECT_SET, counts, offsets);
-    }
-
-    // write dataset
     dataset.write(tile.ptr(), internal::hdf5_datatype<T>::type, dataspace_mem, dataspace_file);
   }
 }

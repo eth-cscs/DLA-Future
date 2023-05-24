@@ -185,43 +185,29 @@ public:
 
   /// Read dataset @p dataset_name in a local matrix with given @p blocksize.
   template <class T, Device D = Device::CPU>
-  auto read(const std::string& dataset_name, const TileElementSize blocksize) const {
-    const H5::DataSet dataset = file_.openDataSet(dataset_name);
-
-    DLAF_ASSERT(dataset.getDataType() == internal::hdf5_datatype<BaseType<T>>::type,
-                "HDF5 Type mismatch");
+  Matrix<T, D> read(const std::string& dataset_name, const TileElementSize blocksize) const {
+    const H5::DataSet dataset = openDataSet<T>(dataset_name);
 
     const LocalElementSize size = FileHDF5::datasetToSize<LocalElementSize>(dataset);
     const matrix::Distribution dist(size, blocksize);
-    matrix::Matrix<T, D> mat(dist);
 
-    {
-      matrix::MatrixMirror<T, D, Device::CPU> matrix_mirror(mat);
-      internal::from_dataset<T>(dataset, matrix_mirror.get());
-    }
-
-    return mat;
+    matrix::Matrix<T, Device::CPU> mat(dist);
+    internal::from_dataset<T>(dataset, mat);
+    return returnMatrixOn<D>(std::move(mat));
   }
 
   /// Read dataset @p dataset_name in the matrix distributed accordingly to given parameters.
   template <class T, Device D = Device::CPU>
-  auto read(const std::string& dataset_name, const TileElementSize blocksize,
-            comm::CommunicatorGrid grid, const dlaf::comm::Index2D src_rank_index = {0, 0}) const {
-    const H5::DataSet dataset = file_.openDataSet(dataset_name);
-
-    DLAF_ASSERT(dataset.getDataType() == internal::hdf5_datatype<BaseType<T>>::type,
-                "HDF5 type mismatch");
+  Matrix<T, D> read(const std::string& dataset_name, const TileElementSize blocksize,
+                    comm::CommunicatorGrid grid, const dlaf::comm::Index2D src_rank_index) const {
+    const H5::DataSet dataset = openDataSet<T>(dataset_name);
 
     const GlobalElementSize size = FileHDF5::datasetToSize<GlobalElementSize>(dataset);
     const matrix::Distribution dist(size, blocksize, grid.size(), grid.rank(), src_rank_index);
-    matrix::Matrix<T, D> mat(dist);
 
-    {
-      matrix::MatrixMirror<T, D, Device::CPU> matrix_mirror(mat);
-      internal::from_dataset<T>(dataset, matrix_mirror.get());
-    }
-
-    return mat;
+    matrix::Matrix<T, Device::CPU> mat(dist);
+    internal::from_dataset<T>(dataset, mat);
+    return returnMatrixOn<D>(std::move(mat));
   }
 
 private:
@@ -244,6 +230,27 @@ private:
     dataset.getSpace().getSimpleExtentDims(dims_file);
 
     return Index2D{to_SizeType(dims_file[1]), to_SizeType(dims_file[0])};
+  }
+
+  template <Device Target, class T, Device Source>
+  static Matrix<T, Target> returnMatrixOn(Matrix<T, Source> source) {
+    if constexpr (Source == Target)
+      return source;
+    else {
+      Matrix<T, Target> target(source.distribution);
+      copy(source, target);
+      return target;
+    }
+  }
+
+  template <class T>
+  H5::DataSet openDataSet(const std::string& dataset_name) const {
+    const H5::DataSet dataset = file_.openDataSet(dataset_name);
+
+    const auto hdf5_t = internal::hdf5_datatype<BaseType<T>>::type;
+    DLAF_ASSERT(hdf5_t == dataset.getDataType(), "HDF5 type mismatch");
+
+    return dataset;
   }
 
   H5::H5File file_;

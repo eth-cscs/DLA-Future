@@ -156,17 +156,22 @@ void to_dataset(dlaf::Matrix<const T, Device::CPU>& mat, const H5::DataSet& data
 
 }
 
+enum class HDF5_FILE_MODE {
+  READONLY,
+  READWRITE,
+};
+
 class FileHDF5 final {
 public:
   // This call implies that no other rank are running the same code
-  FileHDF5(const std::string& filepath, unsigned int flags = H5F_ACC_RDONLY) {
-    file_ = H5::H5File(filepath, flags);
+  FileHDF5(const std::string& filepath, const HDF5_FILE_MODE& mode = HDF5_FILE_MODE::READONLY) {
+    file_ = H5::H5File(filepath, mode2flags(mode));
   }
 
-  FileHDF5(comm::Communicator comm, const std::string& filepath, unsigned int flags = H5F_ACC_RDONLY) {
+  FileHDF5(comm::Communicator comm, const std::string& filepath, const HDF5_FILE_MODE& mode) {
     H5::FileAccPropList fapl;
     DLAF_ASSERT(H5Pset_fapl_mpio(fapl.getId(), comm, MPI_INFO_NULL) >= 0, "Problem setting up MPI-IO.");
-    file_ = H5::H5File(filepath, flags, {}, fapl);
+    file_ = H5::H5File(filepath, mode2flags(mode), {}, fapl);
     rank_ = comm.rank();
   }
 
@@ -232,6 +237,16 @@ public:
   }
 
 private:
+  static unsigned int mode2flags(const HDF5_FILE_MODE mode) {
+    switch (mode) {
+      case HDF5_FILE_MODE::READONLY:
+        return H5F_ACC_RDONLY;
+      case HDF5_FILE_MODE::READWRITE:
+        return H5F_ACC_RDWR | H5F_ACC_EXCL;
+    }
+    return DLAF_UNREACHABLE(unsigned int);
+  }
+
   template <class Index2D>
   static Index2D datasetToSize(const H5::DataSet& dataset) {
     const H5::DataSpace& dataspace = dataset.getSpace();
@@ -246,7 +261,6 @@ private:
   H5::H5File file_;
   comm::IndexT_MPI rank_ = 0;
 };
-
 }
 
 #endif

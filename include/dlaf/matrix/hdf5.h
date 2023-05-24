@@ -230,7 +230,7 @@ private:
       case HDF5_FILE_MODE::READONLY:
         return H5F_ACC_RDONLY;
       case HDF5_FILE_MODE::READWRITE:
-        return H5F_ACC_RDWR | H5F_ACC_EXCL;
+        return H5F_ACC_RDWR | H5F_ACC_CREAT;
     }
     return DLAF_UNREACHABLE(unsigned int);
   }

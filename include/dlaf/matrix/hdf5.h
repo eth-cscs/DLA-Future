@@ -192,7 +192,7 @@ public:
       internal::to_dataset<T>(matrix_host, dataset);
   }
 
-  template <class T>
+  template <class T, Device D = Device::CPU>
   auto read(const std::string& name, const TileElementSize blocksize) const {
     const H5::DataSet dataset = file_.openDataSet(name);
 
@@ -201,14 +201,17 @@ public:
 
     const LocalElementSize size = FileHDF5::datasetToSize<LocalElementSize>(dataset);
     const matrix::Distribution dist(size, blocksize);
-    matrix::Matrix<T, dlaf::Device::CPU> mat(dist);
+    matrix::Matrix<T, D> mat(dist);
 
-    internal::from_dataset<T>(dataset, mat);
+    {
+      matrix::MatrixMirror<T, D, Device::CPU> matrix_mirror(mat);
+      internal::from_dataset<T>(dataset, matrix_mirror.get());
+    }
 
     return mat;
   }
 
-  template <class T>
+  template <class T, Device D = Device::CPU>
   auto read(const std::string& name, const TileElementSize blocksize, comm::CommunicatorGrid grid,
             const dlaf::comm::Index2D src_rank_index = {0, 0}) const {
     const H5::DataSet dataset = file_.openDataSet(name);
@@ -218,9 +221,12 @@ public:
 
     const GlobalElementSize size = FileHDF5::datasetToSize<GlobalElementSize>(dataset);
     const matrix::Distribution dist(size, blocksize, grid.size(), grid.rank(), src_rank_index);
-    matrix::Matrix<T, dlaf::Device::CPU> mat(dist);
+    matrix::Matrix<T, D> mat(dist);
 
-    internal::from_dataset<T>(dataset, mat);
+    {
+      matrix::MatrixMirror<T, D, Device::CPU> matrix_mirror(mat);
+      internal::from_dataset<T>(dataset, matrix_mirror.get());
+    }
 
     return mat;
   }

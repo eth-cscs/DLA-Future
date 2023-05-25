@@ -50,6 +50,10 @@ using dlaf::common::Ordering;
 using dlaf::matrix::Distribution;
 using dlaf::matrix::MatrixMirror;
 
+#ifdef DLAF_WITH_HDF5
+using dlaf::matrix::FileHDF5;
+#endif
+
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
   SizeType m;
@@ -65,7 +69,7 @@ struct Options
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
-      input_file = dlaf::matrix::FileHDF5(vm["input-file"].as<std::string>());
+      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::READONLY);
 
       if (!vm["matrix-size"].defaulted()) {
         std::cerr << "Warning! "

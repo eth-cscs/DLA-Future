@@ -35,6 +35,7 @@ namespace dlaf::matrix {
 
 namespace internal {
 
+// Type mappings
 template <class T>
 struct hdf5_datatype {
   static const H5::PredType& type;
@@ -55,12 +56,12 @@ struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 
 // Helper function that for each local tile index in @p dist, gets a sender of a tile with
 // @p get_tile and sends it to a function that takes care of the mapping between file and memory.
-// Then, this function, passes all required arguments to @p dataset_op which is either dataset.read
-// or dataste.write, so it has the following signature
+// Then, this function, passes all required arguments to @p dataset_op which should be either
+// dataset.read or dataste.write, so it has the following signature
 //    dataset_op(memory_ptr, type, dataspace_file, dataspace_mem)
 template <class T, class TileGetter, class DatasetOp>
-void for_each_local_and_map(Distribution dist, const H5::DataSet& dataset, TileGetter&& get_tile,
-                            DatasetOp&& dataset_op) {
+void for_each_local_map_with_dataset(Distribution dist, const H5::DataSet& dataset,
+                                     TileGetter&& get_tile, DatasetOp&& dataset_op) {
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
 
@@ -110,7 +111,8 @@ void from_dataset(const H5::DataSet& dataset, dlaf::Matrix<T, Device::CPU>& matr
   auto dataset_read = [&dataset](auto&&... args) {
     dataset.read(std::forward<decltype(args)>(args)...);
   };
-  for_each_local_and_map<T>(matrix.distribution(), dataset, std::move(tile_rw), std::move(dataset_read));
+  for_each_local_map_with_dataset<T>(matrix.distribution(), dataset, std::move(tile_rw),
+                                     std::move(dataset_read));
 }
 
 template <class T>
@@ -119,40 +121,43 @@ void to_dataset(dlaf::Matrix<const T, Device::CPU>& matrix, const H5::DataSet& d
   auto dataset_write = [&dataset](auto&&... args) {
     dataset.write(std::forward<decltype(args)>(args)...);
   };
-  for_each_local_and_map<T>(matrix.distribution(), dataset, std::move(tile_ro),
-                            std::move(dataset_write));
+  for_each_local_map_with_dataset<T>(matrix.distribution(), dataset, std::move(tile_ro),
+                                     std::move(dataset_write));
 }
 
 }
-
-enum class HDF5_FILE_MODE {
-  READONLY,
-  READWRITE,
-};
 
 class FileHDF5 final {
 public:
-  /// Create/open a local file.
-  ///
-  /// Depending on @p mode
+  /// File access modes:
   /// - READONLY, the file will be opened (if should already exist)
   /// - READWRITE, the file will be created (if should not exist)
+  enum class FileMode {
+    READONLY,
+    READWRITE,
+  };
+
+  /// Create/open a local file.
   ///
-  /// @pre @p filepath should not exist if mode == READWRITE
-  /// @pre @p filepath should exist if mode == READONLY
-  /// @post local file that will not support parallel-write
-  FileHDF5(const std::string& filepath, const HDF5_FILE_MODE& mode = HDF5_FILE_MODE::READONLY) {
+  /// @p filepath filepath where the file to be opened is or where it will be created
+  /// @p mode file access mode (see FileMode for more details)
+  ///
+  /// @post if mode == READWRITE, being a local file it will not support parallel-write
+  FileHDF5(const std::string& filepath, const FileMode& mode) {
     file_ = H5::H5File(filepath, mode2flags(mode));
   }
 
-  /// Create a file that supports writing in parallel from different ranks.
+  /// Create a file that, besides read, supports writing in parallel from different ranks.
+  ///
+  /// @p comm Communicator grouping all ranks that will be able to write in parallel to the file
+  /// @p filepath filepath where the file will be created
   ///
   /// @pre @p filepath should not exist
   /// @post file created will support parallel-write
   FileHDF5(comm::Communicator comm, const std::string& filepath) {
     H5::FileAccPropList fapl;
     DLAF_ASSERT(H5Pset_fapl_mpio(fapl.getId(), comm, MPI_INFO_NULL) >= 0, "Problem setting up MPI-IO.");
-    file_ = H5::H5File(filepath, mode2flags(HDF5_FILE_MODE::READWRITE), {}, fapl);
+    file_ = H5::H5File(filepath, mode2flags(FileMode::READWRITE), {}, fapl);
     has_mpio_ = true;
     rank_ = comm.rank();
   }
@@ -215,11 +220,11 @@ public:
   }
 
 private:
-  static unsigned int mode2flags(const HDF5_FILE_MODE mode) {
+  static unsigned int mode2flags(const FileMode mode) {
     switch (mode) {
-      case HDF5_FILE_MODE::READONLY:
+      case FileMode::READONLY:
         return H5F_ACC_RDONLY;
-      case HDF5_FILE_MODE::READWRITE:
+      case FileMode::READWRITE:
         return H5F_ACC_RDWR | H5F_ACC_CREAT;
     }
     return DLAF_UNREACHABLE(unsigned int);
@@ -236,6 +241,19 @@ private:
     return Index2D{to_SizeType(dims_file[1]), to_SizeType(dims_file[0])};
   }
 
+  template <class T>
+  H5::DataSet openDataSet(const std::string& dataset_name) const {
+    const H5::DataSet dataset = file_.openDataSet(dataset_name);
+
+    const auto hdf5_t = internal::hdf5_datatype<BaseType<T>>::type;
+    DLAF_ASSERT(hdf5_t == dataset.getDataType(), "HDF5 type mismatch");
+
+    return dataset;
+  }
+
+  // This helper returns @p source on specified @p Target device.
+  // If @p source is not on @p Target, it clones it on @p Target and returns it. Otherwise, if it
+  // was already on @p Target, it is simply returned.
   template <Device Target, class T, Device Source>
   static Matrix<T, Target> returnMatrixOn(Matrix<T, Source> source) {
     if constexpr (Source == Target)
@@ -245,16 +263,6 @@ private:
       copy(source, target);
       return target;
     }
-  }
-
-  template <class T>
-  H5::DataSet openDataSet(const std::string& dataset_name) const {
-    const H5::DataSet dataset = file_.openDataSet(dataset_name);
-
-    const auto hdf5_t = internal::hdf5_datatype<BaseType<T>>::type;
-    DLAF_ASSERT(hdf5_t == dataset.getDataType(), "HDF5 type mismatch");
-
-    return dataset;
   }
 
   H5::H5File file_;

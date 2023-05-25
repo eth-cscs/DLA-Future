@@ -1,0 +1,30 @@
+name: Docs
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  doc:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Install tools
+        run: sudo apt-get install --no-install-recommends doxygen
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Fetch docs
+        run: git fetch --no-tags --depth=1 origin +refs/heads/docs:refs/heads/docs
+      - name: Make Docs
+        run: |
+          cd doc && make doc && cd .. && mv doc/html master
+      - name: Push Docs
+        run: |
+          COMMIT_MSG=`git log -n 1 --pretty=format:%s`
+          git config user.name "Doc CI Action" && git config user.email "rasolca@users.noreply.github.com"
+          git symbolic-ref HEAD refs/heads/docs && git reset
+          git add master && git commit -m "Doc $COMMIT_MSG" && git push --set-upstream origin docs

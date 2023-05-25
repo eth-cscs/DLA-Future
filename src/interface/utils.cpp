@@ -17,6 +17,8 @@
 
 namespace dlaf::interface::utils{
 
+static bool initialized = false;
+
 extern "C" void dlafuture_init(int argc, char** argv){
   if(!initialized){
     pika::program_options::options_description desc("");

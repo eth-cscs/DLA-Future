@@ -276,11 +276,14 @@ DLAF_addSublibrary(
 )
 
 # Define DLAF's interface library
+if(DLAF_WITH_INTERFACE)
 DLAF_addSublibrary(
   interface SOURCES interface/blacs.cpp
+                    interface/cholesky.cpp
                     interface/utils.cpp
-  LIBRARIES dlaf.core
+  LIBRARIES dlaf.core dlaf.factorization
 )
+endif()
 
 # Define DLAF's complete library
 add_library(
@@ -293,7 +296,6 @@ add_library(
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>
-  $<TARGET_OBJECTS:dlaf.interface_object>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)

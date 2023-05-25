@@ -11,11 +11,9 @@
 
 namespace dlaf::interface::utils{
 
-static bool initialized = false;
-
 extern "C" void dlafuture_init(int argc, char** argv);
 extern "C" void dlafuture_finalize();
 
-void dlaf_check(char uplo, int* desc, int* info);
+void dlaf_check(char uplo, int* desc, int& info);
 
 }

@@ -87,3 +87,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# ------------------- Spack
+/spack-*

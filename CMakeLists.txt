@@ -134,6 +134,9 @@ if(DLAF_WITH_MKL)
   set(MKL_LAPACK_TARGET "mkl::mkl_intel_32bit_seq_dyn"
       CACHE STRING "MKL LAPACK target (see FindMKL for details)"
   )
+  set(MKL_SCALAPACK_TARGET "mkl::scalapack_intel_32bit_seq_dyn"
+    CACHE STRING "MKL ScaLAPACK target (see FindMKL for details)"
+  )
 
   # Note:
   # If specified targets are found, "standardize" them
@@ -144,6 +147,14 @@ if(DLAF_WITH_MKL)
     target_link_libraries(DLAF::LAPACK INTERFACE ${MKL_LAPACK_TARGET})
   else()
     message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
+  endif()
+  
+  if(TARGET ${MKL_SCALAPACK_TARGET})
+    set(SCALAPACK_FOUND TRUE)
+    add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)
+    target_link_libraries(DLAF::SCALAPACK INTERFACE ${MKL_SCALAPACK_TARGET})
+  else()
+    message(FATAL_ERROR "${MKL_SCALAPACK_TARGET} as ScaLAPACK target has not been found")
   endif()
 else()
   find_package(LAPACK REQUIRED)

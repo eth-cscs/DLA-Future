@@ -75,6 +75,7 @@ target_link_libraries(
     MPI::MPI_CXX
     $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
+    DLAF::SCALAPACK
     pika::pika
     pika-algorithms::pika_algorithms
     lapackpp
@@ -274,6 +275,13 @@ DLAF_addSublibrary(
   LIBRARIES dlaf.core
 )
 
+# Define DLAF's interface library
+DLAF_addSublibrary(
+  interface SOURCES interface/blacs.cpp
+                    interface/utils.cpp
+  LIBRARIES dlaf.core
+)
+
 # Define DLAF's complete library
 add_library(
   DLAF
@@ -285,6 +293,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>
+  $<TARGET_OBJECTS:dlaf.interface_object>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)

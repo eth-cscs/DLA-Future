@@ -10,10 +10,11 @@
 
 #pragma once
 
-#ifdef DLAF_WITH_GPU
+#ifdef DLAF_WITH_HIP
 
 #include <blas.hh>
 #include "dlaf/gpu/blas/api.h"
+#include "dlaf/gpu/lapack/api.h"
 
 namespace dlaf::util {
 namespace internal {

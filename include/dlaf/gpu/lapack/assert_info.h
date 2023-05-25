@@ -10,6 +10,8 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+
 #include <whip.hpp>
 
 /// @file
@@ -22,3 +24,5 @@ DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Potrf);
 DLAF_DECLARE_CUSOLVER_ASSERT_INFO(Hegst);
 
 }
+
+#endif

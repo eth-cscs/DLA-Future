@@ -13,6 +13,8 @@
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
 
+#include <dlaf/types.h>
+
 namespace dlaf::internal {
 template <typename...>
 struct TypeList {};

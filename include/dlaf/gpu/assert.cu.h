@@ -10,6 +10,8 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_GPU
+
 #include <stdio.h>
 
 #include <whip.hpp>
@@ -40,3 +42,5 @@ __device__ void gpuAssert(bool expr, PrintFunc&& print_func) {
 }
 
 }
+
+#endif

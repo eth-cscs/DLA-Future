@@ -9,6 +9,9 @@
 //
 #pragma once
 
+#include <functional>
+#include <type_traits>
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
@@ -27,7 +30,7 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
   using type = T;
 };
 
-struct empty_env {};
+struct EmptyEnv {};
 
 // We are only interested in the types wrapped by future and shared_future since
 // we will internally unwrap them.
@@ -60,12 +63,16 @@ struct SenderSingleValueTypeImpl<
   using type = RType;
 };
 
+template <typename... Ts>
+using DecayedTypeList = TypeList<std::decay_t<Ts>...>;
+
 // The type sent by Sender, if Sender sends exactly one type.
 #if defined(PIKA_HAVE_STDEXEC)
+// TODO: make it unique if several types have a identical decayed type
 template <typename Sender>
 using SenderSingleValueType =
     typename SenderSingleValueTypeImpl<pika::execution::experimental::value_types_of_t<
-        std::decay_t<Sender>, empty_env, TypeList, TypeList>>::type;
+        std::decay_t<Sender>, EmptyEnv, DecayedTypeList, DecayedTypeList>>::type;
 #else
 template <typename Sender>
 using SenderSingleValueType =

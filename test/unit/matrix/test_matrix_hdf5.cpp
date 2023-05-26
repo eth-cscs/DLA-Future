@@ -109,7 +109,7 @@ void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem
 
   comm::CommunicatorGrid grid(world, world.size(), 1, common::Ordering::RowMajor);
 
-  // Just one of rank writes the file, others wait the MPI barrier which ensures that file has been
+  // Just one rank writes the file, others wait the MPI barrier which ensures that file has been
   // written on disk.
   if (isMasterRank) {
     FileHDF5 file(filepath, FileHDF5::FileMode::READWRITE);
@@ -120,7 +120,7 @@ void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem
   }
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-  // At this point all ranks can open the file independently in readonly mode.
+  // At this point all ranks can open the file independently in READONLY mode.
   FileHDF5 file(filepath, FileHDF5::FileMode::READONLY);
 
   testReadLocal(file, dataset_name, mat_original, original_values);
@@ -146,8 +146,10 @@ void testHDF5Parallel(const bool isMasterRank, comm::CommunicatorGrid grid,
 
   comm::Communicator& world = grid.fullCommunicator();
 
-  // All ranks open the file with MPI-IO support and write their part to the file.
+  // All ranks open the file with MPI-IO support.
   FileHDF5 file(world, filepath);
+
+  // If it is a local matrix, just one rank will write, otherwise each rank will write its part.
   file.write(mat_original, dataset_name);
 
   // Note:

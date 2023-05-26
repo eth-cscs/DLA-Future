@@ -776,6 +776,9 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
 
+  // Note:
+  // This is neeeded to set to zero elements of e2 outside of the k by k top-left part.
+  // The input is not required to be zero for solveRank1Problem.
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
   solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);

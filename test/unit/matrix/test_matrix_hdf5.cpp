@@ -19,6 +19,7 @@
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/error.h"
+#include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
@@ -49,11 +50,26 @@ protected:
 
   comm::Communicator world;
   const std::filesystem::path filepath;
-  const std::string dataset_name = "/matrix";
 };
 
 TYPED_TEST_SUITE(MatrixHDF5Test, dlaf::test::MatrixElementTypes);
 
+template <class T, Device D>
+auto getMatrixAndSetter(matrix::Distribution dist) {
+  auto original_values = [](const GlobalElementIndex& ij) { return ij.row() * 100 + ij.col(); };
+
+  matrix::Matrix<T, Device::CPU> matrix(dist);
+  dlaf::matrix::util::set(matrix, original_values);
+
+  if constexpr (D == Device::CPU)
+    return std::make_tuple(std::move(matrix), std::move(original_values));
+
+  Matrix<T, D> mat_device(matrix.distribution());
+  copy(matrix, mat_device);
+  return std::make_tuple(std::move(mat_device), std::move(original_values));
+}
+
+// Read the full dataset locally.
 template <class T, Device D, class Func>
 void testReadLocal(const FileHDF5& file, const std::string& dataset_name,
                    const Matrix<const T, D>& mat_original, Func&& original_values) {
@@ -67,6 +83,7 @@ void testReadLocal(const FileHDF5& file, const std::string& dataset_name,
   CHECK_MATRIX_EQ(original_values, matrix_host.get());
 }
 
+// Read the part of dataset in a distributed matrix (i.e. just the part that belongs to current rank)
 template <class T, Device D, class Func>
 void testReadDistributed(const FileHDF5& file, const std::string& dataset_name,
                          comm::CommunicatorGrid grid, const Matrix<const T, D>& mat_original,
@@ -83,34 +100,20 @@ void testReadDistributed(const FileHDF5& file, const std::string& dataset_name,
 }
 
 template <class T, Device D>
-auto getLocalMatrixAndSetter() {
-  auto original_values = [](const GlobalElementIndex& ij) { return ij.row() * 100 + ij.col(); };
+void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem::path& filepath) {
+  const std::string dataset_name = "/matrix";
 
-  matrix::Matrix<T, Device::CPU> matrix({83, 88}, {9, 6});
-  dlaf::matrix::util::set(matrix, original_values);
+  auto [mat_original, original_values] = getMatrixAndSetter<T, D>({{83, 88}, {9, 6}});
 
-  if constexpr (D == Device::CPU)
-    return std::make_tuple(std::move(matrix), std::move(original_values));
-
-  Matrix<T, D> mat_device(matrix.distribution());
-  copy(matrix, mat_device);
-  return std::make_tuple(std::move(mat_device), std::move(original_values));
-}
-
-template <class T, Device D>
-void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem::path& filepath,
-              const std::string& dataset_name) {
   comm::CommunicatorGrid grid(world, world.size(), 1, common::Ordering::RowMajor);
 
-  auto [mat_original, original_values] = getLocalMatrixAndSetter<T, D>();
-
-  // Just one of the two ranks write the file, the other waits the MPI barrier which ensures that
-  // file has been written on disk.
+  // Just one of rank writes the file, others wait the MPI barrier which ensures that file has been
+  // written on disk.
   if (isMasterRank) {
     FileHDF5 file(filepath, FileHDF5::FileMode::READWRITE);
     file.write(mat_original, dataset_name);
 
-    // Verify that with a READWRITE file it is possible to read
+    // Verify that with READWRITE it is also possible to read
     testReadLocal(file, dataset_name, mat_original, original_values);
   }
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
@@ -123,24 +126,25 @@ void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem
 }
 
 TYPED_TEST(MatrixHDF5Test, SingleWriteMC) {
-  testHDF5<TypeParam, Device::CPU>(this->isMasterRank(), this->world, this->filepath,
-                                   this->dataset_name);
+  testHDF5<TypeParam, Device::CPU>(this->isMasterRank(), this->world, this->filepath);
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixHDF5Test, SingleWriteGPU) {
-  testHDF5<TypeParam, Device::GPU>(this->isMasterRank(), this->world, this->filepath,
-                                   this->dataset_name);
+  testHDF5<TypeParam, Device::GPU>(this->isMasterRank(), this->world, this->filepath);
 }
 #endif
 
 template <class T, Device D>
-void testHDF5Parallel(const bool isMasterRank, comm::Communicator world,
-                      const std::filesystem::path& filepath, const std::string& dataset_name) {
-  comm::CommunicatorGrid grid(world, world.size(), 1, common::Ordering::RowMajor);
+void testHDF5Parallel(const bool isMasterRank, comm::CommunicatorGrid grid,
+                      const std::filesystem::path& filepath, matrix::Distribution dist) {
+  const std::string dataset_name = "/matrix";
 
-  auto&& [mat_original, original_values] = getLocalMatrixAndSetter<T, D>();
+  auto [mat_original, original_values] = getMatrixAndSetter<T, D>(dist);
 
+  comm::Communicator& world = grid.fullCommunicator();
+
+  // All ranks open the file with MPI-IO support and write their part to the file.
   FileHDF5 file(world, filepath);
   file.write(mat_original, dataset_name);
 
@@ -153,18 +157,33 @@ void testHDF5Parallel(const bool isMasterRank, comm::Communicator world,
   testReadDistributed(file, dataset_name, grid, mat_original, original_values);
 
   // Check that a single rank can read, without involving others
-  if (isMasterRank)
+  if (isMasterRank) {
     testReadLocal(file, dataset_name, mat_original, original_values);
+  }
 }
 
-TYPED_TEST(MatrixHDF5Test, RWParallelMC) {
-  testHDF5Parallel<TypeParam, Device::CPU>(this->isMasterRank(), this->world, this->filepath,
-                                           this->dataset_name);
+TYPED_TEST(MatrixHDF5Test, RWParallelFromLocalMC) {
+  comm::CommunicatorGrid grid(this->world, this->world.size(), 1, common::Ordering::RowMajor);
+  matrix::Distribution dist({83, 88}, {9, 6});
+  testHDF5Parallel<TypeParam, Device::CPU>(this->isMasterRank(), grid, this->filepath, dist);
+}
+
+TYPED_TEST(MatrixHDF5Test, RWParallelFromDistributedMC) {
+  comm::CommunicatorGrid grid(this->world, this->world.size(), 1, common::Ordering::RowMajor);
+  matrix::Distribution dist({83, 88}, {9, 6}, grid.size(), grid.rank(), {0, 0});
+  testHDF5Parallel<TypeParam, Device::CPU>(this->isMasterRank(), grid, this->filepath, dist);
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(MatrixHDF5Test, RWParallelGPU) {
-  testHDF5Parallel<TypeParam, Device::GPU>(this->isMasterRank(), this->world, this->filepath,
-                                           this->dataset_name);
+TYPED_TEST(MatrixHDF5Test, RWParallelFromLocalGPU) {
+  comm::CommunicatorGrid grid(this->world, this->world.size(), 1, common::Ordering::RowMajor);
+  matrix::Distribution dist({83, 88}, {9, 6});
+  testHDF5Parallel<TypeParam, Device::GPU>(this->isMasterRank(), grid, this->filepath, dist);
+}
+
+TYPED_TEST(MatrixHDF5Test, RWParallelFromDistributedGPU) {
+  comm::CommunicatorGrid grid(this->world, this->world.size(), 1, common::Ordering::RowMajor);
+  matrix::Distribution dist({83, 88}, {9, 6}, grid.size(), grid.rank(), {0, 0});
+  testHDF5Parallel<TypeParam, Device::GPU>(this->isMasterRank(), grid, this->filepath, dist);
 }
 #endif

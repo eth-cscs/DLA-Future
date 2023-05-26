@@ -40,10 +40,10 @@ namespace dlaf::interface::blacs{
 
 std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo, dlaf::comm::CommunicatorGrid> dlaf_setup_from_desc(int * desc){
   // Matrix sizes
-  int n = desc[2];
-  int m = desc[3];
-  int nb = desc[4];
-  int mb = desc[5];
+  int m = desc[2];
+  int n = desc[3];
+  int mb = desc[4];
+  int nb = desc[5];
 
   auto grid_context = get_grid_context(desc);
 
@@ -58,8 +58,8 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo, dlaf::comm::Com
 
   dlaf::comm::CommunicatorGrid communicator_grid(world, dims[0], dims[1], dlaf::common::Ordering::RowMajor);
 
-  dlaf::GlobalElementSize matrix_size(n, m);
-  dlaf::TileElementSize block_size(nb, mb);
+  dlaf::GlobalElementSize matrix_size(m, n);
+  dlaf::TileElementSize block_size(mb, nb);
   
   dlaf::comm::Index2D src_rank_index(0, 0); // TODO: Get from BLACS?
   

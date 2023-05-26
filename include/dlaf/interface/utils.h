@@ -11,7 +11,7 @@
 
 namespace dlaf::interface::utils{
 
-extern "C" void dlafuture_init(int argc, char** argv);
+extern "C" void dlafuture_init(int argc, const char** argv);
 extern "C" void dlafuture_finalize();
 
 void dlaf_check(char uplo, int* desc, int& info);

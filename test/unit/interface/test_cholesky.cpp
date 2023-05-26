@@ -50,7 +50,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   int mb = 1;
 
   const char* order = "C";
-  char uplo = 'U';
+  char uplo = 'L';
 
   int contxt = 0;
   
@@ -66,36 +66,36 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   int m_local = numroc(&m, &mb, &myprow, &izero, &nprow);
   int n_local = numroc(&n, &nb, &mypcol, &izero, &npcol);
 
-  auto A = new double[m_local * n_local];
+  auto A = new double[static_cast<unsigned long>(m_local * n_local)];
 
   // TODO:Fill A
-  //std::cout << myprow << ' ' << mypcol << ' ' << m_local << ' ' << n_local << std::endl;
+  std::cout << myprow << ' ' << mypcol << ' ' << m_local << ' ' << n_local << '\n';
   if(myprow == 0 && mypcol == 0){
     assert(m_local * n_local == 2);
-    A[0] = 1.0;
-    A[1] = 0.0;
+    A[0] = 4.0;
+    A[1] = -16.0;
   }
   if(myprow == 1 && mypcol == 0){
     assert(m_local * n_local == 1);
-    A[0] = 0.5;
+    A[0] = 12;
   }
   if(myprow == 0 && mypcol == 1){
     assert(m_local * n_local == 2);
-    A[0] = 0.5;
-    A[1] = 0.0;
+    A[0] = 12.0;
+    A[1] = -43.0;
   }
   if(myprow == 1 && mypcol == 1){
     assert(m_local * n_local == 1);
-    A[0] = 1.0;
+    A[0] = 37;
   }
   if(myprow == 0 && mypcol == 2){
     assert(m_local * n_local == 2);
-    A[0] = 0.0;
-    A[1] = 1.0;
+    A[0] = -16.0;
+    A[1] = 98.0;
   }
   if(myprow == 1 && mypcol == 2){
     assert(m_local * n_local == 1);
-    A[0] = 0.0;
+    A[0] = -43;
   }
 
   int desca[9];
@@ -111,8 +111,26 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   EXPECT_EQ(info, 0);
 
   // TODO: Check decomposition
+  if(myprow == 0 && mypcol == 0){
+    EXPECT_DOUBLE_EQ(A[0], 2.0);
+    EXPECT_DOUBLE_EQ(A[1], -8.0);
+  }
+  if(myprow == 1 && mypcol == 0){
+    EXPECT_DOUBLE_EQ(A[0], 6.0);
+  }
+  if(myprow == 0 && mypcol == 1){
+    EXPECT_DOUBLE_EQ(A[0], 12.0); // Upper: contains original value
+    EXPECT_DOUBLE_EQ(A[1], 5.0);
+  }
   if(myprow == 1 && mypcol == 1){
-    std::cout << "L[1,1] = " << A[0] << '\n';
+    EXPECT_DOUBLE_EQ(A[0], 1.0);
+  }
+  if(myprow == 0 && mypcol == 2){
+    EXPECT_DOUBLE_EQ(A[0], -16.0); // Upper: contains original value
+    EXPECT_DOUBLE_EQ(A[1], 3.0);
+  }
+  if(myprow == 1 && mypcol == 2){
+    EXPECT_DOUBLE_EQ(A[0], -43.0); // Upper: contains original value
   }
 
   dlaf::interface::utils::dlafuture_finalize();

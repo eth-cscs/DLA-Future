@@ -27,7 +27,8 @@ template <typename T>
 void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info){
   utils::dlaf_check(uplo, desca, info);
   if(info == -1) return;
-  
+  info = -1; // Reset info to bad state
+ 
   pika::resume();
 
   auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;

@@ -52,17 +52,21 @@ void dlaf_check(char uplo, int* desc, int& info) {
     info = -1;
     std::cerr << "ERROR: The UpLo parameter has a incorrect value: '" << uplo;
     std::cerr << "'. Please check the ScaLAPACK documentation.\n";
+    return;
   } 
 
   if (desc[0] != 1) {
     info = -1;
     std::cerr << "ERROR: DLA-Future can only treat dense matrices.\n";
+    return;
   }
 
   if (!initialized) {
     info = -1;
     std::cerr << "Error: DLA-Future must be initialized.\n";
+    return;
   }
+  info = 0; // Checks OK
 }
 
 

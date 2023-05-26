@@ -73,11 +73,12 @@ auto getMatrixAndSetter(matrix::Distribution dist) {
 template <class T, Device D, class Func>
 void testReadLocal(const FileHDF5& file, const std::string& dataset_name,
                    const Matrix<const T, D>& mat_original, Func&& original_values) {
-  Matrix<const T, D> mat_local = file.read<T, D>(dataset_name, {13, 27});
+  const TileElementSize blocksize(13, 27);
+  Matrix<const T, D> mat_local = file.read<T, D>(dataset_name, blocksize);
 
   EXPECT_TRUE(local_matrix(mat_local));
   EXPECT_EQ(mat_original.size(), mat_local.size());
-  EXPECT_EQ(TileElementSize(13, 27), mat_local.blockSize());
+  EXPECT_EQ(blocksize, mat_local.blockSize());
 
   dlaf::matrix::MatrixMirror<const T, Device::CPU, D> matrix_host(mat_local);
   CHECK_MATRIX_EQ(original_values, matrix_host.get());
@@ -88,12 +89,13 @@ template <class T, Device D, class Func>
 void testReadDistributed(const FileHDF5& file, const std::string& dataset_name,
                          comm::CommunicatorGrid grid, const Matrix<const T, D>& mat_original,
                          Func&& original_values) {
-  Matrix<const T, D> mat_dist = file.read<T, D>(dataset_name, {26, 13}, grid, {0, 0});
+  const TileElementSize blocksize(26, 13);
+  Matrix<const T, D> mat_dist = file.read<T, D>(dataset_name, blocksize, grid, {0, 0});
 
   EXPECT_EQ(grid.size(), mat_dist.distribution().commGridSize());
   EXPECT_EQ(grid.rank(), mat_dist.distribution().rankIndex());
   EXPECT_EQ(mat_original.size(), mat_dist.size());
-  EXPECT_EQ(TileElementSize(26, 13), mat_dist.blockSize());
+  EXPECT_EQ(blocksize, mat_dist.blockSize());
 
   dlaf::matrix::MatrixMirror<const T, Device::CPU, D> matrix_host(mat_dist);
   CHECK_MATRIX_EQ(original_values, matrix_host.get());

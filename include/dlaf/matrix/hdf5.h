@@ -164,6 +164,7 @@ public:
 
   /// Write @p matrix into dataset @p dataset_name
   ///
+  /// If the matrix is local, just one rank is going to write on the file.
   /// @pre if @p matrix is distributed, the file should support parallel-write
   template <class T, Device D>
   void write(matrix::Matrix<const T, D>& matrix, const std::string& dataset_name) const {

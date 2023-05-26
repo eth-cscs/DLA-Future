@@ -468,9 +468,9 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                    ex::when_all_vector(tc.readwrite(evecs)),
                    ex::just(std::vector<common::internal::vector<T>>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
-                                 auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles, auto& evec_tiles,
-                                 auto& ws_vecs) {
+      ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
+                                           auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
+                                           auto& evec_tiles, auto& ws_vecs) {
         common::internal::SingleThreadedBlasScope single;
 
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
@@ -519,16 +519,22 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         }
 
         // - compute productorial (thread-local)
+        auto compute_w = [&](const GlobalElementIndex ij) {
+          const auto q_tile = distr.globalTileLinearIndex(ij);
+          const auto q_ij = distr.tileElementIndex(ij);
+
+          const SizeType i = ij.row();
+          const SizeType j = ij.col();
+
+          w[i] *= q[to_sizet(q_tile)](q_ij) / (d_ptr[to_sizet(i)] - d_ptr[to_sizet(j)]);
+        };
+
         for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
-          for (auto i = 0; i < k; ++i) {
-            if (i == j)
-              continue;
+          for (auto i = 0; i < j; ++i)
+            compute_w({i, j});
 
-            const auto q_tile = distr.globalTileLinearIndex({i, j});
-            const auto q_ij = distr.tileElementIndex({i, j});
-
-            w[i] *= q[to_sizet(q_tile)](q_ij) / (d_ptr[to_sizet(i)] - d_ptr[to_sizet(j)]);
-          }
+          for (auto i = j + 1; i < k; ++i)
+            compute_w({i, j});
         }
 
         barrier_ptr->arrive_and_wait();

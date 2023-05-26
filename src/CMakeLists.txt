@@ -75,7 +75,7 @@ target_link_libraries(
     MPI::MPI_CXX
     $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
-    DLAF::SCALAPACK
+    $<$<BOOL:${DLAF_WITH_INTERFACE}>:DLAF::SCALAPACK>
     pika::pika
     pika-algorithms::pika_algorithms
     lapackpp

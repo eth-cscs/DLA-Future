@@ -9,11 +9,11 @@
 #
 
 if(DLAF_WITH_INTERFACE)
-DLAF_addTest(
-  test_cholesky_interface
-  SOURCES test_cholesky.cpp
-  LIBRARIES dlaf.interface dlaf.core
-  USE_MAIN MPI
-  MPIRANKS 6
-)
+  DLAF_addTest(
+    test_cholesky_interface
+    SOURCES test_cholesky.cpp
+    LIBRARIES dlaf.interface dlaf.core
+    USE_MAIN MPI
+    MPIRANKS 6
+  )
 endif()

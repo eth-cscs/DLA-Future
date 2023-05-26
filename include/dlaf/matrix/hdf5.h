@@ -219,6 +219,10 @@ public:
     return returnMatrixOn<D>(std::move(mat));
   }
 
+  void flush() const {
+    file_.flush(H5F_SCOPE_LOCAL);
+  }
+
 private:
   static unsigned int mode2flags(const FileMode mode) {
     switch (mode) {
@@ -258,11 +262,10 @@ private:
   static Matrix<T, Target> returnMatrixOn(Matrix<T, Source> source) {
     if constexpr (Source == Target)
       return source;
-    else {
-      Matrix<T, Target> target(source.distribution);
-      copy(source, target);
-      return target;
-    }
+
+    Matrix<T, Target> target(source.distribution());
+    copy(source, target);
+    return target;
   }
 
   H5::H5File file_;

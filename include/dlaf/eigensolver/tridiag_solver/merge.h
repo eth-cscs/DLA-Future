@@ -9,6 +9,8 @@
 //
 #pragma once
 
+#include <algorithm>
+
 #include <pika/algorithm.hpp>
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -28,6 +30,7 @@
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
+#include "dlaf/memory/memory_view.h"
 #include "dlaf/multiplication/general.h"
 #include "dlaf/permutations/general.h"
 #include "dlaf/permutations/general/impl.h"
@@ -466,7 +469,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.readwrite(evecs)),
-                   ex::just(std::vector<common::internal::vector<T>>())) |
+                   ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
@@ -480,8 +483,11 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         const std::size_t end = std::min(thread_idx * batch_size + batch_size, to_sizet(k));
 
         // STEP 0: Initialize workspaces (single-thread)
-        if (thread_idx == 0)
-          ws_vecs.resize(nthreads);
+        if (thread_idx == 0) {
+          ws_vecs.reserve(nthreads);
+          for (std::size_t i = 0; i < nthreads; ++i)
+            ws_vecs.emplace_back(to_sizet(k));
+        }
 
         barrier_ptr->arrive_and_wait();
 
@@ -504,10 +510,9 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // STEP 2a Compute weights
         auto& q = evec_tiles;
-        auto& w = ws_vecs[thread_idx];
+        T* w = ws_vecs[thread_idx]();
 
         // - copy diagonal from q -> w (or just initialize with 1)
-        w.resize(k, 1);
         if (thread_idx == 0) {
           for (auto i = 0; i < k; ++i) {
             const GlobalElementIndex kk(i, i);
@@ -516,6 +521,9 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             w[i] = q[to_sizet(diag_tile)](diag_element);
           }
+        }
+        else {
+          std::fill_n(w, k, T(1));
         }
 
         // - compute productorial (thread-local)
@@ -542,8 +550,10 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
           for (int i = 0; i < k; ++i) {
-            for (std::size_t tidx = 1; tidx < nthreads; ++tidx)
-              w[i] *= ws_vecs[tidx][i];
+            for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
+              const T* w_partial = ws_vecs[tidx]();
+              w[i] *= w_partial[i];
+            }
             z_tiles[0].ptr()[i] = std::copysign(std::sqrt(-w[i]), z_ptr[to_sizet(i)]);
           }
         }
@@ -553,7 +563,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
         {
           const T* w = z_ptr;
-          auto& s = ws_vecs[thread_idx];
+          T* s = ws_vecs[thread_idx]();
 
           for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
             for (int i = 0; i < k; ++i) {
@@ -563,7 +573,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
               s[i] = w[i] / q[to_sizet(q_tile)](q_ij);
             }
 
-            const auto vec_norm = blas::nrm2(k, s.data(), 1);
+            const T vec_norm = blas::nrm2(k, s, 1);
 
             for (auto i = 0; i < k; ++i) {
               const auto q_tile = distr.globalTileLinearIndex({i, j});

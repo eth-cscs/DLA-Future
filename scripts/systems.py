@@ -38,6 +38,7 @@ cscs["daint-mc"] = {
     "Multiple rpn in same job": True,
     "GPU": False,
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -69,6 +70,7 @@ cscs["daint-gpu"] = {
     "Multiple rpn in same job": True,
     "GPU": True,
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -100,6 +102,7 @@ cscs["eiger"] = {
     "Multiple rpn in same job": True,
     "GPU": False,
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -133,6 +136,7 @@ cscs["clariden-nvgpu"] = {
     "GPU": True,
     # Based on nvidia-smi topo --matrix
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm_cuda",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -165,6 +169,7 @@ cscs["clariden-amdgpu"] = {
     "Multiple rpn in same job": True,
     "GPU": True,
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm_hip",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -197,6 +202,7 @@ csc["lumi-cpu"] = {
     "Multiple rpn in same job": True,
     "GPU": False,
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -233,6 +239,7 @@ csc["lumi-gpu"] = {
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --show-topo
     "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:fe00000000000000fe000000000000,fe00000000000000fe00000000000000,fe00000000000000fe0000,fe00000000000000fe000000,fe00000000000000fe,fe00000000000000fe00,fe00000000000000fe00000000,fe00000000000000fe0000000000 gpu2ranks_slurm_hip",
+    "Launch command": "sbatch --chdir={job_path} {job_file}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}

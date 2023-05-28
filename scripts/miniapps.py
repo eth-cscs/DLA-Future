@@ -10,10 +10,11 @@
 
 from itertools import product
 from math import ceil, sqrt
-from os import makedirs, system
+from os import makedirs
 from os.path import expanduser, isfile
 from time import sleep
 from pathlib import Path
+from subprocess import Popen, PIPE
 
 
 # Finds two factors of `n` that are as close to each other as possible.
@@ -134,8 +135,13 @@ class JobText:
             print(f"Created : {job_file}")
             return
 
-        print(f"Submitting : {job_file}")
-        system(f"sbatch --chdir={job_path} {job_file}")
+        launch_cmd = self.system["Launch command"]
+        # fstring substitution of vars in launch_cmd
+        launch_cmd = launch_cmd.format(job_path=job_path, job_file=job_file)
+        print(f"Submitting : {launch_cmd}")
+
+        process = Popen(f"{launch_cmd}", shell=True, executable="/bin/bash", universal_newlines=True,
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE ) 
         # sleep to not overload the scheduler
         sleep(1)
 

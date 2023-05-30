@@ -473,8 +473,6 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
                                            auto& evec_tiles, auto& ws_vecs) {
-        common::internal::SingleThreadedBlasScope single;
-
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
         const std::size_t batch_size = util::ceilDiv(to_sizet(k), nthreads);
@@ -493,21 +491,26 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // STEP 1: LAED4 (multi-thread)
         const T* d_ptr = d_tiles_futs[0].get().ptr();
         const T* z_ptr = z_tiles[0].ptr();
-        T* eval_ptr = eval_tiles[0].ptr();
 
-        for (std::size_t i = begin; i < end; ++i) {
-          T& eigenval = eval_ptr[i];
+        {
+          common::internal::SingleThreadedBlasScope single;
 
-          const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, to_SizeType(i)));
-          const SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(to_SizeType(i));
-          T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
+          T* eval_ptr = eval_tiles[0].ptr();
 
-          lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
+          for (std::size_t i = begin; i < end; ++i) {
+            T& eigenval = eval_ptr[i];
+
+            const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, to_SizeType(i)));
+            const SizeType i_col = distr.tileElementFromGlobalElement<Coord::Col>(to_SizeType(i));
+            T* delta = evec_tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_col));
+
+            lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
+          }
         }
 
         barrier_ptr->arrive_and_wait();
 
-        // STEP 2a Compute weights
+        // STEP 2a Compute weights (multi-thread)
         auto& q = evec_tiles;
         T* w = ws_vecs[thread_idx]();
 
@@ -525,7 +528,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           std::fill_n(w, k, T(1));
         }
 
-        // - compute productorial (thread-local)
+        // - compute productorial
         auto compute_w = [&](const GlobalElementIndex ij) {
           const auto q_tile = distr.globalTileLinearIndex(ij);
           const auto q_ij = distr.tileElementIndex(ij);
@@ -561,6 +564,8 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
         {
+          common::internal::SingleThreadedBlasScope single;
+
           const T* w = z_ptr;
           T* s = ws_vecs[thread_idx]();
 

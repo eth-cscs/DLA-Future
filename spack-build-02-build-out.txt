@@ -1,0 +1,197 @@
+==> dla-future: Executing phase: 'build'
+==> [2023-05-30-10:40:53.521735] '/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make' '-j16'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -S/home/rmeli/git/DLA-Future -B/home/rmeli/git/DLA-Future/spack-build-um55btz --check-build-system CMakeFiles/Makefile.cmake 0
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_progress_start /home/rmeli/git/DLA-Future/spack-build-um55btz/CMakeFiles /home/rmeli/git/DLA-Future/spack-build-um55btz//CMakeFiles/progress.marks
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f CMakeFiles/Makefile2 all
+make[1]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.core_object.dir/build.make src/CMakeFiles/dlaf.core_object.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.auxiliary_object.dir/build.make src/CMakeFiles/dlaf.auxiliary_object.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.eigensolver_object.dir/build.make src/CMakeFiles/dlaf.eigensolver_object.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-src/googletest /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-build/googletest /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-build/googletest/CMakeFiles/gtest.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.solver_object.dir/build.make src/CMakeFiles/dlaf.solver_object.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.permutations_object.dir/build.make src/CMakeFiles/dlaf.permutations_object.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.auxiliary_object.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/build.make src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.core_object.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.factorization_object.dir/build.make src/CMakeFiles/dlaf.factorization_object.dir/depend
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.solver_object.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.permutations_object.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.eigensolver_object.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.multiplication_object.dir/build.make src/CMakeFiles/dlaf.multiplication_object.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.interface_object.dir/build.make src/CMakeFiles/dlaf.interface_object.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.factorization_object.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.interface_object.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.multiplication_object.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for '_deps/googletest-build/googletest/CMakeFiles/gtest.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.auxiliary_object.dir/build.make src/CMakeFiles/dlaf.auxiliary_object.dir/build
+[  3%] Built target gtest
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/depend
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.permutations_object.dir/build.make src/CMakeFiles/dlaf.permutations_object.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-src/googletest /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-build/googletest /home/rmeli/git/DLA-Future/spack-build-um55btz/_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.solver_object.dir/build.make src/CMakeFiles/dlaf.solver_object.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.auxiliary_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.solver_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.factorization_object.dir/build.make src/CMakeFiles/dlaf.factorization_object.dir/build
+[  5%] Built target dlaf.auxiliary_object
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.permutations_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for '_deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/build.make src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/build
+[  7%] Built target dlaf.solver_object
+[ 12%] Built target gtest_main
+[ 12%] Built target dlaf.permutations_object
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.multiplication_object.dir/build.make src/CMakeFiles/dlaf.multiplication_object.dir/build
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.interface_object.dir/build.make src/CMakeFiles/dlaf.interface_object.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.factorization_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 16%] Built target dlaf.factorization_object
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.tridiagonal_eigensolver_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 20%] Built target dlaf.tridiagonal_eigensolver_object
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.multiplication_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.interface_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 25%] Built target dlaf.multiplication_object
+[ 32%] Built target dlaf.interface_object
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.eigensolver_object.dir/build.make src/CMakeFiles/dlaf.eigensolver_object.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.eigensolver_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 45%] Built target dlaf.eigensolver_object
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.core_object.dir/build.make src/CMakeFiles/dlaf.core_object.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.core_object.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 81%] Built target dlaf.core_object
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.core.dir/build.make src/CMakeFiles/dlaf.core.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/DLAF.dir/build.make src/CMakeFiles/DLAF.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.core.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/DLAF.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.core.dir/build.make src/CMakeFiles/dlaf.core.dir/build
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/DLAF.dir/build.make src/CMakeFiles/DLAF.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.core.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/DLAF.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 83%] Built target dlaf.core
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.auxiliary.dir/build.make src/CMakeFiles/dlaf.auxiliary.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.solver.dir/build.make src/CMakeFiles/dlaf.solver.dir/depend
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.permutations.dir/build.make src/CMakeFiles/dlaf.permutations.dir/depend
+[ 85%] Built target DLAF
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.factorization.dir/build.make src/CMakeFiles/dlaf.factorization.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.auxiliary.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.solver.dir/DependInfo.cmake --color=
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.multiplication.dir/build.make src/CMakeFiles/dlaf.multiplication.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.permutations.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.factorization.dir/DependInfo.cmake --color=
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.multiplication.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.solver.dir/build.make src/CMakeFiles/dlaf.solver.dir/build
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.auxiliary.dir/build.make src/CMakeFiles/dlaf.auxiliary.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.solver.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.permutations.dir/build.make src/CMakeFiles/dlaf.permutations.dir/build
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.multiplication.dir/build.make src/CMakeFiles/dlaf.multiplication.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.auxiliary.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.factorization.dir/build.make src/CMakeFiles/dlaf.factorization.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.permutations.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.multiplication.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.factorization.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 87%] Built target dlaf.solver
+[ 89%] Built target dlaf.auxiliary
+[ 90%] Built target dlaf.permutations
+[ 92%] Built target dlaf.multiplication
+[ 94%] Built target dlaf.factorization
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/build.make src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/build.make src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.tridiagonal_eigensolver.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 96%] Built target dlaf.tridiagonal_eigensolver
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.eigensolver.dir/build.make src/CMakeFiles/dlaf.eigensolver.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.eigensolver.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.eigensolver.dir/build.make src/CMakeFiles/dlaf.eigensolver.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.eigensolver.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[ 98%] Built target dlaf.eigensolver
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.interface.dir/build.make src/CMakeFiles/dlaf.interface.dir/depend
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+cd /home/rmeli/git/DLA-Future/spack-build-um55btz && /home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_depends "Unix Makefiles" /home/rmeli/git/DLA-Future /home/rmeli/git/DLA-Future/src /home/rmeli/git/DLA-Future/spack-build-um55btz /home/rmeli/git/DLA-Future/spack-build-um55btz/src /home/rmeli/git/DLA-Future/spack-build-um55btz/src/CMakeFiles/dlaf.interface.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/gmake-4.4.1-2uwsz6npxa4yk7mm7kf2cyubsy5pio2t/bin/make  -f src/CMakeFiles/dlaf.interface.dir/build.make src/CMakeFiles/dlaf.interface.dir/build
+make[2]: Entering directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+make[2]: Nothing to be done for 'src/CMakeFiles/dlaf.interface.dir/build'.
+make[2]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+[100%] Built target dlaf.interface
+make[1]: Leaving directory '/home/rmeli/git/DLA-Future/spack-build-um55btz'
+/home/rmeli/spack/opt/spack/linux-ubuntu23.04-zen4/gcc-11.3.0/cmake-3.26.3-xm7jqizk3hey32gkxk7o6vg46l4giddn/bin/cmake -E cmake_progress_start /home/rmeli/git/DLA-Future/spack-build-um55btz/CMakeFiles 0

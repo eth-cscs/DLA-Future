@@ -21,12 +21,12 @@
 
 namespace dlaf::interface {
 
-template <typename T>
-using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
 template <typename T>
 void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator,
              int nprow, int npcol) {
+  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+  
   pika::resume();
 
   // TODO: Check uplo
@@ -50,7 +50,7 @@ void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_C
   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
 
   {
-    MatrixMirror<T> matrix(matrix_host);
+    MatrixMirror matrix(matrix_host);
 
     dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
                                                                                     dlaf_uplo,
@@ -62,6 +62,8 @@ void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_C
 
 template <typename T>
 void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
+  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+
   utils::dlaf_check(uplo, desca, info);
   if (info == -1)
     return;
@@ -76,7 +78,7 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(dlaf_info.distribution), dlaf_info.layout_info, a);
 
   {
-    MatrixMirror<T> matrix(matrix_host);
+    MatrixMirror matrix(matrix_host);
 
     dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_info.communicator_grid,
                                                                                     dlaf_uplo,

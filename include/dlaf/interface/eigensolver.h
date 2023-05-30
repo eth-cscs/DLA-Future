@@ -20,11 +20,11 @@
 
 namespace dlaf::interface {
 
-template <typename T>
-using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
 template <typename T>
 void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& info) {
+  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+  
   // TODO: Check desca matches descz?
   utils::dlaf_check(uplo, desca, info);
   if (info == -1)
@@ -49,9 +49,9 @@ void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& in
 
   {
     // Create matrix mirrors
-    MatrixMirror<T> matrix(matrix_host);
-    MatrixMirror<T> eigenvalues(eigenvalues_host);
-    MatrixMirror<T> eigenvectors(eigenvectors_host);
+    MatrixMirror matrix(matrix_host);
+    MatrixMirror eigenvalues(eigenvalues_host);
+    MatrixMirror eigenvectors(eigenvectors_host);
 
     // WARN: Hard-coded to LOWER, use dlaf_uplo instead
     dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_setup.communicator_grid,

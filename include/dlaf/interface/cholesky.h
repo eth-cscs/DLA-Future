@@ -10,7 +10,6 @@
 #pragma once
 
 #include <mpi.h>
-#include <dlaf/interface/cholesky.h>
 
 #include <pika/init.hpp>
 #include <dlaf/factorization/cholesky.h>
@@ -21,12 +20,11 @@
 
 namespace dlaf::interface {
 
-
 template <typename T>
 void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator,
              int nprow, int npcol) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-  
+
   pika::resume();
 
   // TODO: Check uplo
@@ -75,14 +73,14 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
 
   auto dlaf_info = blacs::from_desc(desca);
 
-  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(dlaf_info.distribution), dlaf_info.layout_info, a);
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(dlaf_info.distribution),
+                                                         dlaf_info.layout_info, a);
 
   {
     MatrixMirror matrix(matrix_host);
 
-    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_info.communicator_grid,
-                                                                                    dlaf_uplo,
-                                                                                    matrix.get());
+    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default,
+                                  T>(dlaf_info.communicator_grid, dlaf_uplo, matrix.get());
   }  // Destroy mirror
 
   pika::suspend();

@@ -9,7 +9,7 @@
 //
 #pragma once
 
-namespace dlaf::interface::utils{
+namespace dlaf::interface::utils {
 
 extern "C" void dlafuture_init(int argc, const char** argv);
 extern "C" void dlafuture_finalize();

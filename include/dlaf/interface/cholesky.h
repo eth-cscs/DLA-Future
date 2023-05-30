@@ -11,24 +11,25 @@
 
 #include <dlaf/interface/cholesky.h>
 
+#include <pika/init.hpp>
 #include <dlaf/factorization/cholesky.h>
 #include <dlaf/interface/blacs.h>
 #include <dlaf/interface/utils.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
-#include <pika/init.hpp>
 
-namespace dlaf::interface{
+namespace dlaf::interface {
 
 template <typename T>
 using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
 template <typename T>
-void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info){
+void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
   utils::dlaf_check(uplo, desca, info);
-  if(info == -1) return;
-  info = -1; // Reset info to bad state
- 
+  if (info == -1)
+    return;
+  info = -1;  // Reset info to bad state
+
   pika::resume();
 
   auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
@@ -39,14 +40,16 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info){
 
   {
     MatrixMirror<T> matrix(matrix_host);
-    
-    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid, dlaf_uplo, matrix.get());
-  } // Destroy mirror
-  
+
+    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
+                                                                                    dlaf_uplo,
+                                                                                    matrix.get());
+  }  // Destroy mirror
+
   matrix_host.waitLocalTiles();
 
   pika::suspend();
-  
+
   info = 0;
 }
 

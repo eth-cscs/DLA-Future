@@ -10,13 +10,13 @@
 
 #include <dlaf/interface/cholesky.h>
 
-namespace dlaf::interface{
+namespace dlaf::interface {
 
-extern "C" void pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info){
+extern "C" void pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info) {
   pxpotrf<double>(uplo, n, a, ia, ja, desca, info);
 }
 
-extern "C" void pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info){
+extern "C" void pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info) {
   pxpotrf<float>(uplo, n, a, ia, ja, desca, info);
 }
 

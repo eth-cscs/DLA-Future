@@ -53,7 +53,8 @@ void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& in
     MatrixMirror eigenvalues(eigenvalues_host);
     MatrixMirror eigenvectors(eigenvectors_host);
 
-    // WARN: Hard-coded to LOWER, use dlaf_uplo instead
+    // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
+    // TODO: blas::Uplo::Upper is not yet supported
     dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_setup.communicator_grid,
                                                                                      blas::Uplo::Lower,
                                                                                      matrix.get(),

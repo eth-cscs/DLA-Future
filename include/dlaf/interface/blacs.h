@@ -27,7 +27,12 @@ int get_grid_context(int* desc);
 int get_communicator_context(const int grid_context);
 MPI_Comm get_communicator(const int grid_context);
 
-std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo, dlaf::comm::CommunicatorGrid>
-dlaf_setup_from_desc(int* desc);
+struct DlafSetup{
+  dlaf::matrix::Distribution distribution;
+  dlaf::matrix::LayoutInfo layout_info;
+  dlaf::comm::CommunicatorGrid communicator_grid;
+};
+
+DlafSetup from_desc(int* desc);
 
 }

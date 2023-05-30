@@ -38,8 +38,7 @@ MPI_Comm get_communicator(const int grid_context) {
   return communicator;
 }
 
-std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo, dlaf::comm::CommunicatorGrid>
-dlaf_setup_from_desc(int* desc) {
+DlafSetup from_desc(int* desc) {
   // Matrix sizes
   int m = desc[2];
   int n = desc[3];
@@ -71,7 +70,7 @@ dlaf_setup_from_desc(int* desc) {
   const int lld = desc[8];  // Local leading dimension
   dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, lld);
 
-  return std::make_tuple(distribution, layout, communicator_grid);
+  return {distribution, layout, communicator_grid};
 }
 
 }

@@ -33,18 +33,18 @@ void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& in
 
   pika::resume();
 
-  auto [distribution, layout, comm_grid] = blacs::dlaf_setup_from_desc(desca);
+  auto dlaf_setup = dlaf::interface::blacs::from_desc(desca);
 
-  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(distribution, layout, a);
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(dlaf_setup.distribution, dlaf_setup.layout_info, a);
 
   // uplo checked by dlaf_check
   auto dlaf_uplo = uplo == 'U' or uplo == 'u' ? blas::Uplo::Upper : blas::Uplo::Lower;
 
-  dlaf::matrix::Matrix<T, dlaf::Device::CPU> eigenvectors_host(distribution, layout,
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> eigenvectors_host(dlaf_setup.distribution, dlaf_setup.layout_info,
                                                                z);  // Distributed eigenvectors
   auto eigenvalues_host =
       dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>({n, 1},
-                                                                {distribution.blockSize().rows(), 1}, n,
+                                                                {dlaf_setup.distribution.blockSize().rows(), 1}, n,
                                                                 w);  // Local eigenvectors
 
   {
@@ -54,7 +54,7 @@ void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& in
     MatrixMirror<T> eigenvectors(eigenvectors_host);
 
     // WARN: Hard-coded to LOWER, use dlaf_uplo instead
-    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(comm_grid,
+    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_setup.communicator_grid,
                                                                                      blas::Uplo::Lower,
                                                                                      matrix.get(),
                                                                                      eigenvalues.get(),

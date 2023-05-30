@@ -73,14 +73,14 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
 
   auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
 
-  auto [distribution, layout, communicator_grid] = blacs::dlaf_setup_from_desc(desca);
+  auto dlaf_info = blacs::from_desc(desca);
 
-  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(dlaf_info.distribution), dlaf_info.layout_info, a);
 
   {
     MatrixMirror<T> matrix(matrix_host);
 
-    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
+    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(dlaf_info.communicator_grid,
                                                                                     dlaf_uplo,
                                                                                     matrix.get());
   }  // Destroy mirror

@@ -34,6 +34,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
 
+    variant("ci-check-threads", default=False, description="Check number of spawned threads in CI (Advanced usage).")
+
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
@@ -150,11 +152,12 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
 
-            if "~cuda" in self.spec and "~rocm" in self.spec:
-                args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
+
+        if "+ci-check-threads" in self.spec:
+            args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

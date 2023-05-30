@@ -11,7 +11,6 @@
 
 #include <algorithm>
 
-#include <pika/algorithm.hpp>
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
 

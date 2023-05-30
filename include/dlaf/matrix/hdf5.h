@@ -57,7 +57,7 @@ struct hdf5_datatype<const T> : public hdf5_datatype<T> {};
 // Helper function that for each local tile index in @p dist, gets a sender of a tile with
 // @p get_tile and sends it to a function that takes care of the mapping between file and memory.
 // Then, this function, passes all required arguments to @p dataset_op which should be either
-// dataset.read or dataste.write, so it has the following signature
+// dataset.read or dataset.write, so it has the following signature
 //    dataset_op(memory_ptr, type, dataspace_file, dataspace_mem)
 template <class T, class TileGetter, class DatasetOp>
 void for_each_local_map_with_dataset(Distribution dist, const H5::DataSet& dataset,

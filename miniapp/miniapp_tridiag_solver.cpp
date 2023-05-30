@@ -51,7 +51,7 @@ using dlaf::matrix::Distribution;
 using dlaf::matrix::MatrixMirror;
 
 #ifdef DLAF_WITH_HDF5
-using dlaf::matrix::FileHDF5;
+using dlaf::matrix::internal::FileHDF5;
 #endif
 
 struct Options
@@ -59,7 +59,7 @@ struct Options
   SizeType m;
   SizeType mb;
 #ifdef DLAF_WITH_HDF5
-  std::optional<dlaf::matrix::FileHDF5> input_file;
+  std::optional<dlaf::matrix::internal::FileHDF5> input_file;
 #endif
 
   Options(const pika::program_options::variables_map& vm)

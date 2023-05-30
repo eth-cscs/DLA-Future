@@ -64,7 +64,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
 #ifdef DLAF_WITH_HDF5
-  matrix::FileHDF5 file(grid.fullCommunicator(), "trid-ref.h5");
+  matrix::internal::FileHDF5 file(grid.fullCommunicator(), "trid-ref.h5");
 
   file.write(ret.tridiagonal, "/tridiag");
 #endif

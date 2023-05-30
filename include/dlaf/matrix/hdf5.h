@@ -31,9 +31,7 @@
 #include "dlaf/types.h"
 #include "dlaf/util_matrix.h"
 
-namespace dlaf::matrix {
-
-namespace internal {
+namespace dlaf::matrix::internal {
 
 // Type mappings
 template <class T>
@@ -123,8 +121,6 @@ void to_dataset(dlaf::Matrix<const T, Device::CPU>& matrix, const H5::DataSet& d
   };
   for_each_local_map_with_dataset<T>(matrix.distribution(), dataset, std::move(tile_ro),
                                      std::move(dataset_write));
-}
-
 }
 
 class FileHDF5 final {

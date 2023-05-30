@@ -29,7 +29,7 @@
 #include "dlaf_test/util_types.h"
 
 using namespace dlaf;
-using dlaf::matrix::FileHDF5;
+using dlaf::matrix::internal::FileHDF5;
 
 template <typename T>
 class MatrixHDF5Test : public ::testing::Test {

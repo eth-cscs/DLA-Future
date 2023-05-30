@@ -130,11 +130,11 @@ void to_dataset(dlaf::Matrix<const T, Device::CPU>& matrix, const H5::DataSet& d
 class FileHDF5 final {
 public:
   /// File access modes:
-  /// - READONLY, the file will be opened (if should already exist)
-  /// - READWRITE, the file will be created (if should not exist)
+  /// - readonly, the file will be opened (if should already exist)
+  /// - readwrite, the file will be created (if should not exist)
   enum class FileMode {
-    READONLY,
-    READWRITE,
+    readonly,
+    readwrite,
   };
 
   /// Create/open a local file.
@@ -157,7 +157,7 @@ public:
   FileHDF5(comm::Communicator comm, const std::string& filepath) {
     H5::FileAccPropList fapl;
     DLAF_ASSERT(H5Pset_fapl_mpio(fapl.getId(), comm, MPI_INFO_NULL) >= 0, "Problem setting up MPI-IO.");
-    file_ = H5::H5File(filepath, mode2flags(FileMode::READWRITE), {}, fapl);
+    file_ = H5::H5File(filepath, mode2flags(FileMode::readwrite), {}, fapl);
     has_mpio_ = true;
     rank_ = comm.rank();
   }
@@ -227,9 +227,9 @@ public:
 private:
   static unsigned int mode2flags(const FileMode mode) {
     switch (mode) {
-      case FileMode::READONLY:
+      case FileMode::readonly:
         return H5F_ACC_RDONLY;
-      case FileMode::READWRITE:
+      case FileMode::readwrite:
         return H5F_ACC_RDWR | H5F_ACC_CREAT;
     }
     return DLAF_UNREACHABLE(unsigned int);

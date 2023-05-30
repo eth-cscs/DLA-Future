@@ -112,16 +112,16 @@ void testHDF5(bool isMasterRank, comm::Communicator world, const std::filesystem
   // Just one rank writes the file, others wait the MPI barrier which ensures that file has been
   // written on disk.
   if (isMasterRank) {
-    FileHDF5 file(filepath, FileHDF5::FileMode::READWRITE);
+    FileHDF5 file(filepath, FileHDF5::FileMode::readwrite);
     file.write(mat_original, dataset_name);
 
-    // Verify that with READWRITE it is also possible to read
+    // Verify that with readwrite it is also possible to read
     testReadLocal(file, dataset_name, mat_original, original_values);
   }
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
-  // At this point all ranks can open the file independently in READONLY mode.
-  FileHDF5 file(filepath, FileHDF5::FileMode::READONLY);
+  // At this point all ranks can open the file independently in readonly mode.
+  FileHDF5 file(filepath, FileHDF5::FileMode::readonly);
 
   testReadLocal(file, dataset_name, mat_original, original_values);
   testReadDistributed(file, dataset_name, grid, mat_original, original_values);

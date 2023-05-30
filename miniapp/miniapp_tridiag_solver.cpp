@@ -69,7 +69,7 @@ struct Options
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
-      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::READONLY);
+      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::readonly);
 
       if (!vm["matrix-size"].defaulted()) {
         std::cerr << "Warning! "

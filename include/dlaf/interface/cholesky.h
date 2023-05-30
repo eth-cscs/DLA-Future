@@ -57,8 +57,6 @@ void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_C
                                                                                     matrix.get());
   }  // Destroy mirror
 
-  matrix_host.waitLocalTiles();
-
   pika::suspend();
 }
 
@@ -84,8 +82,6 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
                                                                                     dlaf_uplo,
                                                                                     matrix.get());
   }  // Destroy mirror
-
-  matrix_host.waitLocalTiles();
 
   pika::suspend();
 

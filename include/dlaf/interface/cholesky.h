@@ -9,6 +9,7 @@
 //
 #pragma once
 
+#include <mpi.h>
 #include <dlaf/interface/cholesky.h>
 
 #include <pika/init.hpp>
@@ -22,6 +23,44 @@ namespace dlaf::interface {
 
 template <typename T>
 using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+
+template <typename T>
+void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator,
+             int nprow, int npcol) {
+  pika::resume();
+
+  // TODO: Check uplo
+  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+
+  dlaf::comm::Communicator world(communicator);
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
+
+  dlaf::comm::CommunicatorGrid communicator_grid(world, nprow, npcol, dlaf::common::Ordering::RowMajor);
+
+  dlaf::GlobalElementSize matrix_size(m, n);
+  dlaf::TileElementSize block_size(mb, nb);
+
+  dlaf::comm::Index2D src_rank_index(0, 0);  // WARN: Is this always the case?
+
+  dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
+                                          communicator_grid.rank(), src_rank_index);
+
+  dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, lld);
+
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
+
+  {
+    MatrixMirror<T> matrix(matrix_host);
+
+    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
+                                                                                    dlaf_uplo,
+                                                                                    matrix.get());
+  }  // Destroy mirror
+
+  matrix_host.waitLocalTiles();
+
+  pika::suspend();
+}
 
 template <typename T>
 void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
@@ -52,6 +91,12 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
 
   info = 0;
 }
+
+extern "C" void cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
+                           const MPI_Comm& communicator, int nprow, int npcol);
+
+extern "C" void cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
+                           const MPI_Comm& communicator, int nprow, int npcol);
 
 extern "C" void pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info);
 

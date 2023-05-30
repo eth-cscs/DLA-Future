@@ -20,4 +20,12 @@ extern "C" void pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, 
   pxpotrf<float>(uplo, n, a, ia, ja, desca, info);
 }
 
+extern "C" void cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator, int nprow, int npcol){
+  pxpotrf<double>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
+}
+
+extern "C" void cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator, int nprow, int npcol){
+  pxpotrf<float>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
+}
+
 }

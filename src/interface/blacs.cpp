@@ -21,18 +21,18 @@
 #include <mpi.h>
 
 namespace dlaf::interface::blacs {
-static int get_grid_context(int* desc) {
+int get_grid_context(int* desc) {
   return desc[1];  // BLACS context
 }
 
-static int get_communicator_context(const int grid_context) {
+int get_communicator_context(const int grid_context) {
   int communicator_context;
   // SGET_BLACSCONTXT == 10
   Cblacs_get(grid_context, 10, &communicator_context);
   return communicator_context;
 }
 
-static MPI_Comm get_communicator(const int grid_context) {
+MPI_Comm get_communicator(const int grid_context) {
   int communicator_context = get_communicator_context(grid_context);
   MPI_Comm communicator = Cblacs2sys_handle(communicator_context);
   return communicator;

@@ -279,9 +279,10 @@ DLAF_addSublibrary(
 if(DLAF_WITH_INTERFACE)
 DLAF_addSublibrary(
   interface SOURCES interface/blacs.cpp
+                    interface/eigensolver.cpp
                     interface/cholesky.cpp
                     interface/utils.cpp
-  LIBRARIES dlaf.core dlaf.factorization
+  LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
 )
 endif()
 

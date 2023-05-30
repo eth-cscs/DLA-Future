@@ -211,7 +211,7 @@ pika::program_options::options_description getOptionsDescription() {
       "The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. (The input matrix is distributed with a {nb x nb} block size.)");
   desc.add_options()(
       "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(),
-      "Maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
+      "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
   desc.add_options()(
       "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(),
       "The application of the HH reflector is splitted in smaller applications of group size reflectors.");

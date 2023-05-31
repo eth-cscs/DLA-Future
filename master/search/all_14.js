@@ -1,8 +1,8 @@
 var searchData=
 [
-  ['waitlocaltiles_419',['waitLocalTiles',['../classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#abffc73bf079f7f7c23af3fca4dec329f',1,'dlaf::matrix::Matrix&lt; const T, D &gt;::waitLocalTiles()'],['../classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0',1,'dlaf::matrix::RetiledMatrix::waitLocalTiles()']]],
-  ['workspace_420',['WorkSpace',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space.html',1,'dlaf::eigensolver::internal']]],
-  ['workspacehost_421',['WorkSpaceHost',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host.html',1,'dlaf::eigensolver::internal']]],
-  ['workspacehostmirror_422',['WorkSpaceHostMirror',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host_mirror.html',1,'dlaf::eigensolver::internal']]],
-  ['workspacehostmirror_3c_20t_2c_20device_3a_3acpu_20_3e_423',['WorkSpaceHostMirror&lt; T, Device::CPU &gt;',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host_mirror_3_01_t_00_01_device_1_1_c_p_u_01_4.html',1,'dlaf::eigensolver::internal']]]
+  ['waitlocaltiles_418',['waitLocalTiles',['../classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#abffc73bf079f7f7c23af3fca4dec329f',1,'dlaf::matrix::Matrix&lt; const T, D &gt;::waitLocalTiles()'],['../classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0',1,'dlaf::matrix::RetiledMatrix::waitLocalTiles()']]],
+  ['workspace_419',['WorkSpace',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space.html',1,'dlaf::eigensolver::internal']]],
+  ['workspacehost_420',['WorkSpaceHost',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host.html',1,'dlaf::eigensolver::internal']]],
+  ['workspacehostmirror_421',['WorkSpaceHostMirror',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host_mirror.html',1,'dlaf::eigensolver::internal']]],
+  ['workspacehostmirror_3c_20t_2c_20device_3a_3acpu_20_3e_422',['WorkSpaceHostMirror&lt; T, Device::CPU &gt;',['../structdlaf_1_1eigensolver_1_1internal_1_1_work_space_host_mirror_3_01_t_00_01_device_1_1_c_p_u_01_4.html',1,'dlaf::eigensolver::internal']]]
 ];

@@ -139,7 +139,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   }
 
   const char* argv[] = {"test_interface_", nullptr};
-  dlaf::interface::utils::dlafuture_init(1, argv);
+  dlaf_initialize(1, argv);
 
   info = -1;
   dlaf_pdpotrf(uplo, n, a, 1, 1, desca, info);
@@ -162,7 +162,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
     delete[] A;
   }
 
-  dlaf::interface::utils::dlafuture_finalize();
+  dlaf_finalize();
 
   delete[] a;
   Cblacs_gridexit(contxt);
@@ -275,7 +275,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
   }
 
   const char* argv[] = {"test_interface_", nullptr};
-  dlaf::interface::utils::dlafuture_init(1, argv);
+  dlaf_initialize(1, argv);
 
   dlaf_cholesky_d(uplo, a, m, n, mb, nb, m_local, comm, nprow, npcol);
 
@@ -296,7 +296,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
     delete[] A;
   }
 
-  dlaf::interface::utils::dlafuture_finalize();
+  dlaf_finalize();
 
   delete[] a;
   Cblacs_gridexit(contxt);

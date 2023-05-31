@@ -16,12 +16,10 @@
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
-namespace dlaf::interface::utils{
+static bool dlaf_initialized = false;
 
-static bool initialized = false;
-
-extern "C" void dlafuture_init(int argc, const char** argv){
-  if(!initialized){
+void dlaf_initialize(int argc, const char** argv){
+  if(!dlaf_initialized){
     pika::program_options::options_description desc("");
     desc.add(dlaf::getOptionsDescription());
 
@@ -33,22 +31,24 @@ extern "C" void dlafuture_init(int argc, const char** argv){
 
     // DLA-Future initialization
     dlaf::initialize(argc, argv);
-    initialized = true;
+    dlaf_initialized = true;
 
     pika::suspend();
   }
 }
 
-extern "C" void dlafuture_finalize(){
+void dlaf_finalize(){
   pika::resume();
   pika::finalize();
   dlaf::finalize();
   pika::stop();
 
-  initialized = false;
+  dlaf_initialized = false;
 }
 
-void dlaf_check(char uplo, int* desc, int& info) {
+namespace dlaf::interface::utils{
+
+void check(char uplo, int* desc, int& info) {
   if (uplo != 'U' && uplo != 'u' && uplo != 'L' && uplo != 'l') {
     info = -1;
     std::cerr << "ERROR: The UpLo parameter has a incorrect value: '" << uplo;
@@ -62,14 +62,12 @@ void dlaf_check(char uplo, int* desc, int& info) {
     return;
   }
 
-  if (!initialized) {
+  if (!dlaf_initialized) {
     info = -1;
     std::cerr << "Error: DLA-Future must be initialized.\n";
     return;
   }
   info = 0; // Checks OK
 }
-
-
 
 }

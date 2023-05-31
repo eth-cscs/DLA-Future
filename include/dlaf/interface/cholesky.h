@@ -64,7 +64,7 @@ template <typename T>
 void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  utils::dlaf_check(uplo, desca, info);
+  utils::check(uplo, desca, info);
   if (info == -1)
     return;
   info = -1;  // Reset info to bad state

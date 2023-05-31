@@ -14,11 +14,4 @@ if (DLAF_WITH_INTERFACE)
     LIBRARIES dlaf.interface dlaf.core
     USE_MAIN MPI MPIRANKS 6
   )
-
-  # DLAF_addTest(test_eigensolver_interface
-  #   SOURCES test_eigensolver.cpp
-  #   LIBRARIES dlaf.interface dlaf.core
-  #   USE_MAIN MPI MPIRANKS 6
-  # )
-
 endif()

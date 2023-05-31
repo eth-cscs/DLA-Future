@@ -9,11 +9,13 @@
 //
 #pragma once
 
+extern "C"{
+void dlaf_initialize(int argc, const char** argv);
+void dlaf_finalize();
+}
+
 namespace dlaf::interface::utils {
 
-extern "C" void dlafuture_init(int argc, const char** argv);
-extern "C" void dlafuture_finalize();
-
-void dlaf_check(char uplo, int* desc, int& info);
+void check(char uplo, int* desc, int& info);
 
 }

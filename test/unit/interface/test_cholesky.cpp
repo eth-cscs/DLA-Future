@@ -142,7 +142,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   dlaf::interface::utils::dlafuture_init(1, argv);
 
   info = -1;
-  dlaf::interface::pdpotrf(uplo, n, a, 1, 1, desca, info);
+  dlaf_pdpotrf(uplo, n, a, 1, 1, desca, info);
   ASSERT_EQ(info, 0);
 
   // Gather local matrices into global one
@@ -277,7 +277,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
   const char* argv[] = {"test_interface_", nullptr};
   dlaf::interface::utils::dlafuture_init(1, argv);
 
-  dlaf::interface::cholesky_d(uplo, a, m, n, mb, nb, m_local, comm, nprow, npcol);
+  dlaf_cholesky_d(uplo, a, m, n, mb, nb, m_local, comm, nprow, npcol);
 
   // Gather local matrices into global one
   pdgemr2d(&m, &n, a, &ione, &ione, desca, A, &ione, &ione, descA, &contxt);

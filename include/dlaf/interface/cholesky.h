@@ -91,15 +91,16 @@ void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
 
   info = 0;
 }
+}
 
-extern "C" void cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
-                           const MPI_Comm& communicator, int nprow, int npcol);
+extern "C" {
+void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
+                     const MPI_Comm& communicator, int nprow, int npcol);
 
-extern "C" void cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
-                           const MPI_Comm& communicator, int nprow, int npcol);
+void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
+                     const MPI_Comm& communicator, int nprow, int npcol);
 
-extern "C" void pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info);
+void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info);
 
-extern "C" void pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info);
-
+void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info);
 }

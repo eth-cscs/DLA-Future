@@ -13,12 +13,14 @@
 
 #include <mpi.h>
 
-void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info) {
-  pxpotrf<double>(uplo, n, a, ia, ja, desca, info);
+extern "C"{
+
+void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info) {
+  pxpotrf<double>(uplo, n, a, ia, ja, desca, *info);
 }
 
-void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info) {
-  pxpotrf<float>(uplo, n, a, ia, ja, desca, info);
+void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info) {
+  pxpotrf<float>(uplo, n, a, ia, ja, desca, *info);
 }
 
 // void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
@@ -31,3 +33,4 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& i
 //                 int nprow, int npcol) {
 //   pxpotrf<float>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
 // }
+}

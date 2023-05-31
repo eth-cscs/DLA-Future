@@ -7,6 +7,10 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+extern "C"{
+#include "test_cholesky_c_api_wrapper.h"
+}
+
 #include "dlaf_c/factorization/cholesky.h"
 #include "dlaf_c/grid.h"
 #include "dlaf_c/init.h"
@@ -143,7 +147,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   dlaf_create_grid_from_blacs(contxt);
 
   info = -1;
-  dlaf_pdpotrf(uplo, n, a, 1, 1, desca, info);
+  C_dlaf_pdpotrf(uplo, n, a, 1, 1, desca, &info);
   ASSERT_EQ(info, 0);
 
   // Gather local matrices into global one

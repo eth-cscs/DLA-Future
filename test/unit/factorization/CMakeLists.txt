@@ -27,7 +27,7 @@ DLAF_addTest(
 if(DLAF_WITH_C_API)
   DLAF_addTest(
     test_cholesky_c_api
-    SOURCES test_cholesky_c_api.cpp
+    SOURCES test_cholesky_c_api.cpp test_cholesky_c_api_wrapper.c
     LIBRARIES dlaf.c_api dlaf.core dlaf.factorization
     USE_MAIN MPI
     MPIRANKS 6

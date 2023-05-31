@@ -12,7 +12,6 @@
 #include <mpi.h>
 
 extern "C" {
-
 MPI_Comm Cblacs2sys_handle(int ictxt);
 void Cblacs_get(int ictxt, int inum, int* comm);
 extern "C" void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);

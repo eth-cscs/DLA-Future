@@ -11,13 +11,20 @@
 
 #include <mpi.h>
 
+#ifdef __cplusplus
 extern "C" {
-void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
-                     const MPI_Comm& communicator, int nprow, int npcol);
+#endif
 
-void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
-                     const MPI_Comm& communicator, int nprow, int npcol);
-void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int& info);
+void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info);
 
-void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& info);
+void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
+
+// void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
+//                      const MPI_Comm& communicator, int nprow, int npcol);
+//
+// void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
+//                      const MPI_Comm& communicator, int nprow, int npcol);
+
+#ifdef __cplusplus
 }
+#endif

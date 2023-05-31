@@ -983,7 +983,6 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
     const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
     T* eval_ptr = eval_tiles[0].ptr();
     T* delta_ptr = delta_tile_arr[0].ptr();
-    SizeType* i2_ptr = i2_tile_arr[0].ptr();
 
     // Iterate over the columns of the local submatrix tile grid
     for (SizeType j_loc_subm_tile = 0; j_loc_subm_tile < sz_loc_tiles.cols(); ++j_loc_subm_tile) {
@@ -1007,8 +1006,7 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
 
         // Solve the deflated rank-1 problem
         T& eigenval = eval_ptr[to_sizet(j_gl_el)];
-        lapack::laed4(static_cast<int>(k), static_cast<int>(j_gl_el), d_ptr, z_ptr, delta_ptr, rho,
-                      &eigenval);
+        lapack::laed4(to_int(k), to_int(j_gl_el), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
 
         // Iterate over the rows of the local submatrix tile grid and copy the parts from delta stored on this rank.
         for (SizeType i_loc_subm_tile = 0; i_loc_subm_tile < sz_loc_tiles.rows(); ++i_loc_subm_tile) {
@@ -1027,7 +1025,7 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
           auto& i2_tile = i2_tile_arr[to_sizet(i_subm_i2_arr)];
 
           const SizeType nrows = std::min(dist.tileSize<Coord::Row>(i_gl_tile), n - i_gl_subm_el);
-          for (int i = 0; i < nrows; ++i) {
+          for (SizeType i = 0; i < nrows; ++i) {
             const SizeType ii = i2_tile({i, 0});
             if (ii < k)
               evec_tile({i, j_tile_el}) = delta_ptr[ii];
@@ -1043,6 +1041,8 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
 
     const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
                                     i_begin * dist.blockSize().cols()};
+    const SizeType* i2_ptr = i2_tile_arr[0].ptr();
+
     for (SizeType i = 0; i < n; ++i) {
       const SizeType j = i2_ptr[i];
       if (j >= k) {

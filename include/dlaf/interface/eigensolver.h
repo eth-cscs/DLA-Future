@@ -62,6 +62,8 @@ void pxsyevd(char uplo, int n, T* a, int* desca, T* w, T* z, int* descz, int& in
                                                                                      eigenvectors.get());
   }  // Destroy mirrors
 
+  eigenvalues_host.waitLocalTiles();
+
   pika::suspend();
 
   info = 0;

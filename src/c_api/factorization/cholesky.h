@@ -10,9 +10,9 @@
 #pragma once
 #include <mpi.h>
 
+#include "../grid.h"
 #include <dlaf/factorization/cholesky.h>
 #include <dlaf_c/grid.h>
-#include "../grid.h"
 
 #include <pika/init.hpp>
 #include <dlaf/matrix/matrix.h>

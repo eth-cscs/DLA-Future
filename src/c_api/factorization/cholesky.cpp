@@ -8,8 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <dlaf_c/factorization/cholesky.h>
 #include "cholesky.h"
+#include <dlaf_c/factorization/cholesky.h>
 
 #include <mpi.h>
 
@@ -26,7 +26,8 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int& i
 //   pxpotrf<double>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
 // }
 //
-// void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator,
+// void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld, const MPI_Comm&
+// communicator,
 //                 int nprow, int npcol) {
 //   pxpotrf<float>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
 // }

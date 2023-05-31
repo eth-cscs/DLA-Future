@@ -10,16 +10,16 @@
 
 #include <dlaf_c/init.h>
 
-#include <dlaf/init.h>
 #include <pika/execution.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
+#include <dlaf/init.h>
 
 static bool dlaf_initialized = false;
 
-void dlaf_initialize(int argc, const char** argv){
-  if(!dlaf_initialized){
+void dlaf_initialize(int argc, const char** argv) {
+  if (!dlaf_initialized) {
     pika::program_options::options_description desc("");
     desc.add(dlaf::getOptionsDescription());
 
@@ -37,7 +37,7 @@ void dlaf_initialize(int argc, const char** argv){
   }
 }
 
-void dlaf_finalize(){
+void dlaf_finalize() {
   pika::resume();
   pika::finalize();
   dlaf::finalize();

@@ -33,15 +33,15 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts('~miniapps', when='+ci-test')
-    
-    variant("interface", default=False, description="Build ScaLAPACK-like interface")
+
+    variant("c_api", default=False, description="Build C API")
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
-    depends_on("scalapack", when="+interface")
+    depends_on("scalapack", when="+c_api") # TODO: Make optional?
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
@@ -119,7 +119,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 self.define("DLAF_WITH_MKL", True),
                 self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
             ]
-            if "+interface" in spec:
+            if "+c_api" in spec: # TODO: Make ScaLAPACK optional?
                 if "^mpich" in spec or "^cray-mpich" in spec:
                     mkl_mpi = "mpich"
                 elif "+openmpi" in spec:
@@ -132,8 +132,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 ))
 
-        if "+interface" in spec:
-            args.append(self.define_from_variant("DLAF_WITH_INTERFACE", "interface"))
+        if "+c_api" in spec:
+            args.append(self.define_from_variant("DLAF_WITH_C_API", "c_api"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

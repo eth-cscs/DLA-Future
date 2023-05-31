@@ -7,9 +7,9 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf_c/init.h"
-#include "dlaf_c/grid.h"
 #include "dlaf_c/factorization/cholesky.h"
+#include "dlaf_c/grid.h"
+#include "dlaf_c/init.h"
 
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>

@@ -75,7 +75,7 @@ target_link_libraries(
     MPI::MPI_CXX
     $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
-    $<$<BOOL:${DLAF_WITH_INTERFACE}>:DLAF::SCALAPACK> # TODO: Make ScaLAPACK optional
+    $<$<BOOL:${DLAF_WITH_C_API}>:DLAF::SCALAPACK> # TODO: Make ScaLAPACK optional
     pika::pika
     pika-algorithms::pika_algorithms
     lapackpp
@@ -103,7 +103,7 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
             $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
             $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
-            $<$<BOOL:${DLAF_WITH_INTERFACE}>:DLAF_WITH_INTERFACE>
+            $<$<BOOL:${DLAF_WITH_C_API}>:DLAF_WITH_C_API>
 )
 
 # Precompiled headers
@@ -277,12 +277,11 @@ DLAF_addSublibrary(
 )
 
 # Define DLAF's interface library
-if(DLAF_WITH_INTERFACE)
-DLAF_addSublibrary(
-  c_api SOURCES c_api/factorization/cholesky.cpp
-                c_api/grid.cpp c_api/init.cpp
-  LIBRARIES dlaf.core dlaf.factorization
-)
+if(DLAF_WITH_C_API)
+  DLAF_addSublibrary(
+    c_api SOURCES c_api/factorization/cholesky.cpp c_api/grid.cpp c_api/init.cpp
+    LIBRARIES dlaf.core dlaf.factorization
+  )
 endif()
 
 # Define DLAF's complete library

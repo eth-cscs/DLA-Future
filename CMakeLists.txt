@@ -44,7 +44,7 @@ option(DLAF_BUILD_TESTING "Build tests" ON)
 option(DLAF_BUILD_TESTING_HEADER "Build header tests" OFF)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
-option(DLAF_WITH_INTERFACE "Build ScaLAPACK-like interface" OFF)
+option(DLAF_WITH_C_API "Build ScaLAPACK-like interface" OFF)
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with
@@ -148,9 +148,9 @@ if(DLAF_WITH_MKL)
     message(FATAL_ERROR "${MKL_LAPACK_TARGET} as LAPACK target has not been found")
   endif()
 
-  if(DLAF_WITH_INTERFACE)
+  if(DLAF_WITH_C_API)
     set(MKL_SCALAPACK_TARGET "mkl::scalapack_intel_32bit_seq_dyn"
-      CACHE STRING "MKL ScaLAPACK target (see FindMKL for details)"
+        CACHE STRING "MKL ScaLAPACK target (see FindMKL for details)"
     )
   
     if(TARGET ${MKL_SCALAPACK_TARGET})

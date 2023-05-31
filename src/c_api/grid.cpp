@@ -8,18 +8,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include "grid.h"
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/grid.h>
-#include "grid.h"
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
-void dlaf_create_grid_from_blacs(int blacs_ctxt){
+void dlaf_create_grid_from_blacs(int blacs_ctxt) {
   int system_ctxt;
   // SGET_BLACSCONTXT == 10
   Cblacs_get(blacs_ctxt, 10, &system_ctxt);
-  
+
   MPI_Comm communicator = Cblacs2sys_handle(system_ctxt);
 
   dlaf::comm::Communicator world(communicator);
@@ -35,6 +35,6 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt){
   dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], dlaf::common::Ordering::RowMajor);
 }
 
-void dlaf_free_grid(int blacs_ctxt){
+void dlaf_free_grid(int blacs_ctxt) {
   dlaf_grids.erase(blacs_ctxt);
 }

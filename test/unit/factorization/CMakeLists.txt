@@ -24,11 +24,12 @@ DLAF_addTest(
   MPIRANKS 6
 )
 
-if (DLAF_WITH_INTERFACE)
+if(DLAF_WITH_C_API)
   DLAF_addTest(
     test_cholesky_c_api
     SOURCES test_cholesky_c_api.cpp
     LIBRARIES dlaf.c_api dlaf.core dlaf.factorization
-    USE_MAIN MPI MPIRANKS 6
+    USE_MAIN MPI
+    MPIRANKS 6
   )
 endif()

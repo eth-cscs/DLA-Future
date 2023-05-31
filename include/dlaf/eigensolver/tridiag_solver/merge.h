@@ -980,9 +980,10 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
   const SizeType n = problemSize(i_begin, i_end, dist);
 
   const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
+    const std::size_t min_workers = 1;
     const std::size_t available_workers = getTridiagRank1NWorkers();
-    const std::size_t max_workers = util::ceilDiv(to_sizet(size), to_sizet(2));
-    return std::min(max_workers, available_workers);
+    const std::size_t ideal_workers = util::ceilDiv(to_sizet(size), to_sizet(2));
+    return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 
   ex::start_detached(

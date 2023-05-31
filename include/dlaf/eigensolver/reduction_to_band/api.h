@@ -10,7 +10,11 @@
 
 #pragma once
 
-#include "dlaf/types.h"
+#include <pika/future.hpp>
+
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 

@@ -61,14 +61,14 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   int contxt_global = 0;
 
   // Global matrix
-  dlaf::interface::blacs::Cblacs_get(0, 0, &contxt);
+  Cblacs_get(0, 0, &contxt);
   contxt_global = contxt;
 
   Cblacs_gridinit(&contxt_global, order, 1, 1);  // Global matrix: only on rank 0
   Cblacs_gridinit(&contxt, order, nprow, npcol);
 
   int myprow, mypcol;
-  dlaf::interface::blacs::Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);
+  Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);
 
   int izero = 0;
   int m_local = numroc(&m, &mb, &myprow, &izero, &nprow);
@@ -195,7 +195,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
   int contxt_global = 0;
 
   // Global matrix
-  dlaf::interface::blacs::Cblacs_get(0, 0, &contxt);
+  Cblacs_get(0, 0, &contxt);
   contxt_global = contxt;
 
   Cblacs_gridinit(&contxt_global, order, 1, 1);  // Global matrix: only on rank 0
@@ -204,7 +204,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
   MPI_Comm comm = dlaf::interface::blacs::get_communicator(contxt);
 
   int myprow, mypcol;
-  dlaf::interface::blacs::Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);
+  Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);
 
   int izero = 0;
   int m_local = numroc(&m, &mb, &myprow, &izero, &nprow);

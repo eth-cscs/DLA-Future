@@ -16,18 +16,20 @@
 
 #include <mpi.h>
 
-namespace dlaf::interface::blacs {
-// Cblacs does not have public header files and is only used in ScaLAPACK
-extern "C" MPI_Comm Cblacs2sys_handle(int ictxt);
-extern "C" void Cblacs_get(int ictxt, int inum, int* comm);
+extern "C" {
+MPI_Comm Cblacs2sys_handle(int ictxt);
+void Cblacs_get(int ictxt, int inum, int* comm);
 extern "C" void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
+}
+
+namespace dlaf::interface::blacs {
 
 int get_grid_context(int* desc);
 
 int get_communicator_context(const int grid_context);
 MPI_Comm get_communicator(const int grid_context);
 
-struct DlafSetup{
+struct DlafSetup {
   dlaf::matrix::Distribution distribution;
   dlaf::matrix::LayoutInfo layout_info;
   dlaf::comm::CommunicatorGrid communicator_grid;

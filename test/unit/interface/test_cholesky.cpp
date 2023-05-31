@@ -7,8 +7,8 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/interface/blacs.h"
-#include "dlaf/interface/cholesky.h"
+#include "dlaf/interface/blacs_c.h"
+#include "dlaf/interface/cholesky_c.h"
 #include "dlaf/interface/utils.h"
 
 #include <gtest/gtest.h>
@@ -201,7 +201,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
   Cblacs_gridinit(&contxt_global, order, 1, 1);  // Global matrix: only on rank 0
   Cblacs_gridinit(&contxt, order, nprow, npcol);
 
-  MPI_Comm comm = dlaf::interface::blacs::get_communicator(contxt);
+  MPI_Comm comm = blacs_communicator(contxt);
 
   int myprow, mypcol;
   Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);

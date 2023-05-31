@@ -9,6 +9,7 @@
 //
 
 #include <dlaf/interface/cholesky.h>
+#include <dlaf/interface/cholesky_c.h>
 
 #include <mpi.h>
 

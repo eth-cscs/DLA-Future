@@ -9,6 +9,7 @@
 //
 
 #include <dlaf/interface/blacs.h>
+#include <dlaf/interface/blacs_c.h>
 
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
@@ -20,23 +21,24 @@
 
 #include <mpi.h>
 
-namespace dlaf::interface::blacs {
-int get_grid_context(int* desc) {
+int blacs_grid_context(int* desc) {
   return desc[1];  // BLACS context
 }
 
-int get_communicator_context(const int grid_context) {
+int blacs_communicator_context(const int grid_context) {
   int communicator_context;
   // SGET_BLACSCONTXT == 10
   Cblacs_get(grid_context, 10, &communicator_context);
   return communicator_context;
 }
 
-MPI_Comm get_communicator(const int grid_context) {
-  int communicator_context = get_communicator_context(grid_context);
+MPI_Comm blacs_communicator(const int grid_context) {
+  int communicator_context = blacs_communicator_context(grid_context);
   MPI_Comm communicator = Cblacs2sys_handle(communicator_context);
   return communicator;
 }
+
+namespace dlaf::interface::blacs {
 
 DlafSetup from_desc(int* desc) {
   // Matrix sizes
@@ -45,9 +47,9 @@ DlafSetup from_desc(int* desc) {
   int mb = desc[4];
   int nb = desc[5];
 
-  auto grid_context = get_grid_context(desc);
+  auto grid_context = blacs_grid_context(desc);
 
-  MPI_Comm communicator = get_communicator(grid_context);
+  MPI_Comm communicator = blacs_communicator(grid_context);
   dlaf::comm::Communicator world(communicator);
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 

@@ -16,15 +16,13 @@
 
 #include <mpi.h>
 
+extern "C" {
+MPI_Comm Cblacs2sys_handle(int ictxt);
+void Cblacs_get(int ictxt, int inum, int* comm);
+extern "C" void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
 
-namespace dlaf::interface::blacs {
-
-struct DlafSetup {
-  dlaf::matrix::Distribution distribution;
-  dlaf::matrix::LayoutInfo layout_info;
-  dlaf::comm::CommunicatorGrid communicator_grid;
-};
-
-DlafSetup from_desc(int* desc);
+int blacs_grid_context(int* desc);
+int blacs_communicator_context(const int grid_context);
+MPI_Comm blacs_communicator(const int grid_context);
 
 }

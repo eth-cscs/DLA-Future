@@ -963,8 +963,9 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
   }
 }
 
-template <class T, class KSender, class RhoSender>
-void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
+template <class T, class CommSender, class KSender, class RhoSender>
+void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dist_evecs,
+                           const SizeType i_begin, const SizeType i_end,
                            const LocalTileIndex idx_loc_begin, const LocalTileSize sz_loc_tiles,
                            KSender&& k, RhoSender&& rho, Matrix<const T, Device::CPU>& d,
                            Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
@@ -987,18 +988,18 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
   }();
 
   ex::start_detached(
-      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
+      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
+                   std::forward<CommSender>(row_comm), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
                    ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(i2)),
                    ex::when_all_vector(tc.readwrite(evecs))) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [nthreads, n, i_begin, idx_loc_begin, sz_loc_tiles,
-                          dist](const std::size_t thread_idx, auto& barrier_ptr, const auto& k,
-                                const auto& rho, const auto& d_sfut_tile_arr,
-                                const auto& z_sfut_tile_arr, const auto& eval_tiles,
-                                const auto& delta_tile_arr, const auto& i2_tile_arr,
-                                const auto& evec_tile_arr) {
+      ex::bulk(nthreads, [nthreads, n, dist_evecs, i_begin, i_end, idx_loc_begin, sz_loc_tiles,
+                          dist](const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
+                                const auto& k, const auto& rho, const auto& d_tiles_futs, auto& z_tiles,
+                                const auto& eval_tiles, const auto& delta_tile_arr,
+                                const auto& i2_tile_arr, const auto& evec_tiles) {
         const auto batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
         const auto begin = to_SizeType(thread_idx * batch_size);
@@ -1008,8 +1009,8 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
         {
           common::internal::SingleThreadedBlasScope single;
 
-          const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
-          const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
+          const T* d_ptr = d_tiles_futs[0].get().ptr();
+          const T* z_ptr = z_tiles[0].get().ptr();
           T* eval_ptr = eval_tiles[0].ptr();
           T* delta_ptr = delta_tile_arr[0].ptr();
 
@@ -1043,7 +1044,7 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
                    ++i_loc_subm_tile) {
                 const SizeType i_subm_evec_arr =
                     i_loc_subm_tile + to_SizeType(j_loc_subm_tile) * sz_loc_tiles.rows();
-                auto& evec_tile = evec_tile_arr[to_sizet(i_subm_evec_arr)];
+                auto& evec_tile = evec_tiles[to_sizet(i_subm_evec_arr)];
                 // The tile row in the local matrix tile grid
                 const SizeType i_loc_tile = idx_loc_begin.row() + i_loc_subm_tile;
                 // The tile row in the global matrix tile grid
@@ -1088,14 +1089,27 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
                       i_tile_l.row() - idx_loc_begin.row() +
                       (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
                   const TileElementIndex i = dist.tileElementIndex(i_g);
-                  evec_tile_arr[to_sizet(i_subm_evec_arr)](i) = T{1};
+                  evec_tiles[to_sizet(i_subm_evec_arr)](i) = T{1};
                 }
               }
             }
           }
         }
 
-        barrier_ptr->arrive_and_wait();
+        // STEP 1c: assemble dist evals vec
+        if (thread_idx == 0) {
+          auto& row_comm = row_comm_wrapper.get();
+          const comm::Index2D this_rank = dist_evecs.rankIndex();
+          for (SizeType i = i_begin; i < i_end; ++i) {
+            const comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
+            auto& tile = eval_tiles[to_sizet(i - i_begin)];
+
+            if (evecs_tile_rank == this_rank.col())
+              comm::sync::broadcast::send(row_comm, tile);
+            else
+              comm::sync::broadcast::receive_from(evecs_tile_rank, row_comm, tile);
+          }
+        }
 
         // TODO STEP 2a Compute weights (multi-thread)
         // TODO - copy diagonal from q -> w (or just initialize with 1)
@@ -1222,10 +1236,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1ProblemDist(i_begin, i_end, idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1,
-                        ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2, ws_hm.e2);
-
-  assembleDistEvalsVec(row_task_chain, i_begin, i_end, dist_evecs, ws_h.d0);
+  solveRank1ProblemDist(row_task_chain(), dist_evecs, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k,
+                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2,
+                        ws_hm.e2);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);

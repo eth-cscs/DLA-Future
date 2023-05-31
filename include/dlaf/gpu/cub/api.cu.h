@@ -141,7 +141,7 @@ struct DeviceSegmentedReduce {
 
 }
 
-#else
+#elif defined(DLAF_WITH_CUDA)
 
 #include <cub/cub.cuh>
 

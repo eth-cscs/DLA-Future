@@ -14,6 +14,7 @@
 
 #include <exception>
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 #include "dlaf/common/source_location.h"

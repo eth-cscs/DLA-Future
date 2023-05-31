@@ -9,13 +9,7 @@
 //
 #pragma once
 
-extern "C"{
-void dlaf_initialize(int argc, const char** argv);
-void dlaf_finalize();
-}
+#include <dlaf/communication/communicator_grid.h>
+#include <unordered_map>
 
-namespace dlaf::interface::utils {
-
-void check(char uplo, int* desc, int& info);
-
-}
+extern std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;

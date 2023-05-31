@@ -23,3 +23,12 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
+
+if (DLAF_WITH_INTERFACE)
+  DLAF_addTest(
+    test_cholesky_c_api
+    SOURCES test_cholesky_c_api.cpp
+    LIBRARIES dlaf.c_api dlaf.core dlaf.factorization
+    USE_MAIN MPI MPIRANKS 6
+  )
+endif()

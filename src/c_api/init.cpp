@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <dlaf/interface/utils.h>
+#include <dlaf_c/init.h>
 
 #include <dlaf/init.h>
 #include <pika/execution.hpp>
@@ -44,30 +44,4 @@ void dlaf_finalize(){
   pika::stop();
 
   dlaf_initialized = false;
-}
-
-namespace dlaf::interface::utils{
-
-void check(char uplo, int* desc, int& info) {
-  if (uplo != 'U' && uplo != 'u' && uplo != 'L' && uplo != 'l') {
-    info = -1;
-    std::cerr << "ERROR: The UpLo parameter has a incorrect value: '" << uplo;
-    std::cerr << "'. Please check the ScaLAPACK documentation.\n";
-    return;
-  } 
-
-  if (desc[0] != 1) {
-    info = -1;
-    std::cerr << "ERROR: DLA-Future can only treat dense matrices.\n";
-    return;
-  }
-
-  if (!dlaf_initialized) {
-    info = -1;
-    std::cerr << "Error: DLA-Future must be initialized.\n";
-    return;
-  }
-  info = 0; // Checks OK
-}
-
 }

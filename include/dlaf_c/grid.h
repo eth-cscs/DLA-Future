@@ -9,20 +9,14 @@
 //
 #pragma once
 
-#include <dlaf/communication/communicator.h>
-#include <dlaf/communication/communicator_grid.h>
-#include <dlaf/matrix/distribution.h>
-#include <dlaf/matrix/layout_info.h>
-
 #include <mpi.h>
 
 extern "C" {
+
 MPI_Comm Cblacs2sys_handle(int ictxt);
 void Cblacs_get(int ictxt, int inum, int* comm);
 extern "C" void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
 
-int blacs_grid_context(int* desc);
-int blacs_communicator_context(const int grid_context);
-MPI_Comm blacs_communicator(const int grid_context);
-
+void dlaf_create_grid_from_blacs(int blacs_ctxt);
+void dlaf_free_grid(int blacs_ctxt);
 }

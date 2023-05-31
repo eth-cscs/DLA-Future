@@ -61,6 +61,3 @@ add_subdirectory(factorization)
 add_subdirectory(multiplication)
 add_subdirectory(permutations)
 add_subdirectory(solver)
-
-# Interface
-add_subdirectory(interface)

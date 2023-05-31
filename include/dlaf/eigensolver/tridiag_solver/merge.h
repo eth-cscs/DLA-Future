@@ -34,12 +34,14 @@
 #include <dlaf/multiplication/general.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
+#include <dlaf/schedulers.h>
 #include <dlaf/sender/make_sender_algorithm_overloads.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/transform.h>
 #include <dlaf/sender/transform_mpi.h>
 #include <dlaf/sender/when_all_lift.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
@@ -972,102 +974,136 @@ void solveRank1ProblemDist(const SizeType i_begin, const SizeType i_end,
   namespace di = dlaf::internal;
 
   const matrix::Distribution& dist = evecs.distribution();
-  auto rank1_fn = [i_begin, i_end, idx_loc_begin, sz_loc_tiles,
-                   dist](const auto& k, const auto& rho, const auto& d_sfut_tile_arr,
-                         const auto& z_sfut_tile_arr, const auto& eval_tiles, const auto& delta_tile_arr,
-                         const auto& i2_tile_arr, const auto& evec_tile_arr) {
-    common::internal::SingleThreadedBlasScope single;
-
-    const SizeType n = problemSize(i_begin, i_end, dist);
-    const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
-    const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
-    T* eval_ptr = eval_tiles[0].ptr();
-    T* delta_ptr = delta_tile_arr[0].ptr();
-
-    // Iterate over the columns of the local submatrix tile grid
-    for (SizeType j_loc_subm_tile = 0; j_loc_subm_tile < sz_loc_tiles.cols(); ++j_loc_subm_tile) {
-      // The tile column in the local matrix tile grid
-      const SizeType j_loc_tile = idx_loc_begin.col() + j_loc_subm_tile;
-      // The tile column in the global matrix tile grid
-      const SizeType j_gl_tile = dist.globalTileFromLocalTile<Coord::Col>(j_loc_tile);
-      // The element distance between the current tile column and the initial tile column in the global
-      // matrix tile grid
-      const SizeType j_gl_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j_gl_tile);
-
-      // Skip columns that are in the deflation zone
-      if (j_gl_subm_el >= k)
-        break;
-
-      // Iterate over the elements of the column tile
-      const SizeType ncols = std::min(dist.tileSize<Coord::Col>(j_gl_tile), k - j_gl_subm_el);
-      for (SizeType j_tile_el = 0; j_tile_el < ncols; ++j_tile_el) {
-        // The global submatrix column
-        const SizeType j_gl_el = j_gl_subm_el + j_tile_el;
-
-        // Solve the deflated rank-1 problem
-        T& eigenval = eval_ptr[to_sizet(j_gl_el)];
-        lapack::laed4(to_int(k), to_int(j_gl_el), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
-
-        // Iterate over the rows of the local submatrix tile grid and copy the parts from delta stored on this rank.
-        for (SizeType i_loc_subm_tile = 0; i_loc_subm_tile < sz_loc_tiles.rows(); ++i_loc_subm_tile) {
-          const SizeType i_subm_evec_arr = i_loc_subm_tile + j_loc_subm_tile * sz_loc_tiles.rows();
-          auto& evec_tile = evec_tile_arr[to_sizet(i_subm_evec_arr)];
-          // The tile row in the local matrix tile grid
-          const SizeType i_loc_tile = idx_loc_begin.row() + i_loc_subm_tile;
-          // The tile row in the global matrix tile grid
-          const SizeType i_gl_tile = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile);
-          // The element distance between the current tile row and the initial tile row in the
-          // global matrix tile grid
-          const SizeType i_gl_subm_el = dist.globalTileElementDistance<Coord::Row>(i_begin, i_gl_tile);
-
-          // The tile row in the global submatrix tile grid
-          const SizeType i_subm_i2_arr = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile) - i_begin;
-          auto& i2_tile = i2_tile_arr[to_sizet(i_subm_i2_arr)];
-
-          const SizeType nrows = std::min(dist.tileSize<Coord::Row>(i_gl_tile), n - i_gl_subm_el);
-          for (SizeType i = 0; i < nrows; ++i) {
-            const SizeType ii = i2_tile({i, 0});
-            if (ii < k)
-              evec_tile({i, j_tile_el}) = delta_ptr[ii];
-          }
-        }
-      }
-    }
-
-    // Fill ones for deflated Eigenvectors.
-    // Quick return if there is none.
-    if (n == k)
-      return;
-
-    const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
-                                    i_begin * dist.blockSize().cols()};
-    const SizeType* i2_ptr = i2_tile_arr[0].ptr();
-
-    for (SizeType i = 0; i < n; ++i) {
-      const SizeType j = i2_ptr[i];
-      if (j >= k) {
-        const GlobalElementIndex i_g{i + origin.row(), j + origin.col()};
-        const GlobalTileIndex i_tile = dist.globalTileIndex(i_g);
-        if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
-          const LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);
-          const SizeType i_subm_evec_arr = i_tile_l.row() - idx_loc_begin.row() +
-                                           (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
-          const TileElementIndex i = dist.tileElementIndex(i_g);
-          evec_tile_arr[to_sizet(i_subm_evec_arr)](i) = T{1};
-        }
-      }
-    }
-  };
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender =
-      ex::when_all(std::forward<KSender>(k), std::forward<RhoSender>(rho),
-                   ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.read(z)),
-                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.readwrite(delta)),
-                   ex::when_all_vector(tc.readwrite(i2)), ex::when_all_vector(tc.readwrite(evecs)));
+  const SizeType n = problemSize(i_begin, i_end, dist);
 
-  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(rank1_fn), std::move(sender)));
+  const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
+    const std::size_t available_workers = getTridiagRank1NWorkers();
+    const std::size_t max_workers = util::ceilDiv(to_sizet(size), to_sizet(2));
+    return std::min(max_workers, available_workers);
+  }();
+
+  ex::start_detached(
+      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
+                   std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
+                   ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
+                   ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(i2)),
+                   ex::when_all_vector(tc.readwrite(evecs))) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::bulk(nthreads, [nthreads, n, i_begin, idx_loc_begin, sz_loc_tiles,
+                          dist](const std::size_t thread_idx, auto& barrier_ptr, const auto& k,
+                                const auto& rho, const auto& d_sfut_tile_arr,
+                                const auto& z_sfut_tile_arr, const auto& eval_tiles,
+                                const auto& delta_tile_arr, const auto& i2_tile_arr,
+                                const auto& evec_tile_arr) {
+        const auto batch_size =
+            std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
+        const auto begin = to_SizeType(thread_idx * batch_size);
+        const auto end = std::min(to_SizeType((thread_idx + 1) * batch_size), sz_loc_tiles.cols());
+
+        // STEP 1a: LAED4 (multi-thread)
+        {
+          common::internal::SingleThreadedBlasScope single;
+
+          const T* d_ptr = d_sfut_tile_arr[0].get().ptr();
+          const T* z_ptr = z_sfut_tile_arr[0].get().ptr();
+          T* eval_ptr = eval_tiles[0].ptr();
+          T* delta_ptr = delta_tile_arr[0].ptr();
+
+          // Iterate over the columns of the local submatrix tile grid
+          for (SizeType j_loc_subm_tile = begin; j_loc_subm_tile < end; ++j_loc_subm_tile) {
+            // The tile column in the local matrix tile grid
+            const SizeType j_loc_tile = idx_loc_begin.col() + to_SizeType(j_loc_subm_tile);
+            // The tile column in the global matrix tile grid
+            const SizeType j_gl_tile = dist.globalTileFromLocalTile<Coord::Col>(j_loc_tile);
+            // The element distance between the current tile column and the initial tile column in the
+            // global matrix tile grid
+            const SizeType j_gl_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j_gl_tile);
+
+            // Skip columns that are in the deflation zone
+            if (j_gl_subm_el >= k)
+              break;
+
+            // Iterate over the elements of the column tile
+            const SizeType ncols = std::min(dist.tileSize<Coord::Col>(j_gl_tile), k - j_gl_subm_el);
+            for (SizeType j_tile_el = 0; j_tile_el < ncols; ++j_tile_el) {
+              // The global submatrix column
+              const SizeType j_gl_el = j_gl_subm_el + j_tile_el;
+
+              // Solve the deflated rank-1 problem
+              T& eigenval = eval_ptr[to_sizet(j_gl_el)];
+              lapack::laed4(to_int(k), to_int(j_gl_el), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
+
+              // Iterate over the rows of the local submatrix tile grid and copy the parts from delta
+              // stored on this rank.
+              for (SizeType i_loc_subm_tile = 0; i_loc_subm_tile < sz_loc_tiles.rows();
+                   ++i_loc_subm_tile) {
+                const SizeType i_subm_evec_arr =
+                    i_loc_subm_tile + to_SizeType(j_loc_subm_tile) * sz_loc_tiles.rows();
+                auto& evec_tile = evec_tile_arr[to_sizet(i_subm_evec_arr)];
+                // The tile row in the local matrix tile grid
+                const SizeType i_loc_tile = idx_loc_begin.row() + i_loc_subm_tile;
+                // The tile row in the global matrix tile grid
+                const SizeType i_gl_tile = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile);
+                // The element distance between the current tile row and the initial tile row in the
+                // global matrix tile grid
+                const SizeType i_gl_subm_el =
+                    dist.globalTileElementDistance<Coord::Row>(i_begin, i_gl_tile);
+
+                // The tile row in the global submatrix tile grid
+                const SizeType i_subm_i2_arr =
+                    dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile) - i_begin;
+                auto& i2_tile = i2_tile_arr[to_sizet(i_subm_i2_arr)];
+
+                const SizeType nrows = std::min(dist.tileSize<Coord::Row>(i_gl_tile), n - i_gl_subm_el);
+                for (SizeType i = 0; i < nrows; ++i) {
+                  const SizeType ii = i2_tile({i, 0});
+                  if (ii < k)
+                    evec_tile({i, j_tile_el}) = delta_ptr[ii];
+                }
+              }
+            }
+          }
+        }
+
+        // STEP 1b: Fill ones for deflated Eigenvectors. (single-thread)
+        if (thread_idx == 0) {
+          // just if there are deflated eigenvectors
+          if (k < n) {
+            const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
+                                            i_begin * dist.blockSize().cols()};
+            const SizeType* i2_ptr = i2_tile_arr[0].ptr();
+
+            for (SizeType i = 0; i < n; ++i) {
+              const SizeType j = i2_ptr[i];
+              if (j >= k) {
+                const GlobalElementIndex i_g{i + origin.row(), j + origin.col()};
+                const GlobalTileIndex i_tile = dist.globalTileIndex(i_g);
+                if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
+                  const LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);
+                  const SizeType i_subm_evec_arr =
+                      i_tile_l.row() - idx_loc_begin.row() +
+                      (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
+                  const TileElementIndex i = dist.tileElementIndex(i_g);
+                  evec_tile_arr[to_sizet(i_subm_evec_arr)](i) = T{1};
+                }
+              }
+            }
+          }
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // TODO STEP 2a Compute weights (multi-thread)
+        // TODO - copy diagonal from q -> w (or just initialize with 1)
+        // TODO - compute productorial
+
+        // TODO STEP 2b Reduce, then finalize computation with sign and square root
+
+        // TODO STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
+      }));
 }
 
 // Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.
@@ -1228,5 +1264,4 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_h.i1, ws_hm.i2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws_h.i1);
 }
-
 }

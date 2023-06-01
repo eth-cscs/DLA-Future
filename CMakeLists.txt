@@ -152,7 +152,7 @@ if(DLAF_WITH_MKL)
     set(MKL_SCALAPACK_TARGET "mkl::scalapack_intel_32bit_seq_dyn"
         CACHE STRING "MKL ScaLAPACK target (see FindMKL for details)"
     )
-  
+
     if(TARGET ${MKL_SCALAPACK_TARGET})
       set(SCALAPACK_FOUND TRUE)
       add_library(DLAF::SCALAPACK INTERFACE IMPORTED GLOBAL)

@@ -13,7 +13,7 @@
 
 #include <mpi.h>
 
-extern "C"{
+extern "C" {
 
 void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info) {
   pxpotrf<double>(uplo, n, a, ia, ja, desca, *info);

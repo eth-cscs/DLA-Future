@@ -12,57 +12,55 @@
 
 #include "../grid.h"
 #include <dlaf/factorization/cholesky.h>
+#include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
 #include <pika/init.hpp>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 
-// template <typename T>
-// void pxpotrf(char uplo, T* a, int m, int n, int mb, int nb, int lld, const MPI_Comm& communicator,
-//              int nprow, int npcol) {
-//   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-//
-//   pika::resume();
-//
-//   // TODO: Check uplo
-//   auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
-//
-//   dlaf::comm::Communicator world(communicator);
-//   DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
-//
-//   dlaf::comm::CommunicatorGrid communicator_grid(world, nprow, npcol, dlaf::common::Ordering::RowMajor);
-//
-//   dlaf::GlobalElementSize matrix_size(m, n);
-//   dlaf::TileElementSize block_size(mb, nb);
-//
-//   dlaf::comm::Index2D src_rank_index(0, 0);  // WARN: Is this always the case?
-//
-//   dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
-//                                           communicator_grid.rnk(), src_rank_index);
-//
-//   dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, lld);
-//
-//   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
-//
-//   {
-//     MatrixMirror matrix(matrix_host);
-//
-//     dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-//                                                                                     dlaf_uplo,
-//                                                                                     matrix.get());
-//   }  // Destroy mirror
-//
-//   matrix_host.waitLocalTiles();
-//
-//   pika::suspend();
-// }
+template <typename T>
+void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
+  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+
+  pika::resume();
+
+  // TODO: Check uplo
+  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+
+  auto communicator_grid = dlaf_grids.at(dlaf_context);
+
+  dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
+  dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
+
+  dlaf::comm::Index2D src_rank_index(0, 0);  // WARN: Is this always the case?
+
+  dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
+                                          communicator_grid.rank(), src_rank_index);
+
+  dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desca.ld);
+
+  dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
+
+  {
+    MatrixMirror matrix(matrix_host);
+
+    dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
+                                                                                    dlaf_uplo,
+                                                                                    matrix.get());
+  }  // Destroy mirror
+
+  matrix_host.waitLocalTiles();
+
+  pika::suspend();
+}
 
 template <typename T>
 void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja,
              int* desca, int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
+  // TODO: Add checks
   // utils::check(uplo, desca, info);
   // if (info == -1)
   //   return;

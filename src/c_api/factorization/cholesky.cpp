@@ -23,10 +23,9 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* i
   pxpotrf<float>(uplo, n, a, ia, ja, desca, *info);
 }
 
-// void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
-//                 const MPI_Comm& communicator, int nprow, int npcol) {
-//   pxpotrf<double>(uplo, a, m, n, mb, nb, lld, communicator, nprow, npcol);
-// }
+void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
+  cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
+}
 //
 // void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld, const MPI_Comm&
 // communicator,

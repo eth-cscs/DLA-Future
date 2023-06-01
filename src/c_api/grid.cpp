@@ -13,7 +13,25 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/grid.h>
 
+#include <limits>
+
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
+
+int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
+  // TODO: Use a SizeType larger than BLACS context? TBD
+  // dlaf_context starts from INT_MAX to reeduce the likelihood of clashes with blacs contexts
+  // blacs starts to number contexts from 0
+  int dlaf_context = std::numeric_limits<int>::max() - std::size(dlaf_grids);
+
+  auto dlaf_order =
+      order == 'C' ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
+
+  DLAF_MPI_CHECK_ERROR(MPI_Barrier(comm));
+
+  dlaf_grids.try_emplace(dlaf_context, comm, nprow, npcol, dlaf_order);
+
+  return dlaf_context;
+}
 
 void dlaf_create_grid_from_blacs(int blacs_ctxt) {
   int system_ctxt;

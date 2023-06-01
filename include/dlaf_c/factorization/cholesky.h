@@ -10,6 +10,7 @@
 #pragma once
 
 #include <mpi.h>
+#include <dlaf_c/desc.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,9 +20,8 @@ void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* 
 
 void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
 
-// void dlaf_cholesky_d(char uplo, double* a, int m, int n, int mb, int nb, int lld,
-//                      const MPI_Comm& communicator, int nprow, int npcol);
-//
+void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor dlaf_desca);
+
 // void dlaf_cholesky_s(char uplo, float* a, int m, int n, int mb, int nb, int lld,
 //                      const MPI_Comm& communicator, int nprow, int npcol);
 

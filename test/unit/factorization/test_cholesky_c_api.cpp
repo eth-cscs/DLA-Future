@@ -37,8 +37,10 @@ extern "C" void descinit(int* desc, const int* m, const int* n, const int* mb, c
 extern "C" void pdgemr2d(int* m, int* n, double* A, int* ia, int* ja, int* desca, double* B, int* ib,
                          int* jb, int* descb, int* ictxt);
 
+
+
 // TODO: Check double and float
-TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
+TEST(CholeskyCAPIScaLAPACKTest, CorrectnessDistributed) {
   int rank;
   int num_ranks;
 
@@ -174,7 +176,7 @@ TEST(CholeskyInterfaceTest, CorrectnessDistributed) {
   Cblacs_gridexit(contxt);
 }
 
-TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
+TEST(CholeskyCAPITest, CorrectnessDistributed) {
   int rank;
   int num_ranks;
 
@@ -286,7 +288,7 @@ TEST(CholeskyCInterfaceTest, CorrectnessDistributed) {
 
   const char* argv[] = {"test_interface_", nullptr};
   dlaf_initialize(1, argv);
-  // FIXME: Order 'R' insteaf of 'C'?
+  // FIXME: Order 'C' insteaf of 'R'?
   int dlaf_context = dlaf_create_grid(comm, nprow, npcol, 'R');
 
   dlaf_cholesky_d(dlaf_context, uplo, a, {m, n, mb, nb, 0, 0, 1, 1, m_local});

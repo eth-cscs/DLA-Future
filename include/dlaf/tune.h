@@ -30,6 +30,10 @@ namespace dlaf {
 /// - tridiag_rank1_nworkers:
 ///     The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver
 ///     algorithm. Set with --dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.
+/// - tridiag_rank1_barrier_busy_wait_us:
+///     The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in
+///     the tridiagonal solver algorithm. Set with --dlaf:tridiag-rank1-barrier-busy-wait-us or env
+///     variable DLAF_TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US.
 /// - eigensolver_min_band:
 ///     The minimum value to start looking for a divisor of the block size.
 ///     Set with --dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.
@@ -50,6 +54,7 @@ struct TuneParameters {
   std::size_t red2band_barrier_busy_wait_us = 1000;
   std::size_t tridiag_rank1_nworkers =
       std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
+  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;
 
   SizeType eigensolver_min_band = 100;
   SizeType band_to_tridiag_1d_block_size_base = 8192;

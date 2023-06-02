@@ -11,7 +11,6 @@
 
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include <dlaf/types.h>
 
@@ -28,18 +27,6 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
 };
 
 struct empty_env {};
-
-// We are only interested in the types wrapped by future and shared_future since
-// we will internally unwrap them.
-template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::future<T>>>> {
-  using type = T;
-};
-
-template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
-  using type = T;
-};
 
 template <typename T>
 struct SenderSingleValueTypeImpl<TypeList<TypeList<std::reference_wrapper<T>>>> {
@@ -82,13 +69,4 @@ using SenderElementType = typename SenderSingleValueType<Sender>::ElementType;
 // exists and Sender sends exactly one type.
 template <typename Sender>
 inline constexpr Device sender_device = SenderSingleValueType<Sender>::device;
-
-template <typename T>
-struct IsSharedFuture : std::false_type {};
-
-template <typename U>
-struct IsSharedFuture<pika::shared_future<U>> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_shared_future_v = IsSharedFuture<std::decay_t<T>>::value;
 }

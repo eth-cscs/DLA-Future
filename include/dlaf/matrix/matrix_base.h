@@ -68,6 +68,11 @@ public:
     return distribution_.rankIndex();
   }
 
+  ///
+  const comm::Index2D& sourceRankIndex() const noexcept {
+    return distribution_.sourceRankIndex();
+  }
+
   /// Returns the size of the communicator grid associated to the matrix.
   const comm::Size2D& commGridSize() const noexcept {
     return distribution_.commGridSize();

@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/vector.h"
@@ -50,9 +50,10 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
-                   pika::shared_future<common::internal::vector<T>> taus,
-                   matrix::ReadWriteTileSender<T, device> t);
+  static void call(
+      matrix::Panel<Coord::Col, T, device>& panel_view,
+      pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
+      matrix::ReadWriteTileSender<T, device> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.
@@ -79,10 +80,11 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                   pika::shared_future<common::internal::vector<T>> taus,
-                   matrix::ReadWriteTileSender<T, device> t,
-                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
+  static void call(
+      matrix::Panel<Coord::Col, T, device>& hh_panel,
+      pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
+      matrix::ReadWriteTileSender<T, device> t,
+      common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 // ETI

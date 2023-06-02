@@ -38,7 +38,9 @@ namespace eigensolver {
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(
     const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<
+        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
+        taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -73,7 +75,9 @@ template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
     Matrix<const T, device>& mat_v,
-    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<
+        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
+        taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
   DLAF_ASSERT(square_size(mat_v), mat_v);

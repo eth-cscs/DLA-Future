@@ -41,6 +41,9 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+using pika::execution::experimental::any_sender;
+using pika::execution::experimental::just;
+
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
@@ -144,17 +147,25 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> taus;
   SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb));
   taus.reserve(nr_reflectors_blocks);
 
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
+    DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
+    // SizeType n = std::min(mb, nr_reflectors - k);
+    // auto begin = taus_loc.begin() + k;
+    // auto end = begin + std::min(k + mb, nr_reflectors);
+    // std::shared_ptr<common::internal::vector<T>> tau_tile =
+    //     std::make_shared<common::internal::vector<T>>(begin, end);
+    // taus.emplace_back(just(std::move(tau_tile)));
+
     common::internal::vector<T> tau_tile;
     tau_tile.reserve(mb);
     for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
       tau_tile.push_back(taus_loc[j]);
     }
-    taus.push_back(pika::make_ready_future(tau_tile));
+    taus.emplace_back(just(std::make_shared<common::internal::vector<T>>(std::move(tau_tile))));
   }
 
   {
@@ -196,18 +207,26 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
+  common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> taus;
   SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - b - 1, mb));
   taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, grid.size().cols()));
 
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
-    common::internal::vector<T> tau_tile;
-    tau_tile.reserve(mb);
     if (grid.rank().col() == mat_v_h.distribution().template rankGlobalTile<Coord::Col>(k / mb)) {
+      // DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
+      // SizeType n = std::min(mb, nr_reflectors - k);
+      // auto begin = taus_loc.begin() + k;
+      // auto end = begin + std::min(k + mb, nr_reflectors);
+      // std::shared_ptr<common::internal::vector<T>> tau_tile =
+      //     std::make_shared<common::internal::vector<T>>(begin, end);
+      // taus.emplace_back(just(std::move(tau_tile)));
+
+      common::internal::vector<T> tau_tile;
+      tau_tile.reserve(mb);
       for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
         tau_tile.push_back(taus_loc[j]);
       }
-      taus.push_back(pika::make_ready_future(tau_tile));
+      taus.emplace_back(just(std::make_shared<common::internal::vector<T>>(std::move(tau_tile))));
     }
   }
 

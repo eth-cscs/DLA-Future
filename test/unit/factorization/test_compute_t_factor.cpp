@@ -38,6 +38,8 @@ using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
+using pika::execution::experimental::any_sender;
+using pika::execution::experimental::just;
 using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
@@ -275,8 +277,8 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
   auto v_local = dlaf::matrix::test::allGather<const T>(blas::Uplo::General, v_h);
 
   auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
-  pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
+  any_sender<std::shared_ptr<dlaf::common::internal::vector<T>>> taus_input =
+      just(std::make_shared<dlaf::common::internal::vector<T>>(std::move(taus)));
 
   is_orthogonal(h_expected);
 
@@ -356,8 +358,8 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     return;
 
   auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
-  pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
+  any_sender<std::shared_ptr<dlaf::common::internal::vector<T>>> taus_input =
+      just(std::make_shared<dlaf::common::internal::vector<T>>(std::move(taus)));
 
   is_orthogonal(h_expected);
 

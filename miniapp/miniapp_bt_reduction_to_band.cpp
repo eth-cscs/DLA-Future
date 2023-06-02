@@ -80,6 +80,8 @@ struct BacktransformBandToTridiagMiniapp {
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
+    namespace ex = pika::execution::experimental;
+
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -111,19 +113,17 @@ struct BacktransformBandToTridiagMiniapp {
 
     auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
 
-    vector<pika::shared_future<vector<T>>> taus;
+    vector<ex::any_sender<std::shared_ptr<vector<T>>>> taus;
     SizeType nr_reflectors_blocks = dlaf::util::ceilDiv(nr_reflectors, opts.mb);
     taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, comm_grid.size().cols()));
 
     for (SizeType k = 0; k < nr_reflectors; k += opts.mb) {
-      vector<T> tau_tile;
-      tau_tile.reserve(opts.mb);
       if (comm_grid.rank().col() ==
           mat_hh_ref.distribution().template rankGlobalTile<dlaf::Coord::Col>(k / opts.mb)) {
-        for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
-          tau_tile.push_back(T(2));
-        }
-        taus.push_back(pika::make_ready_future(tau_tile));
+        DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
+        SizeType n = std::min(opts.mb, nr_reflectors - k);
+        std::shared_ptr<vector<T>> tau_tile = std::make_shared<vector<T>>(n, T(2));
+        taus.emplace_back(ex::just(std::move(tau_tile)));
       }
     }
 

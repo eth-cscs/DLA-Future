@@ -38,17 +38,18 @@ namespace dlaf::factorization::internal {
 /// @pre taus contains a vector with k elements
 /// @pre t contains a (k x k) tile
 template <Backend backend, Device device, class T>
-void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                    pika::shared_future<common::internal::vector<T>> taus,
-                    matrix::ReadWriteTileSender<T, device> t) {
+void computeTFactor(
+    matrix::Panel<Coord::Col, T, device>& hh_panel,
+    pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
+    matrix::ReadWriteTileSender<T, device> t) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t));
 }
 
 template <Backend backend, Device device, class T>
-void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                    pika::shared_future<common::internal::vector<T>> taus,
-                    matrix::ReadWriteTileSender<T, device> t,
-                    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void computeTFactor(
+    matrix::Panel<Coord::Col, T, device>& hh_panel,
+    pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
+    matrix::ReadWriteTileSender<T, device> t, common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
 }
 

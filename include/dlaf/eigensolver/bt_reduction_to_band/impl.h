@@ -9,7 +9,7 @@
 //
 #pragma once
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 #include <pika/thread.hpp>
 
 #ifdef DLAF_WITH_GPU
@@ -124,7 +124,9 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
 template <Backend backend, Device device, class T>
 void BackTransformationReductionToBand<backend, device, T>::call(
     const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<
+        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
+        taus) {
   using namespace bt_red_band;
 
   auto hp = pika::execution::thread_priority::high;
@@ -231,7 +233,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 template <Backend B, Device D, class T>
 void BackTransformationReductionToBand<B, D, T>::call(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
-    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus) {
+    common::internal::vector<
+        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
+        taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
 

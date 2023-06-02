@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <lapack/util.hh>
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 #include <pika/runtime.hpp>
 
 #include "dlaf/common/index2d.h"
@@ -47,6 +47,8 @@ using namespace dlaf::comm;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 
+using pika::execution::experimental::any_sender;
+using pika::execution::experimental::when_all_vector;
 using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
@@ -189,20 +191,19 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size,
-                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus) {
+auto allGatherTaus(
+    const SizeType k, const SizeType chunk_size,
+    std::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> sender_local_taus) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  pika::wait_all(fut_local_taus);
-  auto local_taus = pika::unwrap(fut_local_taus);
+  auto local_taus = sync_wait(when_all_vector(std::move(sender_local_taus)));
 
   const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
   for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
-    std::vector<T> chunk_data;
     const auto index_chunk_local = to_sizet(index_chunk);
-    chunk_data = local_taus.at(index_chunk_local);
+    const auto& chunk_data = *local_taus.at(index_chunk_local);
 
     // copy each chunk contiguously
     std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
@@ -212,14 +213,14 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size,
-                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus,
-                   comm::CommunicatorGrid comm_grid) {
+auto allGatherTaus(
+    const SizeType k, const SizeType chunk_size,
+    std::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> sender_local_taus,
+    comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  pika::wait_all(fut_local_taus);
-  auto local_taus = pika::unwrap(fut_local_taus);
+  auto local_taus = sync_wait(when_all_vector(std::move(sender_local_taus)));
 
   const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
@@ -238,23 +239,24 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size,
 
     const auto this_chunk_size = std::min(k - index_chunk * chunk_size, chunk_size);
 
-    std::vector<T> chunk_data;
     if (is_owner) {
       const auto index_chunk_local = to_sizet(index_chunk / comm_grid.size().cols());
-      chunk_data = local_taus.at(index_chunk_local);
+      std::vector<T>& chunk_data = *local_taus.at(index_chunk_local);
       sync::broadcast::send(comm_grid.rowCommunicator(),
                             common::make_data(chunk_data.data(),
                                               static_cast<SizeType>(chunk_data.size())));
+      std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
     }
     else {
+      std::vector<T> chunk_data;
       chunk_data.resize(to_sizet(this_chunk_size));
       sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
                                     common::make_data(chunk_data.data(),
                                                       static_cast<SizeType>(chunk_data.size())));
+      std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
     }
 
     // copy each chunk contiguously
-    std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
   }
 
   return taus;
@@ -342,7 +344,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   Matrix<T, Device::CPU> mat_a_h(distribution);
   copy(reference, mat_a_h);
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
+  common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> local_taus;
   {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     local_taus = eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
@@ -414,7 +416,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   Matrix<T, Device::CPU> matrix_a_h(distribution);
   copy(reference, matrix_a_h);
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
+  common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> local_taus;
   {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
     local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);

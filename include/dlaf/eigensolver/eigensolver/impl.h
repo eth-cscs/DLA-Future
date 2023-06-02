@@ -48,6 +48,10 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   backTransformationBandToTridiag<B>(band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(band_size, mat_e, mat_a, taus);
+
+  for (auto t : taus) {
+    pika::execution::experimental::start_detached(std::move(t));
+  }
 }
 
 template <Backend B, Device D, class T>
@@ -66,5 +70,9 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(grid, band_size, mat_e, mat_a, taus);
+
+  for (auto t : taus) {
+    pika::execution::experimental::start_detached(std::move(t));
+  }
 }
 }

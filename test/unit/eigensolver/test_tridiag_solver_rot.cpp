@@ -108,12 +108,14 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
   const SizeType n = std::min((idx_end) *mb, m) - idx_begin * mb;
   const GlobalElementSize offset(idx_begin * mb, idx_begin * mb);
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  for (auto rot : rots) {
-    T* x = mat_loc.ptr(GlobalElementIndex{0, rot.i} + offset);
-    T* y = mat_loc.ptr(GlobalElementIndex{0, rot.j} + offset);
-    blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+    for (auto rot : rots) {
+      T* x = mat_loc.ptr(GlobalElementIndex{0, rot.i} + offset);
+      T* y = mat_loc.ptr(GlobalElementIndex{0, rot.j} + offset);
+      blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+    }
   }
 
   auto result = [&dist = mat_h.distribution(), &mat_local = mat_loc](const GlobalElementIndex& element) {

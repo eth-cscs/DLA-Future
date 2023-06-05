@@ -134,24 +134,26 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
   if (m == 0 || n == 0)
     return;
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  using eigensolver::internal::nrStepsForSweep;
-  using eigensolver::internal::nrSweeps;
-  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
-      const SizeType j = sweep;
-      const SizeType i = j + 1 + step * b;
+    using eigensolver::internal::nrStepsForSweep;
+    using eigensolver::internal::nrSweeps;
+    for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+      for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
+        const SizeType j = sweep;
+        const SizeType i = j + 1 + step * b;
 
-      const SizeType size = std::min(b, m - i);
-      const SizeType i_v = (i - 1) / b * b;
+        const SizeType size = std::min(b, m - i);
+        const SizeType i_v = (i - 1) / b * b;
 
-      T& v_head = *mat_hh_local.ptr({i_v, j});
-      const T tau = v_head;
-      v_head = 1;
+        T& v_head = *mat_hh_local.ptr({i_v, j});
+        const T tau = v_head;
+        v_head = 1;
 
-      using blas::Side;
-      lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+        using blas::Side;
+        lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+      }
     }
   }
 
@@ -212,24 +214,26 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
   if (m == 0 || n == 0)
     return;
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  using eigensolver::internal::nrStepsForSweep;
-  using eigensolver::internal::nrSweeps;
-  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
-      const SizeType j = sweep;
-      const SizeType i = j + 1 + step * b;
+    using eigensolver::internal::nrStepsForSweep;
+    using eigensolver::internal::nrSweeps;
+    for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+      for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
+        const SizeType j = sweep;
+        const SizeType i = j + 1 + step * b;
 
-      const SizeType size = std::min(b, m - i);
-      const SizeType i_v = (i - 1) / b * b;
+        const SizeType size = std::min(b, m - i);
+        const SizeType i_v = (i - 1) / b * b;
 
-      T& v_head = *mat_hh_local.ptr({i_v, j});
-      const T tau = v_head;
-      v_head = 1;
+        T& v_head = *mat_hh_local.ptr({i_v, j});
+        const T tau = v_head;
+        v_head = 1;
 
-      using blas::Side;
-      lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+        using blas::Side;
+        lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+      }
     }
   }
 

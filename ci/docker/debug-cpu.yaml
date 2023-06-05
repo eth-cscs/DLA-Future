@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@develop build_type=Debug +miniapps +ci-test ^openblas threads=openmp ^mpich
+    - dla-future@develop build_type=Debug +miniapps +ci-test +ci-check-threads ^openblas threads=openmp ^mpich
 
   packages:
     all:

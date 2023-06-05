@@ -10,8 +10,6 @@
 
 #pragma once
 
-/// @file
-
 #include <string>
 
 #include <dlaf/gpu/blas/api.h>

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <exception>
 #include <ostream>
 #include <tuple>
@@ -612,7 +614,7 @@ std::vector<ReadWriteTileSender<T, D>> splitTileDisjoint(ReadWriteTileSender<T, 
   return senders;
 }
 
-/// ---- ETI
+// ETI
 
 #define DLAF_TILE_ETI(KWORD, DATATYPE, DEVICE) \
   KWORD template class Tile<DATATYPE, DEVICE>; \

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include "dlaf/communication/sync/all_reduce.h"
 #include "dlaf/communication/sync/basic.h"
 #include "dlaf/communication/sync/broadcast.h"

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 namespace dlaf::common::internal {
 class [[nodiscard]] SingleThreadedBlasScope {
 public:

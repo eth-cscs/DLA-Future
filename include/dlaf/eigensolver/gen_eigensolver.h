@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <blas.hh>
 #include "dlaf/eigensolver/gen_eigensolver/api.h"
 #include "dlaf/matrix/matrix.h"
@@ -25,8 +27,8 @@ namespace dlaf::eigensolver {
 /// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
 /// including the diagonal, is destroyed.
 /// - @p mat_b contains the Cholesky decomposition of B
-/// - @eigenvalues contains all the eigenvalues lambda
-/// - @eigenvectors contains all the eigenvectors x
+/// - @p eigenvalues contains all the eigenvalues lambda
+/// - @p eigenvectors contains all the eigenvectors x
 ///
 /// Implementation on local memory.
 ///
@@ -104,8 +106,8 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// - the lower triangle or the upper triangle (depending on @p uplo) of @p mat_a,
 /// including the diagonal, is destroyed.
 /// - @p mat_b contains the Cholesky decomposition of B
-/// - @eigenvalues contains all the eigenvalues lambda
-/// - @eigenvectors contains all the eigenvectors x
+/// - @p eigenvalues contains all the eigenvalues lambda
+/// - @p eigenvectors contains all the eigenvectors x
 ///
 /// Implementation on distributed memory.
 ///

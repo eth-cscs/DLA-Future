@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <cstddef>
 #include <vector>
 
@@ -161,7 +163,7 @@ protected:
 template <class T, Device D>
 class RetiledMatrix<const T, D>;
 
-/// ---- ETI
+// ETI
 
 #define DLAF_RETILED_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
   KWORD template class RetiledMatrix<DATATYPE, DEVICE>;

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <blas.hh>
 
 #include "dlaf/common/assert.h"

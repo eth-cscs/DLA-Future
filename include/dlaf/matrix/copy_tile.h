@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <type_traits>
 
 #if DLAF_WITH_GPU

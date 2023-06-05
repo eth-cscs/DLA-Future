@@ -53,7 +53,7 @@ struct Triangular {
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_SOLVER_TRIANGULAR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct Triangular<BACKEND, DEVICE, DATATYPE>;
 

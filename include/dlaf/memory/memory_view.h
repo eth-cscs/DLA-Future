@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <cstdlib>
 #include <memory>
 
@@ -152,7 +154,7 @@ private:
   SizeType size_;
 };
 
-/// ---- ETI
+// ETI
 
 #define DLAF_MEMVIEW_ETI(KWORD, DATATYPE, DEVICE) KWORD template class MemoryView<DATATYPE, DEVICE>;
 

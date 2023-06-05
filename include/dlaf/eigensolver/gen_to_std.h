@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <blas.hh>
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/gen_to_std/api.h"

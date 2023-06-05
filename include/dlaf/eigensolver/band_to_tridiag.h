@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <blas.hh>
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"

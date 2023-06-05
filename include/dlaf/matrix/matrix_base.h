@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <cstddef>
 #include <ostream>
 

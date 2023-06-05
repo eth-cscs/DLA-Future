@@ -10,8 +10,6 @@
 
 #pragma once
 
-/// @file
-
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -130,7 +128,7 @@ void silenceUnusedWarningFor(Args&&...) {}
 
 #define DLAF_STATIC_FAIL(DummyType, Msg) static_assert(sizeof(DummyType) == 0, Msg)
 
-/// Returns a fake object of type T (specified by __VA_ARGS__) dereferencing a null pointer.
+/// Returns a fake object of type T (specified by @p __VA_ARGS__ ) dereferencing a null pointer.
 ///
 /// At runtime the program is exited with an error before dereferencing the null pointer.
 /// This macro is useful when a return statement is needed in unreachable branches,

@@ -28,7 +28,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
 #include "dlaf/eigensolver/band_to_tridiag/api.h"
-#include "dlaf/eigensolver/get_1d_block_size.h"
+#include "dlaf/eigensolver/internal/get_1d_block_size.h"
 #include "dlaf/lapack/gpu/lacpy.h"
 #include "dlaf/lapack/gpu/laset.h"
 #include "dlaf/lapack/tile.h"

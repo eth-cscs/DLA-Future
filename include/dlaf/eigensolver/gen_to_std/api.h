@@ -24,7 +24,7 @@ struct GenToStd {
   static void call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a, Matrix<T, device>& mat_u);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_GENTOSTD_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct GenToStd<BACKEND, DEVICE, DATATYPE>;
 

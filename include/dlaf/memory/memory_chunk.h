@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <cstdlib>
 #include <memory>
 

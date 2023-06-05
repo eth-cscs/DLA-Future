@@ -9,6 +9,9 @@
 //
 #pragma once
 
+/// @file
+/// Provides `Tile` wrappers for BLAS operations.
+
 #include <cstddef>
 
 #include <blas.hh>
@@ -162,23 +165,21 @@ using matrix::Tile;
 
 #ifdef DLAF_DOXYGEN
 
-/// Computes general matrix matrix multiplication.
+/// @brief Computes general matrix matrix multiplication.
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
 void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<const T, D>& a,
           const Tile<const T, D>& b, const T beta, const Tile<T, D>& c);
 
-/// \overload gemm
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
+///
+/// Test
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto gemm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload gemm
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -191,16 +192,12 @@ template <Backend B, class T, Device D>
 void hemm(const blas::Side side, const blas::Uplo uplo, const T alpha, const Tile<const T, D>& a,
           const Tile<const T, D>& b, const T beta, const Tile<T, D>& c);
 
-/// \overload hemm
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto hemm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload hemm
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -213,16 +210,12 @@ template <Backend B, class T, Device D>
 void her2k(const blas::Uplo uplo, const blas::Op op, const T alpha, const Tile<const T, D>& a,
            const Tile<const T, D>& b, const BaseType<T> beta, const Tile<T, D>& c);
 
-/// \overload her2k
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto her2k(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload her2k
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -235,16 +228,12 @@ template <Backend B, class T, Device D>
 void herk(const blas::Uplo uplo, const blas::Op op, const BaseType<T> alpha, const Tile<const T, D>& a,
           const BaseType<T> beta, const Tile<T, D>& c);
 
-/// \overload herk
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto herk(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload herk
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -258,16 +247,12 @@ void trmm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const 
           const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
           const Tile<T, D>& b);
 
-/// \overload trmm
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto trmm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload trmm
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -282,16 +267,12 @@ void trmm3(const dlaf::internal::Policy<B>& policy, const blas::Side side, const
            const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
            const Tile<const T, D>& b, const Tile<T, D>& c);
 
-/// \overload trmm3
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto trmm3(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload trmm3
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>
@@ -305,16 +286,12 @@ void trsm(const dlaf::internal::Policy<B>& policy, const blas::Side side, const 
           const blas::Op op, const blas::Diag diag, const T alpha, const Tile<const T, D>& a,
           const Tile<T, D>& b);
 
-/// \overload trsm
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto trsm(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload trsm
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>

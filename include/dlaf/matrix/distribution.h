@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/util_distribution.h"

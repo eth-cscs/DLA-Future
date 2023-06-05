@@ -27,7 +27,7 @@ struct Norm<Backend::MC, Device::CPU, T> {
                                  Matrix<const T, Device::CPU>& matrix);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_NORM_ETI(KWORD, DATATYPE) KWORD template struct Norm<Backend::MC, Device::CPU, DATATYPE>;
 
 DLAF_NORM_ETI(extern, float)

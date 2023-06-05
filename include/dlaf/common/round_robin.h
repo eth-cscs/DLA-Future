@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <vector>
 
 namespace dlaf {

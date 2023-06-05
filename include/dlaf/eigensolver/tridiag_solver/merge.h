@@ -17,7 +17,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/single_threaded_blas.h"
 #include "dlaf/communication/kernels.h"
-#include "dlaf/eigensolver/get_tridiag_rank1_nworkers.h"
+#include "dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h"
 #include "dlaf/eigensolver/tridiag_solver/coltype.h"
 #include "dlaf/eigensolver/tridiag_solver/index_manipulation.h"
 #include "dlaf/eigensolver/tridiag_solver/kernels.h"

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <type_traits>
 
 #include "dlaf/communication/datatypes.h"

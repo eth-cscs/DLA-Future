@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 /// Given a function name @fname generates a constexpr object with name fname_o
 /// with type fname_t. The generated type has one static operator() which
 /// transparently forwards all arguments to a call to fname. This macro is

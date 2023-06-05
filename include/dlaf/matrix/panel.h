@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <pika/execution.hpp>
 
 #include "dlaf/common/index2d.h"

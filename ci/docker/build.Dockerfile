@@ -80,11 +80,6 @@ RUN spack external find \
       echo -e "  intel-mkl:\n    externals:\n    - spec: \"intel-mkl@$MKL_SPEC\"\n      prefix: /opt/intel\n    buildable: False" >> ~/.spack/packages.yaml ; \
     fi
 
-# Set up the binary cache and trust the public part of our signing key
-COPY ./ci/docker/spack.cloud_key.asc ./spack.cloud_key.asc
-RUN spack mirror add --scope site cscs https://spack.cloud && \
-    spack gpg trust ./spack.cloud_key.asc
-
 # Add our custom spack repo from here
 ARG SPACK_DLAF_REPO
 COPY $SPACK_DLAF_REPO /user_repo

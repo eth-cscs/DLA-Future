@@ -12,6 +12,10 @@
 
 /// @file
 
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+#include <thread>
+#endif
+
 namespace dlaf::common::internal {
 class [[nodiscard]] SingleThreadedBlasScope {
 public:
@@ -23,6 +27,9 @@ public:
   SingleThreadedBlasScope& operator=(SingleThreadedBlasScope const&) = delete;
 
 private:
+#ifdef DLAF_ASSERT_MODERATE_ENABLE
+  std::thread::id calling_thread;
+#endif
 #ifdef DLAF_WITH_OPENMP
   int omp_num_threads;
 #endif

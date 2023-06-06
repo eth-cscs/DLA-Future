@@ -24,8 +24,7 @@ namespace dlaf {
 /// - debug_dump_trisolver_data:
 ///     Enable dump of trisolver input/output data to "trid-ref.h5" file that will be created in the
 ///     working folder (it should not exist before the execution).
-///     WARNING: the dataset is overwritten at each eigensolver call (i.e. just last call data will be
-///     available).
+///     WARNING: just a single execution can be dumped on disk, and any subsequent call fails.
 ///     Set with environment variable DLAF_DEBUG_DUMP_TRISOLVER_DATA.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.

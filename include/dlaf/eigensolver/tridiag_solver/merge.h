@@ -1403,18 +1403,12 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                         sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0,
                         ws_hm.i2, ws_hm.e2);
 
-  // TODO probably we can skip some copies
-  copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues
   // as prepared for the deflated system.
   //
-
+  copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
                                                   T(1), ws.e1, ws.e2, T(0), ws.e0);
 

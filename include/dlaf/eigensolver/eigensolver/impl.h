@@ -66,14 +66,18 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
 #ifdef DLAF_WITH_HDF5
   matrix::internal::FileHDF5 file(grid.fullCommunicator(), "trid-ref.h5");
 
-  file.write(ret.tridiagonal, "/tridiag");
+  if (getTuneParameters().debug_dump_trisolver_data) {
+    file.write(ret.tridiagonal, "/tridiag");
+  }
 #endif
 
   eigensolver::tridiagSolver<B>(grid, ret.tridiagonal, evals, mat_e);
 
 #ifdef DLAF_WITH_HDF5
-  file.write(evals, "/evals");
-  file.write(mat_e, "/evecs");
+  if (getTuneParameters().debug_dump_trisolver_data) {
+    file.write(evals, "/evals");
+    file.write(mat_e, "/evecs");
+  }
 #endif
 
   backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);

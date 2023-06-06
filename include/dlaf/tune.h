@@ -49,6 +49,7 @@ namespace dlaf {
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by
 /// algorithms.
 struct TuneParameters {
+  bool debug_dump_trisolver_data = false;
   std::size_t red2band_panel_nworkers =
       std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
   std::size_t red2band_barrier_busy_wait_us = 1000;

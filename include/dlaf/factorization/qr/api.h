@@ -85,7 +85,7 @@ struct QR_Tfactor {
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct QR_Tfactor<BACKEND, DEVICE, DATATYPE>;
 

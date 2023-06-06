@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include "dlaf/common/index2d.h"
 #include "dlaf/types.h"
 

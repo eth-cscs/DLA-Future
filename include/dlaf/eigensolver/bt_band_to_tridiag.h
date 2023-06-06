@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"

@@ -10,8 +10,6 @@
 
 #pragma once
 
-/// @file
-
 #ifdef DLAF_WITH_HIP
 
 #include <rocblas/rocblas.h>

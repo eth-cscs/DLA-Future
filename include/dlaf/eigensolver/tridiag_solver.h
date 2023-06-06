@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include "dlaf/common/assert.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/eigensolver/tridiag_solver/api.h"

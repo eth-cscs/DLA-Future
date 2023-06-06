@@ -34,7 +34,7 @@ struct Eigensolver {
                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct Eigensolver<BACKEND, DEVICE, DATATYPE>;
 

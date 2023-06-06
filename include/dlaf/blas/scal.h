@@ -13,12 +13,11 @@
 #include <complex>
 
 /// @file
-
-namespace blas {
-
-/// Provides overloads for mixed real complex variants missing in blaspp.
+/// Provides overloads for mixed real complex variants of scal missing in blaspp.
 /// - csscal
 /// - zdscal
+
+namespace blas {
 
 void scal(std::int64_t n, float a, std::complex<float>* x, std::int64_t incx) noexcept;
 void scal(std::int64_t n, double a, std::complex<double>* x, std::int64_t incx) noexcept;

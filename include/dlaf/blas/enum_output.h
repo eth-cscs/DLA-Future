@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <ostream>
 
 #include <blas.hh>

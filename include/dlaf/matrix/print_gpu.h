@@ -11,6 +11,8 @@
 #ifdef DLAF_WITH_GPU
 #pragma once
 
+/// @file
+
 #include <iostream>
 
 #include <whip.hpp>

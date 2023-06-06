@@ -32,7 +32,7 @@
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/communication/kernels/reduce.h"
 #include "dlaf/communication/rdma.h"
-#include "dlaf/eigensolver/get_red2band_panel_nworkers.h"
+#include "dlaf/eigensolver/internal/get_red2band_panel_nworkers.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/copy_tile.h"
 #include "dlaf/matrix/distribution.h"

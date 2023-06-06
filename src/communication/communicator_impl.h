@@ -12,8 +12,6 @@
 
 #include "dlaf/communication/error.h"
 
-/// @file
-
 namespace dlaf {
 namespace comm {
 

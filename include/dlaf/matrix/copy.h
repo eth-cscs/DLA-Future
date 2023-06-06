@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <pika/execution.hpp>
 
 #include "dlaf/common/range2d.h"

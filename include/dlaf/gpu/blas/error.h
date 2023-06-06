@@ -10,8 +10,6 @@
 
 #pragma once
 
-/// @file
-
 #include <exception>
 #include <iostream>
 

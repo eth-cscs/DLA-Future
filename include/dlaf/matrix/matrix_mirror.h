@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <exception>
 #include <vector>
 
@@ -170,7 +172,7 @@ public:
   }
 };
 
-/// ---- ETI
+// ETI
 
 #define DLAF_MATRIX_MIRROR_ETI(KWORD, DATATYPE, TARGETDEVICE, SOURCEDEVICE) \
   KWORD template class MatrixMirror<DATATYPE, TARGETDEVICE, SOURCEDEVICE>;  \

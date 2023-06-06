@@ -25,7 +25,7 @@ struct GenEigensolver {
                    Matrix<T, device>& eigenvectors);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_GEN_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct GenEigensolver<BACKEND, DEVICE, DATATYPE>;
 

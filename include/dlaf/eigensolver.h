@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include "dlaf/eigensolver/band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_band_to_tridiag.h"
 #include "dlaf/eigensolver/bt_reduction_to_band.h"

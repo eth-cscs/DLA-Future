@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #ifdef DLAF_ASSERT_MODERATE_ENABLE
 #include <thread>
 #endif

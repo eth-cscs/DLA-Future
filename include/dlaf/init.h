@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <iostream>
 
 #include <pika/program_options.hpp>

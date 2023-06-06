@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <exception>
 #include <vector>
 
@@ -375,7 +377,7 @@ auto select(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG>
   return internal::selectGeneric([&](auto index) { return matrix.readwrite(index); }, range);
 }
 
-/// ---- ETI
+// ETI
 
 #define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
   KWORD template class Matrix<DATATYPE, DEVICE>; \

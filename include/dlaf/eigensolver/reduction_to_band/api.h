@@ -26,7 +26,7 @@ struct ReductionToBand {
       comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct ReductionToBand<BACKEND, DEVICE, DATATYPE>;
 

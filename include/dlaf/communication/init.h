@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <iostream>
 #include <mutex>
 

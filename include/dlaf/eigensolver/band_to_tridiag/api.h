@@ -45,7 +45,7 @@ struct BandToTridiag<Backend::MC, D, T> {
                                               Matrix<const T, D>& mat_a) noexcept;
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_B2T_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct BandToTridiag<BACKEND, DEVICE, DATATYPE>;
 #define DLAF_EIGENSOLVER_B2T_DISTR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \

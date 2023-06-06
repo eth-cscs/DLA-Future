@@ -24,7 +24,7 @@
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/init.h"
 #include "dlaf/eigensolver/eigensolver.h"
-#include "dlaf/eigensolver/get_band_size.h"
+#include "dlaf/eigensolver/internal/get_band_size.h"
 #include "dlaf/init.h"
 #include "dlaf/matrix/copy.h"
 #include "dlaf/matrix/matrix.h"

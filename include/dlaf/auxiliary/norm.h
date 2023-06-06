@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include "dlaf/auxiliary/norm/api.h"
 #include "dlaf/blas/enum_output.h"
 #include "dlaf/common/assert.h"

@@ -23,7 +23,15 @@
 namespace dlaf {
 namespace common {
 
+#ifdef DLAF_DOXYGEN
+
 /// Traits for verifying if the given type is an implementation of the Data concept.
+///
+/// Derive from @p std::true_type or @p std::false_type.
+template <class Data>
+struct is_data {};
+
+#else
 template <class Data, class = void>
 struct is_data : std::false_type {};
 
@@ -37,6 +45,7 @@ struct is_data<
                      std::is_same_v<decltype(data_count(std::declval<const Data&>())), SizeType> &&
                      std::is_same_v<decltype(data_iscontiguous(std::declval<const Data&>())), bool>>>
     : std::true_type {};
+#endif
 
 template <class T>
 inline constexpr bool is_data_v = is_data<T>::value;

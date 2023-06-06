@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include "dlaf/common/assert.h"
 #include "dlaf/matrix/distribution.h"
 #include "dlaf/matrix/index.h"

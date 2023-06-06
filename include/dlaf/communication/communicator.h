@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <memory>
 #include "dlaf/communication/error.h"
 

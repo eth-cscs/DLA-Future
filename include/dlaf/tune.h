@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <cstdint>
 
 #include <pika/runtime.hpp>

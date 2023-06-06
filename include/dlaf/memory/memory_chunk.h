@@ -88,7 +88,8 @@ public:
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
   /// Move constructor.
-  MemoryChunk(MemoryChunk&& rhs) : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {
+  MemoryChunk(MemoryChunk&& rhs) noexcept
+      : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {
     rhs.ptr_ = nullptr;
     rhs.size_ = 0;
     rhs.allocated_ = false;

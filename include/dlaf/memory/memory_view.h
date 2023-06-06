@@ -12,6 +12,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <utility>
 
 #include "memory_chunk.h"
 #include "dlaf/common/assert.h"
@@ -62,14 +63,14 @@ public:
   MemoryView(const MemoryView<ElementType, D>& rhs)
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {}
 
-  MemoryView(MemoryView&& rhs)
+  MemoryView(MemoryView&& rhs) noexcept
       : memory_(std::move(rhs.memory_)), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.size_ = 0;
     rhs.offset_ = 0;
   }
 
   template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
-  MemoryView(MemoryView<ElementType, D>&& rhs)
+  MemoryView(MemoryView<ElementType, D>&& rhs) noexcept
       : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.memory_ = std::make_shared<MemoryChunk<ElementType, D>>();
     rhs.size_ = 0;

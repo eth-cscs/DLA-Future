@@ -129,6 +129,15 @@ public:
     return readwrite(this->distribution().localTileIndex(index));
   }
 
+private:
+  using typename Matrix<const T, D>::SubPipelineTag;
+  Matrix(Matrix& mat, const SubPipelineTag);
+
+public:
+  Matrix subPipeline() {
+    return Matrix(*this, SubPipelineTag{});
+  }
+
 protected:
   using Matrix<const T, D>::tileLinearIndex;
 
@@ -186,10 +195,18 @@ public:
   /// involving any of the locally available tiles are completed.
   void waitLocalTiles() noexcept;
 
+  Matrix subPipelineConst() {
+    return Matrix(*this, SubPipelineTag{});
+  }
+
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
 
+  struct SubPipelineTag {};
+  Matrix(Matrix& mat, const SubPipelineTag);
+
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
+  void setUpSubPipelines(Matrix<const T, D>&) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };

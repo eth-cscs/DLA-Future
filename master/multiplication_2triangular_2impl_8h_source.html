@@ -83,19 +83,19 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;pika/thread.hpp&gt;</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/round_robin.h&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/kernels.h&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&quot;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/distribution.h&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/panel.h&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;dlaf/multiplication/triangular/api.h&quot;</span></div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
@@ -796,12 +796,21 @@ $(function() {
 <div class="line"><a name="l00725"></a><span class="lineno">  725</span>&#160;}</div>
 <div class="line"><a name="l00726"></a><span class="lineno">  726</span>&#160;}</div>
 <div class="line"><a name="l00727"></a><span class="lineno">  727</span>&#160;}</div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html_a83a59dd8a250067f25b9b4bbd041a9cf"><div class="ttname"><a href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:58</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
+<div class="ttc" id="acommunication_2kernels_8h_html"><div class="ttname"><a href="communication_2kernels_8h.html">kernels.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="adistribution_8h_html"><div class="ttname"><a href="distribution_8h.html">distribution.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
+<div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

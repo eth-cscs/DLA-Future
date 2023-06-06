@@ -96,23 +96,23 @@ $(function() {
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;whip.hpp&gt;</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/callable_object.h&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/single_threaded_blas.h&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="callable__object_8h.html">dlaf/common/callable_object.h</a>&quot;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/enum_output.h&quot;</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/index.h&quot;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&quot;</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/make_sender_algorithm_overloads.h&quot;</span></div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/policy.h&quot;</span></div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform.h&quot;</span></div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;dlaf/util_lapack.h&quot;</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__lapack_8h.html">dlaf/util_lapack.h</a>&quot;</span></div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__tile_8h.html">dlaf/util_tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="gpu_2lapack_2api_8h.html">dlaf/gpu/lapack/api.h</a>&quot;</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;dlaf/gpu/lapack/api.h&quot;</span></div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">#include &quot;dlaf/gpu/lapack/assert_info.h&quot;</span></div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="gpu_2lapack_2error_8h.html">dlaf/gpu/lapack/error.h</a>&quot;</span></div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#include &quot;dlaf/gpu/lapack/error.h&quot;</span></div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/gpu/laset.h&quot;</span></div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">#include &quot;dlaf/util_cublas.h&quot;</span></div>
 <div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#endif</span></div>
@@ -120,7 +120,7 @@ $(function() {
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_CUDA</span></div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#include &quot;dlaf/gpu/cusolver/hegst.h&quot;</span></div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="preprocessor">#elif defined(DLAF_WITH_HIP)</span></div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="gpu_2blas_2error_8h.html">dlaf/gpu/blas/error.h</a>&quot;</span></div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="preprocessor">#include &quot;dlaf/gpu/blas/error.h&quot;</span></div>
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="preprocessor">#include &quot;dlaf/util_rocblas.h&quot;</span></div>
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
@@ -130,7 +130,7 @@ $(function() {
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="comment">// See LAPACK documentation for more details.</span></div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">   68</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">lacpy</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const T, Device::CPU&gt;</a>&amp; a, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, Device::CPU&gt;</a>&amp; b) {</div>
+<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">   68</a></span>&#160;<span class="keywordtype">void</span> lacpy(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const T, Device::CPU&gt;</a>&amp; a, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, Device::CPU&gt;</a>&amp; b) {</div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  DLAF_ASSERT_MODERATE(a.size() == b.size(), a, b);</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <span class="keyword">const</span> SizeType m = a.size().rows();</div>
@@ -141,7 +141,7 @@ $(function() {
 <div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;}</div>
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
 <div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00084"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#a1bbf24144aebc55d9d50bb3b53ae38f7">   84</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">lacpy</a>(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> region, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> in_idx, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const T, Device::CPU&gt;</a>&amp; in,</div>
+<div class="line"><a name="l00084"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#a1bbf24144aebc55d9d50bb3b53ae38f7">   84</a></span>&#160;<span class="keywordtype">void</span> lacpy(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> region, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> in_idx, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const T, Device::CPU&gt;</a>&amp; in,</div>
 <div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;           <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> out_idx, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, Device::CPU&gt;</a>&amp; out) {</div>
 <div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  DLAF_ASSERT_MODERATE(in_idx.<a class="code" href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">isIn</a>(in.size() - region + <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>(1, 1)),</div>
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;                       <span class="stringliteral">&quot;Region goes out of bounds for `in`!&quot;</span>, region, in_idx, in);</div>
@@ -178,15 +178,15 @@ $(function() {
 <div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="lapack_2tile_8h.html#a22be986552edcbdc4a3785a72620d0ca">lantr</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p);</div>
 <div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160; </div>
 <div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00155"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">  155</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p, <span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta,</div>
+<div class="line"><a name="l00155"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">  155</a></span>&#160;<span class="keywordtype">void</span> laset(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p, <span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta,</div>
 <div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;           <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a>&amp; tile);</div>
 <div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160; </div>
 <div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">typename</span> Sender,</div>
 <div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;          <span class="keyword">typename</span> = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt;</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p, Sender&amp;&amp; s);</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;<span class="keywordtype">void</span> laset(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p, Sender&amp;&amp; s);</div>
 <div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160; </div>
 <div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;<span class="keyword">template</span> &lt;Backend B&gt;</div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p);</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;<span class="keywordtype">void</span> laset(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p);</div>
 <div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160; </div>
 <div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">class</span> T, Device D&gt;</div>
 <div class="line"><a name="l00177"></a><span class="lineno"><a class="line" href="lapack_2tile_8h.html#ab094eeac6052422b50a298b42a947251">  177</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#ab094eeac6052422b50a298b42a947251">set0</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>&amp; p, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a>&amp; tile);</div>
@@ -268,12 +268,12 @@ $(function() {
 <div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;}</div>
 <div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160; </div>
 <div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(<span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta, <span class="keyword">const</span> Tile&lt;T, Device::CPU&gt;&amp; tile) {</div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;<span class="keywordtype">void</span> laset(<span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta, <span class="keyword">const</span> Tile&lt;T, Device::CPU&gt;&amp; tile) {</div>
 <div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;  <span class="keyword">const</span> SizeType m = tile.size().rows();</div>
 <div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;  <span class="keyword">const</span> SizeType n = tile.size().cols();</div>
 <div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160; </div>
 <div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;  common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;  lapack::laset(uplo, m, n, alpha, beta, tile.ptr(), tile.ld());</div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;  <a class="code" href="util__lapack_8h.html#a653b4d466d700c7d6d3befb51c8ca9d8">lapack::laset</a>(uplo, m, n, alpha, beta, tile.ptr(), tile.ld());</div>
 <div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;}</div>
 <div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160; </div>
 <div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
@@ -334,7 +334,7 @@ $(function() {
 <div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;  DLAF_ASSERT(col &gt;= 0, col);</div>
 <div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;  DLAF_ASSERT(tile.size().cols() &gt; col, tile, col);</div>
 <div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;  common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;  <a class="code" href="scal_8h.html#aedab5556a733369707d71dac05b4f729">blas::scal</a>(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;  blas::scal(tile.size().rows(), alpha, tile.ptr(TileElementIndex(0, col)), 1);</div>
 <div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;}</div>
 <div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160; </div>
 <div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
@@ -458,18 +458,18 @@ $(function() {
 <div class="line"><a name="l00521"></a><span class="lineno">  521</span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="lapack_2tile_8h.html#a839d86dad6ce772207964d76b3ad07fa">lange</a>(cusolverDnHandle_t handle, <span class="keyword">const</span> lapack::Norm norm,</div>
 <div class="line"><a name="l00522"></a><span class="lineno">  522</span>&#160;                        <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; a) {</div>
 <div class="line"><a name="l00523"></a><span class="lineno">  523</span>&#160;  DLAF_STATIC_UNIMPLEMENTED(T);</div>
-<div class="line"><a name="l00524"></a><span class="lineno">  524</span>&#160;  <a class="code" href="assert_8h.html#a5e81092abc0e41569e08231603261e22">dlaf::internal::silenceUnusedWarningFor</a>(handle, norm, a);</div>
+<div class="line"><a name="l00524"></a><span class="lineno">  524</span>&#160;  dlaf::internal::silenceUnusedWarningFor(handle, norm, a);</div>
 <div class="line"><a name="l00525"></a><span class="lineno">  525</span>&#160;}</div>
 <div class="line"><a name="l00526"></a><span class="lineno">  526</span>&#160; </div>
 <div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
 <div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="lapack_2tile_8h.html#a22be986552edcbdc4a3785a72620d0ca">lantr</a>(cusolverDnHandle_t handle, <span class="keyword">const</span> lapack::Norm norm, <span class="keyword">const</span> blas::Uplo uplo,</div>
 <div class="line"><a name="l00529"></a><span class="lineno">  529</span>&#160;                        <span class="keyword">const</span> blas::Diag diag, <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; a) {</div>
 <div class="line"><a name="l00530"></a><span class="lineno">  530</span>&#160;  DLAF_STATIC_UNIMPLEMENTED(T);</div>
-<div class="line"><a name="l00531"></a><span class="lineno">  531</span>&#160;  <a class="code" href="assert_8h.html#a5e81092abc0e41569e08231603261e22">dlaf::internal::silenceUnusedWarningFor</a>(handle, norm, uplo, diag, a);</div>
+<div class="line"><a name="l00531"></a><span class="lineno">  531</span>&#160;  dlaf::internal::silenceUnusedWarningFor(handle, norm, uplo, diag, a);</div>
 <div class="line"><a name="l00532"></a><span class="lineno">  532</span>&#160;}</div>
 <div class="line"><a name="l00533"></a><span class="lineno">  533</span>&#160; </div>
 <div class="line"><a name="l00534"></a><span class="lineno">  534</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00535"></a><span class="lineno">  535</span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(<span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta, <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; tile,</div>
+<div class="line"><a name="l00535"></a><span class="lineno">  535</span>&#160;<span class="keywordtype">void</span> laset(<span class="keyword">const</span> blas::Uplo uplo, T alpha, T beta, <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; tile,</div>
 <div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;           whip::stream_t stream) {</div>
 <div class="line"><a name="l00537"></a><span class="lineno">  537</span>&#160;  <span class="keyword">const</span> SizeType m = tile.size().rows();</div>
 <div class="line"><a name="l00538"></a><span class="lineno">  538</span>&#160;  <span class="keyword">const</span> SizeType n = tile.size().cols();</div>
@@ -555,15 +555,15 @@ $(function() {
 <div class="line"><a name="l00618"></a><span class="lineno">  618</span>&#160; </div>
 <div class="line"><a name="l00619"></a><span class="lineno">  619</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160; </div>
-<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(lange);</div>
-<div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(lantr);</div>
-<div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(laset);</div>
-<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(set0);</div>
-<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(hegst);</div>
-<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(potrf);</div>
-<div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(potrfInfo);</div>
-<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(stedc);</div>
-<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(scaleCol);</div>
+<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lange);</div>
+<div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lantr);</div>
+<div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(laset);</div>
+<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(set0);</div>
+<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(hegst);</div>
+<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrf);</div>
+<div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrfInfo);</div>
+<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(stedc);</div>
+<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(scaleCol);</div>
 <div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160;}</div>
 <div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160; </div>
 <div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lange,</div>
@@ -587,20 +587,17 @@ $(function() {
 <div class="line"><a name="l00650"></a><span class="lineno">  650</span>&#160; </div>
 <div class="line"><a name="l00651"></a><span class="lineno">  651</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00652"></a><span class="lineno">  652</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
-<div class="ttc" id="aassert_8h_html_a5e81092abc0e41569e08231603261e22"><div class="ttname"><a href="assert_8h.html#a5e81092abc0e41569e08231603261e22">dlaf::internal::silenceUnusedWarningFor</a></div><div class="ttdeci">void silenceUnusedWarningFor(Args &amp;&amp;...)</div><div class="ttdef"><b>Definition:</b> assert.h:58</div></div>
+<div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
+<div class="ttc" id="acallable__object_8h_html_a5aafa5a9c65ad07da48410427f4825b2"><div class="ttname"><a href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a></div><div class="ttdeci">#define DLAF_MAKE_CALLABLE_OBJECT(fname)</div><div class="ttdef"><b>Definition:</b> callable_object.h:26</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a5f174cc234af20d79923b31d7fa90b19"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">dlaf::common::Index2D::isIn</a></div><div class="ttdeci">bool isIn(const Size2D&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:213</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:18</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:20</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:327</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html_ad14d471389721941e830f73d7ae0716d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">dlaf::matrix::Tile::ptr</a></div><div class="ttdeci">T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:376</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_view_html"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_view.html">dlaf::memory::MemoryView</a></div><div class="ttdef"><b>Definition:</b> memory_view.h:29</div></div>
-<div class="ttc" id="agpu_2blas_2error_8h_html"><div class="ttname"><a href="gpu_2blas_2error_8h.html">error.h</a></div></div>
-<div class="ttc" id="agpu_2lapack_2api_8h_html"><div class="ttname"><a href="gpu_2lapack_2api_8h.html">api.h</a></div></div>
-<div class="ttc" id="agpu_2lapack_2error_8h_html"><div class="ttname"><a href="gpu_2lapack_2error_8h.html">error.h</a></div></div>
-<div class="ttc" id="alapack_2tile_8h_html_a19439efac55cc846b684ed2c6f78eb33"><div class="ttname"><a href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">dlaf::tile::laset</a></div><div class="ttdeci">void laset(const dlaf::internal::Policy&lt; B &gt; &amp;p, const blas::Uplo uplo, T alpha, T beta, const Tile&lt; T, D &gt; &amp;tile)</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html_ad14d471389721941e830f73d7ae0716d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">dlaf::matrix::Tile::ptr</a></div><div class="ttdeci">T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:378</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_view_html"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_view.html">dlaf::memory::MemoryView</a></div><div class="ttdef"><b>Definition:</b> memory_view.h:31</div></div>
+<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html_a22be986552edcbdc4a3785a72620d0ca"><div class="ttname"><a href="lapack_2tile_8h.html#a22be986552edcbdc4a3785a72620d0ca">dlaf::tile::lantr</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; lantr(const dlaf::internal::Policy&lt; B &gt; &amp;p, const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag, const Tile&lt; T, D &gt; &amp;a)</div></div>
 <div class="ttc" id="alapack_2tile_8h_html_a68163899b7b15f447fdbb05e475d9cc6"><div class="ttname"><a href="lapack_2tile_8h.html#a68163899b7b15f447fdbb05e475d9cc6">dlaf::tile::stedc</a></div><div class="ttdeci">void stedc(const dlaf::internal::Policy&lt; B &gt; &amp;p, const Tile&lt; T, D &gt; &amp;tridiag, const Tile&lt; T, D &gt; &amp;evecs)</div></div>
 <div class="ttc" id="alapack_2tile_8h_html_a839d86dad6ce772207964d76b3ad07fa"><div class="ttname"><a href="lapack_2tile_8h.html#a839d86dad6ce772207964d76b3ad07fa">dlaf::tile::lange</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; lange(const dlaf::internal::Policy&lt; B &gt; &amp;p, const lapack::Norm norm, const Tile&lt; T, D &gt; &amp;a)</div></div>
@@ -608,11 +605,13 @@ $(function() {
 <div class="ttc" id="alapack_2tile_8h_html_aab0795227301a9e8e63232028e331fe0"><div class="ttname"><a href="lapack_2tile_8h.html#aab0795227301a9e8e63232028e331fe0">dlaf::tile::potrf</a></div><div class="ttdeci">void potrf(const dlaf::internal::Policy&lt; B &gt; &amp;p, const blas::Uplo uplo, const Tile&lt; T, D &gt; &amp;a)</div></div>
 <div class="ttc" id="alapack_2tile_8h_html_aaf274e91e36453e7994dd1f2a2813681"><div class="ttname"><a href="lapack_2tile_8h.html#aaf274e91e36453e7994dd1f2a2813681">dlaf::tile::hegst</a></div><div class="ttdeci">void hegst(const dlaf::internal::Policy&lt; B &gt; &amp;, const int itype, const blas::Uplo uplo, const Tile&lt; T, D &gt; &amp;a, const Tile&lt; T, D &gt; &amp;b)</div></div>
 <div class="ttc" id="alapack_2tile_8h_html_ab094eeac6052422b50a298b42a947251"><div class="ttname"><a href="lapack_2tile_8h.html#ab094eeac6052422b50a298b42a947251">dlaf::tile::set0</a></div><div class="ttdeci">void set0(const dlaf::internal::Policy&lt; B &gt; &amp;p, const Tile&lt; T, D &gt; &amp;tile)</div></div>
-<div class="ttc" id="alapack_2tile_8h_html_adba78fac5535c410d8bd2e6c53ff8c7d"><div class="ttname"><a href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">dlaf::tile::lacpy</a></div><div class="ttdeci">void lacpy(const Tile&lt; const T, Device::CPU &gt; &amp;a, const Tile&lt; T, Device::CPU &gt; &amp;b)</div><div class="ttdef"><b>Definition:</b> tile.h:68</div></div>
-<div class="ttc" id="ascal_8h_html_aedab5556a733369707d71dac05b4f729"><div class="ttname"><a href="scal_8h.html#aedab5556a733369707d71dac05b4f729">blas::scal</a></div><div class="ttdeci">void scal(std::int64_t n, float a, std::complex&lt; float &gt; *x, std::int64_t incx) noexcept</div><div class="ttdef"><b>Definition:</b> scal.cpp:29</div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_a25d16ff6621f011d9a98be3d9ebf29f1"><div class="ttname"><a href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">dlaf::to_sizet</a></div><div class="ttdeci">auto to_sizet(const T signed_value)</div><div class="ttdef"><b>Definition:</b> types.h:265</div></div>
 <div class="ttc" id="atypes_8h_html_af90e7fd5acadf5987b7199b0bd44deea"><div class="ttname"><a href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">dlaf::to_int</a></div><div class="ttdeci">auto to_int(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:247</div></div>
+<div class="ttc" id="autil__lapack_8h_html"><div class="ttname"><a href="util__lapack_8h.html">util_lapack.h</a></div></div>
+<div class="ttc" id="autil__lapack_8h_html_a653b4d466d700c7d6d3befb51c8ca9d8"><div class="ttname"><a href="util__lapack_8h.html#a653b4d466d700c7d6d3befb51c8ca9d8">lapack::laset</a></div><div class="ttdeci">void laset(blas::Uplo uplo, int64_t m, int64_t n, T alpha, T beta, T *a, int64_t lda)</div><div class="ttdoc">Overload of laset with blas::Uplo instead of lapack::MatrixType.</div><div class="ttdef"><b>Definition:</b> util_lapack.h:42</div></div>
 <div class="ttc" id="autil__matrix_8h_html_aae6464887dae32e01668a32e71397cb0"><div class="ttname"><a href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">dlaf::matrix::square_size</a></div><div class="ttdeci">bool square_size(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is square.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:41</div></div>
 <div class="ttc" id="autil__tile_8h_html"><div class="ttname"><a href="util__tile_8h.html">util_tile.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

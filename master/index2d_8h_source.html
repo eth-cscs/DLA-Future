@@ -88,7 +88,7 @@ $(function() {
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;string&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;type_traits&gt;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__math_8h.html">dlaf/util_math.h</a>&quot;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
@@ -96,8 +96,7 @@ $(function() {
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="keyword">enum class</span> Coord { Row, Col };</div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="comment">// Given a Coord, returns its orthogonal</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;constexpr Coord orthogonal(<span class="keyword">const</span> Coord rc) {</div>
+<div class="line"><a name="l00030"></a><span class="lineno"><a class="line" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">   30</a></span>&#160;constexpr Coord <a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(<span class="keyword">const</span> Coord rc) {</div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keywordflow">return</span> rc == Coord::Row ? Coord::Col : Coord::Row;</div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;}</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
@@ -401,7 +400,6 @@ $(function() {
 <div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160; </div>
 <div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;}</div>
 <div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D</a></div><div class="ttdef"><b>Definition:</b> index2d.h:184</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a4724fdad093b5d189c5f5e0b1ac5e305"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">dlaf::common::Index2D::operator==</a></div><div class="ttdeci">bool operator==(const Index2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:230</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a5f174cc234af20d79923b31d7fa90b19"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">dlaf::common::Index2D::isIn</a></div><div class="ttdeci">bool isIn(const Size2D&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:213</div></div>
@@ -428,6 +426,7 @@ $(function() {
 <div class="ttc" id="aindex2d_8h_html_a15f2674deab8ea5e84471b18b8ffba94"><div class="ttname"><a href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">dlaf::common::computeLinearIndex</a></div><div class="ttdeci">LinearIndexT computeLinearIndex(Ordering ordering, const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:400</div></div>
 <div class="ttc" id="aindex2d_8h_html_a2ed7f0c019788f600bc067956646bf75"><div class="ttname"><a href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">dlaf::common::operator+</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; operator+(const Index2D&lt; IndexT, Tag &gt; &amp;lhs, const Size2D&lt; IndexT, Tag &gt; &amp;rhs) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:419</div></div>
 <div class="ttc" id="aindex2d_8h_html_a7e8f91611ddcaf36316ee316666e4d07"><div class="ttname"><a href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">dlaf::common::computeLinearIndexColMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexColMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:375</div></div>
+<div class="ttc" id="aindex2d_8h_html_a9b3be798b052f32def2a280a80e2295c"><div class="ttname"><a href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">dlaf::orthogonal</a></div><div class="ttdeci">constexpr Coord orthogonal(const Coord rc)</div><div class="ttdoc">Given a Coord, returns its orthogonal.</div><div class="ttdef"><b>Definition:</b> index2d.h:30</div></div>
 <div class="ttc" id="aindex2d_8h_html_ab6f5ed39b526ad9ae94ed6394a35832b"><div class="ttname"><a href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">dlaf::common::computeCoords</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoords(Ordering ordering, SizeType index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:332</div></div>
 <div class="ttc" id="aindex2d_8h_html_ac9c99027fa12a875fa12d878393fefff"><div class="ttname"><a href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">dlaf::common::computeCoordsRowMajor</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoordsRowMajor(SizeType linear_index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:288</div></div>
 <div class="ttc" id="aindex2d_8h_html_ad3fcc947c550d2315d1afca1241b29b9"><div class="ttname"><a href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">dlaf::common::computeLinearIndexRowMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexRowMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:353</div></div>

@@ -83,16 +83,16 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &quot;dlaf/multiplication/general/api.h&quot;</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/round_robin.h&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/distribution.h&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/index.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/panel.h&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="keyword">namespace </span>dlaf::multiplication {</div>
@@ -191,7 +191,7 @@ $(function() {
 <div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">bool</span> isRowPartial = (i == i_end - 1 &amp;&amp; isEndRangePartial &amp;&amp; rankHasLastRow);</div>
 <div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;        <span class="keyword">const</span> SizeType nrows = isRowPartial ? partialSize : mb;</div>
 <div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;        panelA.setTile(ik, (isRowPartial || isKPartial)</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;                               ? splitTile(mat_a.read(ik), {{0, 0}, {nrows, kSize}})</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;                               ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_a.read(ik), {{0, 0}, {nrows, kSize}})</div>
 <div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;                               : mat_a.read(ik));</div>
 <div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;      }</div>
 <div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    }</div>
@@ -203,7 +203,7 @@ $(function() {
 <div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;        <span class="keyword">const</span> <span class="keywordtype">bool</span> isColPartial = (j == j_end - 1 &amp;&amp; isEndRangePartial &amp;&amp; rankHasLastCol);</div>
 <div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;        <span class="keyword">const</span> SizeType ncols = isColPartial ? partialSize : mb;</div>
 <div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;        panelB.setTile(kj, (isKPartial || isColPartial)</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;                               ? splitTile(mat_b.read(kj), {{0, 0}, {kSize, ncols}})</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;                               ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_b.read(kj), {{0, 0}, {kSize, ncols}})</div>
 <div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;                               : mat_b.read(kj));</div>
 <div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;      }</div>
 <div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;    }</div>
@@ -229,7 +229,7 @@ $(function() {
 <div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;            dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha, panelA.read(ij),</div>
 <div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;                                        panelB.read(ij), k == idx_begin ? beta : T(1),</div>
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;                                        (isRowPartial || isColPartial)</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;                                            ? splitTile(mat_c.readwrite(ij), {{0, 0}, {nrows, ncols}})</div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;                                            ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_c.readwrite(ij), {{0, 0}, {nrows, ncols}})</div>
 <div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;                                            : mat_c.readwrite(ij)) |</div>
 <div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;            tile::gemm(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>()));</div>
 <div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;      }</div>
@@ -241,12 +241,18 @@ $(function() {
 <div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;}</div>
 <div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;}</div>
 <div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html_a83a59dd8a250067f25b9b4bbd041a9cf"><div class="ttname"><a href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:58</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="adistribution_8h_html"><div class="ttname"><a href="distribution_8h.html">distribution.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
+<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html_ae46de76ccc35985387f6820b1db9fb51"><div class="ttname"><a href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">dlaf::matrix::splitTile</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; splitTile(ReadOnlyTileSender&lt; T, D &gt; tile, const SubTileSpec &amp;spec)</div><div class="ttdef"><b>Definition:</b> tile.h:507</div></div>
+<div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
+<div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

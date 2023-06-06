@@ -69,7 +69,7 @@ $(function() {
 <div class="title">norm.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
+<a href="norm_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="comment">// Distributed Linear Algebra with Future (DLAF)</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="comment">// Copyright (c) 2018-2023, ETH Zurich</span></div>
@@ -80,60 +80,65 @@ $(function() {
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &quot;dlaf/auxiliary/norm/api.h&quot;</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/enum_output.h&quot;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/enum_output.h&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf::auxiliary {</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;dlaf/auxiliary/norm/api.h&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2enum__output_8h.html">dlaf/blas/enum_output.h</a>&quot;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/enum_output.h&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;dlaf::BaseType&lt;T&gt; norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;                       blas::Uplo uplo, Matrix&lt;const T, device&gt;&amp; A) {</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">using</span> <a class="code" href="util__matrix_8h.html#ab60bac9a36466ff9f784d2c909a62507">dlaf::matrix::equal_process_grid</a>;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  DLAF_ASSERT(<a class="code" href="util__matrix_8h.html#ab60bac9a36466ff9f784d2c909a62507">equal_process_grid</a>(A, grid), A, grid);</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">namespace </span>dlaf::auxiliary {</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00043"></a><span class="lineno"><a class="line" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">   43</a></span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">norm</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">comm::Index2D</a> rank, lapack::Norm norm_type,</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;                       blas::Uplo uplo, Matrix&lt;const T, device&gt;&amp; A) {</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  <span class="keyword">using</span> dlaf::matrix::equal_process_grid;</div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="comment">// LAPACK documentation specify that if any dimension is 0, the result is 0</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  <span class="keywordflow">if</span> (A.size().isEmpty())</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <span class="keywordflow">return</span> {0};</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  <span class="keywordflow">switch</span> (norm_type) {</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::One:</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Two:</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Inf:</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Fro:</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;      DLAF_UNIMPLEMENTED(norm_type);</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;      <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Max:</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;      <span class="keywordflow">switch</span> (uplo) {</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;          <span class="keywordflow">return</span> internal::Norm&lt;backend, device, T&gt;::max_L(grid, rank, A);</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;          DLAF_UNIMPLEMENTED(norm_type, uplo);</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;          <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::General:</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;          <span class="keywordflow">return</span> internal::Norm&lt;backend, device, T&gt;::max_G(grid, rank, A);</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;          <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;      }</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;      <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  }</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;}</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; </div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  DLAF_ASSERT(equal_process_grid(A, grid), A, grid);</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160; </div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <span class="comment">// LAPACK documentation specify that if any dimension is 0, the result is 0</span></div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  <span class="keywordflow">if</span> (A.size().isEmpty())</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keywordflow">return</span> {0};</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <span class="keywordflow">switch</span> (norm_type) {</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::One:</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Two:</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Inf:</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Fro:</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;      DLAF_UNIMPLEMENTED(norm_type);</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;      <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="keywordflow">case</span> lapack::Norm::Max:</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;      <span class="keywordflow">switch</span> (uplo) {</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;          <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1auxiliary_1_1internal_1_1_norm.html">internal::Norm&lt;backend, device, T&gt;::max_L</a>(grid, rank, A);</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;          DLAF_UNIMPLEMENTED(norm_type, uplo);</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;          <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        <span class="keywordflow">case</span> blas::Uplo::General:</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;          <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1auxiliary_1_1internal_1_1_norm.html">internal::Norm&lt;backend, device, T&gt;::max_G</a>(grid, rank, A);</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;        <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;          <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;      }</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;      <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  }</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;}</div>
+<div class="ttc" id="ablas_2enum__output_8h_html"><div class="ttname"><a href="blas_2enum__output_8h.html">enum_output.h</a></div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="anorm_8h_html_a2d0adfb7be9cfe934f96e9dd1c38d839"><div class="ttname"><a href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">dlaf::auxiliary::norm</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</div><div class="ttdef"><b>Definition:</b> norm.h:43</div></div>
+<div class="ttc" id="astructdlaf_1_1auxiliary_1_1internal_1_1_norm_html"><div class="ttname"><a href="structdlaf_1_1auxiliary_1_1internal_1_1_norm.html">dlaf::auxiliary::internal::Norm</a></div><div class="ttdef"><b>Definition:</b> api.h:19</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
-<div class="ttc" id="autil__matrix_8h_html_ab60bac9a36466ff9f784d2c909a62507"><div class="ttname"><a href="util__matrix_8h.html#ab60bac9a36466ff9f784d2c909a62507">dlaf::matrix::equal_process_grid</a></div><div class="ttdeci">bool equal_process_grid(const Matrix&lt; const T, D &gt; &amp;m, comm::CommunicatorGrid const &amp;g) noexcept</div><div class="ttdoc">Returns true if the matrix is distributed on the communication grid.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:71</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

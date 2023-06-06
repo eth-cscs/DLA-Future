@@ -89,23 +89,23 @@ $(function() {
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;whip.hpp&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/round_robin.h&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/single_threaded_blas.h&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/vector.h&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&quot;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/kernels.h&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&quot;</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/band_to_tridiag/api.h&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/get_1d_block_size.h&quot;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/internal/get_1d_block_size.h&quot;</span></div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/gpu/lacpy.h&quot;</span></div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;dlaf/lapack/gpu/laset.h&quot;</span></div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/copy_tile.h&quot;</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;dlaf/memory/memory_view.h&quot;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="memory__view_8h.html">dlaf/memory/memory_view.h</a>&quot;</span></div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/traits.h&quot;</span></div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform_mpi.h&quot;</span></div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="traits_8h.html">dlaf/traits.h</a>&quot;</span></div>
@@ -494,7 +494,7 @@ $(function() {
 <div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;};</div>
 <div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160; </div>
 <div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> CommSender, <span class="keyword">class</span> T, <span class="keyword">class</span> DepSender&gt;</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleSendCol(CommSender&amp;&amp; pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleSendCol(CommSender&amp;&amp; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> dest, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag,</div>
 <div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;                                   SizeType b, std::shared_ptr&lt;<a class="code" href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">BandBlock&lt;T, true&gt;</a>&gt; a_block, SizeType j,</div>
 <div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;                                   DepSender&amp;&amp; dep) {</div>
 <div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;  <span class="keyword">using</span> dlaf::comm::internal::transformMPI;</div>
@@ -512,7 +512,7 @@ $(function() {
 <div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;}</div>
 <div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160; </div>
 <div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> CommSender, <span class="keyword">class</span> T, <span class="keyword">class</span> DepSender&gt;</div>
-<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleRecvCol(CommSender&amp;&amp; pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,</div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleRecvCol(CommSender&amp;&amp; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> src, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag,</div>
 <div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;                                   SizeType b, std::shared_ptr&lt;BandBlock&lt;T, true&gt;&gt; a_block, SizeType j,</div>
 <div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;                                   DepSender&amp;&amp; dep) {</div>
 <div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;  <span class="keyword">using</span> dlaf::comm::internal::transformMPI;</div>
@@ -644,14 +644,14 @@ $(function() {
 <div class="line"><a name="l00573"></a><span class="lineno">  573</span>&#160;    }</div>
 <div class="line"><a name="l00574"></a><span class="lineno">  574</span>&#160;  }</div>
 <div class="line"><a name="l00575"></a><span class="lineno">  575</span>&#160; </div>
-<div class="line"><a name="l00576"></a><span class="lineno">  576</span>&#160;  <span class="keywordtype">void</span> send(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a>&amp; comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,</div>
+<div class="line"><a name="l00576"></a><span class="lineno">  576</span>&#160;  <span class="keywordtype">void</span> send(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a>&amp; comm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> dest, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag,</div>
 <div class="line"><a name="l00577"></a><span class="lineno">  577</span>&#160;            MPI_Request* req) <span class="keyword">const</span> noexcept {</div>
 <div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;    DLAF_MPI_CHECK_ERROR(</div>
 <div class="line"><a name="l00579"></a><span class="lineno">  579</span>&#160;        MPI_Isend(data_(), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(band_size_ + 1), <a class="code" href="structdlaf_1_1comm_1_1mpi__datatype.html">comm::mpi_datatype&lt;T&gt;::type</a>, dest, tag, comm, req));</div>
 <div class="line"><a name="l00580"></a><span class="lineno">  580</span>&#160;  }</div>
 <div class="line"><a name="l00581"></a><span class="lineno">  581</span>&#160; </div>
-<div class="line"><a name="l00582"></a><span class="lineno">  582</span>&#160;  <span class="keywordtype">void</span> recv(SizeType sweep, SizeType step, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a>&amp; comm, comm::IndexT_MPI src,</div>
-<div class="line"><a name="l00583"></a><span class="lineno">  583</span>&#160;            comm::IndexT_MPI tag, MPI_Request* req) noexcept {</div>
+<div class="line"><a name="l00582"></a><span class="lineno">  582</span>&#160;  <span class="keywordtype">void</span> recv(SizeType sweep, SizeType step, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a>&amp; comm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> src,</div>
+<div class="line"><a name="l00583"></a><span class="lineno">  583</span>&#160;            <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag, MPI_Request* req) noexcept {</div>
 <div class="line"><a name="l00584"></a><span class="lineno">  584</span>&#160;    <a class="code" href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html">SweepWorker&lt;T&gt;::setId</a>(sweep, step);</div>
 <div class="line"><a name="l00585"></a><span class="lineno">  585</span>&#160;    DLAF_MPI_CHECK_ERROR(</div>
 <div class="line"><a name="l00586"></a><span class="lineno">  586</span>&#160;        MPI_Irecv(data_(), <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(band_size_ + 1), <a class="code" href="structdlaf_1_1comm_1_1mpi__datatype.html">comm::mpi_datatype&lt;T&gt;::type</a>, src, tag, comm, req));</div>
@@ -689,7 +689,7 @@ $(function() {
 <div class="line"><a name="l00618"></a><span class="lineno">  618</span>&#160;};</div>
 <div class="line"><a name="l00619"></a><span class="lineno">  619</span>&#160; </div>
 <div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> CommSender, <span class="keyword">class</span> PromiseSender&gt;</div>
-<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleSendWorker(CommSender&amp;&amp; pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,</div>
+<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleSendWorker(CommSender&amp;&amp; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> dest, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag,</div>
 <div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;                                      PromiseSender&amp;&amp; worker) {</div>
 <div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;  <span class="keyword">using</span> dlaf::comm::internal::transformMPI;</div>
 <div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;  <span class="keyword">using</span> dlaf::internal::whenAllLift;</div>
@@ -704,7 +704,7 @@ $(function() {
 <div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160; </div>
 <div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> CommSender, <span class="keyword">class</span> PromiseSender&gt;</div>
 <div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;[[nodiscard]] <span class="keyword">auto</span> scheduleRecvWorker(SizeType sweep, SizeType step, CommSender&amp;&amp; pcomm,</div>
-<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;                                      comm::IndexT_MPI src, comm::IndexT_MPI tag,</div>
+<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;                                      <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> src, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> tag,</div>
 <div class="line"><a name="l00637"></a><span class="lineno">  637</span>&#160;                                      PromiseSender&amp;&amp; worker) {</div>
 <div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160;  <span class="keyword">using</span> dlaf::comm::internal::transformMPI;</div>
 <div class="line"><a name="l00639"></a><span class="lineno">  639</span>&#160;  <span class="keyword">using</span> dlaf::internal::whenAllLift;</div>
@@ -794,7 +794,7 @@ $(function() {
 <div class="line"><a name="l00723"></a><span class="lineno">  723</span>&#160;  <span class="comment">// Maximum size / (2b-1) sweeps can be executed in parallel, however due to task combination it reduces</span></div>
 <div class="line"><a name="l00724"></a><span class="lineno">  724</span>&#160;  <span class="comment">// to size / (2nb-1).</span></div>
 <div class="line"><a name="l00725"></a><span class="lineno">  725</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> max_workers =</div>
-<div class="line"><a name="l00726"></a><span class="lineno">  726</span>&#160;      std::min(<a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(size, 2 * nb - 1), 2 * <a class="code" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(get_num_threads(<span class="stringliteral">&quot;default&quot;</span>)));</div>
+<div class="line"><a name="l00726"></a><span class="lineno">  726</span>&#160;      std::min(ceilDiv(size, 2 * nb - 1), 2 * <a class="code" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(get_num_threads(<span class="stringliteral">&quot;default&quot;</span>)));</div>
 <div class="line"><a name="l00727"></a><span class="lineno">  727</span>&#160; </div>
 <div class="line"><a name="l00728"></a><span class="lineno">  728</span>&#160;  vector&lt;Pipeline&lt;SweepWorker&lt;T&gt;&gt;&gt; workers;</div>
 <div class="line"><a name="l00729"></a><span class="lineno">  729</span>&#160;  workers.reserve(max_workers);</div>
@@ -856,11 +856,11 @@ $(function() {
 <div class="line"><a name="l00785"></a><span class="lineno">  785</span>&#160;      <span class="comment">// Last task only applies the remaining steps</span></div>
 <div class="line"><a name="l00786"></a><span class="lineno">  786</span>&#160;      nr_steps = std::min(nr_steps, steps - step);</div>
 <div class="line"><a name="l00787"></a><span class="lineno">  787</span>&#160; </div>
-<div class="line"><a name="l00788"></a><span class="lineno">  788</span>&#160;      <span class="keyword">auto</span> dep_index = std::min(<a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(step + nr_steps, nb / b), last_dep);</div>
+<div class="line"><a name="l00788"></a><span class="lineno">  788</span>&#160;      <span class="keyword">auto</span> dep_index = std::min(ceilDiv(step + nr_steps, nb / b), last_dep);</div>
 <div class="line"><a name="l00789"></a><span class="lineno">  789</span>&#160; </div>
 <div class="line"><a name="l00790"></a><span class="lineno">  790</span>&#160;      <span class="keyword">const</span> GlobalElementIndex index_v((sweep / b + step) * b, sweep);</div>
 <div class="line"><a name="l00791"></a><span class="lineno">  791</span>&#160; </div>
-<div class="line"><a name="l00792"></a><span class="lineno">  792</span>&#160;      SizeType set_index = <a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(step, nb / b);</div>
+<div class="line"><a name="l00792"></a><span class="lineno">  792</span>&#160;      SizeType set_index = ceilDiv(step, nb / b);</div>
 <div class="line"><a name="l00793"></a><span class="lineno">  793</span>&#160; </div>
 <div class="line"><a name="l00794"></a><span class="lineno">  794</span>&#160;      deps[set_index] = dlaf::internal::whenAllLift(nr_steps, w_pipeline(),</div>
 <div class="line"><a name="l00795"></a><span class="lineno">  795</span>&#160;                                                    mat_v.readwrite(dist_v.globalTileIndex(index_v)),</div>
@@ -953,7 +953,7 @@ $(function() {
 <div class="line"><a name="l00882"></a><span class="lineno">  882</span>&#160;    DLAF_ASSERT_HEAVY(index_panel_.<a class="code" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9">isValid</a>(), index_panel_);</div>
 <div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160;    <span class="keywordflow">return</span> index_panel_;</div>
 <div class="line"><a name="l00884"></a><span class="lineno">  884</span>&#160;  }</div>
-<div class="line"><a name="l00885"></a><span class="lineno">  885</span>&#160;  comm::IndexT_MPI rankPanel() <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00885"></a><span class="lineno">  885</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rankPanel() <span class="keyword">const</span> noexcept {</div>
 <div class="line"><a name="l00886"></a><span class="lineno">  886</span>&#160;    <span class="keywordflow">return</span> rank_panel_;</div>
 <div class="line"><a name="l00887"></a><span class="lineno">  887</span>&#160;  }</div>
 <div class="line"><a name="l00888"></a><span class="lineno">  888</span>&#160; </div>
@@ -971,7 +971,7 @@ $(function() {
 <div class="line"><a name="l00900"></a><span class="lineno">  900</span>&#160;  <a class="code" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">matrix::SubTileSpec</a> specVTop() <span class="keyword">const</span> noexcept {</div>
 <div class="line"><a name="l00901"></a><span class="lineno">  901</span>&#160;    <span class="keywordflow">return</span> {index_element_tile_v_, size_top_};</div>
 <div class="line"><a name="l00902"></a><span class="lineno">  902</span>&#160;  }</div>
-<div class="line"><a name="l00903"></a><span class="lineno">  903</span>&#160;  comm::IndexT_MPI rankVTop() <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00903"></a><span class="lineno">  903</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rankVTop() <span class="keyword">const</span> noexcept {</div>
 <div class="line"><a name="l00904"></a><span class="lineno">  904</span>&#160;    <span class="keywordflow">return</span> rank_v_top_;</div>
 <div class="line"><a name="l00905"></a><span class="lineno">  905</span>&#160;  }</div>
 <div class="line"><a name="l00906"></a><span class="lineno">  906</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> indexVBottom() <span class="keyword">const</span> noexcept {</div>
@@ -982,12 +982,12 @@ $(function() {
 <div class="line"><a name="l00911"></a><span class="lineno">  911</span>&#160;    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);</div>
 <div class="line"><a name="l00912"></a><span class="lineno">  912</span>&#160;    <span class="keywordflow">return</span> {{0, index_element_tile_v_.col()}, size_bottom_};</div>
 <div class="line"><a name="l00913"></a><span class="lineno">  913</span>&#160;  }</div>
-<div class="line"><a name="l00914"></a><span class="lineno">  914</span>&#160;  comm::IndexT_MPI rankVBottom() <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00914"></a><span class="lineno">  914</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rankVBottom() <span class="keyword">const</span> noexcept {</div>
 <div class="line"><a name="l00915"></a><span class="lineno">  915</span>&#160;    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);</div>
 <div class="line"><a name="l00916"></a><span class="lineno">  916</span>&#160;    <span class="keywordflow">return</span> rank_v_bottom_;</div>
 <div class="line"><a name="l00917"></a><span class="lineno">  917</span>&#160;  }</div>
 <div class="line"><a name="l00918"></a><span class="lineno">  918</span>&#160; </div>
-<div class="line"><a name="l00919"></a><span class="lineno">  919</span>&#160;  <span class="keyword">static</span> comm::IndexT_MPI rankPanel(<span class="keyword">const</span> SizeType band, <span class="keyword">const</span> SizeType step,</div>
+<div class="line"><a name="l00919"></a><span class="lineno">  919</span>&#160;  <span class="keyword">static</span> <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rankPanel(<span class="keyword">const</span> SizeType band, <span class="keyword">const</span> SizeType step,</div>
 <div class="line"><a name="l00920"></a><span class="lineno">  920</span>&#160;                                    <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a>&amp; dist_band) noexcept {</div>
 <div class="line"><a name="l00921"></a><span class="lineno">  921</span>&#160;    <span class="comment">// Need to use dist_band to identify the rank</span></div>
 <div class="line"><a name="l00922"></a><span class="lineno">  922</span>&#160;    <span class="comment">// as the panel distribution is local (mismatch between tile size and distribution block-size).</span></div>
@@ -1027,11 +1027,11 @@ $(function() {
 <div class="line"><a name="l00956"></a><span class="lineno">  956</span>&#160;  }</div>
 <div class="line"><a name="l00957"></a><span class="lineno">  957</span>&#160; </div>
 <div class="line"><a name="l00958"></a><span class="lineno">  958</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> index_panel_;</div>
-<div class="line"><a name="l00959"></a><span class="lineno">  959</span>&#160;  comm::IndexT_MPI rank_panel_;</div>
+<div class="line"><a name="l00959"></a><span class="lineno">  959</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_panel_;</div>
 <div class="line"><a name="l00960"></a><span class="lineno">  960</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> index_v_;</div>
 <div class="line"><a name="l00961"></a><span class="lineno">  961</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> index_element_tile_v_;</div>
-<div class="line"><a name="l00962"></a><span class="lineno">  962</span>&#160;  comm::IndexT_MPI rank_v_top_;</div>
-<div class="line"><a name="l00963"></a><span class="lineno">  963</span>&#160;  comm::IndexT_MPI rank_v_bottom_;</div>
+<div class="line"><a name="l00962"></a><span class="lineno">  962</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_v_top_;</div>
+<div class="line"><a name="l00963"></a><span class="lineno">  963</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_v_bottom_;</div>
 <div class="line"><a name="l00964"></a><span class="lineno">  964</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> size_top_{0, 0};</div>
 <div class="line"><a name="l00965"></a><span class="lineno">  965</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> size_bottom_{0, 0};</div>
 <div class="line"><a name="l00966"></a><span class="lineno">  966</span>&#160;};</div>
@@ -1112,7 +1112,7 @@ $(function() {
 <div class="line"><a name="l01041"></a><span class="lineno"> 1041</span>&#160;  matrix::Distribution dist({1, size}, {1, nb_band}, {1, ranks}, {0, rank}, {0, 0});</div>
 <div class="line"><a name="l01042"></a><span class="lineno"> 1042</span>&#160; </div>
 <div class="line"><a name="l01043"></a><span class="lineno"> 1043</span>&#160;  <span class="comment">// Maximum block_size / (2b-1) sweeps per block can be executed in parallel + 1 communication buffer.</span></div>
-<div class="line"><a name="l01044"></a><span class="lineno"> 1044</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> workers_per_block = 1 + <a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(dist.blockSize().cols(), 2 * b - 1);</div>
+<div class="line"><a name="l01044"></a><span class="lineno"> 1044</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> workers_per_block = 1 + ceilDiv(dist.blockSize().cols(), 2 * b - 1);</div>
 <div class="line"><a name="l01045"></a><span class="lineno"> 1045</span>&#160; </div>
 <div class="line"><a name="l01046"></a><span class="lineno"> 1046</span>&#160;  <span class="comment">// Point to point communication happens in four ways:</span></div>
 <div class="line"><a name="l01047"></a><span class="lineno"> 1047</span>&#160;  <span class="comment">// - when copying the band matrix in compact form             -&gt; compute_copy_tag</span></div>
@@ -1212,7 +1212,7 @@ $(function() {
 <div class="line"><a name="l01141"></a><span class="lineno"> 1141</span>&#160;        <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l01142"></a><span class="lineno"> 1142</span>&#160;          <span class="keyword">auto</span>&amp; temp = temps.nextResource();</div>
 <div class="line"><a name="l01143"></a><span class="lineno"> 1143</span>&#160;          <span class="keyword">auto</span> diag_tile = comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_diag, tag_diag,</div>
-<div class="line"><a name="l01144"></a><span class="lineno"> 1144</span>&#160;                                              splitTile(temp.readwrite(LocalTileIndex{0, 0}),</div>
+<div class="line"><a name="l01144"></a><span class="lineno"> 1144</span>&#160;                                              <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
 <div class="line"><a name="l01145"></a><span class="lineno"> 1145</span>&#160;                                                        {{0, 0}, dist_a.tileSize(index_diag)}));</div>
 <div class="line"><a name="l01146"></a><span class="lineno"> 1146</span>&#160;          dep = copy_diag(a_ws[id_block_local], k * nb, std::move(diag_tile)) | ex::split();</div>
 <div class="line"><a name="l01147"></a><span class="lineno"> 1147</span>&#160;        }</div>
@@ -1227,7 +1227,7 @@ $(function() {
 <div class="line"><a name="l01156"></a><span class="lineno"> 1156</span>&#160;            <span class="keyword">auto</span>&amp; temp = temps.nextResource();</div>
 <div class="line"><a name="l01157"></a><span class="lineno"> 1157</span>&#160;            <span class="keyword">auto</span> offdiag_tile =</div>
 <div class="line"><a name="l01158"></a><span class="lineno"> 1158</span>&#160;                comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_offdiag, tag_offdiag,</div>
-<div class="line"><a name="l01159"></a><span class="lineno"> 1159</span>&#160;                                   splitTile(temp.readwrite(LocalTileIndex{0, 0}),</div>
+<div class="line"><a name="l01159"></a><span class="lineno"> 1159</span>&#160;                                   <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(temp.readwrite(LocalTileIndex{0, 0}),</div>
 <div class="line"><a name="l01160"></a><span class="lineno"> 1160</span>&#160;                                             {{0, 0}, dist_a.tileSize(index_offdiag)}));</div>
 <div class="line"><a name="l01161"></a><span class="lineno"> 1161</span>&#160;            dep = copy_offdiag(a_ws[id_block_local], k * nb,</div>
 <div class="line"><a name="l01162"></a><span class="lineno"> 1162</span>&#160;                               ex::when_all(std::move(dep), std::move(offdiag_tile))) |</div>
@@ -1383,12 +1383,12 @@ $(function() {
 <div class="line"><a name="l01312"></a><span class="lineno"> 1312</span>&#160;          <span class="keyword">const</span> SizeType nr_steps = std::min(steps_per_task, block_steps - block_step);</div>
 <div class="line"><a name="l01313"></a><span class="lineno"> 1313</span>&#160; </div>
 <div class="line"><a name="l01314"></a><span class="lineno"> 1314</span>&#160;          <span class="keyword">auto</span> dep_index =</div>
-<div class="line"><a name="l01315"></a><span class="lineno"> 1315</span>&#160;              std::min(<a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(block_step + nr_steps, steps_per_task), deps_block.size() - 1);</div>
+<div class="line"><a name="l01315"></a><span class="lineno"> 1315</span>&#160;              std::min(ceilDiv(block_step + nr_steps, steps_per_task), deps_block.size() - 1);</div>
 <div class="line"><a name="l01316"></a><span class="lineno"> 1316</span>&#160; </div>
 <div class="line"><a name="l01317"></a><span class="lineno"> 1317</span>&#160;          <span class="keyword">const</span> <span class="keyword">auto</span> local_index_tile_panel_v =</div>
 <div class="line"><a name="l01318"></a><span class="lineno"> 1318</span>&#160;              VAccessHelper::indexPanel(b, init_step + block_step, dist, dist_panel);</div>
 <div class="line"><a name="l01319"></a><span class="lineno"> 1319</span>&#160; </div>
-<div class="line"><a name="l01320"></a><span class="lineno"> 1320</span>&#160;          deps_block[<a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(block_step, steps_per_task)] =</div>
+<div class="line"><a name="l01320"></a><span class="lineno"> 1320</span>&#160;          deps_block[ceilDiv(block_step, steps_per_task)] =</div>
 <div class="line"><a name="l01321"></a><span class="lineno"> 1321</span>&#160;              dlaf::internal::whenAllLift(a_block, nr_steps, w_pipeline(),</div>
 <div class="line"><a name="l01322"></a><span class="lineno"> 1322</span>&#160;                                          v_panel.readwrite(local_index_tile_panel_v),</div>
 <div class="line"><a name="l01323"></a><span class="lineno"> 1323</span>&#160;                                          TileElementIndex{0, sweep % b}, deps_block[dep_index]) |</div>
@@ -1398,7 +1398,7 @@ $(function() {
 <div class="line"><a name="l01327"></a><span class="lineno"> 1327</span>&#160;        }</div>
 <div class="line"><a name="l01328"></a><span class="lineno"> 1328</span>&#160; </div>
 <div class="line"><a name="l01329"></a><span class="lineno"> 1329</span>&#160;        <span class="comment">// Shrink the dependency vector to only include the futures generated by this block in this sweep.</span></div>
-<div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;        deps_block.resize(<a class="code" href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">ceilDiv</a>(last_step, steps_per_task) + 1);</div>
+<div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;        deps_block.resize(ceilDiv(last_step, steps_per_task) + 1);</div>
 <div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160; </div>
 <div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;        <span class="keywordflow">if</span> (init_step + block_steps &lt; steps) {</div>
 <div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;          ex::start_detached(scheduleSendWorker(comm, next_rank,</div>
@@ -1426,9 +1426,9 @@ $(function() {
 <div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;                 &amp;compute_v_tag](<span class="keyword">const</span> LocalTileIndex index_panel, <span class="keyword">const</span> matrix::SubTileSpec spec_panel,</div>
 <div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160;                                 <span class="keyword">const</span> comm::IndexT_MPI rank_v, <span class="keyword">const</span> GlobalTileIndex index_v,</div>
 <div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160;                                 <span class="keyword">const</span> matrix::SubTileSpec spec_v, <span class="keyword">const</span> <span class="keywordtype">bool</span> bottom) {</div>
-<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;                  <span class="keyword">auto</span> tile_v_panel = splitTile(v_panel.read(index_panel), spec_panel);</div>
+<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;                  <span class="keyword">auto</span> tile_v_panel = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(v_panel.read(index_panel), spec_panel);</div>
 <div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;                  <span class="keywordflow">if</span> (rank == rank_v) {</div>
-<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;                    <span class="keyword">auto</span> tile_v = splitTile(mat_v.readwrite(index_v), spec_v);</div>
+<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;                    <span class="keyword">auto</span> tile_v = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_v.readwrite(index_v), spec_v);</div>
 <div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160;                    ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |</div>
 <div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;                                       <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(Policy&lt;CopyBackend_v&lt;Device::CPU, Device::CPU&gt;&gt;{}));</div>
 <div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160;                  }</div>
@@ -1452,7 +1452,7 @@ $(function() {
 <div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160;                                         <span class="keyword">const</span> comm::IndexT_MPI rank_v, <span class="keyword">const</span> GlobalTileIndex index_v,</div>
 <div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;                                         <span class="keyword">const</span> matrix::SubTileSpec spec_v, <span class="keyword">const</span> <span class="keywordtype">bool</span> bottom) {</div>
 <div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;              <span class="keywordflow">if</span> (rank == rank_v) {</div>
-<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160;                <span class="keyword">auto</span> tile_v = splitTile(mat_v.readwrite(index_v), spec_v);</div>
+<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160;                <span class="keyword">auto</span> tile_v = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_v.readwrite(index_v), spec_v);</div>
 <div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;                <span class="keyword">auto</span> local_index_v = dist_v.localTileIndex(index_v);</div>
 <div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160; </div>
 <div class="line"><a name="l01387"></a><span class="lineno"> 1387</span>&#160;                ex::any_sender&lt;&gt; dep;</div>
@@ -1501,48 +1501,59 @@ $(function() {
 <div class="line"><a name="l01430"></a><span class="lineno"> 1430</span>&#160;  <span class="keywordflow">return</span> {std::move(mat_trid), std::move(mat_v)};</div>
 <div class="line"><a name="l01431"></a><span class="lineno"> 1431</span>&#160;}</div>
 <div class="line"><a name="l01432"></a><span class="lineno"> 1432</span>&#160;}</div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_a45574d05dd3cfb3d40d198cdf10b169e"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#a45574d05dd3cfb3d40d198cdf10b169e">dlaf::comm::CommunicatorGrid::rank</a></div><div class="ttdeci">Index2D rank() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:63</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_ad9a0a0a05723adbe0e57171c7c1e2e93"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#ad9a0a0a05723adbe0e57171c7c1e2e93">dlaf::comm::CommunicatorGrid::rankFullCommunicator</a></div><div class="ttdeci">IndexT_MPI rankFullCommunicator(const Index2D &amp;index) const noexcept</div><div class="ttdoc">Return rank in the grid with all ranks given the 2D index.</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:55</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:37</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:39</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:28</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:30</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:18</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:20</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1basic__coords_html_a380f1ac07da35bc014bcbfff908eb0a9"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9">dlaf::common::internal::basic_coords::isValid</a></div><div class="ttdeci">bool isValid() const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:101</div></div>
 <div class="ttc" id="aclassdlaf_1_1eigensolver_1_1internal_1_1_band_block_html"><div class="ttname"><a href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">dlaf::eigensolver::internal::BandBlock</a></div><div class="ttdef"><b>Definition:</b> mc.h:163</div></div>
 <div class="ttc" id="aclassdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist_html"><div class="ttname"><a href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html">dlaf::eigensolver::internal::SweepWorkerDist</a></div><div class="ttdef"><b>Definition:</b> mc.h:555</div></div>
 <div class="ttc" id="aclassdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_html"><div class="ttname"><a href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html">dlaf::eigensolver::internal::SweepWorker</a></div><div class="ttdef"><b>Definition:</b> mc.h:464</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:25</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a71ad776a93750b9c6d1ebfa2d36e28db"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a71ad776a93750b9c6d1ebfa2d36e28db">dlaf::matrix::Distribution::tileElementIndex</a></div><div class="ttdeci">TileElementIndex tileElementIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:187</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a77f2413076c87fee45f6afb6e6e1baae"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a77f2413076c87fee45f6afb6e6e1baae">dlaf::matrix::Distribution::localTileIndex</a></div><div class="ttdeci">LocalTileIndex localTileIndex(const GlobalTileIndex &amp;global_tile) const</div><div class="ttdef"><b>Definition:</b> distribution.h:174</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae3f7cda513d213773cb4d8a0ba22b758"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae3f7cda513d213773cb4d8a0ba22b758">dlaf::matrix::Distribution::rankGlobalTile</a></div><div class="ttdeci">comm::Index2D rankGlobalTile(const GlobalTileIndex &amp;global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:163</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae49ef916d77bf8de7e8e4710a1034299"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae49ef916d77bf8de7e8e4710a1034299">dlaf::matrix::Distribution::globalTileIndex</a></div><div class="ttdeci">GlobalTileIndex globalTileIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:142</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html">dlaf::matrix::Tile&lt; const T, D &gt;</a></div><div class="ttdef"><b>Definition:</b> tile.h:199</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a018a34c9be26937cbb0c6dbb727c69ce"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a018a34c9be26937cbb0c6dbb727c69ce">dlaf::matrix::Tile&lt; const T, D &gt;::ptr</a></div><div class="ttdeci">const T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:254</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a44282c10a5112a78c95c557538f13a74"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a44282c10a5112a78c95c557538f13a74">dlaf::matrix::Tile&lt; const T, D &gt;::ld</a></div><div class="ttdeci">SizeType ld() const noexcept</div><div class="ttdoc">Returns the leading dimension.</div><div class="ttdef"><b>Definition:</b> tile.h:271</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a7ef713ad7d24caccfc0863ab4b8481f2"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a7ef713ad7d24caccfc0863ab4b8481f2">dlaf::matrix::Tile&lt; const T, D &gt;::size</a></div><div class="ttdeci">const TileElementSize &amp; size() const noexcept</div><div class="ttdoc">Returns the size of the Tile.</div><div class="ttdef"><b>Definition:</b> tile.h:267</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:327</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html_ad14d471389721941e830f73d7ae0716d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">dlaf::matrix::Tile::ptr</a></div><div class="ttdeci">T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:376</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:27</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a71ad776a93750b9c6d1ebfa2d36e28db"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a71ad776a93750b9c6d1ebfa2d36e28db">dlaf::matrix::Distribution::tileElementIndex</a></div><div class="ttdeci">TileElementIndex tileElementIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:189</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a77f2413076c87fee45f6afb6e6e1baae"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a77f2413076c87fee45f6afb6e6e1baae">dlaf::matrix::Distribution::localTileIndex</a></div><div class="ttdeci">LocalTileIndex localTileIndex(const GlobalTileIndex &amp;global_tile) const</div><div class="ttdef"><b>Definition:</b> distribution.h:176</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae3f7cda513d213773cb4d8a0ba22b758"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae3f7cda513d213773cb4d8a0ba22b758">dlaf::matrix::Distribution::rankGlobalTile</a></div><div class="ttdeci">comm::Index2D rankGlobalTile(const GlobalTileIndex &amp;global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:165</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae49ef916d77bf8de7e8e4710a1034299"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae49ef916d77bf8de7e8e4710a1034299">dlaf::matrix::Distribution::globalTileIndex</a></div><div class="ttdeci">GlobalTileIndex globalTileIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:144</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html">dlaf::matrix::Tile&lt; const T, D &gt;</a></div><div class="ttdef"><b>Definition:</b> tile.h:201</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a018a34c9be26937cbb0c6dbb727c69ce"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a018a34c9be26937cbb0c6dbb727c69ce">dlaf::matrix::Tile&lt; const T, D &gt;::ptr</a></div><div class="ttdeci">const T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:256</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a44282c10a5112a78c95c557538f13a74"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a44282c10a5112a78c95c557538f13a74">dlaf::matrix::Tile&lt; const T, D &gt;::ld</a></div><div class="ttdeci">SizeType ld() const noexcept</div><div class="ttdoc">Returns the leading dimension.</div><div class="ttdef"><b>Definition:</b> tile.h:273</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4_html_a7ef713ad7d24caccfc0863ab4b8481f2"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile_3_01const_01_t_00_01_d_01_4.html#a7ef713ad7d24caccfc0863ab4b8481f2">dlaf::matrix::Tile&lt; const T, D &gt;::size</a></div><div class="ttdeci">const TileElementSize &amp; size() const noexcept</div><div class="ttdoc">Returns the size of the Tile.</div><div class="ttdef"><b>Definition:</b> tile.h:269</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html_ad14d471389721941e830f73d7ae0716d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html#ad14d471389721941e830f73d7ae0716d">dlaf::matrix::Tile::ptr</a></div><div class="ttdeci">T * ptr() const noexcept</div><div class="ttdoc">Returns the base pointer.</div><div class="ttdef"><b>Definition:</b> tile.h:378</div></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_view_html"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_view.html">dlaf::memory::MemoryView&lt; T, Device::CPU &gt;</a></div></div>
+<div class="ttc" id="acommunication_2kernels_8h_html"><div class="ttname"><a href="communication_2kernels_8h.html">kernels.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
-<div class="ttc" id="adata_8h_html_a7f6919f56260399a905af9e869afba10"><div class="ttname"><a href="data_8h.html#a7f6919f56260399a905af9e869afba10">dlaf::common::copy</a></div><div class="ttdeci">void copy(const DataIn &amp;src, const DataOut &amp;dest)</div><div class="ttdef"><b>Definition:</b> data.h:128</div></div>
+<div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
+<div class="ttc" id="adata_8h_html_a7f6919f56260399a905af9e869afba10"><div class="ttname"><a href="data_8h.html#a7f6919f56260399a905af9e869afba10">dlaf::common::copy</a></div><div class="ttdeci">void copy(const DataIn &amp;src, const DataOut &amp;dest)</div><div class="ttdef"><b>Definition:</b> data.h:137</div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html_ae46de76ccc35985387f6820b1db9fb51"><div class="ttname"><a href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">dlaf::matrix::splitTile</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; splitTile(ReadOnlyTileSender&lt; T, D &gt; tile, const SubTileSpec &amp;spec)</div><div class="ttdef"><b>Definition:</b> tile.h:507</div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="amemory__view_8h_html"><div class="ttname"><a href="memory__view_8h.html">memory_view.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html_adcdcf40345b7f03cf52e871a2420057b"><div class="ttname"><a href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">dlaf::common::iterate_range2d</a></div><div class="ttdeci">IterableRange2D&lt; IndexT, Tag &gt; iterate_range2d(Index2D&lt; IndexT, Tag &gt; begin_idx, Index2D&lt; IndexT, Tag &gt; end_idx) noexcept</div><div class="ttdef"><b>Definition:</b> range2d.h:247</div></div>
-<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__datatype_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__datatype.html">dlaf::comm::mpi_datatype</a></div><div class="ttdoc">Mapper between language types and basic MPI_Datatype.</div><div class="ttdef"><b>Definition:</b> datatypes.h:22</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1_round_robin_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a></div><div class="ttdef"><b>Definition:</b> round_robin.h:18</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:24</div></div>
+<div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
+<div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__datatype_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__datatype.html">dlaf::comm::mpi_datatype</a></div><div class="ttdoc">Mapper between language types and basic MPI_Datatype.</div><div class="ttdef"><b>Definition:</b> datatypes.h:24</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1_round_robin_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a></div><div class="ttdef"><b>Definition:</b> round_robin.h:20</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:26</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1_tridiag_result_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1_tridiag_result.html">dlaf::eigensolver::TridiagResult</a></div><div class="ttdef"><b>Definition:</b> api.h:19</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag.html">dlaf::eigensolver::internal::BandToTridiag</a></div><div class="ttdef"><b>Definition:</b> api.h:39</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_v_access_helper_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_v_access_helper.html">dlaf::eigensolver::internal::VAccessHelper</a></div><div class="ttdef"><b>Definition:</b> mc.h:817</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_tile_spec_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">dlaf::matrix::SubTileSpec</a></div><div class="ttdoc">Contains the information to create a subtile.</div><div class="ttdef"><b>Definition:</b> tile.h:107</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_tile_spec_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">dlaf::matrix::SubTileSpec</a></div><div class="ttdoc">Contains the information to create a subtile.</div><div class="ttdef"><b>Definition:</b> tile.h:109</div></div>
 <div class="ttc" id="atraits_8h_html"><div class="ttname"><a href="traits_8h.html">traits.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_ab1f0edc8e1281293c9c1325cb9d4bec9"><div class="ttname"><a href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">dlaf::to_SizeType</a></div><div class="ttdeci">auto to_SizeType(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:274</div></div>
 <div class="ttc" id="atypes_8h_html_af90e7fd5acadf5987b7199b0bd44deea"><div class="ttname"><a href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">dlaf::to_int</a></div><div class="ttdeci">auto to_int(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:247</div></div>
-<div class="ttc" id="autil__math_8h_html_a65aa2478fed7af8bdb404930d7a90fb3"><div class="ttname"><a href="util__math_8h.html#a65aa2478fed7af8bdb404930d7a90fb3">dlaf::util::ceilDiv</a></div><div class="ttdeci">constexpr IntType ceilDiv(const IntType num, const IntType den)</div></div>
 <div class="ttc" id="autil__math_8h_html_a77a106250e33d119c5415546f6b74544"><div class="ttname"><a href="util__math_8h.html#a77a106250e33d119c5415546f6b74544">dlaf::util::size_t::mul</a></div><div class="ttdeci">std::size_t mul(const TA a, const TB b)</div><div class="ttdef"><b>Definition:</b> util_math.h:134</div></div>
+<div class="ttc" id="avector_8h_html"><div class="ttname"><a href="vector_8h.html">vector.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

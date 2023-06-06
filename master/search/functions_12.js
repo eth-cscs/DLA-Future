@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['waitlocaltiles_859',['waitLocalTiles',['../classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#abffc73bf079f7f7c23af3fca4dec329f',1,'dlaf::matrix::Matrix&lt; const T, D &gt;::waitLocalTiles()'],['../classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0',1,'dlaf::matrix::RetiledMatrix::waitLocalTiles()']]]
+  ['valid_1047',['valid',['../classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5',1,'dlaf::common::Pipeline::valid()'],['../classdlaf_1_1matrix_1_1internal_1_1_tile_pipeline.html#a3e3096bb1ef85b6017bd8c42c9617586',1,'dlaf::matrix::internal::TilePipeline::valid()']]],
+  ['view_1048',['View',['../structdlaf_1_1matrix_1_1internal_1_1_view.html#a3635af3164815f905a9fd33979a14a34',1,'dlaf::matrix::internal::View']]]
 ];

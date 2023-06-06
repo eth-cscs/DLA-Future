@@ -82,15 +82,15 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/callable_object.h&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="callable__object_8h.html">dlaf/common/callable_object.h</a>&quot;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/copy_tile.h&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="keyword">namespace </span>comm {</div>
@@ -104,12 +104,12 @@ $(function() {
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">auto</span> message = comm::make_message(std::move(data));</div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Bcast(<span class="keyword">const_cast&lt;</span>DataT*<span class="keyword">&gt;</span>(message.data()), message.count(), message.mpi_type(),</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;                                 communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">rank</a>(), communicator));</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;                                 communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">rank</a>(), communicator));</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;}</div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> DataOut&gt;</div>
 <div class="line"><a name="l00047"></a><span class="lineno"><a class="line" href="sync_2broadcast_8h.html#a86fb5d23e8299cbd380a4e7d724c1112">   47</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="basic_8h.html#a13040096b22855cefca83ec02f0c64c0">receive_from</a>(<span class="keyword">const</span> <span class="keywordtype">int</span> broadcaster_rank, <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, DataOut&amp;&amp; data) {</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">rank</a>(), broadcaster_rank, communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">rank</a>());</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT_HEAVY(broadcaster_rank != communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">rank</a>(), broadcaster_rank, communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">rank</a>());</div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <span class="keyword">auto</span> message = comm::make_message(common::make_data(std::forward&lt;DataOut&gt;(data)));</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  DLAF_MPI_CHECK_ERROR(</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;      MPI_Bcast(message.data(), message.count(), message.mpi_type(), broadcaster_rank, communicator));</div>
@@ -118,15 +118,19 @@ $(function() {
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;}</div>
 <div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
 <div class="ttc" id="abasic_8h_html_a13040096b22855cefca83ec02f0c64c0"><div class="ttname"><a href="basic_8h.html#a13040096b22855cefca83ec02f0c64c0">dlaf::comm::sync::receive_from</a></div><div class="ttdeci">void receive_from(int sender_rank, Communicator &amp;communicator, DataOut &amp;&amp;data)</div><div class="ttdef"><b>Definition:</b> basic.h:39</div></div>
 <div class="ttc" id="abroadcast__panel_8h_html_a83a59dd8a250067f25b9b4bbd041a9cf"><div class="ttname"><a href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:58</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_af4d940b84843386d2c214c201f54c1fe"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">dlaf::comm::Communicator::rank</a></div><div class="ttdeci">IndexT_MPI rank() const noexcept</div><div class="ttdoc">Return the rank of the current process in the Communicator.</div><div class="ttdef"><b>Definition:</b> communicator.cpp:41</div></div>
+<div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a52be17b02755dcbfbdcaa95ba5f9230c"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">dlaf::comm::Communicator::rank</a></div><div class="ttdeci">IndexT_MPI rank() const noexcept</div><div class="ttdoc">Return the rank of the current process in the Communicator.</div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1data__traits_html"><div class="ttname"><a href="structdlaf_1_1common_1_1data__traits.html">dlaf::common::data_traits</a></div><div class="ttdef"><b>Definition:</b> data.h:48</div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1data__traits_html"><div class="ttname"><a href="structdlaf_1_1common_1_1data__traits.html">dlaf::common::data_traits</a></div><div class="ttdef"><b>Definition:</b> data.h:57</div></div>
 <div class="ttc" id="async_2broadcast_8h_html_a313a9dc3d212f70d7af273fa0c681aee"><div class="ttname"><a href="sync_2broadcast_8h.html#a313a9dc3d212f70d7af273fa0c681aee">dlaf::comm::sync::broadcast::send</a></div><div class="ttdeci">void send(Communicator &amp;communicator, DataIn &amp;&amp;message_to_send)</div><div class="ttdef"><b>Definition:</b> broadcast.h:34</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

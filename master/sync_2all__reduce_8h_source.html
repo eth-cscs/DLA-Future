@@ -84,9 +84,9 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;mpi.h&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data__descriptor_8h.html">dlaf/common/data_descriptor.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="sync_2reduce_8h.html">dlaf/communication/sync/reduce.h</a>&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
@@ -102,7 +102,7 @@ $(function() {
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  <span class="keyword">using</span> T = std::remove_const_t&lt;typename common::data_traits&lt;DataIn&gt;::element_t&gt;;</div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="comment">// Wayout for single rank communicator, just copy data</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keywordflow">if</span> (communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#ad8ce8e75b5dd3be81e7e6f31e0958fdb">size</a>() == 1) {</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keywordflow">if</span> (communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">size</a>() == 1) {</div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;    DLAF_ASSERT_MODERATE(input != output, <span class="stringliteral">&quot;input and output should not equal (use in-place)&quot;</span>);</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    common::copy(input, output);</div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="keywordflow">return</span>;</div>
@@ -136,7 +136,7 @@ $(function() {
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <span class="keyword">using</span> T = std::remove_const_t&lt;typename common::data_traits&lt;DataInOut&gt;::element_t&gt;;</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
 <div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  <span class="comment">// Wayout for single rank communicator, just copy data</span></div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keywordflow">if</span> (communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#ad8ce8e75b5dd3be81e7e6f31e0958fdb">size</a>() == 1)</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keywordflow">if</span> (communicator.<a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">size</a>() == 1)</div>
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    <span class="keywordflow">return</span>;</div>
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
 <div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  <span class="comment">// Buffers not allocated, just placeholders in case we need to allocate them</span></div>
@@ -158,9 +158,9 @@ $(function() {
 <div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;}</div>
 <div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;}</div>
 <div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_ad8ce8e75b5dd3be81e7e6f31e0958fdb"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#ad8ce8e75b5dd3be81e7e6f31e0958fdb">dlaf::comm::Communicator::size</a></div><div class="ttdeci">IndexT_MPI size() const noexcept</div><div class="ttdoc">Return the number of ranks in the Communicator.</div><div class="ttdef"><b>Definition:</b> communicator.cpp:45</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a415f5d36c3033320074df329163c3127"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">dlaf::comm::Communicator::size</a></div><div class="ttdeci">IndexT_MPI size() const noexcept</div><div class="ttdoc">Return the number of ranks in the Communicator.</div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="adata__descriptor_8h_html"><div class="ttname"><a href="data__descriptor_8h.html">data_descriptor.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1_buffer_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_buffer.html">dlaf::common::Buffer</a></div><div class="ttdef"><b>Definition:</b> data_descriptor.h:153</div></div>

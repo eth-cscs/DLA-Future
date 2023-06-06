@@ -87,39 +87,39 @@ $(function() {
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;pika/barrier.hpp&gt;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;pika/future.hpp&gt;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/round_robin.h&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/single_threaded_blas.h&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/vector.h&quot;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&quot;</span></div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/functions_sync.h&quot;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="functions__sync_8h.html">dlaf/communication/functions_sync.h</a>&quot;</span></div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="kernels_2all__reduce_8h.html">dlaf/communication/kernels/all_reduce.h</a>&quot;</span></div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="kernels_2reduce_8h.html">dlaf/communication/kernels/reduce.h</a>&quot;</span></div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="rdma_8h.html">dlaf/communication/rdma.h</a>&quot;</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/get_red2band_panel_nworkers.h&quot;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/internal/get_red2band_panel_nworkers.h&quot;</span></div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/copy_tile.h&quot;</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/distribution.h&quot;</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/index.h&quot;</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/panel.h&quot;</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/views.h&quot;</span></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">#include &quot;dlaf/schedulers.h&quot;</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&quot;</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="views_8h.html">dlaf/matrix/views.h</a>&quot;</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="schedulers_8h.html">dlaf/schedulers.h</a>&quot;</span></div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/traits.h&quot;</span></div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__math_8h.html">dlaf/util_math.h</a>&quot;</span></div>
 <div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160; </div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/reduction_to_band/api.h&quot;</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#include &quot;dlaf/factorization/qr.h&quot;</span></div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="qr_8h.html">dlaf/factorization/qr.h</a>&quot;</span></div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
 <div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
@@ -169,9 +169,9 @@ $(function() {
 <div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;<span class="keyword">template</span> &lt;Device D, <span class="keyword">class</span> T&gt;</div>
 <div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;T computeReflectorAndTau(<span class="keyword">const</span> <span class="keywordtype">bool</span> has_head, <span class="keyword">const</span> std::vector&lt;matrix::Tile&lt;T, D&gt;&gt;&amp; panel,</div>
 <div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;                         <span class="keyword">const</span> SizeType j, std::array&lt;T, 2&gt; x0_and_squares) {</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  <span class="keyword">const</span> T norm = std::sqrt(x0_and_squares[1]);</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  <span class="keyword">const</span> T <a class="code" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">norm</a> = std::sqrt(x0_and_squares[1]);</div>
 <div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  <span class="keyword">const</span> T x0 = x0_and_squares[0];</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  <span class="keyword">const</span> T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  <span class="keyword">const</span> T y = std::signbit(std::real(x0_and_squares[0])) ? <a class="code" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">norm</a> : -<a class="code" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">norm</a>;</div>
 <div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;  <span class="keyword">const</span> T tau = (y - x0) / y;</div>
 <div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
 <div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;  <span class="keyword">auto</span> it_begin = panel.begin();</div>
@@ -187,14 +187,14 @@ $(function() {
 <div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160; </div>
 <div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;    <span class="keywordflow">if</span> (j + 1 &lt; tile_v0.size().rows()) {</div>
 <div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;      T* v = tile_v0.ptr({j + 1, j});</div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;      <a class="code" href="scal_8h.html#aedab5556a733369707d71dac05b4f729">blas::scal</a>(tile_v0.size().rows() - (j + 1), T(1) / (x0 - y), v, 1);</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;      blas::scal(tile_v0.size().rows() - (j + 1), T(1) / (x0 - y), v, 1);</div>
 <div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;    }</div>
 <div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;  }</div>
 <div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160; </div>
 <div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> it = it_begin; it != it_end; ++it) {</div>
 <div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;    <span class="keyword">auto</span>&amp; tile_v = *it;</div>
 <div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;    T* v = tile_v.ptr({0, j});</div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    <a class="code" href="scal_8h.html#aedab5556a733369707d71dac05b4f729">blas::scal</a>(tile_v.size().rows(), T(1) / (x0 - y), v, 1);</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    blas::scal(tile_v.size().rows(), T(1) / (x0 - y), v, 1);</div>
 <div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;  }</div>
 <div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160; </div>
 <div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;  <span class="keywordflow">return</span> tau;</div>
@@ -445,7 +445,7 @@ $(function() {
 <div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;    <span class="comment">// copy + laset is done in two independent tasks, but it could be theoretically merged to into a</span></div>
 <div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;    <span class="comment">// single task doing both.</span></div>
 <div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> p = <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>(thread_priority::high);</div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;    ex::start_detached(dlaf::internal::whenAllLift(splitTile(mat_a.read(i), spec), v.readwrite(i)) |</div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;    ex::start_detached(dlaf::internal::whenAllLift(<a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_a.read(i), spec), v.readwrite(i)) |</div>
 <div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;                       matrix::copy(p));</div>
 <div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160;    ex::start_detached(dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite(i)) |</div>
 <div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;                       tile::laset(p));</div>
@@ -534,7 +534,7 @@ $(function() {
 <div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160; </div>
 <div class="line"><a name="l00464"></a><span class="lineno">  464</span>&#160;      <span class="keyword">const</span> <span class="keywordtype">bool</span> is_diagonal_tile = (ij.row() == ij.col());</div>
 <div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160; </div>
-<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span>&amp; tile_a = splitTile(a.read(ij), view(ij));</div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span>&amp; tile_a = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(a.read(ij), view(ij));</div>
 <div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160; </div>
 <div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;      <span class="keywordflow">if</span> (is_diagonal_tile) {</div>
 <div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;        hemmDiag&lt;B&gt;(thread_priority::high, tile_a, w.read(ij), x.readwrite(ij));</div>
@@ -610,7 +610,7 @@ $(function() {
 <div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;      <span class="keyword">const</span> <span class="keywordtype">bool</span> is_diagonal_tile = (ij.row() == ij.col());</div>
 <div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160; </div>
 <div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160;      <span class="keyword">auto</span> getSubA = [&amp;a, &amp;view, ij_local]() {</div>
-<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;        <span class="keywordflow">return</span> splitTile(a.readwrite(ij_local), view(ij_local));</div>
+<div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(a.readwrite(ij_local), view(ij_local));</div>
 <div class="line"><a name="l00543"></a><span class="lineno">  543</span>&#160;      };</div>
 <div class="line"><a name="l00544"></a><span class="lineno">  544</span>&#160; </div>
 <div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;      <span class="comment">// The first column of the trailing matrix (except for the very first global tile) has to be</span></div>
@@ -772,7 +772,7 @@ $(function() {
 <div class="line"><a name="l00701"></a><span class="lineno">  701</span>&#160; </div>
 <div class="line"><a name="l00702"></a><span class="lineno">  702</span>&#160;      <span class="keyword">const</span> <span class="keywordtype">bool</span> is_diagonal_tile = (ij.row() == ij.col());</div>
 <div class="line"><a name="l00703"></a><span class="lineno">  703</span>&#160; </div>
-<div class="line"><a name="l00704"></a><span class="lineno">  704</span>&#160;      <span class="keyword">auto</span> tile_a = splitTile(a.read(ij), view(ij_local));</div>
+<div class="line"><a name="l00704"></a><span class="lineno">  704</span>&#160;      <span class="keyword">auto</span> tile_a = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(a.read(ij), view(ij_local));</div>
 <div class="line"><a name="l00705"></a><span class="lineno">  705</span>&#160; </div>
 <div class="line"><a name="l00706"></a><span class="lineno">  706</span>&#160;      <span class="keywordflow">if</span> (is_diagonal_tile) {</div>
 <div class="line"><a name="l00707"></a><span class="lineno">  707</span>&#160;        hemmDiag&lt;B&gt;(thread_priority::high, std::move(tile_a), w.read(ij_local), x.readwrite(ij_local));</div>
@@ -876,7 +876,7 @@ $(function() {
 <div class="line"><a name="l00805"></a><span class="lineno">  805</span>&#160;      <span class="keyword">const</span> <span class="keywordtype">bool</span> is_diagonal_tile = (ij.row() == ij.col());</div>
 <div class="line"><a name="l00806"></a><span class="lineno">  806</span>&#160; </div>
 <div class="line"><a name="l00807"></a><span class="lineno">  807</span>&#160;      <span class="keyword">auto</span> getSubA = [&amp;a, &amp;view, ij_local]() {</div>
-<div class="line"><a name="l00808"></a><span class="lineno">  808</span>&#160;        <span class="keywordflow">return</span> splitTile(a.readwrite(ij_local), view(ij_local));</div>
+<div class="line"><a name="l00808"></a><span class="lineno">  808</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(a.readwrite(ij_local), view(ij_local));</div>
 <div class="line"><a name="l00809"></a><span class="lineno">  809</span>&#160;      };</div>
 <div class="line"><a name="l00810"></a><span class="lineno">  810</span>&#160; </div>
 <div class="line"><a name="l00811"></a><span class="lineno">  811</span>&#160;      <span class="comment">// The first column of the trailing matrix (except for the very first global tile) has to be</span></div>
@@ -912,7 +912,7 @@ $(function() {
 <div class="line"><a name="l00841"></a><span class="lineno">  841</span>&#160;  }</div>
 <div class="line"><a name="l00842"></a><span class="lineno">  842</span>&#160; </div>
 <div class="line"><a name="l00843"></a><span class="lineno">  843</span>&#160;  <span class="keyword">template</span> &lt;Device D, <span class="keyword">class</span> CommSender, <span class="keyword">class</span> TriggerSender&gt;</div>
-<div class="line"><a name="l00844"></a><span class="lineno">  844</span>&#160;  <span class="keyword">auto</span> call(TriggerSender&amp;&amp; trigger, comm::IndexT_MPI rank_v0, CommSender&amp;&amp; mpi_col_chain_panel,</div>
+<div class="line"><a name="l00844"></a><span class="lineno">  844</span>&#160;  <span class="keyword">auto</span> call(TriggerSender&amp;&amp; trigger, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_v0, CommSender&amp;&amp; mpi_col_chain_panel,</div>
 <div class="line"><a name="l00845"></a><span class="lineno">  845</span>&#160;            Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> <a class="code" href="structdlaf_1_1matrix_1_1_sub_panel_view.html">matrix::SubPanelView</a>&amp; panel_view, SizeType nrefls) {</div>
 <div class="line"><a name="l00846"></a><span class="lineno">  846</span>&#160;    <span class="keyword">using</span> red2band::distributed::computePanelReflectors;</div>
 <div class="line"><a name="l00847"></a><span class="lineno">  847</span>&#160;    <span class="keywordflow">return</span> computePanelReflectors(std::forward&lt;TriggerSender&gt;(trigger), rank_v0,</div>
@@ -923,7 +923,7 @@ $(function() {
 <div class="line"><a name="l00852"></a><span class="lineno">  852</span>&#160; </div>
 <div class="line"><a name="l00853"></a><span class="lineno">  853</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
 <div class="line"><a name="l00854"></a><span class="lineno">  854</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00855"></a><span class="lineno">  855</span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper.html">ComputePanelHelper</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
+<div class="line"><a name="l00855"></a><span class="lineno"><a class="line" href="structdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper_3_01_backend_1_1_g_p_e566a066992e6980ee13cab3c8831bc5.html">  855</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper.html">ComputePanelHelper</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
 <div class="line"><a name="l00856"></a><span class="lineno">  856</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper.html">ComputePanelHelper</a>(<span class="keyword">const</span> std::size_t n_workspaces, <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> dist_a)</div>
 <div class="line"><a name="l00857"></a><span class="lineno">  857</span>&#160;      : panels_v(n_workspaces, dist_a) {}</div>
 <div class="line"><a name="l00858"></a><span class="lineno">  858</span>&#160; </div>
@@ -948,7 +948,7 @@ $(function() {
 <div class="line"><a name="l00877"></a><span class="lineno">  877</span>&#160;  }</div>
 <div class="line"><a name="l00878"></a><span class="lineno">  878</span>&#160; </div>
 <div class="line"><a name="l00879"></a><span class="lineno">  879</span>&#160;  <span class="keyword">template</span> &lt;Device D, <span class="keyword">class</span> CommSender, <span class="keyword">class</span> TriggerSender&gt;</div>
-<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;  <span class="keyword">auto</span> call(TriggerSender&amp;&amp; trigger, comm::IndexT_MPI rank_v0, CommSender&amp;&amp; mpi_col_chain_panel,</div>
+<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;  <span class="keyword">auto</span> call(TriggerSender&amp;&amp; trigger, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_v0, CommSender&amp;&amp; mpi_col_chain_panel,</div>
 <div class="line"><a name="l00881"></a><span class="lineno">  881</span>&#160;            Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> <a class="code" href="structdlaf_1_1matrix_1_1_sub_panel_view.html">matrix::SubPanelView</a>&amp; panel_view, <span class="keyword">const</span> SizeType nrefls) {</div>
 <div class="line"><a name="l00882"></a><span class="lineno">  882</span>&#160;    <span class="keyword">auto</span>&amp; v = panels_v.nextResource();</div>
 <div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160; </div>
@@ -987,17 +987,17 @@ $(function() {
 <div class="line"><a name="l00916"></a><span class="lineno">  916</span>&#160;    }</div>
 <div class="line"><a name="l00917"></a><span class="lineno">  917</span>&#160;  }</div>
 <div class="line"><a name="l00918"></a><span class="lineno">  918</span>&#160; </div>
-<div class="line"><a name="l00919"></a><span class="lineno">  919</span>&#160;  <span class="keywordtype">void</span> copyFromCPU(<span class="keyword">const</span> matrix::SubPanelView panel_view, matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;&amp; v,</div>
-<div class="line"><a name="l00920"></a><span class="lineno">  920</span>&#160;                   matrix::Matrix&lt;T, Device::GPU&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00919"></a><span class="lineno">  919</span>&#160;  <span class="keywordtype">void</span> copyFromCPU(<span class="keyword">const</span> <a class="code" href="structdlaf_1_1matrix_1_1_sub_panel_view.html">matrix::SubPanelView</a> panel_view, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;</a>&amp; v,</div>
+<div class="line"><a name="l00920"></a><span class="lineno">  920</span>&#160;                   <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;T, Device::GPU&gt;</a>&amp; mat_a) {</div>
 <div class="line"><a name="l00921"></a><span class="lineno">  921</span>&#160;    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
 <div class="line"><a name="l00922"></a><span class="lineno">  922</span>&#160; </div>
 <div class="line"><a name="l00923"></a><span class="lineno">  923</span>&#160;    <span class="keyword">using</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>;</div>
 <div class="line"><a name="l00924"></a><span class="lineno">  924</span>&#160;    <span class="keyword">using</span> dlaf::matrix::internal::CopyBackend_v;</div>
 <div class="line"><a name="l00925"></a><span class="lineno">  925</span>&#160;    <span class="keyword">using</span> pika::execution::thread_priority;</div>
 <div class="line"><a name="l00926"></a><span class="lineno">  926</span>&#160; </div>
-<div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; i : panel_view.iteratorLocal()) {</div>
+<div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; i : panel_view.<a class="code" href="structdlaf_1_1matrix_1_1internal_1_1_view.html#a7c25686d3fb7e47b627af360592168ad">iteratorLocal</a>()) {</div>
 <div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;      <span class="keyword">auto</span> spec = panel_view(i);</div>
-<div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;      <span class="keyword">auto</span> tile_a = mat_a.readwrite(i);</div>
+<div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;      <span class="keyword">auto</span> tile_a = mat_a.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(i);</div>
 <div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;      ex::start_detached(</div>
 <div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;          ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |</div>
 <div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;          matrix::copy(Policy&lt;CopyBackend_v&lt;Device::CPU, Device::GPU&gt;&gt;(thread_priority::high)));</div>
@@ -1376,7 +1376,7 @@ $(function() {
 <div class="line"><a name="l01309"></a><span class="lineno"> 1309</span>&#160;    <span class="keyword">const</span> SizeType j_tile_current = ij_offset.col() / dist.blockSize().cols();</div>
 <div class="line"><a name="l01310"></a><span class="lineno"> 1310</span>&#160;    <span class="keyword">const</span> SizeType j_tile_next = at_offset.col() / dist.blockSize().cols();</div>
 <div class="line"><a name="l01311"></a><span class="lineno"> 1311</span>&#160;    <span class="keyword">const</span> <span class="keywordtype">bool</span> isNextColumnOnSameRank = (j_tile_current == j_tile_next);</div>
-<div class="line"><a name="l01312"></a><span class="lineno"> 1312</span>&#160;    <span class="keyword">const</span> comm::IndexT_MPI rank_next_col =</div>
+<div class="line"><a name="l01312"></a><span class="lineno"> 1312</span>&#160;    <span class="keyword">const</span> <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_next_col =</div>
 <div class="line"><a name="l01313"></a><span class="lineno"> 1313</span>&#160;        isNextColumnOnSameRank ? rank_v0.col() : (rank_v0.col() + 1) % dist.commGridSize().cols();</div>
 <div class="line"><a name="l01314"></a><span class="lineno"> 1314</span>&#160; </div>
 <div class="line"><a name="l01315"></a><span class="lineno"> 1315</span>&#160;    <span class="keywordflow">if</span> (rank.col() == rank_next_col) {</div>
@@ -1395,7 +1395,7 @@ $(function() {
 <div class="line"><a name="l01328"></a><span class="lineno"> 1328</span>&#160;          dist.template globalTileFromGlobalElement&lt;Coord::Col&gt;(at_offset.col());</div>
 <div class="line"><a name="l01329"></a><span class="lineno"> 1329</span>&#160; </div>
 <div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;      <span class="keywordflow">if</span> (at_tile_col == dist.nrTiles().cols() - 1) {</div>
-<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;        <span class="keyword">const</span> comm::IndexT_MPI owner = rank_v0.row();</div>
+<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;        <span class="keyword">const</span> <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> owner = rank_v0.row();</div>
 <div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;        <span class="keywordflow">if</span> (rank.row() == owner) {</div>
 <div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;          xt.setTile(at, x.read(at));</div>
 <div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160; </div>
@@ -1459,44 +1459,61 @@ $(function() {
 <div class="line"><a name="l01392"></a><span class="lineno"> 1392</span>&#160;  <span class="keywordflow">return</span> taus;</div>
 <div class="line"><a name="l01393"></a><span class="lineno"> 1393</span>&#160;}</div>
 <div class="line"><a name="l01394"></a><span class="lineno"> 1394</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_ab13487adb2992d2cc50e06b498582391"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#ab13487adb2992d2cc50e06b498582391">dlaf::comm::CommunicatorGrid::rowCommunicator</a></div><div class="ttdeci">Communicator &amp; rowCommunicator() noexcept</div><div class="ttdoc">Return a Communicator grouping all ranks in the row (that includes the current process).</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:78</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_af6821b23aeb96284b9e217a02c5115e5"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#af6821b23aeb96284b9e217a02c5115e5">dlaf::comm::CommunicatorGrid::colCommunicator</a></div><div class="ttdeci">Communicator &amp; colCommunicator() noexcept</div><div class="ttdoc">Return a Communicator grouping all ranks in the column (that includes the current process).</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:83</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a436eca0d1c23635a6dcd209f1a1c37df"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">dlaf::comm::Communicator::clone</a></div><div class="ttdeci">Communicator clone() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator.h:70</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a436eca0d1c23635a6dcd209f1a1c37df"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">dlaf::comm::Communicator::clone</a></div><div class="ttdeci">Communicator clone() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator.h:72</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::GlobalElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a5f174cc234af20d79923b31d7fa90b19"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">dlaf::common::Index2D::isIn</a></div><div class="ttdeci">bool isIn(const Size2D&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:213</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:28</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:30</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::GlobalElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:25</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:54</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:120</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:27</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:56</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:122</div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
+<div class="ttc" id="adistribution_8h_html"><div class="ttname"><a href="distribution_8h.html">distribution.h</a></div></div>
+<div class="ttc" id="afunctions__sync_8h_html"><div class="ttname"><a href="functions__sync_8h.html">functions_sync.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html_a024753ac73fbefa174548c575327862b"><div class="ttname"><a href="index2d_8h.html#a024753ac73fbefa174548c575327862b">dlaf::common::transposed</a></div><div class="ttdeci">Coords2DType transposed(Coords2DType coords)</div><div class="ttdoc">Given a coordinate type, it returns its transpose.</div><div class="ttdef"><b>Definition:</b> index2d.h:266</div></div>
+<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
 <div class="ttc" id="akernels_2all__reduce_8h_html"><div class="ttname"><a href="kernels_2all__reduce_8h.html">all_reduce.h</a></div></div>
 <div class="ttc" id="akernels_2reduce_8h_html"><div class="ttname"><a href="kernels_2reduce_8h.html">reduce.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html_ae46de76ccc35985387f6820b1db9fb51"><div class="ttname"><a href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">dlaf::matrix::splitTile</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; splitTile(ReadOnlyTileSender&lt; T, D &gt; tile, const SubTileSpec &amp;spec)</div><div class="ttdef"><b>Definition:</b> tile.h:507</div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="anorm_8h_html_a2d0adfb7be9cfe934f96e9dd1c38d839"><div class="ttname"><a href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">dlaf::auxiliary::norm</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</div><div class="ttdef"><b>Definition:</b> norm.h:43</div></div>
+<div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
+<div class="ttc" id="aqr_8h_html"><div class="ttname"><a href="qr_8h.html">qr.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>
 <div class="ttc" id="ardma_8h_html"><div class="ttname"><a href="rdma_8h.html">rdma.h</a></div></div>
-<div class="ttc" id="ascal_8h_html_aedab5556a733369707d71dac05b4f729"><div class="ttname"><a href="scal_8h.html#aedab5556a733369707d71dac05b4f729">blas::scal</a></div><div class="ttdeci">void scal(std::int64_t n, float a, std::complex&lt; float &gt; *x, std::int64_t incx) noexcept</div><div class="ttdef"><b>Definition:</b> scal.cpp:29</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1_round_robin_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a></div><div class="ttdef"><b>Definition:</b> round_robin.h:18</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:24</div></div>
+<div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
+<div class="ttc" id="aschedulers_8h_html"><div class="ttname"><a href="schedulers_8h.html">schedulers.h</a></div></div>
+<div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1_round_robin_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a></div><div class="ttdef"><b>Definition:</b> round_robin.h:20</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:26</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band_html_a9588c2cfc600e4af418a6bb729c27ed5"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html#a9588c2cfc600e4af418a6bb729c27ed5">dlaf::eigensolver::internal::ReductionToBand::call</a></div><div class="ttdeci">static common::internal::vector&lt; pika::shared_future&lt; common::internal::vector&lt; T &gt; &gt; &gt; call(Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> impl.h:943</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1red2band_1_1_compute_panel_helper.html">dlaf::eigensolver::internal::red2band::ComputePanelHelper</a></div><div class="ttdef"><b>Definition:</b> impl.h:831</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:550</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:568</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_matrix_view_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_matrix_view.html">dlaf::matrix::SubMatrixView</a></div><div class="ttdef"><b>Definition:</b> views.h:85</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_panel_view_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_panel_view.html">dlaf::matrix::SubPanelView</a></div><div class="ttdef"><b>Definition:</b> views.h:129</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1internal_1_1_view_html_a7c25686d3fb7e47b627af360592168ad"><div class="ttname"><a href="structdlaf_1_1matrix_1_1internal_1_1_view.html#a7c25686d3fb7e47b627af360592168ad">dlaf::matrix::internal::View::iteratorLocal</a></div><div class="ttdeci">auto iteratorLocal() const noexcept</div><div class="ttdoc">Return a Range2D that gives access to all local tiles part of the View.</div><div class="ttdef"><b>Definition:</b> views.h:67</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:552</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:570</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_matrix_view_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_matrix_view.html">dlaf::matrix::SubMatrixView</a></div><div class="ttdef"><b>Definition:</b> views.h:87</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_panel_view_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_panel_view.html">dlaf::matrix::SubPanelView</a></div><div class="ttdef"><b>Definition:</b> views.h:131</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1internal_1_1_view_html_a7c25686d3fb7e47b627af360592168ad"><div class="ttname"><a href="structdlaf_1_1matrix_1_1internal_1_1_view.html#a7c25686d3fb7e47b627af360592168ad">dlaf::matrix::internal::View::iteratorLocal</a></div><div class="ttdeci">auto iteratorLocal() const noexcept</div><div class="ttdoc">Return a Range2D that gives access to all local tiles part of the View.</div><div class="ttdef"><b>Definition:</b> views.h:69</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_a25d16ff6621f011d9a98be3d9ebf29f1"><div class="ttname"><a href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">dlaf::to_sizet</a></div><div class="ttdeci">auto to_sizet(const T signed_value)</div><div class="ttdef"><b>Definition:</b> types.h:265</div></div>
 <div class="ttc" id="atypes_8h_html_ab1f0edc8e1281293c9c1325cb9d4bec9"><div class="ttname"><a href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">dlaf::to_SizeType</a></div><div class="ttdeci">auto to_SizeType(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:274</div></div>
 <div class="ttc" id="autil__math_8h_html"><div class="ttname"><a href="util__math_8h.html">util_math.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
+<div class="ttc" id="avector_8h_html"><div class="ttname"><a href="vector_8h.html">vector.h</a></div></div>
+<div class="ttc" id="aviews_8h_html"><div class="ttname"><a href="views_8h.html">views.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

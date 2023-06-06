@@ -91,24 +91,24 @@ $(function() {
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/factorization/qr/api.h&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&quot;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/single_threaded_blas.h&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/vector.h&quot;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&quot;</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="kernels_2all__reduce_8h.html">dlaf/communication/kernels/all_reduce.h</a>&quot;</span></div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/views.h&quot;</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="views_8h.html">dlaf/matrix/views.h</a>&quot;</span></div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/keep_future.h&quot;</span></div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="keyword">namespace </span>dlaf::factorization::internal {</div>
@@ -205,7 +205,7 @@ $(function() {
 <div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160; </div>
 <div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
 <div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers.html">Helpers</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
+<div class="line"><a name="l00137"></a><span class="lineno"><a class="line" href="structdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers_3_01_backend_1_1_g_p_u_00_01_device_1_1_g_p_u_00_01_t_01_4.html">  137</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers.html">Helpers</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
 <div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">class</span> TSender&gt;</div>
 <div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;  <span class="keyword">static</span> <span class="keyword">auto</span> set0(TSender&amp;&amp; t) {</div>
 <div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
@@ -243,7 +243,7 @@ $(function() {
 <div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;        <span class="keyword">const</span> <span class="keyword">auto</span> mtau = util::blasToCublasCast(-taus[j]);</div>
 <div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;        <span class="keyword">const</span> <span class="keyword">auto</span> one = util::blasToCublasCast(T{1});</div>
 <div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        <span class="keyword">const</span> TileElementIndex t_start{0, j};</div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> t_start{0, j};</div>
 <div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160; </div>
 <div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;        <span class="comment">// Position of the 1 in the diagonal in the current column.</span></div>
 <div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;        SizeType i_diag = j - first_row_tile;</div>
@@ -255,9 +255,9 @@ $(function() {
 <div class="line"><a name="l00184"></a><span class="lineno">  184</span>&#160; </div>
 <div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;        <span class="comment">// T(0:j, j) = -tau . V(j:, 0:j)* . V(j:, j)</span></div>
 <div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;        <span class="comment">// [j x 1] = [(n-j) x j]* . [(n-j) x 1]</span></div>
-<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;        TileElementIndex va_start{first_element_in_col, 0};</div>
-<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;        TileElementIndex vb_start{first_element_in_col, j};</div>
-<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;        TileElementSize va_size{tile_v.size().rows() - first_element_in_col, j};</div>
+<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;        <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> va_start{first_element_in_col, 0};</div>
+<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;        <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> vb_start{first_element_in_col, j};</div>
+<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;        <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> va_size{tile_v.size().rows() - first_element_in_col, j};</div>
 <div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160; </div>
 <div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;        gpublas::internal::Gemv&lt;T&gt;::call(handle, CUBLAS_OP_C, <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(va_size.rows()),</div>
 <div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;                                         <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(va_size.cols()), &amp;mtau,</div>
@@ -283,10 +283,10 @@ $(function() {
 <div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160; </div>
 <div class="line"><a name="l00213"></a><span class="lineno">  213</span>&#160;    <span class="comment">// Update each column (in order) t = T . t</span></div>
 <div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;    <span class="comment">// remember that T is upper triangular, so it is possible to use TRMV</span></div>
-<div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160;    <span class="keyword">auto</span> trmv_func = [](cublasHandle_t handle, matrix::Tile&lt;T, Device::GPU&gt;&amp; tile_t) {</div>
+<div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160;    <span class="keyword">auto</span> trmv_func = [](cublasHandle_t handle, <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;T, Device::GPU&gt;</a>&amp; tile_t) {</div>
 <div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160;      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; tile_t.size().cols(); ++j) {</div>
-<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160;        <span class="keyword">const</span> TileElementIndex t_start{0, j};</div>
-<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        <span class="keyword">const</span> TileElementSize t_size{j, 1};</div>
+<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160;        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> t_start{0, j};</div>
+<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> t_size{j, 1};</div>
 <div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160; </div>
 <div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;        gpublas::internal::Trmv&lt;T&gt;::call(handle, CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,</div>
 <div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;                                         CUBLAS_DIAG_NON_UNIT, <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(t_size.rows()),</div>
@@ -416,26 +416,32 @@ $(function() {
 <div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;}</div>
 <div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160; </div>
 <div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:28</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:30</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:18</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:20</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:327</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
 <div class="ttc" id="akernels_2all__reduce_8h_html"><div class="ttname"><a href="kernels_2all__reduce_8h.html">all_reduce.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:24</div></div>
+<div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:26</div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor_html_a88bd9c17befff93a720bb00d5b8581db"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a88bd9c17befff93a720bb00d5b8581db">dlaf::factorization::internal::QR_Tfactor::call</a></div><div class="ttdeci">static void call(matrix::Panel&lt; Coord::Col, T, device &gt; &amp;panel_view, pika::shared_future&lt; common::internal::vector&lt; T &gt;&gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</div><div class="ttdef"><b>Definition:</b> t_factor_impl.h:239</div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers_html"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers.html">dlaf::factorization::internal::tfactor_l::Helpers</a></div><div class="ttdef"><b>Definition:</b> t_factor_impl.h:47</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:550</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:552</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_a25d16ff6621f011d9a98be3d9ebf29f1"><div class="ttname"><a href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">dlaf::to_sizet</a></div><div class="ttdeci">auto to_sizet(const T signed_value)</div><div class="ttdef"><b>Definition:</b> types.h:265</div></div>
 <div class="ttc" id="atypes_8h_html_af90e7fd5acadf5987b7199b0bd44deea"><div class="ttname"><a href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">dlaf::to_int</a></div><div class="ttdeci">auto to_int(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:247</div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
+<div class="ttc" id="avector_8h_html"><div class="ttname"><a href="vector_8h.html">vector.h</a></div></div>
+<div class="ttc" id="aviews_8h_html"><div class="ttname"><a href="views_8h.html">views.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -75,9 +75,9 @@ $(function() {
 <div class="textblock"><code>#include &lt;complex&gt;</code><br />
 <code>#include &lt;mpi.h&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
-<code>#include &quot;dlaf/common/pipeline.h&quot;</code><br />
-<code>#include &quot;dlaf/communication/communicator.h&quot;</code><br />
-<code>#include &quot;dlaf/matrix/tile.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&quot;</code><br />
 </div>
 <p><a href="p2p_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -118,10 +118,34 @@ template&lt;class T , Device D, class Comm &gt; </td></tr>
 <tr class="memitem:a5ee8ee9dd967bf29387c5fb174c44aa5"><td class="memItemLeft" align="right" valign="top"><a id="a5ee8ee9dd967bf29387c5fb174c44aa5"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, std::complex&lt; double &gt;, Device::CPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
 <tr class="separator:a5ee8ee9dd967bf29387c5fb174c44aa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a530d31c0da93af00bc65e0f7f720b5b3"><td class="memTemplParams" colspan="2"><a id="a530d31c0da93af00bc65e0f7f720b5b3"></a>
+<tr class="memitem:ab6b1a1cb6f0b6af55642092c63e03a11"><td class="memItemLeft" align="right" valign="top"><a id="ab6b1a1cb6f0b6af55642092c63e03a11"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, float, Device::GPU, Communicator)</td></tr>
+<tr class="separator:ab6b1a1cb6f0b6af55642092c63e03a11"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a63b73755d53d09cc370ce4b054f3f6de"><td class="memItemLeft" align="right" valign="top"><a id="a63b73755d53d09cc370ce4b054f3f6de"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, double, Device::GPU, Communicator)</td></tr>
+<tr class="separator:a63b73755d53d09cc370ce4b054f3f6de"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9c2447bb2a009dbdd1b8465cf80dcedd"><td class="memItemLeft" align="right" valign="top"><a id="a9c2447bb2a009dbdd1b8465cf80dcedd"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, std::complex&lt; float &gt;, Device::GPU, Communicator)</td></tr>
+<tr class="separator:a9c2447bb2a009dbdd1b8465cf80dcedd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a989b55dbbb05d1bb1c8efe3195a8607d"><td class="memItemLeft" align="right" valign="top"><a id="a989b55dbbb05d1bb1c8efe3195a8607d"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, std::complex&lt; double &gt;, Device::GPU, Communicator)</td></tr>
+<tr class="separator:a989b55dbbb05d1bb1c8efe3195a8607d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9477d9ba5ad65a22235871f52b0eb91"><td class="memItemLeft" align="right" valign="top"><a id="ad9477d9ba5ad65a22235871f52b0eb91"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, float, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:ad9477d9ba5ad65a22235871f52b0eb91"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af75386df98a1095ff2ff954b5bc8d6ba"><td class="memItemLeft" align="right" valign="top"><a id="af75386df98a1095ff2ff954b5bc8d6ba"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, double, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:af75386df98a1095ff2ff954b5bc8d6ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add899b88deec9ddb4bad4bc799254ff2"><td class="memItemLeft" align="right" valign="top"><a id="add899b88deec9ddb4bad4bc799254ff2"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, std::complex&lt; float &gt;, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:add899b88deec9ddb4bad4bc799254ff2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b3495da101ced6fc87b48fdd26f6cac"><td class="memItemLeft" align="right" valign="top"><a id="a5b3495da101ced6fc87b48fdd26f6cac"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_ETI</b> (extern, std::complex&lt; double &gt;, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:a5b3495da101ced6fc87b48fdd26f6cac"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2750f7a15ff81267d8c93591b9c9e829"><td class="memTemplParams" colspan="2"><a id="a2750f7a15ff81267d8c93591b9c9e829"></a>
 template&lt;class T , Device D, class Comm &gt; </td></tr>
-<tr class="memitem:a530d31c0da93af00bc65e0f7f720b5b3"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::scheduleRecv</b> (pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:a530d31c0da93af00bc65e0f7f720b5b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2750f7a15ff81267d8c93591b9c9e829"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::scheduleRecv</b> (pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:a2750f7a15ff81267d8c93591b9c9e829"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a85a7de7b74282469391b14ac06d43151"><td class="memItemLeft" align="right" valign="top"><a id="a85a7de7b74282469391b14ac06d43151"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, float, Device::CPU, Communicator)</td></tr>
 <tr class="separator:a85a7de7b74282469391b14ac06d43151"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -146,6 +170,30 @@ template&lt;class T , Device D, class Comm &gt; </td></tr>
 <tr class="memitem:a99bb2c195cef7227250df68a832ce151"><td class="memItemLeft" align="right" valign="top"><a id="a99bb2c195cef7227250df68a832ce151"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, std::complex&lt; double &gt;, Device::CPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
 <tr class="separator:a99bb2c195cef7227250df68a832ce151"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae8f0e82ccded74b9521450e7af456e28"><td class="memItemLeft" align="right" valign="top"><a id="ae8f0e82ccded74b9521450e7af456e28"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, float, Device::GPU, Communicator)</td></tr>
+<tr class="separator:ae8f0e82ccded74b9521450e7af456e28"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa53f01805913eb6eb9fd3bce0c038354"><td class="memItemLeft" align="right" valign="top"><a id="aa53f01805913eb6eb9fd3bce0c038354"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, double, Device::GPU, Communicator)</td></tr>
+<tr class="separator:aa53f01805913eb6eb9fd3bce0c038354"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60558530609b4c6cde824ae53b7fe03c"><td class="memItemLeft" align="right" valign="top"><a id="a60558530609b4c6cde824ae53b7fe03c"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, std::complex&lt; float &gt;, Device::GPU, Communicator)</td></tr>
+<tr class="separator:a60558530609b4c6cde824ae53b7fe03c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91533563c0104c070a5c1542996a3980"><td class="memItemLeft" align="right" valign="top"><a id="a91533563c0104c070a5c1542996a3980"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, std::complex&lt; double &gt;, Device::GPU, Communicator)</td></tr>
+<tr class="separator:a91533563c0104c070a5c1542996a3980"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a98de3abb96877eb19d73387f57af51ab"><td class="memItemLeft" align="right" valign="top"><a id="a98de3abb96877eb19d73387f57af51ab"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, float, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:a98de3abb96877eb19d73387f57af51ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad84768bbb425a7341d5b23a247eaf97b"><td class="memItemLeft" align="right" valign="top"><a id="ad84768bbb425a7341d5b23a247eaf97b"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, double, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:ad84768bbb425a7341d5b23a247eaf97b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff6c2c466ba334477a88a80ea80c2507"><td class="memItemLeft" align="right" valign="top"><a id="aff6c2c466ba334477a88a80ea80c2507"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, std::complex&lt; float &gt;, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:aff6c2c466ba334477a88a80ea80c2507"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad4336f4b9d2ace452f9607cde2bd4eb7"><td class="memItemLeft" align="right" valign="top"><a id="ad4336f4b9d2ace452f9607cde2bd4eb7"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_ETI</b> (extern, std::complex&lt; double &gt;, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
+<tr class="separator:ad4336f4b9d2ace452f9607cde2bd4eb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a593336e02d30a07c5b058c05f552aea9"></a>

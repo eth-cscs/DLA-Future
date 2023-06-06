@@ -69,7 +69,7 @@ $(function() {
 <div class="title">communicator.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
+<a href="communicator_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="comment">// Distributed Linear Algebra with Future (DLAF)</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="comment">// Copyright (c) 2018-2023, ETH Zurich</span></div>
@@ -81,60 +81,63 @@ $(function() {
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160; </div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;memory&gt;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="keyword">namespace </span>comm {</div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">using</span> IndexT_MPI = int;</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">class </span>CommunicatorImpl;</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;memory&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="keyword">namespace </span>comm {</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
+<div class="line"><a name="l00022"></a><span class="lineno"><a class="line" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">   22</a></span>&#160;<span class="keyword">using</span> <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> = int;</div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html">   37</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> {</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">friend</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">make_communicator_managed</a>(MPI_Comm);</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keyword">public</span>:</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>();</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>(MPI_Comm mpi_communicator);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  <span class="keyword">operator</span> MPI_Comm() <span class="keyword">const</span> noexcept;</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  MPI_Comm* <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#adf1556bbb1f9b698c0bf561346b11610">operator&amp;</a>() noexcept;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <span class="keyword">const</span> MPI_Comm* <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#adf1556bbb1f9b698c0bf561346b11610">operator&amp;</a>() <span class="keyword">const</span> noexcept;</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  IndexT_MPI <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">rank</a>() <span class="keyword">const</span> noexcept;</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  IndexT_MPI <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#ad8ce8e75b5dd3be81e7e6f31e0958fdb">size</a>() <span class="keyword">const</span> noexcept;</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00070"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">   70</a></span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">clone</a>() const noexcept {</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    MPI_Comm comm_clone;</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    DLAF_MPI_CHECK_ERROR(MPI_Comm_dup(*<span class="keyword">this</span>, &amp;comm_clone));</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>(comm_clone, managed{});</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  }</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="keyword">private</span>:</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  <span class="keyword">struct </span>managed {};</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>(MPI_Comm mpi_communicator, managed);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  std::shared_ptr&lt;CommunicatorImpl&gt; comm_ref_;</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;};</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
-<div class="line"><a name="l00091"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">   91</a></span>&#160;<span class="keyword">inline</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> make_communicator_managed(MPI_Comm mpi_communicator) {</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>(mpi_communicator, Communicator::managed{});</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;}</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">class </span>CommunicatorImpl;</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html">   39</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> {</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keyword">friend</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">make_communicator_managed</a>(MPI_Comm);</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="keyword">public</span>:</div>
+<div class="line"><a name="l00044"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">   44</a></span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>();</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
+<div class="line"><a name="l00051"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#afa39beca08a343e1b8587b98d63870a0">   51</a></span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#afa39beca08a343e1b8587b98d63870a0">Communicator</a>(MPI_Comm mpi_communicator);</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
+<div class="line"><a name="l00056"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a5be809bbc2d038669e31a9de501a2070">   56</a></span>&#160;  <span class="keyword">operator</span> MPI_Comm() const noexcept;</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
+<div class="line"><a name="l00061"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#ace61947783c442bf684c2f035093acf2">   61</a></span>&#160;  MPI_Comm* operator&amp;() noexcept;</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  const MPI_Comm* operator&amp;() const noexcept;</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00065"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">   65</a></span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">rank</a>() const noexcept;</div>
+<div class="line"><a name="l00067"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">   67</a></span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">size</a>() const noexcept;</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
+<div class="line"><a name="l00072"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">   72</a></span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">clone</a>() const noexcept {</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    MPI_Comm comm_clone;</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    DLAF_MPI_CHECK_ERROR(MPI_Comm_dup(*<span class="keyword">this</span>, &amp;comm_clone));</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>(comm_clone, managed{});</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  }</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;<span class="keyword">private</span>:</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  <span class="keyword">struct </span>managed {};</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">Communicator</a>(MPI_Comm mpi_communicator, managed);</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160; </div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  std::shared_ptr&lt;CommunicatorImpl&gt; comm_ref_;</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;};</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
+<div class="line"><a name="l00093"></a><span class="lineno"><a class="line" href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">   93</a></span>&#160;<span class="keyword">inline</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> <a class="code" href="communicator_8h.html#a8b7bf4fa5dfb408439c9c93ce3ebb216">make_communicator_managed</a>(MPI_Comm mpi_communicator) {</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>(mpi_communicator, Communicator::managed{});</div>
 <div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;}</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a436eca0d1c23635a6dcd209f1a1c37df"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">dlaf::comm::Communicator::clone</a></div><div class="ttdeci">Communicator clone() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator.h:70</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a891a7bf00a52071373bfc38aae8f83aa"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">dlaf::comm::Communicator::Communicator</a></div><div class="ttdeci">Communicator()</div><div class="ttdoc">Create a NULL Communicator (i.e. MPI_COMM_NULL).</div><div class="ttdef"><b>Definition:</b> communicator.cpp:21</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_ad8ce8e75b5dd3be81e7e6f31e0958fdb"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#ad8ce8e75b5dd3be81e7e6f31e0958fdb">dlaf::comm::Communicator::size</a></div><div class="ttdeci">IndexT_MPI size() const noexcept</div><div class="ttdoc">Return the number of ranks in the Communicator.</div><div class="ttdef"><b>Definition:</b> communicator.cpp:45</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_ada042e7529d465519d9fb98e004d6a55"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">dlaf::comm::Communicator::make_communicator_managed</a></div><div class="ttdeci">friend Communicator make_communicator_managed(MPI_Comm)</div><div class="ttdoc">Wrap an MPI_Comm into a Communicator that takes the ownership.</div><div class="ttdef"><b>Definition:</b> communicator.h:91</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_adf1556bbb1f9b698c0bf561346b11610"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#adf1556bbb1f9b698c0bf561346b11610">dlaf::comm::Communicator::operator&amp;</a></div><div class="ttdeci">MPI_Comm * operator&amp;() noexcept</div><div class="ttdef"><b>Definition:</b> communicator.cpp:33</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_af4d940b84843386d2c214c201f54c1fe"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#af4d940b84843386d2c214c201f54c1fe">dlaf::comm::Communicator::rank</a></div><div class="ttdeci">IndexT_MPI rank() const noexcept</div><div class="ttdoc">Return the rank of the current process in the Communicator.</div><div class="ttdef"><b>Definition:</b> communicator.cpp:41</div></div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;}</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;}</div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a415f5d36c3033320074df329163c3127"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a415f5d36c3033320074df329163c3127">dlaf::comm::Communicator::size</a></div><div class="ttdeci">IndexT_MPI size() const noexcept</div><div class="ttdoc">Return the number of ranks in the Communicator.</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a436eca0d1c23635a6dcd209f1a1c37df"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a436eca0d1c23635a6dcd209f1a1c37df">dlaf::comm::Communicator::clone</a></div><div class="ttdeci">Communicator clone() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator.h:72</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a52be17b02755dcbfbdcaa95ba5f9230c"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a52be17b02755dcbfbdcaa95ba5f9230c">dlaf::comm::Communicator::rank</a></div><div class="ttdeci">IndexT_MPI rank() const noexcept</div><div class="ttdoc">Return the rank of the current process in the Communicator.</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_a891a7bf00a52071373bfc38aae8f83aa"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#a891a7bf00a52071373bfc38aae8f83aa">dlaf::comm::Communicator::Communicator</a></div><div class="ttdeci">Communicator()</div><div class="ttdoc">Create a NULL Communicator (i.e. MPI_COMM_NULL).</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_ada042e7529d465519d9fb98e004d6a55"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#ada042e7529d465519d9fb98e004d6a55">dlaf::comm::Communicator::make_communicator_managed</a></div><div class="ttdeci">friend Communicator make_communicator_managed(MPI_Comm)</div><div class="ttdoc">Wrap an MPI_Comm into a Communicator that takes the ownership.</div><div class="ttdef"><b>Definition:</b> communicator.h:93</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html_afa39beca08a343e1b8587b98d63870a0"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html#afa39beca08a343e1b8587b98d63870a0">dlaf::comm::Communicator::Communicator</a></div><div class="ttdeci">Communicator(MPI_Comm mpi_communicator)</div></div>
 <div class="ttc" id="acommunication_2error_8h_html"><div class="ttname"><a href="communication_2error_8h.html">error.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
+<div class="ttc" id="acommunicator_8h_html_a8b7bf4fa5dfb408439c9c93ce3ebb216"><div class="ttname"><a href="communicator_8h.html#a8b7bf4fa5dfb408439c9c93ce3ebb216">dlaf::comm::make_communicator_managed</a></div><div class="ttdeci">Communicator make_communicator_managed(MPI_Comm mpi_communicator)</div><div class="ttdoc">Wrap an MPI_Comm into a Communicator that takes the ownership.</div><div class="ttdef"><b>Definition:</b> communicator.h:93</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

@@ -69,7 +69,7 @@ $(function() {
 <div class="title">tridiag_solver.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
+<a href="tridiag__solver_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="comment">// Distributed Linear Algebra with Future (DLAF)</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="comment">// Copyright (c) 2018-2023, ETH Zurich</span></div>
@@ -80,72 +80,77 @@ $(function() {
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/api.h&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>eigensolver {</div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keywordtype">void</span> tridiagSolver(Matrix&lt;BaseType&lt;T&gt;, Device::CPU&gt;&amp; tridiag, Matrix&lt;BaseType&lt;T&gt;, device&gt;&amp; evals,</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;                   Matrix&lt;T, device&gt;&amp; evecs) {</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evals), evals);</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evecs), evecs);</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  DLAF_ASSERT(matrix::square_size(evecs), evecs);</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160; </div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;              evecs.distribution().blockSize().rows(), tridiag.distribution().blockSize().rows());</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;              tridiag.distribution().blockSize().rows(), evals.distribution().blockSize().rows());</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(),</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;              evecs.distribution().size().rows(), tridiag.distribution().size().rows());</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;              tridiag.distribution().size().rows(), evals.distribution().size().rows());</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  internal::TridiagSolver&lt;backend, device, BaseType&lt;T&gt;&gt;::call(tridiag, evals, evecs);</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;}</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;<span class="keywordtype">void</span> tridiagSolver(comm::CommunicatorGrid grid, Matrix&lt;BaseType&lt;T&gt;, Device::CPU&gt;&amp; tridiag,</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;                   Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; evals, Matrix&lt;T, D&gt;&amp; evecs) {</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160; </div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evals), evals);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  DLAF_ASSERT(matrix::square_size(evecs), evecs);</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(evecs, grid), evecs, grid);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;              evecs, tridiag);</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;              tridiag, evals);</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(), evecs,</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;              tridiag);</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;              evals);</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  internal::TridiagSolver&lt;B, D, BaseType&lt;T&gt;&gt;::call(grid, tridiag, evals, evecs);</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;}</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160; </div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/api.h&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span><a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a> {</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="tridiag__solver_8h.html#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">   39</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="tridiag__solver_8h.html#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">tridiagSolver</a>(Matrix&lt;BaseType&lt;T&gt;, Device::CPU&gt;&amp; tridiag, Matrix&lt;BaseType&lt;T&gt;, device&gt;&amp; evals,</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;                   Matrix&lt;T, device&gt;&amp; evecs) {</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evals), evals);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evecs), evecs);</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  DLAF_ASSERT(matrix::square_size(evecs), evecs);</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;              evecs.distribution().blockSize().rows(), tridiag.distribution().blockSize().rows());</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;              tridiag.distribution().blockSize().rows(), evals.distribution().blockSize().rows());</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(),</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;              evecs.distribution().size().rows(), tridiag.distribution().size().rows());</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;              tridiag.distribution().size().rows(), evals.distribution().size().rows());</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_solver.html">internal::TridiagSolver&lt;backend, device, BaseType&lt;T&gt;</a>&gt;::call(tridiag, evals, evecs);</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;}</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00081"></a><span class="lineno"><a class="line" href="tridiag__solver_8h.html#a0cfeab14e9e1dc7a2fb703006cd7e957">   81</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="tridiag__solver_8h.html#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">tridiagSolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, Matrix&lt;BaseType&lt;T&gt;, Device::CPU&gt;&amp; tridiag,</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;                   Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; evals, Matrix&lt;T, D&gt;&amp; evecs) {</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  DLAF_ASSERT(matrix::local_matrix(evals), evals);</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  DLAF_ASSERT(matrix::square_size(evecs), evecs);</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(evecs, grid), evecs, grid);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;              evecs, tridiag);</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;  DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evals.distribution().blockSize().rows(),</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;              tridiag, evals);</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evecs.distribution().size().rows(), evecs,</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;              tridiag);</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;              evals);</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_solver.html">internal::TridiagSolver&lt;B, D, BaseType&lt;T&gt;</a>&gt;::call(grid, tridiag, evals, evecs);</div>
 <div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;}</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160; </div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;}</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;}</div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="aeigensolver_2eigensolver_8h_html_a7aeed252a1783c24f778eb250d0efd72"><div class="ttname"><a href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">dlaf::eigensolver::eigensolver</a></div><div class="ttdeci">void eigensolver(blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</div><div class="ttdef"><b>Definition:</b> eigensolver.h:39</div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_tridiag_solver_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_solver.html">dlaf::eigensolver::internal::TridiagSolver</a></div><div class="ttdef"><b>Definition:</b> api.h:18</div></div>
+<div class="ttc" id="atridiag__solver_8h_html_a52f0bd4b681a2d1c3e47bfd6a6ebf15a"><div class="ttname"><a href="tridiag__solver_8h.html#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">dlaf::eigensolver::tridiagSolver</a></div><div class="ttdeci">void tridiagSolver(Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;tridiag, Matrix&lt; BaseType&lt; T &gt;, device &gt; &amp;evals, Matrix&lt; T, device &gt; &amp;evecs)</div><div class="ttdef"><b>Definition:</b> tridiag_solver.h:39</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

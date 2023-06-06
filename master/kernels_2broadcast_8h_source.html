@@ -87,13 +87,13 @@ $(function() {
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;mpi.h&gt;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/callable_object.h&quot;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="callable__object_8h.html">dlaf/common/callable_object.h</a>&quot;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
@@ -109,7 +109,7 @@ $(function() {
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;      MPI_Ibcast(<span class="keyword">const_cast&lt;</span>T*<span class="keyword">&gt;</span>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));</div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;}</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(sendBcast);</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(sendBcast);</div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="keywordtype">void</span> recvBcast(<span class="keyword">const</span> Communicator&amp; comm, comm::IndexT_MPI root_rank, <span class="keyword">const</span> matrix::Tile&lt;T, D&gt;&amp; tile,</div>
@@ -122,11 +122,11 @@ $(function() {
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));</div>
 <div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;}</div>
 <div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;DLAF_MAKE_CALLABLE_OBJECT(recvBcast);</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(recvBcast);</div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;}</div>
 <div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>(</div>
+<div class="line"><a name="l00064"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">   64</a></span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>(</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,</div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    dlaf::matrix::ReadOnlyTileSender&lt;T, D&gt; tile);</div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
@@ -154,8 +154,8 @@ $(function() {
 <div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160; </div>
 <div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2broadcast_8h.html#a000ad410269e3ea3934ad1ef3960d4fd">scheduleRecvBcast</a>(</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, comm::IndexT_MPI root_rank,</div>
+<div class="line"><a name="l00097"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">   97</a></span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> root_rank,</div>
 <div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;    dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; tile);</div>
 <div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160; </div>
 <div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                   \</span></div>
@@ -181,11 +181,16 @@ $(function() {
 <div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
 <div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
+<div class="ttc" id="acallable__object_8h_html_a5aafa5a9c65ad07da48410427f4825b2"><div class="ttname"><a href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a></div><div class="ttdeci">#define DLAF_MAKE_CALLABLE_OBJECT(fname)</div><div class="ttdef"><b>Definition:</b> callable_object.h:26</div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
-<div class="ttc" id="akernels_2broadcast_8h_html_a000ad410269e3ea3934ad1ef3960d4fd"><div class="ttname"><a href="kernels_2broadcast_8h.html#a000ad410269e3ea3934ad1ef3960d4fd">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div><div class="ttdef"><b>Definition:</b> broadcast.cpp:81</div></div>
-<div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div><div class="ttdef"><b>Definition:</b> broadcast.cpp:56</div></div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a3645d0cfc3caad43c37c355896a7215f"><div class="ttname"><a href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

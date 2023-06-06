@@ -73,18 +73,25 @@ $(function() {
 <div class="contents">
 <div class="textblock"><code>#include &lt;cstddef&gt;</code><br />
 <code>#include &lt;lapack.hh&gt;</code><br />
-<code>#include &quot;<a class="el" href="assert_8h_source.html">dlaf/common/assert.h</a>&quot;</code><br />
-<code>#include &quot;dlaf/common/callable_object.h&quot;</code><br />
-<code>#include &quot;dlaf/common/single_threaded_blas.h&quot;</code><br />
+<code>#include &lt;pika/cuda.hpp&gt;</code><br />
+<code>#include &lt;whip.hpp&gt;</code><br />
+<code>#include &quot;dlaf/common/assert.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="callable__object_8h_source.html">dlaf/common/callable_object.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="single__threaded__blas_8h_source.html">dlaf/common/single_threaded_blas.h</a>&quot;</code><br />
 <code>#include &quot;dlaf/lapack/enum_output.h&quot;</code><br />
-<code>#include &quot;dlaf/matrix/index.h&quot;</code><br />
-<code>#include &quot;dlaf/matrix/tile.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&quot;</code><br />
 <code>#include &quot;dlaf/sender/make_sender_algorithm_overloads.h&quot;</code><br />
 <code>#include &quot;dlaf/sender/policy.h&quot;</code><br />
 <code>#include &quot;dlaf/sender/transform.h&quot;</code><br />
 <code>#include &quot;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&quot;</code><br />
-<code>#include &quot;dlaf/util_lapack.h&quot;</code><br />
+<code>#include &quot;<a class="el" href="util__lapack_8h_source.html">dlaf/util_lapack.h</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="util__tile_8h_source.html">dlaf/util_tile.h</a>&quot;</code><br />
+<code>#include &quot;dlaf/gpu/lapack/api.h&quot;</code><br />
+<code>#include &quot;dlaf/gpu/lapack/assert_info.h&quot;</code><br />
+<code>#include &quot;dlaf/gpu/lapack/error.h&quot;</code><br />
+<code>#include &quot;dlaf/lapack/gpu/laset.h&quot;</code><br />
+<code>#include &quot;dlaf/util_cublas.h&quot;</code><br />
 </div>
 <p><a href="lapack_2tile_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">

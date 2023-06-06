@@ -89,9 +89,9 @@ $(function() {
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="kernels_2broadcast_8h.html">dlaf/communication/kernels/broadcast.h</a>&quot;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/copy_tile.h&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/panel.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
@@ -114,7 +114,7 @@ $(function() {
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class </span>T, Device D, Coord axis, matrix::StoreTransposed storage,</div>
 <div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;          <span class="keyword">class </span>= std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt;</div>
-<div class="line"><a name="l00058"></a><span class="lineno"><a class="line" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">   58</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(comm::IndexT_MPI rank_root, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;axis, T, D, storage&gt;</a>&amp; panel,</div>
+<div class="line"><a name="l00058"></a><span class="lineno"><a class="line" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">   58</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(<a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;axis, T, D, storage&gt;</a>&amp; panel,</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;               <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; serial_comm) {</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  constexpr <span class="keyword">auto</span> comm_coord = axis;</div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
@@ -129,18 +129,18 @@ $(function() {
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keywordflow">if</span> (rank == rank_root)</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;      ex::start_detached(<a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>(serial_comm(), panel.read(index)));</div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;      ex::start_detached(<a class="code" href="kernels_2broadcast_8h.html#a000ad410269e3ea3934ad1ef3960d4fd">scheduleRecvBcast</a>(serial_comm(), rank_root, panel.<a class="code" href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">readwrite</a>(index)));</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;      ex::start_detached(<a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(serial_comm(), rank_root, panel.<a class="code" href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">readwrite</a>(index)));</div>
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  }</div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;}</div>
 <div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
 <div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;<span class="comment"></span><span class="keyword">template</span> &lt;<span class="keyword">class </span>T, Device D, Coord axis, matrix::StoreTransposed storage,</div>
 <div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;          matrix::StoreTransposed storageT, <span class="keyword">class </span>= std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt;</div>
-<div class="line"><a name="l00108"></a><span class="lineno"><a class="line" href="broadcast__panel_8h.html#a6e56082c935ff28b0184870563b4069b">  108</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(comm::IndexT_MPI rank_root, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;axis, T, D, storage&gt;</a>&amp; panel,</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;               <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt;orthogonal(axis), T, D, storageT&gt;&amp; panelT,</div>
+<div class="line"><a name="l00108"></a><span class="lineno"><a class="line" href="broadcast__panel_8h.html#a6e56082c935ff28b0184870563b4069b">  108</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(<a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;axis, T, D, storage&gt;</a>&amp; panel,</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;               <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt;<a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axis), T, D, storageT&gt;&amp; panelT,</div>
 <div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;               <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; row_task_chain,</div>
 <div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;               <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; col_task_chain) {</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;  constexpr Coord axisT = orthogonal(axis);</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;  constexpr Coord axisT = <a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axis);</div>
 <div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160; </div>
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;  constexpr Coord coord = std::decay_t&lt;decltype(panel)&gt;::coord;</div>
 <div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;  constexpr Coord coordT = std::decay_t&lt;decltype(panelT)&gt;::coord;</div>
@@ -190,13 +190,13 @@ $(function() {
 <div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;    <span class="keywordflow">return</span>;</div>
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160; </div>
 <div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;  <span class="comment">// STEP 1</span></div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;  constexpr <span class="keyword">auto</span> comm_dir_step1 = orthogonal(axis);</div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;  constexpr <span class="keyword">auto</span> comm_dir_step1 = <a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axis);</div>
 <div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;  <span class="keyword">auto</span>&amp; chain_step1 = get_taskchain(comm_dir_step1);</div>
 <div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160; </div>
 <div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;  <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(rank_root, panel, chain_step1);</div>
 <div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160; </div>
 <div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;  <span class="comment">// STEP 2</span></div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;  constexpr <span class="keyword">auto</span> comm_dir_step2 = orthogonal(axisT);</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;  constexpr <span class="keyword">auto</span> comm_dir_step2 = <a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(axisT);</div>
 <div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;  constexpr <span class="keyword">auto</span> comm_coord_step2 = axisT;</div>
 <div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160; </div>
 <div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  <span class="keyword">auto</span>&amp; chain_step2 = get_taskchain(comm_dir_step2);</div>
@@ -221,7 +221,7 @@ $(function() {
 <div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;    }</div>
 <div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;    <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;      <span class="keywordflow">if</span> (dist.commGridSize().get(comm_coord_step2) &gt; 1)</div>
-<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        ex::start_detached(<a class="code" href="kernels_2broadcast_8h.html#a000ad410269e3ea3934ad1ef3960d4fd">scheduleRecvBcast</a>(chain_step2(), owner_diag, panelT.readwrite(indexT)));</div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        ex::start_detached(<a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(chain_step2(), owner_diag, panelT.readwrite(indexT)));</div>
 <div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;    }</div>
 <div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;  }</div>
 <div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;}</div>
@@ -230,14 +230,19 @@ $(function() {
 <div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;}</div>
 <div class="ttc" id="abroadcast__panel_8h_html_a83a59dd8a250067f25b9b4bbd041a9cf"><div class="ttname"><a href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:58</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:28</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:30</div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
+<div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
+<div class="ttc" id="aindex2d_8h_html_a9b3be798b052f32def2a280a80e2295c"><div class="ttname"><a href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">dlaf::orthogonal</a></div><div class="ttdeci">constexpr Coord orthogonal(const Coord rc)</div><div class="ttdoc">Given a Coord, returns its orthogonal.</div><div class="ttdef"><b>Definition:</b> index2d.h:30</div></div>
 <div class="ttc" id="akernels_2broadcast_8h_html"><div class="ttname"><a href="kernels_2broadcast_8h.html">broadcast.h</a></div></div>
-<div class="ttc" id="akernels_2broadcast_8h_html_a000ad410269e3ea3934ad1ef3960d4fd"><div class="ttname"><a href="kernels_2broadcast_8h.html#a000ad410269e3ea3934ad1ef3960d4fd">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div><div class="ttdef"><b>Definition:</b> broadcast.cpp:81</div></div>
-<div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div><div class="ttdef"><b>Definition:</b> broadcast.cpp:56</div></div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a3645d0cfc3caad43c37c355896a7215f"><div class="ttname"><a href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:550</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:568</div></div>
+<div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:552</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:570</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

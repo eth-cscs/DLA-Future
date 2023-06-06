@@ -91,32 +91,32 @@ $(function() {
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;whip.hpp&gt;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/blas/tile.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="assert_8h.html">dlaf/common/assert.h</a>&quot;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/assert.h&quot;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/pipeline.h&quot;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
 <div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/round_robin.h&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;dlaf/common/single_threaded_blas.h&quot;</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;dlaf/communication/communicator.h&quot;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="kernels_2broadcast_8h.html">dlaf/communication/kernels/broadcast.h</a>&quot;</span></div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="p2p_8h.html">dlaf/communication/kernels/p2p.h</a>&quot;</span></div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="p2p__allsum_8h.html">dlaf/communication/kernels/p2p_allsum.h</a>&quot;</span></div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/band_to_tridiag/api.h&quot;</span></div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/bt_band_to_tridiag/api.h&quot;</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/copy_tile.h&quot;</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/distribution.h&quot;</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/index.h&quot;</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/matrix.h&quot;</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/panel.h&quot;</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/retiled_matrix.h&quot;</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/tile.h&quot;</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&quot;</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="retiled__matrix_8h.html">dlaf/matrix/retiled_matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/policy.h&quot;</span></div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/traits.h&quot;</span></div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform.h&quot;</span></div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#include &quot;dlaf/tune.h&quot;</span></div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="tune_8h.html">dlaf/tune.h</a>&quot;</span></div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__math_8h.html">dlaf/util_math.h</a>&quot;</span></div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
@@ -129,8 +129,8 @@ $(function() {
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;matrix::Tile&lt;T, Device::CPU&gt; setupVWellFormed(<span class="keyword">const</span> SizeType b,</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;                                              <span class="keyword">const</span> matrix::Tile&lt;const T, Device::CPU&gt;&amp; tile_hh,</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;                                              matrix::Tile&lt;T, Device::CPU&gt; tile_v) {</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">using</span> lapack::lacpy;</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">using</span> lapack::laset;</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">using</span> <a class="code" href="util__lapack_8h.html#a2a62e0ec6768b42ae19efff5ea5e4331">lapack::lacpy</a>;</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">using</span> <a class="code" href="util__lapack_8h.html#a653b4d466d700c7d6d3befb51c8ca9d8">lapack::laset</a>;</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  common::internal::SingleThreadedBlasScope single;</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
@@ -148,7 +148,7 @@ $(function() {
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    <span class="keywordflow">if</span> (compact_refl_size == 0)</div>
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;      <span class="keywordflow">continue</span>;</div>
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    <a class="code" href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">lacpy</a>(blas::Uplo::General, compact_refl_size, 1, tile_hh.ptr({1, j}), tile_hh.ld(),</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;    lacpy(blas::Uplo::General, compact_refl_size, 1, tile_hh.ptr({1, j}), tile_hh.ld(),</div>
 <div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;          tile_v.ptr({1 + j, j}), tile_v.ld());</div>
 <div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  }</div>
 <div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
@@ -157,10 +157,10 @@ $(function() {
 <div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  <span class="comment">// both the upper and the lower part. Indeed due to the skewed shape, reflectors do not occupy</span></div>
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  <span class="comment">// the full tile height, and V should be fully well-formed because the next triangular</span></div>
 <div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  <span class="comment">// multiplication, i.e. `V . T`, and the gemm `V* . E`, will use V as a general matrix.</span></div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(blas::Uplo::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  laset(blas::Uplo::Upper, tile_v.size().rows(), k, T(0), T(1), tile_v.ptr({0, 0}), tile_v.ld());</div>
 <div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160; </div>
 <div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  <span class="keywordflow">if</span> (tile_v.size().rows() &gt; b)</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    <a class="code" href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">laset</a>(blas::Uplo::Lower, tile_v.size().rows() - b, k - 1, T(0), T(0), tile_v.ptr({b, 0}),</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    laset(blas::Uplo::Lower, tile_v.size().rows() - b, k - 1, T(0), T(0), tile_v.ptr({b, 0}),</div>
 <div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;          tile_v.ld());</div>
 <div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
 <div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;  <span class="keywordflow">return</span> tile_v;</div>
@@ -270,7 +270,7 @@ $(function() {
 <div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160; </div>
 <div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
 <div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_single_tile_row.html">ApplyHHToSingleTileRow</a>&lt;Backend::GPU, T&gt; {</div>
+<div class="line"><a name="l00202"></a><span class="lineno"><a class="line" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_single_tile_row_3_01_backend_1_1_g_p_u_00_01_t_01_4.html">  202</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_single_tile_row.html">ApplyHHToSingleTileRow</a>&lt;Backend::GPU, T&gt; {</div>
 <div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160;  <span class="keywordtype">void</span> operator()(cublasHandle_t handle, <span class="keyword">const</span> SizeType hhr_nb,</div>
 <div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;                  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_v,</div>
 <div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;                  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_w,</div>
@@ -306,7 +306,7 @@ $(function() {
 <div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160;  DLAF_ASSERT_HEAVY(tile_e_bottom.size().cols() == tile_w2.size().cols(), tile_e_bottom, tile_w2);</div>
 <div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160; </div>
 <div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;  <span class="keyword">auto</span> subtile_e_top =</div>
-<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;      tile_e_top.subTileReference({{j + 1, 0}, tile_e_top.size() - TileElementSize{j + 1, 0}});</div>
+<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;      tile_e_top.subTileReference({{j + 1, 0}, tile_e_top.size() - <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>{j + 1, 0}});</div>
 <div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160;  <span class="keyword">auto</span> subtile_e_bottom = tile_e_bottom.subTileReference(</div>
 <div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;      {{0, 0},</div>
 <div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;       TileElementSize{std::min(tile_e_bottom.size().rows(), j + jb), tile_e_bottom.size().cols()}});</div>
@@ -359,7 +359,7 @@ $(function() {
 <div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160; </div>
 <div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
 <div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_double_tile_row.html">ApplyHHToDoubleTileRow</a>&lt;Backend::GPU, T&gt; {</div>
+<div class="line"><a name="l00291"></a><span class="lineno"><a class="line" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_double_tile_row_3_01_backend_1_1_g_p_u_00_01_t_01_4.html">  291</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_double_tile_row.html">ApplyHHToDoubleTileRow</a>&lt;Backend::GPU, T&gt; {</div>
 <div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;  <span class="keywordtype">void</span> operator()(cublasHandle_t handle, <span class="keyword">const</span> SizeType hhr_nb,</div>
 <div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;                  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_v,</div>
 <div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;                  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile&lt;const T, Device::GPU&gt;</a>&amp; tile_w,</div>
@@ -512,7 +512,7 @@ $(function() {
 <div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;    n_ws_per_block = <a class="code" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(<span class="keyword">static_cast&lt;</span><span class="keywordtype">size_t</span><span class="keyword">&gt;</span>(std::ceil(mb / b / 2.0f)) + 1);</div>
 <div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;  }</div>
 <div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160; </div>
-<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;  comm::IndexT_MPI rankRowPartner()<span class="keyword"> const </span>{</div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;  <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rankRowPartner()<span class="keyword"> const </span>{</div>
 <div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160;    <span class="keywordflow">return</span> (rankHH.row() + 1) % dist_hh.commGridSize().rows();</div>
 <div class="line"><a name="l00458"></a><span class="lineno">  458</span>&#160;  }</div>
 <div class="line"><a name="l00459"></a><span class="lineno">  459</span>&#160; </div>
@@ -586,7 +586,7 @@ $(function() {
 <div class="line"><a name="l00527"></a><span class="lineno">  527</span>&#160; </div>
 <div class="line"><a name="l00528"></a><span class="lineno">  528</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
 <div class="line"><a name="l00529"></a><span class="lineno">  529</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00530"></a><span class="lineno">  530</span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_h_h_manager.html">HHManager</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
+<div class="line"><a name="l00530"></a><span class="lineno"><a class="line" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_h_h_manager_3_01_backend_1_1_g_p_u_00_01_device_1_1_g_p_u_00_01_t_01_4.html">  530</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_h_h_manager.html">HHManager</a>&lt;Backend::GPU, Device::GPU, T&gt; {</div>
 <div class="line"><a name="l00531"></a><span class="lineno">  531</span>&#160;  <span class="keyword">static</span> constexpr Backend B = Backend::GPU;</div>
 <div class="line"><a name="l00532"></a><span class="lineno">  532</span>&#160;  <span class="keyword">static</span> constexpr Device D = Device::GPU;</div>
 <div class="line"><a name="l00533"></a><span class="lineno">  533</span>&#160; </div>
@@ -595,7 +595,7 @@ $(function() {
 <div class="line"><a name="l00536"></a><span class="lineno">  536</span>&#160;      : b(b), t_panels_h(n_workspaces, dist_t), w_panels_h(n_workspaces, dist_w) {}</div>
 <div class="line"><a name="l00537"></a><span class="lineno">  537</span>&#160; </div>
 <div class="line"><a name="l00538"></a><span class="lineno">  538</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">class</span> SenderHH&gt;</div>
-<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;  <span class="keyword">auto</span> computeVW(<span class="keyword">const</span> SizeType hhr_nb, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> ij, <span class="keyword">const</span> TileAccessHelper&amp; helper,</div>
+<div class="line"><a name="l00539"></a><span class="lineno">  539</span>&#160;  <span class="keyword">auto</span> computeVW(<span class="keyword">const</span> SizeType hhr_nb, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> ij, <span class="keyword">const</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_tile_access_helper.html">TileAccessHelper</a>&amp; helper,</div>
 <div class="line"><a name="l00540"></a><span class="lineno">  540</span>&#160;                 SenderHH&amp;&amp; tile_hh, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, D&gt;</a>&amp; mat_v,</div>
 <div class="line"><a name="l00541"></a><span class="lineno">  541</span>&#160;                 <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, D&gt;</a>&amp; mat_t, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, D&gt;</a>&amp; mat_w) {</div>
 <div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
@@ -631,7 +631,7 @@ $(function() {
 <div class="line"><a name="l00572"></a><span class="lineno">  572</span>&#160;            <span class="keyword">const</span> SizeType ib = std::min(jb + b - 1, tile_v_h.size().rows() - j);</div>
 <div class="line"><a name="l00573"></a><span class="lineno">  573</span>&#160;            <span class="keyword">auto</span> subtile_t = tile_t.subTileReference({{j, j}, {jb, jb}});</div>
 <div class="line"><a name="l00574"></a><span class="lineno">  574</span>&#160;            <span class="keyword">auto</span> subtile_v = tile_v.subTileReference({{j, j}, {ib, jb}});</div>
-<div class="line"><a name="l00575"></a><span class="lineno">  575</span>&#160;            <span class="keyword">auto</span> subtile_w = tile_w.<a class="code" href="classdlaf_1_1matrix_1_1_tile.html#a670161e49f6a18b5979e9938e4e7e867">subTileReference</a>({{j, j}, {ib, jb}});</div>
+<div class="line"><a name="l00575"></a><span class="lineno">  575</span>&#160;            <span class="keyword">auto</span> subtile_w = tile_w.subTileReference({{j, j}, {ib, jb}});</div>
 <div class="line"><a name="l00576"></a><span class="lineno">  576</span>&#160; </div>
 <div class="line"><a name="l00577"></a><span class="lineno">  577</span>&#160;            dlaf::tile::internal::trmm3(handle, Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,</div>
 <div class="line"><a name="l00578"></a><span class="lineno">  578</span>&#160;                                        T(1), subtile_t, subtile_v, subtile_w);</div>
@@ -652,21 +652,21 @@ $(function() {
 <div class="line"><a name="l00593"></a><span class="lineno">  593</span>&#160; </div>
 <div class="line"><a name="l00594"></a><span class="lineno">  594</span>&#160;<span class="keyword">protected</span>:</div>
 <div class="line"><a name="l00595"></a><span class="lineno">  595</span>&#160;  <span class="keyword">const</span> SizeType b;</div>
-<div class="line"><a name="l00596"></a><span class="lineno">  596</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;&gt; t_panels_h;</div>
-<div class="line"><a name="l00597"></a><span class="lineno">  597</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;&gt; w_panels_h;</div>
+<div class="line"><a name="l00596"></a><span class="lineno">  596</span>&#160;  <a class="code" href="structdlaf_1_1common_1_1_round_robin.html">common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;</a>&gt; t_panels_h;</div>
+<div class="line"><a name="l00597"></a><span class="lineno">  597</span>&#160;  <a class="code" href="structdlaf_1_1common_1_1_round_robin.html">common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, Device::CPU&gt;</a>&gt; w_panels_h;</div>
 <div class="line"><a name="l00598"></a><span class="lineno">  598</span>&#160;};</div>
 <div class="line"><a name="l00599"></a><span class="lineno">  599</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00600"></a><span class="lineno">  600</span>&#160;}</div>
 <div class="line"><a name="l00601"></a><span class="lineno">  601</span>&#160; </div>
 <div class="line"><a name="l00602"></a><span class="lineno">  602</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00603"></a><span class="lineno">  603</span>&#160;<span class="keywordtype">void</span> BackTransformationT2B&lt;B, D, T&gt;::call(<span class="keyword">const</span> SizeType band_size, Matrix&lt;T, D&gt;&amp; mat_e,</div>
+<div class="line"><a name="l00603"></a><span class="lineno">  603</span>&#160;<span class="keywordtype">void</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_t2_b.html">BackTransformationT2B&lt;B, D, T&gt;::call</a>(<span class="keyword">const</span> SizeType band_size, Matrix&lt;T, D&gt;&amp; mat_e,</div>
 <div class="line"><a name="l00604"></a><span class="lineno">  604</span>&#160;                                          Matrix&lt;const T, Device::CPU&gt;&amp; mat_hh) {</div>
 <div class="line"><a name="l00605"></a><span class="lineno">  605</span>&#160;  <span class="keyword">using</span> pika::execution::thread_priority;</div>
 <div class="line"><a name="l00606"></a><span class="lineno">  606</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
 <div class="line"><a name="l00607"></a><span class="lineno">  607</span>&#160; </div>
 <div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;  <span class="keyword">using</span> common::iterate_range2d;</div>
-<div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;  <span class="keyword">using</span> common::RoundRobin;</div>
-<div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160;  <span class="keyword">using</span> matrix::Panel;</div>
+<div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;  <span class="keyword">using</span> <a class="code" href="structdlaf_1_1common_1_1_round_robin.html">common::RoundRobin</a>;</div>
+<div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160;  <span class="keyword">using</span> <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>;</div>
 <div class="line"><a name="l00611"></a><span class="lineno">  611</span>&#160;  <span class="keyword">using namespace </span>bt_tridiag;</div>
 <div class="line"><a name="l00612"></a><span class="lineno">  612</span>&#160; </div>
 <div class="line"><a name="l00613"></a><span class="lineno">  613</span>&#160;  <span class="keywordflow">if</span> (mat_hh.size().isEmpty() || mat_e.size().isEmpty())</div>
@@ -680,8 +680,8 @@ $(function() {
 <div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;  <span class="keyword">const</span> SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;</div>
 <div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;  <span class="keyword">const</span> SizeType nsweeps = nrSweeps&lt;T&gt;(mat_hh.size().cols());</div>
 <div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160; </div>
-<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;  <span class="keyword">const</span> LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);</div>
-<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;  matrix::RetiledMatrix&lt;T, D&gt; mat_e_rt(mat_e, tiles_per_block);</div>
+<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> tiles_per_block(mat_e.blockSize().rows() / b, 1);</div>
+<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">matrix::RetiledMatrix&lt;T, D&gt;</a> mat_e_rt(mat_e, tiles_per_block);</div>
 <div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160; </div>
 <div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span>&amp; dist_hh = mat_hh.distribution();</div>
 <div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span>&amp; dist_e_rt = mat_e_rt.distribution();</div>
@@ -699,11 +699,11 @@ $(function() {
 <div class="line"><a name="l00640"></a><span class="lineno">  640</span>&#160;  <span class="comment">//               0 b c d</span></div>
 <div class="line"><a name="l00641"></a><span class="lineno">  641</span>&#160;  <span class="comment">//               0 0 c d</span></div>
 <div class="line"><a name="l00642"></a><span class="lineno">  642</span>&#160;  <span class="comment">//               0 0 0 d</span></div>
-<div class="line"><a name="l00643"></a><span class="lineno">  643</span>&#160;  <span class="keyword">const</span> TileElementSize w_tile_sz(2 * b - 1, b);</div>
+<div class="line"><a name="l00643"></a><span class="lineno">  643</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> w_tile_sz(2 * b - 1, b);</div>
 <div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160; </div>
 <div class="line"><a name="l00645"></a><span class="lineno">  645</span>&#160;  <span class="keyword">const</span> SizeType dist_w_rows = mat_e_rt.nrTiles().rows() * w_tile_sz.rows();</div>
-<div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160;  <span class="keyword">const</span> matrix::Distribution dist_w({dist_w_rows, b}, w_tile_sz);</div>
-<div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160;  <span class="keyword">const</span> matrix::Distribution dist_t({mat_hh.size().rows(), b}, {b, b});</div>
+<div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> dist_w({dist_w_rows, b}, w_tile_sz);</div>
+<div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> dist_t({mat_hh.size().rows(), b}, {b, b});</div>
 <div class="line"><a name="l00648"></a><span class="lineno">  648</span>&#160;  <span class="keyword">const</span> matrix::Distribution dist_w2({b, mat_e_rt.size().cols()}, {b, mat_e_rt.blockSize().cols()});</div>
 <div class="line"><a name="l00649"></a><span class="lineno">  649</span>&#160; </div>
 <div class="line"><a name="l00650"></a><span class="lineno">  650</span>&#160;  constexpr std::size_t n_workspaces = 2;</div>
@@ -750,7 +750,7 @@ $(function() {
 <div class="line"><a name="l00691"></a><span class="lineno">  691</span>&#160; </div>
 <div class="line"><a name="l00692"></a><span class="lineno">  692</span>&#160;      <span class="keyword">auto</span> [tile_v_unshared, tile_w_unshared] =</div>
 <div class="line"><a name="l00693"></a><span class="lineno">  693</span>&#160;          helperBackend.computeVW(group_size, ij, helper,</div>
-<div class="line"><a name="l00694"></a><span class="lineno">  694</span>&#160;                                  splitTile(mat_hh.read(ij), helper.specHHCompact()), mat_v, mat_t,</div>
+<div class="line"><a name="l00694"></a><span class="lineno">  694</span>&#160;                                  <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij), helper.specHHCompact()), mat_v, mat_t,</div>
 <div class="line"><a name="l00695"></a><span class="lineno">  695</span>&#160;                                  mat_w);</div>
 <div class="line"><a name="l00696"></a><span class="lineno">  696</span>&#160;      <span class="keyword">auto</span> tile_v = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_v_unshared)));</div>
 <div class="line"><a name="l00697"></a><span class="lineno">  697</span>&#160;      <span class="keyword">auto</span> tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));</div>
@@ -947,11 +947,11 @@ $(function() {
 <div class="line"><a name="l00888"></a><span class="lineno">  888</span>&#160;        <span class="keywordflow">if</span> (rank.col() == rankHH.col()) {</div>
 <div class="line"><a name="l00889"></a><span class="lineno">  889</span>&#160;          ex::start_detached(</div>
 <div class="line"><a name="l00890"></a><span class="lineno">  890</span>&#160;              comm::scheduleSendBcast(mpi_chain_row(),</div>
-<div class="line"><a name="l00891"></a><span class="lineno">  891</span>&#160;                                      splitTile(mat_hh.read(ij_g), helper.specHHCompact())));</div>
+<div class="line"><a name="l00891"></a><span class="lineno">  891</span>&#160;                                      <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij_g), helper.specHHCompact())));</div>
 <div class="line"><a name="l00892"></a><span class="lineno">  892</span>&#160;        }</div>
 <div class="line"><a name="l00893"></a><span class="lineno">  893</span>&#160;        <span class="keywordflow">else</span> {</div>
 <div class="line"><a name="l00894"></a><span class="lineno">  894</span>&#160;          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),</div>
-<div class="line"><a name="l00895"></a><span class="lineno">  895</span>&#160;                                                     splitTile(panel_hh.readwrite(ij_hh_panel),</div>
+<div class="line"><a name="l00895"></a><span class="lineno">  895</span>&#160;                                                     <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.readwrite(ij_hh_panel),</div>
 <div class="line"><a name="l00896"></a><span class="lineno">  896</span>&#160;                                                               helper.specHHCompact(<span class="keyword">true</span>))));</div>
 <div class="line"><a name="l00897"></a><span class="lineno">  897</span>&#160;        }</div>
 <div class="line"><a name="l00898"></a><span class="lineno">  898</span>&#160;      }</div>
@@ -968,8 +968,8 @@ $(function() {
 <div class="line"><a name="l00909"></a><span class="lineno">  909</span>&#160; </div>
 <div class="line"><a name="l00910"></a><span class="lineno">  910</span>&#160;        <span class="keywordflow">if</span> (rank.row() == rank_src) {</div>
 <div class="line"><a name="l00911"></a><span class="lineno">  911</span>&#160;          <span class="keyword">auto</span> tile_hh = rank.col() == rankHH.col()</div>
-<div class="line"><a name="l00912"></a><span class="lineno">  912</span>&#160;                             ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())</div>
-<div class="line"><a name="l00913"></a><span class="lineno">  913</span>&#160;                             : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));</div>
+<div class="line"><a name="l00912"></a><span class="lineno">  912</span>&#160;                             ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij_g), helper.specHHCompact())</div>
+<div class="line"><a name="l00913"></a><span class="lineno">  913</span>&#160;                             : <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));</div>
 <div class="line"><a name="l00914"></a><span class="lineno">  914</span>&#160;          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, std::move(tile_hh)));</div>
 <div class="line"><a name="l00915"></a><span class="lineno">  915</span>&#160;        }</div>
 <div class="line"><a name="l00916"></a><span class="lineno">  916</span>&#160;        <span class="keywordflow">else</span> <span class="keywordflow">if</span> (rank.row() == rank_dst) {</div>
@@ -984,8 +984,8 @@ $(function() {
 <div class="line"><a name="l00925"></a><span class="lineno">  925</span>&#160; </div>
 <div class="line"><a name="l00926"></a><span class="lineno">  926</span>&#160;      <span class="comment">// COMPUTE V and W from HH and T</span></div>
 <div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;      <span class="keyword">auto</span> tile_hh = (rankHH == rank)</div>
-<div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;                         ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())</div>
-<div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;                         : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(<span class="keyword">true</span>));</div>
+<div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;                         ? <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_hh.read(ij_g), helper.specHHCompact())</div>
+<div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;                         : <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(panel_hh.read(ij_hh_panel), helper.specHHCompact(<span class="keyword">true</span>));</div>
 <div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;      <span class="keyword">auto</span> [tile_v_unshared, tile_w_unshared] =</div>
 <div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;          helperBackend.computeVW(current_group_size, indexing_helper.wsIndexHH(), helper,</div>
 <div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;                                  std::move(tile_hh), mat_v, mat_t, mat_w);</div>
@@ -1004,7 +1004,7 @@ $(function() {
 <div class="line"><a name="l00945"></a><span class="lineno">  945</span>&#160;        <span class="keywordflow">if</span> (!helper.affectsMultipleTiles()) {</div>
 <div class="line"><a name="l00946"></a><span class="lineno">  946</span>&#160;          ex::start_detached(</div>
 <div class="line"><a name="l00947"></a><span class="lineno">  947</span>&#160;              ex::when_all(ex::just(current_group_size), tile_v, tile_w,</div>
-<div class="line"><a name="l00948"></a><span class="lineno">  948</span>&#160;                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),</div>
+<div class="line"><a name="l00948"></a><span class="lineno">  948</span>&#160;                           <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.readwrite(idx_w2), helper.specW2(nb)),</div>
 <div class="line"><a name="l00949"></a><span class="lineno">  949</span>&#160;                           mat_e_rt.readwrite(idx_e_top)) |</div>
 <div class="line"><a name="l00950"></a><span class="lineno">  950</span>&#160;              dlaf::internal::transform&lt;</div>
 <div class="line"><a name="l00951"></a><span class="lineno">  951</span>&#160;                  dlaf::internal::TransformDispatchType::Blas&gt;(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>(</div>
@@ -1019,7 +1019,7 @@ $(function() {
 <div class="line"><a name="l00960"></a><span class="lineno">  960</span>&#160;          <span class="keywordflow">if</span> (!helper.affectsMultipleRanks()) {</div>
 <div class="line"><a name="l00961"></a><span class="lineno">  961</span>&#160;            ex::start_detached(</div>
 <div class="line"><a name="l00962"></a><span class="lineno">  962</span>&#160;                ex::when_all(ex::just(current_group_size), tile_v, tile_w,</div>
-<div class="line"><a name="l00963"></a><span class="lineno">  963</span>&#160;                             splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),</div>
+<div class="line"><a name="l00963"></a><span class="lineno">  963</span>&#160;                             <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.readwrite(idx_w2), helper.specW2(nb)),</div>
 <div class="line"><a name="l00964"></a><span class="lineno">  964</span>&#160;                             mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |</div>
 <div class="line"><a name="l00965"></a><span class="lineno">  965</span>&#160;                dlaf::internal::transform&lt;</div>
 <div class="line"><a name="l00966"></a><span class="lineno">  966</span>&#160;                    dlaf::internal::TransformDispatchType::Blas&gt;(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>(</div>
@@ -1041,29 +1041,29 @@ $(function() {
 <div class="line"><a name="l00982"></a><span class="lineno">  982</span>&#160;            <span class="keyword">const</span> matrix::SubTileSpec spec_e{{(is_top_rank ? 1 : 0), 0},</div>
 <div class="line"><a name="l00983"></a><span class="lineno">  983</span>&#160;                                             {sz_e.rows() - (is_top_rank ? 1 : 0), sz_e.cols()}};</div>
 <div class="line"><a name="l00984"></a><span class="lineno">  984</span>&#160; </div>
-<div class="line"><a name="l00985"></a><span class="lineno">  985</span>&#160;            <span class="keyword">auto</span> subtile_v = splitTile(tile_v, spec_vw);</div>
-<div class="line"><a name="l00986"></a><span class="lineno">  986</span>&#160;            <span class="keyword">auto</span> subtile_w = splitTile(tile_w, spec_vw);</div>
-<div class="line"><a name="l00987"></a><span class="lineno">  987</span>&#160;            <span class="keyword">auto</span> subtile_e_ro = splitTile(mat_e_rt.read(idx_e), spec_e);</div>
+<div class="line"><a name="l00985"></a><span class="lineno">  985</span>&#160;            <span class="keyword">auto</span> subtile_v = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(tile_v, spec_vw);</div>
+<div class="line"><a name="l00986"></a><span class="lineno">  986</span>&#160;            <span class="keyword">auto</span> subtile_w = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(tile_w, spec_vw);</div>
+<div class="line"><a name="l00987"></a><span class="lineno">  987</span>&#160;            <span class="keyword">auto</span> subtile_e_ro = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_e_rt.read(idx_e), spec_e);</div>
 <div class="line"><a name="l00988"></a><span class="lineno">  988</span>&#160; </div>
 <div class="line"><a name="l00989"></a><span class="lineno">  989</span>&#160;            <span class="comment">// W2 = V* . E</span></div>
 <div class="line"><a name="l00990"></a><span class="lineno">  990</span>&#160;            ex::start_detached(</div>
 <div class="line"><a name="l00991"></a><span class="lineno">  991</span>&#160;                dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),</div>
 <div class="line"><a name="l00992"></a><span class="lineno">  992</span>&#160;                                            std::move(subtile_v), std::move(subtile_e_ro), T(0),</div>
-<div class="line"><a name="l00993"></a><span class="lineno">  993</span>&#160;                                            splitTile(mat_w2tmp.readwrite(idx_w2), helper.specW2(nb))) |</div>
+<div class="line"><a name="l00993"></a><span class="lineno">  993</span>&#160;                                            <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2tmp.readwrite(idx_w2), helper.specW2(nb))) |</div>
 <div class="line"><a name="l00994"></a><span class="lineno">  994</span>&#160;                dlaf::tile::gemm(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>(thread_priority::normal)));</div>
 <div class="line"><a name="l00995"></a><span class="lineno">  995</span>&#160; </div>
 <div class="line"><a name="l00996"></a><span class="lineno">  996</span>&#160;            <span class="comment">// Compute final W2 by adding the contribution from the partner rank</span></div>
 <div class="line"><a name="l00997"></a><span class="lineno">  997</span>&#160;            ex::start_detached(  <span class="comment">//</span></div>
 <div class="line"><a name="l00998"></a><span class="lineno">  998</span>&#160;                comm::scheduleAllSumP2P&lt;B&gt;(mpi_col_comm, rank_partner, tag,</div>
-<div class="line"><a name="l00999"></a><span class="lineno">  999</span>&#160;                                           splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),</div>
-<div class="line"><a name="l01000"></a><span class="lineno"> 1000</span>&#160;                                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));</div>
+<div class="line"><a name="l00999"></a><span class="lineno">  999</span>&#160;                                           <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2tmp.read(idx_w2), helper.specW2(nb)),</div>
+<div class="line"><a name="l01000"></a><span class="lineno"> 1000</span>&#160;                                           <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.readwrite(idx_w2), helper.specW2(nb))));</div>
 <div class="line"><a name="l01001"></a><span class="lineno"> 1001</span>&#160; </div>
-<div class="line"><a name="l01002"></a><span class="lineno"> 1002</span>&#160;            <span class="keyword">auto</span> subtile_e = splitTile(mat_e_rt.readwrite(idx_e), spec_e);</div>
+<div class="line"><a name="l01002"></a><span class="lineno"> 1002</span>&#160;            <span class="keyword">auto</span> subtile_e = <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_e_rt.readwrite(idx_e), spec_e);</div>
 <div class="line"><a name="l01003"></a><span class="lineno"> 1003</span>&#160;            <span class="comment">// E -= W . W2</span></div>
 <div class="line"><a name="l01004"></a><span class="lineno"> 1004</span>&#160;            ex::start_detached(  <span class="comment">//</span></div>
 <div class="line"><a name="l01005"></a><span class="lineno"> 1005</span>&#160;                dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, T(-1),</div>
 <div class="line"><a name="l01006"></a><span class="lineno"> 1006</span>&#160;                                            std::move(subtile_w),</div>
-<div class="line"><a name="l01007"></a><span class="lineno"> 1007</span>&#160;                                            splitTile(mat_w2.read(idx_w2), helper.specW2(nb)), T(1),</div>
+<div class="line"><a name="l01007"></a><span class="lineno"> 1007</span>&#160;                                            <a class="code" href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">splitTile</a>(mat_w2.read(idx_w2), helper.specW2(nb)), T(1),</div>
 <div class="line"><a name="l01008"></a><span class="lineno"> 1008</span>&#160;                                            std::move(subtile_e)) |</div>
 <div class="line"><a name="l01009"></a><span class="lineno"> 1009</span>&#160;                dlaf::tile::gemm(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;B&gt;</a>(thread_priority::normal)));</div>
 <div class="line"><a name="l01010"></a><span class="lineno"> 1010</span>&#160;          }</div>
@@ -1080,40 +1080,57 @@ $(function() {
 <div class="line"><a name="l01021"></a><span class="lineno"> 1021</span>&#160;  }</div>
 <div class="line"><a name="l01022"></a><span class="lineno"> 1022</span>&#160;}</div>
 <div class="line"><a name="l01023"></a><span class="lineno"> 1023</span>&#160;}</div>
-<div class="ttc" id="aassert_8h_html"><div class="ttname"><a href="assert_8h.html">assert.h</a></div></div>
+<div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::GlobalElement_TAG &gt;</a></div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html_afe5870841ddc785db5d4c81cc22aeb93"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html#afe5870841ddc785db5d4c81cc22aeb93">dlaf::common::Size2D::isEmpty</a></div><div class="ttdeci">bool isEmpty() const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:159</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:18</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:20</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:25</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a6e8c79e3f901845182c4e7e32de5eb34"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a6e8c79e3f901845182c4e7e32de5eb34">dlaf::matrix::Distribution::localNrTiles</a></div><div class="ttdeci">const LocalTileSize &amp; localNrTiles() const noexcept</div><div class="ttdoc">Returns the number of tiles stored locally (2D size).</div><div class="ttdef"><b>Definition:</b> distribution.h:100</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a71ad776a93750b9c6d1ebfa2d36e28db"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a71ad776a93750b9c6d1ebfa2d36e28db">dlaf::matrix::Distribution::tileElementIndex</a></div><div class="ttdeci">TileElementIndex tileElementIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:187</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_abdc93bce29920c2dff64235391cf3811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#abdc93bce29920c2dff64235391cf3811">dlaf::matrix::Distribution::localTileFromGlobalTile</a></div><div class="ttdeci">SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:275</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_acc85a62e6350bcac93a8e442d4603516"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#acc85a62e6350bcac93a8e442d4603516">dlaf::matrix::Distribution::nrTiles</a></div><div class="ttdeci">const GlobalTileSize &amp; nrTiles() const noexcept</div><div class="ttdoc">Returns the number of tiles of the global matrix (2D size).</div><div class="ttdef"><b>Definition:</b> distribution.h:95</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae3f7cda513d213773cb4d8a0ba22b758"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae3f7cda513d213773cb4d8a0ba22b758">dlaf::matrix::Distribution::rankGlobalTile</a></div><div class="ttdeci">comm::Index2D rankGlobalTile(const GlobalTileIndex &amp;global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:163</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae63d662d123b38f1150b553b2cdb259d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae63d662d123b38f1150b553b2cdb259d">dlaf::matrix::Distribution::globalTileFromGlobalElement</a></div><div class="ttdeci">SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:244</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:327</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html_a670161e49f6a18b5979e9938e4e7e867"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html#a670161e49f6a18b5979e9938e4e7e867">dlaf::matrix::Tile::subTileReference</a></div><div class="ttdeci">Tile subTileReference(const SubTileSpec &amp;spec) const noexcept</div><div class="ttdef"><b>Definition:</b> tile.h:390</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:27</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a6e8c79e3f901845182c4e7e32de5eb34"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a6e8c79e3f901845182c4e7e32de5eb34">dlaf::matrix::Distribution::localNrTiles</a></div><div class="ttdeci">const LocalTileSize &amp; localNrTiles() const noexcept</div><div class="ttdoc">Returns the number of tiles stored locally (2D size).</div><div class="ttdef"><b>Definition:</b> distribution.h:102</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_a71ad776a93750b9c6d1ebfa2d36e28db"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#a71ad776a93750b9c6d1ebfa2d36e28db">dlaf::matrix::Distribution::tileElementIndex</a></div><div class="ttdeci">TileElementIndex tileElementIndex(const GlobalElementIndex &amp;global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:189</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_abdc93bce29920c2dff64235391cf3811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#abdc93bce29920c2dff64235391cf3811">dlaf::matrix::Distribution::localTileFromGlobalTile</a></div><div class="ttdeci">SizeType localTileFromGlobalTile(SizeType global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:277</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_acc85a62e6350bcac93a8e442d4603516"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#acc85a62e6350bcac93a8e442d4603516">dlaf::matrix::Distribution::nrTiles</a></div><div class="ttdeci">const GlobalTileSize &amp; nrTiles() const noexcept</div><div class="ttdoc">Returns the number of tiles of the global matrix (2D size).</div><div class="ttdef"><b>Definition:</b> distribution.h:97</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae3f7cda513d213773cb4d8a0ba22b758"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae3f7cda513d213773cb4d8a0ba22b758">dlaf::matrix::Distribution::rankGlobalTile</a></div><div class="ttdeci">comm::Index2D rankGlobalTile(const GlobalTileIndex &amp;global_tile) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:165</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html_ae63d662d123b38f1150b553b2cdb259d"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html#ae63d662d123b38f1150b553b2cdb259d">dlaf::matrix::Distribution::globalTileFromGlobalElement</a></div><div class="ttdeci">SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept</div><div class="ttdef"><b>Definition:</b> distribution.h:246</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html">dlaf::matrix::RetiledMatrix</a></div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:37</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
+<div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
+<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:22</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
+<div class="ttc" id="adistribution_8h_html"><div class="ttname"><a href="distribution_8h.html">distribution.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
+<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
 <div class="ttc" id="akernels_2broadcast_8h_html"><div class="ttname"><a href="kernels_2broadcast_8h.html">broadcast.h</a></div></div>
-<div class="ttc" id="alapack_2tile_8h_html_a19439efac55cc846b684ed2c6f78eb33"><div class="ttname"><a href="lapack_2tile_8h.html#a19439efac55cc846b684ed2c6f78eb33">dlaf::tile::laset</a></div><div class="ttdeci">void laset(const dlaf::internal::Policy&lt; B &gt; &amp;p, const blas::Uplo uplo, T alpha, T beta, const Tile&lt; T, D &gt; &amp;tile)</div></div>
-<div class="ttc" id="alapack_2tile_8h_html_adba78fac5535c410d8bd2e6c53ff8c7d"><div class="ttname"><a href="lapack_2tile_8h.html#adba78fac5535c410d8bd2e6c53ff8c7d">dlaf::tile::lacpy</a></div><div class="ttdeci">void lacpy(const Tile&lt; const T, Device::CPU &gt; &amp;a, const Tile&lt; T, Device::CPU &gt; &amp;b)</div><div class="ttdef"><b>Definition:</b> tile.h:68</div></div>
+<div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="amatrix_2tile_8h_html_ae46de76ccc35985387f6820b1db9fb51"><div class="ttname"><a href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">dlaf::matrix::splitTile</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; splitTile(ReadOnlyTileSender&lt; T, D &gt; tile, const SubTileSpec &amp;spec)</div><div class="ttdef"><b>Definition:</b> tile.h:507</div></div>
+<div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="ap2p_8h_html"><div class="ttname"><a href="p2p_8h.html">p2p.h</a></div></div>
 <div class="ttc" id="ap2p__allsum_8h_html"><div class="ttname"><a href="p2p__allsum_8h.html">p2p_allsum.h</a></div></div>
+<div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
+<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>
+<div class="ttc" id="aretiled__matrix_8h_html"><div class="ttname"><a href="retiled__matrix_8h.html">retiled_matrix.h</a></div></div>
+<div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
+<div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1_round_robin_html"><div class="ttname"><a href="structdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a></div><div class="ttdef"><b>Definition:</b> round_robin.h:20</div></div>
+<div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_t2_b_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_t2_b.html">dlaf::eigensolver::internal::BackTransformationT2B</a></div><div class="ttdef"><b>Definition:</b> api.h:20</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_double_tile_row_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_double_tile_row.html">dlaf::eigensolver::internal::bt_tridiag::ApplyHHToDoubleTileRow</a></div><div class="ttdef"><b>Definition:</b> impl.h:259</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_single_tile_row_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_apply_h_h_to_single_tile_row.html">dlaf::eigensolver::internal::bt_tridiag::ApplyHHToSingleTileRow</a></div><div class="ttdef"><b>Definition:</b> impl.h:174</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_dist_indexing_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_dist_indexing.html">dlaf::eigensolver::internal::bt_tridiag::DistIndexing</a></div><div class="ttdef"><b>Definition:</b> impl.h:446</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_h_h_manager_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_h_h_manager.html">dlaf::eigensolver::internal::bt_tridiag::HHManager</a></div><div class="ttdef"><b>Definition:</b> impl.h:501</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_tile_access_helper_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1bt__tridiag_1_1_tile_access_helper.html">dlaf::eigensolver::internal::bt_tridiag::TileAccessHelper</a></div><div class="ttdef"><b>Definition:</b> impl.h:322</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:550</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:568</div></div>
-<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_tile_spec_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">dlaf::matrix::SubTileSpec</a></div><div class="ttdoc">Contains the information to create a subtile.</div><div class="ttdef"><b>Definition:</b> tile.h:107</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:552</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html_aac41b4dfa833e4a24839fe1d470b835a"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">dlaf::matrix::Panel::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(LocalTileIndex index)</div><div class="ttdef"><b>Definition:</b> panel.h:570</div></div>
+<div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_tile_spec_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">dlaf::matrix::SubTileSpec</a></div><div class="ttdoc">Contains the information to create a subtile.</div><div class="ttdef"><b>Definition:</b> tile.h:109</div></div>
+<div class="ttc" id="atune_8h_html"><div class="ttname"><a href="tune_8h.html">tune.h</a></div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_a25d16ff6621f011d9a98be3d9ebf29f1"><div class="ttname"><a href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">dlaf::to_sizet</a></div><div class="ttdeci">auto to_sizet(const T signed_value)</div><div class="ttdef"><b>Definition:</b> types.h:265</div></div>
 <div class="ttc" id="atypes_8h_html_ab1f0edc8e1281293c9c1325cb9d4bec9"><div class="ttname"><a href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">dlaf::to_SizeType</a></div><div class="ttdeci">auto to_SizeType(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:274</div></div>
 <div class="ttc" id="atypes_8h_html_af90e7fd5acadf5987b7199b0bd44deea"><div class="ttname"><a href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">dlaf::to_int</a></div><div class="ttdeci">auto to_int(const T unsigned_value)</div><div class="ttdef"><b>Definition:</b> types.h:247</div></div>
+<div class="ttc" id="autil__lapack_8h_html_a2a62e0ec6768b42ae19efff5ea5e4331"><div class="ttname"><a href="util__lapack_8h.html#a2a62e0ec6768b42ae19efff5ea5e4331">lapack::lacpy</a></div><div class="ttdeci">void lacpy(blas::Uplo uplo, int64_t m, int64_t n, const T *a, int64_t lda, T *b, int64_t ldb)</div><div class="ttdoc">Overload of lacpy with blas::Uplo instead of lapack::MatrixType.</div><div class="ttdef"><b>Definition:</b> util_lapack.h:36</div></div>
+<div class="ttc" id="autil__lapack_8h_html_a653b4d466d700c7d6d3befb51c8ca9d8"><div class="ttname"><a href="util__lapack_8h.html#a653b4d466d700c7d6d3befb51c8ca9d8">lapack::laset</a></div><div class="ttdeci">void laset(blas::Uplo uplo, int64_t m, int64_t n, T alpha, T beta, T *a, int64_t lda)</div><div class="ttdoc">Overload of laset with blas::Uplo instead of lapack::MatrixType.</div><div class="ttdef"><b>Definition:</b> util_lapack.h:42</div></div>
 <div class="ttc" id="autil__math_8h_html"><div class="ttname"><a href="util__math_8h.html">util_math.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

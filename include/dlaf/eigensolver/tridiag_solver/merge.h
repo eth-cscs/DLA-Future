@@ -966,11 +966,13 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
 template <class T, class CommSender, class KSender, class RhoSender>
 void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dist_evecs,
                            const SizeType i_begin, const SizeType i_end,
-                           const LocalTileIndex idx_loc_begin, const LocalTileSize sz_loc_tiles,
+                           const LocalTileIndex ij_begin_lc, const LocalTileSize sz_loc_tiles,
                            KSender&& k, RhoSender&& rho, Matrix<const T, Device::CPU>& d,
-                           Matrix<const T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
-                           Matrix<T, Device::CPU>& delta, Matrix<SizeType, Device::CPU>& i2,
-                           Matrix<T, Device::CPU>& evecs) {
+                           Matrix<T, Device::CPU>& z, Matrix<T, Device::CPU>& evals,
+                           Matrix<T, Device::CPU>& delta, Matrix<const SizeType, Device::CPU>& i2,
+                           Matrix<T, Device::CPU>& evecs,
+                           // TODO temporary
+                           Matrix<T, Device::CPU>& e0) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -991,79 +993,85 @@ void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dis
       ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)),
                    std::forward<CommSender>(row_comm), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
-                   ex::when_all_vector(tc.read(z)), ex::when_all_vector(tc.readwrite(evals)),
-                   ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.readwrite(i2)),
-                   ex::when_all_vector(tc.readwrite(evecs))) |
+                   ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
+                   ex::when_all_vector(tc.readwrite(delta)), ex::when_all_vector(tc.read(i2)),
+                   ex::when_all_vector(tc.readwrite(evecs)),
+                   ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
+                   // TODO temporary
+                   ex::when_all_vector(tc.readwrite(e0))) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [nthreads, n, dist_evecs, i_begin, i_end, idx_loc_begin, sz_loc_tiles,
+      ex::bulk(nthreads, [nthreads, n, dist_evecs, i_begin, i_end, ij_begin_lc, sz_loc_tiles,
                           dist](const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
                                 const auto& k, const auto& rho, const auto& d_tiles_futs, auto& z_tiles,
                                 const auto& eval_tiles, const auto& delta_tile_arr,
-                                const auto& i2_tile_arr, const auto& evec_tiles) {
+                                const auto& i2_tile_arr, const auto& evec_tiles, auto& ws_vecs,
+                                // TODO temporary
+                                auto& e0) {
         const auto batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
         const auto begin = to_SizeType(thread_idx * batch_size);
         const auto end = std::min(to_SizeType((thread_idx + 1) * batch_size), sz_loc_tiles.cols());
 
+        // STEP 0: Initialize workspaces (single-thread)
+        const SizeType m_el_lc = [=]() {
+          const auto i_loc_being = ij_begin_lc.row();
+          const auto i_loc_end = ij_begin_lc.row() + sz_loc_tiles.rows();
+          return dist.localElementDistanceFromLocalTile<Coord::Row>(i_loc_being, i_loc_end);
+        }();
+
+        // Note: nthreads + 1 to get additional workspace for reduction
+        if (thread_idx == 0) {
+          ws_vecs.reserve(nthreads + 1);
+          for (std::size_t i = 0; i < nthreads + 1; ++i)
+            ws_vecs.emplace_back(m_el_lc);
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        const T* d_ptr = d_tiles_futs[0].get().ptr();
+        const T* z_ptr = z_tiles[0].ptr();
+
         // STEP 1a: LAED4 (multi-thread)
         {
           common::internal::SingleThreadedBlasScope single;
 
-          const T* d_ptr = d_tiles_futs[0].get().ptr();
-          const T* z_ptr = z_tiles[0].get().ptr();
           T* eval_ptr = eval_tiles[0].ptr();
           T* delta_ptr = delta_tile_arr[0].ptr();
 
-          // Iterate over the columns of the local submatrix tile grid
-          for (SizeType j_loc_subm_tile = begin; j_loc_subm_tile < end; ++j_loc_subm_tile) {
-            // The tile column in the local matrix tile grid
-            const SizeType j_loc_tile = idx_loc_begin.col() + to_SizeType(j_loc_subm_tile);
-            // The tile column in the global matrix tile grid
-            const SizeType j_gl_tile = dist.globalTileFromLocalTile<Coord::Col>(j_loc_tile);
-            // The element distance between the current tile column and the initial tile column in the
-            // global matrix tile grid
-            const SizeType j_gl_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j_gl_tile);
+          for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
+            const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
+            const SizeType j = dist.globalTileFromLocalTile<Coord::Col>(j_lc);
+            const SizeType n_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j);
 
             // Skip columns that are in the deflation zone
-            if (j_gl_subm_el >= k)
+            if (n_subm_el >= k)
               break;
 
-            // Iterate over the elements of the column tile
-            const SizeType ncols = std::min(dist.tileSize<Coord::Col>(j_gl_tile), k - j_gl_subm_el);
-            for (SizeType j_tile_el = 0; j_tile_el < ncols; ++j_tile_el) {
-              // The global submatrix column
-              const SizeType j_gl_el = j_gl_subm_el + j_tile_el;
+            const SizeType n_el_tl = std::min(dist.tileSize<Coord::Col>(j), k - n_subm_el);
+            for (SizeType j_el_tl = 0; j_el_tl < n_el_tl; ++j_el_tl) {
+              const SizeType j_el = n_subm_el + j_el_tl;
 
               // Solve the deflated rank-1 problem
-              T& eigenval = eval_ptr[to_sizet(j_gl_el)];
-              lapack::laed4(to_int(k), to_int(j_gl_el), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
+              T& eigenval = eval_ptr[to_sizet(j_el)];
+              lapack::laed4(to_int(k), to_int(j_el), d_ptr, z_ptr, delta_ptr, rho, &eigenval);
 
-              // Iterate over the rows of the local submatrix tile grid and copy the parts from delta
-              // stored on this rank.
-              for (SizeType i_loc_subm_tile = 0; i_loc_subm_tile < sz_loc_tiles.rows();
-                   ++i_loc_subm_tile) {
-                const SizeType i_subm_evec_arr =
-                    i_loc_subm_tile + to_SizeType(j_loc_subm_tile) * sz_loc_tiles.rows();
-                auto& evec_tile = evec_tiles[to_sizet(i_subm_evec_arr)];
-                // The tile row in the local matrix tile grid
-                const SizeType i_loc_tile = idx_loc_begin.row() + i_loc_subm_tile;
-                // The tile row in the global matrix tile grid
-                const SizeType i_gl_tile = dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile);
-                // The element distance between the current tile row and the initial tile row in the
-                // global matrix tile grid
-                const SizeType i_gl_subm_el =
-                    dist.globalTileElementDistance<Coord::Row>(i_begin, i_gl_tile);
+              // copy the parts from delta stored on this rank
+              for (SizeType i_subm_lc = 0; i_subm_lc < sz_loc_tiles.rows(); ++i_subm_lc) {
+                const SizeType linear_subm_lc = i_subm_lc + to_SizeType(j_subm_lc) * sz_loc_tiles.rows();
+                auto& evec_tile = evec_tiles[to_sizet(linear_subm_lc)];
 
-                // The tile row in the global submatrix tile grid
-                const SizeType i_subm_i2_arr =
-                    dist.globalTileFromLocalTile<Coord::Row>(i_loc_tile) - i_begin;
-                auto& i2_tile = i2_tile_arr[to_sizet(i_subm_i2_arr)];
+                const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
+                const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);
+                const SizeType m_subm_el = dist.globalTileElementDistance<Coord::Row>(i_begin, i);
 
-                const SizeType nrows = std::min(dist.tileSize<Coord::Row>(i_gl_tile), n - i_gl_subm_el);
-                for (SizeType i = 0; i < nrows; ++i) {
-                  const SizeType ii = i2_tile({i, 0});
-                  if (ii < k)
-                    evec_tile({i, j_tile_el}) = delta_ptr[ii];
+                const SizeType i_subm = i - i_begin;
+                const auto& i2_perm = i2_tile_arr[to_sizet(i_subm)].get();
+
+                const SizeType m_el_tl = std::min(dist.tileSize<Coord::Row>(i), n - m_subm_el);
+                for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
+                  const SizeType jj_subm_el = i2_perm({i_el_tl, 0});
+                  if (jj_subm_el < k)
+                    evec_tile({i_el_tl, j_el_tl}) = delta_ptr[jj_subm_el];
                 }
               }
             }
@@ -1076,18 +1084,18 @@ void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dis
           if (k < n) {
             const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
                                             i_begin * dist.blockSize().cols()};
-            const SizeType* i2_ptr = i2_tile_arr[0].ptr();
+            const SizeType* i2_perm = i2_tile_arr[0].get().ptr();
 
             for (SizeType i = 0; i < n; ++i) {
-              const SizeType j = i2_ptr[i];
+              const SizeType j = i2_perm[i];
               if (j >= k) {
                 const GlobalElementIndex i_g{i + origin.row(), j + origin.col()};
                 const GlobalTileIndex i_tile = dist.globalTileIndex(i_g);
                 if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
                   const LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);
                   const SizeType i_subm_evec_arr =
-                      i_tile_l.row() - idx_loc_begin.row() +
-                      (i_tile_l.col() - idx_loc_begin.col()) * sz_loc_tiles.rows();
+                      i_tile_l.row() - ij_begin_lc.row() +
+                      (i_tile_l.col() - ij_begin_lc.col()) * sz_loc_tiles.rows();
                   const TileElementIndex i = dist.tileElementIndex(i_g);
                   evec_tiles[to_sizet(i_subm_evec_arr)](i) = T{1};
                 }
@@ -1097,6 +1105,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dis
         }
 
         // STEP 1c: assemble dist evals vec
+        // TODO this step looks like it is completely "independent"; maybe we can do something different
         if (thread_idx == 0) {
           auto& row_comm = row_comm_wrapper.get();
           const comm::Index2D this_rank = dist_evecs.rankIndex();
@@ -1104,6 +1113,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dis
             const comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
             auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
+            // TODO sync MPI or sync_wait(MPIasync)?
             if (evecs_tile_rank == this_rank.col())
               comm::sync::broadcast::send(row_comm, tile);
             else
@@ -1111,36 +1121,140 @@ void solveRank1ProblemDist(CommSender&& row_comm, const matrix::Distribution dis
           }
         }
 
-        // TODO STEP 2a Compute weights (multi-thread)
-        // TODO - copy diagonal from q -> w (or just initialize with 1)
-        // TODO - compute productorial
+        barrier_ptr->arrive_and_wait();
 
-        // TODO STEP 2b Reduce, then finalize computation with sign and square root
+        // STEP 2a Compute weights (multi-thread)
+        auto& q = evec_tiles;
+        T* w = ws_vecs[thread_idx]();
+
+        // - copy diagonal from q -> w (or just initialize with 1)
+        if (thread_idx == 0) {
+          for (SizeType i_subm_lc = 0; i_subm_lc < sz_loc_tiles.rows(); ++i_subm_lc) {
+            const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
+            const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);
+            const SizeType i_subm_el = dist.globalTileElementDistance<Coord::Row>(i_begin, i);
+            const SizeType m_subm_el_lc =
+                dist.localElementDistanceFromLocalTile<Coord::Row>(ij_begin_lc.row(), i_lc);
+            const auto& i2 = i2_tile_arr[to_sizet(i - i_begin)].get();
+
+            const SizeType m_el_tl = std::min(dist.tileSize<Coord::Row>(i), n - i_subm_el);
+            for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
+              const SizeType i_subm_el_lc = m_subm_el_lc + i_el_tl;
+
+              const SizeType jj_subm_el = i2({i_el_tl, 0});
+              const SizeType n_el = dist.globalTileElementDistance<Coord::Col>(0, i_begin);
+              const SizeType jj_el = n_el + jj_subm_el;
+              const SizeType jj = dist.globalTileFromGlobalElement<Coord::Col>(jj_el);
+
+              if (dist.rankGlobalTile<Coord::Col>(jj) == dist.rankIndex().col()) {
+                const SizeType jj_lc = dist.localTileFromGlobalTile<Coord::Col>(jj);
+                const SizeType jj_subm_lc = jj_lc - ij_begin_lc.col();
+                const SizeType jj_el_tl = dist.tileElementFromGlobalElement<Coord::Col>(jj_el);
+
+                const SizeType linear_subm_lc = i_subm_lc + sz_loc_tiles.rows() * jj_subm_lc;
+
+                w[i_subm_el_lc] = q[to_sizet(linear_subm_lc)]({i_el_tl, jj_el_tl});
+              }
+              else {
+                w[i_subm_el_lc] = T(1);
+              }
+            }
+          }
+        }
+        else {  // other workers
+          std::fill_n(w, m_el_lc, T(1));
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        barrier_ptr->arrive_and_wait();
+
+        for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
+          const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
+          const SizeType j = dist.globalTileFromLocalTile<Coord::Col>(j_lc);
+          const SizeType n_subm_el = dist.globalTileElementDistance<Coord::Col>(i_begin, j);
+
+          // Skip columns that are in the deflation zone
+          if (n_subm_el >= k)
+            break;
+
+          const SizeType n_el_tl = std::min(dist.tileSize<Coord::Col>(j), k - n_subm_el);
+          for (SizeType j_el_tl = 0; j_el_tl < n_el_tl; ++j_el_tl) {
+            const SizeType j_subm_el = n_subm_el + j_el_tl;
+            for (SizeType i_subm_lc = 0; i_subm_lc < sz_loc_tiles.rows(); ++i_subm_lc) {
+              const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
+              const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);
+              const SizeType m_subm_el = dist.globalTileElementDistance<Coord::Row>(i_begin, i);
+
+              auto& i2_perm = i2_tile_arr[to_sizet(i - i_begin)].get();
+
+              const SizeType m_el_tl = std::min(dist.tileSize<Coord::Row>(i), n - m_subm_el);
+              for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
+                const SizeType ii_subm_el = i2_perm({i_el_tl, 0});
+
+                // deflated zone
+                if (ii_subm_el >= k)
+                  continue;
+
+                // diagonal
+                if (ii_subm_el == j_subm_el)
+                  continue;
+
+                const SizeType linear_subm_lc = i_subm_lc + sz_loc_tiles.rows() * j_subm_lc;
+                const SizeType i_subm_el_lc = i_subm_lc * dist.blockSize().rows() + i_el_tl;
+
+                w[i_subm_el_lc] *= q[to_sizet(linear_subm_lc)]({i_el_tl, j_el_tl}) /
+                                   (d_ptr[to_sizet(ii_subm_el)] - d_ptr[to_sizet(j_subm_el)]);
+              }
+            }
+          }
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
+        if (thread_idx == 0) {
+          for (int i = 0; i < m_el_lc; ++i) {
+            for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
+              const T* w_partial = ws_vecs[tidx]();
+              w[i] *= w_partial[i];
+            }
+          }
+
+          // TODO do not use sync
+          comm::sync::allReduceInPlace(row_comm_wrapper.get(), MPI_PROD, common::make_data(w, m_el_lc));
+
+          T* z_ptr = z_tiles[0].ptr();
+          for (int i_subm_el_lc = 0; i_subm_el_lc < m_el_lc; ++i_subm_el_lc) {
+            const SizeType i_subm_lc = i_subm_el_lc / dist.blockSize().rows();
+            const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
+            const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);
+            const SizeType i_subm = i - i_begin;
+            const SizeType i_subm_el =
+                i_subm * dist.blockSize().rows() + i_subm_el_lc % dist.blockSize().rows();
+
+            const auto* i2_perm = i2_tile_arr[0].get().ptr();
+            const SizeType ii_subm_el = i2_perm[i_subm_el];
+            ws_vecs[nthreads]()[to_sizet(i_subm_el_lc)] =
+                std::copysign(std::sqrt(-w[i_subm_el_lc]), z_ptr[to_sizet(ii_subm_el)]);
+          }
+        }
+
+        barrier_ptr->arrive_and_wait();
+
+        // TODO temporary integration with old code
+        if (thread_idx == 0) {
+          if (!sz_loc_tiles.isEmpty()) {
+            for (int i_subm_el_lc = 0; i_subm_el_lc < m_el_lc; ++i_subm_el_lc) {
+              const SizeType i_subm = i_subm_el_lc / dist.blockSize().rows();
+              const SizeType i_el_tl = i_subm_el_lc % dist.blockSize().rows();
+              e0[to_sizet(i_subm)]({i_el_tl, 0}) = ws_vecs[nthreads]()[to_sizet(i_subm_el_lc)];
+            }
+          }
+        }
 
         // TODO STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
       }));
-}
-
-// Assembles the local matrix of eigenvalues @p evals with size (n, 1) by communication tiles row-wise.
-template <class T, Device D>
-void assembleDistEvalsVec(common::Pipeline<comm::Communicator>& row_task_chain, const SizeType i_begin,
-                          const SizeType i_end, const matrix::Distribution& dist_evecs,
-                          Matrix<T, D>& evals) {
-  namespace ex = pika::execution::experimental;
-
-  comm::Index2D this_rank = dist_evecs.rankIndex();
-  for (SizeType i = i_begin; i < i_end; ++i) {
-    const GlobalTileIndex evals_idx(i, 0);
-
-    const comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
-    if (evecs_tile_rank == this_rank.col()) {
-      ex::start_detached(comm::scheduleSendBcast(row_task_chain(), evals.read(evals_idx)));
-    }
-    else {
-      ex::start_detached(comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank,
-                                                 evals.readwrite(evals_idx)));
-    }
-  }
 }
 
 // Distributed version of the tridiagonal solver on CPUs
@@ -1236,23 +1350,18 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
+  // TODO remove temporary e0 after embedding step3 in bulk
   solveRank1ProblemDist(row_task_chain(), dist_evecs, i_begin, i_end, idx_loc_begin, sz_loc_tiles, k,
-                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2,
-                        ws_hm.e2);
+                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2, ws_hm.e2,
+                        ws.e0);
 
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.z1, ws.z1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws.d1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  // ---
 
   auto n = ex::just(problemSize(i_begin, i_end, dist_evecs));
-  // Eigenvector formation: `ws.e2` stores the eigenvectors, `ws.e0` is used as an additional workspace
-  // Note ws.z0 is used as continuous buffer workspace to store permuted values of evals and ws.z1
-  applyIndex(i_begin, i_end, ws.i2, ws.d1, ws.z0);
-  initWeightVector(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.d1, ws.z0, ws.e2, ws.e0);
-  reduceMultiplyWeightVector(row_task_chain, i_begin, i_end, idx_loc_begin, sz_loc_tiles, n, k, ws.e0,
-                             ws.z0);
+
   applyIndex(i_begin, i_end, ws.i2, ws.z1, ws.z0);
   formEvecsUsingWeightVec(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.z0, ws.e0, ws.e2);
   sumsqEvecs(idx_gl_begin, idx_loc_begin, sz_loc_tiles, n, k, ws.e2, ws.e0);

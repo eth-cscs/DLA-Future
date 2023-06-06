@@ -147,90 +147,91 @@ $(function() {
 <div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="preprocessor">#pragma GCC diagnostic push</span></div>
 <div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="preprocessor">#pragma GCC diagnostic ignored &quot;-Warray-bounds&quot;</span></div>
 <div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00093"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#abb29f9034e7cda4c4f606603de942181">   93</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#abb29f9034e7cda4c4f606603de942181">MemoryChunk</a>(<a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;&amp; rhs) : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;    rhs.ptr_ = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    rhs.size_ = 0;</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;    rhs.allocated_ = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  }</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;<span class="preprocessor">#if defined(__GNUC__)</span></div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;<span class="preprocessor">#pragma GCC diagnostic pop</span></div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160; </div>
-<div class="line"><a name="l00105"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">  105</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp; <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">operator=</a>(<a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;&amp; rhs) {</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    deallocate();</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160; </div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;    size_ = rhs.size_;</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;    ptr_ = rhs.ptr_;</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;    allocated_ = rhs.allocated_;</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160; </div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;    rhs.size_ = 0;</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;    rhs.ptr_ = <span class="keyword">nullptr</span>;</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;    rhs.allocated_ = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160; </div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;    <span class="keywordflow">return</span> *<span class="keyword">this</span>;</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;  }</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160; </div>
-<div class="line"><a name="l00120"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">  120</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">~MemoryChunk</a>() {</div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;    deallocate();</div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;  }</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160; </div>
-<div class="line"><a name="l00128"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">  128</a></span>&#160;  T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">operator()</a>(SizeType index) {</div>
-<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;    DLAF_ASSERT_HEAVY(index &lt; size_, index, size_);</div>
-<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;    <span class="keywordflow">return</span> ptr_ + index;</div>
-<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;  }</div>
-<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;  <span class="keyword">const</span> T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>(SizeType index)<span class="keyword"> const </span>{</div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;    DLAF_ASSERT_HEAVY(index &lt; size_, index, size_);</div>
-<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;    <span class="keywordflow">return</span> ptr_ + index;</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  }</div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160; </div>
-<div class="line"><a name="l00139"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">  139</a></span>&#160;  T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>() {</div>
-<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;    <span class="keywordflow">return</span> ptr_;</div>
-<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;  }</div>
-<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;  <span class="keyword">const</span> T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;    <span class="keywordflow">return</span> ptr_;</div>
-<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;  }</div>
-<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160; </div>
-<div class="line"><a name="l00147"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">  147</a></span>&#160;  SizeType <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">size</a>()<span class="keyword"> const </span>{</div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;    <span class="keywordflow">return</span> size_;</div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;  }</div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160; </div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;<span class="keyword">private</span>:</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  <span class="keywordtype">void</span> deallocate() {</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;    <span class="keywordflow">if</span> (allocated_) {</div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;      <span class="keywordflow">if</span> (D == Device::CPU) {</div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;        internal::getUmpireHostAllocator().deallocate(ptr_);</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;      }</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;      <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;        internal::getUmpireDeviceAllocator().deallocate(ptr_);</div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;      }</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;<span class="preprocessor">#else</span></div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;      <span class="keywordflow">if</span> (D == Device::CPU) {</div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;        internal::getUmpireHostAllocator().deallocate(ptr_);</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;      }</div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;    }</div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;  }</div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160; </div>
-<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;  SizeType size_;</div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;  T* ptr_;</div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  <span class="keywordtype">bool</span> allocated_;</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;};</div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160; </div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;}  <span class="comment">// namespace memory</span></div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;}  <span class="comment">// namespace dlaf</span></div>
+<div class="line"><a name="l00093"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#ab7a334b89c214fe25ffde4bf0fd4e802">   93</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#ab7a334b89c214fe25ffde4bf0fd4e802">MemoryChunk</a>(<a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;&amp; rhs) noexcept</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;      : size_(rhs.size_), ptr_(rhs.ptr_), allocated_(rhs.allocated_) {</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    rhs.ptr_ = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;    rhs.size_ = 0;</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    rhs.allocated_ = <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  }</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;<span class="preprocessor">#if defined(__GNUC__)</span></div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;<span class="preprocessor">#pragma GCC diagnostic pop</span></div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160; </div>
+<div class="line"><a name="l00106"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">  106</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp; <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">operator=</a>(<a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html">MemoryChunk</a>&amp;&amp; rhs) {</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;    deallocate();</div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160; </div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;    size_ = rhs.size_;</div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;    ptr_ = rhs.ptr_;</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;    allocated_ = rhs.allocated_;</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160; </div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;    rhs.size_ = 0;</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;    rhs.ptr_ = <span class="keyword">nullptr</span>;</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;    rhs.allocated_ = <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160; </div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;    <span class="keywordflow">return</span> *<span class="keyword">this</span>;</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;  }</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160; </div>
+<div class="line"><a name="l00121"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">  121</a></span>&#160;  <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">~MemoryChunk</a>() {</div>
+<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;    deallocate();</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;  }</div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160; </div>
+<div class="line"><a name="l00129"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">  129</a></span>&#160;  T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">operator()</a>(SizeType index) {</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;    DLAF_ASSERT_HEAVY(index &lt; size_, index, size_);</div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;    <span class="keywordflow">return</span> ptr_ + index;</div>
+<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;  }</div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;  <span class="keyword">const</span> T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>(SizeType index)<span class="keyword"> const </span>{</div>
+<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;    DLAF_ASSERT_HEAVY(index &lt; size_, index, size_);</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;    <span class="keywordflow">return</span> ptr_ + index;</div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;  }</div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160; </div>
+<div class="line"><a name="l00140"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">  140</a></span>&#160;  T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>() {</div>
+<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;    <span class="keywordflow">return</span> ptr_;</div>
+<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;  }</div>
+<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;  <span class="keyword">const</span> T* <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">operator()</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a name="l00144"></a><span class="lineno">  144</span>&#160;    <span class="keywordflow">return</span> ptr_;</div>
+<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;  }</div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160; </div>
+<div class="line"><a name="l00148"></a><span class="lineno"><a class="line" href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">  148</a></span>&#160;  SizeType <a class="code" href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">size</a>()<span class="keyword"> const </span>{</div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;    <span class="keywordflow">return</span> size_;</div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;  }</div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160; </div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;<span class="keyword">private</span>:</div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  <span class="keywordtype">void</span> deallocate() {</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;    <span class="keywordflow">if</span> (allocated_) {</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;      <span class="keywordflow">if</span> (D == Device::CPU) {</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;        internal::getUmpireHostAllocator().deallocate(ptr_);</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;      }</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;      <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;        internal::getUmpireDeviceAllocator().deallocate(ptr_);</div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;      }</div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;<span class="preprocessor">#else</span></div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;      <span class="keywordflow">if</span> (D == Device::CPU) {</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;        internal::getUmpireHostAllocator().deallocate(ptr_);</div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;      }</div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;    }</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;  }</div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160; </div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;  SizeType size_;</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  T* ptr_;</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;  <span class="keywordtype">bool</span> allocated_;</div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;};</div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;}  <span class="comment">// namespace memory</span></div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;}  <span class="comment">// namespace dlaf</span></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html">dlaf::memory::MemoryChunk</a></div><div class="ttdoc">The class MemoryChunk represents a layer of abstraction over the underlying device memory.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:39</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a0c03f967f09e963519dae5e235da66e1"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">dlaf::memory::MemoryChunk::operator=</a></div><div class="ttdeci">MemoryChunk &amp; operator=(MemoryChunk &amp;&amp;rhs)</div><div class="ttdoc">Move assignement.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:105</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a1720c41c3c3cbad2e198e7cedbfa84de"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">dlaf::memory::MemoryChunk::operator()</a></div><div class="ttdeci">T * operator()()</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:139</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a0c03f967f09e963519dae5e235da66e1"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a0c03f967f09e963519dae5e235da66e1">dlaf::memory::MemoryChunk::operator=</a></div><div class="ttdeci">MemoryChunk &amp; operator=(MemoryChunk &amp;&amp;rhs)</div><div class="ttdoc">Move assignement.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:106</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a1720c41c3c3cbad2e198e7cedbfa84de"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a1720c41c3c3cbad2e198e7cedbfa84de">dlaf::memory::MemoryChunk::operator()</a></div><div class="ttdeci">T * operator()()</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:140</div></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a4059fde641a91f8cac05721fb54c749b"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a4059fde641a91f8cac05721fb54c749b">dlaf::memory::MemoryChunk::MemoryChunk</a></div><div class="ttdeci">MemoryChunk()</div><div class="ttdoc">Creates a MemoryChunk object with size 0.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:44</div></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a53cffddd0ddfd2e1e0db839157a58913"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a53cffddd0ddfd2e1e0db839157a58913">dlaf::memory::MemoryChunk::MemoryChunk</a></div><div class="ttdeci">MemoryChunk(SizeType size)</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:51</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a597aa1c075db44808f7e14c9ec03e50b"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">dlaf::memory::MemoryChunk::~MemoryChunk</a></div><div class="ttdeci">~MemoryChunk()</div><div class="ttdoc">Destructor. Memory is deallocated only if it was allocated at construction.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:120</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a597aa1c075db44808f7e14c9ec03e50b"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a597aa1c075db44808f7e14c9ec03e50b">dlaf::memory::MemoryChunk::~MemoryChunk</a></div><div class="ttdeci">~MemoryChunk()</div><div class="ttdoc">Destructor. Memory is deallocated only if it was allocated at construction.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:121</div></div>
 <div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a8855d0d0e0c35c83394ce82cd14ea36d"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a8855d0d0e0c35c83394ce82cd14ea36d">dlaf::memory::MemoryChunk::MemoryChunk</a></div><div class="ttdeci">MemoryChunk(T *ptr, SizeType size)</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:82</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a886c87812f0a8eb9071c70477ac9f042"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">dlaf::memory::MemoryChunk::size</a></div><div class="ttdeci">SizeType size() const</div><div class="ttdoc">Returns the number of elements of type T allocated.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:147</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_abb29f9034e7cda4c4f606603de942181"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#abb29f9034e7cda4c4f606603de942181">dlaf::memory::MemoryChunk::MemoryChunk</a></div><div class="ttdeci">MemoryChunk(MemoryChunk &amp;&amp;rhs)</div><div class="ttdoc">Move constructor.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:93</div></div>
-<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_ac0325c028366b219597dde97814e9a7a"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">dlaf::memory::MemoryChunk::operator()</a></div><div class="ttdeci">T * operator()(SizeType index)</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:128</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_a886c87812f0a8eb9071c70477ac9f042"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#a886c87812f0a8eb9071c70477ac9f042">dlaf::memory::MemoryChunk::size</a></div><div class="ttdeci">SizeType size() const</div><div class="ttdoc">Returns the number of elements of type T allocated.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:148</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_ab7a334b89c214fe25ffde4bf0fd4e802"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#ab7a334b89c214fe25ffde4bf0fd4e802">dlaf::memory::MemoryChunk::MemoryChunk</a></div><div class="ttdeci">MemoryChunk(MemoryChunk &amp;&amp;rhs) noexcept</div><div class="ttdoc">Move constructor.</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:93</div></div>
+<div class="ttc" id="aclassdlaf_1_1memory_1_1_memory_chunk_html_ac0325c028366b219597dde97814e9a7a"><div class="ttname"><a href="classdlaf_1_1memory_1_1_memory_chunk.html#ac0325c028366b219597dde97814e9a7a">dlaf::memory::MemoryChunk::operator()</a></div><div class="ttdeci">T * operator()(SizeType index)</div><div class="ttdef"><b>Definition:</b> memory_chunk.h:129</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

@@ -233,7 +233,7 @@ void divideEvecsByDiagonal(const SizeType& k_row, const SizeType& k_col, const S
                            const matrix::Tile<const T, Device::GPU>& diag_cols,
                            const matrix::Tile<const T, Device::GPU>& evecs_tile,
                            const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (i_subm_el >= k_row || j_subm_el >= k_col)
+  if (k_col <= 2 || i_subm_el >= k_row || j_subm_el >= k_col)
     return;
 
   SizeType nrows = std::min(k_row - i_subm_el, evecs_tile.size().rows());
@@ -304,7 +304,7 @@ template <class T>
 void multiplyFirstColumns(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
                           const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   SizeType nrows = std::min(k_row - row, in.size().rows());
@@ -350,7 +350,7 @@ void calcEvecsFromWeightVec(const SizeType& k_row, const SizeType& k_col, const 
                             const SizeType& col, const matrix::Tile<const T, Device::GPU>& z_tile,
                             const matrix::Tile<const T, Device::GPU>& ws_tile,
                             const matrix::Tile<T, Device::GPU>& evecs_tile, whip::stream_t stream) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
@@ -391,7 +391,7 @@ template <class T>
 void sumsqCols(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                const matrix::Tile<const T, Device::GPU>& evecs_tile,
                const matrix::Tile<T, Device::GPU>& ws_tile, whip::stream_t stream) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   SizeType nrows = std::min(k_row - row, evecs_tile.size().rows());
@@ -447,7 +447,7 @@ template <class T>
 void addFirstRows(const SizeType& k_row, const SizeType& k_col, const SizeType& row, const SizeType& col,
                   const matrix::Tile<const T, Device::GPU>& in, const matrix::Tile<T, Device::GPU>& out,
                   whip::stream_t stream) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   SizeType ncols = std::min(k_col - col, in.size().cols());
@@ -490,7 +490,7 @@ template <class T>
 void divideColsByFirstRow(const SizeType& k_row, const SizeType& k_col, const SizeType& row,
                           const SizeType& col, const matrix::Tile<const T, Device::GPU>& in,
                           const matrix::Tile<T, Device::GPU>& out, whip::stream_t stream) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   SizeType nrows = std::min(k_row - row, out.size().rows());
@@ -550,7 +550,7 @@ void copy1D(cublasHandle_t handle, const SizeType& k_row, const SizeType& k_col,
             const SizeType& col, const Coord& in_coord,
             const matrix::Tile<const T, Device::GPU>& in_tile, const Coord& out_coord,
             const matrix::Tile<T, Device::GPU>& out_tile) {
-  if (row >= k_row || col >= k_col)
+  if (k_col <= 2 || row >= k_row || col >= k_col)
     return;
 
   const T* in_ptr = in_tile.ptr();

@@ -14,6 +14,7 @@
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
 
+#include <dlaf/blas/tile.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/kernels.h>
@@ -1256,7 +1257,6 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
 
             const SizeType n_el_tl = std::min(dist.tileSize<Coord::Col>(j), k - n_subm_el);
             for (SizeType j_el_tl = 0; j_el_tl < n_el_tl; ++j_el_tl) {
-              T sum_squares = 0;
               for (SizeType i_subm_lc = 0; i_subm_lc < sz_loc_tiles.rows(); ++i_subm_lc) {
                 const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
                 const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);
@@ -1275,12 +1275,12 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
                     s[i_subm_el_lc] = 0;
                   else
                     s[i_subm_el_lc] = w[i_subm_el_lc] / q[to_sizet(linear_subm_lc)]({i_el_tl, j_el_tl});
-
-                  sum_squares += s[i_subm_el_lc] * s[i_subm_el_lc];  // TODO use dot
                 }
               }
 
               // NORM (distributed)
+              T sum_squares = blas::dot(m_subm_el_lc, s, 1, s, 1);
+
               // TODO check order over multi threads
               // TODO do a reduction tile by tile instead of col by col
               comm::sync::allReduceInPlace(col_comm_wrapper.get(), MPI_SUM,

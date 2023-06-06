@@ -165,7 +165,7 @@ using matrix::Tile;
 
 #ifdef DLAF_DOXYGEN
 
-/// @brief Computes general matrix matrix multiplication.
+/// Computes general matrix matrix multiplication.
 ///
 /// This overload blocks until completion of the algorithm.
 template <Backend B, class T, Device D>
@@ -174,8 +174,6 @@ void gemm(const blas::Op op_a, const blas::Op op_b, const T alpha, const Tile<co
 
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
-///
-/// Test
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto gemm(const dlaf::internal::Policy<B>& p, Sender&& s);

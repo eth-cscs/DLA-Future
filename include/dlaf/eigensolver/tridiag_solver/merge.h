@@ -506,6 +506,9 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
           }
+          // Note for in-place row permutation implementation: The rows should be permuted for the k=2 case as well.
+          if (k <= 2)
+            return;
         }
 
         barrier_ptr->arrive_and_wait();

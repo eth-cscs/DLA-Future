@@ -197,6 +197,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
     {0, 8},
+    {4, 2},
     {16, 16},
     {16, 8},
     {16, 4},

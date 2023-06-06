@@ -10,6 +10,7 @@
 #pragma once
 
 #include <cmath>
+#include <optional>
 #include <vector>
 
 #include <dlaf/blas/tile.h>
@@ -64,10 +65,11 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
 #ifdef DLAF_WITH_HDF5
-  matrix::internal::FileHDF5 file(grid.fullCommunicator(), "trid-ref.h5");
+  std::optional<matrix::internal::FileHDF5> file;
 
   if (getTuneParameters().debug_dump_trisolver_data) {
-    file.write(ret.tridiagonal, "/tridiag");
+    file = matrix::internal::FileHDF5(grid.fullCommunicator(), "trid-ref.h5");
+    file->write(ret.tridiagonal, "/tridiag");
   }
 #endif
 
@@ -75,8 +77,8 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_trisolver_data) {
-    file.write(evals, "/evals");
-    file.write(mat_e, "/evecs");
+    file->write(evals, "/evals");
+    file->write(mat_e, "/evecs");
   }
 #endif
 

@@ -21,6 +21,12 @@ namespace dlaf {
 /// DLA-Future tuning parameters.
 ///
 /// Holds the value of the parameters that can be used to tune DLA-Future.
+/// - debug_dump_trisolver_data:
+///     Enable dump of trisolver input/output data to "trid-ref.h5" file that will be created in the
+///     working folder (it should not exist before the execution).
+///     WARNING: the dataset is overwritten at each eigensolver call (i.e. just last call data will be
+///     available).
+///     Set with environment variable DLAF_DEBUG_DUMP_TRISOLVER_DATA.
 /// - red2band_panel_nworkers:
 ///     The maximum number of threads to use for computing the panel in the reduction to band algorithm.
 ///     Set with --dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.
@@ -48,6 +54,8 @@ namespace dlaf {
 ///     DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE.
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by
 /// algorithms.
+///
+/// Note: debug parameters should not be considered as part of the public API
 struct TuneParameters {
   bool debug_dump_trisolver_data = false;
   std::size_t red2band_panel_nworkers =

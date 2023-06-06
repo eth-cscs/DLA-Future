@@ -511,7 +511,10 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
           }
-          // Note for in-place row permutation implementation: The rows should be permuted for the k=2 case as well.
+
+          // Note: for in-place row permutation implementation: The rows should be permuted for the k=2 case as well.
+
+          // Note: laed4 handles k <= 2 cases differently
           if (k <= 2)
             return;
         }
@@ -1116,6 +1119,10 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
               comm::sync::broadcast::receive_from(evecs_tile_rank, row_comm, tile);
           }
         }
+
+        // Note: laed4 handles k <= 2 cases differently
+        if (k <= 2)
+          return;
 
         barrier_ptr->arrive_and_wait();
 

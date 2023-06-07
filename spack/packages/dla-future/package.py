@@ -14,7 +14,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
     git = "https://github.com/eth-cscs/DLA-Future"
 
-    maintainers = ["teonnik", "albestro", "Sely85"]
+    maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
     version("develop", branch="master")
 

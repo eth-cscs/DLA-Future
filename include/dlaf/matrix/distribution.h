@@ -33,7 +33,8 @@ public:
   ///
   /// @pre size.isValid(),
   /// @pre !block_size.isEmpty().
-  Distribution(const LocalElementSize& size, const TileElementSize& block_size);
+  Distribution(const LocalElementSize& size, const TileElementSize& block_size,
+               const GlobalElementIndex& offset = {0, 0});  // TODO: Add LocalElementIndex strong type?
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
   /// distributed on a 2D grid of processes of size @p grid_size.
@@ -47,7 +48,7 @@ public:
   /// @pre source_rank_index.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
-               const comm::Index2D& source_rank_index);
+               const comm::Index2D& source_rank_index, const GlobalElementIndex& offset = {0, 0});
 
   /// Constructs a distribution for a matrix of size @p size
   /// distributed on a 2D grid of processes of size @p grid_size.
@@ -64,7 +65,8 @@ public:
   /// @pre source_rank_index.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const TileElementSize& tile_size, const comm::Size2D& grid_size,
-               const comm::Index2D& rank_index, const comm::Index2D& source_rank_index);
+               const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
+               const GlobalElementIndex& offset = {0, 0});
 
   Distribution(const Distribution& rhs) = default;
 
@@ -83,6 +85,10 @@ public:
 
   bool operator!=(const Distribution& rhs) const noexcept {
     return !operator==(rhs);
+  }
+
+  const GlobalElementIndex& offset() const noexcept {
+    return offset_;
   }
 
   const GlobalElementSize& size() const noexcept {
@@ -132,6 +138,10 @@ public:
                                         const TileElementIndex& tile_element) const noexcept {
     DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
     DLAF_ASSERT_HEAVY(tile_element.isIn(tile_size_), tile_element, tile_size_);
+    // TODO: No check for partial tiles at the bottom-right of distribution? Or
+    // is that done elsewhere?
+    // TODO: Check for partial tiles at top-left of distribution done inside
+    // elementFromTileAndElementTile. Need extra checks here?
 
     return {globalElementFromGlobalTileAndTileElement<Coord::Row>(global_tile.row(), tile_element.row()),
             globalElementFromGlobalTileAndTileElement<Coord::Col>(global_tile.col(),
@@ -205,7 +215,8 @@ public:
                       global_nr_tiles_.get<rc>());
     DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < tile_size_.get<rc>(), tile_element,
                       tile_size_.get<rc>());
-    return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, tile_size_.get<rc>());
+    return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, tile_size_.get<rc>(),
+                                                       offset_.get<rc>() % tile_size_.get<rc>());
   }
 
   /// Returns the global index of the element
@@ -236,7 +247,8 @@ public:
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     return util::matrix::rankGlobalTile(global_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
-                                        source_rank_index_.get<rc>());
+                                        source_rank_index_.get<rc>(),
+                                        offset_.get<rc>() / tile_size_.get<rc>());
   }
 
   /// Returns the global index of the tile which contains the element with global index @p global_element.
@@ -245,7 +257,8 @@ public:
   template <Coord rc>
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element, size_);
-    return util::matrix::tileFromElement(global_element, tile_size_.get<rc>());
+    return util::matrix::tileFromElement(global_element, tile_size_.get<rc>(),
+                                         offset_.get<rc>() % tile_size_.get<rc>());
   }
 
   /// Returns the global index of the tile that has index @p local_tile
@@ -257,7 +270,8 @@ public:
     DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < local_nr_tiles_.get<rc>(), local_tile,
                       local_nr_tiles_.get<rc>());
     return util::matrix::globalTileFromLocalTile(local_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
-                                                 rank_index_.get<rc>(), source_rank_index_.get<rc>());
+                                                 rank_index_.get<rc>(), source_rank_index_.get<rc>(),
+                                                 offset_.get<rc>() / tile_size_.get<rc>());
   }
 
   /// Returns the local index of the tile which contains the element with global index @p global_element.
@@ -278,7 +292,8 @@ public:
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     return util::matrix::localTileFromGlobalTile(global_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
-                                                 rank_index_.get<rc>(), source_rank_index_.get<rc>());
+                                                 rank_index_.get<rc>(), source_rank_index_.get<rc>(),
+                                                 offset_.get<rc>() / tile_size_.get<rc>());
   }
 
   /// Returns the local index in current process of the global tile
@@ -304,7 +319,8 @@ public:
                       global_nr_tiles_.get<rc>());
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, tilesPerBlock<rc>(),
                                                      grid_size_.get<rc>(), rank_index_.get<rc>(),
-                                                     source_rank_index_.get<rc>());
+                                                     source_rank_index_.get<rc>(),
+                                                     offset_.get<rc>() / tile_size_.get<rc>());
   }
 
   /// Returns the index within the tile of the global element with index @p global_element.
@@ -314,7 +330,8 @@ public:
   SizeType tileElementFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element,
                       size_.get<rc>());
-    return util::matrix::tileElementFromElement(global_element, tile_size_.get<rc>());
+    return util::matrix::tileElementFromElement(global_element, tile_size_.get<rc>(),
+                                                offset_.get<rc>() % tile_size_.get<rc>());
   }
 
   template <Coord rc>
@@ -323,6 +340,9 @@ public:
                       global_nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();
+    if (global_tile == 0) {
+      return nb - (offset_.get<rc>() % nb);
+    }
     return std::min(nb, n - global_tile * nb);
   }
 
@@ -338,8 +358,15 @@ public:
     SizeType n = size_.get<rc>();
     DLAF_ASSERT_HEAVY(0 <= i_gl && i_gl < n, i_gl, n);
     SizeType tile_n = tile_size_.get<rc>();
-    SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n);
-    return std::min(tile_n, n - tile_i * tile_n);
+    SizeType tile_element_offset = offset_.get<rc>() % tile_size_.get<rc>();
+    SizeType first_tile_n = tile_n - tile_element_offset;
+    SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n, tile_element_offset);
+
+    if (tile_i == 0) {
+      return first_tile_n;
+    }
+
+    return std::min(tile_n, (n + tile_element_offset) - tile_i * tile_n);
   }
 
   /// Returns the distance from the global index @p i_gl to the tile adjacent the one containing @p i_gl
@@ -388,22 +415,15 @@ public:
     DLAF_ASSERT_HEAVY(i_begin <= i_end, i_begin, i_end);
     DLAF_ASSERT_HEAVY(0 <= i_begin && i_end <= global_nr_tiles_.get<rc>(), i_begin, i_end,
                       global_nr_tiles_.get<rc>());
-    DLAF_ASSERT(tilesPerBlock<rc>() == 1, "Multi Tile distribution block is not supported yet");
 
-    // Note the second assert is already done by the following calls.
     SizeType i_loc_begin = nextLocalTileFromGlobalTile<rc>(i_begin);
-    SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_end) - 1;
-    if (i_loc_begin > i_loc_last)
-      return 0;
-    SizeType l = local_size_.get<rc>();
-    SizeType nb = tile_size_.get<rc>();
-    SizeType nbr = std::min(nb, l - i_loc_last * nb);  // size of last local tile along `rc`
-    return (i_loc_last - i_loc_begin) * nb + nbr;
+    SizeType i_loc_end = nextLocalTileFromGlobalTile<rc>(i_end);
+    return localElementDistanceFromLocalTile<rc>(i_loc_begin, i_loc_end);
   }
 
-  /// \overlap localElementDistanceFromGlobalTile
+  /// \overload localElementDistanceFromGlobalTile
   ///
-  /// This overlap implements the 2D version of the function.
+  /// This overload implements the 2D version of the function.
   LocalElementSize localElementDistanceFromGlobalTile(GlobalTileIndex begin,
                                                       GlobalTileIndex end) const noexcept {
     return {localElementDistanceFromGlobalTile<Coord::Row>(begin.row(), end.row()),
@@ -417,17 +437,44 @@ public:
     DLAF_ASSERT_HEAVY(i_loc_begin <= i_loc_end, i_loc_begin, i_loc_end);
     DLAF_ASSERT_HEAVY(0 <= i_loc_begin && i_loc_end <= local_nr_tiles_.get<rc>(), i_loc_begin, i_loc_end,
                       local_nr_tiles_.get<rc>());
-    DLAF_ASSERT(tilesPerBlock<rc>() == 1, "Multi Tile distribution block is not supported yet");
 
-    SizeType lsz = local_size_.get<rc>();
-    SizeType nb = tile_size_.get<rc>();
-    SizeType nbr = std::min(nb, lsz - (i_loc_end - 1) * nb);  // size of last local tile along `rc`
-    return (i_loc_end - i_loc_begin - 1) * nb + nbr;
+    SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_loc_end) - 1;
+    if (i_loc_begin > i_loc_last)
+      return 0;
+
+    // TODO: index naming?
+    // TODO: add helpers?
+    // - localTileElementOffset (offset in first tile in terms of elements, takes rank into account)
+    // - globalTileElementOffset (offset in first tile in terms of elements, all ranks)
+    // - localBlockElementOffset (offset in first block in terms of elements, takes rank into account)
+    // - globalBlockElementOffset (offset in first block in terms of elements, all ranks; this is the
+    // same as current offset_)
+    // - localTileOffset (offset in first block in terms of tiles, takes rank into account)
+    // - globalTileOffset (offset in first block in terms of tiles, all ranks)
+    // The following are always 0 because of normalization and are not needed
+    // - localBlockOffset (takes rank into account)
+    // - globalBlockOffset (always applies offset)
+    SizeType i_element_begin =
+        util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
+                                                    rank_index_.get<rc>() == source_rank_index_.get<rc>()
+                                                        ? (offset_.get<rc>() % tile_size_.get<rc>())
+                                                        : 0);
+    SizeType i_element_last =
+        std::min(util::matrix::elementFromTileAndTileElement(i_loc_last, tile_size_.get<rc>(),
+                                                             tile_size_.get<rc>(),
+                                                             rank_index_.get<rc>() ==
+                                                                     source_rank_index_.get<rc>()
+                                                                 ? (offset_.get<rc>() %
+                                                                    tile_size_.get<rc>())
+                                                                 : 0),
+                 local_size_.get<rc>()) -
+        1;
+    return i_element_last - i_element_begin;
   }
 
-  /// \overlap localElementDistanceFromLocalTile
+  /// \overload localElementDistanceFromLocalTile
   ///
-  /// This overlap implements the 2D version of he function.
+  /// This overload implements the 2D version of the function.
   LocalElementSize localElementDistanceFromLocalTile(LocalTileIndex begin,
                                                      LocalTileIndex end) const noexcept {
     return {localElementDistanceFromLocalTile<Coord::Row>(begin.row(), end.row()),
@@ -462,8 +509,15 @@ private:
   /// @pre local_size_, and tile_size_ are already set correctly.
   void computeLocalNrTiles() noexcept;
 
+  /// Normalizes @p offset_ and @p source_rank_index_ into a canonical form.
+  ///
+  /// @pre offset_ and source_rank_index_ are already set correctly.
+  /// @post offset_.row() < block_size_.rows() && offset_.col() < block_size_.cols()
+  void normalizeSourceRankAndOffset() noexcept;
+
   /// Sets default values.
   ///
+  /// offset_            = {0, 0}
   /// size_              = {0, 0}
   /// local_size_        = {0, 0}
   /// global_nr_tiles_   = {0, 0}
@@ -475,6 +529,9 @@ private:
   /// source_rank_index_ = {0, 0}
   void setDefaultSizes() noexcept;
 
+  // TODO: GlobalElementSize or Index?
+  // TODO: Name element_offset_ or offset_? Can distinguish from tile_offset.
+  GlobalElementIndex offset_;
   GlobalElementSize size_;
   LocalElementSize local_size_;
   GlobalTileSize global_nr_tiles_;

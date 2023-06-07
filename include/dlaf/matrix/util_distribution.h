@@ -24,22 +24,35 @@ namespace matrix {
 /// If the element index is local, the returned tile index is local.
 /// If the element index is global, the returned tile index is global.
 /// @pre 0 <= element,
-/// @pre 0 < block_size.
-inline SizeType tileFromElement(SizeType element, SizeType block_size) {
+/// @pre 0 < tile_size.
+/// @pre 0 <= tile_element_offset < tile_size
+inline SizeType tileFromElement(SizeType element, SizeType tile_size, SizeType tile_element_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= element, element);
-  DLAF_ASSERT_HEAVY(0 < block_size, block_size);
-  return element / block_size;
+  DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_element_offset,
+                    tile_size);
+  return (element + tile_element_offset) / tile_size;
 }
+
+/// TODO: Check block_size vs. tile_size naming here and in distribution.{cpp,h}
 
 /// Returns the index within the tile of the element with index @p element.
 ///
 /// The element index can be either global or local.
 /// @pre 0 <= element,
-/// @pre 0 < block_size.
-inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
+/// @pre 0 < tile_size,
+/// @pre 0 <= tile_element_offset < tile_size.
+inline SizeType tileElementFromElement(SizeType element, SizeType tile_size,
+                                       SizeType tile_element_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= element, element);
-  DLAF_ASSERT_HEAVY(0 < block_size, block_size);
-  return element % block_size;
+  DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_size);
+  element += tile_element_offset;
+  SizeType tile_element = element % tile_size;
+  if (element < tile_size) {
+    tile_element -= tile_element_offset;
+  }
+  return tile_element;
 }
 
 /// Returns the index of the element
@@ -48,14 +61,19 @@ inline SizeType tileElementFromElement(SizeType element, SizeType block_size) {
 /// If the tile index is local, the returned element index is local.
 /// If the tile index is global, the returned element index is global.
 /// @pre 0 <= tile,
-/// @pre 0 <= tile_element < block_size,
-/// @pre 0 < block_size.
-inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element,
-                                              SizeType block_size) {
+/// @pre 0 <= tile_element < tile_size,
+/// @pre 0 < tile_size,
+/// @pre 0 <= tile_element_offset < tile_size.
+inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element, SizeType tile_size,
+                                              SizeType tile_element_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= tile, tile);
-  DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < block_size, tile_element, block_size);
-  DLAF_ASSERT_HEAVY(0 < block_size, block_size);
-  return tile * block_size + tile_element;
+  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_element_offset,
+                    tile_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < tile_size &&
+                        (tile > 0 || tile_element < (tile_size - tile_element_offset)),
+                    tile, tile_element, tile_size, tile_element_offset);
+  DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
+  return tile * tile_size + tile_element - (tile > 0 ? tile_element_offset : 0);
 }
 
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.
@@ -63,14 +81,17 @@ inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_eleme
 /// @pre 0 <= global_tile,
 /// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
-/// @pre 0 <= src_rank < grid_size.
-inline int rankGlobalTile(SizeType global_tile, SizeType tiles_per_block, int grid_size, int src_rank) {
+/// @pre 0 <= src_rank < grid_size,
+/// @pre 0 <= tile_offset < tiles_per_block.
+inline int rankGlobalTile(SizeType global_tile, SizeType tiles_per_block, int grid_size, int src_rank,
+                          SizeType tile_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
   DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_offset && tile_offset < tiles_per_block, tile_offset, tiles_per_block);
 
-  SizeType global_block = global_tile / tiles_per_block;
+  SizeType global_block = (global_tile + tile_offset) / tiles_per_block;
   return (global_block + src_rank) % grid_size;
 }
 
@@ -81,18 +102,30 @@ inline int rankGlobalTile(SizeType global_tile, SizeType tiles_per_block, int gr
 /// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
-/// @pre 0 <= src_rank < grid_size.
+/// @pre 0 <= src_rank < grid_size,
+/// @pre 0 <= tile_offset < tiles_per_block.
 inline SizeType localTileFromGlobalTile(SizeType global_tile, SizeType tiles_per_block, int grid_size,
-                                        int rank, int src_rank) {
+                                        int rank, int src_rank, SizeType tile_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
   DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_offset && tile_offset < tiles_per_block, tile_offset, tiles_per_block);
 
-  if (rank == rankGlobalTile(global_tile, tiles_per_block, grid_size, src_rank)) {
-    SizeType local_block = global_tile / tiles_per_block / grid_size;
-    return local_block * tiles_per_block + global_tile % tiles_per_block;
+  if (rank == rankGlobalTile(global_tile, tiles_per_block, grid_size, src_rank, tile_offset)) {
+    // tile_offset only affects the source rank
+    // TODO: Be consistent about style for handling tile_offset (ternary vs
+    // separate branches etc.).
+    if (rank == src_rank) {
+      global_tile += tile_offset;
+      SizeType local_block = global_tile / tiles_per_block / grid_size;
+      return local_block * tiles_per_block + global_tile % tiles_per_block - tile_offset;
+    }
+    else {
+      SizeType local_block = global_tile / tiles_per_block / grid_size;
+      return local_block * tiles_per_block + global_tile % tiles_per_block;
+    }
   }
   else
     return -1;
@@ -106,27 +139,35 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, SizeType tiles_per
 /// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
-/// @pre 0 <= src_rank < grid_size.
+/// @pre 0 <= src_rank < grid_size,
+/// @pre 0 <= tile_offset < tiles_per_block.
 inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, SizeType tiles_per_block,
-                                            int grid_size, int rank, int src_rank) {
+                                            int grid_size, int rank, int src_rank,
+                                            SizeType tile_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= global_tile, global_tile);
   DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_offset && tile_offset < tiles_per_block, tile_offset, tiles_per_block);
 
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
+  global_tile += tile_offset;
   SizeType global_block = global_tile / tiles_per_block;
   SizeType owner_to_src = global_block % grid_size;
   SizeType local_block = global_block / grid_size;
 
+  // If there's a tile offset it affects only the source rank block. All other
+  // blocks are whole.
+  SizeType negative_offset = src_rank == rank ? tile_offset : 0;
+
   if (rank_to_src == owner_to_src)
-    return local_block * tiles_per_block + global_tile % tiles_per_block;
+    return local_block * tiles_per_block + global_tile % tiles_per_block - negative_offset;
 
   if (rank_to_src < owner_to_src)
     ++local_block;
 
-  return local_block * tiles_per_block;
+  return local_block * tiles_per_block - negative_offset;
 }
 
 /// Returns the global tile index of the tile that has index @p local_tile
@@ -136,20 +177,27 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, SizeType tiles
 /// @pre 0 < tiles_per_block,
 /// @pre 0 < grid_size,
 /// @pre 0 <= rank < grid_size,
-/// @pre 0 <= src_rank < grid_size.
+/// @pre 0 <= src_rank < grid_size,
+/// @pre 0 <= tile_offset < tiles_per_block.
 inline SizeType globalTileFromLocalTile(SizeType local_tile, SizeType tiles_per_block, int grid_size,
-                                        int rank, int src_rank) {
+                                        int rank, int src_rank, SizeType tile_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= local_tile, local_tile);
   DLAF_ASSERT_HEAVY(0 < tiles_per_block, tiles_per_block);
   DLAF_ASSERT_HEAVY(0 < grid_size, grid_size);
   DLAF_ASSERT_HEAVY(0 <= rank && rank < grid_size, rank, grid_size);
   DLAF_ASSERT_HEAVY(0 <= src_rank && src_rank < grid_size, src_rank, grid_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_offset && tile_offset < tiles_per_block, tile_offset, tiles_per_block);
 
+  bool may_have_partial_first_block = rank == src_rank;
+  if (may_have_partial_first_block) {
+    local_tile += tile_offset;
+  }
   // Renumber ranks such that src_rank is 0.
   int rank_to_src = (rank + grid_size - src_rank) % grid_size;
   SizeType local_block = local_tile / tiles_per_block;
 
-  return (grid_size * local_block + rank_to_src) * tiles_per_block + local_tile % tiles_per_block;
+  return (grid_size * local_block + rank_to_src) * tiles_per_block + local_tile % tiles_per_block -
+         (may_have_partial_first_block ? tile_offset : 0);
 }
 
 }

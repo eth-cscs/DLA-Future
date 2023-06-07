@@ -25,6 +25,7 @@ struct ParametersConstructor {
   comm::Index2D rank;
   comm::Size2D grid_size;
   comm::Index2D src_rank;
+  GlobalElementIndex offset;
   // Derived params
   GlobalTileSize global_tiles;
   LocalTileSize local_tiles;
@@ -41,18 +42,43 @@ public:
 };
 
 const std::vector<ParametersConstructor> tests_constructor = {
-    // {size, block_size, rank, grid_size, src_rank, global_tiles, local_tiles, local_size}
-    {{0, 0}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 0}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}},
-    {{0, 128}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {0, 12}, {0, 12}, {0, 128}},
-    {{25, 0}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {2, 0}, {0, 0}, {0, 0}},
-    {{1, 1}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {1, 1}, {1, 1}, {1, 1}},
-    {{1, 32}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {1, 2}, {0, 1}, {0, 11}},
-    {{13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {1, 1}, {0, 0}, {0, 0}},
-    {{523, 111}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {28, 11}, {4, 2}, {67, 12}},
-    {{71, 3750}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {2, 30}, {0, 5}, {0, 550}},
-    {{1020, 34}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {64, 2}, {64, 1}, {1020, 32}},
-    {{1024, 1024}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {32, 32}, {5, 8}, {160, 256}},
+    // {size, block_size, rank, grid_size, src_rank, offset, global_tiles, local_tiles, local_size}
+    {{0, 0}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 128}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {0, 0}, {0, 12}, {0, 12}, {0, 128}},
+    {{25, 0}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {0, 0}, {2, 0}, {0, 0}, {0, 0}},
+    {{1, 1}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 1}, {1, 1}, {1, 1}},
+    {{1, 32}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {0, 0}, {1, 2}, {0, 1}, {0, 11}},
+    {{13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {0, 0}, {1, 1}, {0, 0}, {0, 0}},
+    {{523, 111}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {0, 0}, {28, 11}, {4, 2}, {67, 12}},
+    {{71, 3750}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 0}, {2, 30}, {0, 5}, {0, 550}},
+    {{1020, 34}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {0, 0}, {64, 2}, {64, 1}, {1020, 32}},
+    {{1024, 1024}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {0, 0}, {32, 32}, {5, 8}, {160, 256}},
+    {{160, 192}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {0, 0}, {5, 6}, {2, 2}, {64, 64}},
+
+    // offset != {0, 0}
+    {{0, 0}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {3, 3}, {2, 1}, {3, 2}, {1, 1}, {4, 1}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {13, 17}, {2, 1}, {3, 2}, {0, 1}, {2, 1}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 128}, {12, 11}, {1, 0}, {3, 1}, {0, 0}, {2, 3}, {0, 12}, {0, 12}, {0, 128}},
+    {{25, 0}, {14, 7}, {0, 1}, {3, 2}, {1, 1}, {3, 3}, {2, 0}, {0, 0}, {0, 0}},
+    {{1, 1}, {16, 16}, {0, 0}, {1, 1}, {0, 0}, {17, 17}, {1, 1}, {1, 1}, {1, 1}},
+    {{1, 32}, {13, 21}, {2, 1}, {3, 2}, {0, 0}, {1, 1}, {1, 2}, {0, 1}, {0, 12}},
+    {{1, 32}, {13, 21}, {2, 1}, {3, 2}, {2, 1}, {1, 1}, {1, 2}, {1, 1}, {1, 20}},
+    {{10, 15}, {5, 5}, {1, 1}, {2, 2}, {1, 0}, {3, 7}, {3, 4}, {2, 2}, {5, 8}},
+    {{13, 16}, {13, 16}, {4, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {7, 16}},
+    {{13, 16}, {13, 16}, {5, 5}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 1}, {6, 16}},
+    {{13, 16}, {13, 16}, {5, 7}, {9, 8}, {2, 3}, {32, 32}, {2, 1}, {1, 0}, {6, 0}},
+    {{523, 111}, {19, 11}, {2, 5}, {9, 8}, {2, 3}, {10, 10}, {29, 11}, {4, 2}, {66, 22}},
+    {{71, 3750}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {2, 30}, {0, 5}, {0, 551}},
+    {{71, 3750}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {2, 30}, {0, 5}, {0, 550}},
+    {{71, 3750}, {64, 128}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {2, 30}, {0, 5}, {0, 550}},
+    {{1020, 34}, {16, 32}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {65, 2}, {65, 1}, {1020, 24}},
+    {{1024, 1024}, {32, 32}, {3, 2}, {6, 4}, {1, 1}, {48, 48}, {33, 33}, {6, 9}, {192, 256}},
+    {{160, 192}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 2}, {48, 48}},
+    {{160, 192}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {40, 56}},
+    {{160, 192}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
+    {{160, 192}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
 };
 
 TEST(DistributionTest, DefaultConstructor) {
@@ -72,7 +98,7 @@ TEST(DistributionTest, DefaultConstructor) {
 TEST(DistributionTest, ConstructorLocal) {
   for (const auto& test : tests_constructor) {
     if (test.grid_size == comm::Size2D(1, 1)) {
-      Distribution obj(test.local_size, test.block_size);
+      Distribution obj(test.local_size, test.block_size, test.offset);
 
       EXPECT_EQ(test.size, obj.size());
       EXPECT_EQ(test.block_size, obj.blockSize());
@@ -89,13 +115,21 @@ TEST(DistributionTest, ConstructorLocal) {
 
 TEST(DistributionTest, Constructor) {
   for (const auto& test : tests_constructor) {
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
 
     EXPECT_EQ(test.size, obj.size());
     EXPECT_EQ(test.block_size, obj.blockSize());
     EXPECT_EQ(test.rank, obj.rankIndex());
     EXPECT_EQ(test.grid_size, obj.commGridSize());
-    EXPECT_EQ(test.src_rank, obj.sourceRankIndex());
+    // TODO: casts and stuff
+    decltype(obj.sourceRankIndex()) expected_source_rank_index =
+        {static_cast<int>((test.src_rank.get<Coord::Row>() +
+                           (test.offset.get<Coord::Row>() / test.block_size.get<Coord::Row>())) %
+                          test.grid_size.get<Coord::Row>()),
+         static_cast<int>((test.src_rank.get<Coord::Col>() +
+                           (test.offset.get<Coord::Col>() / test.block_size.get<Coord::Row>())) %
+                          test.grid_size.get<Coord::Col>())};
+    EXPECT_EQ(expected_source_rank_index, obj.sourceRankIndex());
 
     EXPECT_EQ(test.global_tiles, obj.nrTiles());
     EXPECT_EQ(test.local_size, TestDistribution::testLocalSize(obj));
@@ -105,42 +139,45 @@ TEST(DistributionTest, Constructor) {
 
 TEST(DistributionTest, ComparisonOperator) {
   for (const auto& test : tests_constructor) {
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
-    Distribution obj_eq(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj_eq(test.size, test.block_size, test.grid_size, test.rank, test.src_rank,
+                        test.offset);
 
     EXPECT_TRUE(obj == obj_eq);
     EXPECT_FALSE(obj != obj_eq);
 
     std::vector<Distribution> objs_ne;
     objs_ne.emplace_back(GlobalElementSize(test.size.rows() + 1, test.size.cols()), test.block_size,
-                         test.grid_size, test.rank, test.src_rank);
+                         test.grid_size, test.rank, test.src_rank, test.offset);
     objs_ne.emplace_back(GlobalElementSize(test.size.rows(), test.size.cols() + 1), test.block_size,
-                         test.grid_size, test.rank, test.src_rank);
+                         test.grid_size, test.rank, test.src_rank, test.offset);
     objs_ne.emplace_back(test.size, TileElementSize(test.block_size.rows() + 1, test.block_size.cols()),
-                         test.grid_size, test.rank, test.src_rank);
+                         test.grid_size, test.rank, test.src_rank, test.offset);
     objs_ne.emplace_back(test.size, TileElementSize(test.block_size.rows(), test.block_size.cols() + 1),
-                         test.grid_size, test.rank, test.src_rank);
+                         test.grid_size, test.rank, test.src_rank, test.offset);
     objs_ne.emplace_back(test.size, test.block_size,
                          comm::Size2D{test.grid_size.rows() + 1, test.grid_size.cols()}, test.rank,
-                         test.src_rank);
+                         test.src_rank, test.offset);
     objs_ne.emplace_back(test.size, test.block_size,
                          comm::Size2D{test.grid_size.rows(), test.grid_size.cols() + 1}, test.rank,
-                         test.src_rank);
+                         test.src_rank, test.offset);
     if (test.rank.row() < test.grid_size.rows() - 1) {
       objs_ne.emplace_back(test.size, test.block_size, test.grid_size,
-                           comm::Index2D(test.rank.row() + 1, test.rank.col()), test.src_rank);
+                           comm::Index2D(test.rank.row() + 1, test.rank.col()), test.src_rank,
+                           test.offset);
     }
     if (test.rank.col() < test.grid_size.cols() - 1) {
       objs_ne.emplace_back(test.size, test.block_size, test.grid_size,
-                           comm::Index2D(test.rank.row(), test.rank.col() + 1), test.src_rank);
+                           comm::Index2D(test.rank.row(), test.rank.col() + 1), test.src_rank,
+                           test.offset);
     }
     if (test.src_rank.row() < test.grid_size.rows() - 1) {
       objs_ne.emplace_back(test.size, test.block_size, test.grid_size, test.rank,
-                           comm::Index2D(test.src_rank.row() + 1, test.src_rank.col()));
+                           comm::Index2D(test.src_rank.row() + 1, test.src_rank.col()), test.offset);
     }
     if (test.src_rank.col() < test.grid_size.cols() - 1) {
       objs_ne.emplace_back(test.size, test.block_size, test.grid_size, test.rank,
-                           comm::Index2D(test.src_rank.row(), test.src_rank.col() + 1));
+                           comm::Index2D(test.src_rank.row(), test.src_rank.col() + 1), test.offset);
     }
 
     for (const auto& obj_ne : objs_ne) {
@@ -152,8 +189,8 @@ TEST(DistributionTest, ComparisonOperator) {
 
 TEST(DistributionTest, CopyConstructor) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_copy(obj);
@@ -164,8 +201,8 @@ TEST(DistributionTest, CopyConstructor) {
 
 TEST(DistributionTest, MoveConstructor) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_move(std::move(obj));
@@ -176,8 +213,8 @@ TEST(DistributionTest, MoveConstructor) {
 
 TEST(DistributionTest, CopyAssignment) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_copy;
@@ -189,8 +226,8 @@ TEST(DistributionTest, CopyAssignment) {
 
 TEST(DistributionTest, MoveAssignment) {
   for (const auto& test : tests_constructor) {
-    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
-    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank);
+    Distribution obj0(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution obj(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
     EXPECT_EQ(obj0, obj);
 
     Distribution obj_move;
@@ -207,6 +244,7 @@ struct ParametersIndices {
   comm::Index2D rank;
   comm::Size2D grid_size;
   comm::Index2D src_rank;
+  GlobalElementIndex offset;
   // Valid indices
   GlobalElementIndex global_element;
   GlobalTileIndex global_tile;

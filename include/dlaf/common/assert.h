@@ -42,7 +42,9 @@ template <class... Ts>
 inline void do_assert(bool expr, const common::internal::source_location& loc, const char* expression,
                       const Ts&... ts) noexcept {
   if (!expr) {
-    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << std::endl;
+    std::ostringstream ss;
+    ss << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << "\n";
+    std::cerr << ss.str();
     std::terminate();
   }
 }

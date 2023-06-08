@@ -216,7 +216,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < tile_size_.get<rc>(), tile_element,
                       tile_size_.get<rc>());
     return util::matrix::elementFromTileAndTileElement(global_tile, tile_element, tile_size_.get<rc>(),
-                                                       offset_.get<rc>() % tile_size_.get<rc>());
+                                                       globalTileElementOffset<rc>());
   }
 
   /// Returns the global index of the element
@@ -247,8 +247,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     return util::matrix::rankGlobalTile(global_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
-                                        source_rank_index_.get<rc>(),
-                                        offset_.get<rc>() / tile_size_.get<rc>());
+                                        source_rank_index_.get<rc>(), globalTileOffset<rc>());
   }
 
   /// Returns the global index of the tile which contains the element with global index @p global_element.
@@ -258,7 +257,7 @@ public:
   SizeType globalTileFromGlobalElement(SizeType global_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element, size_);
     return util::matrix::tileFromElement(global_element, tile_size_.get<rc>(),
-                                         offset_.get<rc>() % tile_size_.get<rc>());
+                                         globalTileElementOffset<rc>());
   }
 
   /// Returns the global index of the tile that has index @p local_tile
@@ -271,7 +270,7 @@ public:
                       local_nr_tiles_.get<rc>());
     return util::matrix::globalTileFromLocalTile(local_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
                                                  rank_index_.get<rc>(), source_rank_index_.get<rc>(),
-                                                 offset_.get<rc>() / tile_size_.get<rc>());
+                                                 globalTileOffset<rc>());
   }
 
   /// Returns the local index of the tile which contains the element with global index @p global_element.
@@ -293,7 +292,7 @@ public:
                       global_nr_tiles_.get<rc>());
     return util::matrix::localTileFromGlobalTile(global_tile, tilesPerBlock<rc>(), grid_size_.get<rc>(),
                                                  rank_index_.get<rc>(), source_rank_index_.get<rc>(),
-                                                 offset_.get<rc>() / tile_size_.get<rc>());
+                                                 globalTileOffset<rc>());
   }
 
   /// Returns the local index in current process of the global tile
@@ -320,7 +319,7 @@ public:
     return util::matrix::nextLocalTileFromGlobalTile(global_tile, tilesPerBlock<rc>(),
                                                      grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>(),
-                                                     offset_.get<rc>() / tile_size_.get<rc>());
+                                                     globalTileOffset<rc>());
   }
 
   /// Returns the index within the tile of the global element with index @p global_element.
@@ -331,7 +330,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= global_element && global_element < size_.get<rc>(), global_element,
                       size_.get<rc>());
     return util::matrix::tileElementFromElement(global_element, tile_size_.get<rc>(),
-                                                offset_.get<rc>() % tile_size_.get<rc>());
+                                                globalTileElementOffset<rc>());
   }
 
   template <Coord rc>
@@ -341,7 +340,7 @@ public:
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();
     if (global_tile == 0) {
-      return nb - (offset_.get<rc>() % nb);
+      return nb - (globalTileElementOffset<rc>());
     }
     return std::min(nb, n - global_tile * nb);
   }
@@ -358,7 +357,7 @@ public:
     SizeType n = size_.get<rc>();
     DLAF_ASSERT_HEAVY(0 <= i_gl && i_gl < n, i_gl, n);
     SizeType tile_n = tile_size_.get<rc>();
-    SizeType tile_element_offset = offset_.get<rc>() % tile_size_.get<rc>();
+    SizeType tile_element_offset = globalTileElementOffset<rc>();
     SizeType first_tile_n = tile_n - tile_element_offset;
     SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n, tile_element_offset);
 
@@ -443,30 +442,13 @@ public:
       return 0;
 
     // TODO: index naming?
-    // TODO: add helpers?
-    // - localTileElementOffset (offset in first tile in terms of elements, takes rank into account)
-    // - globalTileElementOffset (offset in first tile in terms of elements, all ranks)
-    // - localBlockElementOffset (offset in first block in terms of elements, takes rank into account)
-    // - globalBlockElementOffset (offset in first block in terms of elements, all ranks; this is the
-    // same as current offset_)
-    // - localTileOffset (offset in first block in terms of tiles, takes rank into account)
-    // - globalTileOffset (offset in first block in terms of tiles, all ranks)
-    // The following are always 0 because of normalization and are not needed
-    // - localBlockOffset (takes rank into account)
-    // - globalBlockOffset (always applies offset)
     SizeType i_element_begin =
         util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
-                                                    rank_index_.get<rc>() == source_rank_index_.get<rc>()
-                                                        ? (offset_.get<rc>() % tile_size_.get<rc>())
-                                                        : 0);
+                                                    localTileElementOffset<rc>());
     SizeType i_element_last =
         std::min(util::matrix::elementFromTileAndTileElement(i_loc_last, tile_size_.get<rc>(),
                                                              tile_size_.get<rc>(),
-                                                             rank_index_.get<rc>() ==
-                                                                     source_rank_index_.get<rc>()
-                                                                 ? (offset_.get<rc>() %
-                                                                    tile_size_.get<rc>())
-                                                                 : 0),
+                                                             localTileElementOffset<rc>()),
                  local_size_.get<rc>()) -
         1;
     return i_element_last - i_element_begin;
@@ -486,6 +468,46 @@ private:
   template <Coord rc>
   SizeType tilesPerBlock() const noexcept {
     return block_size_.get<rc>() / tile_size_.get<rc>();
+  }
+
+  /// Returns true if the current rank is the source rank along the @p rc coordinate, otherwise false.
+  template <Coord rc>
+  bool isSourceRank() const noexcept {
+    return rank_index_.get<rc>() == source_rank_index_.get<rc>();
+  }
+
+  /// Computes the offset inside the first global block in terms of tiles along the @p rc coordinate.
+  template <Coord rc>
+  SizeType globalTileOffset() const noexcept {
+    return offset_.get<rc>() / tile_size_.get<rc>();
+  }
+
+  /// Computes the offset inside the first global tile in terms of elements along the @p rc coordinate.
+  template <Coord rc>
+  SizeType globalTileElementOffset() const noexcept {
+    return offset_.get<rc>() % tile_size_.get<rc>();
+  }
+
+  /// Computes the offset inside the first local block in terms of tiles along the @p rc coordinate.
+  template <Coord rc>
+  SizeType localTileOffset() const noexcept {
+    if (isSourceRank<rc>()) {
+      return globalTileOffset<rc>();
+    }
+    else {
+      return 0;
+    }
+  }
+
+  /// Computes the offset inside the first local tile in terms of elements along the @p rc coordinate.
+  template <Coord rc>
+  SizeType localTileElementOffset() const noexcept {
+    if (isSourceRank<rc>()) {
+      return globalTileElementOffset<rc>();
+    }
+    else {
+      return 0;
+    }
   }
 
   /// Computes and sets @p size_.

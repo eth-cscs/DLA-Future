@@ -75,14 +75,14 @@ void Distribution::computeGlobalSizeForNonDistr() noexcept {
 }
 
 void Distribution::computeGlobalNrTiles() noexcept {
-  // offset_ gives the offset from the top-left block. If the offset is larger
-  // than a tile using the full blocks will give the wrong number of tiles.
-  // tile_offset gives the offset from the top-left tile.
-  GlobalElementIndex tile_offset = {offset_.row() % tile_size_.rows(),
-                                    offset_.col() % tile_size_.rows()};
-  global_nr_tiles_ =
-      {size_.rows() > 0 ? util::ceilDiv(size_.rows() + tile_offset.row(), tile_size_.rows()) : 0,
-       size_.cols() > 0 ? util::ceilDiv(size_.cols() + tile_offset.col(), tile_size_.cols()) : 0};
+  global_nr_tiles_ = {size_.rows() > 0
+                          ? util::ceilDiv(size_.rows() + globalTileElementOffset<Coord::Row>(),
+                                          tile_size_.rows())
+                          : 0,
+                      size_.cols() > 0
+                          ? util::ceilDiv(size_.cols() + globalTileElementOffset<Coord::Col>(),
+                                          tile_size_.cols())
+                          : 0};
 }
 
 void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
@@ -119,8 +119,9 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
       row = tile_row * tile_size_.rows();
     }
     if (tile_row > 0 && rank_index_.row() == source_rank_index_.row()) {
-      DLAF_ASSERT(row >= offset_.get<Coord::Row>() % tile_size_.get<Coord::Row>(), row, offset_, tile_size_);
-      row -= offset_.get<Coord::Row>() % tile_size_.get<Coord::Row>();
+      DLAF_ASSERT(row >= globalTileElementOffset<Coord::Row>(), row,
+                  globalTileElementOffset<Coord::Row>());
+      row -= globalTileElementOffset<Coord::Row>();
     }
   }
   SizeType col = 0;
@@ -134,8 +135,9 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
       col = tile_col * tile_size_.cols();
     }
     if (tile_col > 0 && rank_index_.col() == source_rank_index_.col()) {
-      DLAF_ASSERT(col >= offset_.get<Coord::Col>() % tile_size_.get<Coord::Col>(), col, offset_, tile_size_);
-      col -= offset_.get<Coord::Col>() % tile_size_.get<Coord::Col>();
+      DLAF_ASSERT(col >= globalTileElementOffset<Coord::Col>(), col,
+                  globalTileElementOffset<Coord::Col>());
+      col -= globalTileElementOffset<Coord::Col>();
     }
   }
 

@@ -32,15 +32,6 @@ struct ParametersConstructor {
   LocalElementSize local_size;
 };
 
-class TestDistribution : public Distribution {
-  TestDistribution(Distribution d) : Distribution(d) {}
-
-public:
-  static LocalElementSize testLocalSize(const Distribution& d) {
-    return TestDistribution(d).localSize();
-  }
-};
-
 const std::vector<ParametersConstructor> tests_constructor = {
     // {size, block_size, rank, grid_size, src_rank, offset, global_tiles, local_tiles, local_size}
     {{0, 0}, {13, 17}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
@@ -90,7 +81,7 @@ TEST(DistributionTest, DefaultConstructor) {
   EXPECT_EQ(comm::Size2D(1, 1), obj.commGridSize());
   EXPECT_EQ(comm::Index2D(0, 0), obj.sourceRankIndex());
 
-  EXPECT_EQ(LocalElementSize(0, 0), TestDistribution::testLocalSize(obj));
+  EXPECT_EQ(LocalElementSize(0, 0), obj.localSize());
   EXPECT_EQ(GlobalTileSize(0, 0), obj.nrTiles());
   EXPECT_EQ(LocalTileSize(0, 0), obj.localNrTiles());
 }
@@ -107,7 +98,7 @@ TEST(DistributionTest, ConstructorLocal) {
       EXPECT_EQ(test.src_rank, obj.sourceRankIndex());
 
       EXPECT_EQ(test.global_tiles, obj.nrTiles());
-      EXPECT_EQ(test.local_size, TestDistribution::testLocalSize(obj));
+      EXPECT_EQ(test.local_size, obj.localSize());
       EXPECT_EQ(test.local_tiles, obj.localNrTiles());
     }
   }
@@ -132,7 +123,7 @@ TEST(DistributionTest, Constructor) {
     EXPECT_EQ(expected_source_rank_index, obj.sourceRankIndex());
 
     EXPECT_EQ(test.global_tiles, obj.nrTiles());
-    EXPECT_EQ(test.local_size, TestDistribution::testLocalSize(obj));
+    EXPECT_EQ(test.local_size, obj.localSize());
     EXPECT_EQ(test.local_tiles, obj.localNrTiles());
   }
 }

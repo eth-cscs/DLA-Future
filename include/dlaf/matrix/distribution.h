@@ -340,7 +340,7 @@ public:
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();
     if (global_tile == 0) {
-      return nb - (globalTileElementOffset<rc>());
+      return std::min(nb - (globalTileElementOffset<rc>()), n);
     }
     return std::min(nb, n - global_tile * nb);
   }
@@ -446,7 +446,10 @@ public:
         util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
                                                     localTileElementOffset<rc>());
     SizeType i_element_last =
-        std::min(util::matrix::elementFromTileAndTileElement(i_loc_last, tile_size_.get<rc>(),
+        std::min(util::matrix::elementFromTileAndTileElement(i_loc_last,
+                                                             tileSize<rc>(globalTileFromLocalTile<rc>(
+                                                                 i_loc_last)) -
+                                                                 1,
                                                              tile_size_.get<rc>(),
                                                              localTileElementOffset<rc>()),
                  local_size_.get<rc>()) -

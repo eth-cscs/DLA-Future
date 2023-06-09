@@ -362,6 +362,26 @@ TEST(DistributionTest, DistanceToAdjacentTile) {
     EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Row>(9));
   }
 
+  // block_size > size && offset != {0, 0}
+  {
+    matrix::Distribution distr(LocalElementSize(7, 7), TileElementSize(20, 20),
+                               GlobalElementIndex(1, 15));
+
+    // Columns
+    //
+    EXPECT_EQ(5, distr.distanceToAdjacentTile<Coord::Col>(0));
+    EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Col>(4));
+    EXPECT_EQ(2, distr.distanceToAdjacentTile<Coord::Col>(5));
+    EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Col>(6));
+
+    // Rows
+    //
+    EXPECT_EQ(7, distr.distanceToAdjacentTile<Coord::Row>(0));
+    EXPECT_EQ(6, distr.distanceToAdjacentTile<Coord::Row>(1));
+    EXPECT_EQ(2, distr.distanceToAdjacentTile<Coord::Row>(5));
+    EXPECT_EQ(1, distr.distanceToAdjacentTile<Coord::Row>(6));
+  }
+
   // offset != {0, 0}
   {
     matrix::Distribution distr(LocalElementSize(10, 10), TileElementSize(3, 3),

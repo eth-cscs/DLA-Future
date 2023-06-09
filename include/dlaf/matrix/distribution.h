@@ -358,11 +358,10 @@ public:
     DLAF_ASSERT_HEAVY(0 <= i_gl && i_gl < n, i_gl, n);
     SizeType tile_n = tile_size_.get<rc>();
     SizeType tile_element_offset = globalTileElementOffset<rc>();
-    SizeType first_tile_n = tile_n - tile_element_offset;
     SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n, tile_element_offset);
 
     if (tile_i == 0) {
-      return first_tile_n;
+      return std::min(tile_n - tile_element_offset, n);
     }
 
     return std::min(tile_n, (n + tile_element_offset) - tile_i * tile_n);

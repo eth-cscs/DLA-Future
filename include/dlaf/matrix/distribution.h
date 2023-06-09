@@ -436,7 +436,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= i_loc_begin && i_loc_end <= local_nr_tiles_.get<rc>(), i_loc_begin, i_loc_end,
                       local_nr_tiles_.get<rc>());
 
-    SizeType i_loc_last = nextLocalTileFromGlobalTile<rc>(i_loc_end) - 1;
+    SizeType i_loc_last = i_loc_end - 1;
     if (i_loc_begin > i_loc_last)
       return 0;
 
@@ -444,16 +444,14 @@ public:
     SizeType i_element_begin =
         util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
                                                     localTileElementOffset<rc>());
-    SizeType i_element_last =
-        std::min(util::matrix::elementFromTileAndTileElement(i_loc_last,
-                                                             tileSize<rc>(globalTileFromLocalTile<rc>(
-                                                                 i_loc_last)) -
-                                                                 1,
-                                                             tile_size_.get<rc>(),
-                                                             localTileElementOffset<rc>()),
-                 local_size_.get<rc>()) -
+    SizeType i_element_end =
+        util::matrix::elementFromTileAndTileElement(i_loc_last,
+                                                    tileSize<rc>(
+                                                        globalTileFromLocalTile<rc>(i_loc_last)) -
+                                                        1,
+                                                    tile_size_.get<rc>(), localTileElementOffset<rc>()) +
         1;
-    return i_element_last - i_element_begin;
+    return i_element_end - i_element_begin;
   }
 
   /// \overload localElementDistanceFromLocalTile

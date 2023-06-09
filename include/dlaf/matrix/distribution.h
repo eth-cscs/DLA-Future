@@ -340,9 +340,9 @@ public:
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();
     if (global_tile == 0) {
-      return std::min(nb - (globalTileElementOffset<rc>()), n);
+      return std::min(nb - globalTileElementOffset<rc>(), n);
     }
-    return std::min(nb, n - global_tile * nb);
+    return std::min(nb, n + globalTileElementOffset<rc>() - global_tile * nb);
   }
 
   /// Returns the size of the Tile with global index @p index.

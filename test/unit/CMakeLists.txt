@@ -61,3 +61,6 @@ add_subdirectory(factorization)
 add_subdirectory(multiplication)
 add_subdirectory(permutations)
 add_subdirectory(solver)
+
+# C API
+add_subdirectory(c_api/eigensolver)

@@ -22,3 +22,7 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* i
 void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
   cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
 }
+
+void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf_desca) {
+  cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
+}

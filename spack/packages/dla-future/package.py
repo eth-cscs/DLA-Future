@@ -1,29 +1,31 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
+# Copyright 2013-2023 Lawrence Livermore National Security, LLC and other
 # Spack Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 # dlaf-no-license-check
 
-from spack import *
+from spack.package import *
 
 
 class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     """DLA-Future library: Distributed Linear Algebra with Future"""
 
-    homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
-    git = "https://github.com/eth-cscs/DLA-Future"
-
+    homepage = "https://github.com/eth-cscs/DLA-Future"
+    url = "https://github.com/eth-cscs/DLA-Future/archive/v0.0.0.tar.gz"
+    git = "https://github.com/eth-cscs/DLA-Future.git"
     maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
-    version("develop", branch="master")
+    version("master", branch="master")
 
-    cxxstds = ('17', '20')
-    variant('cxxstd',
-            default='17',
-            values=cxxstds,
-            description='Use the specified C++ standard when building')
-    conflicts('cxxstd=20', when='+cuda')
+    cxxstds = ("17", "20")
+    variant(
+        "cxxstd",
+        default="17",
+        values=cxxstds,
+        description="Use the specified C++ standard when building",
+    )
+    conflicts("cxxstd=20", when="+cuda")
 
     variant("shared", default=True, description="Build shared libraries.")
 
@@ -32,9 +34,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("miniapps", default=False, description="Build miniapps.")
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
-    conflicts('~miniapps', when='+ci-test')
+    conflicts("~miniapps", when="+ci-test")
 
-    variant("ci-check-threads", default=False, description="Check number of spawned threads in CI (Advanced usage).")
+    variant(
+        "ci-check-threads",
+        default=False,
+        description="Check number of spawned threads in CI (Advanced usage).",
+    )
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -54,20 +60,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pika +rocm", when="+rocm")
     for cxxstd in cxxstds:
         depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on(
-            "pika-algorithms cxxstd={0}".format(cxxstd),
-            when="cxxstd={0}".format(cxxstd),
-        )
+        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
 
-    for build_type in ("Debug", "RelWithDebInfo", "Release"):
-        depends_on(
-            "pika build_type={0}".format(build_type),
-            when="build_type={0}".format(build_type),
-        )
-        depends_on(
-            "pika-algorithms build_type={0}".format(build_type),
-            when="build_type={0}".format(build_type),
-        )
 
     depends_on("whip +cuda", when="+cuda")
     depends_on("whip +rocm", when="+rocm")
@@ -81,27 +75,28 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     with when("+rocm"):
         for val in ROCmPackage.amdgpu_targets:
-            depends_on("pika amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("rocsolver amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("rocblas amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("rocprim amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("rocthrust amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("whip amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
-            depends_on("umpire amdgpu_target={0}".format(val),
-                when="amdgpu_target={0}".format(val))
+            depends_on("pika amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
+            depends_on(
+                "rocsolver amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
+            depends_on(
+                "rocblas amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
+            depends_on(
+                "rocprim amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
+            depends_on(
+                "rocthrust amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
+            depends_on("whip amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
+            depends_on(
+                "umpire amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
 
     with when("+cuda"):
         for val in CudaPackage.cuda_arch_values:
-            depends_on("pika cuda_arch={0}".format(val),
-                when="cuda_arch={0}".format(val))
-            depends_on("umpire cuda_arch={0}".format(val),
-                when="cuda_arch={0}".format(val))
+            depends_on("pika cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
+            depends_on("umpire cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
 
     def cmake_args(self):
         spec = self.spec
@@ -111,18 +106,29 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-            vmap = {"none": "seq", "openmp": "omp", "tbb": "tbb"} # Map MKL variants to LAPACK target name
+            vmap = {
+                "none": "seq",
+                "openmp": "omp",
+                "tbb": "tbb",
+            }  # Map MKL variants to LAPACK target name
             # TODO: Generalise for intel-oneapi-mkl
             args += [
                 self.define("DLAF_WITH_MKL", True),
-                self.define("MKL_LAPACK_TARGET", "mkl::mkl_intel_32bit_{0}_dyn".format(vmap[spec["intel-mkl"].variants["threads"].value])),
+                self.define(
+                    "MKL_LAPACK_TARGET",
+                    "mkl::mkl_intel_32bit_{0}_dyn".format(
+                        vmap[spec["intel-mkl"].variants["threads"].value]
+                    ),
+                ),
             ]
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
-            args.append(self.define(
+            args.append(
+                self.define(
                     "LAPACK_LIBRARY",
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
-                ))
+                )
+            )
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

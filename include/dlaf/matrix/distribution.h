@@ -34,7 +34,7 @@ public:
   /// @pre size.isValid(),
   /// @pre !block_size.isEmpty().
   Distribution(const LocalElementSize& size, const TileElementSize& block_size,
-               const GlobalElementIndex& offset = {0, 0});  // TODO: Add LocalElementIndex strong type?
+               const GlobalElementIndex& offset = {0, 0});
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
   /// distributed on a 2D grid of processes of size @p grid_size.

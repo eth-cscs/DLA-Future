@@ -969,8 +969,7 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
 }
 
 template <class T, class CommSender, class KSender, class RhoSender>
-void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
-                           const matrix::Distribution dist_evecs, const SizeType i_begin,
+void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const SizeType i_begin,
                            const SizeType i_end, const LocalTileIndex ij_begin_lc,
                            const LocalTileSize sz_loc_tiles, KSender&& k, RhoSender&& rho,
                            Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
@@ -978,12 +977,46 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
                            Matrix<const SizeType, Device::CPU>& i2, Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  namespace tt = pika::this_thread::experimental;
 
   const matrix::Distribution& dist = evecs.distribution();
 
   TileCollector tc{i_begin, i_end};
 
   const SizeType n = problemSize(i_begin, i_end, dist);
+
+  const SizeType m_subm_el_lc = [=]() {
+    const auto i_loc_being = ij_begin_lc.row();
+    const auto i_loc_end = ij_begin_lc.row() + sz_loc_tiles.rows();
+    return dist.localElementDistanceFromLocalTile<Coord::Row>(i_loc_being, i_loc_end);
+  }();
+
+  const SizeType n_subm_el_lc = [=]() {
+    const auto i_loc_being = ij_begin_lc.col();
+    const auto i_loc_end = ij_begin_lc.col() + sz_loc_tiles.cols();
+    return dist.localElementDistanceFromLocalTile<Coord::Col>(i_loc_being, i_loc_end);
+  }();
+
+  auto bcast_evals = [i_begin, i_end,
+                      dist](const dlaf::comm::Communicator& row_comm,
+                            const std::vector<matrix::Tile<T, Device::CPU>>& eval_tiles) {
+    using dlaf::comm::internal::sendBcast_o;
+    using dlaf::comm::internal::recvBcast_o;
+
+    const comm::Index2D this_rank = dist.rankIndex();
+
+    // TODO it is not needed to sync_wait, but we have to wait for the completion of all before releasing tiles
+    for (SizeType i = i_begin; i < i_end; ++i) {
+      const comm::IndexT_MPI evecs_tile_rank = dist.rankGlobalTile<Coord::Col>(i);
+      auto& tile = eval_tiles[to_sizet(i - i_begin)];
+
+      if (evecs_tile_rank == this_rank.col())
+        tt::sync_wait(transformMPI(sendBcast_o, ex::just(std::cref(row_comm), std::cref(tile))));
+      else
+        tt::sync_wait(transformMPI(recvBcast_o,
+                                   ex::just(std::cref(row_comm), evecs_tile_rank, std::cref(tile))));
+    }
+  };
 
   const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
     const std::size_t min_workers = 1;
@@ -1002,14 +1035,13 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [nthreads, n, dist_evecs, i_begin, i_end, ij_begin_lc, sz_loc_tiles,
-                          dist](const std::size_t thread_idx, auto& barrier_ptr, auto& col_comm_wrapper,
-                                auto& row_comm_wrapper, const auto& k, const auto& rho,
-                                const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
-                                const auto& delta_tile_arr, const auto& i2_tile_arr,
-                                const auto& evec_tiles, auto& ws_vecs, auto& ws_rowvec) {
-        namespace tt = pika::this_thread::experimental;
-
+      ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, i_end, ij_begin_lc,
+                          sz_loc_tiles, dist, bcast_evals](
+                             const std::size_t thread_idx, auto& barrier_ptr, auto& col_comm_wrapper,
+                             auto& row_comm_wrapper, const auto& k, const auto& rho,
+                             const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
+                             const auto& delta_tile_arr, const auto& i2_tile_arr, const auto& evec_tiles,
+                             auto& ws_vecs, auto& ws_rowvec) {
         using dlaf::comm::internal::transformMPI;
 
         auto reduce_o = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op, const auto& data,
@@ -1028,29 +1060,17 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         const SizeType end = std::min(to_SizeType((thread_idx + 1) * batch_size), sz_loc_tiles.cols());
 
         // STEP 0: Initialize workspaces (single-thread)
-        const SizeType m_subm_el_lc = [=]() {
-          const auto i_loc_being = ij_begin_lc.row();
-          const auto i_loc_end = ij_begin_lc.row() + sz_loc_tiles.rows();
-          return dist.localElementDistanceFromLocalTile<Coord::Row>(i_loc_being, i_loc_end);
-        }();
-
-        const SizeType n_subm_el_lc = [=]() {
-          const auto i_loc_being = ij_begin_lc.col();
-          const auto i_loc_end = ij_begin_lc.col() + sz_loc_tiles.cols();
-          return dist.localElementDistanceFromLocalTile<Coord::Col>(i_loc_being, i_loc_end);
-        }();
-
-        // Note: nthreads + 1 to get additional workspace for reduction
-        if (thread_idx == 0) {
+        // Note: use last threads that in principle should have less work to do (because it might
+        // just have to set 1s for deflated)
+        if (thread_idx == nthreads - 1) {
           ws_vecs.reserve(nthreads + 1);
+          // Note: nthreads + 1 to get additional workspace for reduction
           for (std::size_t i = 0; i < nthreads + 1; ++i)
             ws_vecs.emplace_back(m_subm_el_lc);
 
           ws_rowvec = memory::MemoryView<T, Device::CPU>(n_subm_el_lc);
           std::fill_n(ws_rowvec(), n_subm_el_lc, 0);
         }
-
-        barrier_ptr->arrive_and_wait();
 
         const T* d_ptr = d_tiles_futs[0].get().ptr();
         const T* z_ptr = z_tiles[0].ptr();
@@ -1102,10 +1122,9 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
           }
         }
 
-        barrier_ptr->arrive_and_wait();
-
         // STEP 1b: Fill ones for deflated Eigenvectors. (single-thread)
         // TODO this step looks like it is completely "independent"; maybe we can do something different
+        // TODO if chunked this can be run by multiple workers
         if (thread_idx == 0) {
           // just if there are deflated eigenvectors
           if (k < n) {
@@ -1132,31 +1151,15 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
           }
         }
 
-        // STEP 1c: assemble dist evals vec
-        // TODO this step looks like it is completely "independent"; maybe we can do something different
-        if (thread_idx == 0) {
-          using dlaf::comm::internal::sendBcast_o;
-          using dlaf::comm::internal::recvBcast_o;
+        // This barrier ensures that LAED4 finished, so from now on values are available
+        barrier_ptr->arrive_and_wait();
 
-          const comm::Index2D this_rank = dist_evecs.rankIndex();
-
-          for (SizeType i = i_begin; i < i_end; ++i) {
-            const comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
-            auto& tile = eval_tiles[to_sizet(i - i_begin)];
-
-            if (evecs_tile_rank == this_rank.col())
-              tt::sync_wait(transformMPI(sendBcast_o, ex::just(std::cref(row_comm), std::cref(tile))));
-            else
-              tt::sync_wait(transformMPI(recvBcast_o, ex::just(std::cref(row_comm), evecs_tile_rank,
-                                                               std::cref(tile))));
-          }
-        }
+        if (thread_idx == 0)
+          bcast_evals(row_comm, eval_tiles);
 
         // Note: laed4 handles k <= 2 cases differently
         if (k <= 2)
           return;
-
-        barrier_ptr->arrive_and_wait();
 
         // STEP 2a Compute weights (multi-thread)
         auto& q = evec_tiles;
@@ -1459,9 +1462,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1ProblemDist(col_task_chain(), row_task_chain(), dist_evecs, i_begin, i_end, idx_loc_begin,
-                        sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0,
-                        ws_hm.i2, ws_hm.e2);
+  solveRank1ProblemDist(col_task_chain(), row_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
+                        k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2,
+                        ws_hm.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //

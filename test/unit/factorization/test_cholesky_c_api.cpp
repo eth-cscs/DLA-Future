@@ -13,6 +13,7 @@
 #include "dlaf_c/factorization/cholesky.h"
 #include "dlaf_c/grid.h"
 #include "dlaf_c/init.h"
+#include "dlaf_c/utils.h"
 
 #include <gtest/gtest.h>
 #include <pika/runtime.hpp>
@@ -22,21 +23,132 @@
 #include <iostream>
 
 // BLACS
-extern "C" void Cblacs_pinfo();
-extern "C" void Cblacs_gridinit(int* contxt, const char* order, int nprow, int npcol);
-extern "C" void Cblacs_gridexit(int contxt);
-extern "C" void Cblacs_exit(int error);
+DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);
+DLAF_EXTERN_C void Cblacs_gridexit(int ictxt);
 
 // ScaLAPACK
-extern "C" int numroc(const int* n, const int* nb, const int* iproc, const int* isrcproc,
-                      const int* nprocs);
-extern "C" void descinit(int* desc, const int* m, const int* n, const int* mb, const int* nb,
-                         const int* irsrc, const int* icsrc, const int* ictxt, const int* lld,
-                         int* info);
-extern "C" void pdgemr2d(int* m, int* n, double* A, int* ia, int* ja, int* desca, double* B, int* ib,
-                         int* jb, int* descb, int* ictxt);
+DLAF_EXTERN_C int numroc(const int* n, const int* nb, const int* iproc, const int* isrcproc,
+                         const int* nprocs);
+DLAF_EXTERN_C void descinit(int* desc, const int* m, const int* n, const int* mb, const int* nb,
+                            const int* irsrc, const int* icsrc, const int* ictxt, const int* lld,
+                            int* info);
+DLAF_EXTERN_C void pdgemr2d(int* m, int* n, double* A, int* ia, int* ja, int* desca, double* B, int* ib,
+                            int* jb, int* descb, int* ictxt);
 
+int izero = 0;
+int ione = 1;
 
+// TODO: Move?
+#include "dlaf/communication/error.h"
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+dlaf::common::Ordering grid_order(MPI_Comm& communicator, int nprow, int npcol, int myprow, int mypcol) {
+  int rank;
+  DLAF_MPI_CHECK_ERROR(MPI_Comm_rank(communicator, &rank));
+
+  std::cout << rank << ' ' << myprow << ' ' << mypcol << '\n';
+
+  bool _row_major = false, _col_major = false;
+  bool row_major, col_major;
+
+  if (rank == myprow * npcol + mypcol) {
+    _row_major = true;
+  }
+  else if (rank == mypcol * nprow + myprow) {
+    _col_major = true;
+  }
+
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_row_major, &row_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
+
+  if (row_major) {
+    return dlaf::common::Ordering::RowMajor;
+  }
+  else if (col_major) {
+    return dlaf::common::Ordering::ColumnMajor;
+  }
+  // TODO: Deal with gridmap-initialised grids
+}
+
+TEST(CAPIScaLAPACKTest, GridOrderColumnR) {
+  int rank;
+  int num_ranks;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+
+  EXPECT_EQ(num_ranks, 6);
+
+  int nprow = 2;  // Rows of process grid
+  int npcol = 3;  // Cols of process grid
+
+  EXPECT_EQ(nprow * npcol, num_ranks);
+
+  char order = 'R';
+
+  int contxt = 0;
+
+  Cblacs_get(0, 0, &contxt);
+  Cblacs_gridinit(&contxt, &order, nprow, npcol);
+
+  int system_ctxt;
+  // SGET_BLACSCONTXT == 10
+  int get_blacs_contxt = 10;
+  Cblacs_get(contxt, get_blacs_contxt, &system_ctxt);
+
+  MPI_Comm communicator = Cblacs2sys_handle(system_ctxt);
+
+  int dims[2] = {0, 0};
+  int coords[2] = {-1, -1};
+
+  Cblacs_gridinfo(contxt, &dims[0], &dims[1], &coords[0], &coords[1]);
+
+  auto go = grid_order(communicator, dims[0], dims[1], coords[0], coords[1]);
+
+  EXPECT_EQ(go, dlaf::common::Ordering::RowMajor);
+
+  Cblacs_gridexit(contxt);
+}
+
+TEST(CAPIScaLAPACKTest, GridOrderColumnC) {
+  int rank;
+  int num_ranks;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &num_ranks);
+
+  EXPECT_EQ(num_ranks, 6);
+
+  int nprow = 2;  // Rows of process grid
+  int npcol = 3;  // Cols of process grid
+
+  EXPECT_EQ(nprow * npcol, num_ranks);
+
+  char order = 'C';
+
+  int contxt = 0;
+
+  Cblacs_get(0, 0, &contxt);
+  Cblacs_gridinit(&contxt, &order, nprow, npcol);
+
+  int system_ctxt;
+  // SGET_BLACSCONTXT == 10
+  int get_blacs_contxt = 10;
+  Cblacs_get(contxt, get_blacs_contxt, &system_ctxt);
+
+  MPI_Comm communicator = Cblacs2sys_handle(system_ctxt);
+
+  int dims[2] = {0, 0};
+  int coords[2] = {-1, -1};
+
+  Cblacs_gridinfo(contxt, &dims[0], &dims[1], &coords[0], &coords[1]);
+
+  auto go = grid_order(communicator, dims[0], dims[1], coords[0], coords[1]);
+
+  EXPECT_EQ(go, dlaf::common::Ordering::ColumnMajor);
+
+  Cblacs_gridexit(contxt);
+}
 
 // TODO: Check double and float
 TEST(CholeskyCAPIScaLAPACKTest, CorrectnessDistributed) {
@@ -59,7 +171,7 @@ TEST(CholeskyCAPIScaLAPACKTest, CorrectnessDistributed) {
   int nb = 1;
   int mb = 1;
 
-  const char* order = "C";
+  char order = 'C';
   char uplo = 'L';
 
   int contxt = 0;
@@ -69,8 +181,8 @@ TEST(CholeskyCAPIScaLAPACKTest, CorrectnessDistributed) {
   Cblacs_get(0, 0, &contxt);
   contxt_global = contxt;
 
-  Cblacs_gridinit(&contxt_global, order, 1, 1);  // Global matrix: only on rank 0
-  Cblacs_gridinit(&contxt, order, nprow, npcol);
+  Cblacs_gridinit(&contxt_global, &order, 1, 1);  // Global matrix: only on rank 0
+  Cblacs_gridinit(&contxt, &order, nprow, npcol);
 
   int myprow, mypcol;
   Cblacs_gridinfo(contxt, &nprow, &npcol, &myprow, &mypcol);
@@ -195,7 +307,7 @@ TEST(CholeskyCAPITest, CorrectnessDistributed) {
   int nb = 1;
   int mb = 1;
 
-  const char* order = "C";
+  char order = 'C';
   char uplo = 'L';
 
   int contxt = 0;
@@ -205,13 +317,14 @@ TEST(CholeskyCAPITest, CorrectnessDistributed) {
   Cblacs_get(0, 0, &contxt);
   contxt_global = contxt;
 
-  Cblacs_gridinit(&contxt_global, order, 1, 1);  // Global matrix: only on rank 0
-  Cblacs_gridinit(&contxt, order, nprow, npcol);
+  Cblacs_gridinit(&contxt_global, &order, 1, 1);  // Global matrix: only on rank 0
+  Cblacs_gridinit(&contxt, &order, nprow, npcol);
 
   // Get MPI_Comm
   // TODO: Re-use code from dlaf_create_grid_from_blacs?
   int system_context;
-  Cblacs_get(contxt, 10, &system_context);
+  int get_blacs_contxt = 10;
+  Cblacs_get(contxt, get_blacs_contxt, &system_context);
   MPI_Comm comm = Cblacs2sys_handle(system_context);
 
   int myprow, mypcol;

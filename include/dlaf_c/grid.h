@@ -14,7 +14,7 @@
 #include "dlaf_c/utils.h"
 
 DLAF_EXTERN_C MPI_Comm Cblacs2sys_handle(int ictxt);
-DLAF_EXTERN_C void Cblacs_get(int ictxt, int inum, int* comm);
+DLAF_EXTERN_C void Cblacs_get(int ictxt, int what, int* val);
 DLAF_EXTERN_C void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
 
 DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order = 'R');

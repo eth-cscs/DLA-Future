@@ -17,6 +17,7 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/kernels.h>
+#include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
@@ -475,6 +476,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                                            auto& evec_tiles, auto& ws_vecs) {
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
+        const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
         const std::size_t batch_size = util::ceilDiv(to_sizet(k), nthreads);
         const std::size_t begin = thread_idx * batch_size;
         const std::size_t end = std::min(thread_idx * batch_size + batch_size, to_sizet(k));
@@ -486,7 +488,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             ws_vecs.emplace_back(to_sizet(k));
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 1: LAED4 (multi-thread)
         const T* d_ptr = d_tiles_futs[0].get().ptr();
@@ -511,7 +513,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             return;
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2a Compute weights (multi-thread)
         auto& q = evec_tiles;
@@ -550,7 +552,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             compute_w({i, j});
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
@@ -563,7 +565,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           }
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
         {

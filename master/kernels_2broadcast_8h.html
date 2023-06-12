@@ -75,14 +75,14 @@ $(function() {
 <div class="textblock"><code>#include &lt;complex&gt;</code><br />
 <code>#include &lt;mpi.h&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
-<code>#include &quot;dlaf/common/assert.h&quot;</code><br />
-<code>#include &quot;<a class="el" href="callable__object_8h_source.html">dlaf/common/callable_object.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="data_8h_source.html">dlaf/common/data.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="message_8h_source.html">dlaf/communication/message.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&quot;</code><br />
+<code>#include &lt;dlaf/common/assert.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="callable__object_8h_source.html">dlaf/common/callable_object.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="data_8h_source.html">dlaf/common/data.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="message_8h_source.html">dlaf/communication/message.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 </div>
 <p><a href="kernels_2broadcast_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -214,9 +214,10 @@ template&lt;class T , Device D&gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt;                  \</div>
-<div class="line">  scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, \</div>
-<div class="line">                    comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(             \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, comm::IndexT_MPI root_rank, \</div>
+<div class="line">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a3645d0cfc3caad43c37c355896a7215f"><div class="ttname"><a href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -257,9 +258,10 @@ template&lt;class T , Device D&gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt;               \</div>
-<div class="line">  scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, \</div>
-<div class="line">                    dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>( \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,                    \</div>
+<div class="line">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
+<div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>

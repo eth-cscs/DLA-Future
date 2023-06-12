@@ -84,10 +84,10 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf::matrix {</div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
@@ -102,37 +102,36 @@ $(function() {
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
 <div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="comment">// Given that `sz` is the same for both `source` and `dest` it is sufficient to only check if the local</span></div>
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="comment">// length of the copied region is the same.</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(source.distribution().localElementDistanceFromLocalTile(idx_source_begin,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;                                                                      idx_source_begin + sz) ==</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                  dest.distribution().localElementDistanceFromLocalTile(idx_dest_begin,</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;                                                                        idx_dest_begin + sz),</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;              source, dest);</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> idx_dest : common::iterate_range2d(idx_dest_begin, sz)) {</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> idx_source = idx_source_begin + (idx_dest - idx_dest_begin);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    ex::start_detached(ex::when_all(source.read(idx_source), dest.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(idx_dest)) |</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;                       copy(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt;internal::CopyBackend_v&lt;Source, Destination&gt;&gt;{}));</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  }</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;}</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device Source, Device Destination&gt;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="keywordtype">void</span> copy(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> idx_begin, <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> sz, Matrix&lt;const T, Source&gt;&amp; source,</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;          Matrix&lt;T, Destination&gt;&amp; dest) {</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  copy(sz, idx_begin, source, idx_begin, dest);</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;}</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device Source, Device Destination&gt;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="keywordtype">void</span> copy(Matrix&lt;const T, Source&gt;&amp; source, Matrix&lt;T, Destination&gt;&amp; dest) {</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  copy(source.distribution().localNrTiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0), dest);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;}</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;}</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;      source.distribution().localElementDistanceFromLocalTile(idx_source_begin, idx_source_begin + sz) ==</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;          dest.distribution().localElementDistanceFromLocalTile(idx_dest_begin, idx_dest_begin + sz),</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;      source, dest);</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> idx_dest : common::iterate_range2d(idx_dest_begin, sz)) {</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> idx_source = idx_source_begin + (idx_dest - idx_dest_begin);</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    ex::start_detached(ex::when_all(source.read(idx_source), dest.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(idx_dest)) |</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                       copy(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt;internal::CopyBackend_v&lt;Source, Destination&gt;&gt;{}));</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  }</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;}</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160; </div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device Source, Device Destination&gt;</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="keywordtype">void</span> copy(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> idx_begin, <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> sz, Matrix&lt;const T, Source&gt;&amp; source,</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;          Matrix&lt;T, Destination&gt;&amp; dest) {</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  copy(sz, idx_begin, source, idx_begin, dest);</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;}</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device Source, Device Destination&gt;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="keywordtype">void</span> copy(Matrix&lt;const T, Source&gt;&amp; source, Matrix&lt;T, Destination&gt;&amp; dest) {</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  copy(source.distribution().localNrTiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0), dest);</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;}</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix&lt; const T, Source &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:122</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:121</div></div>
 <div class="ttc" id="acopy__tile_8h_html"><div class="ttname"><a href="copy__tile_8h.html">copy_tile.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>

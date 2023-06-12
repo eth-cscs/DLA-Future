@@ -83,24 +83,24 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;pika/thread.hpp&gt;</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="tile__extensions_8h.html">dlaf/blas/tile_extensions.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;dlaf/solver/triangular/api.h&quot;</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="tile__extensions_8h.html">dlaf/blas/tile_extensions.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&gt;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &lt;dlaf/solver/triangular/api.h&gt;</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="keyword">namespace </span>solver {</div>
@@ -662,12 +662,12 @@ $(function() {
 <div class="line"><a name="l00591"></a><span class="lineno">  591</span>&#160;    <span class="keywordflow">if</span> (grid.colCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00592"></a><span class="lineno">  592</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00593"></a><span class="lineno">  593</span>&#160;        <span class="keywordflow">if</span> (this_rank.row() == rank_kk.row()) {</div>
-<div class="line"><a name="l00594"></a><span class="lineno">  594</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00595"></a><span class="lineno">  595</span>&#160;              comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00594"></a><span class="lineno">  594</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l00595"></a><span class="lineno">  595</span>&#160;                                                             b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00596"></a><span class="lineno">  596</span>&#160;        }</div>
 <div class="line"><a name="l00597"></a><span class="lineno">  597</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00598"></a><span class="lineno">  598</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00599"></a><span class="lineno">  599</span>&#160;              comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00598"></a><span class="lineno">  598</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,</div>
+<div class="line"><a name="l00599"></a><span class="lineno">  599</span>&#160;                                                      b_panel.read(idx)));</div>
 <div class="line"><a name="l00600"></a><span class="lineno">  600</span>&#160;        }</div>
 <div class="line"><a name="l00601"></a><span class="lineno">  601</span>&#160;      }</div>
 <div class="line"><a name="l00602"></a><span class="lineno">  602</span>&#160;    }</div>
@@ -839,12 +839,12 @@ $(function() {
 <div class="line"><a name="l00768"></a><span class="lineno">  768</span>&#160;    <span class="keywordflow">if</span> (grid.colCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00769"></a><span class="lineno">  769</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00770"></a><span class="lineno">  770</span>&#160;        <span class="keywordflow">if</span> (this_rank.row() == rank_kk.row()) {</div>
-<div class="line"><a name="l00771"></a><span class="lineno">  771</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00772"></a><span class="lineno">  772</span>&#160;              comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00771"></a><span class="lineno">  771</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l00772"></a><span class="lineno">  772</span>&#160;                                                             b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00773"></a><span class="lineno">  773</span>&#160;        }</div>
 <div class="line"><a name="l00774"></a><span class="lineno">  774</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00775"></a><span class="lineno">  775</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00776"></a><span class="lineno">  776</span>&#160;              comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00775"></a><span class="lineno">  775</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,</div>
+<div class="line"><a name="l00776"></a><span class="lineno">  776</span>&#160;                                                      b_panel.read(idx)));</div>
 <div class="line"><a name="l00777"></a><span class="lineno">  777</span>&#160;        }</div>
 <div class="line"><a name="l00778"></a><span class="lineno">  778</span>&#160;      }</div>
 <div class="line"><a name="l00779"></a><span class="lineno">  779</span>&#160;    }</div>
@@ -1018,12 +1018,12 @@ $(function() {
 <div class="line"><a name="l00947"></a><span class="lineno">  947</span>&#160;    <span class="keywordflow">if</span> (grid.rowCommunicator().size() != 1) {</div>
 <div class="line"><a name="l00948"></a><span class="lineno">  948</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l00949"></a><span class="lineno">  949</span>&#160;        <span class="keywordflow">if</span> (this_rank.col() == rank_kk.col()) {</div>
-<div class="line"><a name="l00950"></a><span class="lineno">  950</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00951"></a><span class="lineno">  951</span>&#160;              comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l00950"></a><span class="lineno">  950</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l00951"></a><span class="lineno">  951</span>&#160;                                                             b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l00952"></a><span class="lineno">  952</span>&#160;        }</div>
 <div class="line"><a name="l00953"></a><span class="lineno">  953</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00954"></a><span class="lineno">  954</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l00955"></a><span class="lineno">  955</span>&#160;              comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l00954"></a><span class="lineno">  954</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,</div>
+<div class="line"><a name="l00955"></a><span class="lineno">  955</span>&#160;                                                      b_panel.read(idx)));</div>
 <div class="line"><a name="l00956"></a><span class="lineno">  956</span>&#160;        }</div>
 <div class="line"><a name="l00957"></a><span class="lineno">  957</span>&#160;      }</div>
 <div class="line"><a name="l00958"></a><span class="lineno">  958</span>&#160;    }</div>
@@ -1198,12 +1198,12 @@ $(function() {
 <div class="line"><a name="l01127"></a><span class="lineno"> 1127</span>&#160;    <span class="keywordflow">if</span> (grid.rowCommunicator().size() != 1) {</div>
 <div class="line"><a name="l01128"></a><span class="lineno"> 1128</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : b_panel.iteratorLocal()) {</div>
 <div class="line"><a name="l01129"></a><span class="lineno"> 1129</span>&#160;        <span class="keywordflow">if</span> (this_rank.col() == rank_kk.col()) {</div>
-<div class="line"><a name="l01130"></a><span class="lineno"> 1130</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l01131"></a><span class="lineno"> 1131</span>&#160;              comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel.readwrite(idx)));</div>
+<div class="line"><a name="l01130"></a><span class="lineno"> 1130</span>&#160;          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l01131"></a><span class="lineno"> 1131</span>&#160;                                                             b_panel.readwrite(idx)));</div>
 <div class="line"><a name="l01132"></a><span class="lineno"> 1132</span>&#160;        }</div>
 <div class="line"><a name="l01133"></a><span class="lineno"> 1133</span>&#160;        <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01134"></a><span class="lineno"> 1134</span>&#160;          ex::start_detached(</div>
-<div class="line"><a name="l01135"></a><span class="lineno"> 1135</span>&#160;              comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM, b_panel.read(idx)));</div>
+<div class="line"><a name="l01134"></a><span class="lineno"> 1134</span>&#160;          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,</div>
+<div class="line"><a name="l01135"></a><span class="lineno"> 1135</span>&#160;                                                      b_panel.read(idx)));</div>
 <div class="line"><a name="l01136"></a><span class="lineno"> 1136</span>&#160;        }</div>
 <div class="line"><a name="l01137"></a><span class="lineno"> 1137</span>&#160;      }</div>
 <div class="line"><a name="l01138"></a><span class="lineno"> 1138</span>&#160;    }</div>

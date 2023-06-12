@@ -85,37 +85,38 @@ $(function() {
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;mutex&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;mpi.h&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;pika/mutex.hpp&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>comm {</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html">   25</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1mpi__init.html">mpi_init</a> {</div>
-<div class="line"><a name="l00027"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">   27</a></span>&#160;  <a class="code" href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">mpi_init</a>(<span class="keywordtype">int</span> argc, <span class="keywordtype">char</span>** argv) noexcept {</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    <span class="keywordtype">int</span> required_threading = MPI_THREAD_MULTIPLE;</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    <span class="keywordtype">int</span> provided_threading;</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    MPI_Init_thread(&amp;argc, &amp;argv, required_threading, &amp;provided_threading);</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160; </div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;    <span class="keywordflow">if</span> (provided_threading != required_threading) {</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;      std::cerr &lt;&lt; <span class="stringliteral">&quot;Provided MPI threading model does not match the required one (MPI_THREAD_MULTIPLE).&quot;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;                &lt;&lt; std::endl;</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;      MPI_Abort(MPI_COMM_WORLD, 1);</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;    }</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  }</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">   40</a></span>&#160;  <a class="code" href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">~mpi_init</a>() noexcept {</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    MPI_Finalize();</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  }</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;};</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;}</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;pika/mutex.hpp&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">namespace </span>comm {</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00026"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html">   26</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1comm_1_1mpi__init.html">mpi_init</a> {</div>
+<div class="line"><a name="l00028"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">   28</a></span>&#160;  <a class="code" href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">mpi_init</a>(<span class="keywordtype">int</span> argc, <span class="keywordtype">char</span>** argv) noexcept {</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    <span class="keywordtype">int</span> required_threading = MPI_THREAD_MULTIPLE;</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    <span class="keywordtype">int</span> provided_threading;</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;    MPI_Init_thread(&amp;argc, &amp;argv, required_threading, &amp;provided_threading);</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160; </div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;    <span class="keywordflow">if</span> (provided_threading != required_threading) {</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;      std::cerr &lt;&lt; <span class="stringliteral">&quot;Provided MPI threading model does not match the required one (MPI_THREAD_MULTIPLE).&quot;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;                &lt;&lt; std::endl;</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;      MPI_Abort(MPI_COMM_WORLD, 1);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    }</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  }</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
+<div class="line"><a name="l00041"></a><span class="lineno"><a class="line" href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">   41</a></span>&#160;  <a class="code" href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">~mpi_init</a>() noexcept {</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    MPI_Finalize();</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  }</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;};</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;}</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
 <div class="ttc" id="acommunication_2error_8h_html"><div class="ttname"><a href="communication_2error_8h.html">error.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html">dlaf::comm::mpi_init</a></div><div class="ttdef"><b>Definition:</b> init.h:25</div></div>
-<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html_a2413c9dc23983c5790cd0ebb3bb9e057"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">dlaf::comm::mpi_init::~mpi_init</a></div><div class="ttdeci">~mpi_init() noexcept</div><div class="ttdoc">Finalize MPI.</div><div class="ttdef"><b>Definition:</b> init.h:40</div></div>
-<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html_a415e55c02e205e6f782ff7000755c842"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">dlaf::comm::mpi_init::mpi_init</a></div><div class="ttdeci">mpi_init(int argc, char **argv) noexcept</div><div class="ttdoc">Initialize MPI to MPI_THREAD_MULTIPLE.</div><div class="ttdef"><b>Definition:</b> init.h:27</div></div>
+<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html">dlaf::comm::mpi_init</a></div><div class="ttdef"><b>Definition:</b> init.h:26</div></div>
+<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html_a2413c9dc23983c5790cd0ebb3bb9e057"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html#a2413c9dc23983c5790cd0ebb3bb9e057">dlaf::comm::mpi_init::~mpi_init</a></div><div class="ttdeci">~mpi_init() noexcept</div><div class="ttdoc">Finalize MPI.</div><div class="ttdef"><b>Definition:</b> init.h:41</div></div>
+<div class="ttc" id="astructdlaf_1_1comm_1_1mpi__init_html_a415e55c02e205e6f782ff7000755c842"><div class="ttname"><a href="structdlaf_1_1comm_1_1mpi__init.html#a415e55c02e205e6f782ff7000755c842">dlaf::comm::mpi_init::mpi_init</a></div><div class="ttdeci">mpi_init(int argc, char **argv) noexcept</div><div class="ttdoc">Initialize MPI to MPI_THREAD_MULTIPLE.</div><div class="ttdef"><b>Definition:</b> init.h:28</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

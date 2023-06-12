@@ -75,9 +75,9 @@ $(function() {
 <div class="textblock"><code>#include &lt;complex&gt;</code><br />
 <code>#include &lt;mpi.h&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
-<code>#include &quot;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&quot;</code><br />
+<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
 </div>
 <p><a href="p2p_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -233,9 +233,9 @@ template&lt;class T , Device D, class Comm &gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt;                                \</div>
-<div class="line">  scheduleRecv(pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, IndexT_MPI source, \</div>
-<div class="line">               IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleRecv(                         \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, IndexT_MPI source, IndexT_MPI tag, \</div>
+<div class="line">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -276,9 +276,9 @@ template&lt;class T , Device D, class Comm &gt; </td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt;                           \</div>
-<div class="line">  scheduleSend(pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, IndexT_MPI dest, \</div>
-<div class="line">               IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; scheduleSend(                    \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, IndexT_MPI dest, IndexT_MPI tag, \</div>
+<div class="line">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
 </div><!-- fragment -->
 </div>
 </div>

@@ -85,7 +85,7 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
 Macros</h2></td></tr>
-<tr class="memitem:aa6e6fc9684bd84ce7b72da6a2eef668f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="source__location_8h.html#aa6e6fc9684bd84ce7b72da6a2eef668f">SOURCE_LOCATION</a>()</td></tr>
+<tr class="memitem:aa6e6fc9684bd84ce7b72da6a2eef668f"><td class="memItemLeft" align="right" valign="top">#define&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="source__location_8h.html#aa6e6fc9684bd84ce7b72da6a2eef668f">SOURCE_LOCATION</a>()&#160;&#160;&#160;  ::<a class="el" href="structdlaf_1_1common_1_1internal_1_1source__location.html">dlaf::common::internal::source_location</a> { __FILE__, __LINE__, DLAF_FUNCTION_NAME }</td></tr>
 <tr class="separator:aa6e6fc9684bd84ce7b72da6a2eef668f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
@@ -99,15 +99,11 @@ Macros</h2></td></tr>
           <td class="memname">#define SOURCE_LOCATION</td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
-          <td></td>
+          <td>&#160;&#160;&#160;  ::<a class="el" href="structdlaf_1_1common_1_1internal_1_1source__location.html">dlaf::common::internal::source_location</a> { __FILE__, __LINE__, DLAF_FUNCTION_NAME }</td>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  <a class="code" href="structdlaf_1_1common_1_1internal_1_1source__location.html">::dlaf::common::internal::source_location</a> { \</div>
-<div class="line">    __FILE__, __LINE__, DLAF_FUNCTION_NAME    \</div>
-<div class="line">  }</div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1source__location_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1source__location.html">dlaf::common::internal::source_location</a></div><div class="ttdef"><b>Definition:</b> source_location.h:37</div></div>
-</div><!-- fragment --><p>This macro return a <a class="el" href="structdlaf_1_1common_1_1internal_1_1source__location.html">dlaf::common::internal::source_location</a> instance using information from the line where this macro is used.</p>
+<p>This macro return a <a class="el" href="structdlaf_1_1common_1_1internal_1_1source__location.html">dlaf::common::internal::source_location</a> instance using information from the line where this macro is used.</p>
 <p>It uses DLAF_FUNCTION_NAME that it is set to __PRETTY_FUNCTION__ or __func__ depending on availability of the former one. </p>
 
 </div>

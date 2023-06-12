@@ -75,11 +75,11 @@ $(function() {
 <div class="textblock"><code>#include &lt;complex&gt;</code><br />
 <code>#include &lt;mpi.h&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
-<code>#include &quot;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&quot;</code><br />
-<code>#include &quot;dlaf/sender/traits.h&quot;</code><br />
+<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
+<code>#include &lt;dlaf/sender/traits.h&gt;</code><br />
 </div>
 <p><a href="kernels_2all__reduce_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -161,12 +161,11 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt;                              \</div>
-<div class="line">  scheduleAllReduce(pika::execution::experimental::unique_any_sender&lt;                         \</div>
-<div class="line">                        common::Pipeline&lt;Communicator&gt;::Wrapper&gt;                              \</div>
-<div class="line">                        pcomm,                                                                \</div>
-<div class="line">                    MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile_in, \</div>
-<div class="line">                    dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile_out)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#a8cb64ca1859aef0b95cdcfa8a1f05297">scheduleAllReduce</a>(                    \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</div>
+<div class="line">      MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile_in,                        \</div>
+<div class="line">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile_out)</div>
+<div class="ttc" id="akernels_2all__reduce_8h_html_a8cb64ca1859aef0b95cdcfa8a1f05297"><div class="ttname"><a href="kernels_2all__reduce_8h.html#a8cb64ca1859aef0b95cdcfa8a1f05297">dlaf::comm::scheduleAllReduce</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleAllReduce(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile_in, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile_out)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -201,11 +200,10 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt;             \</div>
-<div class="line">  scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender&lt; \</div>
-<div class="line">                               common::Pipeline&lt;Communicator&gt;::Wrapper&gt;      \</div>
-<div class="line">                               pcomm,                                        \</div>
-<div class="line">                           MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2all__reduce_8h.html#a689b3d06eea6e5d2c9899521e970ecb0">scheduleAllReduceInPlace</a>(             \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</div>
+<div class="line">      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
+<div class="ttc" id="akernels_2all__reduce_8h_html_a689b3d06eea6e5d2c9899521e970ecb0"><div class="ttname"><a href="kernels_2all__reduce_8h.html#a689b3d06eea6e5d2c9899521e970ecb0">dlaf::comm::scheduleAllReduceInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleAllReduceInPlace(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>

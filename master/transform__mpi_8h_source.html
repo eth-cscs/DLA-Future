@@ -82,11 +82,11 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;type_traits&gt;</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="unwrap_8h.html">dlaf/common/unwrap.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform.h&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="unwrap_8h.html">dlaf/common/unwrap.h</a>&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/transform.h&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>dlaf::comm::internal {</div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
@@ -136,7 +136,7 @@ $(function() {
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;};</div>
 <div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
 <div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F&gt;</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<a class="code" href="structdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper.html">MPICallHelper</a>(F &amp;&amp;) -&gt; <a class="code" href="structdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper.html">MPICallHelper&lt;std::decay_t&lt;F&gt;</a>&gt;;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<a class="code" href="structdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper.html">MPICallHelper</a>(F&amp;&amp;) -&gt; <a class="code" href="structdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper.html">MPICallHelper&lt;std::decay_t&lt;F&gt;</a>&gt;;</div>
 <div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
 <div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F, <span class="keyword">typename</span> Sender,</div>
 <div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;          <span class="keyword">typename</span> = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt;</div>
@@ -150,8 +150,8 @@ $(function() {
 <div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F, <span class="keyword">typename</span> Sender,</div>
 <div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;          <span class="keyword">typename</span> = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt;</div>
 <div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="keywordtype">void</span> transformMPIDetach(F&amp;&amp; f, Sender&amp;&amp; sender) {</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  pika::execution::experimental::start_detached(</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;      transformMPI(std::forward&lt;F&gt;(f), std::forward&lt;Sender&gt;(sender)));</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  pika::execution::experimental::start_detached(transformMPI(std::forward&lt;F&gt;(f),</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;                                                             std::forward&lt;Sender&gt;(sender)));</div>
 <div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;}</div>
 <div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
 <div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F, <span class="keyword">typename</span>... Ts&gt;</div>
@@ -161,8 +161,8 @@ $(function() {
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160; </div>
 <div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F, <span class="keyword">typename</span>... Ts&gt;</div>
 <div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;<span class="keywordtype">void</span> transformMPILiftDetach(F&amp;&amp; f, Ts&amp;&amp;... ts) {</div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;  pika::execution::experimental::start_detached(</div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;      transformLift(std::forward&lt;F&gt;(f), std::forward&lt;Ts&gt;(ts)...));</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;  pika::execution::experimental::start_detached(transformLift(std::forward&lt;F&gt;(f),</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;                                                              std::forward&lt;Ts&gt;(ts)...));</div>
 <div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;}</div>
 <div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160; </div>
 <div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F&gt;</div>
@@ -176,9 +176,9 @@ $(function() {
 <div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> F_&gt;</div>
 <div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>(F_&amp;&amp; f) : <a class="code" href="structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html">PartialTransformMPIBase&lt;F&gt;</a>{std::forward&lt;F_&gt;(f)} {}</div>
 <div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a> <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp;) = <span class="keywordflow">default</span>;</div>
 <div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp; operator=(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp; operator=(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a> <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a>&amp;) = <span class="keywordflow">default</span>;</div>
 <div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160; </div>
 <div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Sender&gt;</div>
 <div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;  <span class="keyword">friend</span> <span class="keyword">auto</span> operator|(Sender&amp;&amp; sender, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">PartialTransformMPI</a> pa) {</div>
@@ -195,14 +195,14 @@ $(function() {
 <div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> F_&gt;</div>
 <div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>(F_&amp;&amp; f) : <a class="code" href="structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html">PartialTransformMPIBase&lt;F&gt;</a>{std::forward&lt;F_&gt;(f)} {}</div>
 <div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a> <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp;) = <span class="keywordflow">default</span>;</div>
 <div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp; operator=(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp; operator=(<a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a> <span class="keyword">const</span>&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;  <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a>&amp;) = <span class="keywordflow">default</span>;</div>
 <div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160; </div>
 <div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span> Sender&gt;</div>
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;  <span class="keyword">friend</span> <span class="keyword">auto</span> operator|(Sender&amp;&amp; sender, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">PartialTransformMPIDetach</a> pa) {</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;    <span class="keywordflow">return</span> pika::execution::experimental::start_detached(</div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;        transformMPI(std::move(pa.f_), std::forward&lt;Sender&gt;(sender)));</div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;    <span class="keywordflow">return</span> pika::execution::experimental::start_detached(transformMPI(std::move(pa.f_),</div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;                                                                      std::forward&lt;Sender&gt;(sender)));</div>
 <div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;  }</div>
 <div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;};</div>
 <div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160; </div>

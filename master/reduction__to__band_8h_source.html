@@ -82,97 +82,96 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/reduction_to_band/api.h&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver {</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keyword">namespace </span>internal {</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">auto</span> groupTausFromBandsToTiles(</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;&gt;&gt; taus_band,</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    <span class="keyword">const</span> SizeType band_size, <span class="keyword">const</span> SizeType mb) {</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keyword">using</span> common::internal::vector;</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160; </div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160; </div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">auto</span> accumulateVectorSizes = [](<span class="keyword">const</span> SizeType acc, <span class="keyword">const</span> vector&lt;T&gt;&amp; v) { <span class="keywordflow">return</span> acc + v.size(); };</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  vector&lt;pika::shared_future&lt;vector&lt;T&gt;&gt;&gt; taus;</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">const</span> SizeType group_size = mb / band_size;</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  taus.reserve(dlaf::util::ceilDiv(taus_band.size(), group_size));</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <span class="keywordflow">for</span> (SizeType start = 0; start &lt; taus_band.size(); start += group_size) {</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">const</span> SizeType end = std::min&lt;SizeType&gt;(taus_band.size(), start + group_size);</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    std::vector&lt;pika::shared_future&lt;vector&lt;T&gt;&gt;&gt; block_deps(begin(taus_band) + start,</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;                                                           begin(taus_band) + end);</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    taus.emplace_back(ex::when_all_vector(std::move(block_deps)) |</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;                      ex::then([accumulateVectorSizes](std::vector&lt;vector&lt;T&gt;&gt;&amp;&amp; taus_band_chunks) {</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;                        <span class="keyword">const</span> <span class="keyword">auto</span> nrefls =</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;                            std::accumulate(cbegin(taus_band_chunks), cend(taus_band_chunks),</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                                            SizeType(0), accumulateVectorSizes);</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;                        vector&lt;T&gt; taus_tile;</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;                        taus_tile.reserve(nrefls);</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;                        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; taus_band : taus_band_chunks)</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;                          <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; tau : taus_band)</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;                            taus_tile.emplace_back(std::move(tau));</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;                        <span class="keywordflow">return</span> taus_tile;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;                      }) |</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;                      ex::make_future());</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  }</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="keywordflow">return</span> taus;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;}</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;}</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="comment">//</span></div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="comment"></span><span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00082"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">   82</a></span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;</a>&gt;&gt; <a class="code" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">reductionToBand</a>(</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;    Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> SizeType band_size) {</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160; </div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  <span class="keywordflow">return</span> internal::groupTausFromBandsToTiles(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">internal::ReductionToBand&lt;B, D, T&gt;::call</a>(mat_a, band_size),</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;                                             band_size, mat_a.blockSize().rows());</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;}</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160; </div>
-<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160; </div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00148"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#a19d6aef5f1c26415e750d531ef63b38e">  148</a></span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;</a>&gt;&gt; <a class="code" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">reductionToBand</a>(</div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;    <a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> SizeType band_size) {</div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160; </div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160; </div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;  <span class="keywordflow">return</span> internal::groupTausFromBandsToTiles(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">internal::ReductionToBand&lt;B, D, T&gt;::call</a>(grid, mat_a,</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;                                                                                      band_size),</div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;                                             band_size, mat_a.blockSize().rows());</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/reduction_to_band/api.h&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver {</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">namespace </span>internal {</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="keyword">auto</span> groupTausFromBandsToTiles(</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;    common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;&gt;&gt; taus_band,</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;    <span class="keyword">const</span> SizeType band_size, <span class="keyword">const</span> SizeType mb) {</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keyword">using</span> common::internal::vector;</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160; </div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keyword">auto</span> accumulateVectorSizes = [](<span class="keyword">const</span> SizeType acc, <span class="keyword">const</span> vector&lt;T&gt;&amp; v) { <span class="keywordflow">return</span> acc + v.size(); };</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  vector&lt;pika::shared_future&lt;vector&lt;T&gt;&gt;&gt; taus;</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">const</span> SizeType group_size = mb / band_size;</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  taus.reserve(dlaf::util::ceilDiv(taus_band.size(), group_size));</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keywordflow">for</span> (SizeType start = 0; start &lt; taus_band.size(); start += group_size) {</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="keyword">const</span> SizeType end = std::min&lt;SizeType&gt;(taus_band.size(), start + group_size);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    std::vector&lt;pika::shared_future&lt;vector&lt;T&gt;&gt;&gt; block_deps(begin(taus_band) + start,</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;                                                           begin(taus_band) + end);</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    taus.emplace_back(ex::when_all_vector(std::move(block_deps)) |</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;                      ex::then([accumulateVectorSizes](std::vector&lt;vector&lt;T&gt;&gt;&amp;&amp; taus_band_chunks) {</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;                        <span class="keyword">const</span> <span class="keyword">auto</span> nrefls =</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;                            std::accumulate(cbegin(taus_band_chunks), cend(taus_band_chunks),</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;                                            SizeType(0), accumulateVectorSizes);</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;                        vector&lt;T&gt; taus_tile;</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;                        taus_tile.reserve(nrefls);</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160; </div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;                        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; taus_band : taus_band_chunks)</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;                          <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; tau : taus_band)</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;                            taus_tile.emplace_back(std::move(tau));</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;                        <span class="keywordflow">return</span> taus_tile;</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;                      }) |</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;                      ex::make_future());</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  }</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keywordflow">return</span> taus;</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;}</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;}</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="comment">//</span></div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;<span class="comment"></span><span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00081"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">   81</a></span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;</a>&gt;&gt; <a class="code" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">reductionToBand</a>(</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> SizeType band_size) {</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160; </div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160; </div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  <span class="keywordflow">return</span> internal::groupTausFromBandsToTiles(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">internal::ReductionToBand&lt;B, D, T&gt;::call</a>(mat_a, band_size),</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;                                             band_size, mat_a.blockSize().rows());</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;}</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160; </div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00147"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#a19d6aef5f1c26415e750d531ef63b38e">  147</a></span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector&lt;pika::shared_future&lt;common::internal::vector&lt;T&gt;</a>&gt;&gt; <a class="code" href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">reductionToBand</a>(</div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;    <a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, Matrix&lt;T, D&gt;&amp; mat_a, <span class="keyword">const</span> SizeType band_size) {</div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160; </div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160; </div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;  <span class="keywordflow">return</span> internal::groupTausFromBandsToTiles(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">internal::ReductionToBand&lt;B, D, T&gt;::call</a>(grid, mat_a,</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;                                                                                      band_size),</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;                                             band_size, mat_a.blockSize().rows());</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;}</div>
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;}</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
-<div class="ttc" id="areduction__to__band_8h_html_a75f548f9feeacd6b1d8556d8fedfa0d4"><div class="ttname"><a href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">dlaf::eigensolver::reductionToBand</a></div><div class="ttdeci">common::internal::vector&lt; pika::shared_future&lt; common::internal::vector&lt; T &gt; &gt; &gt; reductionToBand(Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> reduction_to_band.h:82</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:26</div></div>
+<div class="ttc" id="areduction__to__band_8h_html_a75f548f9feeacd6b1d8556d8fedfa0d4"><div class="ttname"><a href="reduction__to__band_8h.html#a75f548f9feeacd6b1d8556d8fedfa0d4">dlaf::eigensolver::reductionToBand</a></div><div class="ttdeci">common::internal::vector&lt; pika::shared_future&lt; common::internal::vector&lt; T &gt; &gt; &gt; reductionToBand(Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> reduction_to_band.h:81</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:27</div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">dlaf::eigensolver::internal::ReductionToBand</a></div><div class="ttdef"><b>Definition:</b> api.h:22</div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 <div class="ttc" id="avector_8h_html"><div class="ttname"><a href="vector_8h.html">vector.h</a></div></div>

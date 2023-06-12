@@ -1,8 +1,8 @@
 var searchData=
 [
   ['index2d_892',['Index2D',['../classdlaf_1_1common_1_1_index2_d.html#a940432586f1b501b8dda46355999335d',1,'dlaf::common::Index2D::Index2D() noexcept'],['../classdlaf_1_1common_1_1_index2_d.html#ae959b1b0c405d3480f9d4960946b5b2e',1,'dlaf::common::Index2D::Index2D(const std::array&lt; IndexT, 2 &gt; &amp;coords) noexcept']]],
-  ['initialize_893',['initialize',['../init_8h.html#a22b48d2b57c39680c77b0148c2328bd3',1,'dlaf::initialize(pika::program_options::variables_map const &amp;vm, configuration const &amp;user_cfg={})'],['../init_8h.html#aae324598b757f2d2cb4fef8a2c3e1093',1,'dlaf::initialize(int argc, const char *const argv[], configuration const &amp;user_cfg={})']]],
-  ['initresourcepartitionerhandler_894',['initResourcePartitionerHandler',['../init_8h.html#a7a9c9e822c6a4aa177e81f7b339324a5',1,'dlaf']]],
+  ['initialize_893',['initialize',['../init_8h.html#a100757e13ff576c8a93dd7aed3ca7ec4',1,'dlaf::initialize(const pika::program_options::variables_map &amp;vm, const configuration &amp;user_cfg={})'],['../init_8h.html#a94175c61baedbcc0bf6bd53e0f57380f',1,'dlaf::initialize(int argc, const char *const argv[], const configuration &amp;user_cfg={})']]],
+  ['initresourcepartitionerhandler_894',['initResourcePartitionerHandler',['../init_8h.html#a3685b1a9ef2da35287ae3b03ea3b62e6',1,'dlaf']]],
   ['is_5fcontiguous_895',['is_contiguous',['../structdlaf_1_1common_1_1_data_descriptor.html#ad73cebe7217dd9f3ad68190dc09bce9e',1,'dlaf::common::DataDescriptor']]],
   ['isempty_896',['isEmpty',['../classdlaf_1_1common_1_1_size2_d.html#afe5870841ddc785db5d4c81cc22aeb93',1,'dlaf::common::Size2D']]],
   ['isexternal_897',['isExternal',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#aa77cf35507fc6a6291e9197996034db8',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]],

@@ -85,26 +85,26 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/policy.h&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform.h&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/policy.h&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/transform.h&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                 \</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">  template &lt;Backend B, typename Sender,                                                            \</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">            typename = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt;       \</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">  auto fname(const dlaf::internal::Policy&lt;B&gt; p, Sender&amp;&amp; s) {                                      \</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">    return dlaf::internal::transform&lt;tag&gt;(p, callable, std::forward&lt;Sender&gt;(s));                   \</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">  }                                                                                                \</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">                                                                                                   \</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">  template &lt;Backend B&gt;                                                                             \</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">  auto fname(const dlaf::internal::Policy&lt;B&gt; p) {                                                  \</span></div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">    return dlaf::internal::makePartialTransform&lt;tag&gt;(p, callable);                                 \</span></div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">  }                                                                                                \</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">                                                                                                   \</span></div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">  template &lt;Backend B, typename T1, typename T2, typename... Ts&gt;                                   \</span></div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">  void fname(const dlaf::internal::Policy&lt;B&gt; p, T1&amp;&amp; t1, T2&amp;&amp; t2, Ts&amp;&amp;... ts) {                    \</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">    pika::this_thread::experimental::sync_wait(                                                    \</span></div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">        (fname)(p, pika::execution::experimental::just(std::forward&lt;T1&gt;(t1), std::forward&lt;T2&gt;(t2), \</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">                                                       std::forward&lt;Ts&gt;(ts)...)));                 \</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#define DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(tag, fname, callable)                                  \</span></div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">  template &lt;Backend B, typename Sender,                                                             \</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">            typename = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt;        \</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">  auto fname(const dlaf::internal::Policy&lt;B&gt; p, Sender&amp;&amp; s) {                                       \</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">    return dlaf::internal::transform&lt;tag&gt;(p, callable, std::forward&lt;Sender&gt;(s));                    \</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">  }                                                                                                 \</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">                                                                                                    \</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">  template &lt;Backend B&gt;                                                                              \</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">  auto fname(const dlaf::internal::Policy&lt;B&gt; p) {                                                   \</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">    return dlaf::internal::makePartialTransform&lt;tag&gt;(p, callable);                                  \</span></div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="preprocessor">  }                                                                                                 \</span></div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="preprocessor">                                                                                                    \</span></div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="preprocessor">  template &lt;Backend B, typename T1, typename T2, typename... Ts&gt;                                    \</span></div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">  void fname(const dlaf::internal::Policy&lt;B&gt; p, T1&amp;&amp; t1, T2&amp;&amp; t2, Ts&amp;&amp;... ts) {                     \</span></div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">    pika::this_thread::experimental::sync_wait(                                                     \</span></div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">        (fname) (p, pika::execution::experimental::just(std::forward&lt;T1&gt;(t1), std::forward&lt;T2&gt;(t2), \</span></div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">                                                        std::forward&lt;Ts&gt;(ts)...)));                 \</span></div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="preprocessor">  }</span></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

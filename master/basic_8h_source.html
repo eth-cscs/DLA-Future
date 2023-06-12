@@ -82,10 +82,10 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&quot;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communication_2error_8h.html">dlaf/communication/error.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="keyword">namespace </span>comm {</div>
@@ -95,8 +95,8 @@ $(function() {
 <div class="line"><a name="l00028"></a><span class="lineno"><a class="line" href="basic_8h.html#adfd3205605f800afb2208146565a3bd4">   28</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="basic_8h.html#adfd3205605f800afb2208146565a3bd4">send_to</a>(<span class="keywordtype">int</span> receiver_rank, <a class="code" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; communicator, DataIn&amp;&amp; data) {</div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;  <span class="keywordtype">int</span> tag = 0;</div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keyword">auto</span> message = <a class="code" href="message_8h.html#a256282d96e42c4ff2e6353ae28263422">make_message</a>(common::make_data(std::forward&lt;DataIn&gt;(data)));</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  DLAF_MPI_CHECK_ERROR(</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;      MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag, communicator));</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag,</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;                                communicator));</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;}</div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160; </div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> DataOut&gt;</div>
@@ -111,7 +111,7 @@ $(function() {
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
 <div class="ttc" id="abasic_8h_html_a13040096b22855cefca83ec02f0c64c0"><div class="ttname"><a href="basic_8h.html#a13040096b22855cefca83ec02f0c64c0">dlaf::comm::sync::receive_from</a></div><div class="ttdeci">void receive_from(int sender_rank, Communicator &amp;communicator, DataOut &amp;&amp;data)</div><div class="ttdef"><b>Definition:</b> basic.h:39</div></div>
 <div class="ttc" id="abasic_8h_html_adfd3205605f800afb2208146565a3bd4"><div class="ttname"><a href="basic_8h.html#adfd3205605f800afb2208146565a3bd4">dlaf::comm::sync::send_to</a></div><div class="ttdeci">void send_to(int receiver_rank, Communicator &amp;communicator, DataIn &amp;&amp;data)</div><div class="ttdef"><b>Definition:</b> basic.h:28</div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:40</div></div>
 <div class="ttc" id="acommunication_2error_8h_html"><div class="ttname"><a href="communication_2error_8h.html">error.h</a></div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>

@@ -12,7 +12,7 @@ var searchData=
   ['enum_5foutput_2eh_137',['enum_output.h',['../blas_2enum__output_8h.html',1,'']]],
   ['equal_5fblocksize_138',['equal_blocksize',['../util__matrix_8h.html#a0bb54ace6dfcb245ec387c1af75e63fe',1,'dlaf::matrix']]],
   ['equal_5fdistributions_139',['equal_distributions',['../util__matrix_8h.html#a8af8a409c1af4f1c7cdbed9b4f6b24a2',1,'dlaf::matrix']]],
-  ['equal_5fprocess_5fgrid_140',['equal_process_grid',['../util__matrix_8h.html#ab60bac9a36466ff9f784d2c909a62507',1,'dlaf::matrix']]],
+  ['equal_5fprocess_5fgrid_140',['equal_process_grid',['../util__matrix_8h.html#a7a41b22af7fe104052668cc02d5a624c',1,'dlaf::matrix']]],
   ['equal_5fsize_141',['equal_size',['../util__matrix_8h.html#ada06af4450b10ed70a5830c0d8db0302',1,'dlaf::matrix']]],
   ['error_2eh_142',['error.h',['../communication_2error_8h.html',1,'']]],
   ['external_5f_143',['external_',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#a785fd3e6c916a2ae30efb17f3449c230',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]]

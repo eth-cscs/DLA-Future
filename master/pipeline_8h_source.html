@@ -84,46 +84,47 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;pika/async_rw_mutex.hpp&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/common/assert.h&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="keyword">namespace </span>dlaf::common {</div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00030"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html">   30</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a> {</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keyword">using</span> AsyncRwMutex = pika::execution::experimental::async_rw_mutex&lt;T&gt;;</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160; </div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keyword">public</span>:</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;  <span class="keyword">using</span> Wrapper = <span class="keyword">typename</span> AsyncRwMutex::readwrite_access_type;</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">using</span> Sender = pika::execution::experimental::unique_any_sender&lt;Wrapper&gt;;</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
-<div class="line"><a name="l00038"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">   38</a></span>&#160;  <span class="keyword">explicit</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(T <span class="keywordtype">object</span>) : pipeline(std::move(object)) {}</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp; operator=(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;) = <span class="keyword">delete</span>;</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00048"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">   48</a></span>&#160;  Sender <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">operator()</a>() {</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    DLAF_ASSERT(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">valid</a>(), <span class="stringliteral">&quot;&quot;</span>);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    <span class="keywordflow">return</span> pipeline-&gt;readwrite();</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  }</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
-<div class="line"><a name="l00056"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">   56</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">valid</a>() const noexcept {</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    <span class="keywordflow">return</span> pipeline.has_value();</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  }</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">   63</a></span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">reset</a>() noexcept {</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    pipeline.reset();</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  }</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="keyword">private</span>:</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  std::optional&lt;AsyncRwMutex&gt; pipeline = std::nullopt;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;};</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:30</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a388b1fe53e84dde5b0f026e7b334902d"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">dlaf::common::Pipeline::operator()</a></div><div class="ttdeci">Sender operator()()</div><div class="ttdef"><b>Definition:</b> pipeline.h:48</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a4a9e1a35ffad351b5b4e01b88ef8a447"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">dlaf::common::Pipeline::reset</a></div><div class="ttdeci">void reset() noexcept</div><div class="ttdef"><b>Definition:</b> pipeline.h:63</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a6379e14f25ed8d98d3b3434ec0d54a62"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">dlaf::common::Pipeline::Pipeline</a></div><div class="ttdeci">Pipeline(T object)</div><div class="ttdoc">Create a Pipeline by moving in the resource (it takes the ownership).</div><div class="ttdef"><b>Definition:</b> pipeline.h:38</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_affda528ea4c5e0e54f8fca4250b53af5"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">dlaf::common::Pipeline::valid</a></div><div class="ttdeci">bool valid() const noexcept</div><div class="ttdef"><b>Definition:</b> pipeline.h:56</div></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;dlaf/common/assert.h&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>dlaf::common {</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00031"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html">   31</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a> {</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keyword">using</span> AsyncRwMutex = pika::execution::experimental::async_rw_mutex&lt;T&gt;;</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="keyword">public</span>:</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">using</span> Wrapper = <span class="keyword">typename</span> AsyncRwMutex::readwrite_access_type;</div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  <span class="keyword">using</span> Sender = pika::execution::experimental::unique_any_sender&lt;Wrapper&gt;;</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">   39</a></span>&#160;  <span class="keyword">explicit</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(T <span class="keywordtype">object</span>) : pipeline(std::move(object)) {}</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp; operator=(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;&amp;) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">Pipeline</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">Pipeline</a>&amp;) = <span class="keyword">delete</span>;</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00049"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">   49</a></span>&#160;  Sender <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">operator()</a>() {</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    DLAF_ASSERT(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">valid</a>(), <span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keywordflow">return</span> pipeline-&gt;readwrite();</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  }</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160; </div>
+<div class="line"><a name="l00057"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">   57</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">valid</a>() const noexcept {</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keywordflow">return</span> pipeline.has_value();</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  }</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">   64</a></span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">reset</a>() noexcept {</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    pipeline.reset();</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  }</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;<span class="keyword">private</span>:</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  std::optional&lt;AsyncRwMutex&gt; pipeline = std::nullopt;</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;};</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;}</div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:31</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a388b1fe53e84dde5b0f026e7b334902d"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a388b1fe53e84dde5b0f026e7b334902d">dlaf::common::Pipeline::operator()</a></div><div class="ttdeci">Sender operator()()</div><div class="ttdef"><b>Definition:</b> pipeline.h:49</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a4a9e1a35ffad351b5b4e01b88ef8a447"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a4a9e1a35ffad351b5b4e01b88ef8a447">dlaf::common::Pipeline::reset</a></div><div class="ttdeci">void reset() noexcept</div><div class="ttdef"><b>Definition:</b> pipeline.h:64</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_a6379e14f25ed8d98d3b3434ec0d54a62"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#a6379e14f25ed8d98d3b3434ec0d54a62">dlaf::common::Pipeline::Pipeline</a></div><div class="ttdeci">Pipeline(T object)</div><div class="ttdoc">Create a Pipeline by moving in the resource (it takes the ownership).</div><div class="ttdef"><b>Definition:</b> pipeline.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html_affda528ea4c5e0e54f8fca4250b53af5"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html#affda528ea4c5e0e54f8fca4250b53af5">dlaf::common::Pipeline::valid</a></div><div class="ttdeci">bool valid() const noexcept</div><div class="ttdef"><b>Definition:</b> pipeline.h:57</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

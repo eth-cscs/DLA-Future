@@ -85,32 +85,32 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;pika/barrier.hpp&gt;</span></div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160; </div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/coltype.h&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/index_manipulation.h&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/kernels.h&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/rot.h&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/tridiag_solver/tile_collector.h&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy_8h.html">dlaf/matrix/copy.h</a>&quot;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&quot;</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="memory__view_8h.html">dlaf/memory/memory_view.h</a>&quot;</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="multiplication_2general_8h.html">dlaf/multiplication/general.h</a>&quot;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="permutations_2general_8h.html">dlaf/permutations/general.h</a>&quot;</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &quot;dlaf/permutations/general/impl.h&quot;</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/make_sender_algorithm_overloads.h&quot;</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/policy.h&quot;</span></div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform.h&quot;</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/transform_mpi.h&quot;</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/when_all_lift.h&quot;</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communication_2kernels_8h.html">dlaf/communication/kernels.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/coltype.h&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/index_manipulation.h&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/kernels.h&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/rot.h&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/tile_collector.h&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="copy_8h.html">dlaf/matrix/copy.h</a>&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="copy__tile_8h.html">dlaf/matrix/copy_tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="memory__view_8h.html">dlaf/memory/memory_view.h</a>&gt;</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="multiplication_2general_8h.html">dlaf/multiplication/general.h</a>&gt;</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="permutations_2general_8h.html">dlaf/permutations/general.h</a>&gt;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#include &lt;dlaf/permutations/general/impl.h&gt;</span></div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/make_sender_algorithm_overloads.h&gt;</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/policy.h&gt;</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/transform.h&gt;</span></div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/transform_mpi.h&gt;</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
@@ -947,8 +947,8 @@ $(function() {
 <div class="line"><a name="l00876"></a><span class="lineno">  876</span>&#160;        <span class="keyword">auto</span> laset_sender =</div>
 <div class="line"><a name="l00877"></a><span class="lineno">  877</span>&#160;            di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm));</div>
 <div class="line"><a name="l00878"></a><span class="lineno">  878</span>&#160;        ex::start_detached(tile::laset(di::Policy&lt;DefaultBackend_v&lt;D&gt;&gt;(), std::move(laset_sender)));</div>
-<div class="line"><a name="l00879"></a><span class="lineno">  879</span>&#160;        ex::start_detached(</div>
-<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;            comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, comm_vec.readwrite(idx_gl_comm)));</div>
+<div class="line"><a name="l00879"></a><span class="lineno">  879</span>&#160;        ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,</div>
+<div class="line"><a name="l00880"></a><span class="lineno">  880</span>&#160;                                                          comm_vec.readwrite(idx_gl_comm)));</div>
 <div class="line"><a name="l00881"></a><span class="lineno">  881</span>&#160;      }</div>
 <div class="line"><a name="l00882"></a><span class="lineno">  882</span>&#160;    }</div>
 <div class="line"><a name="l00883"></a><span class="lineno">  883</span>&#160;    <span class="keywordflow">return</span>;</div>
@@ -962,16 +962,16 @@ $(function() {
 <div class="line"><a name="l00891"></a><span class="lineno">  891</span>&#160;    <span class="keyword">const</span> GlobalTileIndex idx_gl_comm(idx_gl_tile.row(), 0);</div>
 <div class="line"><a name="l00892"></a><span class="lineno">  892</span>&#160; </div>
 <div class="line"><a name="l00893"></a><span class="lineno">  893</span>&#160;    <span class="comment">// set buffer to 1</span></div>
-<div class="line"><a name="l00894"></a><span class="lineno">  894</span>&#160;    ex::start_detached(</div>
-<div class="line"><a name="l00895"></a><span class="lineno">  895</span>&#160;        di::whenAllLift(blas::Uplo::General, T(1), T(1), comm_vec.readwrite(idx_gl_comm)) |</div>
-<div class="line"><a name="l00896"></a><span class="lineno">  896</span>&#160;        tile::laset(di::Policy&lt;DefaultBackend_v&lt;D&gt;&gt;()));</div>
+<div class="line"><a name="l00894"></a><span class="lineno">  894</span>&#160;    ex::start_detached(di::whenAllLift(blas::Uplo::General, T(1), T(1),</div>
+<div class="line"><a name="l00895"></a><span class="lineno">  895</span>&#160;                                       comm_vec.readwrite(idx_gl_comm)) |</div>
+<div class="line"><a name="l00896"></a><span class="lineno">  896</span>&#160;                       tile::laset(di::Policy&lt;DefaultBackend_v&lt;D&gt;&gt;()));</div>
 <div class="line"><a name="l00897"></a><span class="lineno">  897</span>&#160; </div>
 <div class="line"><a name="l00898"></a><span class="lineno">  898</span>&#160;    <span class="comment">// copy the first column of the matrix tile into the column tile of the buffer</span></div>
 <div class="line"><a name="l00899"></a><span class="lineno">  899</span>&#160;    copy1DAsync&lt;D&gt;(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, mat.read(idx_loc_tile),</div>
 <div class="line"><a name="l00900"></a><span class="lineno">  900</span>&#160;                   Coord::Col, comm_vec.readwrite(idx_gl_comm));</div>
 <div class="line"><a name="l00901"></a><span class="lineno">  901</span>&#160; </div>
-<div class="line"><a name="l00902"></a><span class="lineno">  902</span>&#160;    ex::start_detached(</div>
-<div class="line"><a name="l00903"></a><span class="lineno">  903</span>&#160;        comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD, comm_vec.readwrite(idx_gl_comm)));</div>
+<div class="line"><a name="l00902"></a><span class="lineno">  902</span>&#160;    ex::start_detached(comm::scheduleAllReduceInPlace(row_task_chain(), MPI_PROD,</div>
+<div class="line"><a name="l00903"></a><span class="lineno">  903</span>&#160;                                                      comm_vec.readwrite(idx_gl_comm)));</div>
 <div class="line"><a name="l00904"></a><span class="lineno">  904</span>&#160; </div>
 <div class="line"><a name="l00905"></a><span class="lineno">  905</span>&#160;    <span class="comment">// copy the column tile of the buffer into the first column of the matrix tile</span></div>
 <div class="line"><a name="l00906"></a><span class="lineno">  906</span>&#160;    copy1DAsync&lt;D&gt;(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),</div>
@@ -998,10 +998,10 @@ $(function() {
 <div class="line"><a name="l00927"></a><span class="lineno">  927</span>&#160;    <span class="keywordflow">for</span> (SizeType i_tile = i_begin; i_tile &lt; i_end; ++i_tile) {</div>
 <div class="line"><a name="l00928"></a><span class="lineno">  928</span>&#160;      <span class="keywordflow">if</span> (this_rank.col() == dist.rankGlobalTile&lt;Coord::Col&gt;(i_tile)) {</div>
 <div class="line"><a name="l00929"></a><span class="lineno">  929</span>&#160;        <span class="keyword">const</span> GlobalTileIndex idx_gl_comm(i_tile, 0);</div>
-<div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;        ex::start_detached(</div>
-<div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;            tile::set0(di::Policy&lt;DefaultBackend_v&lt;D&gt;&gt;(), comm_vec.readwrite(idx_gl_comm)));</div>
-<div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;        ex::start_detached(</div>
-<div class="line"><a name="l00933"></a><span class="lineno">  933</span>&#160;            comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, comm_vec.readwrite(idx_gl_comm)));</div>
+<div class="line"><a name="l00930"></a><span class="lineno">  930</span>&#160;        ex::start_detached(tile::set0(di::Policy&lt;DefaultBackend_v&lt;D&gt;&gt;(),</div>
+<div class="line"><a name="l00931"></a><span class="lineno">  931</span>&#160;                                      comm_vec.readwrite(idx_gl_comm)));</div>
+<div class="line"><a name="l00932"></a><span class="lineno">  932</span>&#160;        ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l00933"></a><span class="lineno">  933</span>&#160;                                                          comm_vec.readwrite(idx_gl_comm)));</div>
 <div class="line"><a name="l00934"></a><span class="lineno">  934</span>&#160;      }</div>
 <div class="line"><a name="l00935"></a><span class="lineno">  935</span>&#160;    }</div>
 <div class="line"><a name="l00936"></a><span class="lineno">  936</span>&#160;    <span class="keywordflow">return</span>;</div>
@@ -1021,8 +1021,8 @@ $(function() {
 <div class="line"><a name="l00950"></a><span class="lineno">  950</span>&#160;    copy1DAsync&lt;D&gt;(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Row, mat.read(idx_loc_tile),</div>
 <div class="line"><a name="l00951"></a><span class="lineno">  951</span>&#160;                   Coord::Col, comm_vec.readwrite(idx_gl_comm));</div>
 <div class="line"><a name="l00952"></a><span class="lineno">  952</span>&#160; </div>
-<div class="line"><a name="l00953"></a><span class="lineno">  953</span>&#160;    ex::start_detached(</div>
-<div class="line"><a name="l00954"></a><span class="lineno">  954</span>&#160;        comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM, comm_vec.readwrite(idx_gl_comm)));</div>
+<div class="line"><a name="l00953"></a><span class="lineno">  953</span>&#160;    ex::start_detached(comm::scheduleAllReduceInPlace(col_task_chain(), MPI_SUM,</div>
+<div class="line"><a name="l00954"></a><span class="lineno">  954</span>&#160;                                                      comm_vec.readwrite(idx_gl_comm)));</div>
 <div class="line"><a name="l00955"></a><span class="lineno">  955</span>&#160; </div>
 <div class="line"><a name="l00956"></a><span class="lineno">  956</span>&#160;    <span class="comment">// copy the column tile of the buffer into the first column of the matrix tile</span></div>
 <div class="line"><a name="l00957"></a><span class="lineno">  957</span>&#160;    copy1DAsync&lt;D&gt;(k_row, k_col, sz_subm.rows(), sz_subm.cols(), Coord::Col, comm_vec.read(idx_gl_comm),</div>
@@ -1155,8 +1155,8 @@ $(function() {
 <div class="line"><a name="l01084"></a><span class="lineno"> 1084</span>&#160;      ex::start_detached(comm::scheduleSendBcast(row_task_chain(), evals.read(evals_idx)));</div>
 <div class="line"><a name="l01085"></a><span class="lineno"> 1085</span>&#160;    }</div>
 <div class="line"><a name="l01086"></a><span class="lineno"> 1086</span>&#160;    <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01087"></a><span class="lineno"> 1087</span>&#160;      ex::start_detached(</div>
-<div class="line"><a name="l01088"></a><span class="lineno"> 1088</span>&#160;          comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank, evals.readwrite(evals_idx)));</div>
+<div class="line"><a name="l01087"></a><span class="lineno"> 1087</span>&#160;      ex::start_detached(comm::scheduleRecvBcast(row_task_chain(), evecs_tile_rank,</div>
+<div class="line"><a name="l01088"></a><span class="lineno"> 1088</span>&#160;                                                 evals.readwrite(evals_idx)));</div>
 <div class="line"><a name="l01089"></a><span class="lineno"> 1089</span>&#160;    }</div>
 <div class="line"><a name="l01090"></a><span class="lineno"> 1090</span>&#160;  }</div>
 <div class="line"><a name="l01091"></a><span class="lineno"> 1091</span>&#160;}</div>

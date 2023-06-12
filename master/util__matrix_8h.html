@@ -79,15 +79,15 @@ $(function() {
 <code>#include &lt;string&gt;</code><br />
 <code>#include &lt;blas.hh&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
-<code>#include &quot;<a class="el" href="blas_2enum__output_8h_source.html">dlaf/blas/enum_output.h</a>&quot;</code><br />
-<code>#include &quot;dlaf/common/assert.h&quot;</code><br />
-<code>#include &quot;<a class="el" href="index2d_8h_source.html">dlaf/common/index2d.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="range2d_8h_source.html">dlaf/common/range2d.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="lapack_2tile_8h_source.html">dlaf/lapack/tile.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&quot;</code><br />
-<code>#include &quot;<a class="el" href="panel_8h_source.html">dlaf/matrix/panel.h</a>&quot;</code><br />
-<code>#include &quot;dlaf/sender/transform.h&quot;</code><br />
-<code>#include &quot;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&quot;</code><br />
+<code>#include &lt;<a class="el" href="blas_2enum__output_8h_source.html">dlaf/blas/enum_output.h</a>&gt;</code><br />
+<code>#include &lt;dlaf/common/assert.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="index2d_8h_source.html">dlaf/common/index2d.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="range2d_8h_source.html">dlaf/common/range2d.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="lapack_2tile_8h_source.html">dlaf/lapack/tile.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="panel_8h_source.html">dlaf/matrix/panel.h</a>&gt;</code><br />
+<code>#include &lt;dlaf/sender/transform.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 </div>
 <p><a href="util__matrix_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -127,11 +127,11 @@ template&lt;class T , Device D&gt; </td></tr>
 <tr class="memitem:a801d4c1863ecd48a5758741b63781921"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a801d4c1863ecd48a5758741b63781921">dlaf::matrix::local_matrix</a> (const Matrix&lt; const T, D &gt; &amp;m) noexcept</td></tr>
 <tr class="memdesc:a801d4c1863ecd48a5758741b63781921"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is local to a process. <br /></td></tr>
 <tr class="separator:a801d4c1863ecd48a5758741b63781921"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab60bac9a36466ff9f784d2c909a62507"><td class="memTemplParams" colspan="2"><a id="ab60bac9a36466ff9f784d2c909a62507"></a>
+<tr class="memitem:a7a41b22af7fe104052668cc02d5a624c"><td class="memTemplParams" colspan="2"><a id="a7a41b22af7fe104052668cc02d5a624c"></a>
 template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:ab60bac9a36466ff9f784d2c909a62507"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#ab60bac9a36466ff9f784d2c909a62507">dlaf::matrix::equal_process_grid</a> (const Matrix&lt; const T, D &gt; &amp;m, comm::CommunicatorGrid const &amp;g) noexcept</td></tr>
-<tr class="memdesc:ab60bac9a36466ff9f784d2c909a62507"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is distributed on the communication grid. <br /></td></tr>
-<tr class="separator:ab60bac9a36466ff9f784d2c909a62507"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7a41b22af7fe104052668cc02d5a624c"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a7a41b22af7fe104052668cc02d5a624c">dlaf::matrix::equal_process_grid</a> (const Matrix&lt; const T, D &gt; &amp;m, const comm::CommunicatorGrid &amp;g) noexcept</td></tr>
+<tr class="memdesc:a7a41b22af7fe104052668cc02d5a624c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is distributed on the communication grid. <br /></td></tr>
+<tr class="separator:a7a41b22af7fe104052668cc02d5a624c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8af8a409c1af4f1c7cdbed9b4f6b24a2"><td class="memTemplParams" colspan="2"><a id="a8af8a409c1af4f1c7cdbed9b4f6b24a2"></a>
 template&lt;class T , Device D1, Device D2&gt; </td></tr>
 <tr class="memitem:a8af8a409c1af4f1c7cdbed9b4f6b24a2"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a8af8a409c1af4f1c7cdbed9b4f6b24a2">dlaf::matrix::equal_distributions</a> (const Matrix&lt; const T, D1 &gt; &amp;lhs, const Matrix&lt; const T, D2 &gt; &amp;rhs) noexcept</td></tr>

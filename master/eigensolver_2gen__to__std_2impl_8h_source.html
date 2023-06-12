@@ -82,22 +82,22 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;dlaf/eigensolver/gen_to_std/api.h&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &quot;dlaf/sender/traits.h&quot;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="blas_2tile_8h.html">dlaf/blas/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/gen_to_std/api.h&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&gt;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/traits.h&gt;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160; </div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keyword">namespace </span><a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a> {</div>
@@ -350,8 +350,8 @@ $(function() {
 <div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device&gt;&gt; a_panels(n_workspaces, distr);</div>
 <div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; a_panelsT(n_workspaces, distr);</div>
 <div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device&gt;&gt; l_panels(n_workspaces, distr);</div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device, matrix::StoreTransposed::Yes&gt;&gt;</div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;      l_panelsT(n_workspaces, distr);</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device, matrix::StoreTransposed::Yes&gt;&gt; l_panelsT(</div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;      n_workspaces, distr);</div>
 <div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160; </div>
 <div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
 <div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;    <span class="keyword">const</span> GlobalTileIndex kk{k, k};</div>
@@ -613,8 +613,8 @@ $(function() {
 <div class="line"><a name="l00542"></a><span class="lineno">  542</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; a_panels(n_workspaces, distr);</div>
 <div class="line"><a name="l00543"></a><span class="lineno">  543</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device&gt;&gt; a_panelsT(n_workspaces, distr);</div>
 <div class="line"><a name="l00544"></a><span class="lineno">  544</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Row, T, device&gt;&gt; u_panels(n_workspaces, distr);</div>
-<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device, matrix::StoreTransposed::Yes&gt;&gt;</div>
-<div class="line"><a name="l00546"></a><span class="lineno">  546</span>&#160;      u_panelsT(n_workspaces, distr);</div>
+<div class="line"><a name="l00545"></a><span class="lineno">  545</span>&#160;  common::RoundRobin&lt;matrix::Panel&lt;Coord::Col, T, device, matrix::StoreTransposed::Yes&gt;&gt; u_panelsT(</div>
+<div class="line"><a name="l00546"></a><span class="lineno">  546</span>&#160;      n_workspaces, distr);</div>
 <div class="line"><a name="l00547"></a><span class="lineno">  547</span>&#160; </div>
 <div class="line"><a name="l00548"></a><span class="lineno">  548</span>&#160;  <span class="keywordflow">for</span> (SizeType k = 0; k &lt; nrtile; ++k) {</div>
 <div class="line"><a name="l00549"></a><span class="lineno">  549</span>&#160;    <span class="keyword">const</span> GlobalTileIndex kk{k, k};</div>

@@ -82,43 +82,44 @@ $(function() {
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;blas.hh&gt;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&quot;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &quot;dlaf/factorization/cholesky/api.h&quot;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>factorization {</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00038"></a><span class="lineno"><a class="line" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">   38</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">cholesky</a>(blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keywordflow">if</span> (uplo == blas::Uplo::Lower)</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_L</a>(mat_a);</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_U</a>(mat_a);</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;}</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00064"></a><span class="lineno"><a class="line" href="cholesky_8h.html#aed7e035a7eff7eb31eea293621b0c8fa">   64</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">cholesky</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="comment">// Method only for Lower triangular matrix</span></div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <span class="keywordflow">if</span> (uplo == blas::Uplo::Lower)</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_L</a>(grid, mat_a);</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_U</a>(grid, mat_a);</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;}</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;}</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/factorization/cholesky/api.h&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>factorization {</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00039"></a><span class="lineno"><a class="line" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">   39</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">cholesky</a>(blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keywordflow">if</span> (uplo == blas::Uplo::Lower)</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_L</a>(mat_a);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_U</a>(mat_a);</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;}</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00065"></a><span class="lineno"><a class="line" href="cholesky_8h.html#aed7e035a7eff7eb31eea293621b0c8fa">   65</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">cholesky</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <span class="comment">// Method only for Lower triangular matrix</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <span class="keywordflow">if</span> (uplo == blas::Uplo::Lower)</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_L</a>(grid, mat_a);</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_cholesky.html">internal::Cholesky&lt;backend, device, T&gt;::call_U</a>(grid, mat_a);</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;}</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;}</div>
-<div class="ttc" id="acholesky_8h_html_a016f168408d2fe4c2803538e486d7241"><div class="ttname"><a href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">dlaf::factorization::cholesky</a></div><div class="ttdeci">void cholesky(blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> cholesky.h:38</div></div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;}</div>
+<div class="ttc" id="acholesky_8h_html_a016f168408d2fe4c2803538e486d7241"><div class="ttname"><a href="cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">dlaf::factorization::cholesky</a></div><div class="ttdeci">void cholesky(blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> cholesky.h:39</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>

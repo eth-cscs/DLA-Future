@@ -85,156 +85,155 @@ $(function() {
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;cstddef&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;vector&gt;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&quot;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &quot;dlaf/matrix/internal/tile_pipeline.h&quot;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&quot;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix__base_8h.html">dlaf/matrix/matrix_base.h</a>&quot;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&quot;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="types_8h.html">dlaf/types.h</a>&quot;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&quot;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&quot;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">namespace </span>dlaf::matrix {</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00037"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">   37</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a> : <span class="keyword">public</span> <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">internal::MatrixBase</a> {</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keyword">public</span>:</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">static</span> constexpr Device device = D;</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keyword">using</span> ElementType = T;</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">TileType</a> = <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;ElementType, D&gt;</a>;</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">ConstTileType</a> = <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const ElementType, D&gt;</a>;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_tile_data.html">TileDataType</a> = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_tile_data.html">internal::TileData&lt;const ElementType, D&gt;</a>;</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
-<div class="line"><a name="l00047"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">   47</a></span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, D&gt;</a>&amp; mat, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block)</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;      : MatrixBase(mat.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>(), tiles_per_block) {</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <span class="keyword">using</span> <a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>;</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> n = <a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localNrTiles().linear_size());</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    tile_managers_.reserve(n);</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; n; ++i) {</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;      tile_managers_.emplace_back(<a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a>());</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    }</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> tile_size = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().baseTileSize();</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    vector&lt;SubTileSpec&gt; specs;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    vector&lt;LocalTileIndex&gt; indices;</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    specs.reserve(tiles_per_block.linear_size());</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    indices.reserve(tiles_per_block.linear_size());</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; orig_tile_index : common::iterate_range2d(mat.distribution().localNrTiles())) {</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span> original_tile_size = mat.tileSize(mat.distribution().globalTileIndex(orig_tile_index));</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; original_tile_size.cols(); j += tile_size.cols())</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;        <span class="keywordflow">for</span> (SizeType i = 0; i &lt; original_tile_size.rows(); i += tile_size.rows()) {</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;          indices.emplace_back(</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;              <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;                             orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;          specs.emplace_back(</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;              <a class="code" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">SubTileSpec</a>{{i, j}, <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a891c1da69cefcfdfb73b3915ccc2cce5">tileSize</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().globalTileIndex(indices.back()))});</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        }</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;      <span class="keyword">auto</span> sub_tiles = <a class="code" href="matrix_2tile_8h.html#a4c15e2e57d6336347e6e19d945bd650e">splitTileDisjoint</a>(mat.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(orig_tile_index), specs);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;      DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; specs.size(); ++j) {</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(indices[j]);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;        <span class="comment">// Move subtile to be managed by the tile manager of RetiledMatrix. We</span></div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        <span class="comment">// use readwrite_with_wrapper to get access to the original tile managed</span></div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;        <span class="comment">// by the underlying async_rw_mutex.</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;        <span class="keyword">auto</span> s =</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;            ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j)])) |</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;            ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;                        <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a> sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;        ex::start_detached(std::move(s));</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;      }</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;      specs.clear();</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;      indices.clear();</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;    }</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;  }</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; rhs) = <span class="keyword">delete</span>;</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp;&amp; rhs) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; rhs) = <span class="keyword">delete</span>;</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; operator=(<a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp;&amp; rhs) = <span class="keywordflow">default</span>;</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
-<div class="line"><a name="l00106"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">  106</a></span>&#160;  ReadOnlyTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">read</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;    <span class="keywordflow">return</span> tile_managers_[i].read();</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;  }</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
-<div class="line"><a name="l00115"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">  115</a></span>&#160;  ReadOnlyTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">read</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">read</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;  }</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160; </div>
-<div class="line"><a name="l00123"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">  123</a></span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">waitLocalTiles</a>() noexcept {</div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;    <span class="keyword">auto</span> readwrite_f = [<span class="keyword">this</span>](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) {</div>
-<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;      <span class="keywordflow">return</span> this-&gt;tile_managers_[<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index)].readwrite();</div>
-<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    };</div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
-<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> range_local = common::iterate_range2d(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localNrTiles());</div>
-<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;    pika::this_thread::experimental::sync_wait(pika::execution::experimental::when_all_vector(</div>
-<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;        internal::selectGeneric(readwrite_f, range_local)));</div>
-<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;  }</div>
-<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160; </div>
-<div class="line"><a name="l00136"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">  136</a></span>&#160;  ReadWriteTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">readwrite</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
-<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;    <span class="keywordflow">return</span> tile_managers_[i].readwrite();</div>
-<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;  }</div>
-<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160; </div>
-<div class="line"><a name="l00145"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">  145</a></span>&#160;  ReadWriteTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">readwrite</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">readwrite</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
-<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;  }</div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160; </div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;  <span class="keywordtype">void</span> done(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;    tile_managers_[i].reset();</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  }</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160; </div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  <span class="keywordtype">void</span> done(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;    done(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;  }</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160; </div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;<span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;  std::vector&lt;internal::TilePipeline&lt;T, D&gt;&gt; tile_managers_;</div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;};</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160; </div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;<span class="keyword">class </span>RetiledMatrix&lt;const T, D&gt;;</div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160; </div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;<span class="comment">// ETI</span></div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160; </div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;<span class="preprocessor">#define DLAF_RETILED_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \</span></div>
-<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;<span class="preprocessor">  KWORD template class RetiledMatrix&lt;DATATYPE, DEVICE&gt;;</span></div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160; </div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU)</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU)</div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU)</div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU)</div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160; </div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU)</span></div>
-<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU)</div>
-<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU)</div>
-<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU)</div>
-<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU)</div>
-<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160;}</div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="vector_8h.html">dlaf/common/vector.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/matrix/internal/tile_pipeline.h&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix__base_8h.html">dlaf/matrix/matrix_base.h</a>&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="keyword">namespace </span>dlaf::matrix {</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00036"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">   36</a></span>&#160;<span class="keyword">class </span><a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a> : <span class="keyword">public</span> <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">internal::MatrixBase</a> {</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keyword">public</span>:</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">static</span> constexpr Device device = D;</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keyword">using</span> ElementType = T;</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">TileType</a> = <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;ElementType, D&gt;</a>;</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">ConstTileType</a> = <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;const ElementType, D&gt;</a>;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_tile_data.html">TileDataType</a> = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_tile_data.html">internal::TileData&lt;const ElementType, D&gt;</a>;</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00046"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">   46</a></span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, D&gt;</a>&amp; mat, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block)</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;      : MatrixBase(mat.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>(), tiles_per_block) {</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <span class="keyword">using</span> <a class="code" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> n = <a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localNrTiles().linear_size());</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    tile_managers_.reserve(n);</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; n; ++i) {</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;      tile_managers_.emplace_back(<a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a>());</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    }</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> tile_size = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().baseTileSize();</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;    vector&lt;SubTileSpec&gt; specs;</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    vector&lt;LocalTileIndex&gt; indices;</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    specs.reserve(tiles_per_block.linear_size());</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    indices.reserve(tiles_per_block.linear_size());</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; orig_tile_index : common::iterate_range2d(mat.distribution().localNrTiles())) {</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span> original_tile_size = mat.tileSize(mat.distribution().globalTileIndex(orig_tile_index));</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; original_tile_size.cols(); j += tile_size.cols())</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;        <span class="keywordflow">for</span> (SizeType i = 0; i &lt; original_tile_size.rows(); i += tile_size.rows()) {</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;          indices.emplace_back(</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;              <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;                             orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;          specs.emplace_back(<a class="code" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">SubTileSpec</a>{{i, j},</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;                                         <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a891c1da69cefcfdfb73b3915ccc2cce5">tileSize</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().globalTileIndex(indices.back()))});</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        }</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; </div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;      <span class="keyword">auto</span> sub_tiles = <a class="code" href="matrix_2tile_8h.html#a4c15e2e57d6336347e6e19d945bd650e">splitTileDisjoint</a>(mat.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(orig_tile_index), specs);</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;      DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;      <span class="keywordflow">for</span> (SizeType j = 0; j &lt; specs.size(); ++j) {</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;        <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(indices[j]);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;        <span class="comment">// Move subtile to be managed by the tile manager of RetiledMatrix. We</span></div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;        <span class="comment">// use readwrite_with_wrapper to get access to the original tile managed</span></div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        <span class="comment">// by the underlying async_rw_mutex.</span></div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;        <span class="keyword">auto</span> s =</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;            ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j)])) |</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;            ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;                        <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, D&gt;</a> sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        ex::start_detached(std::move(s));</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;      }</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160; </div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;      specs.clear();</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;      indices.clear();</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;    }</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  }</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; rhs) = <span class="keyword">delete</span>;</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">RetiledMatrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp;&amp; rhs) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; operator=(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; rhs) = <span class="keyword">delete</span>;</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp; operator=(<a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html">RetiledMatrix</a>&amp;&amp; rhs) = <span class="keywordflow">default</span>;</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
+<div class="line"><a name="l00105"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">  105</a></span>&#160;  ReadOnlyTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">read</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;    <span class="keywordflow">return</span> tile_managers_[i].read();</div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;  }</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160; </div>
+<div class="line"><a name="l00114"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">  114</a></span>&#160;  ReadOnlyTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">read</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">read</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;  }</div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160; </div>
+<div class="line"><a name="l00122"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">  122</a></span>&#160;  <span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">waitLocalTiles</a>() noexcept {</div>
+<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;    <span class="keyword">auto</span> readwrite_f = [<span class="keyword">this</span>](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) {</div>
+<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;      <span class="keywordflow">return</span> this-&gt;tile_managers_[<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index)].readwrite();</div>
+<div class="line"><a name="l00125"></a><span class="lineno">  125</span>&#160;    };</div>
+<div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160; </div>
+<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> range_local = common::iterate_range2d(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localNrTiles());</div>
+<div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;    pika::this_thread::experimental::sync_wait(pika::execution::experimental::when_all_vector(</div>
+<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;        internal::selectGeneric(readwrite_f, range_local)));</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;  }</div>
+<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160; </div>
+<div class="line"><a name="l00135"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">  135</a></span>&#160;  ReadWriteTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">readwrite</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;    <span class="keywordflow">return</span> tile_managers_[i].readwrite();</div>
+<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;  }</div>
+<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160; </div>
+<div class="line"><a name="l00144"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">  144</a></span>&#160;  ReadWriteTileSender&lt;T, D&gt; <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">readwrite</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00145"></a><span class="lineno">  145</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">readwrite</a>(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
+<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;  }</div>
+<div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160; </div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;  <span class="keywordtype">void</span> done(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> i = <a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a>(index);</div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;    tile_managers_[i].reset();</div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  }</div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160; </div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  <span class="keywordtype">void</span> done(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&amp; index) noexcept {</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;    done(<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().localTileIndex(index));</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  }</div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160; </div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;<span class="keyword">protected</span>:</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;  std::vector&lt;internal::TilePipeline&lt;T, D&gt;&gt; tile_managers_;</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;};</div>
+<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160; </div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;<span class="keyword">class </span>RetiledMatrix&lt;const T, D&gt;;</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160; </div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;<span class="comment">// ETI</span></div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160; </div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;<span class="preprocessor">#define DLAF_RETILED_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \</span></div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;<span class="preprocessor">  KWORD template class RetiledMatrix&lt;DATATYPE, DEVICE&gt;;</span></div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160; </div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU)</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU)</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU)</div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU)</div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU)</span></div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU)</div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU)</div>
+<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU)</div>
+<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;DLAF_RETILED_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU)</div>
+<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:56</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:122</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html">dlaf::matrix::RetiledMatrix</a></div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:37</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_a4e208b9159a478b3fa20167ec8e04318"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">dlaf::matrix::RetiledMatrix::RetiledMatrix</a></div><div class="ttdeci">RetiledMatrix(Matrix&lt; T, D &gt; &amp;mat, const LocalTileSize &amp;tiles_per_block)</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:47</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_a814972188382d0ae0120b6acfddd92bb"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">dlaf::matrix::RetiledMatrix::read</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; read(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:106</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_aa0e45d9a97f8d3ff418d2bd08211a5bf"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">dlaf::matrix::RetiledMatrix::readwrite</a></div><div class="ttdeci">ReadWriteTileSender&lt; T, D &gt; readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:136</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_ab731cfea1c5b07288bc3b34c59cb37d0"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">dlaf::matrix::RetiledMatrix::waitLocalTiles</a></div><div class="ttdeci">void waitLocalTiles() noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:123</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_ac3ca2e52e6627f5890bcb25fcff60167"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">dlaf::matrix::RetiledMatrix::readwrite</a></div><div class="ttdeci">ReadWriteTileSender&lt; T, D &gt; readwrite(const GlobalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:145</div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_afacf9af5a45a341c284844d866227579"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">dlaf::matrix::RetiledMatrix::read</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; read(const GlobalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:115</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:55</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html_ad11e9036fe317b6328ae71585b19c811"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">dlaf::matrix::Matrix::readwrite</a></div><div class="ttdeci">ReadWriteSenderType readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> matrix.h:121</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html">dlaf::matrix::RetiledMatrix</a></div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:36</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_a4e208b9159a478b3fa20167ec8e04318"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a4e208b9159a478b3fa20167ec8e04318">dlaf::matrix::RetiledMatrix::RetiledMatrix</a></div><div class="ttdeci">RetiledMatrix(Matrix&lt; T, D &gt; &amp;mat, const LocalTileSize &amp;tiles_per_block)</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:46</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_a814972188382d0ae0120b6acfddd92bb"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#a814972188382d0ae0120b6acfddd92bb">dlaf::matrix::RetiledMatrix::read</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; read(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:105</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_aa0e45d9a97f8d3ff418d2bd08211a5bf"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#aa0e45d9a97f8d3ff418d2bd08211a5bf">dlaf::matrix::RetiledMatrix::readwrite</a></div><div class="ttdeci">ReadWriteTileSender&lt; T, D &gt; readwrite(const LocalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:135</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_ab731cfea1c5b07288bc3b34c59cb37d0"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ab731cfea1c5b07288bc3b34c59cb37d0">dlaf::matrix::RetiledMatrix::waitLocalTiles</a></div><div class="ttdeci">void waitLocalTiles() noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:122</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_ac3ca2e52e6627f5890bcb25fcff60167"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#ac3ca2e52e6627f5890bcb25fcff60167">dlaf::matrix::RetiledMatrix::readwrite</a></div><div class="ttdeci">ReadWriteTileSender&lt; T, D &gt; readwrite(const GlobalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:144</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_retiled_matrix_html_afacf9af5a45a341c284844d866227579"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_retiled_matrix.html#afacf9af5a45a341c284844d866227579">dlaf::matrix::RetiledMatrix::read</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; read(const GlobalTileIndex &amp;index) noexcept</div><div class="ttdef"><b>Definition:</b> retiled_matrix.h:114</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_base_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">dlaf::matrix::internal::MatrixBase</a></div><div class="ttdef"><b>Definition:</b> matrix_base.h:24</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1internal_1_1_matrix_base_html_a28967ff509064a6e04cfc8b2d35af402"><div class="ttname"><a href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">dlaf::matrix::internal::MatrixBase::distribution</a></div><div class="ttdeci">const matrix::Distribution &amp; distribution() const noexcept</div><div class="ttdoc">Returns the distribution of the matrix.</div><div class="ttdef"><b>Definition:</b> matrix_base.h:84</div></div>
@@ -247,7 +246,7 @@ $(function() {
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="amatrix__base_8h_html"><div class="ttname"><a href="matrix__base_8h.html">matrix_base.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:26</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:27</div></div>
 <div class="ttc" id="astructdlaf_1_1matrix_1_1_sub_tile_spec_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">dlaf::matrix::SubTileSpec</a></div><div class="ttdoc">Contains the information to create a subtile.</div><div class="ttdef"><b>Definition:</b> tile.h:109</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="atypes_8h_html_a25d16ff6621f011d9a98be3d9ebf29f1"><div class="ttname"><a href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">dlaf::to_sizet</a></div><div class="ttdeci">auto to_sizet(const T signed_value)</div><div class="ttdef"><b>Definition:</b> types.h:265</div></div>

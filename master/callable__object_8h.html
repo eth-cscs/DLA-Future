@@ -95,13 +95,13 @@ Macros</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  constexpr <span class="keyword">struct </span>fname##_t {                                                             \</div>
-<div class="line">    template &lt;<span class="keyword">typename</span>... Ts&gt;                                                              \</div>
-<div class="line">    auto operator()(Ts&amp;&amp;... ts) <span class="keyword">const</span> noexcept(noexcept((fname)(std::forward&lt;Ts&gt;(ts)...))) \</div>
-<div class="line">        -&gt; decltype((fname)(std::forward&lt;Ts&gt;(ts)...)) {                                    \</div>
-<div class="line">      return (fname)(std::forward&lt;Ts&gt;(ts)...);                                             \</div>
-<div class="line">    }                                                                                      \</div>
-<div class="line">  } fname##_o {                                                                            \</div>
+<b>Value:</b><div class="fragment"><div class="line">  constexpr <span class="keyword">struct </span>fname##_t {                                                              \</div>
+<div class="line">    template &lt;<span class="keyword">typename</span>... Ts&gt;                                                               \</div>
+<div class="line">    auto operator()(Ts&amp;&amp;... ts) <span class="keyword">const</span> noexcept(noexcept((fname) (std::forward&lt;Ts&gt;(ts)...))) \</div>
+<div class="line">        -&gt; decltype((fname) (std::forward&lt;Ts&gt;(ts)...)) {                                    \</div>
+<div class="line">      return (fname) (std::forward&lt;Ts&gt;(ts)...);                                             \</div>
+<div class="line">    }                                                                                       \</div>
+<div class="line">  } fname##_o {                                                                             \</div>
 <div class="line">  }</div>
 </div><!-- fragment --><p>Given a function name @fname generates a constexpr object with name fname_o with type fname_t. The generated type has one static operator() which transparently forwards all arguments to a call to fname. This macro is useful for creating wrappers of overloaded functions that would otherwise require explicit selection of the overload when passing the function to higher-order functions. With this wrapper the overload is selected inside the wrapper's operator().</p>
 <p>The function name is wrapped in parentheses to disable ADL. It is assumed that all required overloads are found relative to the namespace where the macro is used. </p>

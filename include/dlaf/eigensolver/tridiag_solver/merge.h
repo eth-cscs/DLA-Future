@@ -1102,6 +1102,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
           }
         }
 
+        barrier_ptr->arrive_and_wait();
+
         // STEP 1b: Fill ones for deflated Eigenvectors. (single-thread)
         if (thread_idx == 0) {
           // just if there are deflated eigenvectors

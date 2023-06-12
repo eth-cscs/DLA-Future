@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/tune.h Source File</title>
+<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -61,15 +61,15 @@ $(function() {
 
 <div id="nav-path" class="navpath">
   <ul>
-<li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_415b543d06dcd728a2539f6ad76147ea.html">dlaf</a></li>  </ul>
+<li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="dir_415b543d06dcd728a2539f6ad76147ea.html">dlaf</a></li><li class="navelem"><a class="el" href="dir_6a5c477b82cc8ce0f7f0c14e97a46329.html">eigensolver</a></li><li class="navelem"><a class="el" href="dir_65d7cc792b8041c01f13ee8ff4893eee.html">internal</a></li>  </ul>
 </div>
 </div><!-- top -->
 <div class="header">
   <div class="headertitle">
-<div class="title">tune.h</div>  </div>
+<div class="title">get_red2band_barrier_busy_wait.h</div>  </div>
 </div><!--header-->
 <div class="contents">
-<a href="tune_8h.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
+<div class="fragment"><div class="line"><a name="l00001"></a><span class="lineno">    1</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00002"></a><span class="lineno">    2</span>&#160;<span class="comment">// Distributed Linear Algebra with Future (DLAF)</span></div>
 <div class="line"><a name="l00003"></a><span class="lineno">    3</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="comment">// Copyright (c) 2018-2023, ETH Zurich</span></div>
@@ -80,32 +80,18 @@ $(function() {
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;chrono&gt;</span></div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;cstdint&gt;</span></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &quot;<a class="code" href="tune_8h.html">dlaf/tune.h</a>&quot;</span></div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;pika/runtime.hpp&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00051"></a><span class="lineno"><a class="line" href="structdlaf_1_1_tune_parameters.html">   51</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a> {</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  std::size_t red2band_panel_nworkers =</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2);</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  std::size_t red2band_barrier_busy_wait_us = 1000;</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  std::size_t tridiag_rank1_nworkers =</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2);</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  SizeType eigensolver_min_band = 100;</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  SizeType band_to_tridiag_1d_block_size_base = 8192;</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  SizeType bt_band_to_tridiag_hh_apply_group_size = 64;</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;};</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; getTuneParameters();</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;}</div>
-<div class="ttc" id="astructdlaf_1_1_tune_parameters_html"><div class="ttname"><a href="structdlaf_1_1_tune_parameters.html">dlaf::TuneParameters</a></div><div class="ttdef"><b>Definition:</b> tune.h:51</div></div>
-<div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="keyword">inline</span> std::chrono::duration&lt;double&gt; getReductionToBandBarrierBusyWait() noexcept {</div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;  <span class="keywordflow">return</span> std::chrono::microseconds(getTuneParameters().red2band_barrier_busy_wait_us);</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;}</div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;}</div>
+<div class="ttc" id="atune_8h_html"><div class="ttname"><a href="tune_8h.html">tune.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

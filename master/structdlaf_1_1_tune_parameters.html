@@ -79,8 +79,14 @@ $(function() {
 Public Attributes</h2></td></tr>
 <tr class="memitem:a9ae21c43d98f2124d531d928f922171d"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_panel_nworkers</b></td></tr>
 <tr class="separator:a9ae21c43d98f2124d531d928f922171d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memItemLeft" align="right" valign="top"><a id="a6d7a35956da99141f6bcd00f2a0cecc5"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_barrier_busy_wait_us</b> = 1000</td></tr>
+<tr class="separator:a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_nworkers</b></td></tr>
 <tr class="separator:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab468a066388750faccd2a30e399d70c8"><td class="memItemLeft" align="right" valign="top"><a id="ab468a066388750faccd2a30e399d70c8"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_barrier_busy_wait_us</b> = 0</td></tr>
+<tr class="separator:ab468a066388750faccd2a30e399d70c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:afd5c6a981934c759ba9a5b1a9d7897cb"><td class="memItemLeft" align="right" valign="top"><a id="afd5c6a981934c759ba9a5b1a9d7897cb"></a>
 SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>eigensolver_min_band</b> = 100</td></tr>
 <tr class="separator:afd5c6a981934c759ba9a5b1a9d7897cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -95,7 +101,9 @@ SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>bt_band_to_tridia
 <div class="textblock"><p>DLA-Future tuning parameters.</p>
 <p>Holds the value of the parameters that can be used to tune DLA-Future.</p><ul>
 <li>red2band_panel_nworkers: The maximum number of threads to use for computing the panel in the reduction to band algorithm. Set with &ndash;dlaf:red2band-panel-nworkers or env variable DLAF_RED2BAND_PANEL_NWORKERS.</li>
+<li>red2band_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers in the reduction to band algorithm. Set with &ndash;dlaf:red2band-barrier-busy-wait-us or env variable DLAF_RED2BAND_BARRIER_BUSY_WAIT_US.</li>
 <li>tridiag_rank1_nworkers: The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-nworkers or env variable DLAF_TRIDIAG_RANK1_NWORKERS.</li>
+<li>tridiag_rank1_barrier_busy_wait_us: The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm. Set with &ndash;dlaf:tridiag-rank1-barrier-busy-wait-us or env variable DLAF_TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US.</li>
 <li>eigensolver_min_band: The minimum value to start looking for a divisor of the block size. Set with &ndash;dlaf:eigensolver-min-band or env variable DLAF_EIGENSOLVER_MIN_BAND.</li>
 <li>band_to_tridiag_1d_block_size_base: The 1D block size for band_to_tridiagonal is computed as 1d_block_size_base / nb * nb. The input matrix is distributed with a {nb x nb} block size. Set with &ndash;dlaf:band-to-tridiag-1d-block-size-base or env variable DLAF_BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE.</li>
 <li>bt_band_to_tridiag_hh_apply_group_size: The application of the HH reflector is splitted in smaller applications of the group size reflectors. Set with &ndash;dlaf:bt-band-to-tridiag-hh-apply-group-size or env variable DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE. Note to developers: Users can change these values, therefore consistency has to be ensured by algorithms. </li>

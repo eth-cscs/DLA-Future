@@ -8,10 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/layout_info.h"
-
-#include "dlaf/common/assert.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/layout_info.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 namespace matrix {

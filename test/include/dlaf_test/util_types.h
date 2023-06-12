@@ -11,7 +11,8 @@
 #pragma once
 
 #include <complex>
-#include "gtest/gtest.h"
+
+#include <gtest/gtest.h>
 
 namespace dlaf {
 namespace test {

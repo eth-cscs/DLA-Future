@@ -8,18 +8,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/tile.h"
-
-#include <stdexcept>
-
-#include <gtest/gtest.h>
 #include <pika/execution.hpp>
 
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/internal/tile_pipeline.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/internal/tile_pipeline.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -573,12 +572,9 @@ TYPED_TEST(TileTest, SubtileConst) {
   testSubtilesConst<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 1);
   testSubtilesConst<Type, Device::CPU>("Test Vector 2", {5, 7}, 8, {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}},
                                        2);
-  testSubtilesConst<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-                                       {{{5, 7}, {0, 0}},
-                                        {{2, 2}, {2, 2}},
-                                        {{3, 0}, {2, 7}},
-                                        {{0, 0}, {5, 7}}},
-                                       2);
+  testSubtilesConst<Type, Device::CPU>(
+      "Test Vector 3", {5, 7}, 8,
+      {{{5, 7}, {0, 0}}, {{2, 2}, {2, 2}}, {{3, 0}, {2, 7}}, {{0, 0}, {5, 7}}}, 2);
   testSubtilesConst<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
                                        {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
@@ -587,12 +583,9 @@ TYPED_TEST(TileTest, SubtileConst) {
                                                          {{{3, 4}, {2, 3}}}, 1);
   testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector 2", {5, 7}, 8,
                                                          {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 2);
-  testSubtilesConstShareReadWriteTile<Type, Device::CPU>("Test Share Vector 3", {5, 7}, 8,
-                                                         {{{5, 7}, {0, 0}},
-                                                          {{2, 2}, {2, 2}},
-                                                          {{3, 0}, {2, 7}},
-                                                          {{0, 0}, {5, 7}}},
-                                                         2);
+  testSubtilesConstShareReadWriteTile<Type, Device::CPU>(
+      "Test Share Vector 3", {5, 7}, 8,
+      {{{5, 7}, {0, 0}}, {{2, 2}, {2, 2}}, {{3, 0}, {2, 7}}, {{0, 0}, {5, 7}}}, 2);
   testSubtilesConst<Type, Device::CPU>("Test Share Vector 4", {5, 7}, 8,
                                        {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 
@@ -716,13 +709,9 @@ TYPED_TEST(TileTest, Subtile) {
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 1", {5, 7}, 8, {{{3, 4}, {2, 3}}}, 0);
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 2", {5, 7}, 8,
                                           {{{4, 3}, {0, 0}}, {{4, 6}, {1, 1}}}, 1);
-  testSubtilesDisjoint<Type, Device::CPU>("Test Vector 3", {5, 7}, 8,
-                                          {{{5, 7}, {0, 0}},
-                                           {{1, 2}, {2, 2}},
-                                           {{3, 0}, {2, 7}},
-                                           {{0, 0}, {1, 4}},
-                                           {{0, 4}, {3, 3}}},
-                                          2);
+  testSubtilesDisjoint<Type, Device::CPU>(
+      "Test Vector 3", {5, 7}, 8,
+      {{{5, 7}, {0, 0}}, {{1, 2}, {2, 2}}, {{3, 0}, {2, 7}}, {{0, 0}, {1, 4}}, {{0, 4}, {3, 3}}}, 2);
   testSubtilesDisjoint<Type, Device::CPU>("Test Vector 4", {5, 7}, 8,
                                           {{{5, 7}, {0, 0}}, {{5, 4}, {0, 3}}, {{2, 7}, {3, 0}}}, 1);
 

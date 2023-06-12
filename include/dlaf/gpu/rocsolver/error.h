@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include "dlaf/gpu/lapack/api.h"
+#include <dlaf/gpu/lapack/api.h>
 
 #ifdef DLAF_WITH_HIP
 

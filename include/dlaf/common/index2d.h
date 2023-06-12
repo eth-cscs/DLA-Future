@@ -18,9 +18,9 @@
 #include <string>
 #include <type_traits>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 

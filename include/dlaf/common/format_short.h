@@ -25,5 +25,5 @@ struct FormatShort {
 };
 
 template <typename T>
-FormatShort(T &&) -> FormatShort<std::decay_t<T>>;
+FormatShort(T&&) -> FormatShort<std::decay_t<T>>;
 }

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/common/single_threaded_blas.h"
+#include <dlaf/common/single_threaded_blas.h>
 
 #ifdef DLAF_WITH_OPENMP
 #include <omp.h>

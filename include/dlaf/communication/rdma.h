@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf::comm {
 /// Helper struct for determining the device to use for communication.

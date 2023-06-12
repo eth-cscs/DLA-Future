@@ -15,16 +15,17 @@
 #include <complex>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/data.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf::comm {
 namespace internal {
@@ -35,8 +36,8 @@ void sendBcast(const Communicator& comm, const matrix::Tile<const T, D>& tile, M
 #endif
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(), comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(const_cast<T*>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(),
+                                  comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(sendBcast);
@@ -65,10 +66,10 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm,
     dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                   \
-  kword template pika::execution::experimental::unique_any_sender<>               \
-  scheduleSendBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
-                    dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
+#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                        \
+  kword template pika::execution::experimental::unique_any_sender<> scheduleSendBcast( \
+      pika::execution::experimental::unique_any_sender<Comm> pcomm,                    \
+      dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
 DLAF_SCHEDULE_SEND_BCAST_ETI(extern, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);
@@ -98,10 +99,10 @@ template <class T, Device D, class Comm>
     pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank,
     dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
-#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                   \
-  kword template dlaf::matrix::ReadWriteTileSender<Type, Device>                  \
-  scheduleRecvBcast(pika::execution::experimental::unique_any_sender<Comm> pcomm, \
-                    comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
+#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                                 \
+  kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleRecvBcast(             \
+      pika::execution::experimental::unique_any_sender<Comm> pcomm, comm::IndexT_MPI root_rank, \
+      dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
 DLAF_SCHEDULE_RECV_BCAST_ETI(extern, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);

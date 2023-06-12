@@ -41,8 +41,6 @@
 
 #include <cstdio>
 
-#include <gtest/gtest.h>
-
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
@@ -50,6 +48,8 @@
 #include <dlaf/init.h>
 
 #include "gtest_mpi_listener.h"
+
+#include <gtest/gtest.h>
 
 GTEST_API_ int test_main(int argc, char** argv) {
   std::printf("Running main() from gtest_mpipika_main.cpp\n");

@@ -7,25 +7,28 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/eigensolver/band_to_tridiag.h"
 
 #include <exception>
 #include <functional>
 #include <sstream>
 #include <tuple>
-#include "gtest/gtest.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/traits.h"
-#include "dlaf/tune.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_generic_lapack.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/eigensolver/band_to_tridiag.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/traits.h>
+#include <dlaf/tune.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_generic_lapack.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

@@ -8,26 +8,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/print_csv.h"
-#include "dlaf/matrix/print_numpy.h"
-
-#ifdef DLAF_WITH_GPU
-#include "dlaf/matrix/print_gpu.h"
-#endif
-
 #include <sstream>
 #include <tuple>
 
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/print_csv.h>
+#include <dlaf/matrix/print_numpy.h>
+#include <dlaf/matrix/tile.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/matrix/tile.h"
-
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
+#ifdef DLAF_WITH_GPU
+#include <dlaf/matrix/print_gpu.h>
+#endif
 
 using namespace dlaf;
 using namespace dlaf::matrix;

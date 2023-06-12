@@ -10,11 +10,11 @@
 
 #pragma once
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver {
 

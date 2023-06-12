@@ -35,7 +35,7 @@ struct configuration {
   std::string mpi_pool = "mpi";
 };
 
-std::ostream& operator<<(std::ostream& os, configuration const& cfg);
+std::ostream& operator<<(std::ostream& os, const configuration& cfg);
 
 namespace internal {
 configuration& getConfiguration();
@@ -59,7 +59,7 @@ pika::program_options::options_description getOptionsDescription();
 /// @param vm parsed command-line options as provided by the application entry point.
 /// @param user_cfg user-provided default configuration. Takes precedence over
 /// DLA-Future defaults.
-void initialize(pika::program_options::variables_map const& vm, configuration const& user_cfg = {});
+void initialize(const pika::program_options::variables_map& vm, const configuration& user_cfg = {});
 
 /// Initialize DLA-Future.
 ///
@@ -69,7 +69,7 @@ void initialize(pika::program_options::variables_map const& vm, configuration co
 /// @param argv as provided by the application entry point.
 /// @param user_cfg user-provided default configuration. Takes precedence over
 /// DLA-Future defaults.
-void initialize(int argc, const char* const argv[], configuration const& user_cfg = {});
+void initialize(int argc, const char* const argv[], const configuration& user_cfg = {});
 
 /// Finalize DLA-Future.
 ///
@@ -80,19 +80,19 @@ void finalize();
 ///
 /// Calls dlaf::initialize on construction and dlaf::finalize on destruction.
 struct [[nodiscard]] ScopedInitializer {
-  ScopedInitializer(pika::program_options::variables_map const& vm, configuration const& user_cfg = {});
-  ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg = {});
+  ScopedInitializer(const pika::program_options::variables_map& vm, const configuration& user_cfg = {});
+  ScopedInitializer(int argc, const char* const argv[], const configuration& user_cfg = {});
   ~ScopedInitializer();
 
-  ScopedInitializer(ScopedInitializer &&) = delete;
-  ScopedInitializer(ScopedInitializer const&) = delete;
+  ScopedInitializer(ScopedInitializer&&) = delete;
+  ScopedInitializer(const ScopedInitializer&) = delete;
   ScopedInitializer& operator=(ScopedInitializer&&) = delete;
-  ScopedInitializer& operator=(ScopedInitializer const&) = delete;
+  ScopedInitializer& operator=(const ScopedInitializer&) = delete;
 };
 
 /// Initialize the MPI pool.
 ///
 ///
 void initResourcePartitionerHandler(pika::resource::partitioner& rp,
-                                    pika::program_options::variables_map const& vm);
+                                    const pika::program_options::variables_map& vm);
 }

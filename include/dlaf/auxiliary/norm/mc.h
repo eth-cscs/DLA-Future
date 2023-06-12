@@ -9,14 +9,14 @@
 //
 #pragma once
 
-#include "dlaf/auxiliary/norm/api.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/sync/reduce.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/auxiliary/norm/api.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/sync/reduce.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::auxiliary::internal {
 

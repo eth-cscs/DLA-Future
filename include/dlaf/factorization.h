@@ -11,5 +11,5 @@
 
 /// @file
 
-#include "dlaf/factorization/cholesky.h"
-#include "dlaf/factorization/qr.h"
+#include <dlaf/factorization/cholesky.h>
+#include <dlaf/factorization/qr.h>

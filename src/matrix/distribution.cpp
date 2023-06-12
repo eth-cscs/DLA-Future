@@ -10,7 +10,7 @@
 
 #include <cstdlib>
 
-#include "dlaf/matrix/distribution.h"
+#include <dlaf/matrix/distribution.h>
 
 namespace dlaf {
 namespace matrix {

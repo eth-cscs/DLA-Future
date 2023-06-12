@@ -15,10 +15,11 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/types.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/types.h>
+
+#include <dlaf_test/util_types.h>
 
 /// @file
 

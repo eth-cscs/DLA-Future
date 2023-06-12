@@ -12,8 +12,8 @@
 /// More details about how a matrix is distributed can be found in `misc/matrix_distribution.md`.
 
 #pragma once
-#include "dlaf/common/assert.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace util {

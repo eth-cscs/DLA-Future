@@ -13,11 +13,10 @@
 #include <exception>
 #include <iostream>
 
-#include "dlaf/common/source_location.h"
-#include "dlaf/gpu/lapack/api.h"
-
-#include "dlaf/gpu/cusolver/error.h"
-#include "dlaf/gpu/rocsolver/error.h"
+#include <dlaf/common/source_location.h>
+#include <dlaf/gpu/cusolver/error.h>
+#include <dlaf/gpu/lapack/api.h>
+#include <dlaf/gpu/rocsolver/error.h>
 
 #ifdef DLAF_WITH_GPU
 

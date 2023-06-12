@@ -7,21 +7,21 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/multiplication/general.h"
+
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/multiplication/general.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_generic_blas.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_generic_blas.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

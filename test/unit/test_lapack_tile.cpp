@@ -7,18 +7,19 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/lapack/tile.h"
+#include <cmath>
 
-#include "gtest/gtest.h"
+#include <dlaf/lapack/tile.h>
 
 #include "test_lapack_tile/test_hegst.h"
 #include "test_lapack_tile/test_lange.h"
 #include "test_lapack_tile/test_lantr.h"
 #include "test_lapack_tile/test_laset.h"
 #include "test_lapack_tile/test_potrf.h"
-#include "dlaf_test/matrix/util_tile.h"
 
-#include <cmath>
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/util_tile.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

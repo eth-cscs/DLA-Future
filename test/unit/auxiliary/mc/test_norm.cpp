@@ -8,20 +8,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/auxiliary/norm.h"
-
 #include <limits>
+
+#include <dlaf/auxiliary/norm.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/lapack/enum_output.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack/enum_output.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

@@ -15,7 +15,7 @@
 
 #include <pika/runtime.hpp>
 
-#include "dlaf/types.h"
+#include <dlaf/types.h>
 
 namespace dlaf {
 /// DLA-Future tuning parameters.

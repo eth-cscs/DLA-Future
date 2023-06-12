@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/factorization/cholesky/impl.h"
+#include <dlaf/factorization/cholesky/impl.h>
 
 namespace dlaf {
 namespace factorization {

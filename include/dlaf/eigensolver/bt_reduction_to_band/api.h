@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include "dlaf/common/vector.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 

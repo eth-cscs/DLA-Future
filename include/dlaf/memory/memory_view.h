@@ -16,9 +16,9 @@
 #include <memory>
 #include <utility>
 
-#include "memory_chunk.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/memory/memory_chunk.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace memory {

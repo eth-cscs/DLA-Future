@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include "dlaf/common/assert.h"
-#include "dlaf/tune.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/tune.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 

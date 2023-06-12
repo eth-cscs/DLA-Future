@@ -16,14 +16,14 @@
 
 #include <pika/execution.hpp>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/communication/kernels/broadcast.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/index2d.h>
+#include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf {
 namespace comm {

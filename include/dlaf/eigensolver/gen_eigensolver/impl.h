@@ -9,14 +9,13 @@
 //
 #pragma once
 
-#include "dlaf/eigensolver/eigensolver.h"
-#include "dlaf/eigensolver/gen_to_std.h"
-#include "dlaf/factorization/cholesky.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/solver/triangular.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf/eigensolver/gen_eigensolver/api.h"
+#include <dlaf/eigensolver/eigensolver.h>
+#include <dlaf/eigensolver/gen_eigensolver/api.h>
+#include <dlaf/eigensolver/gen_to_std.h>
+#include <dlaf/factorization/cholesky.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/solver/triangular.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 

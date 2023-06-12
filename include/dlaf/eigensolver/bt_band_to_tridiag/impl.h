@@ -20,35 +20,35 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/kernels/broadcast.h"
-#include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/communication/kernels/p2p_allsum.h"
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/retiled_matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/tune.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/kernels/p2p_allsum.h>
+#include <dlaf/eigensolver/band_to_tridiag/api.h>
+#include <dlaf/eigensolver/bt_band_to_tridiag/api.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/retiled_matrix.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/tune.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -585,9 +585,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
                         splitTile(mat_v.readwrite(ij), helper.specHH()),
                         splitTile(mat_t.readwrite(ij_t), t_spec),
                         splitTile(mat_w.readwrite(ij), helper.specHH())) |
-           dlaf::internal::transform<
-               dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(),
-                                                            copyVTandComputeW) |
+           dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+               dlaf::internal::Policy<Backend::GPU>(), copyVTandComputeW) |
            ex::split_tuple();
   }
 
@@ -703,20 +702,16 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
           ex::start_detached(
               ex::when_all(ex::just(group_size), tile_v, tile_w,
                            mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e)) |
-              dlaf::internal::transform<
-                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                   thread_priority::normal),
-                                                               ApplyHHToSingleTileRow<B, T>{}));
+              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                  dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToSingleTileRow<B, T>{}));
         }
         else {
           ex::start_detached(
               ex::when_all(ex::just(group_size), tile_v, tile_w,
                            mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e),
                            mat_e_rt.readwrite(helper.bottomIndexE(j_e))) |
-              dlaf::internal::transform<
-                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                   thread_priority::normal),
-                                                               ApplyHHToDoubleTileRow<B, T>{}));
+              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                  dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToDoubleTileRow<B, T>{}));
         }
       }
 
@@ -886,9 +881,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       // Broadcast on ROW
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
-          ex::start_detached(
-              comm::scheduleSendBcast(mpi_chain_row(),
-                                      splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
+          ex::start_detached(comm::scheduleSendBcast(
+              mpi_chain_row(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
           ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
@@ -914,8 +908,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
-          ex::start_detached(
-              comm::scheduleRecv(mpi_chain_col(), rank_src, 0, panel_hh.readwrite(ij_hh_panel)));
+          ex::start_detached(comm::scheduleRecv(mpi_chain_col(), rank_src, 0,
+                                                panel_hh.readwrite(ij_hh_panel)));
         }
       }
 
@@ -943,14 +937,12 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
         // SINGLE ROW UPDATE
         if (!helper.affectsMultipleTiles()) {
-          ex::start_detached(
-              ex::when_all(ex::just(current_group_size), tile_v, tile_w,
-                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
-                           mat_e_rt.readwrite(idx_e_top)) |
-              dlaf::internal::transform<
-                  dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                   thread_priority::normal),
-                                                               ApplyHHToSingleTileRow<B, T>{}));
+          ex::start_detached(ex::when_all(ex::just(current_group_size), tile_v, tile_w,
+                                          splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
+                                          mat_e_rt.readwrite(idx_e_top)) |
+                             dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                                 dlaf::internal::Policy<B>(thread_priority::normal),
+                                 ApplyHHToSingleTileRow<B, T>{}));
         }
         // TWO ROWs
         else {
@@ -962,10 +954,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                 ex::when_all(ex::just(current_group_size), tile_v, tile_w,
                              splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
                              mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |
-                dlaf::internal::transform<
-                    dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<B>(
-                                                                     thread_priority::normal),
-                                                                 ApplyHHToDoubleTileRow<B, T>{}));
+                dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+                    dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToDoubleTileRow<B, T>{}));
           }
           // TWO ROWs TWO RANKs UPDATE (MAIN + PARTNER)
           else {

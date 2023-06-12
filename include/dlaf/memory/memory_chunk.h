@@ -17,7 +17,7 @@
 
 #include <umpire/Allocator.hpp>
 
-#include "dlaf/types.h"
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace memory {

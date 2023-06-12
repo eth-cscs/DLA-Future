@@ -12,24 +12,24 @@
 #include <pika/execution.hpp>
 #include <pika/thread.hpp>
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/blas/tile_extensions.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/communication/broadcast_panel.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/kernels.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/solver/triangular/api.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/blas/tile_extensions.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/communication/broadcast_panel.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/solver/triangular/api.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf {
 namespace solver {
@@ -591,12 +591,12 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(
-              comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel.readwrite(idx)));
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(
-              comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM, b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
+                                                      b_panel.read(idx)));
         }
       }
     }
@@ -768,12 +768,12 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(
-              comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM, b_panel.readwrite(idx)));
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(
-              comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM, b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
+                                                      b_panel.read(idx)));
         }
       }
     }
@@ -947,12 +947,12 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(
-              comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel.readwrite(idx)));
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(
-              comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM, b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
+                                                      b_panel.read(idx)));
         }
       }
     }
@@ -1127,12 +1127,12 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(
-              comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM, b_panel.readwrite(idx)));
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+                                                             b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(
-              comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM, b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
+                                                      b_panel.read(idx)));
         }
       }
     }

@@ -1105,6 +1105,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         barrier_ptr->arrive_and_wait();
 
         // STEP 1b: Fill ones for deflated Eigenvectors. (single-thread)
+        // TODO this step looks like it is completely "independent"; maybe we can do something different
         if (thread_idx == 0) {
           // just if there are deflated eigenvectors
           if (k < n) {
@@ -1198,8 +1199,6 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         else {  // other workers
           std::fill_n(w, m_subm_el_lc, T(1));
         }
-
-        barrier_ptr->arrive_and_wait();
 
         barrier_ptr->arrive_and_wait();
 
@@ -1466,9 +1465,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
-  // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues
-  // as prepared for the deflated system.
-  //
+  // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
+  // prepared for the deflated system.
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
                                                   T(1), ws.e1, ws.e2, T(0), ws.e0);

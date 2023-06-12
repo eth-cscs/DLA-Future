@@ -8,9 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-extern "C" {
 #include "test_cholesky_c_api_wrapper.h"
-}
 
 #include "dlaf_c/factorization/cholesky.h"
 #include "dlaf_c/grid.h"

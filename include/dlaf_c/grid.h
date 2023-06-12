@@ -11,13 +11,12 @@
 #pragma once
 
 #include <mpi.h>
+#include "dlaf_c/utils.h"
 
-extern "C" {
-MPI_Comm Cblacs2sys_handle(int ictxt);
-void Cblacs_get(int ictxt, int inum, int* comm);
-extern "C" void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
+DLAF_EXTERN_C MPI_Comm Cblacs2sys_handle(int ictxt);
+DLAF_EXTERN_C void Cblacs_get(int ictxt, int inum, int* comm);
+DLAF_EXTERN_C void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
 
-int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order = 'R');
-void dlaf_create_grid_from_blacs(int blacs_ctxt);
-void dlaf_free_grid(int blacs_ctxt);
-}
+DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order = 'R');
+DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
+DLAF_EXTERN_C void dlaf_free_grid(int blacs_ctxt);

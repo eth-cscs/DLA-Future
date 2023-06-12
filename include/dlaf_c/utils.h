@@ -10,7 +10,8 @@
 
 #pragma once
 
-#include <dlaf_c/utils.h>
-
-DLAF_EXTERN_C void dlaf_initialize(int argc, const char** argv);
-DLAF_EXTERN_C void dlaf_finalize();
+#ifdef __cplusplus
+#define DLAF_EXTERN_C extern "C"
+#else
+#define DLAF_EXTERN_C
+#endif

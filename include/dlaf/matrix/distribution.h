@@ -137,11 +137,7 @@ public:
   GlobalElementIndex globalElementIndex(const GlobalTileIndex& global_tile,
                                         const TileElementIndex& tile_element) const noexcept {
     DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
-    DLAF_ASSERT_HEAVY(tile_element.isIn(tile_size_), tile_element, tile_size_);
-    // TODO: No check for partial tiles at the bottom-right of distribution? Or
-    // is that done elsewhere?
-    // TODO: Check for partial tiles at top-left of distribution done inside
-    // elementFromTileAndElementTile. Need extra checks here?
+    DLAF_ASSERT_HEAVY(tile_element.isIn(tileSize(global_tile)), tile_element, tileSize(global_tile));
 
     return {globalElementFromGlobalTileAndTileElement<Coord::Row>(global_tile.row(), tile_element.row()),
             globalElementFromGlobalTileAndTileElement<Coord::Col>(global_tile.col(),
@@ -357,14 +353,14 @@ public:
     SizeType n = size_.get<rc>();
     DLAF_ASSERT_HEAVY(0 <= i_gl && i_gl < n, i_gl, n);
     SizeType tile_n = tile_size_.get<rc>();
-    SizeType tile_element_offset = globalTileElementOffset<rc>();
-    SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n, tile_element_offset);
+    SizeType tile_el_offset = globalTileElementOffset<rc>();
+    SizeType tile_i = util::matrix::tileFromElement(i_gl, tile_n, tile_el_offset);
 
     if (tile_i == 0) {
-      return std::min(tile_n - tile_element_offset, n);
+      return std::min(tile_n - tile_el_offset, n);
     }
 
-    return std::min(tile_n, (n + tile_element_offset) - tile_i * tile_n);
+    return std::min(tile_n, (n + tile_el_offset) - tile_i * tile_n);
   }
 
   /// Returns the distance from the global index @p i_gl to the tile adjacent the one containing @p i_gl
@@ -440,18 +436,17 @@ public:
     if (i_loc_begin > i_loc_last)
       return 0;
 
-    // TODO: index naming?
-    SizeType i_element_begin =
+    SizeType i_el_begin =
         util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
                                                     localTileElementOffset<rc>());
-    SizeType i_element_end =
+    SizeType i_el_end =
         util::matrix::elementFromTileAndTileElement(i_loc_last,
                                                     tileSize<rc>(
                                                         globalTileFromLocalTile<rc>(i_loc_last)) -
                                                         1,
                                                     tile_size_.get<rc>(), localTileElementOffset<rc>()) +
         1;
-    return i_element_end - i_element_begin;
+    return i_el_end - i_el_begin;
   }
 
   /// \overload localElementDistanceFromLocalTile

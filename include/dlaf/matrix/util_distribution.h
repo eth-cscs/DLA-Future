@@ -25,13 +25,12 @@ namespace matrix {
 /// If the element index is global, the returned tile index is global.
 /// @pre 0 <= element,
 /// @pre 0 < tile_size.
-/// @pre 0 <= tile_element_offset < tile_size
-inline SizeType tileFromElement(SizeType element, SizeType tile_size, SizeType tile_element_offset = 0) {
+/// @pre 0 <= tile_el_offset < tile_size
+inline SizeType tileFromElement(SizeType element, SizeType tile_size, SizeType tile_el_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= element, element);
   DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
-  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_element_offset,
-                    tile_size);
-  return (element + tile_element_offset) / tile_size;
+  DLAF_ASSERT_HEAVY(0 <= tile_el_offset && tile_el_offset < tile_size, tile_el_offset, tile_size);
+  return (element + tile_el_offset) / tile_size;
 }
 
 /// TODO: Check block_size vs. tile_size naming here and in distribution.{cpp,h}
@@ -41,16 +40,16 @@ inline SizeType tileFromElement(SizeType element, SizeType tile_size, SizeType t
 /// The element index can be either global or local.
 /// @pre 0 <= element,
 /// @pre 0 < tile_size,
-/// @pre 0 <= tile_element_offset < tile_size.
+/// @pre 0 <= tile_el_offset < tile_size.
 inline SizeType tileElementFromElement(SizeType element, SizeType tile_size,
-                                       SizeType tile_element_offset = 0) {
+                                       SizeType tile_el_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= element, element);
   DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
-  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_size);
-  element += tile_element_offset;
+  DLAF_ASSERT_HEAVY(0 <= tile_el_offset && tile_el_offset < tile_size, tile_size);
+  element += tile_el_offset;
   SizeType tile_element = element % tile_size;
   if (element < tile_size) {
-    tile_element -= tile_element_offset;
+    tile_element -= tile_el_offset;
   }
   return tile_element;
 }
@@ -63,17 +62,16 @@ inline SizeType tileElementFromElement(SizeType element, SizeType tile_size,
 /// @pre 0 <= tile,
 /// @pre 0 <= tile_element < tile_size,
 /// @pre 0 < tile_size,
-/// @pre 0 <= tile_element_offset < tile_size.
+/// @pre 0 <= tile_el_offset < tile_size.
 inline SizeType elementFromTileAndTileElement(SizeType tile, SizeType tile_element, SizeType tile_size,
-                                              SizeType tile_element_offset = 0) {
+                                              SizeType tile_el_offset = 0) {
   DLAF_ASSERT_HEAVY(0 <= tile, tile);
-  DLAF_ASSERT_HEAVY(0 <= tile_element_offset && tile_element_offset < tile_size, tile_element_offset,
-                    tile_size);
+  DLAF_ASSERT_HEAVY(0 <= tile_el_offset && tile_el_offset < tile_size, tile_el_offset, tile_size);
   DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < tile_size &&
-                        (tile > 0 || tile_element < (tile_size - tile_element_offset)),
-                    tile, tile_element, tile_size, tile_element_offset);
+                        (tile > 0 || tile_element < (tile_size - tile_el_offset)),
+                    tile, tile_element, tile_size, tile_el_offset);
   DLAF_ASSERT_HEAVY(0 < tile_size, tile_size);
-  return tile * tile_size + tile_element - (tile > 0 ? tile_element_offset : 0);
+  return tile * tile_size + tile_element - (tile > 0 ? tile_el_offset : 0);
 }
 
 /// Returns the rank index of the process that stores the tiles with index @p global_tile.

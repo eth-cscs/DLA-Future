@@ -1022,10 +1022,10 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         const dlaf::comm::Communicator& row_comm = row_comm_wrapper.get();
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
-        const auto batch_size =
+        const std::size_t batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
-        const auto begin = to_SizeType(thread_idx * batch_size);
-        const auto end = std::min(to_SizeType((thread_idx + 1) * batch_size), sz_loc_tiles.cols());
+        const SizeType begin = to_SizeType(thread_idx * batch_size);
+        const SizeType end = std::min(to_SizeType((thread_idx + 1) * batch_size), sz_loc_tiles.cols());
 
         // STEP 0: Initialize workspaces (single-thread)
         const SizeType m_subm_el_lc = [=]() {
@@ -1108,22 +1108,23 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         if (thread_idx == 0) {
           // just if there are deflated eigenvectors
           if (k < n) {
-            const GlobalElementIndex origin{i_begin * dist.blockSize().rows(),
-                                            i_begin * dist.blockSize().cols()};
+            const GlobalElementSize origin_el(i_begin * dist.blockSize().rows(),
+                                              i_begin * dist.blockSize().cols());
             const SizeType* i2_perm = i2_tile_arr[0].get().ptr();
 
-            for (SizeType i = 0; i < n; ++i) {
-              const SizeType j = i2_perm[i];
-              if (j >= k) {
-                const GlobalElementIndex i_g{i + origin.row(), j + origin.col()};
-                const GlobalTileIndex i_tile = dist.globalTileIndex(i_g);
-                if (dist.rankIndex() == dist.rankGlobalTile(i_tile)) {
-                  const LocalTileIndex i_tile_l = dist.localTileIndex(i_tile);
-                  const SizeType i_subm_evec_arr =
-                      i_tile_l.row() - ij_begin_lc.row() +
-                      (i_tile_l.col() - ij_begin_lc.col()) * sz_loc_tiles.rows();
-                  const TileElementIndex i = dist.tileElementIndex(i_g);
-                  evec_tiles[to_sizet(i_subm_evec_arr)](i) = T{1};
+            for (SizeType i_subm_el = 0; i_subm_el < n; ++i_subm_el) {
+              const SizeType j_subm_el = i2_perm[i_subm_el];
+              if (j_subm_el >= k) {
+                const GlobalElementIndex ij_el(origin_el.rows() + i_subm_el,
+                                               origin_el.cols() + j_subm_el);
+                const GlobalTileIndex ij = dist.globalTileIndex(ij_el);
+                if (dist.rankIndex() == dist.rankGlobalTile(ij)) {
+                  const LocalTileIndex ij_lc = dist.localTileIndex(ij);
+                  const SizeType linear_subm_lc =
+                      (ij_lc.row() - ij_begin_lc.row()) +
+                      (ij_lc.col() - ij_begin_lc.col()) * sz_loc_tiles.rows();
+                  const TileElementIndex ij_el_tl = dist.tileElementIndex(ij_el);
+                  evec_tiles[to_sizet(linear_subm_lc)](ij_el_tl) = T{1};
                 }
               }
             }

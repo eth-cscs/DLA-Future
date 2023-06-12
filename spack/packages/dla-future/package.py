@@ -16,31 +16,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/eth-cscs/DLA-Future.git"
     maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
+    version("0.1.0", sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1")
     version("master", branch="master")
-
-    cxxstds = ("17", "20")
-    variant(
-        "cxxstd",
-        default="17",
-        values=cxxstds,
-        description="Use the specified C++ standard when building",
-    )
-    conflicts("cxxstd=20", when="+cuda")
 
     variant("shared", default=True, description="Build shared libraries.")
 
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
-
-    variant("ci-test", default=False, description="Build for CI (Advanced usage).")
-    conflicts("~miniapps", when="+ci-test")
-
-    variant(
-        "ci-check-threads",
-        default=False,
-        description="Check number of spawned threads in CI (Advanced usage).",
-    )
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -58,10 +41,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
-    for cxxstd in cxxstds:
-        depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
 
+    conflicts("pika cxxstd=20", when="+cuda")
 
     depends_on("whip +cuda", when="+cuda")
     depends_on("whip +rocm", when="+rocm")
@@ -97,6 +78,30 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         for val in CudaPackage.cuda_arch_values:
             depends_on("pika cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
             depends_on("umpire cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
+
+    ### Variants available only in the DLAF repo spack package
+    cxxstds = ("17", "20")
+    variant(
+        "cxxstd",
+        default="17",
+        values=cxxstds,
+        description="Use the specified C++ standard when building",
+    )
+    conflicts("cxxstd=20", when="+cuda")
+
+    for cxxstd in cxxstds:
+        depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
+        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
+
+    variant("ci-test", default=False, description="Build for CI (Advanced usage).")
+    conflicts("~miniapps", when="+ci-test")
+
+    variant(
+        "ci-check-threads",
+        default=False,
+        description="Check number of spawned threads in CI (Advanced usage).",
+    )
+    ###
 
     def cmake_args(self):
         spec = self.spec
@@ -147,6 +152,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         # DOC
         args.append(self.define_from_variant("DLAF_BUILD_DOC", "doc"))
 
+        ### For the spack repo only the else branch should remain.
         if "+ci-test" in self.spec:
             # Enable TESTS and setup CI specific parameters
             args.append(self.define("CMAKE_CXX_FLAGS", "-Werror"))
@@ -158,13 +164,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING_HEADER", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
 
+        ### Variants available only in the DLAF repo spack package
         if "+ci-check-threads" in self.spec:
             args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
+        ###
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

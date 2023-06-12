@@ -10,6 +10,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -1007,6 +1008,20 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
                                 const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
                                 const auto& delta_tile_arr, const auto& i2_tile_arr,
                                 const auto& evec_tiles, auto& ws_vecs, auto& ws_rowvec) {
+        namespace tt = pika::this_thread::experimental;
+
+        using dlaf::comm::internal::transformMPI;
+
+        auto reduce_o = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op, const auto& data,
+                           MPI_Request* req) {
+          auto msg = comm::make_message(data);
+          DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(),
+                                              reduce_op, comm, req));
+        };
+
+        const dlaf::comm::Communicator& row_comm = row_comm_wrapper.get();
+        const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
+
         const auto batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
         const auto begin = to_SizeType(thread_idx * batch_size);
@@ -1116,17 +1131,20 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         // STEP 1c: assemble dist evals vec
         // TODO this step looks like it is completely "independent"; maybe we can do something different
         if (thread_idx == 0) {
-          auto& row_comm = row_comm_wrapper.get();
+          using dlaf::comm::internal::sendBcast_o;
+          using dlaf::comm::internal::recvBcast_o;
+
           const comm::Index2D this_rank = dist_evecs.rankIndex();
+
           for (SizeType i = i_begin; i < i_end; ++i) {
             const comm::IndexT_MPI evecs_tile_rank = dist_evecs.rankGlobalTile<Coord::Col>(i);
             auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
-            // TODO sync MPI or sync_wait(MPIasync)?
             if (evecs_tile_rank == this_rank.col())
-              comm::sync::broadcast::send(row_comm, tile);
+              tt::sync_wait(transformMPI(sendBcast_o, ex::just(std::cref(row_comm), std::cref(tile))));
             else
-              comm::sync::broadcast::receive_from(evecs_tile_rank, row_comm, tile);
+              tt::sync_wait(transformMPI(recvBcast_o, ex::just(std::cref(row_comm), evecs_tile_rank,
+                                                               std::cref(tile))));
           }
         }
 
@@ -1234,9 +1252,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
             }
           }
 
-          // TODO do not use sync
-          comm::sync::allReduceInPlace(row_comm_wrapper.get(), MPI_PROD,
-                                       common::make_data(w, m_subm_el_lc));
+          tt::sync_wait(transformMPI(reduce_o, ex::just(std::cref(row_comm), MPI_PROD,
+                                                        common::make_data(w, m_subm_el_lc))));
 
           T* z_ptr = z_tiles[0].ptr();
           for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
@@ -1257,6 +1274,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
         barrier_ptr->arrive_and_wait();
 
         // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
+
+        // STEP 3a: Form evecs using weights vector and compute (local) sum of squares
         {
           common::internal::SingleThreadedBlasScope single;
 
@@ -1301,14 +1320,20 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm,
               }
             }
           }
+        }
 
-          barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait();
 
-          if (thread_idx == 0)
-            comm::sync::allReduceInPlace(col_comm_wrapper.get(), MPI_SUM,
-                                         common::make_data(ws_rowvec(), n_subm_el_lc));
+        // STEP 3b: Reduce to get the sum of all squares on all ranks
+        if (thread_idx == 0)
+          tt::sync_wait(transformMPI(reduce_o, ex::just(std::cref(col_comm), MPI_SUM,
+                                                        common::make_data(ws_rowvec(), n_subm_el_lc))));
 
-          barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait();
+
+        // STEP 3c: Normalize (compute norm of each column and scale column vector)
+        {
+          common::internal::SingleThreadedBlasScope single;
 
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);

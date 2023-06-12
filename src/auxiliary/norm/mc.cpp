@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/auxiliary/norm/mc.h"
+#include <dlaf/auxiliary/norm/mc.h>
 
 namespace dlaf::auxiliary::internal {
 

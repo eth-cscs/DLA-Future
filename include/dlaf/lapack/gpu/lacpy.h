@@ -12,11 +12,11 @@
 
 #ifdef DLAF_WITH_GPU
 
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/types.h"
-
 #include <blas.hh>
 #include <whip.hpp>
+
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/types.h>
 
 namespace dlaf::gpulapack {
 

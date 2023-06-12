@@ -12,17 +12,18 @@
 #include <utility>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/communication/rdma.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/with_temporary_tile.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/communication/rdma.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/with_temporary_tile.h>
 
 namespace dlaf::comm {
 namespace internal {
@@ -59,7 +60,7 @@ template <class TileInSender, class TileOutSender>
   // will be returned by the returned sender.
   auto all_reduce_final = [reduce_op, pcomm = std::move(pcomm),
                            tile_in =
-                               std::forward<TileInSender>(tile_in)](auto const& tile_out_comm) mutable {
+                               std::forward<TileInSender>(tile_in)](const auto& tile_out_comm) mutable {
     auto all_reduce = [reduce_op, pcomm = std::move(pcomm),
                        &tile_out_comm](auto const& tile_in_comm) mutable {
       return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_in_comm),
@@ -98,8 +99,8 @@ auto allReduceInPlace(const Communicator& comm, MPI_Op reduce_op, const matrix::
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op, comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
+                                      comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
@@ -133,7 +134,7 @@ template <class T, Device D>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
-  auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
+  auto all_reduce_in_place = [reduce_op, pcomm = std::move(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(allReduceInPlace_o);
   };

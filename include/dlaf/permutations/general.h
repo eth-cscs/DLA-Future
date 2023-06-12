@@ -14,11 +14,11 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/permutations/general/api.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/permutations/general/api.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::permutations {
 

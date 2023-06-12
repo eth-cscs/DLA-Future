@@ -14,8 +14,8 @@
 
 #include <array>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/communication/communicator.h"
+#include <dlaf/common/index2d.h>
+#include <dlaf/communication/communicator.h>
 
 namespace dlaf {
 namespace comm {

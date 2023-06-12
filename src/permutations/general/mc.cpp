@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/permutations/general/impl.h"
+#include <dlaf/permutations/general/impl.h>
 
 namespace dlaf::permutations::internal {
 

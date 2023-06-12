@@ -8,16 +8,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "gtest/gtest.h"
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/permutations/general.h>
+#include <dlaf/util_matrix.h>
 
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/permutations/general.h"
-#include "dlaf/permutations/general/impl.h"
-#include "dlaf/util_matrix.h"
+#include <gtest/gtest.h>
 
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

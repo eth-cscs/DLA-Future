@@ -15,15 +15,14 @@
 #include <cstddef>
 #include <vector>
 
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/internal/tile_pipeline.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_base.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
-
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/vector.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/internal/tile_pipeline.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_base.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf::matrix {
 
@@ -69,8 +68,8 @@ public:
           indices.emplace_back(
               LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),
                              orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});
-          specs.emplace_back(
-              SubTileSpec{{i, j}, tileSize(distribution().globalTileIndex(indices.back()))});
+          specs.emplace_back(SubTileSpec{{i, j},
+                                         tileSize(distribution().globalTileIndex(indices.back()))});
         }
 
       auto sub_tiles = splitTileDisjoint(mat.readwrite(orig_tile_index), specs);

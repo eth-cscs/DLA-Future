@@ -8,9 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/blas/tile.h"
-
-#include "gtest/gtest.h"
+#include <dlaf/blas/tile.h>
 
 #include "test_blas_tile/test_gemm.h"
 #include "test_blas_tile/test_hemm.h"
@@ -18,6 +16,8 @@
 #include "test_blas_tile/test_herk.h"
 #include "test_blas_tile/test_trmm.h"
 #include "test_blas_tile/test_trsm.h"
+
+#include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

@@ -12,13 +12,12 @@
 
 /// @file
 
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf/eigensolver/reduction_to_band/api.h"
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/reduction_to_band/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
 

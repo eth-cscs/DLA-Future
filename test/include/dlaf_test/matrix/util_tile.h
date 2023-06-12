@@ -16,11 +16,13 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include "gtest/gtest.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/traits.h"
-#include "dlaf/util_math.h"
+
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/traits.h>
+#include <dlaf/util_math.h>
+
+#include <gtest/gtest.h>
 
 namespace dlaf {
 namespace matrix {
@@ -51,9 +53,9 @@ public:
                pika::execution::experimental::ensure_started() |
                pika::execution::experimental::drop_value()) {}
   EagerVoidSender(EagerVoidSender&&) = default;
-  EagerVoidSender(EagerVoidSender const&) = delete;
+  EagerVoidSender(const EagerVoidSender&) = delete;
   EagerVoidSender& operator=(EagerVoidSender&&) = default;
-  EagerVoidSender& operator=(EagerVoidSender const&) = delete;
+  EagerVoidSender& operator=(const EagerVoidSender&) = delete;
 
   void get() && {
     DLAF_ASSERT(bool(sender), "");
@@ -87,9 +89,9 @@ public:
                pika::execution::experimental::ensure_started() |
                pika::execution::experimental::split()) {}
   EagerReadOnlyTileSender(EagerReadOnlyTileSender&&) = default;
-  EagerReadOnlyTileSender(EagerReadOnlyTileSender const&) = default;
+  EagerReadOnlyTileSender(const EagerReadOnlyTileSender&) = default;
   EagerReadOnlyTileSender& operator=(EagerReadOnlyTileSender&&) = default;
-  EagerReadOnlyTileSender& operator=(EagerReadOnlyTileSender const&) = default;
+  EagerReadOnlyTileSender& operator=(const EagerReadOnlyTileSender&) = default;
 
   auto get() const& {
     DLAF_ASSERT(bool(sender), "");
@@ -127,9 +129,9 @@ public:
                }) |
                pika::execution::experimental::ensure_started()) {}
   EagerReadWriteTileSender(EagerReadWriteTileSender&&) = default;
-  EagerReadWriteTileSender(EagerReadWriteTileSender const&) = delete;
+  EagerReadWriteTileSender(const EagerReadWriteTileSender&) = delete;
   EagerReadWriteTileSender& operator=(EagerReadWriteTileSender&&) = default;
-  EagerReadWriteTileSender& operator=(EagerReadWriteTileSender const&) = delete;
+  EagerReadWriteTileSender& operator=(const EagerReadWriteTileSender&) = delete;
 
   auto get() && {
     DLAF_ASSERT(bool(sender), "");

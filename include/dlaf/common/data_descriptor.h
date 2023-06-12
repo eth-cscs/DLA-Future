@@ -17,9 +17,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace common {

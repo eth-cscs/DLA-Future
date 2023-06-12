@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 namespace matrix {

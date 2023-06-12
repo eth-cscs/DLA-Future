@@ -12,12 +12,13 @@
 
 #include <limits>
 
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-#include "dlaf_test/matrix/util_tile.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+
+#include <dlaf_test/matrix/util_tile.h>
 
 namespace dlaf::miniapp {
 

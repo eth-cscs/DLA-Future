@@ -16,34 +16,34 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
-#include "dlaf/util_blas.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/make_sender_algorithm_overloads.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
+#include <dlaf/util_blas.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/util_cublas.h"
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/util_cublas.h>
 
 #ifdef DLAF_WITH_HIP
 
-#define DLAF_GET_ROCBLAS_WORKSPACE(f)                                                                 \
-  [&]() {                                                                                             \
-    std::size_t workspace_size;                                                                       \
-    DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
-        rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                 \
-    DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));             \
-    DLAF_GPUBLAS_CHECK_ERROR(                                                                         \
-        rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), &workspace_size)); \
-    return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                \
+#define DLAF_GET_ROCBLAS_WORKSPACE(f)                                                                   \
+  [&]() {                                                                                               \
+    std::size_t workspace_size;                                                                         \
+    DLAF_GPUBLAS_CHECK_ERROR(                                                                           \
+        rocblas_start_device_memory_size_query(static_cast<rocblas_handle>(handle)));                   \
+    DLAF_ROCBLAS_WORKSPACE_CHECK_ERROR(rocblas_##f(handle, std::forward<Args>(args)...));               \
+    DLAF_GPUBLAS_CHECK_ERROR(rocblas_stop_device_memory_size_query(static_cast<rocblas_handle>(handle), \
+                                                                   &workspace_size));                   \
+    return ::dlaf::memory::MemoryView<std::byte, Device::GPU>(to_int(workspace_size));                  \
   }();
 
 namespace dlaf::tile::internal {

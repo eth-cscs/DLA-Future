@@ -12,10 +12,11 @@
 /// @file
 
 #include <blas.hh>
-#include "dlaf/eigensolver/gen_eigensolver/api.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+
+#include <dlaf/eigensolver/gen_eigensolver/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
 

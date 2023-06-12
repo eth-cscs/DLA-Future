@@ -13,18 +13,20 @@
 #include <functional>
 #include <tuple>
 
-#include <gtest/gtest.h>
 #include <blas.hh>
 
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/types.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/types.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf::test {
 

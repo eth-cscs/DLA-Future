@@ -8,11 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
+#include <vector>
+
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
 
 #include <gtest/gtest.h>
-#include <vector>
 
 namespace {
 

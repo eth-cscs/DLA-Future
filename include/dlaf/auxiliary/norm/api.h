@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::auxiliary::internal {
 

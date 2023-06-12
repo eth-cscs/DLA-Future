@@ -12,19 +12,20 @@
 #include <utility>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/data.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/kernels/broadcast.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/communication/rdma.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/with_temporary_tile.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/data.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/communication/rdma.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/with_temporary_tile.h>
 
 namespace dlaf::comm {
 namespace internal {
@@ -37,7 +38,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto send = [pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto send = [pcomm = std::forward<CommSender>(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), std::cref(tile_comm)) | transformMPI(sendBcast_o);
   };
 
@@ -93,7 +94,7 @@ template <class T, Device D, class Comm>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
-  auto recv = [root_rank, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
+  auto recv = [root_rank, pcomm = std::move(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), root_rank, std::cref(tile_comm)) | transformMPI(recvBcast_o);
   };
 #if defined(__GNUC__)

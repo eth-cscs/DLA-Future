@@ -21,10 +21,10 @@ class [[nodiscard]] SingleThreadedBlasScope {
 public:
   SingleThreadedBlasScope();
   ~SingleThreadedBlasScope();
-  SingleThreadedBlasScope(SingleThreadedBlasScope &&) = delete;
-  SingleThreadedBlasScope(SingleThreadedBlasScope const&) = delete;
+  SingleThreadedBlasScope(SingleThreadedBlasScope&&) = delete;
+  SingleThreadedBlasScope(const SingleThreadedBlasScope&) = delete;
   SingleThreadedBlasScope& operator=(SingleThreadedBlasScope&&) = delete;
-  SingleThreadedBlasScope& operator=(SingleThreadedBlasScope const&) = delete;
+  SingleThreadedBlasScope& operator=(const SingleThreadedBlasScope&) = delete;
 
 private:
 #ifdef DLAF_ASSERT_MODERATE_ENABLE

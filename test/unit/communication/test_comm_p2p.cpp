@@ -8,27 +8,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/communication/kernels/p2p_allsum.h"
+#include <dlaf/common/data.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/kernels/p2p_allsum.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/layout_info.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/data.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/layout_info.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-
-#include "dlaf_test/matrix/util_tile.h"
+#include <dlaf_test/matrix/util_tile.h>
 
 using namespace dlaf;
 using dlaf::matrix::test::fixedValueTile;

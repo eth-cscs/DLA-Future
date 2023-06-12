@@ -12,9 +12,9 @@
 
 /// @file
 
-#include "dlaf/communication/error.h"
-
 #include <complex>
+
+#include <dlaf/communication/error.h>
 
 namespace dlaf {
 namespace comm {

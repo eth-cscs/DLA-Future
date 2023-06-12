@@ -14,7 +14,8 @@
 
 #include <blas.hh>
 #include <lapack/util.hh>
-#include "dlaf/common/assert.h"
+
+#include <dlaf/common/assert.h>
 
 namespace lapack {
 

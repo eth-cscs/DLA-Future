@@ -39,10 +39,11 @@
 
 // dlaf-multi-license-check
 
-#include <gtest/gtest.h>
 #include <mpi.h>
 
 #include "gtest_mpi_listener.h"
+
+#include <gtest/gtest.h>
 
 GTEST_API_ int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);

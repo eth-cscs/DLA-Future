@@ -52,15 +52,16 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt) {
   Cblacs_gridinfo(blacs_ctxt, &dims[0], &dims[1], &coords[0], &coords[1]);
 
   // TODO: Get ordering from BLACS
+  auto layout = grid_layout(communicator, dims[0], dims[1], coords[0], coords[1]);
 
-  dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], dlaf::common::Ordering::RowMajor);
+  dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], layout);
 }
 
 void dlaf_free_grid(int blacs_ctxt) {
   dlaf_grids.erase(blacs_ctxt);
 }
 
-dlaf::common::Ordering grid_order(MPI_Comm communicator, int nprow, int npcol, int myprow, int mypcol) {
+dlaf::common::Ordering grid_layout(MPI_Comm communicator, int nprow, int npcol, int myprow, int mypcol) {
   int rank;
   DLAF_MPI_CHECK_ERROR(MPI_Comm_rank(communicator, &rank));
 
@@ -77,11 +78,7 @@ dlaf::common::Ordering grid_order(MPI_Comm communicator, int nprow, int npcol, i
   DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_row_major, &row_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
   DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
 
-  if (row_major) {
-    return dlaf::common::Ordering::RowMajor;
-  }
-  else if (col_major) {
-    return dlaf::common::Ordering::ColumnMajor;
-  }
-  // TODO: Deal with gridmap-initialised grids
+  // TODO: Fail gracefully for gridmap-allocated functions
+
+  return col_major ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
 }

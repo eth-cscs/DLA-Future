@@ -126,6 +126,14 @@ TEST(DistributionTest, Constructor) {
     EXPECT_EQ(test.global_tiles, obj.nrTiles());
     EXPECT_EQ(test.local_size, obj.localSize());
     EXPECT_EQ(test.local_tiles, obj.localNrTiles());
+
+    // An offset split into tile and element offsets should produce the same distribution
+    Distribution obj_tile_offset(test.size, test.block_size, test.grid_size, test.rank, test.src_rank,
+                                 GlobalTileIndex(test.offset.row() / test.block_size.rows(),
+                                                 test.offset.col() / test.block_size.cols()),
+                                 GlobalElementIndex(test.offset.row() % test.block_size.rows(),
+                                                    test.offset.col() % test.block_size.cols()));
+    EXPECT_EQ(obj, obj_tile_offset);
   }
 }
 

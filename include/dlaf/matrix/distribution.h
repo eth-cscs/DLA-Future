@@ -31,16 +31,18 @@ public:
 
   /// Constructs a distribution for a non distributed matrix of size @p size and block size @p block_size.
   ///
+  /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
   /// @pre !block_size.isEmpty().
   Distribution(const LocalElementSize& size, const TileElementSize& block_size,
-               const GlobalElementIndex& offset = {0, 0});
+               const GlobalElementIndex& element_offset = {0, 0});
 
   /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
   /// distributed on a 2D grid of processes of size @p grid_size.
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
   /// @pre !tile_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
@@ -48,7 +50,26 @@ public:
   /// @pre source_rank_index.isIn(grid_size).
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const comm::Size2D& grid_size, const comm::Index2D& rank_index,
-               const comm::Index2D& source_rank_index, const GlobalElementIndex& offset = {0, 0});
+               const comm::Index2D& source_rank_index,
+               const GlobalElementIndex& element_offset = {0, 0});
+
+  /// Constructs a distribution for a matrix of size @p size and block size @p block_size,
+  /// distributed on a 2D grid of processes of size @p grid_size.
+  ///
+  /// @param[in] rank_index is the rank of the current process,
+  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] tile_offset is the tile-wise offset of the top left tile of the matrix,
+  /// @param[in] element_offset is the element-wise offset of the top left tile
+  ///            of the matrix, used in addition to @p tile_offset,
+  /// @pre size.isValid(),
+  /// @pre !tile_size.isEmpty(),
+  /// @pre !grid_size.isEmpty(),
+  /// @pre rank_index.isIn(grid_size),
+  /// @pre source_rank_index.isIn(grid_size).
+  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+               const comm::Size2D& grid_size, const comm::Index2D& rank_index,
+               const comm::Index2D& source_rank_index, const GlobalTileIndex& tile_offset,
+               const GlobalElementIndex& element_offset = {0, 0});
 
   /// Constructs a distribution for a matrix of size @p size
   /// distributed on a 2D grid of processes of size @p grid_size.
@@ -56,6 +77,7 @@ public:
   ///
   /// @param[in] rank_index is the rank of the current process,
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
   /// @pre !block_size.isEmpty(),
   /// @pre !tile_size.isEmpty(),
@@ -66,7 +88,28 @@ public:
   Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
                const TileElementSize& tile_size, const comm::Size2D& grid_size,
                const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
-               const GlobalElementIndex& offset = {0, 0});
+               const GlobalElementIndex& element_offset = {0, 0});
+
+  /// Constructs a distribution for a matrix of size @p size
+  /// distributed on a 2D grid of processes of size @p grid_size.
+  /// i.e. multiple tiles per distribution blocks are allowed.
+  ///
+  /// @param[in] rank_index is the rank of the current process,
+  /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
+  /// @param[in] tile_offset is the tile-wise offset of the top left tile of the matrix,
+  /// @param[in] element_offset is the element-wise offset of the top left tile
+  ///            of the matrix, used in addition to @p tile_offset,
+  /// @pre size.isValid(),
+  /// @pre !block_size.isEmpty(),
+  /// @pre !tile_size.isEmpty(),
+  /// @pre block_size is divisible by tile_size,
+  /// @pre !grid_size.isEmpty(),
+  /// @pre rank_index.isIn(grid_size),
+  /// @pre source_rank_index.isIn(grid_size).
+  Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
+               const TileElementSize& tile_size, const comm::Size2D& grid_size,
+               const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
+               const GlobalTileIndex& tile_offset, const GlobalElementIndex& element_offset = {0, 0});
 
   Distribution(const Distribution& rhs) = default;
 

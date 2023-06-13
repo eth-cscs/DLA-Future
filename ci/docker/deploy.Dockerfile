@@ -23,7 +23,7 @@ ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
-    spack -e ci develop --no-clone -p ${SOURCE} dla-future@develop && \
+    spack -e ci develop --no-clone -p ${SOURCE} dla-future@master && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
@@ -32,7 +32,7 @@ RUN spack repo rm --scope site dlaf && \
 # Test deployment with miniapps as independent project
 RUN pushd ${SOURCE}/miniapp && \
     mkdir build-miniapps && cd build-miniapps && \
-    spack -e ci build-env dla-future@develop -- \
+    spack -e ci build-env dla-future@master -- \
     bash -c "cmake -DCMAKE_PREFIX_PATH=`spack -e ci location -i dla-future` .. && make -j ${NUM_PROCS}" && \
     popd
 

@@ -41,6 +41,7 @@ cmake_dependent_option(DLAF_WITH_CUDA_MPI_RDMA "Enable MPI CUDA RDMA" OFF "DLAF_
 option(DLAF_WITH_COVERAGE "Enable coverage" OFF)
 option(DLAF_BUILD_MINIAPPS "Build miniapps" ON)
 option(DLAF_BUILD_TESTING "Build tests" ON)
+option(DLAF_BUILD_TESTING_HEADER "Build header tests" OFF)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 

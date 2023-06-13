@@ -897,6 +897,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
         }
       }
 
+      // Jump to the next loop iteration if the local part of E is not affected by the update.
+      const SizeType ncols_local = dist_e_rt.localNrTiles().cols();
+      if (ncols_local == 0)
+        continue;
+
       // Send P2P on col
       if (helper.affectsMultipleRanks()) {
         const comm::IndexT_MPI rank_src = rankHH.row();
@@ -929,7 +934,6 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       auto tile_w = matrix::shareReadWriteTile(ex::make_unique_any_sender(std::move(tile_w_unshared)));
 
       // UPDATE E
-      const SizeType ncols_local = dist_e_rt.localNrTiles().cols();
       for (SizeType j_e = 0; j_e < ncols_local; ++j_e) {
         const SizeType j_e_g = dist_e_rt.template globalTileFromLocalTile<Coord::Col>(j_e);
         const LocalTileIndex idx_w2(indexing_helper.wsIndexHH().row(), j_e);
@@ -1005,11 +1009,6 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                 dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
           }
         }
-      }
-
-      if (ncols_local == 0) {
-        ex::start_detached(tile_v);
-        ex::start_detached(tile_w);
       }
 
       mat_t.reset();

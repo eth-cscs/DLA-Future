@@ -51,6 +51,8 @@
 
 #pragma once
 
+#ifdef DLAF_WITH_CUDA
+
 #include <cusolverDn.h>
 
 // clang-format off
@@ -148,3 +150,5 @@ cusolverStatus_t CUSOLVERAPI cusolverDnZhegst(
     int *devInfo);
 }
 // clang-format on
+
+#endif

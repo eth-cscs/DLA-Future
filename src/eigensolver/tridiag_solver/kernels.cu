@@ -26,7 +26,7 @@
 #include <pika/cuda.hpp>
 #include <whip.hpp>
 #include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/cub/api.h"
+#include "dlaf/gpu/cub/api.cu.h"
 #include "dlaf/gpu/lapack/api.h"
 #include "dlaf/gpu/lapack/error.h"
 

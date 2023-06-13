@@ -98,7 +98,11 @@ find_package(DLAF)
 target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 ```
 
-### How to generate the documentation
+### Documentation
+
+[Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
+
+#### How to generate the documentation
 
 The documentation can be built together with the project by enabling its generation with the flag `DLAF_BUILD_DOC=on` and then use the `doc` target to eventually generate it.
 

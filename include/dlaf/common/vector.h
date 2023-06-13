@@ -35,6 +35,10 @@ struct vector : public std::vector<T> {
     std::vector<T>::resize(to_sizet(size));
   }
 
+  void resize(SizeType size, const T& value) {
+    std::vector<T>::resize(to_sizet(size), value);
+  }
+
   T& operator[](SizeType index) {
     return std::vector<T>::operator[](to_sizet(index));
   }

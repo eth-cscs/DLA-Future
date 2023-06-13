@@ -18,13 +18,13 @@
 
 namespace dlaf::eigensolver::internal {
 
-inline size_t getReductionToBandPanelNWorkers() noexcept {
+inline std::size_t getTridiagRank1NWorkers() noexcept {
   // Note: precautionarily we leave at least 1 thread "free" to do other stuff (if possible)
   const std::size_t available_workers = pika::resource::get_thread_pool("default").get_os_thread_count();
   const std::size_t min_workers = 1;
   const auto max_workers = std::max(min_workers, available_workers - 1);
 
-  const std::size_t nworkers = getTuneParameters().red2band_panel_nworkers;
+  const std::size_t nworkers = getTuneParameters().tridiag_rank1_nworkers;
   return std::clamp(nworkers, min_workers, max_workers);
 }
 

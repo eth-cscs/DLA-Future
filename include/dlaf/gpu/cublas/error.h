@@ -12,7 +12,9 @@
 
 /// @file
 
-#include "dlaf/gpu/blas/api.h"
+#include <string>
+
+#include <dlaf/gpu/blas/api.h>
 
 #ifdef DLAF_WITH_CUDA
 

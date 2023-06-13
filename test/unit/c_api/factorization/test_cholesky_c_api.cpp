@@ -8,19 +8,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <iostream>
-
-#include <mpi.h>
-
-#include <pika/runtime.hpp>
+#include "test_cholesky_c_api_wrapper.h"
 
 #include "dlaf_c/factorization/cholesky.h"
 #include "dlaf_c/grid.h"
 #include "dlaf_c/init.h"
 #include "dlaf_c/utils.h"
-#include "test_cholesky_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
+#include <pika/runtime.hpp>
+
+#include <mpi.h>
+
+#include <iostream>
 
 // BLACS
 DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
 DLAF_EXTERN_C void C_dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info);

@@ -10,9 +10,9 @@
 
 #include <whip.hpp>
 
-#include "dlaf/permutations/general/perms.h"
-#include "dlaf/types.h"
-#include "dlaf/util_cuda.h"
+#include <dlaf/permutations/general/perms.h>
+#include <dlaf/types.h>
+#include <dlaf/util_cuda.h>
 
 namespace dlaf::permutations::internal {
 

@@ -14,11 +14,11 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/types.h"
+#include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/lapack/api.h"
-#include "dlaf/gpu/lapack/error.h"
+#include <dlaf/gpu/lapack/api.h>
+#include <dlaf/gpu/lapack/error.h>
 #endif
 
 namespace dlaf::test {

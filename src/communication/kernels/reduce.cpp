@@ -16,17 +16,18 @@
 #include <utility>
 
 #include <mpi.h>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/kernels/reduce.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/with_temporary_tile.h"
+#include <dlaf/common/data.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/reduce.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/with_temporary_tile.h>
 
 namespace dlaf::comm {
 namespace internal {
@@ -50,8 +51,8 @@ void reduceSend(const Communicator& comm, comm::IndexT_MPI rank_root, MPI_Op red
   DLAF_ASSERT(tile.is_contiguous(), "");
 
   auto msg = comm::make_message(common::make_data(tile));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op, rank_root, comm, req));
+  DLAF_MPI_CHECK_ERROR(MPI_Ireduce(msg.data(), nullptr, msg.count(), msg.mpi_type(), reduce_op,
+                                   rank_root, comm, req));
 }
 
 DLAF_MAKE_CALLABLE_OBJECT(reduceSend);
@@ -68,7 +69,7 @@ template <class CommSender, class TileSender>
   using dlaf::internal::withTemporaryTile;
 
   auto reduce_send = [rank_root, reduce_op,
-                      pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+                      pcomm = std::forward<CommSender>(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), rank_root, reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceSend_o);
   };
@@ -100,7 +101,7 @@ template <class T, Device D>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
-  auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
+  auto reduce_recv_in_place = [reduce_op, pcomm = std::move(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), reduce_op, std::cref(tile_comm)) |
            transformMPI(reduceRecvInPlace_o);
   };

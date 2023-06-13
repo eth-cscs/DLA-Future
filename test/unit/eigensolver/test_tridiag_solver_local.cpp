@@ -8,16 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver.h"
+#include <dlaf/eigensolver/tridiag_solver.h>
+#include <dlaf/eigensolver/tridiag_solver/impl.h>
+#include <dlaf/matrix/matrix_mirror.h>
 
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 
-#include "dlaf/eigensolver/tridiag_solver/impl.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf_test/eigensolver/test_eigensolver_correctness.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -197,6 +197,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
     {0, 8},
+    {4, 2},
     {16, 16},
     {16, 8},
     {16, 4},

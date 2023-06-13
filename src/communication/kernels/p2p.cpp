@@ -13,17 +13,17 @@
 
 #include <mpi.h>
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/kernels/p2p.h"
-#include "dlaf/communication/message.h"
-#include "dlaf/communication/rdma.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/sender/with_temporary_tile.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/communication/rdma.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/sender/with_temporary_tile.h>
 
 namespace dlaf::comm {
 namespace internal {
@@ -52,7 +52,7 @@ template <class CommSender, class Sender>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](auto const& tile_comm) mutable {
+  auto send = [dest, tag, pcomm = std::forward<CommSender>(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), dest, tag, std::cref(tile_comm)) | transformMPI(send_o);
   };
 
@@ -120,7 +120,7 @@ template <class T, Device D, class Comm>
   using dlaf::internal::whenAllLift;
   using dlaf::internal::withTemporaryTile;
 
-  auto recv = [source, tag, pcomm = std::move(pcomm)](auto const& tile_comm) mutable {
+  auto recv = [source, tag, pcomm = std::move(pcomm)](const auto& tile_comm) mutable {
     return whenAllLift(std::move(pcomm), source, tag, std::cref(tile_comm)) | transformMPI(recv_o);
   };
 

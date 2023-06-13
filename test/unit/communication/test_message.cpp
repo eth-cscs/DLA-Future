@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/message.h"
+#include <dlaf/common/data_descriptor.h>
+#include <dlaf/communication/message.h>
+#include <dlaf/types.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/data_descriptor.h"
-#include "dlaf/types.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

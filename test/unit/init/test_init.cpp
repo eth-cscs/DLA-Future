@@ -8,20 +8,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/init.h"
-
 #include <cstdlib>
 
-#include <gtest/gtest.h>
-
 #include <pika/init.hpp>
+
+#include <dlaf/init.h>
+
+#include <gtest/gtest.h>
 
 static const char* binary_name = "init_test";
 static const char* env_var_name = "DLAF_NUM_HP_GPU_STREAMS_PER_THREAD";
 static const char* command_line_option_name = "--dlaf:num-hp-gpu-streams-per-thread";
+static const char* print_bind = "--pika:print-bind";
 
 static int argc_without_option = 1;
 static const char* argv_without_option[] = {binary_name};
+
+static int pika_argc_without_option = 2;
+static const char* pika_argv_without_option[] = {binary_name, print_bind};
 
 enum class InitializerType {
   RAII,
@@ -60,9 +64,9 @@ struct InitializeTester {
   }
 
   InitializeTester(InitializeTester&&) = delete;
-  InitializeTester(InitializeTester const&) = delete;
+  InitializeTester(const InitializeTester&) = delete;
   InitializeTester& operator=(InitializeTester&&) = delete;
-  InitializeTester& operator=(InitializeTester const&) = delete;
+  InitializeTester& operator=(const InitializeTester&) = delete;
 };
 
 static InitializerType current_initializer_type;
@@ -146,7 +150,7 @@ int precedence_main(int, char*[]) {
 TEST_P(InitTest, Precedence) {
   current_initializer_type = GetParam();
 
-  pika::init(precedence_main, argc_without_option, argv_without_option);
+  pika::init(precedence_main, pika_argc_without_option, pika_argv_without_option);
 }
 
 int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
@@ -214,7 +218,7 @@ int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
 TEST_P(InitTest, VariablesMapNoCommandLineOption) {
   current_initializer_type = GetParam();
 
-  pika::init(vm_no_command_line_option_main, argc_without_option, argv_without_option);
+  pika::init(vm_no_command_line_option_main, pika_argc_without_option, pika_argv_without_option);
 }
 
 int vm_command_line_option_main(pika::program_options::variables_map& vm) {
@@ -257,8 +261,8 @@ TEST_P(InitTest, VariablesMapCommandLineOption) {
   std::string command_line_option_val_str = std::to_string(command_line_option_val);
   std::string command_line_option_str =
       command_line_option_name + std::string("=") + command_line_option_val_str;
-  int argc_with_option = 2;
-  const char* argv_with_option[] = {binary_name, command_line_option_str.c_str()};
+  int argc_with_option = 3;
+  const char* argv_with_option[] = {binary_name, command_line_option_str.c_str(), print_bind};
 
   pika::init(vm_command_line_option_main, argc_with_option, argv_with_option, p);
 }

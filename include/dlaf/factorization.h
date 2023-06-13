@@ -9,5 +9,7 @@
 //
 #pragma once
 
-#include "dlaf/factorization/cholesky.h"
-#include "dlaf/factorization/qr.h"
+/// @file
+
+#include <dlaf/factorization/cholesky.h>
+#include <dlaf/factorization/qr.h>

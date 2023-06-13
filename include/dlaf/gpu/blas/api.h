@@ -10,8 +10,6 @@
 
 #pragma once
 
-/// @file
-
 #ifdef DLAF_WITH_HIP
 
 #include <rocblas/rocblas.h>
@@ -68,8 +66,8 @@ inline constexpr gpublasStatus_t GPUBLAS_STATUS_SUCCESS = rocblas_status_success
 
 #elif defined(DLAF_WITH_CUDA)
 
-#include <cuComplex.h>
 #include <cublas_v2.h>
+#include <cuComplex.h>
 
 namespace dlaf {
 

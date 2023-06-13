@@ -10,13 +10,16 @@
 
 #pragma once
 
+/// @file
+
 #include <ios>
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
+
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::matrix {
 

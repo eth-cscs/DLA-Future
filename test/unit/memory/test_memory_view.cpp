@@ -8,10 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/memory/memory_view.h"
+#include <dlaf/memory/memory_view.h>
 
-#include "gtest/gtest.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

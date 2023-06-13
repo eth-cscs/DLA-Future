@@ -14,7 +14,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     homepage = "https://github.com/eth-cscs/DLA-Future/wiki"
     git = "https://github.com/eth-cscs/DLA-Future"
 
-    maintainers = ["teonnik", "albestro", "Sely85"]
+    maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
     version("develop", branch="master")
 
@@ -35,6 +35,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts('~miniapps', when='+ci-test')
 
     variant("c_api", default=False, description="Build C API")
+    variant("ci-check-threads", default=False, description="Check number of spawned threads in CI (Advanced usage).")
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -48,7 +49,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+rocm~shared", when="+rocm")
     depends_on("umpire@4.1.0:")
 
-    depends_on("pika@0.15.1:")
+    depends_on("pika@0.16:")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
@@ -163,9 +164,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING_HEADER", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
+
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))
+
+        if "+ci-check-threads" in self.spec:
+            args.append(self.define("DLAF_TEST_PREFLAGS", "check-threads"))
 
         # MINIAPPS
         args.append(self.define_from_variant("DLAF_BUILD_MINIAPPS", "miniapps"))

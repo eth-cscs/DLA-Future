@@ -10,20 +10,21 @@
 
 #pragma once
 
+/// @file
+
 #include <exception>
 #include <vector>
 
 #include <pika/execution.hpp>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/internal/tile_pipeline.h"
-#include "dlaf/matrix/layout_info.h"
-#include "dlaf/matrix/matrix_base.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
-
-#include "dlaf/common/range2d.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/internal/tile_pipeline.h>
+#include <dlaf/matrix/layout_info.h>
+#include <dlaf/matrix/matrix_base.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace matrix {
@@ -375,7 +376,7 @@ auto select(MatrixLike& matrix, common::IterableRange2D<SizeType, LocalTile_TAG>
   return internal::selectGeneric([&](auto index) { return matrix.readwrite(index); }, range);
 }
 
-/// ---- ETI
+// ETI
 
 #define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \
   KWORD template class Matrix<DATATYPE, DEVICE>; \
@@ -402,5 +403,5 @@ using matrix::Matrix;
 #endif
 }
 
-#include "dlaf/matrix/matrix.tpp"
-#include "dlaf/matrix/matrix_const.tpp"
+#include <dlaf/matrix/matrix.tpp>
+#include <dlaf/matrix/matrix_const.tpp>

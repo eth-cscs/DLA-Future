@@ -21,37 +21,36 @@
 #undef I
 #endif
 
+#include <dlaf/common/assert.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/lapack/enum_output.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/make_sender_algorithm_overloads.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
+#include <dlaf/util_lapack.h>
+#include <dlaf/util_tile.h>
+
 #ifdef DLAF_WITH_GPU
-#include <pika/cuda.hpp>
 #include <whip.hpp>
-#endif
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/lapack/enum_output.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
-#include "dlaf/util_lapack.h"
-#include "dlaf/util_tile.h"
+#include <pika/cuda.hpp>
 
-#ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/lapack/api.h"
-#include "dlaf/gpu/lapack/assert_info.h"
-#include "dlaf/gpu/lapack/error.h"
-#include "dlaf/lapack/gpu/laset.h"
-#include "dlaf/util_cublas.h"
+#include <dlaf/gpu/lapack/api.h>
+#include <dlaf/gpu/lapack/assert_info.h>
+#include <dlaf/gpu/lapack/error.h>
+#include <dlaf/lapack/gpu/laset.h>
+#include <dlaf/util_cublas.h>
 #endif
 // hegst functions get exposed in rocSOLVER
 #ifdef DLAF_WITH_CUDA
-#include "dlaf/gpu/cusolver/hegst.h"
+#include <dlaf/gpu/cusolver/hegst.h>
 #elif defined(DLAF_WITH_HIP)
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/util_rocblas.h"
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/util_rocblas.h>
 #endif
 
 namespace dlaf::tile {
@@ -461,8 +460,8 @@ inline void extendROCSolverWorkspace(cusolverDnHandle_t handle,
     template <typename... Args>                                                       \
     static void call(cusolverDnHandle_t handle, Args&&... args) {                     \
       auto workspace = DLAF_GET_ROCSOLVER_WORKSPACE(f);                               \
-      DLAF_GPULAPACK_CHECK_ERROR(                                                     \
-          rocblas_set_workspace(handle, workspace(), to_sizet(workspace.size())));    \
+      DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, workspace(),           \
+                                                       to_sizet(workspace.size())));  \
       DLAF_GPULAPACK_CHECK_ERROR(rocsolver_##f(handle, std::forward<Args>(args)...)); \
       DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(handle, nullptr, 0));          \
       extendROCSolverWorkspace(handle, std::move(workspace));                         \

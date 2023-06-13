@@ -10,13 +10,14 @@
 
 #pragma once
 
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/util_matrix.h"
+/// @file
 
-#include "dlaf/eigensolver/reduction_to_band/api.h"
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/reduction_to_band/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
 
@@ -107,12 +108,15 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 ///
 /// In particular, @p mat_a will look like this (tile representation) if band_size == blocksize
 ///
-/// B ~ ~ ~ ~ ~
-/// * B ~ ~ ~ ~
-/// v * B ~ ~ ~
-/// v v * B ~ ~
-/// v v v * B ~
-/// v v v v * B
+/** @verbatim
+B ~ ~ ~ ~ ~
+* B ~ ~ ~ ~
+v * B ~ ~ ~
+v v * B ~ ~
+v v v * B ~
+v v v v * B
+@endverbatim
+*/
 ///
 /// where each column of `v` is an elementary reflector without its first element (which is always equal
 /// to 1), `B` are the tiles containg the band-diagonal form, while `*` tiles contain both elements
@@ -120,14 +124,15 @@ common::internal::vector<pika::shared_future<common::internal::vector<T>>> reduc
 /// diagonal excluded).
 ///
 /// In case band_size < blocksize:
-///
-/// * ~ ~ ~ ~ ~
-/// * * ~ ~ ~ ~
-/// v * * ~ ~ ~
-/// v v * * ~ ~
-/// v v v * * ~
-/// v v v v * *
-///
+/** @verbatim
+* ~ ~ ~ ~ ~
+* * ~ ~ ~ ~
+v * * ~ ~ ~
+v v * * ~ ~
+v v v * * ~
+v v v v * *
+@endverbatim
+*/
 /// @param grid is the CommunicatorGrid on which @p mat_a is distributed
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
 /// band-diagonal result together with the elementary reflectors as described above. Just the tiles of

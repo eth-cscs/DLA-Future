@@ -8,21 +8,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/views.h"
-
 #include <sstream>
+
+#include <dlaf/common/index2d.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/types.h>
 
 #include <gtest/gtest.h>
 #include <gtest/internal/gtest-internal.h>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
 
 using namespace dlaf;
 using namespace dlaf::test;

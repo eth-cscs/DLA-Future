@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/tile.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::matrix::internal {
 template <class T, Device D>

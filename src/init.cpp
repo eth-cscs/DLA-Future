@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
@@ -16,12 +20,8 @@
 #include <dlaf/memory/memory_chunk.h>
 #include <dlaf/tune.h>
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-
 namespace dlaf {
-std::ostream& operator<<(std::ostream& os, configuration const& cfg) {
+std::ostream& operator<<(std::ostream& os, const configuration& cfg) {
   os << "  num_np_gpu_streams_per_thread = " << cfg.num_np_gpu_streams_per_thread << std::endl;
   os << "  num_hp_gpu_streams_per_thread = " << cfg.num_hp_gpu_streams_per_thread << std::endl;
   os << "  umpire_host_memory_pool_initial_bytes = " << cfg.umpire_host_memory_pool_initial_bytes
@@ -42,13 +42,13 @@ template <Backend D>
 struct Init {
   // Initialization and finalization does nothing by default. Behaviour can be
   // overridden for backends.
-  static void initialize(configuration const&) {}
+  static void initialize(const configuration&) {}
   static void finalize() {}
 };
 
 template <>
 struct Init<Backend::MC> {
-  static void initialize(configuration const& cfg) {
+  static void initialize(const configuration& cfg) {
     memory::internal::initializeUmpireHostAllocator(cfg.umpire_host_memory_pool_initial_bytes);
   }
 
@@ -87,7 +87,7 @@ pika::cuda::experimental::cuda_pool getGpuPool() {
 
 template <>
 struct Init<Backend::GPU> {
-  static void initialize(configuration const& cfg) {
+  static void initialize(const configuration& cfg) {
     const int device = 0;
     memory::internal::initializeUmpireDeviceAllocator(cfg.umpire_device_memory_pool_initial_bytes);
     initializeGpuPool(device, cfg.num_np_gpu_streams_per_thread, cfg.num_hp_gpu_streams_per_thread);
@@ -124,14 +124,14 @@ struct parseFromString<SizeType> {
 
 template <class T>
 struct parseFromCommandLine {
-  static T call(pika::program_options::variables_map const& vm, const std::string& cmd_val) {
+  static T call(const pika::program_options::variables_map& vm, const std::string& cmd_val) {
     return vm[cmd_val].as<T>();
   }
 };
 
 template <class T>
-void updateConfigurationValue(pika::program_options::variables_map const& vm, T& var,
-                              std::string const& env_var, std::string const& cmdline_option) {
+void updateConfigurationValue(const pika::program_options::variables_map& vm, T& var,
+                              const std::string& env_var, const std::string& cmdline_option) {
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
@@ -144,7 +144,7 @@ void updateConfigurationValue(pika::program_options::variables_map const& vm, T&
   }
 }
 
-void updateConfiguration(pika::program_options::variables_map const& vm, configuration& cfg) {
+void updateConfiguration(const pika::program_options::variables_map& vm, configuration& cfg) {
   updateConfigurationValue(vm, cfg.num_np_gpu_streams_per_thread, "NUM_NP_GPU_STREAMS_PER_THREAD",
                            "num-np-gpu-streams-per-thread");
   updateConfigurationValue(vm, cfg.num_hp_gpu_streams_per_thread, "NUM_HP_GPU_STREAMS_PER_THREAD",
@@ -162,6 +162,9 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
   updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS",
                            "red2band-panel-nworkers");
 
+  updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "RED2BAND_BARRIER_BUSY_WAIT_US",
+                           "red2band-barrier-busy-wait-us");
+
   updateConfigurationValue(vm, param.eigensolver_min_band, "EIGENSOLVER_MIN_BAND",
                            "eigensolver-min-band");
 
@@ -170,6 +173,9 @@ void updateConfiguration(pika::program_options::variables_map const& vm, configu
 
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
                            "tridiag-rank1-nworkers");
+
+  updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US",
+                           "tridiag-rank1-barrier-busy-wait-us");
 
   updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size,
                            "DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
@@ -202,7 +208,10 @@ pika::program_options::options_description getOptionsDescription() {
   // Tune parameters command line options
   desc.add_options()(
       "dlaf:red2band-panel-nworkers", pika::program_options::value<std::size_t>(),
-      "Maximum number of threads to use for computing the panel in the reduction to band algorithm.");
+      "The maximum number of threads to use for computing the panel in the reduction to band algorithm.");
+  desc.add_options()(
+      "dlaf:red2band-barrier-busy-wait-us", pika::program_options::value<std::size_t>(),
+      "The duration in microseconds to busy-wait in barriers in the reduction to band algorithm.");
   desc.add_options()(
       "dlaf:eigensolver-min-band", pika::program_options::value<SizeType>(),
       "The minimum value to start looking for a divisor of the block size. When larger than the block size, the block size will be used instead.");
@@ -213,13 +222,16 @@ pika::program_options::options_description getOptionsDescription() {
       "dlaf:tridiag-rank1-nworkers", pika::program_options::value<std::size_t>(),
       "The maximum number of threads to use for computing rank1 problem solution in tridiagonal solver algorithm.");
   desc.add_options()(
+      "dlaf:tridiag-rank1-barrier-busy-wait-us", pika::program_options::value<std::size_t>(),
+      "The duration in microseconds to busy-wait in barriers when computing rank1 problem solution in the tridiagonal solver algorithm.");
+  desc.add_options()(
       "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(),
       "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
 
   return desc;
 }
 
-void initialize(pika::program_options::variables_map const& vm, configuration const& user_cfg) {
+void initialize(const pika::program_options::variables_map& vm, const configuration& user_cfg) {
   bool should_exit = false;
   if (vm.count("dlaf:help") > 0) {
     should_exit = true;
@@ -259,7 +271,7 @@ void initialize(pika::program_options::variables_map const& vm, configuration co
   internal::initialized() = true;
 }
 
-void initialize(int argc, const char* const argv[], configuration const& user_cfg) {
+void initialize(int argc, const char* const argv[], const configuration& user_cfg) {
   auto desc = getOptionsDescription();
 
   pika::program_options::variables_map vm;
@@ -279,12 +291,12 @@ void finalize() {
   internal::initialized() = false;
 }
 
-ScopedInitializer::ScopedInitializer(pika::program_options::variables_map const& vm,
-                                     configuration const& user_cfg) {
+ScopedInitializer::ScopedInitializer(const pika::program_options::variables_map& vm,
+                                     const configuration& user_cfg) {
   initialize(vm, user_cfg);
 }
 
-ScopedInitializer::ScopedInitializer(int argc, const char* const argv[], configuration const& user_cfg) {
+ScopedInitializer::ScopedInitializer(int argc, const char* const argv[], const configuration& user_cfg) {
   initialize(argc, argv, user_cfg);
 }
 
@@ -293,7 +305,7 @@ ScopedInitializer::~ScopedInitializer() {
 }
 
 void initResourcePartitionerHandler(pika::resource::partitioner& rp,
-                                    pika::program_options::variables_map const& vm) {
+                                    const pika::program_options::variables_map& vm) {
   // Don't create the MPI pool if the user disabled it
   if (vm["dlaf:no-mpi-pool"].as<bool>())
     return;

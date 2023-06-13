@@ -14,7 +14,7 @@
 
 #include <pika/runtime.hpp>
 
-#include "dlaf/tune.h"
+#include <dlaf/tune.h>
 
 namespace dlaf::eigensolver::internal {
 

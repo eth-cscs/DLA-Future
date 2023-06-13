@@ -10,11 +10,13 @@
 
 #pragma once
 
+/// @file
+
 #include <type_traits>
 
-#include "dlaf/communication/datatypes.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/types.h"
+#include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace comm {

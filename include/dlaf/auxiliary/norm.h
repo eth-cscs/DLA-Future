@@ -9,15 +9,17 @@
 //
 #pragma once
 
-#include "dlaf/auxiliary/norm/api.h"
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack/enum_output.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+/// @file
+
+#include <dlaf/auxiliary/norm/api.h>
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/lapack/enum_output.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::auxiliary {
 

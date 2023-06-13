@@ -12,12 +12,12 @@
 
 #include <pika/future.hpp>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/types.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/types.h>
 
 namespace dlaf::factorization::internal {
 
@@ -85,7 +85,7 @@ struct QR_Tfactor {
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_FACTORIZATION_QR_TFACTOR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct QR_Tfactor<BACKEND, DEVICE, DATATYPE>;
 

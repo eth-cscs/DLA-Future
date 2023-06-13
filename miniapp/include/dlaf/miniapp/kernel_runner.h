@@ -14,12 +14,12 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/common/timer.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/types.h"
+#include <dlaf/common/timer.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/blas/error.h"
+#include <dlaf/gpu/blas/error.h>
 #endif
 namespace dlaf::miniapp {
 

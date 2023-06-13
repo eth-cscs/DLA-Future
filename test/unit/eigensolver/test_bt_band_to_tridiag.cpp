@@ -8,25 +8,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/band_to_tridiag.h>  // for nrSweeps/nrStepsForSweep
+#include <dlaf/eigensolver/bt_band_to_tridiag.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/tune.h>
+#include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/eigensolver/band_to_tridiag.h"  // for nrSweeps/nrStepsForSweep
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/tune.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;
@@ -114,10 +113,9 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
           continue;
 
         const GlobalTileIndex ij_tile = dist.globalTileIndex(ij);
-        dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
-                                            b, k,
-                                            splitTile(mat_hh.readwrite(ij_tile),
-                                                      {sub_origin, sub_size}));
+        dlaf::internal::transformLiftDetach(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>, b, k,
+            splitTile(mat_hh.readwrite(ij_tile), {sub_origin, sub_size}));
       }
     }
 
@@ -134,24 +132,26 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
   if (m == 0 || n == 0)
     return;
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  using eigensolver::internal::nrStepsForSweep;
-  using eigensolver::internal::nrSweeps;
-  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
-      const SizeType j = sweep;
-      const SizeType i = j + 1 + step * b;
+    using eigensolver::internal::nrStepsForSweep;
+    using eigensolver::internal::nrSweeps;
+    for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+      for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
+        const SizeType j = sweep;
+        const SizeType i = j + 1 + step * b;
 
-      const SizeType size = std::min(b, m - i);
-      const SizeType i_v = (i - 1) / b * b;
+        const SizeType size = std::min(b, m - i);
+        const SizeType i_v = (i - 1) / b * b;
 
-      T& v_head = *mat_hh_local.ptr({i_v, j});
-      const T tau = v_head;
-      v_head = 1;
+        T& v_head = *mat_hh_local.ptr({i_v, j});
+        const T tau = v_head;
+        v_head = 1;
 
-      using blas::Side;
-      lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+        using blas::Side;
+        lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+      }
     }
   }
 
@@ -192,10 +192,9 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
         if (k <= 0)
           continue;
 
-        dlaf::internal::transformLiftDetach(dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>,
-                                            b, k,
-                                            splitTile(mat_hh.readwrite(LocalTileIndex{i, j}),
-                                                      {sub_origin, sub_size}));
+        dlaf::internal::transformLiftDetach(
+            dlaf::internal::Policy<dlaf::Backend::MC>(), computeTaus<T>, b, k,
+            splitTile(mat_hh.readwrite(LocalTileIndex{i, j}), {sub_origin, sub_size}));
       }
     }
 
@@ -212,24 +211,26 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
   if (m == 0 || n == 0)
     return;
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  using eigensolver::internal::nrStepsForSweep;
-  using eigensolver::internal::nrSweeps;
-  for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
-    for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
-      const SizeType j = sweep;
-      const SizeType i = j + 1 + step * b;
+    using eigensolver::internal::nrStepsForSweep;
+    using eigensolver::internal::nrSweeps;
+    for (SizeType sweep = nrSweeps<T>(m) - 1; sweep >= 0; --sweep) {
+      for (SizeType step = nrStepsForSweep(sweep, m, b) - 1; step >= 0; --step) {
+        const SizeType j = sweep;
+        const SizeType i = j + 1 + step * b;
 
-      const SizeType size = std::min(b, m - i);
-      const SizeType i_v = (i - 1) / b * b;
+        const SizeType size = std::min(b, m - i);
+        const SizeType i_v = (i - 1) / b * b;
 
-      T& v_head = *mat_hh_local.ptr({i_v, j});
-      const T tau = v_head;
-      v_head = 1;
+        T& v_head = *mat_hh_local.ptr({i_v, j});
+        const T tau = v_head;
+        v_head = 1;
 
-      using blas::Side;
-      lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+        using blas::Side;
+        lapack::larf(Side::Left, size, n, &v_head, 1, tau, mat_e_local.ptr({i, 0}), mat_e_local.ld());
+      }
     }
   }
 

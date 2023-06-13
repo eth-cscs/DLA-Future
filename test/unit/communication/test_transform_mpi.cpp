@@ -8,17 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/sender/transform_mpi.h"
-
 #include <atomic>
 #include <chrono>
 #include <thread>
 
-#include <gtest/gtest.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/sender/when_all_lift.h>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/sender/when_all_lift.h"
+#include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

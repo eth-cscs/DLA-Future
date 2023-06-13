@@ -8,29 +8,30 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <blas/util.hh>
 #include <cstdlib>
 #include <iostream>
 
+#include <blas/util.hh>
 #include <mpi.h>
+
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/timer.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/communication/init.h"
-#include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/eigensolver/gen_to_std.h"
-#include "dlaf/init.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/miniapp/dispatch.h"
-#include "dlaf/miniapp/options.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/timer.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/communication/init.h>
+#include <dlaf/communication/sync/broadcast.h>
+#include <dlaf/eigensolver/gen_to_std.h>
+#include <dlaf/init.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/miniapp/dispatch.h>
+#include <dlaf/miniapp/options.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace {
 

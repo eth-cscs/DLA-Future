@@ -8,17 +8,18 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <vector>
+
+#include <mpi.h>
+
 #include <pika/execution.hpp>
 #include <pika/future.hpp>
 
-#include <vector>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/sender/transform_mpi.h>
 
 #include <gtest/gtest.h>
-#include <mpi.h>
-
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/sender/transform_mpi.h"
 
 using dlaf::comm::internal::transformMPI;
 using pika::execution::experimental::just;

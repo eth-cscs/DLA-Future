@@ -9,4 +9,7 @@
 //
 #pragma once
 
-#include "dlaf/auxiliary/norm.h"
+/// @file
+/// Includes all auxiliary algorithms such as norms.
+
+#include <dlaf/auxiliary/norm.h>

@@ -10,9 +10,9 @@
 
 #pragma once
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -23,7 +23,7 @@ struct BackTransformationT2B {
                    Matrix<const T, Device::CPU>& mat_hh);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_BT_BAND_TO_TRIDIAGONAL_ETI(KWORD, BACKEND, DEVICE, T) \
   KWORD template struct BackTransformationT2B<BACKEND, DEVICE, T>;
 

@@ -9,9 +9,11 @@
 //
 #pragma once
 
-#include "dlaf/factorization/qr/api.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
+/// @file
+
+#include <dlaf/factorization/qr/api.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::factorization::internal {
 

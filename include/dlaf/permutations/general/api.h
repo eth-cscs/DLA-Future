@@ -12,9 +12,9 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::permutations::internal {
 
@@ -27,7 +27,7 @@ struct Permutations {
                    Matrix<T, D>& mat_out);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \
   KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col>; \
   KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row>;

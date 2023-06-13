@@ -9,12 +9,15 @@
 //
 #pragma once
 
+/// @file
+
 #include <blas.hh>
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/gen_to_std/api.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/gen_to_std/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf {
 namespace eigensolver {

@@ -10,19 +10,18 @@
 
 #pragma once
 
-#include "dlaf/multiplication/general/api.h"
-
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/communication/broadcast_panel.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/sender/when_all_lift.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/communication/broadcast_panel.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/multiplication/general/api.h>
+#include <dlaf/sender/when_all_lift.h>
 
 namespace dlaf::multiplication {
 namespace internal {

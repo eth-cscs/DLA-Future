@@ -586,8 +586,6 @@ private:
   /// source_rank_index_ = {0, 0}
   void setDefaultSizes() noexcept;
 
-  // TODO: GlobalElementSize or Index?
-  // TODO: Name element_offset_ or offset_? Can distinguish from tile_offset.
   GlobalElementIndex offset_;
   GlobalElementSize size_;
   LocalElementSize local_size_;

@@ -113,7 +113,6 @@ TEST(DistributionTest, Constructor) {
     EXPECT_EQ(test.block_size, obj.blockSize());
     EXPECT_EQ(test.rank, obj.rankIndex());
     EXPECT_EQ(test.grid_size, obj.commGridSize());
-    // TODO: casts and stuff
     decltype(obj.sourceRankIndex()) expected_source_rank_index =
         {static_cast<int>((test.src_rank.get<Coord::Row>() +
                            (test.offset.get<Coord::Row>() / test.block_size.get<Coord::Row>())) %

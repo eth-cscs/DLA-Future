@@ -33,8 +33,6 @@ inline SizeType tileFromElement(SizeType element, SizeType tile_size, SizeType t
   return (element + tile_el_offset) / tile_size;
 }
 
-/// TODO: Check block_size vs. tile_size naming here and in distribution.{cpp,h}
-
 /// Returns the index within the tile of the element with index @p element.
 ///
 /// The element index can be either global or local.
@@ -113,17 +111,13 @@ inline SizeType localTileFromGlobalTile(SizeType global_tile, SizeType tiles_per
 
   if (rank == rankGlobalTile(global_tile, tiles_per_block, grid_size, src_rank, tile_offset)) {
     // tile_offset only affects the source rank
-    // TODO: Be consistent about style for handling tile_offset (ternary vs
-    // separate branches etc.).
-    if (rank == src_rank) {
+    bool may_have_partial_first_block = rank == src_rank;
+    if (may_have_partial_first_block) {
       global_tile += tile_offset;
-      SizeType local_block = global_tile / tiles_per_block / grid_size;
-      return local_block * tiles_per_block + global_tile % tiles_per_block - tile_offset;
     }
-    else {
-      SizeType local_block = global_tile / tiles_per_block / grid_size;
-      return local_block * tiles_per_block + global_tile % tiles_per_block;
-    }
+    SizeType local_block = global_tile / tiles_per_block / grid_size;
+    return local_block * tiles_per_block + global_tile % tiles_per_block -
+           (may_have_partial_first_block ? tile_offset : 0);
   }
   else
     return -1;
@@ -157,15 +151,16 @@ inline SizeType nextLocalTileFromGlobalTile(SizeType global_tile, SizeType tiles
 
   // If there's a tile offset it affects only the source rank block. All other
   // blocks are whole.
-  SizeType negative_offset = src_rank == rank ? tile_offset : 0;
+  bool may_have_partial_first_block = rank == src_rank;
 
   if (rank_to_src == owner_to_src)
-    return local_block * tiles_per_block + global_tile % tiles_per_block - negative_offset;
+    return local_block * tiles_per_block + global_tile % tiles_per_block -
+           (may_have_partial_first_block ? tile_offset : 0);
 
   if (rank_to_src < owner_to_src)
     ++local_block;
 
-  return local_block * tiles_per_block - negative_offset;
+  return local_block * tiles_per_block - (may_have_partial_first_block ? tile_offset : 0);
 }
 
 /// Returns the global tile index of the tile that has index @p local_tile

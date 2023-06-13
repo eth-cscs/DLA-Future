@@ -10,7 +10,16 @@
 
 #pragma once
 
+#include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
 DLAF_EXTERN_C void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z,
                                   int* descz, int* info);
+
+DLAF_EXTERN_C void C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
+                                        struct DLAF_descriptor desca, double* w, double* z,
+                                        struct DLAF_descriptor descz);
+
+DLAF_EXTERN_C void C_dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
+                                        struct DLAF_descriptor desca, float* w, float* z,
+                                        struct DLAF_descriptor descz);

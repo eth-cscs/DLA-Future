@@ -9,14 +9,16 @@
 //
 
 #include "grid.h"
-#include "dlaf/communication/error.h"
-#include <dlaf/communication/communicator.h>
-#include <dlaf/communication/communicator_grid.h>
-#include <dlaf_c/grid.h>
 
 #include <limits>
 
 #include <mpi.h>
+
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf_c/grid.h>
+
+#include "dlaf/communication/error.h"
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 

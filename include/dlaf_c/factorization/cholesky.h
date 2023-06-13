@@ -17,6 +17,8 @@ DLAF_EXTERN_C void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int
 
 DLAF_EXTERN_C void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
 
-DLAF_EXTERN_C void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor dlaf_desca);
+DLAF_EXTERN_C void dlaf_cholesky_d(int dlaf_context, char uplo, double* a,
+                                   struct DLAF_descriptor dlaf_desca);
 
-DLAF_EXTERN_C void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor dlaf_desca);
+DLAF_EXTERN_C void dlaf_cholesky_s(int dlaf_context, char uplo, float* a,
+                                   struct DLAF_descriptor dlaf_desca);

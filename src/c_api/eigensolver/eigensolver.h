@@ -12,14 +12,15 @@
 
 #include <mpi.h>
 
-#include "../grid.h"
+#include <pika/init.hpp>
+
 #include <dlaf/eigensolver/eigensolver.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
-#include <pika/init.hpp>
-#include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/matrix_mirror.h>
+#include "../grid.h"
 
 template <typename T>
 void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, T* w, T* z,
@@ -48,10 +49,8 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
 
   MatrixHost matrix_host(distribution, layout, a);
   MatrixHost eigenvectors_host(distribution, layout, z);
-  auto eigenvalues_host =
-      dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>({dlaf_descz.m, 1},
-                                                                {distribution.blockSize().rows(), 1},
-                                                                dlaf_descz.m, w);
+  auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
+      {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, dlaf_descz.m, w);
 
   {
     MatrixMirror matrix(matrix_host);
@@ -60,11 +59,8 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
 
     // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
     // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future
-    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                     blas::Uplo::Lower,
-                                                                                     matrix.get(),
-                                                                                     eigenvalues.get(),
-                                                                                     eigenvectors.get());
+    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
+        communicator_grid, blas::Uplo::Lower, matrix.get(), eigenvalues.get(), eigenvectors.get());
   }  // Destroy mirror
 
   eigenvalues_host.waitLocalTiles();
@@ -92,10 +88,8 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
 
   MatrixHost matrix_host(distribution, layout, a);
   MatrixHost eigenvectors_host(distribution, layout, z);
-  auto eigenvalues_host =
-      dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>({descz[2], 1},
-                                                                {distribution.blockSize().rows(), 1},
-                                                                descz[2], w);
+  auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
+      {descz[2], 1}, {distribution.blockSize().rows(), 1}, descz[2], w);
   {
     MatrixMirror matrix(matrix_host);
     MatrixMirror eigenvectors(eigenvectors_host);
@@ -103,11 +97,8 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
 
     // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
     // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future
-    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                     blas::Uplo::Lower,
-                                                                                     matrix.get(),
-                                                                                     eigenvalues.get(),
-                                                                                     eigenvectors.get());
+    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
+        communicator_grid, blas::Uplo::Lower, matrix.get(), eigenvalues.get(), eigenvectors.get());
   }  // Destroy mirror
 
   eigenvalues_host.waitLocalTiles();

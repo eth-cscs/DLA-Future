@@ -9,6 +9,7 @@
 //
 
 #include "test_eigensolver_c_api_wrapper.h"
+
 #include <dlaf_c/eigensolver/eigensolver.h>
 
 void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z, int* descz,

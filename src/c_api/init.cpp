@@ -8,13 +8,13 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <dlaf_c/init.h>
-
 #include <pika/execution.hpp>
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
+
 #include <dlaf/init.h>
+#include <dlaf_c/init.h>
 
 static bool dlaf_initialized = false;
 

@@ -279,12 +279,8 @@ DLAF_addSublibrary(
 # Define DLAF's interface library
 if(DLAF_WITH_C_API)
   DLAF_addSublibrary(
-    c_api SOURCES 
-      c_api/eigensolver/eigensolver.cpp
-      c_api/factorization/cholesky.cpp
-      c_api/grid.cpp
-      c_api/init.cpp
-    LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
+    c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/factorization/cholesky.cpp c_api/grid.cpp
+                  c_api/init.cpp LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
   )
 endif()
 

@@ -11,6 +11,7 @@
 #pragma once
 
 #include <mpi.h>
+
 #include "dlaf_c/utils.h"
 
 DLAF_EXTERN_C MPI_Comm Cblacs2sys_handle(int ictxt);

@@ -9,6 +9,7 @@
 //
 
 #include "cholesky.h"
+
 #include <dlaf_c/factorization/cholesky.h>
 
 void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info) {

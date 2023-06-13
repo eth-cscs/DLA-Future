@@ -8,17 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "test_eigensolver_c_api_wrapper.h"
+#include <mpi.h>
+
+#include <pika/runtime.hpp>
 
 #include "dlaf_c/eigensolver/eigensolver.h"
 #include "dlaf_c/grid.h"
 #include "dlaf_c/init.h"
 #include "dlaf_c/utils.h"
+#include "test_eigensolver_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
-#include <pika/runtime.hpp>
 
-#include <mpi.h>
-
-TEST(EigensolverCAPIScaLAPACKTest, CorrectnessDistributed) {
-}
+TEST(EigensolverCAPIScaLAPACKTest, CorrectnessDistributed) {}

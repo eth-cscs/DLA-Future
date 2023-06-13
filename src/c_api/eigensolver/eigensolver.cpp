@@ -9,6 +9,7 @@
 //
 
 #include "eigensolver.h"
+
 #include <dlaf_c/eigensolver/eigensolver.h>
 
 void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz, int* info) {

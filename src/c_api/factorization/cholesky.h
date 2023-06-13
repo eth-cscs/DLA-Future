@@ -12,14 +12,15 @@
 
 #include <mpi.h>
 
-#include "../grid.h"
+#include <pika/init.hpp>
+
 #include <dlaf/factorization/cholesky.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
-#include <pika/init.hpp>
-#include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/matrix_mirror.h>
+#include "../grid.h"
 
 template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {

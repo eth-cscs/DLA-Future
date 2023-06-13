@@ -8,18 +8,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver.h"
-
-#include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
-#include "dlaf/communication/kernels.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/eigensolver/test_eigensolver_correctness.h"
-#include "dlaf_test/matrix/util_generic_lapack.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/communication/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver.h>
+#include <dlaf/matrix/matrix_mirror.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
+#include <dlaf_test/matrix/util_generic_lapack.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;
@@ -46,6 +47,7 @@ TYPED_TEST_SUITE(TridiagSolverDistTestGPU, MatrixElementTypes);
 const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
     // n, nb
     {0, 8},
+    {4, 2},
     {16, 16},
     {16, 8},
     {16, 4},

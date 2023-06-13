@@ -8,13 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/types.h"
-
 #include <limits>
 
-#include <gtest/gtest.h>
+#include <dlaf/common/source_location.h>
+#include <dlaf/types.h>
 
-#include "dlaf/common/source_location.h"
+#include <gtest/gtest.h>
 
 using dlaf::integral_cast;
 using dlaf::to_signed;

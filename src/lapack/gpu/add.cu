@@ -10,12 +10,12 @@
 
 #include <whip.hpp>
 
-#include "dlaf/gpu/assert.cu.h"
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/lapack/gpu/add.h"
-#include "dlaf/types.h"
-#include "dlaf/util_cublas.h"
-#include "dlaf/util_math.h"
+#include <dlaf/gpu/assert.cu.h>
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/lapack/gpu/add.h>
+#include <dlaf/types.h>
+#include <dlaf/util_cublas.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf::gpulapack {
 namespace kernels {

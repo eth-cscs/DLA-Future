@@ -9,9 +9,9 @@
 //
 #pragma once
 
-#include "dlaf/common/vector.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/vector.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -25,7 +25,7 @@ struct BackTransformationReductionToBand {
                    common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_EIGENSOLVER_BT_REDUCTION_TO_BAND_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct BackTransformationReductionToBand<BACKEND, DEVICE, DATATYPE>;
 

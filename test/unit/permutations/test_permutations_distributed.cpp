@@ -8,23 +8,23 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/permutations/general.h"
-
 #include <algorithm>
 
-#include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/permutations/general.h>
+#include <dlaf/types.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_generic_lapack.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_generic_lapack.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

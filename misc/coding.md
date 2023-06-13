@@ -16,80 +16,83 @@ Tests should be placed according to their type in `test/<type>/`.
 
 ### File Names
 Filenames should be all lowercase and can include numbers and underscores (`_`).
-Header files use the extension `.h`, template implementation files `.tpp` and source files use the extension `.cpp`.
+Header files use the extension `.h` and source files use the extension `.cpp`.
 
 ### Header files
 All header files should be self-contained.
 This means that each header can be included without defining anything special.
 In particular each header file should include all the headers needed and have `#pragma once` to prevent multiple inclusion.
 
-### Template implementation files
-Template implementation files are not self-contained.
-They can only be included in specific parts of the code.
-
-In general the definition of template classes, functions, ... should be included in the header files.
-
-All header files should be self-contained.
-This means that each header can be included without defining anything special.
-In particular each header file should include all the headers needed and have `#pragma once` to prevent multiple inclusion.
-
 ### Includes
+Only use the syntax `#include <...>`, unless the include uses a relative path (see below).
+
 Header files should be included with the full path based on the `include` directory.
-For example, the file `<libname>/include/<libname>/foo/bar.hpp` should be included as
+For example, the file `{libname}/include/{libname}/foo/bar.hpp` should be included as
 ```c++
-#include "<libname>/foo/bar.hpp"
+#include <{libname}/foo/bar.hpp>
 ```
 Even if the included file is located in the same directory as the including file this rule should be obeyed.
+Only source include files (i.e. headers not located in an `include` directory) are included using relative paths.
+
+Never include C library headers. Use instead the corresponding C++ header.
+E.g. include `cstdint` instead of `stdint.h`.
 
 For readability it is suggested to use the standard order of includes:
-
-* Related header (i.e. `filename.h` for `filename.cpp` or `test_filename.cpp`)
-* Empty line
-* C library headers
 * C++ library headers
 * Other libraries' headers
-* Current library's headers
+* `pika` headers
+* `dlaf` headers
+* source include files
+* `gtest` headers (they should be included only in the test directory)
+* `dlaf_test` headers (they should be included only in the test directory)
+* conditionally included files
 
-In each section the included files should be sorted in alphabetical order.
+In each group the included files should be sorted in alphabetical order,
+and groups are separated by a blank line.
+The clang-format style included in the repository provides the correct settings.
 
 ## Naming
 
 The names should be as descriptive as possible.
 
-Note: the following rules can be broken, to follow standard library conventions in case of similar
+**Note**
+the following rules can be broken, to follow standard library conventions in case of similar
 functionalities. E.g trait helpers ends with `_t` and `_v`.
-
 
 ### Type and Class Names
 
 Type and class names should start with a capital letter and have a capital letter for each new word.
 Underscores (`_`) are not allowed.
 
+**Note**
+exceptions are allowed to follow standard library conventions in case of similar
+functionalities.
+
 The `using` syntax is preferred to `typedef` for type definitions.
 
 ### Namespace Names
 
-If possible, namespace names should be one word, lowercase.
-If multiple words are used they should be lowercase and separated with an underscores (`_`).
+In general, namespace names should be one word, lowercase.
+If multiple words are needed they should be lowercase and separated with an underscores (`_`).
 
 ### Variable Names
 
 #### Variable Names
 
 Variable names should contain only lowercase characters and underscores (`_`).
-The underscore is not allowed as first or last character.
+The underscore is used to separate words and is not allowed as first or last character.
+Two consecutive underscores (`__`) are not allowed.
 
 #### Class Data Members
 
-Class data members names follows the convention of variable names with a trailing underscore (`_`).
+Public data members names follows the convention of variable names.
+Private class data members names follows the convention of variable names with a trailing underscore (`_`).
 
 ### Function Names
 
-Function names should start with a lowercase character and have a capital letter for each new word.
-Underscores (`_`) are not allowed.
-
-The only exception to this rule are getter and setter methods for class data members.
-They follow the naming convention `set_variable` and `get_variable`, respectively (see [Class Format](#class-format)).
+Variable names should contain only lowercase characters and underscores (`_`).
+The underscore is used to separate words and is not allowed as first or last character.
+Two consecutive underscores (`__`) are not allowed.
 
 ### Lambda Expressions
 
@@ -102,7 +105,8 @@ auto my_lambda = [](int i) { return i + 4; };
 ### Macro Names
 
 Macro names should be all uppercase and can include underscores (`_`).
-The underscore is not allowed as first or last character.
+The underscore is used to separate words and is not allowed as first or last character.
+Two consecutive underscores (`__`) are not allowed.
 
 ### Naming Example
 
@@ -114,14 +118,14 @@ namespace name {
 
 int variable_name;
 
-void functionNameMultipleWords(...) {
+void function_name_multiple_words(...) {
   auto my_lambda = [](int i) { return i + 4; };
   other_statements;
 }
 
 class ClassNameMultipleWords {
 public:
-  ClassNameMultipleWords : member_name(0) {}
+  ClassNameMultipleWords : member_name_(0) {}
 
   int get_member_name() {
     return member_name_;
@@ -132,7 +136,7 @@ public:
   }
 
 protected:
-  void functionName(Type parameter1, Type2 parameter2);
+  void function_name(Type parameter1, Type2 parameter2);
 
 private:
   int member_name_;
@@ -151,23 +155,33 @@ Classes and functions has to be documented with **Doxygen** (see dedicated secti
 
 ### Function Comments
 
-Each function should have a brief description on what the function does.
+Each function should have a brief description on what the function does and a more detailled documentation separated by a blank line.
 
-The detailed documentation should contain:
-* for each function parameters whose type is non-const reference or pointer to non-const memory,
-the specification if they are input (In:), output (Out:) or input-output parameters (InOut:),
-* a description of the return value,
-* the type of exception that can be thrown and when it happens.
+The detailled documentation should contain:
+* A more detailled explanation of the function
+* for each function parameters a brief description of the parameter and the specification if they are input (in), output (out) or input-output parameters (in,out:),
+* a description of the return value (if not included in the function description),
+* preconditions
+* postconditions
 
 Example:
 ```c++
 /// Updates foo and computes bar using in_1 .. in_5.
 ///
-/// In: in_3, in_5
-/// In/Out: foo
-/// Out: bar
-/// Returns the number of whatever.
-/// Throws an exception of type MyExceptionType if bar cannot be computed.
+/// The function computes bar using the Foo method.
+/// @param[in] in_1 the 1st input parameter
+/// @param[in] in_2 the 2nd input parameter
+/// @param[in] in_3 the 3rd input parameter
+/// @param[in] in_4 the 4th input parameter
+/// @param[in] in_5 the 5th input parameter
+/// @param[in,out] foo the in,out parameter
+/// @param[out] bar the output parameter
+/// @return the number of iterations performed
+/// @pre precondition1
+/// @pre precondition2
+/// ...
+/// @post postcondition1
+/// ...
 int computeFooBar(Type in_1, const Type& in_2, Type& in_3,
                   const Type* in_4, Type* in_5, Type& foo,
                   Type& bar);
@@ -179,7 +193,7 @@ No comments, since the name should be self-descriptive.
 
 ### Class Comments
 
-Every class should have a short description of what it is and what is does. If needed a detailed description can be added.
+Every class should have a short description of what it is and what is does. If needed a detailled description can be added.
 Comments for public class member functions follow the same rules as general function comments.
 Comments for private members are allowed, but not mandatory.
 
@@ -274,6 +288,8 @@ Use the provided clang-format style to format `.h`, `.hpp`, `.tpp` and `.cpp` fi
 The length of each line of your code should, in principle, be at most **105** characters.
 This limit can be exceeded by few characters in special cases.
 
+For C++ files the clang-format style included in the repository provides the correct settings.
+
 ### Scopes
 
 Do not use scopes for formatting reason.
@@ -283,25 +299,32 @@ Do not use scopes for formatting reason.
 No trailing whitespaces should be added to any line.
 Use no space before a comma (`,`) and a semicolon (`;`) and add a space after them if they are not at the end of a line.
 
-### Parenthesis
+For C++ files the clang-format style included in the repository provides the correct settings.
 
-Parenthesis should have no internal padding.
+### Parentheses
+
+Parentheses should have no internal padding.
 In general they have one space external padding, unless the following cases are met
 which require no external padding:
-* between two opening or two closing parenthesis,
+* between two opening or two closing parentheses,
 * between the function name and its arguments,
 * between a closing parenthesis and a comma (`,`) or a semicolon (`;`).
+
+For C++ files the clang-format style included in the repository provides the correct settings.
 
 ### Binary Operators
 
 The assignment operator should always have spaces around it.
 Other operators may have spaces around them, but it is not mandatory.
 
-Note: clang-format forces a space before and one after the binary operators.
+For C++ files the clang-format style included in the repository provides the correct settings.
+**Note**
+clang-format forces a space before and one after the binary operators.
 
 ### Unary Operators
 
 Do not put any space between an unary operator and their argument.
+For C++ files the clang-format style included in the repository provides the correct settings.
 
 ### Types
 
@@ -317,13 +340,16 @@ Type& ref = var;
 Class1<Class2<type1>> object;
 ```
 
+For C++ files the clang-format style included in the repository provides the correct settings.
+
 ### Vertical Spacing
 
 Use empty lines when it helps to improve the readability of the code, but do not use too many.
 Do not use empty lines after a brace which opens a scope,
 or before a brace which closes a scope.
 Each file should contain exactly one empty line at the end of the file.
-**Note that some editors add an empty line automatically without displaying it (e.g. vi), some do not.**
+**Warning**
+Some editors add an empty line automatically without displaying it (e.g. vi), some do not.
 
 ### Indentation
 
@@ -335,7 +361,7 @@ Do not use tabs in the code.
 Do not declare multiple variables in the same declaration, especially if they are not fundamental types:
 
 ```c++
-// Disallowed.
+// Discouraged.
 int x, y;
 Object a("my-matrix"), b(10);
 
@@ -348,86 +374,20 @@ Object b(10);
 
 ### Function Declarations and Definitions
 
-The return type should be on the same line as the function name.
-Parameters should be on the same line, too, unless they do not fit on it.
-Include the parameter names also in the declaration of a function, i.e.
-```c++
-Type function(Type1 par1, Type2 par2, Type3 par3);
-```
-In function declarations comment the unused parameter names `Type /* unused_parameter_name */`
-
-Examples:
-```c++
-Type Class::function(Type1 par1, Type2 par2) {
-  statement;
-  ...
-}
-
-Type LongNameClass::longNameFunction(Type1 par1, Type2 par2
-                                     Type3 par3) {
-  statement;
-  ...
-}
-```
-
-In case of a long list of parameters prefer
-```c++
-Type LongNameClass::longNameFunction(
-    Type1 long_name_par1, Type2 long_name_par2,Type3 par3) {
-  statement;
-  ...
-}
-```
-to
-```c++
-Type LongNameClass::longNameFunction(Type1 long_name_par1,
-                                     Type2 long_name_par2,
-                                     Type3 par3) {
-  statement;
-  ...
-}
-```
+Formatted according to the clang-format style included in the repository.
 
 ### Function Calls
 
-Write the call on a single line if the length of the line does not exceed the maximum limit.
-If it does, wrap the arguments at the parenthesis or start the arguments on a new line using 4 spaces indent.
-Use the method which uses the smaller amount of lines.
-
-Examples:
-```c++
-function(par1, par2, par3);
-
-function(par1, par2,
-         par3);
-
-function(
-    par1, par2, par3);
-```
+Formatted according to the clang-format style included in the repository.
 
 ### Conditionals
 
-Examples:
-```c++
-if (condition)
-  statement;
-else
-  statement;
-
-if (condition) {
-  statement;
-}
-else if (condition2) {
-  statement;
-}
-else {
-  statement;
-}
-```
+Formatted according to the clang-format style included in the repository.
 
 ### Switch statement
 
-Switch statements should always have a default case.
+Switch statements should always have a default case, unless an enum class is used and all the cases are covered.
+Indentation according to the clang-format style included in the repository.
 
 Example:
 ```c++
@@ -450,38 +410,13 @@ switch (var) {
 
 ### Loops
 
-Examples:
-```c++
-for (statement; condition; statement)
-  statement;
-
-for (statement; condition; statement) {
-  statement1;
-  statement2;
-}
-
-while (condition)
-  statement;
-
-while (condition) {
-  statement1;
-  statement2;
-}
-
-do {
-  statement;
-}
-while (condition);
-```
+Formatted according to the clang-format style included in the repository.
 
 ### Preprocessor Directives
 
-The preprocessor directives are not indented.
-The hash is the first character of the line.
+Indentation according to the clang-format style included in the repository.
 
 ### Class Format
-
-`public`, `protected` and `private` keywords are not indented.
 
 Unless a different order is required, the members should be defined in the following order:
 * using statements
@@ -489,59 +424,11 @@ Unless a different order is required, the members should be defined in the follo
 * protected members
 * private members
 
-Example:
-```c++
-class Foo : public Bar {
-public:
-  Foo();
-  explicit Foo(int var);
-
-  void function();
-  void emptyFunction() {}
-
-  void set_var(const int var) {
-    var_ = var;
-  }
-  int get_var() const {
-    return var_;
-  }
-
-private:
-  bool privateFunction();
-
-  int var_;
-  int var2_;
-};
-```
+Indentation according to the clang-format style included in the repository.
 
 ### Constructor Initializer Lists
 
-Examples:
-```c++
-// When everything fits on one line:
-Foo::Foo(int var) : var_(var) {
-  statement;
-}
-
-// If the signature and the initializer list do not
-// fit on one line, the colon is indented by 4 spaces:
-Foo::Foo(int var)
-    : var_(var), var2_(var + 1) {
-  statement;
-}
-
-// If the initializer list occupies more lines,
-// they are aligned in the following way:
-Foo::Foo(int var)
-    : some_var_(var),
-      some_other_var_(var + 1) {
-  statement;
-}
-
-// No statements:
-Foo::Foo(int var)
-    : some_var_(var) {}
-```
+Formatted according to the clang-format style included in the repository.
 
 ## Other C++ Features
 
@@ -555,3 +442,31 @@ The post-increment and post-decrement operators create an unnecessary copy, that
 ### Alternative Operator Representations
 
 Use the primary token for operators (E.g. `&&`, `||`, and `!`), alternative representations are not allowed (`and`, `or`, and `not`).
+
+## Index naming convention
+
+To have an uniform usage of names for indices and sizes in the library, please follow the following conventions:
+- Use `m`, `n` and `k` for sizes and `i`, `j` and `l` for indices,
+- in general, `i` and `m` refers to rows (exceptions square sizes and diagonal),
+- in general, `j` and `n` refers to columns (exceptions square sizes and diagonal).
+
+**Note**
+if the use of the row or column index/size is determined by a template or a function parameter `i`, `m` should be used for the "parallel" coordinate and `j`, `n` for the orthogonal one.
+
+2D Indices:
+- Use the two indices to name the 2D object. E.g. `ij`. In this way extracting a single index with `SizeType i = ij.row();` is intuitive.
+- The use of `id`, `idx` and similar names is discouraged.
+
+2D Size:
+- Name the object to identify what it refers to. E.g. `size_a` represents the number of global tiles of the matrix A.
+
+Distinction of different type of 1D and 2D indices and 1D sizes:
+- GlobalElementIndex and GlobalElementSize: `_el` suffix, e.g. `j_el`.
+- LocalElementIndex and LocalElementSize: `_el_lc` suffix, e.g. `i_el_lc`
+- GlobalTileIndex and GlobalTileSize: no suffix, e.g. `m`
+- LocalTileIndex and LocalTileSize: `_lc` suffix, e.g. `n_lc`
+- TileElementIndex and TileElementSize: `_el_tl`, e.g. `i_el_tl`.
+
+Distinction of different type of 2D sizes:
+- GlobalElementSize, LocalElementSize, GlobalTileSize, LocalTileSize: as above.
+- TileElementSize: use `tile_size` as base of the name, e.g. `tile_size_a` to name the size of a tile of the matrix A.

@@ -10,16 +10,18 @@
 
 #pragma once
 
+/// @file
+
 #include <blas.hh>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/multiplication/general/api.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/multiplication/general/api.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::multiplication {
 

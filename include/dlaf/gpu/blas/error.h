@@ -10,15 +10,13 @@
 
 #pragma once
 
-/// @file
-
 #include <exception>
 #include <iostream>
 
-#include "dlaf/common/source_location.h"
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/cublas/error.h"
-#include "dlaf/gpu/rocblas/error.h"
+#include <dlaf/common/source_location.h>
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/cublas/error.h>
+#include <dlaf/gpu/rocblas/error.h>
 
 namespace dlaf::gpublas::internal {
 

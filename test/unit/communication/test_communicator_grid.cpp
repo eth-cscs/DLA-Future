@@ -8,11 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/error.h"
+#include <mpi.h>
+
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/error.h>
 
 #include <gtest/gtest.h>
-#include <mpi.h>
 
 using namespace dlaf::comm;
 using dlaf::common::Ordering;
@@ -40,8 +41,8 @@ void test_grid_communication(CommunicatorGrid& grid) {
   EXPECT_EQ(buffer, 13);
 
   buffer_recv = 0;
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.fullCommunicator()));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM,
+                                     grid.fullCommunicator()));
   EXPECT_EQ(buffer_recv, grid.size().rows() * grid.size().cols());
 
   // Row Communication
@@ -52,8 +53,8 @@ void test_grid_communication(CommunicatorGrid& grid) {
   EXPECT_EQ(buffer, grid.rank().row());
 
   buffer_recv = 0;
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.rowCommunicator()));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM,
+                                     grid.rowCommunicator()));
   EXPECT_EQ(buffer_recv, grid.rowCommunicator().size());
 
   // Column Communication
@@ -64,8 +65,8 @@ void test_grid_communication(CommunicatorGrid& grid) {
   EXPECT_EQ(buffer, grid.rank().col());
 
   buffer_recv = 0;
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM, grid.colCommunicator()));
+  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&buffer_send, &buffer_recv, 1, MPI_INT, MPI_SUM,
+                                     grid.colCommunicator()));
   EXPECT_EQ(buffer_recv, grid.colCommunicator().size());
 }
 

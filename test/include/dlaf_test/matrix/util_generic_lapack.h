@@ -15,7 +15,7 @@
 
 #include <blas.hh>
 
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/util_types.h>
 
 /// @file
 

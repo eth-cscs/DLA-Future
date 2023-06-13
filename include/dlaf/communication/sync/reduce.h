@@ -13,10 +13,11 @@
 /// @file
 
 #include <mpi.h>
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data_descriptor.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/message.h"
+
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data_descriptor.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/message.h>
 
 namespace dlaf {
 namespace comm {

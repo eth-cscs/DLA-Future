@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace factorization {
@@ -23,7 +23,7 @@ struct Cholesky {
   static void call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_FACTORIZATION_CHOLESKY_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct Cholesky<BACKEND, DEVICE, DATATYPE>;
 

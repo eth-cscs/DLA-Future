@@ -17,7 +17,7 @@
 #include <limits>
 #include <ostream>
 
-#include "dlaf/common/assert.h"
+#include <dlaf/common/assert.h>
 
 namespace dlaf {
 

@@ -8,23 +8,22 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/rot.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/tridiag_solver/rot.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 
 #include <gtest/gtest.h>
 
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -108,12 +107,14 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
   const SizeType n = std::min((idx_end) *mb, m) - idx_begin * mb;
   const GlobalElementSize offset(idx_begin * mb, idx_begin * mb);
 
-  dlaf::common::internal::SingleThreadedBlasScope single;
+  {
+    dlaf::common::internal::SingleThreadedBlasScope single;
 
-  for (auto rot : rots) {
-    T* x = mat_loc.ptr(GlobalElementIndex{0, rot.i} + offset);
-    T* y = mat_loc.ptr(GlobalElementIndex{0, rot.j} + offset);
-    blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+    for (auto rot : rots) {
+      T* x = mat_loc.ptr(GlobalElementIndex{0, rot.i} + offset);
+      T* y = mat_loc.ptr(GlobalElementIndex{0, rot.j} + offset);
+      blas::rot(n, x, 1, y, 1, rot.c, rot.s);
+    }
   }
 
   auto result = [&dist = mat_h.distribution(), &mat_local = mat_loc](const GlobalElementIndex& element) {

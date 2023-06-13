@@ -12,12 +12,12 @@
 
 #include <type_traits>
 
-#include "dlaf/common/range2d.h"
-#include "dlaf/matrix/layout_info.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/matrix/layout_info.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 namespace matrix {

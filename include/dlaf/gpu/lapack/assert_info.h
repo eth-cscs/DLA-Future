@@ -14,8 +14,6 @@
 
 #include <whip.hpp>
 
-/// @file
-
 #define DLAF_DECLARE_CUSOLVER_ASSERT_INFO(func) void assertInfo##func(whip::stream_t stream, int* info)
 
 namespace dlaf::gpulapack::internal {

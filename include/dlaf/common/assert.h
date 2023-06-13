@@ -10,14 +10,12 @@
 
 #pragma once
 
-/// @file
-
 #include <exception>
 #include <iostream>
 #include <memory>
 #include <sstream>
 
-#include "dlaf/common/source_location.h"
+#include <dlaf/common/source_location.h>
 
 namespace dlaf {
 namespace internal {
@@ -44,7 +42,9 @@ template <class... Ts>
 inline void do_assert(bool expr, const common::internal::source_location& loc, const char* expression,
                       const Ts&... ts) noexcept {
   if (!expr) {
-    std::cerr << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << std::endl;
+    std::ostringstream ss;
+    ss << "[ERROR] " << loc << '\n' << expression << '\n' << concat(ts...) << "\n";
+    std::cerr << ss.str();
     std::terminate();
   }
 }
@@ -130,7 +130,7 @@ void silenceUnusedWarningFor(Args&&...) {}
 
 #define DLAF_STATIC_FAIL(DummyType, Msg) static_assert(sizeof(DummyType) == 0, Msg)
 
-/// Returns a fake object of type T (specified by __VA_ARGS__) dereferencing a null pointer.
+/// Returns a fake object of type T (specified by @p __VA_ARGS__ ) dereferencing a null pointer.
 ///
 /// At runtime the program is exited with an error before dereferencing the null pointer.
 /// This macro is useful when a return statement is needed in unreachable branches,

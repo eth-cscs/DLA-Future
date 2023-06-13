@@ -10,8 +10,11 @@
 
 #pragma once
 
+/// @file
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
+
 #include <dlaf/common/assert.h>
 
 namespace dlaf::common {

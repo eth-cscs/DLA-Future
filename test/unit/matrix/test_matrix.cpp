@@ -8,22 +8,23 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-
 #include <atomic>
 #include <chrono>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include <pika/execution.hpp>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/util_matrix.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_senders.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/util_matrix.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_senders.h>
+#include <dlaf_test/util_types.h>
 
 using namespace std::chrono_literals;
 

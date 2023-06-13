@@ -9,6 +9,8 @@
 //
 #pragma once
 
+/// @file
+
 #include <pika/execution.hpp>
 #include <pika/runtime.hpp>
 #include <pika/thread.hpp>

@@ -17,7 +17,7 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: b027f64a7f175b0e7a18388d0aa2484599efd12d
+    SPACK_SHA: b313b28e64c15761be0d45a16c922c25b2786f76
     SPACK_DLAF_REPO: ./spack
   before_script:
     - podman login -u $CSCS_REGISTRY_USER -p $CSCS_REGISTRY_PASSWORD $CSCS_REGISTRY
@@ -76,7 +76,7 @@ cpu release build gcc11:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     CXXSTD: 17
@@ -98,7 +98,7 @@ cpu release build gcc12 cxx20:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@12.1.0
     CXXSTD: 20
@@ -120,7 +120,7 @@ cpu release build clang12:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: "clang-12 libomp-12-dev"
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@12.0.1
     CXXSTD: 17
@@ -142,7 +142,7 @@ cpu release build clang13 cxx20:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: "clang-13 libomp-13-dev"
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: clang@13.0.1
     CXXSTD: 20
@@ -164,7 +164,7 @@ cpu codecov build gcc11:
     BASE_IMAGE: docker.io/ubuntu:22.04
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
     EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
     # glibc-tools is needed for libSegFault on ubuntu:22.04
     COMPILER: gcc@11.2.0
     CXXSTD: 17

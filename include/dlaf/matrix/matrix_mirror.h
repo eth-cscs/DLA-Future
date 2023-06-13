@@ -10,13 +10,15 @@
 
 #pragma once
 
+/// @file
+
 #include <exception>
 #include <vector>
 
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_base.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_base.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace matrix {
@@ -170,7 +172,7 @@ public:
   }
 };
 
-/// ---- ETI
+// ETI
 
 #define DLAF_MATRIX_MIRROR_ETI(KWORD, DATATYPE, TARGETDEVICE, SOURCEDEVICE) \
   KWORD template class MatrixMirror<DATATYPE, TARGETDEVICE, SOURCEDEVICE>;  \

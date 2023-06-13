@@ -17,9 +17,11 @@
 
 #include <pika/execution.hpp>
 
-#include "gtest/gtest.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf_test/matrix/util_tile.h"
+#include <dlaf/matrix/matrix.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/util_tile.h>
 
 namespace dlaf::matrix::test {
 

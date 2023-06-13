@@ -9,22 +9,25 @@
 //
 #pragma once
 
+/// @file
+/// Provides `Tile` wrappers for extra basic linear algebra operations not covered by BLAS.
+
 #include <blas.hh>
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/make_sender_algorithm_overloads.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/util_matrix.h>
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/lapack/gpu/add.h"
-#include "dlaf/util_cublas.h"
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/lapack/gpu/add.h>
+#include <dlaf/util_cublas.h>
 #endif
 
 namespace dlaf {
@@ -39,16 +42,12 @@ using matrix::Tile;
 template <Backend B, class T, Device D>
 void add(T alpha, const matrix::Tile<const T, D>& tile_b, const matrix::Tile<T, D>& tile_a);
 
-/// \overload add
-///
 /// This overload takes a policy argument and a sender which must send all required arguments for the
 /// algorithm. Returns a sender which signals a connected receiver when the algorithm is done.
 template <Backend B, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 auto add(const dlaf::internal::Policy<B>& p, Sender&& s);
 
-/// \overload add
-///
 /// This overload partially applies the algorithm with a policy for later use with operator| with a
 /// sender on the left-hand side.
 template <Backend B>

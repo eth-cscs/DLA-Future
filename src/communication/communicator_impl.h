@@ -10,9 +10,7 @@
 
 #pragma once
 
-#include "dlaf/communication/error.h"
-
-/// @file
+#include <dlaf/communication/error.h>
 
 namespace dlaf {
 namespace comm {

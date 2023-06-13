@@ -11,8 +11,8 @@
 
 #include <blas.hh>
 
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace multiplication {
@@ -45,7 +45,7 @@ struct Triangular {
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_MULTIPLICATION_TRIANGULAR_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct Triangular<BACKEND, DEVICE, DATATYPE>;
 

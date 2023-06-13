@@ -15,7 +15,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "dlaf/types.h"
+#include <dlaf/types.h>
 
 /// @file
 

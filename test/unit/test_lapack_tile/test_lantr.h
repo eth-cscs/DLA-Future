@@ -10,16 +10,16 @@
 
 #pragma once
 
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf {
 namespace test {
@@ -145,10 +145,10 @@ void run(const lapack::Norm norm, const blas::Uplo uplo, const blas::Diag diag,
     case lapack::Norm::Fro:
       switch (diag) {
         case blas::Diag::Unit:
-          norm_expected = static_cast<NormT<T>>(
-              size != TileElementSize{1, 1}
-                  ? std::sqrt(std::pow(3 * value, 2) + std::min(size.rows(), size.cols()))
-                  : 1);
+          norm_expected = static_cast<NormT<T>>(size != TileElementSize{1, 1}
+                                                    ? std::sqrt(std::pow(3 * value, 2) +
+                                                                std::min(size.rows(), size.cols()))
+                                                    : 1);
           break;
         case blas::Diag::NonUnit:
           norm_expected = static_cast<NormT<T>>(size != TileElementSize{1, 1} ? std::sqrt(17) * value

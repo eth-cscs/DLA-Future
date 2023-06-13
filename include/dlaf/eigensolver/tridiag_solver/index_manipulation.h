@@ -12,15 +12,15 @@
 #include <pika/algorithm.hpp>
 #include <pika/execution.hpp>
 
-#include "dlaf/eigensolver/tridiag_solver/kernels.h"
-#include "dlaf/eigensolver/tridiag_solver/tile_collector.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver/tile_collector.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -64,8 +64,8 @@ inline void addIndex(SizeType i_begin, SizeType i_end, SizeType val,
 
   auto sender = ex::when_all_vector(tc.readwrite<SizeType, Device::CPU>(index));
 
-  ex::start_detached(
-      di::transform(di::Policy<DefaultBackend_v<Device::CPU>>(), std::move(add_fn), std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<Device::CPU>>(), std::move(add_fn),
+                                   std::move(sender)));
 }
 
 // Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index
@@ -109,8 +109,8 @@ void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix
                              ex::when_all_vector(tc.read<SizeType, D>(in_index)),
                              ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
 
-  ex::start_detached(
-      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(sort_fn), std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(sort_fn),
+                                   std::move(sender)));
 }
 
 // Applies `index` to `in` to get `out`
@@ -144,8 +144,8 @@ void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeT
 
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
-  ex::start_detached(
-      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(applyIndex_fn), std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(applyIndex_fn),
+                                   std::move(sender)));
 }
 
 template <Device D>
@@ -172,7 +172,7 @@ void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<const Size
 
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
-  ex::start_detached(
-      di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(inv_fn), std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(inv_fn),
+                                   std::move(sender)));
 }
 }

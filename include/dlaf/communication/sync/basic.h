@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/common/data.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/communication/message.h"
+#include <dlaf/common/data.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/communication/message.h>
 
 namespace dlaf {
 namespace comm {
@@ -28,8 +28,8 @@ template <class DataIn>
 void send_to(int receiver_rank, Communicator& communicator, DataIn&& data) {
   int tag = 0;
   auto message = make_message(common::make_data(std::forward<DataIn>(data)));
-  DLAF_MPI_CHECK_ERROR(
-      MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag, communicator));
+  DLAF_MPI_CHECK_ERROR(MPI_Send(message.data(), message.count(), message.mpi_type(), receiver_rank, tag,
+                                communicator));
 }
 
 /// MPI_Recv wrapper for receiver side accepting a Data.

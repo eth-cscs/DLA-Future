@@ -9,12 +9,14 @@
 //
 #pragma once
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+/// @file
+
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf {
 

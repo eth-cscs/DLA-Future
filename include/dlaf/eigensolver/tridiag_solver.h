@@ -9,12 +9,14 @@
 //
 #pragma once
 
-#include "dlaf/common/assert.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/tridiag_solver/api.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+/// @file
+
+#include <dlaf/common/assert.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/tridiag_solver/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf {
 namespace eigensolver {

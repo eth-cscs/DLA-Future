@@ -230,7 +230,7 @@ for nodes in nodes_arr:
     if run_dlaf:
         job_text = mp.JobText(system, run_name, nodes, time, "job_custom_dlaf")
 
-        for (m_sz, mb_sz) in product(m_sz_arr, mb_sz_arr):
+        for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
             job_text.addCommand(
                 mp.chol,
                 lib="dlaf",
@@ -247,7 +247,7 @@ for nodes in nodes_arr:
     if run_dp:
         job_text = mp.JobText(system, run_name, nodes, time, "job_custom_dp")
 
-        for (m_sz, mb_sz) in product(m_sz_arr, mb_sz_arr):
+        for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
             job_text.addCommand(
                 mp.chol,
                 lib="dplasma",
@@ -264,7 +264,7 @@ for nodes in nodes_arr:
     if run_mkl:
         job_text = mp.JobText(system, run_name, nodes, time, "job_custom_mkl")
 
-        for (m_sz, mb_sz) in product(m_sz_arr, mb_sz_arr):
+        for m_sz, mb_sz in product(m_sz_arr, mb_sz_arr):
             job_text.addCommand(
                 mp.chol,
                 lib="scalapack",

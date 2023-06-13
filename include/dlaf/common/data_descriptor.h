@@ -17,9 +17,9 @@
 #include <type_traits>
 #include <utility>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data.h"
-#include "dlaf/types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace common {
@@ -138,7 +138,7 @@ protected:
   SizeType stride_;
 };
 
-/// Helper class for creatig a DataDescriptor from a bounded C-array.
+/// Helper class for creating a DataDescriptor from a bounded C-array.
 template <class T, std::size_t N>
 struct DataDescriptor<T[N]> : DataDescriptor<T> {
   /// Create a Data from a given bounded C-array.

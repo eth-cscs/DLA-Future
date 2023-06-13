@@ -8,14 +8,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/util_cuda.h"
+#include <complex>
 
 #include <whip.hpp>
 
-#include <complex>
+#include <dlaf/util_cuda.h>
 
-#include "gtest/gtest.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::util;

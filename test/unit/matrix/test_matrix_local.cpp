@@ -8,19 +8,19 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/util_math.h"
-#include "dlaf_test/matrix/matrix_local.h"
-
 #include <sstream>
 #include <vector>
 
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/util_math.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

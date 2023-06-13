@@ -18,15 +18,15 @@
 #include <string>
 #include <type_traits>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 
 enum class Coord { Row, Col };
 
-// Given a Coord, returns its orthogonal
+/// Given a Coord, returns its orthogonal
 constexpr Coord orthogonal(const Coord rc) {
   return rc == Coord::Row ? Coord::Col : Coord::Row;
 }

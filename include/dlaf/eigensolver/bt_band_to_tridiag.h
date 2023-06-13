@@ -10,10 +10,12 @@
 
 #pragma once
 
-#include "dlaf/eigensolver/bt_band_to_tridiag/api.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+/// @file
+
+#include <dlaf/eigensolver/bt_band_to_tridiag/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
 

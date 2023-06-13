@@ -13,28 +13,28 @@
 #include <limits>
 #include <type_traits>
 
-#include <mpi.h>
 #include <blas/util.hh>
+#include <mpi.h>
+
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/format_short.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/timer.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/init.h"
-#include "dlaf/init.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/solver.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf/miniapp/dispatch.h"
-#include "dlaf/miniapp/options.h"
+#include <dlaf/common/format_short.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/timer.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/init.h>
+#include <dlaf/init.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/miniapp/dispatch.h>
+#include <dlaf/miniapp/options.h>
+#include <dlaf/solver.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace {
 

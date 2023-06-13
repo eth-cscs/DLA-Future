@@ -12,9 +12,9 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::multiplication {
 namespace internal {
@@ -30,7 +30,7 @@ struct GeneralSub {
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_MULTIPLICATION_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct GeneralSub<BACKEND, DEVICE, DATATYPE>;
 

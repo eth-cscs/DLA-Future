@@ -9,8 +9,8 @@
 //
 #pragma once
 
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -25,7 +25,7 @@ struct TridiagSolver {
                    Matrix<T, device>& evals, Matrix<std::complex<T>, device>& evecs);
 };
 
-/// ---- ETI
+// ETI
 #define DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
   KWORD template struct TridiagSolver<BACKEND, DEVICE, DATATYPE>;
 

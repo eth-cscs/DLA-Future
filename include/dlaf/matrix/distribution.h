@@ -439,13 +439,10 @@ public:
     SizeType i_el_begin =
         util::matrix::elementFromTileAndTileElement(i_loc_begin, 0, tile_size_.get<rc>(),
                                                     localTileElementOffset<rc>());
-    SizeType i_el_end =
-        util::matrix::elementFromTileAndTileElement(i_loc_last,
-                                                    tileSize<rc>(
-                                                        globalTileFromLocalTile<rc>(i_loc_last)) -
-                                                        1,
-                                                    tile_size_.get<rc>(), localTileElementOffset<rc>()) +
-        1;
+    SizeType i_el_end = util::matrix::elementFromTileAndTileElement(
+                            i_loc_last, tileSize<rc>(globalTileFromLocalTile<rc>(i_loc_last)) - 1,
+                            tile_size_.get<rc>(), localTileElementOffset<rc>()) +
+                        1;
     return i_el_end - i_el_begin;
   }
 

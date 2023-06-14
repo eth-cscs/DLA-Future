@@ -1166,11 +1166,11 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // Note: this ensures that evals broadcasting finishes before bulk releases resources
         struct sync_wait_on_exit_t {
-          std::optional<ex::unique_any_sender<>> sender_;
+          ex::unique_any_sender<> sender_;
 
           ~sync_wait_on_exit_t() {
-            if (sender_.has_value())
-              tt::sync_wait(std::move(sender_.value()));
+            if (sender_)
+              tt::sync_wait(std::move(sender_));
           }
         } bcast_barrier;
 

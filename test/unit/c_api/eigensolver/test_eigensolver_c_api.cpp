@@ -64,8 +64,6 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, eigensolver_min_band}
-    // {0, 2, 100},                                              // m = 0
-    // {5, 8, 100}, {34, 34, 100},                               // m <= mb
     //{4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
     {32, 5, 100},
     //{34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
@@ -76,8 +74,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const char* argv[] = {"test_c_api_", nullptr};
   dlaf_initialize(1, argv);
 
-  // The pika runtime is suspended by dlaf_initialize
   // In normal use the runtime is resumed by the C API call
+  // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
 
@@ -118,28 +116,26 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     auto toplefttile_eigenvectors =
         pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
 
-    // Get local leading dimension
-    int m_local = mat_a_h.distribution().localSize().rows();
-    DLAF_descriptor desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, m_local};
+    int lld = mat_a_h.distribution().localSize().rows();
+    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
 
     // Suspend pika to ensure it is resumed by the C API
     pika::suspend();
 
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), desc,
-                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), desc);
+      C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc,
+                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), dlaf_desc);
     }
     else {
-      C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), desc,
-                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), desc);
+      C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc,
+                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), dlaf_desc);
     }
 
-    // eigensolver::eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors);
     return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
-  // if (mat_a_h.size().isEmpty())
-  //   return;
+  if (mat_a_h.size().isEmpty())
+     return;
 
   testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
 

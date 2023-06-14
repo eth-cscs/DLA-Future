@@ -30,6 +30,53 @@ struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
   using type = T;
 };
 
+template <typename T>
+struct IsFalse : std::integral_constant<bool, !(bool) T::value> {};
+
+template <typename T>
+inline constexpr bool IsFalseValue = IsFalse<T>::value;
+
+template <typename... Ts>
+struct AlwaysFalse : std::false_type {};
+
+template <typename... Ts>
+static std::true_type AnyOfImpl(...);
+
+template <typename... Ts>
+static auto AnyOfImpl(int) -> AlwaysFalse<std::enable_if_t<IsFalseValue<Ts>>...>;
+
+template <typename... Ts>
+struct AnyOf : decltype(AnyOfImpl<Ts...>(0)) {};
+
+template <>
+struct AnyOf<> : std::false_type {};
+
+template <typename T, typename... Ts>
+struct Contains : AnyOf<std::is_same<T, Ts>...> {};
+
+template <typename PackUnique, typename PackRest>
+struct UniqueHelper;
+
+template <template <typename...> class Pack, typename... Ts>
+struct UniqueHelper<Pack<Ts...>, Pack<>> {
+  using type = Pack<Ts...>;
+};
+
+template <template <typename...> class Pack, typename... Ts, typename U, typename... Us>
+struct UniqueHelper<Pack<Ts...>, Pack<U, Us...>>
+    : std::conditional<Contains<U, Ts...>::value, UniqueHelper<Pack<Ts...>, Pack<Us...>>,
+                       UniqueHelper<Pack<Ts..., U>, Pack<Us...>>>::type {};
+
+template <typename Pack>
+struct Unique;
+
+template <template <typename...> class Pack, typename... Ts>
+struct Unique<Pack<Ts...>> : UniqueHelper<Pack<>, Pack<Ts...>> {};
+
+/// Remove duplicate types in the given pack.
+template <typename Pack>
+using UniqueType = typename Unique<Pack>::type;
+
 struct EmptyEnv {};
 
 // We are only interested in the types wrapped by future and shared_future since
@@ -68,11 +115,10 @@ using DecayedTypeList = TypeList<std::decay_t<Ts>...>;
 
 // The type sent by Sender, if Sender sends exactly one type.
 #if defined(PIKA_HAVE_STDEXEC)
-// TODO: make it unique if several types have a identical decayed type
 template <typename Sender>
 using SenderSingleValueType =
-    typename SenderSingleValueTypeImpl<pika::execution::experimental::value_types_of_t<
-        std::decay_t<Sender>, EmptyEnv, DecayedTypeList, DecayedTypeList>>::type;
+    typename SenderSingleValueTypeImpl<UniqueType<pika::execution::experimental::value_types_of_t<
+        std::decay_t<Sender>, EmptyEnv, DecayedTypeList, DecayedTypeList>>>::type;
 #else
 template <typename Sender>
 using SenderSingleValueType =

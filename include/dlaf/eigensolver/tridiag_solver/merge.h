@@ -1059,6 +1059,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         const dlaf::comm::Communicator& row_comm = row_comm_wrapper.get();
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
+        const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
+
         const std::size_t batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
         const SizeType begin = to_SizeType(thread_idx * batch_size);
@@ -1068,7 +1070,6 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         // Note: this step is completely independent from the rest, but it is small and it is going
         // to be dropped soon.
         // Note: use last threads that in principle should have less work to do
-        // TODO if chunked this can be run by multiple workers
         if (thread_idx == nthreads - 1) {
           // just if there are deflated eigenvectors
           if (k < n) {
@@ -1160,7 +1161,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         }
 
         // Note: This barrier ensures that LAED4 finished, so from now on values are available
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2: Broadcast evals
 
@@ -1223,7 +1224,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           std::fill_n(w, m_subm_el_lc, T(1));
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2b: compute weights
         for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
@@ -1267,7 +1268,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           }
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2c: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
@@ -1298,7 +1299,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           }
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)
 
@@ -1350,7 +1351,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           }
         }
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 3b: Reduce to get the sum of all squares on all ranks
         if (thread_idx == 0)
@@ -1358,7 +1359,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                                      ex::just(std::cref(col_comm), MPI_SUM,
                                               common::make_data(ws_rowvec(), n_subm_el_lc))));
 
-        barrier_ptr->arrive_and_wait();
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 3c: Normalize (compute norm of each column and scale column vector)
         {

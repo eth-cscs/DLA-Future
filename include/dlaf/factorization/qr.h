@@ -41,8 +41,8 @@ template <Backend backend, Device device, class T>
 void computeTFactor(
     matrix::Panel<Coord::Col, T, device>& hh_panel,
     pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
-    matrix::ReadWriteTileSender<T, device> t) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t));
+    matrix::ReadOnlyTileSender<T, Device::CPU> taus_new, matrix::ReadWriteTileSender<T, device> t) {
+  QR_Tfactor<backend, device, T>::call(hh_panel, taus, taus_new, std::move(t));
 }
 
 template <Backend backend, Device device, class T>

@@ -201,8 +201,8 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 
     auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
-    dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel,
-                                                           panelT.readwrite(t_index));
+    // dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel,
+    //                                                        panelT.readwrite(t_index));
 
     // W = V T
     auto tile_t = panelT.read(t_index);

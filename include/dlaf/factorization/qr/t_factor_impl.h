@@ -64,17 +64,21 @@ struct Helpers<Backend::MC, Device::CPU, T> {
   static auto gemvColumnT(
       SizeType first_row_tile, VISender tile_vi,
       pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>& taus,
-      TSender&& tile_t) {
+      matrix::ReadOnlyTileSender<T, Device::CPU>& taus_new, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
-    auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
+    auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, const auto& taus_new,
+                                      auto&& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus->size() == k, taus->size(), k);
+      DLAF_ASSERT(taus_new.size().cols() == k, taus_new.size().cols(), k);
 
       common::internal::SingleThreadedBlasScope single;
       for (SizeType j = 0; j < k; ++j) {
         const T tau = (*taus)[j];
+        DLAF_ASSERT((*taus)[j] == taus_new(TileElementIndex(0, j)), (*taus)[j],
+                    taus_new(TileElementIndex(0, j)));
 
         const TileElementIndex t_start{0, j};
 
@@ -105,7 +109,8 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
                                          pika::execution::thread_priority::high),
                                      std::move(gemv_func),
-                                     ex::when_all(tile_vi, taus, std::forward<TSender>(tile_t)));
+                                     ex::when_all(tile_vi, taus, taus_new,
+                                                  std::forward<TSender>(tile_t)));
   }
 
   template <typename TSender>
@@ -239,7 +244,7 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(
     matrix::Panel<Coord::Col, T, device>& hh_panel,
     pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
-    matrix::ReadWriteTileSender<T, device> t) {
+    matrix::ReadOnlyTileSender<T, Device::CPU> taus_new, matrix::ReadWriteTileSender<T, device> t) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -277,7 +282,8 @@ void QR_Tfactor<backend, device, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, std::move(t_local));
+    t_local =
+        Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i), taus, taus_new, std::move(t_local));
   }
 
   // 2nd step: compute the T factor, by performing the last step on each column
@@ -331,7 +337,8 @@ void QR_Tfactor<backend, device, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
+    // TODO
+    // t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column

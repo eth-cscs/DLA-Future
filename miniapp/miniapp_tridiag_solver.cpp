@@ -113,10 +113,9 @@ struct TridiagSolverMiniapp {
 
     const Distribution dist_evals(LocalElementSize(tridiag_ref.size().rows(), 1),
                                   TileElementSize(opts.mb, 1));
-    const Distribution dist_evecs(GlobalElementSize(tridiag_ref.size().rows(),
-                                                    tridiag_ref.size().rows()),
-                                  TileElementSize(opts.mb, opts.mb), comm_grid.size(), comm_grid.rank(),
-                                  {0, 0});
+    const Distribution dist_evecs(
+        GlobalElementSize(tridiag_ref.size().rows(), tridiag_ref.size().rows()),
+        TileElementSize(opts.mb, opts.mb), comm_grid.size(), comm_grid.rank(), {0, 0});
 
     Matrix<T, Device::CPU> tridiag(tridiag_ref.distribution());
     Matrix<T, Device::CPU> evals(dist_evals);

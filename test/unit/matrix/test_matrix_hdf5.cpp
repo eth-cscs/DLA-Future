@@ -8,25 +8,24 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/hdf5.h"
-
 #include <filesystem>
 #include <string>
 
+#include <dlaf/common/index2d.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/error.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/error.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using dlaf::matrix::internal::FileHDF5;

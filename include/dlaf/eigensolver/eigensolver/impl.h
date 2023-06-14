@@ -26,11 +26,10 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
-
-#include "dlaf/matrix/hdf5.h"
 
 namespace dlaf::eigensolver::internal {
 

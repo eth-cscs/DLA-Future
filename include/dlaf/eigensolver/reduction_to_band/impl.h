@@ -277,10 +277,8 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
 }
 
 template <class MatrixLike, class MatrixLikeTaus>
-pika::execution::experimental::any_sender<
-    std::shared_ptr<common::internal::vector<typename MatrixLike::ElementType>>>
-computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
-                       const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
+                            const matrix::SubPanelView& panel_view, const SizeType nrefls) {
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
@@ -297,65 +295,52 @@ computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const SizeTy
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
   // TODO: Apply just(x), just(y), just(z) to just(x, y, z) refactoring elsewhere
   auto s = ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads),
-                                 std::vector<common::internal::vector<T>>{},  // w (internally required)
-                                 std::make_shared<common::internal::vector<T>>()),  // taus
-                        mat_taus.readwrite(LocalTileIndex(0, j_sub)),               // taus new
+                                 std::vector<common::internal::vector<T>>{}),  // w (internally required)
+                        mat_taus.readwrite(LocalTileIndex(0, j_sub)),          // taus
                         ex::when_all_vector(std::move(panel_tiles))) |
            ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-           ex::bulk(nthreads,
-                    [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
-                                                                 auto& barrier_ptr, auto& w, auto& taus,
-                                                                 auto& taus_new, auto& tiles) {
-                      const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-                      const std::size_t begin = index * batch_size;
-                      const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
+           ex::bulk(nthreads, [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
+                                                                           auto& barrier_ptr, auto& w,
+                                                                           auto& taus, auto& tiles) {
+             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+             const std::size_t begin = index * batch_size;
+             const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
 
-                      if (index == 0) {
-                        taus->reserve(nrefls);
-                        DLAF_ASSERT(taus_new.size().cols() == nrefls, taus_new.size().cols(), nrefls);
-                        w.resize(nthreads);
-                      }
+             if (index == 0) {
+               DLAF_ASSERT(taus.size().cols() == nrefls, taus.size().cols(), nrefls);
+               w.resize(nthreads);
+             }
 
-                      for (SizeType j = 0; j < nrefls; ++j) {
-                        // STEP1: compute tau and reflector (single-thread)
-                        if (index == 0) {
-                          taus_new({0, j}) = computeReflector(tiles, j);
-                          taus->push_back(taus_new(TileElementIndex{0, j}));
-                        }
+             for (SizeType j = 0; j < nrefls; ++j) {
+               // STEP1: compute tau and reflector (single-thread)
+               if (index == 0) {
+                 // TODO: Use different index constructor
+                 taus({0, j}) = computeReflector(tiles, j);
+               }
 
-                        barrier_ptr->arrive_and_wait();
+               barrier_ptr->arrive_and_wait();
 
-                        // STEP2a: compute w (multi-threaded)
-                        const SizeType pt_cols = cols - (j + 1);
-                        if (pt_cols == 0)
-                          break;
-                        const bool has_head = (index == 0);
+               // STEP2a: compute w (multi-threaded)
+               const SizeType pt_cols = cols - (j + 1);
+               if (pt_cols == 0)
+                 break;
+               const bool has_head = (index == 0);
 
-                        w[index] = common::internal::vector<T>(pt_cols, 0);
-                        computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-                        barrier_ptr->arrive_and_wait();
+               w[index] = common::internal::vector<T>(pt_cols, 0);
+               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
+               barrier_ptr->arrive_and_wait();
 
-                        // STEP2b: reduce w results (single-threaded)
-                        if (index == 0)
-                          dlaf::eigensolver::internal::reduceColumnVectors(w);
-                        barrier_ptr->arrive_and_wait();
+               // STEP2b: reduce w results (single-threaded)
+               if (index == 0)
+                 dlaf::eigensolver::internal::reduceColumnVectors(w);
+               barrier_ptr->arrive_and_wait();
 
-                        // STEP3: update trailing panel (multi-threaded)
-                        updateTrailingPanel(has_head, tiles, j, w[0], taus_new(TileElementIndex{0, j}),
-                                            begin, end);
-                        barrier_ptr->arrive_and_wait();
-                      }
-
-                      DLAF_ASSERT(taus->size() == taus_new.size().cols(), taus->size(),
-                                  taus_new.size().cols());
-                    }) |
-           ex::then([](auto barrier_ptr, auto w, auto taus, auto taus_new, auto tiles) {
-             di::silenceUnusedWarningFor(barrier_ptr, w, taus_new, tiles);
-             return taus;
-           }) |
-           ex::split();
-  ex::start_detached(s);
-  return s;
+               // STEP3: update trailing panel (multi-threaded)
+               updateTrailingPanel(has_head, tiles, j, w[0], taus(TileElementIndex{0, j}), begin, end);
+               barrier_ptr->arrive_and_wait();
+             }
+           });
+  ex::start_detached(std::move(s));
 }
 
 template <Backend B, Device D, class T>
@@ -853,10 +838,10 @@ template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   ComputePanelHelper(const std::size_t, matrix::Distribution) {}
 
-  auto call(Matrix<T, Device::CPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
+  void call(Matrix<T, Device::CPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
             const SizeType j_sub, const matrix::SubPanelView& panel_view, const SizeType nrefls_block) {
     using red2band::local::computePanelReflectors;
-    return computePanelReflectors(mat_a, mat_taus, j_sub, panel_view, nrefls_block);
+    computePanelReflectors(mat_a, mat_taus, j_sub, panel_view, nrefls_block);
   }
 
   template <Device D, class CommSender, class TriggerSender>
@@ -979,8 +964,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   // Reflector of size = 1 is not considered whatever T is (i.e. neither real nor complex)
   const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - band_size - 1);
 
-  common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> taus;
-
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
   // TODO: transpose into column vector?
   // TODO: Many options here:
@@ -1016,7 +999,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 
   // TODO: rename nblocks to ntiles
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
-  taus.reserve(nblocks);
   DLAF_ASSERT(nblocks == mat_taus_retiled.nrTiles().cols(), nblocks, mat_taus_retiled.nrTiles().cols());
 
   const bool is_full_band = (band_size == dist_a.blockSize().cols());
@@ -1067,8 +1049,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
       v.setWidth(nrefls_block);
 
     // PANEL
-    taus.emplace_back(
-        compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view, nrefls_block));
+    compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view, nrefls_block);
 
     // Note:
     // - has_reflector_head tells if this rank owns the first tile of the panel (being local, always true)
@@ -1082,8 +1063,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
 
-    computeTFactor<B>(v, taus.back(), mat_taus_retiled.read(GlobalTileIndex(0, j_sub)),
-                      t.readwrite(t_idx));
+    computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(0, j_sub)), t.readwrite(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));

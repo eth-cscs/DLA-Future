@@ -50,10 +50,9 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(
-      matrix::Panel<Coord::Col, T, device>& panel_view,
-      pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
-      matrix::ReadOnlyTileSender<T, Device::CPU> taus_new, matrix::ReadWriteTileSender<T, device> t);
+  static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
+                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                   matrix::ReadWriteTileSender<T, device> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
   /// elementary reflectors.

@@ -192,25 +192,16 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 
 template <class T>
 auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device::CPU>& mat_local_taus) {
-  std::vector<T> taus;
-  taus.reserve(to_sizet(k));
-
-  // auto local_taus = sync_wait(when_all_vector(std::move(sender_local_taus)));
   auto local_taus_tiles = sync_wait(when_all_vector(
       selectRead(mat_local_taus,
                  common::iterate_range2d(LocalTileSize(1, mat_local_taus.nrTiles().cols())))));
 
   const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
-  // for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
-  //   const auto index_chunk_local = to_sizet(index_chunk);
-  //   const auto& chunk_data = *local_taus.at(index_chunk_local);
-
-  //   // copy each chunk contiguously
-  //   std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
-  // }
   // TODO: taus guaranteed to be contiguous? i.e. can it all be copied in one
   // go? not necessary for performance here...
+  std::vector<T> taus;
+  taus.reserve(to_sizet(k));
   for (const auto& t : local_taus_tiles) {
     for (SizeType i = 0; i < t.get().size().cols(); ++i) {
       taus.push_back(t.get()(TileElementIndex(0, i)));

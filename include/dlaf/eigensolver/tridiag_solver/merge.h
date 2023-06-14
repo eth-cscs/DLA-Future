@@ -1043,6 +1043,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                    ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.readwrite(z)),
                    ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.readwrite(delta)),
                    ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
+                   // additional workspaces
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
@@ -1077,10 +1078,13 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
             for (SizeType i_subm_el = 0; i_subm_el < n; ++i_subm_el) {
               const SizeType j_subm_el = i2_perm[i_subm_el];
+
+              // if it is a deflated vector
               if (j_subm_el >= k) {
                 const GlobalElementIndex ij_el(origin_el.rows() + i_subm_el,
                                                origin_el.cols() + j_subm_el);
                 const GlobalTileIndex ij = dist.globalTileIndex(ij_el);
+
                 if (dist.rankIndex() == dist.rankGlobalTile(ij)) {
                   const LocalTileIndex ij_lc = dist.localTileIndex(ij);
                   const SizeType linear_subm_lc =
@@ -1096,8 +1100,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // STEP 0b: Initialize workspaces (single-thread)
         if (thread_idx == 0) {
-          ws_vecs.reserve(nthreads + 1);
           // Note: nthreads + 1 to get additional workspace for reduction
+          ws_vecs.reserve(nthreads + 1);
           for (std::size_t i = 0; i < nthreads + 1; ++i)
             ws_vecs.emplace_back(m_subm_el_lc);
 
@@ -1160,7 +1164,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // STEP 2: Broadcast evals
 
-        // Note: this ensures that broadcast evals has finished before bulk releases resources
+        // Note: this ensures that evals broadcasting finishes before bulk releases resources
         struct sync_wait_on_exit_t {
           std::optional<ex::unique_any_sender<>> sender_;
 
@@ -1267,6 +1271,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // STEP 2c: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
+          // local reduction from all bulk workers
           for (int i = 0; i < m_subm_el_lc; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
               const T* w_partial = ws_vecs[tidx]();
@@ -1277,7 +1282,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           tt::sync_wait(transformMPI(allReduceInPlace_o, ex::just(std::cref(row_comm), MPI_PROD,
                                                                   common::make_data(w, m_subm_el_lc))));
 
-          T* z_ptr = z_tiles[0].ptr();
+          T* weights = ws_vecs[nthreads]();
           for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
             const SizeType i_subm_lc = i_subm_el_lc / dist.blockSize().rows();
             const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
@@ -1288,7 +1293,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
             const auto* i2_perm = i2_tile_arr[0].get().ptr();
             const SizeType ii_subm_el = i2_perm[i_subm_el];
-            ws_vecs[nthreads]()[to_sizet(i_subm_el_lc)] =
+            weights[to_sizet(i_subm_el_lc)] =
                 std::copysign(std::sqrt(-w[i_subm_el_lc]), z_ptr[to_sizet(ii_subm_el)]);
           }
         }
@@ -1302,6 +1307,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           common::internal::SingleThreadedBlasScope single;
 
           const T* w = ws_vecs[nthreads]();
+          T* sum_squares = ws_rowvec();
 
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
@@ -1337,7 +1343,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                     q_tile({i_el_tl, j_el_tl}) = w[i_subm_el_lc] / q_tile({i_el_tl, j_el_tl});
                 }
 
-                ws_rowvec()[j_subm_el_lc] +=
+                sum_squares[j_subm_el_lc] +=
                     blas::dot(m_el_tl, q_tile.ptr({0, j_el_tl}), 1, q_tile.ptr({0, j_el_tl}), 1);
               }
             }
@@ -1358,6 +1364,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         {
           common::internal::SingleThreadedBlasScope single;
 
+          const T* sum_squares = ws_rowvec();
+
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
             const SizeType j = dist.globalTileFromLocalTile<Coord::Col>(j_lc);
@@ -1370,7 +1378,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
             const SizeType n_el_tl = std::min(dist.tileSize<Coord::Col>(j), k - n_subm_el);
             for (SizeType j_el_tl = 0; j_el_tl < n_el_tl; ++j_el_tl) {
               const SizeType j_subm_el_lc = j_subm_lc * dist.blockSize().cols() + j_el_tl;
-              const T vec_norm = std::sqrt(ws_rowvec()[j_subm_el_lc]);
+              const T vec_norm = std::sqrt(sum_squares[j_subm_el_lc]);
 
               for (SizeType i_subm_lc = 0; i_subm_lc < sz_loc_tiles.rows(); ++i_subm_lc) {
                 const SizeType linear_subm_lc = i_subm_lc + sz_loc_tiles.rows() * j_subm_lc;

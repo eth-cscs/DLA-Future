@@ -39,6 +39,7 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/panel.h"
+#include "dlaf/matrix/retiled_matrix.h"
 #include "dlaf/matrix/tile.h"
 #include "dlaf/matrix/views.h"
 #include "dlaf/schedulers.h"
@@ -852,8 +853,8 @@ template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   ComputePanelHelper(const std::size_t, matrix::Distribution) {}
 
-  auto call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
-            const matrix::SubPanelView& panel_view, const SizeType nrefls_block) {
+  auto call(Matrix<T, Device::CPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
+            const SizeType j_sub, const matrix::SubPanelView& panel_view, const SizeType nrefls_block) {
     using red2band::local::computePanelReflectors;
     return computePanelReflectors(mat_a, mat_taus, j_sub, panel_view, nrefls_block);
   }
@@ -959,9 +960,7 @@ protected:
 /// @return a vector of any_senders of shared pointers of vectors, where each inner vector contains a
 /// block of taus
 template <Backend B, Device D, class T>
-common::internal::vector<
-    pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
+Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
   using dlaf::matrix::Matrix;
   using dlaf::matrix::Panel;
 
@@ -984,20 +983,41 @@ ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
 
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
   // TODO: transpose into column vector?
+  // TODO: Many options here:
+  // - mat with tile_size == block_size, then retile to
+  //   tile_size == band_size for use here, return unretiled matrix for
+  //   backtransformation.
+  // - mat with tile_size == band_size, then retile to bigger tiles (not
+  //   possible currently, but possible in theory)
+  // - mat with tile_size == band_size here, copy to new matrix with tile_size
+  //   == block_size for backtransformation
+  // - mat with tile_size == block_size, access subtiles with splitTileDisjoint
+  //   here (almost exactly the same as option 1)
   DLAF_ASSERT(mat_a.blockSize().cols() % band_size == 0, mat_a.blockSize().cols(), band_size);
-  Matrix<T, Device::CPU> mat_taus(
-      matrix::Distribution(GlobalElementSize(1, nrefls), TileElementSize(1, mat_a.blockSize().cols()),
-                           TileElementSize(1, band_size), comm::Size2D(1, mat_a.commGridSize().cols()),
-                           comm::Index2D(0, mat_a.rankIndex().col()),
-                           comm::Index2D(0, mat_a.sourceRankIndex().col())));
+  // original tile_size == band_size matrix
+  // Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, nrefls), TileElementSize(1,
+  // mat_a.blockSize().cols()),
+  //                          TileElementSize(1, band_size), comm::Size2D(1, mat_a.commGridSize().cols()),
+  //                          comm::Index2D(0, mat_a.rankIndex().col()),
+  //                          comm::Index2D(0, mat_a.sourceRankIndex().col())));
+  // tile_size == block_size
+  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, nrefls),
+                                                       TileElementSize(1, mat_a.blockSize().cols()),
+                                                       comm::Size2D(1, mat_a.commGridSize().cols()),
+                                                       comm::Index2D(0, mat_a.rankIndex().col()),
+                                                       comm::Index2D(0, mat_a.sourceRankIndex().col())));
 
   if (nrefls == 0)
-    return taus;
+    return mat_taus;
+
+  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(mat_taus,
+                                                         LocalTileSize(1, mat_a.blockSize().cols() /
+                                                                              band_size));
 
   // TODO: rename nblocks to ntiles
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
   taus.reserve(nblocks);
-  DLAF_ASSERT(nblocks == mat_taus.nrTiles().cols(), nblocks, mat_taus.nrTiles().cols());
+  DLAF_ASSERT(nblocks == mat_taus_retiled.nrTiles().cols(), nblocks, mat_taus_retiled.nrTiles().cols());
 
   const bool is_full_band = (band_size == dist_a.blockSize().cols());
 
@@ -1029,7 +1049,7 @@ ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
       return nrefls_last == 0 ? band_size : nrefls_last;
     }();
 
-    const SizeType nrefls_block_new = mat_taus.tileSize(GlobalTileIndex(0, j_sub)).cols();
+    const SizeType nrefls_block_new = mat_taus_retiled.tileSize(GlobalTileIndex(0, j_sub)).cols();
     DLAF_ASSERT(nrefls_block == nrefls_block_new, nrefls_block, nrefls_block_new);
 
     const bool isPanelIncomplete = (nrefls_block != band_size);
@@ -1047,7 +1067,8 @@ ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
       v.setWidth(nrefls_block);
 
     // PANEL
-    taus.emplace_back(compute_panel_helper.call(mat_a, mat_taus, j_sub, panel_view, nrefls_block));
+    taus.emplace_back(
+        compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view, nrefls_block));
 
     // Note:
     // - has_reflector_head tells if this rank owns the first tile of the panel (being local, always true)
@@ -1061,7 +1082,8 @@ ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
     // TODO probably the first one in any panel is ok?
     Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
 
-    computeTFactor<B>(v, taus.back(), mat_taus.read(GlobalTileIndex(0, j_sub)), t.readwrite(t_idx));
+    computeTFactor<B>(v, taus.back(), mat_taus_retiled.read(GlobalTileIndex(0, j_sub)),
+                      t.readwrite(t_idx));
 
     // PREPARATION FOR TRAILING MATRIX UPDATE
     const GlobalElementIndex at_offset(ij_offset + GlobalElementSize(0, band_size));
@@ -1113,7 +1135,7 @@ ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
     v.reset();
   }
 
-  return taus;
+  return mat_taus;
 }
 
 /// Distributed implementation of reduction to band

@@ -17,6 +17,9 @@
 #include "dlaf/matrix/index.h"
 #include "dlaf/util_math.h"
 
+// TODO: rename block_size to tile_size everywhere.
+// TODO: Does layout support an arbitrary offset? through ld?
+
 namespace dlaf {
 namespace matrix {
 
@@ -28,6 +31,7 @@ public:
   /// Construct a generic layout of a local matrix of size @p size.
   ///
   /// @param[in] size the size of the local matrix,
+  /// // TODO: block_size -> tile_size
   /// @param[in] block_size the size of the tiles,
   /// @param[in] tile_ld the leading dimension of the tile,
   /// @param[in] tile_offset_row the distance of the next row tile,
@@ -45,6 +49,7 @@ public:
   ///   @pre tile_offset_col >= size of the memory (in elements, padding included)
   ///      to store a column of tiles;
   ///   @pre the tiles should not overlap (combinations of @p tile_ld, @p tile_row_offset).
+  ///   TODO: block_size -> tile_size
   LayoutInfo(const LocalElementSize& size, const TileElementSize& block_size, SizeType tile_ld,
              SizeType tile_offset_row, SizeType tile_offset_col);
 
@@ -103,6 +108,7 @@ public:
     return nr_tiles_;
   }
 
+    // TODO: tileSize
   const TileElementSize& blockSize() const noexcept {
     return block_size_;
   }

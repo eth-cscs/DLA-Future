@@ -20,9 +20,7 @@ namespace dlaf::eigensolver::internal {
 
 template <Backend B, Device D, class T>
 struct ReductionToBand {
-  static common::internal::vector<
-      pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-  call(Matrix<T, D>& mat_a, const SizeType band_size);
+  static Matrix<T, Device::CPU> call(Matrix<T, D>& mat_a, const SizeType band_size);
   static common::internal::vector<
       pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
   call(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a, const SizeType band_size);

@@ -124,9 +124,7 @@ void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSend
 template <Backend backend, Device device, class T>
 void BackTransformationReductionToBand<backend, device, T>::call(
     const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    common::internal::vector<
-        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-        taus) {
+    Matrix<const T, Device::CPU>& mat_taus) {
   using namespace bt_red_band;
 
   auto hp = pika::execution::thread_priority::high;
@@ -199,10 +197,10 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       }
     }
 
-    auto taus_panel = taus[k];
     const LocalTileIndex t_index{Coord::Col, k};
-    // dlaf::factorization::internal::computeTFactor<backend>(panelV, taus_panel,
-    //                                                        panelT.readwrite(t_index));
+    // auto taus_panel = taus.read(t_index);
+    dlaf::factorization::internal::computeTFactor<backend>(panelV, mat_taus.read(t_index),
+                                                           panelT.readwrite(t_index));
 
     // W = V T
     auto tile_t = panelT.read(t_index);

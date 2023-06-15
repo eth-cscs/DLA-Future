@@ -984,6 +984,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   //                          comm::Index2D(0, mat_a.rankIndex().col()),
   //                          comm::Index2D(0, mat_a.sourceRankIndex().col())));
   // tile_size == block_size
+  // TODO: Local matrix -> simplify arguments to mat_taus below.
   Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, nrefls),
                                                        TileElementSize(1, mat_a.blockSize().cols()),
                                                        comm::Size2D(1, mat_a.commGridSize().cols()),

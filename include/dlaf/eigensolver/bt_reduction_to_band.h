@@ -36,11 +36,9 @@ namespace eigensolver {
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
-void backTransformationReductionToBand(
-    const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-    common::internal::vector<
-        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-        taus) {
+void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_c,
+                                       Matrix<const T, device>& mat_v,
+                                       Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -53,9 +51,9 @@ void backTransformationReductionToBand(
     const SizeType mb = mat_v.blockSize().rows();
     return std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb));
   };
-  DLAF_ASSERT(taus.size() == nr_reflectors_blocks(), taus.size(), mat_v, b);
+  DLAF_ASSERT(mat_taus.nrTiles().cols() == nr_reflectors_blocks(), mat_taus.size().cols(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, taus);
+  internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory.

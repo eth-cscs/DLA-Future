@@ -30,6 +30,8 @@
 #include <dlaf_test/matrix/util_matrix.h>
 #include <dlaf_test/util_types.h>
 
+#include <sstream>
+
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
@@ -67,7 +69,7 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 template <class T, Backend B, Device D>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
-  const char* argv[] = {"test_c_api_", nullptr};
+  const char* argv[] = {"test_cholesky_c_api", nullptr};
   dlaf_initialize(1, argv);
 
   // In normal use the runtime is resumed by the C API call
@@ -92,27 +94,52 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
 
-  // Get top left local tiles
-  auto toplefttile_a = pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
+  // Get pointer to first element of local matrix
+  T* local_a_ptr;
+  int lld;
+  {
+    auto toplefttile_a = pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
+    
+    local_a_ptr = toplefttile_a.ptr();
+    lld = toplefttile_a.ld();
+  } // Destroy tile (avoids issues with runtime resume/suspend)
+
+  std::stringstream ssinfo;
 
   auto rank = grid.fullCommunicator().rank();
-  std::cout << rank << " Local element (0, 0): " << *(toplefttile_a.ptr()) << "\n";
+  ssinfo << rank << " Local element (0, 0): " << *local_a_ptr << "\n";
 
-  int lld = mat_h.distribution().localSize().rows();
   DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
+  
+  ssinfo << rank << " Distribution localSize rows: " << mat_h.distribution().localSize().rows() << "\n";
+  ssinfo << rank << " Distribution localSize cols: " << mat_h.distribution().localSize().cols() << "\n";
+  ssinfo << rank << " lld: " << lld << "\n";
+  ssinfo << "\n";
+
+  std::cout << ssinfo.str() << std::flush;
 
   // Suspend pika to ensure it is resumed by the C API
   pika::suspend();
 
   if constexpr (std::is_same_v<T, double>) {
-    C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc);
+    C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
   }
   else {
-    C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc);
+    C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
   }
+  
+  // Resume pika for the checks (suspended by the C API)
+  std::stringstream ssinfo2;
+  ssinfo2 << rank << " calling pika::resume()... ";
+  pika::resume();
+  ssinfo2 << rank << " DONE.\n";
+  std::cout << ssinfo2.str() << std::flush;
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
+
+  dlaf_free_grid(dlaf_context);
+  dlaf_finalize();
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
@@ -120,7 +147,6 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
-        pika::threads::get_thread_manager().wait();
       }
     }
   }
@@ -132,7 +158,6 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
-        pika::threads::get_thread_manager().wait();
       }
     }
   }

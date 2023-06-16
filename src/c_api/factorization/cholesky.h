@@ -55,7 +55,7 @@ void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
 
   matrix_host.waitLocalTiles();
 
-  pika::suspend();
+//  pika::suspend();
 }
 
 template <typename T>
@@ -92,7 +92,7 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
 
   matrix_host.waitLocalTiles();
 
-  pika::suspend();
+//  pika::suspend();
 
   info = 0;
 }

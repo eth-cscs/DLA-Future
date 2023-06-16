@@ -70,7 +70,9 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {32, 6, 3}  // m > mb, sub-band
 };
 
-template <class T, Backend B, Device D, class... GridIfDistributed>
+enum class API { dlaf, scalapack };
+
+template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {
   const char* argv[] = {"test_c_api_", nullptr};
   dlaf_initialize(1, argv);
@@ -128,20 +130,36 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       eigenvalues_ptr = toplefttile_eigenvalues.ptr();
 
     }  // Destroy tiles (avoid spurious dependencies)
-    DLAF_descriptor dlaf_desc_a = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld_a};
-    DLAF_descriptor dlaf_desc_eigenvectors = {(int) m, (int) m, (int) mb, (int) mb,        0,
-                                              0,       1,       1,        lld_eigenvectors};
 
     // Suspend pika to ensure it is resumed by the C API
     pika::suspend();
 
-    if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                           local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+    if constexpr (api == API::dlaf) {
+      DLAF_descriptor dlaf_desc_a = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld_a};
+      DLAF_descriptor dlaf_desc_eigenvectors = {(int) m, (int) m, (int) mb, (int) mb,        0,
+                                                0,       1,       1,        lld_eigenvectors};
+
+      if constexpr (std::is_same_v<T, double>) {
+        C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
+      else {
+        C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
     }
-    else {
-      C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                           local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+    else if constexpr (api == API::scalapack) {
+      int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_a};
+      int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
+      int info = -1;
+      if constexpr (std::is_same_v<T, double>) {
+        C_dlaf_pdsyevd(dlaf_uplo, m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
+                       desc_z, &info);
+      }
+      else {
+        C_dlaf_pssyevd(dlaf_uplo, m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
+                       desc_z, &info);
+      }
     }
 
     return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
@@ -159,24 +177,44 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   dlaf_finalize();
 }
 
-TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
+TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         // getTuneParameters().eigensolver_min_band = b_min;
-        testEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb, grid);
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
+      }
+    }
+  }
+}
+
+TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto [m, mb, b_min] : sizes) {
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
       }
     }
   }
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
+TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         // getTuneParameters().eigensolver_min_band = b_min;
-        testEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb, grid);
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
+      }
+    }
+  }
+}
+
+TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (auto [m, mb, b_min] : sizes) {
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);
       }
     }
   }

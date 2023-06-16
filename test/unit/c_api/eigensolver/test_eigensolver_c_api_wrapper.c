@@ -18,6 +18,11 @@ void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* 
   dlaf_pdsyevd(uplo, m, a, desca, w, z, descz, info);
 }
 
+void C_dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz,
+                    int* info) {
+  dlaf_pssyevd(uplo, m, a, desca, w, z, descz, info);
+}
+
 void C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca, double* w, double* z, struct DLAF_descriptor descz) {
   dlaf_eigensolver_d(dlaf_context, uplo, a, desca, w, z, descz);
 }

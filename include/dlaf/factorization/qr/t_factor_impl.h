@@ -26,7 +26,6 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/range2d.h"
 #include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/communication/kernels/all_reduce.h"
 #include "dlaf/lapack/tile.h"
 #include "dlaf/matrix/matrix.h"
@@ -148,28 +147,27 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
   }
 
   template <class VISender, class TSender>
-  static auto gemvColumnT(
-      SizeType first_row_tile, VISender&& tile_vi,
-      pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>& taus,
-      TSender&& tile_t) noexcept {
+  static auto gemvColumnT(SizeType first_row_tile, VISender&& tile_vi,
+                          matrix::ReadOnlyTileSender<T, Device::CPU>& taus, TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus,
                                       auto& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-      DLAF_ASSERT(taus->size() == k, taus->size(), k);
+      DLAF_ASSERT(taus.size().cols() == k, taus.size().cols(), k);
 
       if (first_row_tile == 0) {
         whip::stream_t stream;
         DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus->data(),
-                              sizeof(T), sizeof(T), to_sizet(k), whip::memcpy_default, stream);
+        // TODO: Check that taus() is safe. Is the layout always correct for this?
+        whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus(), sizeof(T),
+                              sizeof(T), to_sizet(k), whip::memcpy_default, stream);
       }
 
       for (SizeType j = 0; j < k; ++j) {
-        const auto mtau = util::blasToCublasCast(-(*taus)[j]);
+        const auto mtau = util::blasToCublasCast(-taus(TileElementIndex(0, j)));
         const auto one = util::blasToCublasCast(T{1});
 
         const TileElementIndex t_start{0, j};
@@ -285,10 +283,10 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(
-    matrix::Panel<Coord::Col, T, device>& hh_panel,
-    pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
-    matrix::ReadWriteTileSender<T, device> t, common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                                          matrix::ReadWriteTileSender<T, device> t,
+                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -329,8 +327,7 @@ void QR_Tfactor<backend, device, T>::call(
     // Since we are writing always on the same t, the gemv are serialized
     // A possible solution to this would be to have multiple places where to store partial
     // results, and then locally reduce them just before the reduce over ranks
-    // TODO
-    // t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
+    t_local = Helpers::gemvColumnT(first_row_tile, hh_panel.read(v_i_loc), taus, std::move(t_local));
   }
 
   // at this point each rank has its partial result for each column

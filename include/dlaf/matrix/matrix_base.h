@@ -35,7 +35,8 @@ public:
                       distribution.commGridSize(), distribution.rankIndex(),
                       distribution.sourceRankIndex()) {
     DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
-                "distribution should be the distribution of the original Matrix.");
+                "distribution should be the distribution of the original Matrix.",
+                distribution.blockSize(), distribution.baseTileSize());
     DLAF_ASSERT(distribution.blockSize() == distribution_.blockSize(), distribution.blockSize(),
                 distribution_.blockSize());
   }

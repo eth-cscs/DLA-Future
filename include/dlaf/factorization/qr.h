@@ -45,11 +45,11 @@ void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
 }
 
 template <Backend backend, Device device, class T>
-void computeTFactor(
-    matrix::Panel<Coord::Col, T, device>& hh_panel,
-    pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>> taus,
-    matrix::ReadWriteTileSender<T, device> t, common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
-  QR_Tfactor<backend, device, T>::call(hh_panel, taus, std::move(t), mpi_col_task_chain);
+void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                    matrix::ReadWriteTileSender<T, device> t,
+                    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+  QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);
 }
 
 }

@@ -44,6 +44,7 @@
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::comm;
+using namespace dlaf::memory;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 
@@ -213,51 +214,45 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device
 }
 
 template <class T>
-auto allGatherTaus(
-    const SizeType k, const SizeType chunk_size,
-    std::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> sender_local_taus,
-    comm::CommunicatorGrid comm_grid) {
+auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device::CPU>& mat_taus,
+                   comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  auto local_taus = sync_wait(when_all_vector(std::move(sender_local_taus)));
-
-  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
-
-  // Note:
-  // this is just an early exit
-  const SizeType n_local_chunks =
-      n_chunks / comm_grid.size().cols() +
-      (comm_grid.rank().col() < (n_chunks % comm_grid.size().cols()) ? 1 : 0);
-
-  if (local_taus.size() != to_sizet(n_local_chunks))
-    return taus;
-
-  for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
-    const auto owner = index_chunk % comm_grid.size().cols();
+  for (SizeType i = 0; i < mat_taus.nrTiles().cols(); ++i) {
+    const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(0, i)).col();
     const bool is_owner = owner == comm_grid.rank().col();
 
-    const auto this_chunk_size = std::min(k - index_chunk * chunk_size, chunk_size);
+    const auto this_chunk_size = mat_taus.tileSize(GlobalTileIndex(0, i)).cols();
 
     if (is_owner) {
-      const auto index_chunk_local = to_sizet(index_chunk / comm_grid.size().cols());
-      std::vector<T>& chunk_data = *local_taus.at(index_chunk_local);
-      sync::broadcast::send(comm_grid.rowCommunicator(),
-                            common::make_data(chunk_data.data(),
-                                              static_cast<SizeType>(chunk_data.size())));
-      std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
+      auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(0, i)));
+      sync::broadcast::send(comm_grid.rowCommunicator(), common::make_data(tile_local.get()));
+      for (SizeType k = 0; k < tile_local.get().size().cols(); ++k) {
+        taus.push_back(tile_local.get()(TileElementIndex(0, k)));
+      }
     }
     else {
-      std::vector<T> chunk_data;
-      chunk_data.resize(to_sizet(this_chunk_size));
-      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
-                                    common::make_data(chunk_data.data(),
-                                                      static_cast<SizeType>(chunk_data.size())));
-      std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
+      Tile<T, Device::CPU> tile_local(TileElementSize(1, this_chunk_size),
+                                      MemoryView<T, Device::CPU>(this_chunk_size), 1);
+      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
+      for (SizeType k = 0; k < this_chunk_size; ++k) {
+        taus.push_back(tile_local(TileElementIndex(0, k)));
+      }
     }
 
     // copy each chunk contiguously
   }
+
+  // TODO: is the early exit required?
+  // Note:
+  // this is just an early exit
+  // const SizeType n_local_chunks =
+  //     n_chunks / comm_grid.size().cols() +
+  //     (comm_grid.rank().col() < (n_chunks % comm_grid.size().cols()) ? 1 : 0);
+
+  // if (local_taus.size() != to_sizet(n_local_chunks))
+  //   return taus;
 
   return taus;
 }
@@ -380,93 +375,94 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
   }
 }
 
-// #ifdef DLAF_WITH_GPU
-// TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
-//   for (const auto& config : configs) {
-//     const auto& [size, block_size, band_size] = config;
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
+  for (const auto& config : configs) {
+    const auto& [size, block_size, band_size] = config;
 
-//     testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
-//   }
-// }
+    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+  }
+}
 
-// TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
-//   for (const auto& config : configs_subband) {
-//     const auto& [size, block_size, band_size] = config;
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
+  for (const auto& config : configs_subband) {
+    const auto& [size, block_size, band_size] = config;
 
-//     testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
-//   }
-// }
-// #endif
+    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+  }
+}
+#endif
 
-// template <class T, Device D, Backend B>
-// void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize size,
-//                          const TileElementSize block_size, const SizeType band_size) {
-//   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-//   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
+template <class T, Device D, Backend B>
+void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize size,
+                         const TileElementSize block_size, const SizeType band_size) {
+  const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
+  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
-//   Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
+  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
 
-//   // setup the reference input matrix
-//   Matrix<const T, Device::CPU> reference = [&]() {
-//     Matrix<T, Device::CPU> reference(distribution);
-//     matrix::util::set_random_hermitian(reference);
-//     return reference;
-//   }();
+  // setup the reference input matrix
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(distribution);
+    matrix::util::set_random_hermitian(reference);
+    return reference;
+  }();
 
-//   Matrix<T, Device::CPU> matrix_a_h(distribution);
-//   copy(reference, matrix_a_h);
+  Matrix<T, Device::CPU> matrix_a_h(distribution);
+  copy(reference, matrix_a_h);
 
-//   common::internal::vector<any_sender<std::shared_ptr<common::internal::vector<T>>>> local_taus;
-//   {
-//     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-//     local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
-//     pika::threads::get_thread_manager().wait();
-//   }
+  Matrix<T, Device::CPU> mat_local_taus = [&]() {
+    MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
+    auto mat_local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
+    // TODO: Is this wait required? Is it required here?
+    pika::threads::get_thread_manager().wait();
+    return mat_local_taus;
+  }();
 
-//   checkUpperPartUnchanged(reference, matrix_a_h);
+  checkUpperPartUnchanged(reference, matrix_a_h);
 
-//   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
-//   auto mat_b = makeLocal(matrix_a_h);
-//   splitReflectorsAndBand(mat_v, mat_b, band_size);
+  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
+  auto mat_b = makeLocal(matrix_a_h);
+  splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-//   // Note:
-//   // chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by band)
-//   auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus, grid);
-//   ASSERT_EQ(taus.size(), k_reflectors);
+  // Note:
+  // chunks are block_size.cols() wide, because algorithm group reflectors by block (and not by band)
+  auto taus = allGatherTaus(k_reflectors, block_size.cols(), mat_local_taus, grid);
+  ASSERT_EQ(taus.size(), k_reflectors);
 
-//   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
-// }
+  checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
+}
 
-// TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
-//   for (auto&& comm_grid : this->commGrids()) {
-//     for (const auto& [size, block_size, band_size] : configs) {
-//       testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
-//     }
-//   }
-// }
+TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs) {
+      testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
 
-// TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
-//   for (auto&& comm_grid : this->commGrids()) {
-//     for (const auto& [size, block_size, band_size] : configs_subband) {
-//       testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
-//     }
-//   }
-// }
+TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs_subband) {
+      testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
 
-// #ifdef DLAF_WITH_GPU
-// TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
-//   for (auto&& comm_grid : this->commGrids()) {
-//     for (const auto& [size, block_size, band_size] : configs) {
-//       testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
-//     }
-//   }
-// }
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs) {
+      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
 
-// TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
-//   for (auto&& comm_grid : this->commGrids()) {
-//     for (const auto& [size, block_size, band_size] : configs_subband) {
-//       testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
-//     }
-//   }
-// }
-// #endif
+TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
+  for (auto&& comm_grid : this->commGrids()) {
+    for (const auto& [size, block_size, band_size] : configs_subband) {
+      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+    }
+  }
+}
+#endif

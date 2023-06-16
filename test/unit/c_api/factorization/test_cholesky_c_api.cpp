@@ -57,13 +57,10 @@ TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    // {0, 2},                              // m = 0
-    // {5, 8}, {34, 34},                    // m <= mb
-    // {4, 3},
-    // {16, 10},
-    // {34, 13},
-    {4, 1},  // m > mb
-             //    {32, 5}  // m > mb
+    //{0, 2},                              // m = 0
+    //{5, 8}, {34, 34},                    // m <= mb
+    //{4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
+    {4, 1}, {34, 13}, {32, 5}  // m > mb
 };
 
 template <class T, Backend B, Device D>
@@ -102,22 +99,10 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     
     local_a_ptr = toplefttile_a.ptr();
     lld = toplefttile_a.ld();
-  } // Destroy tile (avoids issues with runtime resume/suspend)
-
-  std::stringstream ssinfo;
-
-  auto rank = grid.fullCommunicator().rank();
-  ssinfo << rank << " Local element (0, 0): " << *local_a_ptr << "\n";
+  } // Destroy tile (avoids deoendency issues down the line)
 
   DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
   
-  ssinfo << rank << " Distribution localSize rows: " << mat_h.distribution().localSize().rows() << "\n";
-  ssinfo << rank << " Distribution localSize cols: " << mat_h.distribution().localSize().cols() << "\n";
-  ssinfo << rank << " lld: " << lld << "\n";
-  ssinfo << "\n";
-
-  std::cout << ssinfo.str() << std::flush;
-
   // Suspend pika to ensure it is resumed by the C API
   pika::suspend();
 
@@ -129,11 +114,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   }
   
   // Resume pika for the checks (suspended by the C API)
-  std::stringstream ssinfo2;
-  ssinfo2 << rank << " calling pika::resume()... ";
   pika::resume();
-  ssinfo2 << rank << " DONE.\n";
-  std::cout << ssinfo2.str() << std::flush;
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);

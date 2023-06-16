@@ -21,7 +21,6 @@
 #include "dlaf/common/pipeline.h"
 #include "dlaf/common/round_robin.h"
 #include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
 #include "dlaf/communication/broadcast_panel.h"
 #include "dlaf/communication/communicator_grid.h"
 #include "dlaf/communication/kernels.h"
@@ -198,7 +197,6 @@ void BackTransformationReductionToBand<backend, device, T>::call(
     }
 
     const LocalTileIndex t_index{Coord::Col, k};
-    // auto taus_panel = taus.read(t_index);
     dlaf::factorization::internal::computeTFactor<backend>(panelV, mat_taus.read(t_index),
                                                            panelT.readwrite(t_index));
 
@@ -229,11 +227,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationReductionToBand<B, D, T>::call(
-    comm::CommunicatorGrid grid, const SizeType b, Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
-    common::internal::vector<
-        pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-        taus) {
+void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType b,
+                                                      Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
+                                                      Matrix<const T, Device::CPU>& mat_taus) {
   namespace ex = pika::execution::experimental;
   using namespace bt_red_band;
 
@@ -320,12 +316,11 @@ void BackTransformationReductionToBand<B, D, T>::call(
         }
       }
 
+      const GlobalTileIndex taus_index{Coord::Col, k};
       const SizeType k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
-      auto taus_panel = taus[k_local];
-
-      using dlaf::factorization::internal::computeTFactor;
-      computeTFactor<B>(panelV, taus_panel, panelT.readwrite(t_index), mpi_col_task_chain);
+      dlaf::factorization::internal::computeTFactor<B>(panelV, mat_taus.read(taus_index),
+                                                       panelT.readwrite(t_index), mpi_col_task_chain);
 
       // WH = V T
       for (const auto& idx : panel_view.iteratorLocal()) {

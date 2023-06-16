@@ -9,7 +9,6 @@
 //
 #pragma once
 
-#include "dlaf/common/vector.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/types.h"
 
@@ -20,12 +19,8 @@ struct BackTransformationReductionToBand {
   static void call(SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                    Matrix<const T, Device::CPU>& mat_taus);
 
-  static void call(
-      comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
-      Matrix<const T, device>& mat_v,
-      common::internal::vector<
-          pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-          taus);
+  static void call(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
+                   Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus);
 };
 
 // ETI

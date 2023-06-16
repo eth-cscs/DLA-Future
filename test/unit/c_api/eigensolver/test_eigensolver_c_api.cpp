@@ -11,6 +11,8 @@
 #include <functional>
 #include <tuple>
 
+#include <pika/init.hpp>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>
 #include <dlaf/eigensolver/eigensolver/api.h>
@@ -25,8 +27,6 @@
 #include "test_eigensolver_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
-
-#include <pika/init.hpp>
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
@@ -64,9 +64,10 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, eigensolver_min_band}
-    //{4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
-    {32, 5, 100},
-    //{34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
+    {34, 13, 100},
+    {32, 5, 100},  // m > mb
+    {34, 8, 3},
+    {32, 6, 3}  // m > mb, sub-band
 };
 
 template <class T, Backend B, Device D, class... GridIfDistributed>
@@ -109,33 +110,48 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
 
     // Get top left local tiles
-    auto toplefttile_a =
-        pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
-    auto toplefttile_eigenvalues =
-        pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
-    auto toplefttile_eigenvectors =
-        pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
+    int lld_a, lld_eigenvectors;
+    T *local_a_ptr, *local_eigenvectors_ptr, *eigenvalues_ptr;
+    {
+      auto toplefttile_a =
+          pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
+      auto toplefttile_eigenvalues =
+          pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
+      auto toplefttile_eigenvectors =
+          pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
 
-    int lld = mat_a_h.distribution().localSize().rows();
-    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
+      lld_a = toplefttile_a.ld();
+      lld_eigenvectors = toplefttile_eigenvectors.ld();
+
+      local_a_ptr = toplefttile_a.ptr();
+      local_eigenvectors_ptr = toplefttile_eigenvectors.ptr();
+      eigenvalues_ptr = toplefttile_eigenvalues.ptr();
+
+    }  // Destroy tiles (avoid spurious dependencies)
+    DLAF_descriptor dlaf_desc_a = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld_a};
+    DLAF_descriptor dlaf_desc_eigenvectors = {(int) m, (int) m, (int) mb, (int) mb,        0,
+                                              0,       1,       1,        lld_eigenvectors};
 
     // Suspend pika to ensure it is resumed by the C API
     pika::suspend();
 
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc,
-                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), dlaf_desc);
+      C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                           local_eigenvectors_ptr, dlaf_desc_eigenvectors);
     }
     else {
-      C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, toplefttile_a.ptr(), dlaf_desc,
-                           toplefttile_eigenvalues.ptr(), toplefttile_eigenvectors.ptr(), dlaf_desc);
+      C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                           local_eigenvectors_ptr, dlaf_desc_eigenvectors);
     }
 
     return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
   if (mat_a_h.size().isEmpty())
-     return;
+    return;
+
+  // Resume pika runtime suspended by C API for correctness checks
+  pika::resume();
 
   testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
 
@@ -147,7 +163,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        //getTuneParameters().eigensolver_min_band = b_min;
+        // getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::MC, Device::CPU>(uplo, m, mb, grid);
       }
     }
@@ -159,7 +175,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        //getTuneParameters().eigensolver_min_band = b_min;
+        // getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU>(uplo, m, mb, grid);
       }
     }

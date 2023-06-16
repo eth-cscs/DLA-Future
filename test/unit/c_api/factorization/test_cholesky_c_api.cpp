@@ -64,7 +64,9 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {32, 5}  // m > mb
 };
 
-template <class T, Backend B, Device D>
+enum class API { dlaf, scalapack };
+
+template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
   const char* argv[] = {"test_cholesky_c_api", nullptr};
@@ -103,16 +105,27 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     lld = toplefttile_a.ld();
   }  // Destroy tile (avoids deoendency issues down the line)
 
-  DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
-
   // Suspend pika to ensure it is resumed by the C API
   pika::suspend();
 
-  if constexpr (std::is_same_v<T, double>) {
-    C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+  if constexpr (api == API::dlaf) {
+    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
+    if constexpr (std::is_same_v<T, double>) {
+      C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+    }
+    else {
+      C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+    }
   }
-  else {
-    C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+  else if constexpr (api == API::scalapack) {
+    int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld};
+    int info = -1;
+    if constexpr (std::is_same_v<T, double>) {
+      C_dlaf_pdpotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);
+    }
+    else {
+      C_dlaf_pspotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);
+    }
   }
 
   // Resume pika for the checks (suspended by the C API)
@@ -125,22 +138,44 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   dlaf_finalize();
 }
 
-TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
+TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(comm_grid, uplo, m, mb);
+      }
+    }
+  }
+}
+
+TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (const auto& [m, mb] : sizes) {
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(comm_grid, uplo, m, mb);
       }
     }
   }
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
+TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(comm_grid, uplo, m, mb);
+      }
+    }
+  }
+}
+#endif
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
+  for (const auto& comm_grid : this->commGrids()) {
+    for (auto uplo : blas_uplos) {
+      for (const auto& [m, mb] : sizes) {
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(comm_grid, uplo, m, mb);
       }
     }
   }

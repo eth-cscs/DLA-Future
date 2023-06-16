@@ -90,6 +90,11 @@ public:
     else
       return col_;
   }
+  
+  /// Return full communicator order
+  dlaf::common::Ordering fullCommunicatorOrder() noexcept {
+    return FULL_COMMUNICATOR_ORDER;
+  }
 
   /// Prints information about the CommunicationGrid.
   friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {

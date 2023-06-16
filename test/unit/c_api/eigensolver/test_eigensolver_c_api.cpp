@@ -81,7 +81,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
-  
+
   char grid_order = grid.fullCommunicatorOrder() == dlaf::common::Ordering::RowMajor ? 'R' : 'C';
 
   int dlaf_context =

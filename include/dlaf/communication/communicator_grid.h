@@ -90,7 +90,7 @@ public:
     else
       return col_;
   }
-  
+
   /// Return full communicator order
   dlaf::common::Ordering fullCommunicatorOrder() noexcept {
     return FULL_COMMUNICATOR_ORDER;

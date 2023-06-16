@@ -27,17 +27,6 @@ struct Unwrapper {
   }
 };
 
-// TODO: Remove shared_future specialization.
-// The external types shared_future, and reference_wrapper are unwrapped by
-// calling their get methods.
-// template <typename T>
-// struct Unwrapper<pika::shared_future<T>> {
-//   template <typename U>
-//   static decltype(auto) unwrap(U&& u) {
-//     return u.get();
-//   }
-// };
-
 template <typename T>
 struct Unwrapper<std::reference_wrapper<T>> {
   template <typename U>

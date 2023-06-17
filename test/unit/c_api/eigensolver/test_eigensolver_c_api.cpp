@@ -72,6 +72,9 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 enum class API { dlaf, scalapack };
 
+DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);
+DLAF_EXTERN_C void Cblacs_gridexit(int ictxt);
+
 template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {
   const char* argv[] = {"test_c_api_", nullptr};
@@ -84,8 +87,20 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
   char grid_order = grid.fullCommunicatorOrder() == dlaf::common::Ordering::RowMajor ? 'R' : 'C';
 
-  int dlaf_context =
-      dlaf_create_grid(grid.fullCommunicator(), grid.size().rows(), grid.size().cols(), grid_order);
+  int dlaf_context = -1;
+  if constexpr (api == API::dlaf) {
+    // Create DLAF grid directly
+    dlaf_context =
+        dlaf_create_grid(grid.fullCommunicator(), grid.size().rows(), grid.size().cols(), grid_order);
+  }
+  else if constexpr (api == API::scalapack) {
+    // Create BLACS grid
+    Cblacs_get(0, 0, &dlaf_context);
+    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
+
+    // Create DLAF grid from BLACS context
+    dlaf_create_grid_from_blacs(dlaf_context);
+  }
 
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -177,6 +192,10 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
   dlaf_free_grid(dlaf_context);
   dlaf_finalize();
+
+  if constexpr (api == API::scalapack) {
+    Cblacs_gridexit(dlaf_context);
+  }
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {

@@ -295,7 +295,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>
-  $<TARGET_OBJECTS:dlaf.c_api_object>
+  $<$<BOOL:${DLAF_WITH_C_API}>:$<TARGET_OBJECTS:dlaf.c_api_object>>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)

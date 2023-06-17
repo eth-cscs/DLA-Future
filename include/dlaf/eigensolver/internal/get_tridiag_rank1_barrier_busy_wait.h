@@ -16,7 +16,7 @@
 namespace dlaf::eigensolver::internal {
 
 inline std::chrono::duration<double> getTridiagRank1BarrierBusyWait() noexcept {
-  return std::chrono::microseconds(getTuneParameters().red2band_barrier_busy_wait_us);
+  return std::chrono::microseconds(getTuneParameters().tridiag_rank1_barrier_busy_wait_us);
 }
 
 }

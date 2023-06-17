@@ -174,8 +174,8 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
                            "tridiag-rank1-nworkers");
 
-  updateConfigurationValue(vm, param.red2band_barrier_busy_wait_us, "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US",
-                           "tridiag-rank1-barrier-busy-wait-us");
+  updateConfigurationValue(vm, param.tridiag_rank1_barrier_busy_wait_us,
+                           "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US", "tridiag-rank1-barrier-busy-wait-us");
 
   updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size,
                            "DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",

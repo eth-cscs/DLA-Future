@@ -191,11 +191,9 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device::CPU>& mat_local_taus) {
+auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
   auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
       mat_local_taus, common::iterate_range2d(LocalTileSize(1, mat_local_taus.nrTiles().cols())))));
-
-  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
   // TODO: taus guaranteed to be contiguous? i.e. can it all be copied in one
   // go? not necessary for performance here...
@@ -206,13 +204,14 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device
       taus.push_back(t.get()(TileElementIndex(0, i)));
     }
   }
-  DLAF_ASSERT(taus.size() == k, taus.size(), k);
+
+  DLAF_ASSERT(to_SizeType(taus.size()) == k, taus.size(), k);
 
   return taus;
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device::CPU>& mat_taus,
+auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
                    comm::CommunicatorGrid comm_grid) {
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
@@ -221,7 +220,7 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device
     const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(0, i)).col();
     const bool is_owner = owner == comm_grid.rank().col();
 
-    const auto this_chunk_size = mat_taus.tileSize(GlobalTileIndex(0, i)).cols();
+    const auto chunk_size = mat_taus.tileSize(GlobalTileIndex(0, i)).cols();
 
     if (is_owner) {
       auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(0, i)));
@@ -231,10 +230,10 @@ auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device
       }
     }
     else {
-      Tile<T, Device::CPU> tile_local(TileElementSize(1, this_chunk_size),
-                                      MemoryView<T, Device::CPU>(this_chunk_size), 1);
+      Tile<T, Device::CPU> tile_local(TileElementSize(1, chunk_size),
+                                      MemoryView<T, Device::CPU>(chunk_size), 1);
       sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
-      for (SizeType k = 0; k < this_chunk_size; ++k) {
+      for (SizeType k = 0; k < chunk_size; ++k) {
         taus.push_back(tile_local(TileElementIndex(0, k)));
       }
     }
@@ -342,16 +341,15 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
     return eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
   }();
 
+  ASSERT_EQ(mat_local_taus.blockSize().cols(), block_size.rows());
+
   checkUpperPartUnchanged(reference, mat_a_h);
 
   auto mat_v = allGather(blas::Uplo::Lower, mat_a_h);
   auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  // Note:
-  // What? chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by
-  // band) chunks are tile_size.cols() wide, because algorithm group reflectors by tile (and not by band)
-  auto taus = allGatherTaus(k_reflectors, block_size.cols(), mat_local_taus);
+  auto taus = allGatherTaus(k_reflectors, mat_local_taus);
   ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
@@ -417,15 +415,15 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
     return mat_local_taus;
   }();
 
+  ASSERT_EQ(mat_local_taus.blockSize().cols(), block_size.rows());
+
   checkUpperPartUnchanged(reference, matrix_a_h);
 
   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  // Note:
-  // chunks are block_size.cols() wide, because algorithm group reflectors by block (and not by band)
-  auto taus = allGatherTaus(k_reflectors, block_size.cols(), mat_local_taus, grid);
+  auto taus = allGatherTaus(k_reflectors, mat_local_taus, grid);
   ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);

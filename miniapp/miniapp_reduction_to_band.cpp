@@ -111,6 +111,7 @@ struct reductionToBandMiniapp {
         matrix_host.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
+        // TODO: hangs?
         dlaf::common::Timer<> timeit;
         auto bench = [&]() {
           if (opts.local)

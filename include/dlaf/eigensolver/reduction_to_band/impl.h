@@ -42,6 +42,7 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/retiled_matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/schedulers.h>

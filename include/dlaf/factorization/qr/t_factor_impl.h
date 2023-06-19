@@ -58,7 +58,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
   template <class VISender, class TSender>
   static auto gemvColumnT(SizeType first_row_tile, VISender tile_vi,
-                          matrix::ReadOnlyTileSender<T, Device::CPU>& taus, TSender&& tile_t) {
+                          matrix::ReadOnlyTileSender<T, Device::CPU> taus, TSender&& tile_t) {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
@@ -68,8 +68,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
 
       common::internal::SingleThreadedBlasScope single;
       for (SizeType j = 0; j < k; ++j) {
-        // TODO: Use Coord::Col constructor for index
-        const T tau = taus(TileElementIndex(0, j));
+        const T tau = taus({0, j});
 
         const TileElementIndex t_start{0, j};
 
@@ -99,7 +98,7 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     };
     return dlaf::internal::transform(
         dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
-        std::move(gemv_func), ex::when_all(tile_vi, taus, std::forward<TSender>(tile_t)));
+        std::move(gemv_func), ex::when_all(tile_vi, std::move(taus), std::forward<TSender>(tile_t)));
   }
 
   template <typename TSender>
@@ -144,7 +143,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
 
   template <class VISender, class TSender>
   static auto gemvColumnT(SizeType first_row_tile, VISender&& tile_vi,
-                          matrix::ReadOnlyTileSender<T, Device::CPU>& taus, TSender&& tile_t) noexcept {
+                          matrix::ReadOnlyTileSender<T, Device::CPU> taus, TSender&& tile_t) noexcept {
     namespace ex = pika::execution::experimental;
 
     auto gemv_func = [first_row_tile](cublasHandle_t handle, const auto& tile_v, const auto& taus,
@@ -157,13 +156,15 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         whip::stream_t stream;
         DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        // TODO: Check that taus() is safe. Is the layout always correct for this?
+        // Assume taus is a column vector with column major layout, i.e. elements are contiguous
+        // TODO: Can this be asserted more directly?
+        DLAF_ASSERT(taus.size().cols() == 1, taus);
         whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus(), sizeof(T),
                               sizeof(T), to_sizet(k), whip::memcpy_default, stream);
       }
 
       for (SizeType j = 0; j < k; ++j) {
-        const auto mtau = util::blasToCublasCast(-taus(TileElementIndex(0, j)));
+        const auto mtau = util::blasToCublasCast(-taus({0, j}));
         const auto one = util::blasToCublasCast(T{1});
 
         const TileElementIndex t_start{0, j};
@@ -194,7 +195,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
     return dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
         dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
         std::move(gemv_func),
-        ex::when_all(std::forward<VISender>(tile_vi), taus, std::forward<TSender>(tile_t)));
+        ex::when_all(std::forward<VISender>(tile_vi), std::move(taus), std::forward<TSender>(tile_t)));
   }
 
   template <class TSender>

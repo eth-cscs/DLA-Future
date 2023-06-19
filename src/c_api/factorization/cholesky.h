@@ -36,7 +36,7 @@ void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
   dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
 
-  dlaf::comm::Index2D src_rank_index(0, 0);  // WARN: Is this always the case?
+  dlaf::comm::Index2D src_rank_index(dlaf_desca.isrc, dlaf_desca.jsrc);
 
   dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
                                           communicator_grid.rank(), src_rank_index);
@@ -77,7 +77,7 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
   // The grid needs to be created with dlaf_create_grid_from_blacs
   auto communicator_grid = dlaf_grids.at(desca[1]);
   dlaf::matrix::Distribution distribution({desca[2], desca[3]}, {desca[4], desca[5]},
-                                          communicator_grid.size(), communicator_grid.rank(), {0, 0});
+                                          communicator_grid.size(), communicator_grid.rank(), {desca[6], desca[7]});
   dlaf::matrix::LayoutInfo layout_info = colMajorLayout(distribution, desca[8]);
 
   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout_info, a);

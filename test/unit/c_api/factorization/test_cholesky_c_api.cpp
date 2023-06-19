@@ -99,8 +99,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
-  // Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
-  Index2D src_rank_index(0, 0);  // TODO: Relax this assumption?
+  Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
 
   Distribution distribution(size, block_size, grid.size(), grid.rank(), src_rank_index);
   Matrix<T, Device::CPU> mat_h(std::move(distribution));
@@ -126,7 +125,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   pika::suspend();
 
   if constexpr (api == API::dlaf) {
-    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld};
+    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld};
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
@@ -135,7 +134,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     }
   }
   else if constexpr (api == API::scalapack) {
-    int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld};
+    int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), lld};
     int info = -1;
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_pdpotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);

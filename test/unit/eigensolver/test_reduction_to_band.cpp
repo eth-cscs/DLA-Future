@@ -193,15 +193,14 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 template <class T>
 auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
   auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
-      mat_local_taus, common::iterate_range2d(LocalTileSize(1, mat_local_taus.nrTiles().cols())))));
+      mat_local_taus, common::iterate_range2d(LocalTileSize(mat_local_taus.nrTiles().rows(), 1)))));
 
-  // TODO: taus guaranteed to be contiguous? i.e. can it all be copied in one
-  // go? not necessary for performance here...
+  // TODO: Guaranteed to be contiguous right now (column vector). Update to use std::copy.
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
   for (const auto& t : local_taus_tiles) {
-    for (SizeType i = 0; i < t.get().size().cols(); ++i) {
-      taus.push_back(t.get()(TileElementIndex(0, i)));
+    for (SizeType i = 0; i < t.get().size().rows(); ++i) {
+      taus.push_back(t.get()(TileElementIndex(i, 0)));
     }
   }
 
@@ -216,40 +215,25 @@ auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  for (SizeType i = 0; i < mat_taus.nrTiles().cols(); ++i) {
-    const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(0, i)).col();
+  for (SizeType i = 0; i < mat_taus.nrTiles().rows(); ++i) {
+    const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(i, 0)).row();
     const bool is_owner = owner == comm_grid.rank().col();
 
-    const auto chunk_size = mat_taus.tileSize(GlobalTileIndex(0, i)).cols();
+    const auto chunk_size = mat_taus.tileSize(GlobalTileIndex(i, 0)).rows();
 
     if (is_owner) {
-      auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(0, i)));
+      auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(i, 0)));
       sync::broadcast::send(comm_grid.rowCommunicator(), common::make_data(tile_local.get()));
-      for (SizeType k = 0; k < tile_local.get().size().cols(); ++k) {
-        taus.push_back(tile_local.get()(TileElementIndex(0, k)));
-      }
+      std::copy(tile_local.get().ptr(), tile_local.get().ptr() + tile_local.get().size().rows(),
+                std::back_inserter(taus));
     }
     else {
-      Tile<T, Device::CPU> tile_local(TileElementSize(1, chunk_size),
-                                      MemoryView<T, Device::CPU>(chunk_size), 1);
+      Tile<T, Device::CPU> tile_local(TileElementSize(chunk_size, 1),
+                                      MemoryView<T, Device::CPU>(chunk_size), chunk_size);
       sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
-      for (SizeType k = 0; k < chunk_size; ++k) {
-        taus.push_back(tile_local(TileElementIndex(0, k)));
-      }
+      std::copy(tile_local.ptr(), tile_local.ptr() + tile_local.size().rows(), std::back_inserter(taus));
     }
-
-    // copy each chunk contiguously
   }
-
-  // TODO: is the early exit required?
-  // Note:
-  // this is just an early exit
-  // const SizeType n_local_chunks =
-  //     n_chunks / comm_grid.size().cols() +
-  //     (comm_grid.rank().col() < (n_chunks % comm_grid.size().cols()) ? 1 : 0);
-
-  // if (local_taus.size() != to_sizet(n_local_chunks))
-  //   return taus;
 
   return taus;
 }
@@ -341,7 +325,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
     return eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
   }();
 
-  ASSERT_EQ(mat_local_taus.blockSize().cols(), block_size.rows());
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, mat_a_h);
 
@@ -415,7 +399,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
     return mat_local_taus;
   }();
 
-  ASSERT_EQ(mat_local_taus.blockSize().cols(), block_size.rows());
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, matrix_a_h);
 

@@ -28,7 +28,7 @@ namespace dlaf::eigensolver {
 /// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
 /// triangular part will be used.
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
-/// @return a row vector of size max(0, mat_a.size().rows() - band_size - 1)
+/// @return a column vector of size max(0, mat_a.size().rows() - band_size - 1)
 /// (block size mat_a.blockSize.rows()) containing taus
 ///
 /// @pre mat_a has a square size
@@ -95,7 +95,7 @@ v v v v * *
 /// band-diagonal result together with the elementary reflectors as described above. Just the tiles of
 /// the lower triangular part will be used.
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
-/// @return a row vector of size max(0, mat_a.size().rows() - band_size - 1)
+/// @return a column vector of size max(0, mat_a.size().rows() - band_size - 1)
 /// (block size mat_a.blockSize.rows()) containing taus
 ///
 /// @pre mat_a has a square size

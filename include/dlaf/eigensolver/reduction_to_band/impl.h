@@ -317,7 +317,7 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
             taus({0, j}) = computeReflector(tiles, j);
           }
 
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP2a: compute w (multi-threaded)
           const SizeType pt_cols = cols - (j + 1);
@@ -327,16 +327,16 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
 
           w[index] = common::internal::vector<T>(pt_cols, 0);
           computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP2b: reduce w results (single-threaded)
           if (index == 0)
             dlaf::eigensolver::internal::reduceColumnVectors(w);
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP3: update trailing panel (multi-threaded)
           updateTrailingPanel(has_head, tiles, j, w[0], taus({0, j}), begin, end);
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
         }
       });
   ex::start_detached(std::move(s));
@@ -635,7 +635,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
             const bool has_head = rankHasHead;
             taus({0, j}) = computeReflector(has_head, pcomm.get(), tiles, j);
           }
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP2a: compute w (multi-threaded)
           const SizeType pt_cols = cols - (j + 1);
@@ -646,18 +646,18 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
           w[index] = common::internal::vector<T>(pt_cols, 0);
           computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP2b: reduce w results (single-threaded)
           if (index == 0) {
             dlaf::eigensolver::internal::reduceColumnVectors(w);
             comm::sync::allReduceInPlace(pcomm.get(), MPI_SUM, common::make_data(w[0].data(), pt_cols));
           }
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
           // STEP3: update trailing panel (multi-threaded)
           updateTrailingPanel(has_head, tiles, j, w[0], taus({0, j}), begin, end);
-          barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait(barrier_busy_wait);
         }
       });
   ex::start_detached(std::move(s));
@@ -874,7 +874,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view) {
+            Matrix<T, D>& mat_a, Matrix<T, Device::CPU>& mat_taus, SizeType j_sub,
+            const matrix::SubPanelView& panel_view) {
     auto& v = panels_v.nextResource();
 
     // copy to CPU
@@ -883,7 +884,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     // compute on CPU
     using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
     auto taus = computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                                       std::forward<CommSender>(mpi_col_chain_panel), v, panel_view);
+                                       std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
+                                       panel_view);
 
     // copy back to GPU
     copyFromCPU(panel_view, v, mat_a);

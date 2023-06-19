@@ -65,3 +65,4 @@ add_subdirectory(solver)
 # C API
 add_subdirectory(c_api/eigensolver)
 add_subdirectory(c_api/factorization)
+add_subdirectory(c_api/grid)

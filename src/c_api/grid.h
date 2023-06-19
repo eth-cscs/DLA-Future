@@ -14,6 +14,3 @@
 #include <dlaf/communication/communicator_grid.h>
 
 extern std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
-
-// TODO: Needs testing!
-dlaf::common::Ordering grid_layout(MPI_Comm communicator, int nprow, int npcol, int myprow, int mypcol);

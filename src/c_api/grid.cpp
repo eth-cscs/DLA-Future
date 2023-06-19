@@ -11,6 +11,7 @@
 #include "grid.h"
 
 #include <limits>
+#include <stdio.h>
 
 #include <mpi.h>
 
@@ -23,13 +24,12 @@
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
 int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
-  // TODO: Use a SizeType larger than BLACS context? TBD
   // dlaf_context starts from INT_MAX to reeduce the likelihood of clashes with blacs contexts
   // blacs starts to number contexts from 0
   int dlaf_context = std::numeric_limits<int>::max() - std::size(dlaf_grids);
 
-  auto dlaf_order =
-      order == 'C' ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
+  auto dlaf_order = order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
+                                                 : dlaf::common::Ordering::RowMajor;
 
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(comm));
 
@@ -53,19 +53,20 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt) {
 
   Cblacs_gridinfo(blacs_ctxt, &dims[0], &dims[1], &coords[0], &coords[1]);
 
-  // TODO: Get ordering from BLACS
-  auto layout = grid_layout(communicator, dims[0], dims[1], coords[0], coords[1]);
+  auto order = grid_ordering(communicator, dims[0], dims[1], coords[0], coords[1]);
+  auto dlaf_order =
+      order == 'C' ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
 
-  dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], layout);
+  dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], dlaf_order);
 }
 
 void dlaf_free_grid(int blacs_ctxt) {
   dlaf_grids.erase(blacs_ctxt);
 }
 
-dlaf::common::Ordering grid_layout(MPI_Comm communicator, int nprow, int npcol, int myprow, int mypcol) {
+char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) {
   int rank;
-  DLAF_MPI_CHECK_ERROR(MPI_Comm_rank(communicator, &rank));
+  MPI_Comm_rank(comm, &rank);
 
   bool _row_major = false, _col_major = false;
   bool row_major, col_major;
@@ -73,14 +74,17 @@ dlaf::common::Ordering grid_layout(MPI_Comm communicator, int nprow, int npcol, 
   if (rank == myprow * npcol + mypcol) {
     _row_major = true;
   }
-  else if (rank == mypcol * nprow + myprow) {
+  if (rank == mypcol * nprow + myprow) {
     _col_major = true;
   }
 
-  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_row_major, &row_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
-  DLAF_MPI_CHECK_ERROR(MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, communicator));
+  MPI_Allreduce(&_row_major, &row_major, 1, MPI_C_BOOL, MPI_LAND, comm);
+  MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, comm);
 
-  // TODO: Fail gracefully for gridmap-allocated functions
+  if (!row_major and !col_major) {
+    std::cout << "Grid layout must be row major or columns majord." << std::endl;
+    exit(-1);
+  }
 
-  return col_major ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
+  return col_major ? 'C' : 'R';
 }

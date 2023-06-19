@@ -18,6 +18,7 @@ DLAF_EXTERN_C MPI_Comm Cblacs2sys_handle(int ictxt);
 DLAF_EXTERN_C void Cblacs_get(int ictxt, int what, int* val);
 DLAF_EXTERN_C void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
 
-DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order = 'R');
+DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order);
 DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
 DLAF_EXTERN_C void dlaf_free_grid(int blacs_ctxt);
+DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol);

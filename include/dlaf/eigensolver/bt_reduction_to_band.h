@@ -31,7 +31,7 @@ namespace eigensolver {
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
-/// @param mat_taus is a row vector of size m (blocksize mb). The j-th element is the scaling factor
+/// @param mat_taus is a column vector of size m (blocksize mb). The j-th element is the scaling factor
 /// for the j-th HH tranformation.
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
@@ -51,7 +51,7 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
     const SizeType mb = mat_v.blockSize().rows();
     return std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb));
   };
-  DLAF_ASSERT(mat_taus.nrTiles().cols() == nr_reflectors_blocks(), mat_taus.size().cols(), mat_v, b);
+  DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);
 
   internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
 }
@@ -65,7 +65,7 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
-/// @param mat_taus is a row vector of size m (blocksize mb). The j-th element is the scaling factor
+/// @param mat_taus is a column vector of size m (blocksize mb). The j-th element is the scaling factor
 /// for the j-th HH tranformation.
 /// @pre mat_c is distributed,
 /// @pre mat_v is distributed according to grid.
@@ -86,7 +86,7 @@ void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeTy
     return mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
         std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb)));
   };
-  DLAF_ASSERT(mat_taus.distribution().localNrTiles().cols() == nr_reflectors_blocks(), mat_taus, mat_v,
+  DLAF_ASSERT(mat_taus.distribution().localNrTiles().rows() == nr_reflectors_blocks(), mat_taus, mat_v,
               b);
 
   internal::BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);

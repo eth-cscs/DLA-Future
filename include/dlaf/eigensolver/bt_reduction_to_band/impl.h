@@ -195,8 +195,9 @@ void BackTransformationReductionToBand<backend, device, T>::call(
       }
     }
 
+    const LocalTileIndex taus_index{Coord::Row, k};
     const LocalTileIndex t_index{Coord::Col, k};
-    dlaf::factorization::internal::computeTFactor<backend>(panelV, mat_taus.read(t_index),
+    dlaf::factorization::internal::computeTFactor<backend>(panelV, mat_taus.read(taus_index),
                                                            panelT.readwrite(t_index));
 
     // W = V T
@@ -315,7 +316,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
         }
       }
 
-      const GlobalTileIndex taus_index{Coord::Col, k};
+      const GlobalTileIndex taus_index{Coord::Row, k};
       const SizeType k_local = dist_t.template localTileFromGlobalTile<Coord::Col>(k);
       const LocalTileIndex t_index{Coord::Col, k_local};
       dlaf::factorization::internal::computeTFactor<B>(panelV, mat_taus.read(taus_index),

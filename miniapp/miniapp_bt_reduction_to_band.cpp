@@ -121,10 +121,10 @@ struct BacktransformBandToTridiagMiniapp {
 
     auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
 
-    Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(1, nr_reflectors),
-                                                 TileElementSize(1, opts.mb),
-                                                 Size2D(1, comm_grid.size().cols()),
-                                                 Index2D(0, comm_grid.rank().col()), Index2D(0, 0)));
+    Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                                 TileElementSize(opts.mb, 1),
+                                                 Size2D(comm_grid.size().cols(), 1),
+                                                 Index2D(comm_grid.rank().col(), 0), Index2D(0, 0)));
     set(mat_taus, [](const GlobalElementIndex&) { return T(2); });
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {

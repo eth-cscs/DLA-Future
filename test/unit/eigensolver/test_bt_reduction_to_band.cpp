@@ -151,23 +151,22 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
-  Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(1, nr_reflectors),
-                                               TileElementSize(1, mb), comm::Size2D(1, 1),
+  Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                               TileElementSize(mb, 1), comm::Size2D(1, 1),
                                                comm::Index2D(0, 0), comm::Index2D(0, 0)));
-  // TODO: temporary sanity check.
-  DLAF_ASSERT(std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)) == mat_taus.nrTiles().cols(),
-              std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)), mat_taus.nrTiles().cols());
+  DLAF_ASSERT(std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)) == mat_taus.nrTiles().rows(),
+              std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)), mat_taus.nrTiles().rows());
 
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
     DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
-    auto tau_tile = sync_wait(mat_taus.readwrite(LocalTileIndex(0, k / mb)));
-    DLAF_ASSERT(std::min(k + mb, nr_reflectors) - k == tau_tile.size().cols(),
-                std::min(k + mb, nr_reflectors) - k, tau_tile.size().cols());
+    auto tau_tile = sync_wait(mat_taus.readwrite(LocalTileIndex(k / mb, 0)));
+    DLAF_ASSERT(std::min(k + mb, nr_reflectors) - k == tau_tile.size().rows(),
+                std::min(k + mb, nr_reflectors) - k, tau_tile.size().rows());
     // TODO: The indexing here is more convoluted than it should be. Currently
     // like this only to mirror the old implementation as much as possible.
     // Needs cleanup.
     for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
-      tau_tile(TileElementIndex(0, j - k)) = taus_loc[j];
+      tau_tile({j - k, 0}) = taus_loc[j];
     }
   }
 
@@ -210,28 +209,27 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   auto taus_loc = setUpTest(b, c_loc, v_loc);
   auto nr_reflectors = taus_loc.size();
 
-  // TODO: rows or cols?
-  Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(1, nr_reflectors),
-                                               TileElementSize(1, mb),
-                                               comm::Size2D(1, mat_v_h.commGridSize().cols()),
-                                               comm::Index2D(0, mat_v_h.rankIndex().col()),
-                                               comm::Index2D(0, mat_v_h.sourceRankIndex().col())));
+  Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                               TileElementSize(mb, 1),
+                                               comm::Size2D(mat_v_h.commGridSize().cols(), 1),
+                                               comm::Index2D(mat_v_h.rankIndex().col(), 0),
+                                               comm::Index2D(mat_v_h.sourceRankIndex().col(), 0)));
   // TODO: temporary sanity check.
-  DLAF_ASSERT(std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)) == mat_taus.nrTiles().cols(),
-              std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)), mat_taus.nrTiles().cols());
+  DLAF_ASSERT(std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)) == mat_taus.nrTiles().rows(),
+              std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)), mat_taus.nrTiles().rows());
 
   for (SizeType k = 0; k < nr_reflectors; k += mb) {
     DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
     if (grid.rank().col() == mat_v_h.distribution().template rankGlobalTile<Coord::Col>(k / mb)) {
       // TODO: Do this asynchronously or just set values in mat_taus directly?
-      auto tau_tile = sync_wait(mat_taus.readwrite(GlobalTileIndex(0, k / mb)));
-      DLAF_ASSERT(std::min(k + mb, nr_reflectors) - k == tau_tile.size().cols(),
-                  std::min(k + mb, nr_reflectors) - k, tau_tile.size().cols());
+      auto tau_tile = sync_wait(mat_taus.readwrite(GlobalTileIndex(k / mb, 0)));
+      DLAF_ASSERT(std::min(k + mb, nr_reflectors) - k == tau_tile.size().rows(),
+                  std::min(k + mb, nr_reflectors) - k, tau_tile.size().rows());
       // TODO: The indexing here is more convoluted than it should be. Currently
       // like this only to mirror the old implementation as much as possible.
       // Needs cleanup.
       for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
-        tau_tile(TileElementIndex(0, j - k)) = taus_loc[j];
+        tau_tile({j - k, 0}) = taus_loc[j];
       }
     }
   }

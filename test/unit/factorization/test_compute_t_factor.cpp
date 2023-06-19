@@ -110,7 +110,7 @@ std::tuple<Matrix<T, Device::CPU>, MatrixLocal<T>> computeHAndTFactor(const Size
   const TileElementSize block_size = v.blockSize();
 
   // compute taus and H_exp
-  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, k), TileElementSize(1, k),
+  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(k, 1), TileElementSize(k, 1),
                                                        comm::Size2D(1, 1), comm::Index2D(0, 0),
                                                        comm::Index2D(0, 0)));
   auto taus_tile = sync_wait(mat_taus.readwrite(GlobalTileIndex(0, 0)));
@@ -125,7 +125,7 @@ std::tuple<Matrix<T, Device::CPU>, MatrixLocal<T>> computeHAndTFactor(const Size
     const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
     const T tau = 2 / (norm * norm);
 
-    taus_tile(TileElementIndex(0, j)) = tau;
+    taus_tile(TileElementIndex(j, 0)) = tau;
 
     MatrixLocal<T> h_i({reflector_size, reflector_size}, block_size);
     set(h_i, preset_eye<T>);

@@ -42,7 +42,7 @@ struct QR_Tfactor {
   /// @param k the number of elementary reflectors to use (from the beginning of the tile)
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus row vector of taus, associated with the related elementary reflector
+  /// @param taus column vector of taus, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
   /// TileElementSize(k, k)
   ///
@@ -70,7 +70,7 @@ struct QR_Tfactor {
   /// @param k the number of elementary reflectors to use (from the beginning of the tile)
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus row vector of taus, associated with the related elementary reflector
+  /// @param taus column vector of taus, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
   /// TileElementSize(k, k)
   /// @param mpi_col_task_chain where internal communications are issued

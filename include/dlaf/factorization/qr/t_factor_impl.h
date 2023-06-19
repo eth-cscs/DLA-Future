@@ -64,11 +64,11 @@ struct Helpers<Backend::MC, Device::CPU, T> {
     auto gemv_func = [first_row_tile](const auto& tile_v, const auto& taus, auto&& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-      DLAF_ASSERT(taus.size().cols() == k, taus.size().cols(), k);
+      DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
 
       common::internal::SingleThreadedBlasScope single;
       for (SizeType j = 0; j < k; ++j) {
-        const T tau = taus({0, j});
+        const T tau = taus({j, 0});
 
         const TileElementIndex t_start{0, j};
 
@@ -150,7 +150,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
                                       auto& tile_t) noexcept {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
-      DLAF_ASSERT(taus.size().cols() == k, taus.size().cols(), k);
+      DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
 
       if (first_row_tile == 0) {
         whip::stream_t stream;
@@ -164,7 +164,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       }
 
       for (SizeType j = 0; j < k; ++j) {
-        const auto mtau = util::blasToCublasCast(-taus({0, j}));
+        const auto mtau = util::blasToCublasCast(-taus({j, 0}));
         const auto one = util::blasToCublasCast(T{1});
 
         const TileElementIndex t_start{0, j};

@@ -80,13 +80,13 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
 
-  char grid_order = grid.fullCommunicatorOrder() == dlaf::common::Ordering::RowMajor ? 'R' : 'C';
+  char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid.rank().row(), grid.rank().col());
 
   int dlaf_context = -1;
   if constexpr (api == API::dlaf) {
     // Create DLAF grid directly
     dlaf_context =
-        dlaf_create_grid(grid.fullCommunicator(), grid.size().rows(), grid.size().cols(), grid_order);
+        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
   }
   else if constexpr (api == API::scalapack) {
     // Create BLACS grid

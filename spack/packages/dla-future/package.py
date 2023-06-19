@@ -115,29 +115,19 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
         # BLAS/LAPACK
         if "^mkl" in spec:
-<<<<<<< HEAD
-            vmap = {"none": "seq", "openmp": "omp", "tbb": "tbb"} # Map MKL variants to LAPACK target name
-            mkl_threads = vmap[spec["intel-mkl"].variants["threads"].value]
-            # TODO: Generalise for intel-oneapi-mkl
-            args += [
-                self.define("DLAF_WITH_MKL", True),
-                self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
-=======
             vmap = {
                 "none": "seq",
                 "openmp": "omp",
                 "tbb": "tbb",
             }  # Map MKL variants to LAPACK target name
+            mkl_threads = vmap[spec["intel-mkl"].variants["threads"].value]
             # TODO: Generalise for intel-oneapi-mkl
             args += [
                 self.define("DLAF_WITH_MKL", True),
                 self.define(
                     "MKL_LAPACK_TARGET",
-                    "mkl::mkl_intel_32bit_{0}_dyn".format(
-                        vmap[spec["intel-mkl"].variants["threads"].value]
-                    ),
+                    f"mkl::mkl_intel_32bit_{mkl_threads}_dyn",
                 ),
->>>>>>> master
             ]
             if "+c_api" in spec: # TODO: Make ScaLAPACK optional?
                 if "^mpich" in spec or "^cray-mpich" in spec:

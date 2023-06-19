@@ -11,10 +11,10 @@
 
 /// @file
 
+#include <functional>
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
-
-#include <functional>
 
 namespace dlaf::common::internal {
 /// Unwrapper is used to unwrap things. The default implementation does

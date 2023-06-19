@@ -14,20 +14,20 @@
 
 #include <blas.hh>
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/callable_object.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/sender/make_sender_algorithm_overloads.h"
-#include "dlaf/sender/policy.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/callable_object.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/sender/make_sender_algorithm_overloads.h>
+#include <dlaf/sender/policy.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/util_matrix.h>
 
 #ifdef DLAF_WITH_GPU
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/lapack/gpu/add.h"
-#include "dlaf/util_cublas.h"
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/lapack/gpu/add.h>
+#include <dlaf/util_cublas.h>
 #endif
 
 namespace dlaf {

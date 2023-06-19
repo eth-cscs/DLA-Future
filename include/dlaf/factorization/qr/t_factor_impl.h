@@ -10,32 +10,30 @@
 
 #pragma once
 
+#include <blas.hh>
+
 #include <pika/execution.hpp>
 
-#include <blas.hh>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/factorization/qr/api.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/sender/keep_future.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
-#endif
 
-#include "dlaf/factorization/qr/api.h"
-
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
-
-#ifdef DLAF_WITH_GPU
-#include "dlaf/blas/tile.h"
+#include <dlaf/blas/tile.h>
 #endif
 
 namespace dlaf::factorization::internal {
@@ -100,10 +98,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       }
       return std::move(tile_t);
     };
-    return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                         pika::execution::thread_priority::high),
-                                     std::move(gemv_func),
-                                     ex::when_all(tile_vi, taus, std::forward<TSender>(tile_t)));
+    return dlaf::internal::transform(
+        dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
+        std::move(gemv_func), ex::when_all(tile_vi, taus, std::forward<TSender>(tile_t)));
   }
 
   template <typename TSender>
@@ -124,9 +121,9 @@ struct Helpers<Backend::MC, Device::CPU, T> {
       // TODO: Why return if the tile is unused?
       return std::move(tile_t);
     };
-    return dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(
-                                         pika::execution::thread_priority::high),
-                                     std::move(trmv_func), std::forward<TSender>(tile_t));
+    return dlaf::internal::transform(
+        dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high),
+        std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };
 
@@ -195,12 +192,10 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       }
       return std::move(tile_t);
     };
-    return dlaf::internal::transform<
-        dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
-                                                         pika::execution::thread_priority::high),
-                                                     std::move(gemv_func),
-                                                     ex::when_all(std::forward<VISender>(tile_vi), taus,
-                                                                  std::forward<TSender>(tile_t)));
+    return dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+        dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
+        std::move(gemv_func),
+        ex::when_all(std::forward<VISender>(tile_vi), taus, std::forward<TSender>(tile_t)));
   }
 
   template <class TSender>
@@ -222,11 +217,9 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       return std::move(tile_t);
     };
 
-    return dlaf::internal::transform<
-        dlaf::internal::TransformDispatchType::Blas>(dlaf::internal::Policy<Backend::GPU>(
-                                                         pika::execution::thread_priority::high),
-                                                     std::move(trmv_func),
-                                                     std::forward<TSender>(tile_t));
+    return dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
+        dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_priority::high),
+        std::move(trmv_func), std::forward<TSender>(tile_t));
   }
 };
 #endif

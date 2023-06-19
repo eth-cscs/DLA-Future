@@ -10,34 +10,32 @@
 
 #pragma once
 
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
-
 #include <pika/execution.hpp>
+
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/kernels.h>
+#include <dlaf/eigensolver/band_to_tridiag/api.h>
+#include <dlaf/eigensolver/internal/get_1d_block_size.h>
+#include <dlaf/lapack/gpu/lacpy.h>
+#include <dlaf/lapack/gpu/laset.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform_mpi.h>
+#include <dlaf/traits.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 #endif
-
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/kernels.h"
-#include "dlaf/eigensolver/band_to_tridiag/api.h"
-#include "dlaf/eigensolver/internal/get_1d_block_size.h"
-#include "dlaf/lapack/gpu/lacpy.h"
-#include "dlaf/lapack/gpu/laset.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform_mpi.h"
-#include "dlaf/traits.h"
 
 namespace dlaf::eigensolver::internal {
 
@@ -575,15 +573,15 @@ public:
 
   void send(const comm::Communicator& comm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
             MPI_Request* req) const noexcept {
-    DLAF_MPI_CHECK_ERROR(
-        MPI_Isend(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, dest, tag, comm, req));
+    DLAF_MPI_CHECK_ERROR(MPI_Isend(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, dest,
+                                   tag, comm, req));
   }
 
   void recv(SizeType sweep, SizeType step, const comm::Communicator& comm, comm::IndexT_MPI src,
             comm::IndexT_MPI tag, MPI_Request* req) noexcept {
     SweepWorker<T>::setId(sweep, step);
-    DLAF_MPI_CHECK_ERROR(
-        MPI_Irecv(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, src, tag, comm, req));
+    DLAF_MPI_CHECK_ERROR(MPI_Irecv(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, src,
+                                   tag, comm, req));
   }
 
   using SweepWorker<T>::compactCopyToTile;
@@ -946,8 +944,8 @@ struct VAccessHelper {
                           TileElementIndex(0, 0),
                       local_row_panel_v, dist_panel.blockSize().rows());
 
-    return dist_panel.localTileIndex(
-        dist_panel.globalTileIndex(GlobalElementIndex{local_row_panel_v, 0}));
+    return dist_panel.localTileIndex(dist_panel.globalTileIndex(GlobalElementIndex{local_row_panel_v,
+                                                                                   0}));
   }
 
 private:
@@ -1330,9 +1328,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         deps_block.resize(ceilDiv(last_step, steps_per_task) + 1);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(scheduleSendWorker(comm, next_rank,
-                                                compute_worker_tag(sweep, block_id.col() + 1),
-                                                w_pipeline()));
+          ex::start_detached(scheduleSendWorker(
+              comm, next_rank, compute_worker_tag(sweep, block_id.col() + 1), w_pipeline()));
         }
       }
     }
@@ -1390,11 +1387,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 else
                   dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
-                ex::start_detached(
-                    comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_panel,
-                                       compute_v_tag(index_v.row(), bottom),
-                                       ex::make_unique_any_sender(
-                                           ex::when_all(std::move(tile_v), std::move(dep)))));
+                ex::start_detached(comm::scheduleRecv(
+                    ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v.row(), bottom),
+                    ex::make_unique_any_sender(ex::when_all(std::move(tile_v), std::move(dep)))));
               }
             };
 

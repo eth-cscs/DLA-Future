@@ -8,20 +8,20 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/communication/kernels/reduce.h"
-
-#include <gtest/gtest.h>
 #include <mpi.h>
 
-#include "dlaf/common/data.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/memory/memory_view.h"
+#include <dlaf/common/data.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/kernels/reduce.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/memory/memory_view.h>
 
-#include "dlaf_test/matrix/util_tile.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/matrix/util_tile.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix::test;
@@ -152,8 +152,8 @@ void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::
   auto input_tile = fixedValueTile(world.rank() + 1);
   matrix::test::set(tt::sync_wait(mat_in.readwrite(idx)), input_tile);
 
-  ex::start_detached(
-      dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx), mat_out.readwrite(idx)));
+  ex::start_detached(dlaf::comm::scheduleAllReduce(chain(), MPI_SUM, mat_in.read(idx),
+                                                   mat_out.readwrite(idx)));
 
   auto tile_in = tt::sync_wait(mat_in.read(idx));
   auto tile_out = tt::sync_wait(mat_out.read(idx));

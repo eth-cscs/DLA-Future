@@ -8,9 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/kernels.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/lapack/tile.h"
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/lapack/tile.h>
 
 namespace dlaf::eigensolver::internal {
 

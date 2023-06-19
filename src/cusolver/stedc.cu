@@ -10,8 +10,8 @@
 
 #include <whip.hpp>
 
-#include "dlaf/lapack/tile.h"
-#include "dlaf/util_cuda.h"
+#include <dlaf/lapack/tile.h>
+#include <dlaf/util_cuda.h>
 
 namespace dlaf::tile::internal {
 
@@ -136,8 +136,8 @@ void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_stop_device_memory_size_query(rochandle, &workspace_size));
   dlaf::memory::MemoryView<std::byte, Device::GPU> workspaceOnDevice(to_int(workspace_size));
 
-  DLAF_GPULAPACK_CHECK_ERROR(
-      rocblas_set_workspace(rochandle, workspaceOnDevice(), to_sizet(workspace_size)));
+  DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(rochandle, workspaceOnDevice(),
+                                                   to_sizet(workspace_size)));
   stedc_fn(info());
   DLAF_GPULAPACK_CHECK_ERROR(rocblas_set_workspace(rochandle, nullptr, 0));
 

@@ -8,27 +8,26 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/tridiag_solver/kernels.h"
-
-#include "dlaf/gpu/blas/error.h"
-#include "dlaf/gpu/lapack/error.h"
-#include "dlaf/memory/memory_chunk.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/util_cuda.h"
-#include "dlaf/util_math.h"
-
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/functional.h>
 #include <thrust/merge.h>
 #include <thrust/partition.h>
 #include <thrust/reduce.h>
-#include <pika/cuda.hpp>
 #include <whip.hpp>
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/gpu/cub/api.cu.h"
-#include "dlaf/gpu/lapack/api.h"
-#include "dlaf/gpu/lapack/error.h"
+
+#include <pika/cuda.hpp>
+
+#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/gpu/blas/error.h>
+#include <dlaf/gpu/cub/api.cu.h>
+#include <dlaf/gpu/lapack/api.h>
+#include <dlaf/gpu/lapack/error.h>
+#include <dlaf/memory/memory_chunk.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/util_cuda.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf::eigensolver::internal {
 

@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/matrix/distribution.h"
+#include <dlaf/matrix/distribution.h>
 
 namespace dlaf {
 namespace matrix {

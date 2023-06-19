@@ -8,38 +8,37 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/reduction_to_band.h"
-
 #include <cmath>
 
-#include <gtest/gtest.h>
-#include <lapack/util.hh>
 #include <pika/execution.hpp>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/sync/broadcast.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/functions_sync.h>
+#include <dlaf/communication/sync/broadcast.h>
+#include <dlaf/eigensolver/reduction_to_band.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
+#include <dlaf/util_matrix.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::test;
@@ -193,9 +192,8 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 
 template <class T>
 auto allGatherTaus(const SizeType k, const SizeType chunk_size, Matrix<T, Device::CPU>& mat_local_taus) {
-  auto local_taus_tiles = sync_wait(when_all_vector(
-      selectRead(mat_local_taus,
-                 common::iterate_range2d(LocalTileSize(1, mat_local_taus.nrTiles().cols())))));
+  auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
+      mat_local_taus, common::iterate_range2d(LocalTileSize(1, mat_local_taus.nrTiles().cols())))));
 
   const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
 
@@ -278,7 +276,7 @@ auto checkUpperPartUnchanged(Matrix<const T, Device::CPU>& reference,
 
 template <class T>
 auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Device::CPU>& reference,
-                 MatrixLocal<T> const& mat_v, MatrixLocal<T> const& mat_b, std::vector<T> const& taus) {
+                 const MatrixLocal<T>& mat_v, const MatrixLocal<T>& mat_b, const std::vector<T>& taus) {
   const GlobalElementIndex offset(band_size, 0);
   // Now that all input are collected locally, it's time to apply the transformation,
   // ...but just if there is any

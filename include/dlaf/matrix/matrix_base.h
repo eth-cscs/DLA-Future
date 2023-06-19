@@ -15,7 +15,7 @@
 #include <cstddef>
 #include <ostream>
 
-#include "dlaf/matrix/distribution.h"
+#include <dlaf/matrix/distribution.h>
 
 namespace dlaf {
 namespace matrix {

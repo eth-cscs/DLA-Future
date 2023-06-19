@@ -8,30 +8,31 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/bt_reduction_to_band.h"
-
 #include <functional>
 #include <sstream>
 #include <tuple>
 
-#include <gtest/gtest.h>
 #include <pika/runtime.hpp>
 
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_base.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/bt_reduction_to_band.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_base.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

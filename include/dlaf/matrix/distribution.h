@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/util_distribution.h"
-#include "dlaf/util_math.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/util_distribution.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf {
 namespace matrix {

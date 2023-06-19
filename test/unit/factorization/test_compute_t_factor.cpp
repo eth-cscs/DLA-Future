@@ -7,30 +7,31 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-#include "dlaf/factorization/qr.h"
 
 #include <tuple>
 
-#include <gtest/gtest.h>
 #include <blas.hh>
 
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/lapack/tile.h"  // workaround for importing lapack.hh
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_mirror.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/factorization/qr.h>
+#include <dlaf/lapack/tile.h>  // workaround for importing lapack.hh
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/util_matrix.h>
 
-#include "dlaf_test/comm_grids/grids_6_ranks.h"
-#include "dlaf_test/matrix/matrix_local.h"
-#include "dlaf_test/matrix/util_matrix.h"
-#include "dlaf_test/matrix/util_matrix_local.h"
-#include "dlaf_test/util_types.h"
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/matrix_local.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/matrix/util_matrix_local.h>
+#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::matrix;

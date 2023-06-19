@@ -19,17 +19,18 @@ constexpr double M_PI = 3.141592;
 #endif
 
 #include <blas.hh>
+
 #include <pika/execution.hpp>
 
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
 
 /// @file
 
@@ -68,7 +69,7 @@ bool local_matrix(const Matrix<const T, D>& m) noexcept {
 
 /// Returns true if the matrix is distributed on the communication grid.
 template <class T, Device D>
-bool equal_process_grid(const Matrix<const T, D>& m, comm::CommunicatorGrid const& g) noexcept {
+bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 

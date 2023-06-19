@@ -17,8 +17,8 @@
 
 #include <whip.hpp>
 
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
 
 namespace dlaf::matrix {
 

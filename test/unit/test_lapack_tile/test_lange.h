@@ -10,17 +10,17 @@
 
 #pragma once
 
+#include <dlaf/lapack/enum_output.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/types.h>
+
 #include <gtest/gtest.h>
 
-#include "dlaf/lapack/enum_output.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/types.h"
-
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf {
 namespace test {

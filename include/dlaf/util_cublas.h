@@ -13,8 +13,9 @@
 #ifdef DLAF_WITH_GPU
 
 #include <blas.hh>
-#include "dlaf/gpu/blas/api.h"
-#include "dlaf/util_cuda.h"
+
+#include <dlaf/gpu/blas/api.h>
+#include <dlaf/util_cuda.h>
 
 namespace dlaf {
 namespace util {

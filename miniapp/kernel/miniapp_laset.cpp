@@ -14,16 +14,16 @@
 #include <whip.hpp>
 #endif
 
-#include "dlaf/blas/enum_output.h"
-#include "dlaf/common/format_short.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/miniapp/dispatch.h"
-#include "dlaf/miniapp/kernel_runner.h"
-#include "dlaf/miniapp/options.h"
-#include "dlaf/miniapp/work_tiles.h"
-#include "dlaf/types.h"
+#include <dlaf/blas/enum_output.h>
+#include <dlaf/common/format_short.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/miniapp/dispatch.h>
+#include <dlaf/miniapp/kernel_runner.h>
+#include <dlaf/miniapp/options.h>
+#include <dlaf/miniapp/work_tiles.h>
+#include <dlaf/types.h>
 
 using namespace dlaf;
 using namespace dlaf::miniapp;

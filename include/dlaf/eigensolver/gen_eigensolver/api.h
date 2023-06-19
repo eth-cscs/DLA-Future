@@ -9,11 +9,10 @@
 //
 #pragma once
 
-#include "dlaf/eigensolver/eigensolver/api.h"
-
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/eigensolver/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::eigensolver::internal {
 template <Backend backend, Device device, class T>

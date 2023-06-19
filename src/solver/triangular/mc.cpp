@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/solver/triangular/impl.h"
+#include <dlaf/solver/triangular/impl.h>
 
 namespace dlaf {
 namespace solver {

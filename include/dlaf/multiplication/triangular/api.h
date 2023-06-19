@@ -11,8 +11,8 @@
 
 #include <blas.hh>
 
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace multiplication {

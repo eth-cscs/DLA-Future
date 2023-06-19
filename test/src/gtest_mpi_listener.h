@@ -13,8 +13,9 @@
 #include <memory>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include <mpi.h>
+
+#include <gtest/gtest.h>
 
 class MPIListener : public ::testing::TestEventListener {
 public:

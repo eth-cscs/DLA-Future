@@ -15,9 +15,10 @@
 #include <mutex>
 
 #include <mpi.h>
+
 #include <pika/mutex.hpp>
 
-#include "dlaf/communication/error.h"
+#include <dlaf/communication/error.h>
 
 namespace dlaf {
 namespace comm {

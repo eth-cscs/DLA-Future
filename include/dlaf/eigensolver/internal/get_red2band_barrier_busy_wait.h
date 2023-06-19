@@ -7,12 +7,16 @@
 // Please, refer to the LICENSE file in the root directory.
 // SPDX-License-Identifier: BSD-3-Clause
 //
+#pragma once
 
-#include <dlaf/eigensolver/tridiag_solver/impl.h>
+#include <chrono>
+
+#include "dlaf/tune.h"
 
 namespace dlaf::eigensolver::internal {
 
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::GPU, Device::GPU, float)
-DLAF_TRIDIAGONAL_EIGENSOLVER_ETI(, Backend::GPU, Device::GPU, double)
+inline std::chrono::duration<double> getReductionToBandBarrierBusyWait() noexcept {
+  return std::chrono::microseconds(getTuneParameters().red2band_barrier_busy_wait_us);
+}
 
 }

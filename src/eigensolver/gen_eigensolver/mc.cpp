@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/eigensolver/gen_eigensolver/impl.h"
+#include <dlaf/eigensolver/gen_eigensolver/impl.h>
 
 namespace dlaf::eigensolver::internal {
 

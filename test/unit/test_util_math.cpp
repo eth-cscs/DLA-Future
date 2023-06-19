@@ -10,9 +10,10 @@
 
 #include <cstddef>
 #include <limits>
-#include "dlaf/util_math.h"
 
-#include "gtest/gtest.h"
+#include <dlaf/util_math.h>
+
+#include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace testing;

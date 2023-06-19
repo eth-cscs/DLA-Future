@@ -35,7 +35,8 @@
 #endif
 
 #include <complex>
-#include "dlaf/gpu/blas/api.h"
+
+#include <dlaf/gpu/blas/api.h>
 
 namespace dlaf::util {
 namespace internal {

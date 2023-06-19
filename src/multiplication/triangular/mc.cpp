@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "dlaf/multiplication/triangular/impl.h"
+#include <dlaf/multiplication/triangular/impl.h>
 
 namespace dlaf {
 namespace multiplication {

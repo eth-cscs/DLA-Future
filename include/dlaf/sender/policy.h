@@ -9,10 +9,10 @@
 //
 #pragma once
 
-#include <pika/execution.hpp>
-
 #include <type_traits>
 #include <utility>
+
+#include <pika/execution.hpp>
 
 #include <dlaf/types.h>
 
@@ -29,9 +29,9 @@ public:
   Policy() = default;
   explicit Policy(pika::execution::thread_priority priority) : priority_(priority) {}
   Policy(Policy&&) = default;
-  Policy(Policy const&) = default;
+  Policy(const Policy&) = default;
   Policy& operator=(Policy&&) = default;
-  Policy& operator=(Policy const&) = default;
+  Policy& operator=(const Policy&) = default;
 
   pika::execution::thread_priority priority() const noexcept {
     return priority_;

@@ -93,7 +93,7 @@ def _gen_nodes_plot(
         # i.e. the last overwrites the first (in case of regex match)
         bench_style = dict(linestyle="-", marker=".")  # default style
         if styles != None:
-            for (bench_regex, style) in styles:
+            for bench_regex, style in styles:
                 if re.search(bench_regex, bench_name):
                     bench_style |= style
 
@@ -214,7 +214,6 @@ def _parse_optional_text(text):
 
 
 additional_parsers = dict(optional_text=_parse_optional_text)
-
 # {
 #     "run_index":
 #     "matrix_rows":
@@ -229,6 +228,8 @@ additional_parsers = dict(optional_text=_parse_optional_text)
 #     "bench_name":
 #     "nodes":
 # }
+
+
 def _parse_line_based(fout, bench_name, nodes):
     if "dlaf" in bench_name:
         pstr_arr = []

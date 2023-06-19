@@ -12,9 +12,9 @@
 
 #include <blas.hh>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
 
 namespace dlaf::multiplication {
 namespace internal {

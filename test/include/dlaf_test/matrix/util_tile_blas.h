@@ -14,11 +14,13 @@
 
 #include <utility>
 
-#include "blas.hh"
-#include "dlaf/matrix/tile.h"
-#include "dlaf_test/matrix/util_generic_blas.h"
-#include "dlaf_test/matrix/util_tile.h"
-#include "dlaf_test/util_types.h"
+#include <blas.hh>
+
+#include <dlaf/matrix/tile.h>
+
+#include <dlaf_test/matrix/util_generic_blas.h>
+#include <dlaf_test/matrix/util_tile.h>
+#include <dlaf_test/util_types.h>
 
 namespace dlaf {
 namespace matrix {

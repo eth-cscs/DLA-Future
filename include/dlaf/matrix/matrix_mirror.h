@@ -15,10 +15,10 @@
 #include <exception>
 #include <vector>
 
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/matrix_base.h"
-#include "dlaf/types.h"
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_base.h>
+#include <dlaf/types.h>
 
 namespace dlaf {
 namespace matrix {

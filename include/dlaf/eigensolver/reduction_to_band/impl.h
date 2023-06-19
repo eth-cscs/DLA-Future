@@ -16,40 +16,39 @@
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
 
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/assert.h"
-#include "dlaf/common/data.h"
-#include "dlaf/common/index2d.h"
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/range2d.h"
-#include "dlaf/common/round_robin.h"
-#include "dlaf/common/single_threaded_blas.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/broadcast_panel.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/communication/functions_sync.h"
-#include "dlaf/communication/kernels/all_reduce.h"
-#include "dlaf/communication/kernels/reduce.h"
-#include "dlaf/communication/rdma.h"
-#include "dlaf/eigensolver/internal/get_red2band_panel_nworkers.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/matrix/panel.h"
-#include "dlaf/matrix/retiled_matrix.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/matrix/views.h"
-#include "dlaf/schedulers.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
-#include "dlaf/util_matrix.h"
-
-#include "dlaf/eigensolver/reduction_to_band/api.h"
-#include "dlaf/factorization/qr.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/assert.h>
+#include <dlaf/common/data.h>
+#include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/range2d.h>
+#include <dlaf/common/round_robin.h>
+#include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/broadcast_panel.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/functions_sync.h>
+#include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/kernels/reduce.h>
+#include <dlaf/communication/rdma.h>
+#include <dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h>
+#include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
+#include <dlaf/eigensolver/reduction_to_band/api.h>
+#include <dlaf/factorization/qr.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/panel.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/matrix/views.h>
+#include <dlaf/schedulers.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 
@@ -285,8 +284,8 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
   namespace di = dlaf::internal;
 
   std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
-  panel_tiles.reserve(
-      to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
+  panel_tiles.reserve(to_sizet(std::distance(panel_view.iteratorLocal().begin(),
+                                             panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
     panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
@@ -294,6 +293,7 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
   // TODO: Apply just(x), just(y), just(z) to just(x, y, z) refactoring elsewhere
+  // TODO: make_unique instead of make_shared
   auto s = ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads),
                                  std::vector<common::internal::vector<T>>{}),  // w (internally required)
                         mat_taus.readwrite(LocalTileIndex(0, j_sub)),          // taus
@@ -302,6 +302,7 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
            ex::bulk(nthreads, [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
                                                                            auto& barrier_ptr, auto& w,
                                                                            auto& taus, auto& tiles) {
+             const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
              const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
              const std::size_t begin = index * batch_size;
              const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
@@ -600,8 +601,8 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   namespace di = dlaf::internal;
 
   std::vector<matrix::ReadWriteTileSender<T, D>> panel_tiles;
-  panel_tiles.reserve(
-      to_sizet(std::distance(panel_view.iteratorLocal().begin(), panel_view.iteratorLocal().end())));
+  panel_tiles.reserve(to_sizet(std::distance(panel_view.iteratorLocal().begin(),
+                                             panel_view.iteratorLocal().end())));
   for (const auto& i : panel_view.iteratorLocal()) {
     const matrix::SubTileSpec& spec = panel_view(i);
     panel_tiles.emplace_back(matrix::splitTile(mat_a.readwrite(i), spec));
@@ -620,6 +621,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                                                     auto& taus, auto& tiles, auto&& pcomm) {
         const bool rankHasHead = rank_v0 == pcomm.get().rank();
 
+        const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
         const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
         const std::size_t begin = index * batch_size;
         const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
@@ -757,8 +759,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite({i, 0})));
     }
     else {
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM, xt.read(index_xt)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
+                                                  xt.read(index_xt)));
     }
   }
 
@@ -768,11 +770,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      ex::start_detached(
-          comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM, x.readwrite(index_x)));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
+                                                         x.readwrite(index_x)));
     else
-      ex::start_detached(
-          comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM, x.read(index_x)));
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
+                                                  x.read(index_x)));
   }
 }
 
@@ -987,9 +989,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   if (nrefls == 0)
     return mat_taus;
 
-  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(mat_taus,
-                                                         LocalTileSize(1, mat_a.blockSize().cols() /
-                                                                              band_size));
+  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
+      mat_taus, LocalTileSize(1, mat_a.blockSize().cols() / band_size));
 
   // TODO: rename nblocks to ntiles
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
@@ -1154,9 +1155,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   if (nrefls == 0)
     return mat_taus;
 
-  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(mat_taus,
-                                                         LocalTileSize(1, mat_a.blockSize().cols() /
-                                                                              band_size));
+  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
+      mat_taus, LocalTileSize(1, mat_a.blockSize().cols() / band_size));
 
   // TODO: rename nblocks to ntiles
   const SizeType nblocks = (nrefls - 1) / band_size + 1;
@@ -1166,16 +1166,16 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_v(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_vt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_vt(
+      n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_w(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_wt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_wt(
+      n_workspaces, dist);
 
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panels_x(n_workspaces, dist);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>>
-      panels_xt(n_workspaces, dist);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D, matrix::StoreTransposed::Yes>> panels_xt(
+      n_workspaces, dist);
 
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
@@ -1295,8 +1295,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(
-          comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM, w2.readwrite(LocalTileIndex(0, 0))));
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+                                                        w2.readwrite(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
     }

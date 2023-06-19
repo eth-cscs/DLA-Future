@@ -12,10 +12,10 @@
 
 /// @file
 
-#include "dlaf/common/assert.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/assert.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/util_math.h>
 
 // TODO: rename block_size to tile_size everywhere.
 // TODO: Does layout support an arbitrary offset? through ld?

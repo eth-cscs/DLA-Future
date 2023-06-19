@@ -13,11 +13,11 @@
 
 #include <blas.hh>
 
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/eigensolver/api.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/eigensolver/api.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
 

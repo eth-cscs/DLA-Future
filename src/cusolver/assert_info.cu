@@ -8,11 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <stdio.h>
+#include <cstdio>
 
 #include <whip.hpp>
 
-#include "dlaf/gpu/lapack/assert_info.h"
+#include <dlaf/gpu/lapack/assert_info.h>
 
 #ifdef DLAF_ASSERT_ENABLE
 

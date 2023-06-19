@@ -10,8 +10,8 @@
 
 #pragma once
 
-#include "dlaf/communication/communicator.h"
-#include "dlaf/communication/error.h"
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/error.h>
 
 namespace dlaf {
 namespace comm {

@@ -12,23 +12,22 @@
 #include <cmath>
 #include <vector>
 
-#include "dlaf/eigensolver/eigensolver/api.h"
-
-#include "dlaf/blas/tile.h"
-#include "dlaf/common/vector.h"
-#include "dlaf/communication/communicator_grid.h"
-#include "dlaf/eigensolver/band_to_tridiag.h"
-#include "dlaf/eigensolver/bt_band_to_tridiag.h"
-#include "dlaf/eigensolver/bt_reduction_to_band.h"
-#include "dlaf/eigensolver/internal/get_band_size.h"
-#include "dlaf/eigensolver/reduction_to_band.h"
-#include "dlaf/eigensolver/tridiag_solver.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy.h"
-#include "dlaf/matrix/distribution.h"
-#include "dlaf/matrix/matrix.h"
-#include "dlaf/types.h"
-#include "dlaf/util_matrix.h"
+#include <dlaf/blas/tile.h>
+#include <dlaf/common/vector.h>
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/eigensolver/band_to_tridiag.h>
+#include <dlaf/eigensolver/bt_band_to_tridiag.h>
+#include <dlaf/eigensolver/bt_reduction_to_band.h>
+#include <dlaf/eigensolver/eigensolver/api.h>
+#include <dlaf/eigensolver/internal/get_band_size.h>
+#include <dlaf/eigensolver/reduction_to_band.h>
+#include <dlaf/eigensolver/tridiag_solver.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver::internal {
 

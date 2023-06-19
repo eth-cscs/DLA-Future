@@ -21,12 +21,12 @@
 #include <pika/execution.hpp>
 #include <pika/functional.hpp>
 
-#include "dlaf/common/data_descriptor.h"
-#include "dlaf/matrix/index.h"
-#include "dlaf/memory/memory_view.h"
-#include "dlaf/sender/when_all_lift.h"
-#include "dlaf/types.h"
-#include "dlaf/util_math.h"
+#include <dlaf/common/data_descriptor.h>
+#include <dlaf/matrix/index.h>
+#include <dlaf/memory/memory_view.h>
+#include <dlaf/sender/when_all_lift.h>
+#include <dlaf/types.h>
+#include <dlaf/util_math.h>
 
 namespace dlaf::matrix {
 namespace internal {
@@ -437,8 +437,8 @@ private:
     // either untracked or disjoint tracked read-write access.
     DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>(dep_tracker_)),
                 "");
-    DLAF_ASSERT((!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)),
-                "");
+    DLAF_ASSERT(
+        (!std::holds_alternative<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>(dep_tracker_)), "");
 
     Tile subtile(spec.size, ConstTileType::createMemoryViewForSubtile(*this, spec), this->ld());
     // Not all possible states of the dependency tracker are copyable. This

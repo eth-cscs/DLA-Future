@@ -10,20 +10,20 @@
 
 #pragma once
 
-#include "dlaf/common/callable_object.h"
-#include "dlaf/eigensolver/tridiag_solver/coltype.h"
-#include "dlaf/lapack/tile.h"
-#include "dlaf/matrix/copy_tile.h"
-#include "dlaf/matrix/tile.h"
-#include "dlaf/memory/memory_chunk.h"
-#include "dlaf/sender/traits.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/types.h"
+#include <dlaf/common/callable_object.h>
+#include <dlaf/eigensolver/tridiag_solver/coltype.h>
+#include <dlaf/lapack/tile.h>
+#include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/tile.h>
+#include <dlaf/memory/memory_chunk.h>
+#include <dlaf/sender/traits.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
-#include "dlaf/gpu/lapack/api.h"
+#include <dlaf/gpu/lapack/api.h>
 #endif
 
 namespace dlaf::eigensolver::internal {
@@ -105,10 +105,10 @@ template <class T>
 void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::CPU>& diag_tile);
 
-#define DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
-  kword template void                                                                           \
-  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::CPU>& tridiag_tile, \
-                                     const matrix::Tile<Type, Device::CPU>& diag_tile)
+#define DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type) \
+  kword template void copyDiagonalFromCompactTridiagonal(                \
+      const matrix::Tile<const Type, Device::CPU>& tridiag_tile,         \
+      const matrix::Tile<Type, Device::CPU>& diag_tile)
 
 DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
 DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
@@ -120,11 +120,10 @@ void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
                                         whip::stream_t stream);
 
-#define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type)                        \
-  kword template void                                                                           \
-  copyDiagonalFromCompactTridiagonal(const matrix::Tile<const Type, Device::CPU>& tridiag_tile, \
-                                     const matrix::Tile<Type, Device::GPU>& diag_tile,          \
-                                     whip::stream_t stream)
+#define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type) \
+  kword template void copyDiagonalFromCompactTridiagonal(                \
+      const matrix::Tile<const Type, Device::CPU>& tridiag_tile,         \
+      const matrix::Tile<Type, Device::GPU>& diag_tile, whip::stream_t stream)
 
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
 DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
@@ -148,11 +147,10 @@ void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<const T, Device::CPU>& evecs_tile,
                                    const matrix::Tile<T, Device::CPU>& rank1_tile);
 
-#define DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                      \
-  kword template void                                                                    \
-  assembleRank1UpdateVectorTile(bool is_top_tile, Type rho,                              \
-                                const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
-                                const matrix::Tile<Type, Device::CPU>& rank1_tile)
+#define DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                        \
+  kword template void assembleRank1UpdateVectorTile(                                       \
+      bool is_top_tile, Type rho, const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
+      const matrix::Tile<Type, Device::CPU>& rank1_tile)
 
 DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
 DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
@@ -165,12 +163,10 @@ void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<T, Device::GPU>& rank1_tile,
                                    whip::stream_t stream);
 
-#define DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                      \
-  kword template void                                                                    \
-  assembleRank1UpdateVectorTile(bool is_top_tile, Type rho,                              \
-                                const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
-                                const matrix::Tile<Type, Device::GPU>& rank1_tile,       \
-                                whip::stream_t stream)
+#define DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                        \
+  kword template void assembleRank1UpdateVectorTile(                                       \
+      bool is_top_tile, Type rho, const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
+      const matrix::Tile<Type, Device::GPU>& rank1_tile, whip::stream_t stream)
 
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
 DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);

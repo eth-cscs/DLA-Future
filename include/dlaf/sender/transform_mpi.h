@@ -11,11 +11,11 @@
 
 #include <type_traits>
 
-#include "dlaf/common/pipeline.h"
-#include "dlaf/common/unwrap.h"
-#include "dlaf/communication/communicator.h"
-#include "dlaf/sender/transform.h"
-#include "dlaf/sender/when_all_lift.h"
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/unwrap.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/sender/when_all_lift.h>
 
 namespace dlaf::comm::internal {
 
@@ -79,7 +79,7 @@ struct MPICallHelper {
 };
 
 template <typename F>
-MPICallHelper(F &&) -> MPICallHelper<std::decay_t<F>>;
+MPICallHelper(F&&) -> MPICallHelper<std::decay_t<F>>;
 
 /// Lazy transformMPI. This does not submit the work and returns a sender.
 template <typename F, typename Sender,
@@ -95,8 +95,8 @@ template <typename F, typename Sender,
 template <typename F, typename Sender,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 void transformMPIDetach(F&& f, Sender&& sender) {
-  pika::execution::experimental::start_detached(
-      transformMPI(std::forward<F>(f), std::forward<Sender>(sender)));
+  pika::execution::experimental::start_detached(transformMPI(std::forward<F>(f),
+                                                             std::forward<Sender>(sender)));
 }
 
 /// Lazy transformMPI. This does not submit the work and returns a sender. First
@@ -112,8 +112,8 @@ template <typename F, typename... Ts>
 /// when_all sender of the lifted senders.
 template <typename F, typename... Ts>
 void transformMPILiftDetach(F&& f, Ts&&... ts) {
-  pika::execution::experimental::start_detached(
-      transformLift(std::forward<F>(f), std::forward<Ts>(ts)...));
+  pika::execution::experimental::start_detached(transformLift(std::forward<F>(f),
+                                                              std::forward<Ts>(ts)...));
 }
 
 template <typename F>
@@ -130,9 +130,9 @@ public:
   template <typename F_>
   PartialTransformMPI(F_&& f) : PartialTransformMPIBase<F>{std::forward<F_>(f)} {}
   PartialTransformMPI(PartialTransformMPI&&) = default;
-  PartialTransformMPI(PartialTransformMPI const&) = default;
+  PartialTransformMPI(const PartialTransformMPI&) = default;
   PartialTransformMPI& operator=(PartialTransformMPI&&) = default;
-  PartialTransformMPI& operator=(PartialTransformMPI const&) = default;
+  PartialTransformMPI& operator=(const PartialTransformMPI&) = default;
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformMPI pa) {
@@ -152,14 +152,14 @@ public:
   template <typename F_>
   PartialTransformMPIDetach(F_&& f) : PartialTransformMPIBase<F>{std::forward<F_>(f)} {}
   PartialTransformMPIDetach(PartialTransformMPIDetach&&) = default;
-  PartialTransformMPIDetach(PartialTransformMPIDetach const&) = default;
+  PartialTransformMPIDetach(const PartialTransformMPIDetach&) = default;
   PartialTransformMPIDetach& operator=(PartialTransformMPIDetach&&) = default;
-  PartialTransformMPIDetach& operator=(PartialTransformMPIDetach const&) = default;
+  PartialTransformMPIDetach& operator=(const PartialTransformMPIDetach&) = default;
 
   template <typename Sender>
   friend auto operator|(Sender&& sender, const PartialTransformMPIDetach pa) {
-    return pika::execution::experimental::start_detached(
-        transformMPI(std::move(pa.f_), std::forward<Sender>(sender)));
+    return pika::execution::experimental::start_detached(transformMPI(std::move(pa.f_),
+                                                                      std::forward<Sender>(sender)));
   }
 };
 

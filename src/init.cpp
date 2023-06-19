@@ -122,6 +122,13 @@ struct parseFromString<SizeType> {
   };
 };
 
+template <>
+struct parseFromString<bool> {
+  static std::size_t call(const std::string& var) {
+    return !var.empty();
+  };
+};
+
 template <class T>
 struct parseFromCommandLine {
   static T call(const pika::program_options::variables_map& vm, const std::string& cmd_val) {
@@ -170,6 +177,8 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
 
   updateConfigurationValue(vm, param.band_to_tridiag_1d_block_size_base,
                            "BAND_TO_TRIDIAG_1D_BLOCK_SIZE_BASE", "band-to-tridiag-1d-block-size-base");
+
+  updateConfigurationValue(vm, param.debug_dump_trisolver_data, "DEBUG_DUMP_TRISOLVER_DATA", "");
 
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",
                            "tridiag-rank1-nworkers");

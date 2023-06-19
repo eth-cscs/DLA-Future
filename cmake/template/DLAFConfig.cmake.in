@@ -39,6 +39,10 @@ if(DLAF_WITH_HIP)
   find_dependency(rocthrust)
 endif()
 
+if(DLAF_WITH_GPU)
+  find_dependency(whip)
+endif()
+
 # ----- MPI
 find_dependency(MPI)
 
@@ -74,8 +78,8 @@ find_dependency(lapackpp PATHS @lapackpp_DIR@)
 # ----- UMPIRE
 find_dependency(Umpire PATHS @Umpire_DIR@)
 
-if(DLAF_WITH_GPU)
-  find_dependency(whip)
+if(DLAF_WITH_HDF5)
+  find_dependency(HDF5 PATHS @HDF5_DIR@)
 endif()
 
 check_required_components(DLAF)

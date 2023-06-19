@@ -16,7 +16,6 @@ namespace matrix {
 
 template <class T, Device D>
 Matrix<const T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr)
-  // TODO: This may need to pass tile size and block size
     : MatrixBase({layout.size(), layout.blockSize()}) {
   memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
   setUpTiles(mem, layout);
@@ -28,7 +27,7 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
     : MatrixBase(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(), distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().baseTileSize() == layout.blockSize(), distribution.baseTileSize(),
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());

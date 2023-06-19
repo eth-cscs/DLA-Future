@@ -12,13 +12,13 @@ namespace dlaf {
 namespace matrix {
 
 template <class T, Device D>
-Matrix<T, D>::Matrix(const LocalElementSize& size, const TileElementSize& tile_size)
-    : Matrix<T, D>(Distribution(size, tile_size)) {}
+Matrix<T, D>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
+    : Matrix<T, D>(Distribution(size, block_size)) {}
 
 template <class T, Device D>
-Matrix<T, D>::Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
+Matrix<T, D>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
                      const comm::CommunicatorGrid& comm)
-    : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0})) {}
+    : Matrix<T, D>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device D>
 Matrix<T, D>::Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {
@@ -27,7 +27,7 @@ Matrix<T, D>::Matrix(Distribution distribution) : Matrix<const T, D>(std::move(d
       std::max<SizeType>(1,
                          util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
-  auto layout = colMajorLayout(this->distribution().localSize(), this->baseTileSize(), ld);
+  auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
 
   SizeType memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, D> mem(memory_size);
@@ -41,7 +41,7 @@ Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout) noexce
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().baseTileSize() == layout.blockSize(), distribution.baseTileSize(),
+  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, D> mem(layout.minMemSize());

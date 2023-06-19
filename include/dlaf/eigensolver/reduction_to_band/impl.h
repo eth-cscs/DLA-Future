@@ -293,7 +293,6 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
   }
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
-  // TODO: Apply just(x), just(y), just(z) to just(x, y, z) refactoring elsewhere
   // TODO: make_unique instead of make_shared
   auto s = ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads),
                                  std::vector<common::internal::vector<T>>{}),  // w (internally required)

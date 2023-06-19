@@ -278,7 +278,7 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
 
 template <class MatrixLike, class MatrixLikeTaus>
 void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
-                            const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+                            const matrix::SubPanelView& panel_view) {
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
@@ -293,54 +293,52 @@ void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const S
   }
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
-  // TODO: make_unique instead of make_shared
-  auto s = ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads),
-                                 std::vector<common::internal::vector<T>>{}),  // w (internally required)
-                        mat_taus.readwrite(LocalTileIndex(0, j_sub)),          // taus
-                        ex::when_all_vector(std::move(panel_tiles))) |
-           ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-           ex::bulk(nthreads, [nthreads, nrefls, cols = panel_view.cols()](const std::size_t index,
-                                                                           auto& barrier_ptr, auto& w,
-                                                                           auto& taus, auto& tiles) {
-             const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
-             const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
-             const std::size_t begin = index * batch_size;
-             const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
+  auto s =
+      ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
+                            std::vector<common::internal::vector<T>>{}),  // w (internally required)
+                   mat_taus.readwrite(LocalTileIndex(0, j_sub)),          // taus
+                   ex::when_all_vector(std::move(panel_tiles))) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
+                                                              auto& w, auto& taus, auto& tiles) {
+        const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
+        const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
+        const std::size_t begin = index * batch_size;
+        const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
+        const SizeType nrefls = taus.size().cols();
 
-             if (index == 0) {
-               DLAF_ASSERT(taus.size().cols() == nrefls, taus.size().cols(), nrefls);
-               w.resize(nthreads);
-             }
+        if (index == 0) {
+          w.resize(nthreads);
+        }
 
-             for (SizeType j = 0; j < nrefls; ++j) {
-               // STEP1: compute tau and reflector (single-thread)
-               if (index == 0) {
-                 // TODO: Use different index constructor
-                 taus({0, j}) = computeReflector(tiles, j);
-               }
+        for (SizeType j = 0; j < nrefls; ++j) {
+          // STEP1: compute tau and reflector (single-thread)
+          if (index == 0) {
+            taus({0, j}) = computeReflector(tiles, j);
+          }
 
-               barrier_ptr->arrive_and_wait();
+          barrier_ptr->arrive_and_wait();
 
-               // STEP2a: compute w (multi-threaded)
-               const SizeType pt_cols = cols - (j + 1);
-               if (pt_cols == 0)
-                 break;
-               const bool has_head = (index == 0);
+          // STEP2a: compute w (multi-threaded)
+          const SizeType pt_cols = cols - (j + 1);
+          if (pt_cols == 0)
+            break;
+          const bool has_head = (index == 0);
 
-               w[index] = common::internal::vector<T>(pt_cols, 0);
-               computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
-               barrier_ptr->arrive_and_wait();
+          w[index] = common::internal::vector<T>(pt_cols, 0);
+          computeWTrailingPanel(has_head, tiles, w[index], j, pt_cols, begin, end);
+          barrier_ptr->arrive_and_wait();
 
-               // STEP2b: reduce w results (single-threaded)
-               if (index == 0)
-                 dlaf::eigensolver::internal::reduceColumnVectors(w);
-               barrier_ptr->arrive_and_wait();
+          // STEP2b: reduce w results (single-threaded)
+          if (index == 0)
+            dlaf::eigensolver::internal::reduceColumnVectors(w);
+          barrier_ptr->arrive_and_wait();
 
-               // STEP3: update trailing panel (multi-threaded)
-               updateTrailingPanel(has_head, tiles, j, w[0], taus(TileElementIndex{0, j}), begin, end);
-               barrier_ptr->arrive_and_wait();
-             }
-           });
+          // STEP3: update trailing panel (multi-threaded)
+          updateTrailingPanel(has_head, tiles, j, w[0], taus({0, j}), begin, end);
+          barrier_ptr->arrive_and_wait();
+        }
+      });
   ex::start_detached(std::move(s));
 }
 
@@ -594,7 +592,7 @@ template <class MatrixLike, class MatrixLikeTaus, class TriggerSender, class Com
 void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
                             CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
                             MatrixLikeTaus& mat_taus, SizeType j_sub,
-                            const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+                            const matrix::SubPanelView& panel_view) {
   static Device constexpr D = MatrixLike::device;
   using T = typename MatrixLike::ElementType;
   namespace ex = pika::execution::experimental;
@@ -610,13 +608,13 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
 
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
   auto s =
-      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads),
+      ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
                             std::vector<common::internal::vector<T>>{}),  // w (interally required)
                    mat_taus.readwrite(GlobalTileIndex(0, j_sub)),         // taus
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [nthreads, nrefls, rank_v0,
+      ex::bulk(nthreads, [nthreads, rank_v0,
                           cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr, auto& w,
                                                     auto& taus, auto& tiles, auto&& pcomm) {
         const bool rankHasHead = rank_v0 == pcomm.get().rank();
@@ -625,9 +623,9 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
         const std::size_t batch_size = util::ceilDiv(tiles.size(), nthreads);
         const std::size_t begin = index * batch_size;
         const std::size_t end = std::min(index * batch_size + batch_size, tiles.size());
+        const SizeType nrefls = taus.size().cols();
 
         if (index == 0) {
-          DLAF_ASSERT(taus.size().cols() == nrefls, taus.size().cols(), nrefls);
           w.resize(nthreads);
         }
 
@@ -658,7 +656,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
           barrier_ptr->arrive_and_wait();
 
           // STEP3: update trailing panel (multi-threaded)
-          updateTrailingPanel(has_head, tiles, j, w[0], taus(TileElementIndex{0, j}), begin, end);
+          updateTrailingPanel(has_head, tiles, j, w[0], taus({0, j}), begin, end);
           barrier_ptr->arrive_and_wait();
         }
       });
@@ -832,19 +830,19 @@ struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   ComputePanelHelper(const std::size_t, matrix::Distribution) {}
 
   void call(Matrix<T, Device::CPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
-            const SizeType j_sub, const matrix::SubPanelView& panel_view, const SizeType nrefls_block) {
+            const SizeType j_sub, const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
-    computePanelReflectors(mat_a, mat_taus, j_sub, panel_view, nrefls_block);
+    computePanelReflectors(mat_a, mat_taus, j_sub, panel_view);
   }
 
   template <Device D, class CommSender, class TriggerSender>
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
             Matrix<T, D>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
-            const matrix::SubPanelView& panel_view, SizeType nrefls) {
+            const matrix::SubPanelView& panel_view) {
     using red2band::distributed::computePanelReflectors;
     computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
                            std::forward<CommSender>(mpi_col_chain_panel), mat_a, mat_taus, j_sub,
-                           panel_view, nrefls);
+                           panel_view);
   }
 };
 
@@ -855,7 +853,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
       : panels_v(n_workspaces, dist_a) {}
 
   auto call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
-            const matrix::SubPanelView& panel_view, const SizeType nrefls_block) {
+            const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
 
     namespace ex = pika::execution::experimental;
@@ -868,7 +866,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    auto taus = computePanelReflectors(v, mat_taus, j_sub, panel_view, nrefls_block);
+    auto taus = computePanelReflectors(v, mat_taus, j_sub, panel_view);
     copyFromCPU(panel_view, v, mat_a);
 
     return taus;
@@ -876,7 +874,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view, const SizeType nrefls) {
+            Matrix<T, D>& mat_a, const matrix::SubPanelView& panel_view) {
     auto& v = panels_v.nextResource();
 
     // copy to CPU
@@ -884,9 +882,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
     // compute on CPU
     using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
-    auto taus =
-        computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                               std::forward<CommSender>(mpi_col_chain_panel), v, panel_view, nrefls);
+    auto taus = computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                                       std::forward<CommSender>(mpi_col_chain_panel), v, panel_view);
 
     // copy back to GPU
     copyFromCPU(panel_view, v, mat_a);
@@ -936,9 +933,7 @@ protected:
 }
 
 /// Local implementation of reduction to band
-/// TODO: docs
-/// @return a vector of any_senders of shared pointers of vectors, where each inner vector contains a
-/// block of taus
+/// @return a row vector of taus with block size mat_a.blockSize().cols()
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
   using dlaf::matrix::Matrix;
@@ -960,26 +955,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   const SizeType nrefls = std::max<SizeType>(0, dist_a.size().rows() - band_size - 1);
 
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
-  // TODO: transpose into column vector?
-  // TODO: Many options here:
-  // - mat with tile_size == block_size, then retile to
-  //   tile_size == band_size for use here, return unretiled matrix for
-  //   backtransformation.
-  // - mat with tile_size == band_size, then retile to bigger tiles (not
-  //   possible currently, but possible in theory)
-  // - mat with tile_size == band_size here, copy to new matrix with tile_size
-  //   == block_size for backtransformation
-  // - mat with tile_size == block_size, access subtiles with splitTileDisjoint
-  //   here (almost exactly the same as option 1)
   DLAF_ASSERT(mat_a.blockSize().cols() % band_size == 0, mat_a.blockSize().cols(), band_size);
-  // original tile_size == band_size matrix
-  // Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, nrefls), TileElementSize(1,
-  // mat_a.blockSize().cols()),
-  //                          TileElementSize(1, band_size), comm::Size2D(1, mat_a.commGridSize().cols()),
-  //                          comm::Index2D(0, mat_a.rankIndex().col()),
-  //                          comm::Index2D(0, mat_a.sourceRankIndex().col())));
-  // tile_size == block_size
-  // TODO: Local matrix -> simplify arguments to mat_taus below.
   Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(1, nrefls),
                                                        TileElementSize(1, mat_a.blockSize().cols()),
                                                        comm::Size2D(1, mat_a.commGridSize().cols()),
@@ -992,9 +968,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
       mat_taus, LocalTileSize(1, mat_a.blockSize().cols() / band_size));
 
-  // TODO: rename nblocks to ntiles
-  const SizeType nblocks = (nrefls - 1) / band_size + 1;
-  DLAF_ASSERT(nblocks == mat_taus_retiled.nrTiles().cols(), nblocks, mat_taus_retiled.nrTiles().cols());
+  const SizeType ntiles = (nrefls - 1) / band_size + 1;
+  DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().cols(), ntiles, mat_taus_retiled.nrTiles().cols());
 
   const bool is_full_band = (band_size == dist_a.blockSize().cols());
 
@@ -1012,27 +987,17 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   // Matrix. This results in a variable waste of memory, depending no the ratio band_size/nb.
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist_a);
 
-  for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
+  for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {
     const auto i_sub = j_sub + 1;
 
     const GlobalElementIndex ij_offset(i_sub * band_size, j_sub * band_size);
 
-    const SizeType nrefls_block = [=]() {
-      const bool is_last = j_sub == nblocks - 1;
-      if (!is_last)
-        return band_size;
+    const SizeType nrefls_tile = mat_taus_retiled.tileSize(GlobalTileIndex(0, j_sub)).cols();
 
-      const SizeType nrefls_last = nrefls % band_size;
-      return nrefls_last == 0 ? band_size : nrefls_last;
-    }();
-
-    const SizeType nrefls_block_new = mat_taus_retiled.tileSize(GlobalTileIndex(0, j_sub)).cols();
-    DLAF_ASSERT(nrefls_block == nrefls_block_new, nrefls_block, nrefls_block_new);
-
-    const bool isPanelIncomplete = (nrefls_block != band_size);
+    const bool isPanelIncomplete = (nrefls_tile != band_size);
 
     // Note: if this is running, it must have at least one valid reflector (i.e. with size > 1)
-    DLAF_ASSERT_HEAVY(nrefls_block != 0, nrefls_block);
+    DLAF_ASSERT_HEAVY(nrefls_tile != 0, nrefls_tile);
 
     // Note:  SubPanelView is (at most) band_size wide, but it may contain a smaller number of
     //        reflectors (i.e. at the end when last reflector size is 1)
@@ -1041,22 +1006,22 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     Panel<Coord::Col, T, D>& v = panels_v.nextResource();
     v.setRangeStart(ij_offset);
     if (isPanelIncomplete)
-      v.setWidth(nrefls_block);
+      v.setWidth(nrefls_tile);
 
     // PANEL
-    compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view, nrefls_block);
+    compute_panel_helper.call(mat_a, mat_taus_retiled, j_sub, panel_view);
 
     // Note:
     // - has_reflector_head tells if this rank owns the first tile of the panel (being local, always true)
     // - if !is_full_band it has to force copy as a workaround, otherwise in update matrix it would deadlock
     // due to tile shared between panel and trailing matrix
     constexpr bool has_reflector_head = true;
-    setupReflectorPanelV<B, D, T>(has_reflector_head, panel_view, nrefls_block, v, mat_a, !is_full_band);
+    setupReflectorPanelV<B, D, T>(has_reflector_head, panel_view, nrefls_tile, v, mat_a, !is_full_band);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO probably the first one in any panel is ok?
-    Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
+    Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
 
     computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(0, j_sub)), t.readwrite(t_idx));
 
@@ -1073,7 +1038,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     Panel<Coord::Col, T, D>& w = panels_w.nextResource();
     w.setRangeStart(at_offset);
     if (isPanelIncomplete)
-      w.setWidth(nrefls_block);
+      w.setWidth(nrefls_tile);
 
     trmmComputeW<B>(w, v, t.read(t_idx));
 
@@ -1081,7 +1046,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
     Panel<Coord::Col, T, D>& x = panels_x.nextResource();
     x.setRangeStart(at_offset);
     if (isPanelIncomplete)
-      x.setWidth(nrefls_block);
+      x.setWidth(nrefls_tile);
 
     // Note:
     // Since At is hermitian, just the lower part is referenced.
@@ -1114,9 +1079,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 }
 
 /// Distributed implementation of reduction to band
-/// TODO: docs
-/// @return a vector of any_senders of shared pointers of vectors, where each inner vector contains a
-/// block of taus
+/// @return a row vector of taus with block size mat_a.blockSize().cols()
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
                                                       const SizeType band_size) {
@@ -1158,9 +1121,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
       mat_taus, LocalTileSize(1, mat_a.blockSize().cols() / band_size));
 
-  // TODO: rename nblocks to ntiles
-  const SizeType nblocks = (nrefls - 1) / band_size + 1;
-  DLAF_ASSERT(nblocks == mat_taus_retiled.nrTiles().cols(), nblocks, mat_taus_retiled.nrTiles().cols());
+  const SizeType ntiles = (nrefls - 1) / band_size + 1;
+  DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().cols(), ntiles, mat_taus_retiled.nrTiles().cols());
 
   const bool is_full_band = (band_size == dist.blockSize().cols());
 
@@ -1180,7 +1142,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   red2band::ComputePanelHelper<B, D, T> compute_panel_helper(n_workspaces, dist);
 
   ex::unique_any_sender<> trigger_panel{ex::just()};
-  for (SizeType j_sub = 0; j_sub < nblocks; ++j_sub) {
+  for (SizeType j_sub = 0; j_sub < ntiles; ++j_sub) {
     const SizeType i_sub = j_sub + 1;
 
     const GlobalElementIndex ij_offset(i_sub * band_size, j_sub * band_size);
@@ -1193,16 +1155,9 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
 
     const bool is_panel_rank_col = rank_v0.col() == rank.col();
 
-    const SizeType nrefls_block = [=]() {
-      const bool is_last = j_sub == nblocks - 1;
-      if (!is_last)
-        return band_size;
+    const SizeType nrefls_tile = mat_taus_retiled.tileSize(GlobalTileIndex(0, j_sub)).cols();
 
-      const SizeType nrefls_last = nrefls % band_size;
-      return nrefls_last == 0 ? band_size : nrefls_last;
-    }();
-
-    if (nrefls_block == 0)
+    if (nrefls_tile == 0)
       break;
 
     auto& v = panels_v.nextResource();
@@ -1211,27 +1166,27 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     v.setRangeStart(at_offset);
     vt.setRangeStart(at_offset);
 
-    v.setWidth(nrefls_block);
-    vt.setHeight(nrefls_block);
+    v.setWidth(nrefls_tile);
+    vt.setHeight(nrefls_tile);
 
     const LocalTileIndex t_idx(0, 0);
     // TODO used just by the column, maybe we can re-use a panel tile?
     // TODO or we can keep just the sh_future and allocate just inside if (is_panel_rank_col)
-    matrix::Matrix<T, D> t({nrefls_block, nrefls_block}, dist.blockSize());
+    matrix::Matrix<T, D> t({nrefls_tile, nrefls_tile}, dist.blockSize());
 
     // PANEL
     const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     if (is_panel_rank_col) {
       compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(), mpi_col_chain_panel(), mat_a,
-                                mat_taus_retiled, j_sub, panel_view, nrefls_block);
+                                mat_taus_retiled, j_sub, panel_view);
 
       // Note:
       // - has_reflector_head tells if this rank owns the first tile of the panel
       // - if !is_full_band it has to force copy as a workaround, otherwise in update matrix it would
       // deadlock due to tile shared between panel and trailing matrix
       red2band::local::setupReflectorPanelV<B, D, T>(rank.row() == rank_v0.row(), panel_view,
-                                                     nrefls_block, v, mat_a, !is_full_band);
+                                                     nrefls_tile, v, mat_a, !is_full_band);
       computeTFactor<B>(v, mat_taus_retiled.read(GlobalTileIndex(0, j_sub)), t.readwrite(t_idx),
                         mpi_col_chain);
     }
@@ -1253,8 +1208,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     w.setRangeStart(at_offset);
     wt.setRangeStart(at_offset);
 
-    w.setWidth(nrefls_block);
-    wt.setHeight(nrefls_block);
+    w.setWidth(nrefls_tile);
+    wt.setHeight(nrefls_tile);
 
     if (is_panel_rank_col)
       red2band::local::trmmComputeW<B, D>(w, v, t.read(t_idx));
@@ -1268,8 +1223,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     x.setRangeStart(at_offset);
     xt.setRangeStart(at_offset);
 
-    x.setWidth(nrefls_block);
-    xt.setHeight(nrefls_block);
+    x.setWidth(nrefls_tile);
+    xt.setHeight(nrefls_tile);
 
     // Note:
     // Since At is hermitian, just the lower part is referenced.
@@ -1306,7 +1261,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     // will be used for accessing the broadcasted version of x
     xt.reset();
     xt.setRangeStart(at_offset);
-    xt.setHeight(nrefls_block);
+    xt.setHeight(nrefls_tile);
 
     comm::broadcast(rank_v0.col(), x, xt, mpi_row_chain, mpi_col_chain);
 

@@ -159,7 +159,7 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
         // Assume taus is a column vector with column major layout, i.e. elements are contiguous
         // TODO: Can this be asserted more directly?
         DLAF_ASSERT(taus.size().cols() == 1, taus);
-        whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus(), sizeof(T),
+        whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
                               sizeof(T), to_sizet(k), whip::memcpy_default, stream);
       }
 

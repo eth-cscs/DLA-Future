@@ -852,8 +852,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
       : panels_v(n_workspaces, dist_a) {}
 
-  auto call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
-            const matrix::SubPanelView& panel_view) {
+  void call(Matrix<T, Device::GPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
+            const SizeType j_sub, const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
 
     namespace ex = pika::execution::experimental;
@@ -866,15 +866,13 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
     auto& v = panels_v.nextResource();
 
     copyToCPU(panel_view, mat_a, v);
-    auto taus = computePanelReflectors(v, mat_taus, j_sub, panel_view);
+    computePanelReflectors(v, mat_taus, j_sub, panel_view);
     copyFromCPU(panel_view, v, mat_a);
-
-    return taus;
   }
 
   template <Device D, class CommSender, class TriggerSender>
-  auto call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, Matrix<T, Device::CPU>& mat_taus, SizeType j_sub,
+  void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
+            Matrix<T, D>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus, SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     auto& v = panels_v.nextResource();
 
@@ -883,14 +881,12 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
     // compute on CPU
     using dlaf::eigensolver::internal::red2band::distributed::computePanelReflectors;
-    auto taus = computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
-                                       std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
-                                       panel_view);
+    computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
+                           std::forward<CommSender>(mpi_col_chain_panel), v, mat_taus, j_sub,
+                           panel_view);
 
     // copy back to GPU
     copyFromCPU(panel_view, v, mat_a);
-
-    return taus;
   }
 
 protected:

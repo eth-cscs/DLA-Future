@@ -12,9 +12,6 @@
 
 /// @file
 
-// TODO: remove, only here for shared_ptr
-#include <memory>
-
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/reduction_to_band/api.h>
 #include <dlaf/matrix/matrix.h>
@@ -22,55 +19,6 @@
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::eigensolver {
-
-// namespace internal {
-
-// template <class T>
-// common::internal::vector<
-//     pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-// groupTausFromBandsToTiles(
-//     common::internal::vector<
-//         pika::execution::experimental::any_sender<std::shared_ptr<common::internal::vector<T>>>>
-//         taus_band,
-//     const SizeType band_size, const SizeType mb) {
-//   using common::internal::vector;
-
-//   namespace ex = pika::execution::experimental;
-
-//   auto accumulateVectorSizes = [](const SizeType acc, const std::shared_ptr<vector<T>>& v) {
-//     return acc + v->size();
-//   };
-
-//   vector<ex::any_sender<std::shared_ptr<vector<T>>>> taus;
-
-//   const SizeType group_size = mb / band_size;
-//   taus.reserve(dlaf::util::ceilDiv(taus_band.size(), group_size));
-
-//   for (SizeType start = 0; start < taus_band.size(); start += group_size) {
-//     const SizeType end = std::min<SizeType>(taus_band.size(), start + group_size);
-//     std::vector<ex::any_sender<std::shared_ptr<vector<T>>>> block_deps(begin(taus_band) + start,
-//                                                                        begin(taus_band) + end);
-//     taus.emplace_back(
-//         ex::when_all_vector(std::move(block_deps)) |
-//         ex::then([accumulateVectorSizes](std::vector<std::shared_ptr<vector<T>>>&& taus_band_chunks) {
-//           const auto nrefls = std::accumulate(cbegin(taus_band_chunks), cend(taus_band_chunks),
-//                                               SizeType(0), accumulateVectorSizes);
-
-//           std::shared_ptr<vector<T>> taus_tile = std::make_shared<vector<T>>();
-//           taus_tile->reserve(nrefls);
-
-//           for (auto& taus_band : taus_band_chunks)
-//             for (auto& tau : *taus_band)
-//               taus_tile->push_back(std::move(tau));
-
-//           return taus_tile;
-//         }) |
-//         ex::split());
-//   }
-//   return taus;
-// }
-
-// }
 
 /// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with specified band_size.
 ///
@@ -80,6 +28,8 @@ namespace dlaf::eigensolver {
 /// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
 /// triangular part will be used.
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
+/// @return a row vector of size max(0, mat_a.size().rows() - band_size - 1)
+/// (block size mat_a.blockSize.rows()) containing taus
 ///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size
@@ -145,6 +95,8 @@ v v v v * *
 /// band-diagonal result together with the elementary reflectors as described above. Just the tiles of
 /// the lower triangular part will be used.
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
+/// @return a row vector of size max(0, mat_a.size().rows() - band_size - 1)
+/// (block size mat_a.blockSize.rows()) containing taus
 ///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size

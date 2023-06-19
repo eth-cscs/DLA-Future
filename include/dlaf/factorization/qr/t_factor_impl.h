@@ -26,7 +26,6 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
-#include <dlaf/sender/keep_future.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 

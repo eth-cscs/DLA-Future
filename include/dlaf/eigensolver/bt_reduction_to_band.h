@@ -31,9 +31,8 @@ namespace eigensolver {
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
-/// TODO: Update docs
-/// @param mat_taus is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling
-/// factor for the j-th HH tranformation.
+/// @param mat_taus is a row vector of size m (blocksize mb). The j-th element is the scaling factor
+/// for the j-th HH tranformation.
 /// @pre mat_c is not distributed,
 /// @pre mat_v is not distributed.
 template <Backend backend, Device device, class T>
@@ -66,7 +65,7 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
-/// @param taus is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor
+/// @param mat_taus is a row vector of size m (blocksize mb). The j-th element is the scaling factor
 /// for the j-th HH tranformation.
 /// @pre mat_c is distributed,
 /// @pre mat_v is distributed according to grid.
@@ -87,8 +86,8 @@ void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeTy
     return mat_v.distribution().template nextLocalTileFromGlobalTile<Coord::Col>(
         std::max<SizeType>(0, util::ceilDiv(m - b - 1, mb)));
   };
-  // TODO: localNrTiles not exposed in MatrixBase
-  DLAF_ASSERT(mat_taus.distribution().localNrTiles().cols() == nr_reflectors_blocks(), mat_taus, mat_v, b);
+  DLAF_ASSERT(mat_taus.distribution().localNrTiles().cols() == nr_reflectors_blocks(), mat_taus, mat_v,
+              b);
 
   internal::BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);
 }

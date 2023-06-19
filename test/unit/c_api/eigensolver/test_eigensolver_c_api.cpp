@@ -85,7 +85,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
 
-  char grid_order = grid.fullCommunicatorOrder() == dlaf::common::Ordering::RowMajor ? 'R' : 'C';
+  char grid_order = grid_ordering(grid.fullCommunicator(), grid.size().rows(), grid.size().cols(), grid.rank().row(), grid.rank().col()); 
 
   int dlaf_context = -1;
   if constexpr (api == API::dlaf) {
@@ -95,7 +95,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   }
   else if constexpr (api == API::scalapack) {
     // Create BLACS grid
-    Cblacs_get(0, 0, &dlaf_context);
+    Cblacs_get(0, 0, &dlaf_context); // Default system context
     Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
 
     // Create DLAF grid from BLACS context

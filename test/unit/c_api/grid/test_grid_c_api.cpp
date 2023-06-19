@@ -36,37 +36,71 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-// TEST(GridTest, GridScaLAPACKOrderingR) {
-//
-//
-//     char rm = grid_ordering(row_major.fullCommunicator(), row_major.size().rows(), row_major.size().cols(), row_major.rank().row(), row_major.rank().col()); 
-//     EXPECT_EQ(rm, 'R');
-// }
-//
-// TEST(GridTest, GridScaLAPACKOrderingC) {
-//
-//     comm::CommunicatorGrid col_major(world, 2, 3, common::Ordering::ColumnMajor);
-//     
-//     std::cout << "DEBUG " << col_major.rank() << ' ' << world.rank() << ' ' << col_major.size() << std::endl;
-//     
-//     char cm = grid_ordering(col_major.fullCommunicator(), col_major.size().rows(), col_major.size().cols(), col_major.rank().row(), col_major.rank().col()); 
-//     EXPECT_EQ(cm, 'C');
-// }
+DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);
+DLAF_EXTERN_C void Cblacs_gridexit(int ictxt);
+
+// TODO Parametrise tests on C and R
+
+TEST(GridTest, GridScaLAPACKOrderingR) {
+  char order = 'R';
+
+  int context;
+  Cblacs_get(0, 0, &context);
+  Cblacs_gridinit(&context, &order, 2, 3);
+
+  int nprow, npcol, mynprow, mynpcol;
+  Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
+
+  int system_context;
+  int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
+  Cblacs_get(context, get_blacs_contxt, &system_context);
+
+  MPI_Comm comm = Cblacs2sys_handle(system_context);
+
+  char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
+  EXPECT_EQ(rm, 'R');
+
+  Cblacs_gridexit(context);
+}
+
+TEST(GridTest, GridScaLAPACKOrderingC) {
+  char order = 'C';
+
+  int context;
+  Cblacs_get(0, 0, &context);
+  Cblacs_gridinit(&context, &order, 2, 3);
+
+  int nprow, npcol, mynprow, mynpcol;
+  Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
+
+  int system_context;
+  int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
+  Cblacs_get(context, get_blacs_contxt, &system_context);
+
+  MPI_Comm comm = Cblacs2sys_handle(system_context);
+
+  char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
+  EXPECT_EQ(rm, 'R');
+
+  Cblacs_gridexit(context);
+}
 
 TEST(GridTest, GridDLAFOrderingR) {
-    comm::Communicator world(MPI_COMM_WORLD);
+  comm::Communicator world(MPI_COMM_WORLD);
 
-    comm::CommunicatorGrid row_major(world, 2, 3, common::Ordering::RowMajor);
-    
-    char rm = grid_ordering(world, row_major.size().rows(), row_major.size().cols(), row_major.rank().row(), row_major.rank().col()); 
-    EXPECT_EQ(rm, 'R');
+  comm::CommunicatorGrid row_major(world, 2, 3, common::Ordering::RowMajor);
+
+  char rm = grid_ordering(world, row_major.size().rows(), row_major.size().cols(),
+                          row_major.rank().row(), row_major.rank().col());
+  EXPECT_EQ(rm, 'R');
 }
 
 TEST(GridTest, GridDLAFOrderingC) {
-    comm::Communicator world(MPI_COMM_WORLD);
+  comm::Communicator world(MPI_COMM_WORLD);
 
-    comm::CommunicatorGrid col_major(world, 2, 3, common::Ordering::ColumnMajor);
-    
-    char cm = grid_ordering(world, col_major.size().rows(), col_major.size().cols(), col_major.rank().row(), col_major.rank().col()); 
-    EXPECT_EQ(cm, 'C');
+  comm::CommunicatorGrid col_major(world, 2, 3, common::Ordering::ColumnMajor);
+
+  char cm = grid_ordering(world, col_major.size().rows(), col_major.size().cols(),
+                          col_major.rank().row(), col_major.rank().col());
+  EXPECT_EQ(cm, 'C');
 }

@@ -296,7 +296,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
   auto s =
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
-                   mat_taus.readwrite(LocalTileIndex(j_sub, 0)),          // taus
+                   mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles))) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
@@ -610,7 +610,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   auto s =
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
-                   mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),         // taus
+                   mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
@@ -1105,7 +1105,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   const SizeType nrefls = std::max<SizeType>(0, dist.size().rows() - band_size - 1);
 
   // Row-vector that is distributed over columns, but exists locally on all rows of the grid
-  // TODO: transpose into column vector?
   DLAF_ASSERT(mat_a.blockSize().cols() % band_size == 0, mat_a.blockSize().cols(), band_size);
   Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(nrefls, 1),
                                                        TileElementSize(mat_a.blockSize().cols(), 1),

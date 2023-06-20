@@ -50,7 +50,7 @@ TYPED_TEST_SUITE(CholeskyTestMC, RealMatrixElementTypes);
 template <class T>
 struct CholeskyTestGPU : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyTestGPU, RealMatrixElementTypes);
 #endif
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});

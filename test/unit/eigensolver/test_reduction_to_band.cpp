@@ -390,15 +390,15 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    auto mat_local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
-    // TODO: Is this wait required? Is it required here?
-    pika::threads::get_thread_manager().wait();
-    return mat_local_taus;
+    return eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
   }();
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, matrix_a_h);
+
+  // Wait for all work to finish before doing blocking communication
+  pika::threads::get_thread_manager().wait();
 
   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);

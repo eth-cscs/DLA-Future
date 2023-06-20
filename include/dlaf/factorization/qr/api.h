@@ -78,11 +78,10 @@ struct QR_Tfactor {
   /// @pre k <= t.get().size().rows && k <= t.get().size().cols()
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
-  static void call(
-      matrix::Panel<Coord::Col, T, device>& hh_panel,
-      matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-      matrix::ReadWriteTileSender<T, device> t,
-      common::Pipeline<comm::Communicator>& mpi_col_task_chain);
+  static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
+                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+                   matrix::ReadWriteTileSender<T, device> t,
+                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };
 
 // ETI

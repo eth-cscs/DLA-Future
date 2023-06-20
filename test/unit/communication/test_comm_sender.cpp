@@ -63,8 +63,8 @@ TEST(Bcast, Polling) {
   double val = (comm.rank() == root_rank) ? 4.2 : 1.2;
   std::vector<double> buf(static_cast<std::size_t>(size), val);
 
-  sync_wait(when_all(just(buf.data(), size, dtype, root_rank, comm)) |
-            transformMPI(MPI_Ibcast) | then([](int e) { DLAF_MPI_CHECK_ERROR(e); }));
+  sync_wait(when_all(just(buf.data(), size, dtype, root_rank, comm)) | transformMPI(MPI_Ibcast) |
+            then([](int e) { DLAF_MPI_CHECK_ERROR(e); }));
 
   std::vector<double> expected_buf(static_cast<std::size_t>(size), 4.2);
   ASSERT_TRUE(expected_buf == buf);

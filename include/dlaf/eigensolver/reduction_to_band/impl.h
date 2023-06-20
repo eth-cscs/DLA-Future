@@ -609,7 +609,7 @@ void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
   const std::size_t nthreads = getReductionToBandPanelNWorkers();
   auto s =
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads),
-                            std::vector<common::internal::vector<T>>{}),  // w (interally required)
+                            std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    mat_taus.readwrite(GlobalTileIndex(j_sub, 0)),         // taus
                    ex::when_all_vector(std::move(panel_tiles)),
                    std::forward<CommSender>(mpi_col_chain_panel), std::forward<TriggerSender>(trigger)) |

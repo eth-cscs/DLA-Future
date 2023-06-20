@@ -276,11 +276,11 @@ T computeReflector(const std::vector<matrix::Tile<T, D>>& panel, SizeType j) {
   return tau;
 }
 
-template <class MatrixLike, class MatrixLikeTaus>
-void computePanelReflectors(MatrixLike& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
+template <class MatrixLikeA, class MatrixLikeTaus>
+void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const SizeType j_sub,
                             const matrix::SubPanelView& panel_view) {
-  static Device constexpr D = MatrixLike::device;
-  using T = typename MatrixLike::ElementType;
+  static Device constexpr D = MatrixLikeA::device;
+  using T = typename MatrixLikeA::ElementType;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -588,13 +588,13 @@ T computeReflector(const bool has_head, comm::Communicator& communicator,
   return tau;
 }
 
-template <class MatrixLike, class MatrixLikeTaus, class TriggerSender, class CommSender>
+template <class MatrixLikeA, class MatrixLikeTaus, class TriggerSender, class CommSender>
 void computePanelReflectors(TriggerSender&& trigger, comm::IndexT_MPI rank_v0,
-                            CommSender&& mpi_col_chain_panel, MatrixLike& mat_a,
+                            CommSender&& mpi_col_chain_panel, MatrixLikeA& mat_a,
                             MatrixLikeTaus& mat_taus, SizeType j_sub,
                             const matrix::SubPanelView& panel_view) {
-  static Device constexpr D = MatrixLike::device;
-  using T = typename MatrixLike::ElementType;
+  static Device constexpr D = MatrixLikeA::device;
+  using T = typename MatrixLikeA::ElementType;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 

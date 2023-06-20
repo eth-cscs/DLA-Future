@@ -195,13 +195,10 @@ auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
   auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
       mat_local_taus, common::iterate_range2d(LocalTileSize(mat_local_taus.nrTiles().rows(), 1)))));
 
-  // TODO: Guaranteed to be contiguous right now (column vector). Update to use std::copy.
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
   for (const auto& t : local_taus_tiles) {
-    for (SizeType i = 0; i < t.get().size().rows(); ++i) {
-      taus.push_back(t.get()(TileElementIndex(i, 0)));
-    }
+    std::copy(t.get().ptr(), t.get().ptr() + t.get().size().rows(), std::back_inserter(taus));
   }
 
   DLAF_ASSERT(to_SizeType(taus.size()) == k, taus.size(), k);

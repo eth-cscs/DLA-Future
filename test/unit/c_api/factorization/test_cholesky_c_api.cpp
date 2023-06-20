@@ -118,7 +118,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
         pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
 
     local_a_ptr = toplefttile_a.ptr();
-    lld = toplefttile_a.ld();
+    lld = static_cast<int>(toplefttile_a.ld());
   }  // Destroy tile (avoids deoendency issues down the line)
 
   // Suspend pika to ensure it is resumed by the C API
@@ -146,10 +146,10 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
                     lld};
     int info = -1;
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_pdpotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);
+      C_dlaf_pdpotrf(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, &info);
     }
     else {
-      C_dlaf_pspotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);
+      C_dlaf_pspotrf(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, &info);
     }
   }
 

@@ -139,8 +139,8 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       auto toplefttile_eigenvectors =
           pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
 
-      lld_a = toplefttile_a.ld();
-      lld_eigenvectors = toplefttile_eigenvectors.ld();
+      lld_a = static_cast<int>(toplefttile_a.ld());
+      lld_eigenvectors = static_cast<int>(toplefttile_eigenvectors.ld());
 
       local_a_ptr = toplefttile_a.ptr();
       local_eigenvectors_ptr = toplefttile_eigenvectors.ptr();
@@ -170,11 +170,11 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_pdsyevd(dlaf_uplo, m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
+        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
                        desc_z, &info);
       }
       else {
-        C_dlaf_pssyevd(dlaf_uplo, m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
+        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
                        desc_z, &info);
       }
     }

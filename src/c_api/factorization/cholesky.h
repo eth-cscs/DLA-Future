@@ -1,4 +1,3 @@
-//
 // Distributed Linear Algebra with Future (DLAF)
 //
 // Copyright (c) 2018-2023, ETH Zurich
@@ -77,7 +76,8 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
   // The grid needs to be created with dlaf_create_grid_from_blacs
   auto communicator_grid = dlaf_grids.at(desca[1]);
   dlaf::matrix::Distribution distribution({desca[2], desca[3]}, {desca[4], desca[5]},
-                                          communicator_grid.size(), communicator_grid.rank(), {desca[6], desca[7]});
+                                          communicator_grid.size(), communicator_grid.rank(),
+                                          {desca[6], desca[7]});
   dlaf::matrix::LayoutInfo layout_info = colMajorLayout(distribution, desca[8]);
 
   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout_info, a);

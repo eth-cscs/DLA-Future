@@ -16,8 +16,8 @@
 DLAF_EXTERN_C void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z,
                                   int* descz, int* info);
 
-DLAF_EXTERN_C void C_dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z,
-                                  int* descz, int* info);
+DLAF_EXTERN_C void C_dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz,
+                                  int* info);
 
 DLAF_EXTERN_C void C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
                                         struct DLAF_descriptor desca, double* w, double* z,

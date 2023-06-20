@@ -11,7 +11,6 @@
 #include "grid.h"
 
 #include <limits>
-#include <stdio.h>
 
 #include <mpi.h>
 

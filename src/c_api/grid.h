@@ -11,6 +11,7 @@
 #pragma once
 
 #include <unordered_map>
+
 #include <dlaf/communication/communicator_grid.h>
 
 extern std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;

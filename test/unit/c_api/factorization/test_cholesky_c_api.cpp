@@ -80,13 +80,13 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   // Here we need to resume it manually to build the matrices with DLA-Future
   pika::resume();
 
-  char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid.rank().row(), grid.rank().col());
+  char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
+                                  grid.rank().row(), grid.rank().col());
 
   int dlaf_context = -1;
   if constexpr (api == API::dlaf) {
     // Create DLAF grid directly
-    dlaf_context =
-        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+    dlaf_context = dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
   }
   else if constexpr (api == API::scalapack) {
     // Create BLACS grid
@@ -125,7 +125,8 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   pika::suspend();
 
   if constexpr (api == API::dlaf) {
-    DLAF_descriptor dlaf_desc = {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld};
+    DLAF_descriptor dlaf_desc =
+        {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld};
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
@@ -134,7 +135,15 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     }
   }
   else if constexpr (api == API::scalapack) {
-    int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), lld};
+    int desc_a[] = {1,
+                    dlaf_context,
+                    (int) m,
+                    (int) m,
+                    (int) mb,
+                    (int) mb,
+                    src_rank_index.row(),
+                    src_rank_index.col(),
+                    lld};
     int info = -1;
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_pdpotrf(dlaf_uplo, m, local_a_ptr, 0, 0, desc_a, &info);

@@ -31,7 +31,7 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   pika::resume();
 
   // TODO: Check uplo
-  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  [[maybe_unused]] auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
 
   // TODO: Check desca and descz match
 
@@ -77,7 +77,7 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
 
   pika::resume();
 
-  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  [[maybe_unused]] auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
 
   // Get grid corresponding to blacs context in desca
   // The grid needs to be created with dlaf_create_grid_from_blacs

@@ -25,7 +25,7 @@ std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
   // dlaf_context starts from INT_MAX to reeduce the likelihood of clashes with blacs contexts
   // blacs starts to number contexts from 0
-  int dlaf_context = std::numeric_limits<int>::max() - std::size(dlaf_grids);
+  int dlaf_context = std::numeric_limits<int>::max() - static_cast<int>(std::size(dlaf_grids));
 
   auto dlaf_order = order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
                                                  : dlaf::common::Ordering::RowMajor;

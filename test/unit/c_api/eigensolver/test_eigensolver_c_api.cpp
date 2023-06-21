@@ -80,11 +80,6 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const char* argv[] = {"test_c_api_", nullptr};
   dlaf_initialize(1, argv);
 
-  // In normal use the runtime is resumed by the C API call
-  // The pika runtime is suspended by dlaf_initialize
-  // Here we need to resume it manually to build the matrices with DLA-Future
-  pika::resume();
-
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
                                   grid.rank().row(), grid.rank().col());
 
@@ -101,6 +96,11 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     // Create DLAF grid from BLACS context
     dlaf_create_grid_from_blacs(dlaf_context);
   }
+
+  // In normal use the runtime is resumed by the C API call
+  // The pika runtime is suspended by dlaf_initialize
+  // Here we need to resume it manually to build the matrices with DLA-Future
+  pika::resume();
 
   const LocalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -190,6 +190,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   pika::resume();
 
   testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
+
+  // Suspend pika to make sure dla_finalize resumes it
+  pika::suspend();
 
   dlaf_free_grid(dlaf_context);
   dlaf_finalize();

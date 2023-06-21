@@ -53,8 +53,8 @@ void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
                                                                                     matrix.get());
   }  // Destroy mirror
 
-  matrix_host.waitLocalTiles();
-
+  // matrix_host.waitLocalTiles();
+  //
   pika::suspend();
 }
 
@@ -91,8 +91,8 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
                                                                                     matrix.get());
   }  // Destroy mirror
 
-  matrix_host.waitLocalTiles();
-
+  // matrix_host.waitLocalTiles();
+  //
   pika::suspend();
 
   info = 0;

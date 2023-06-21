@@ -64,8 +64,8 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   }  // Destroy mirror
 
   // Ensure data is copied back to the host
-  eigenvalues_host.waitLocalTiles();
-  eigenvectors_host.waitLocalTiles();
+  // eigenvalues_host.waitLocalTiles();
+  // eigenvectors_host.waitLocalTiles();
 
   pika::suspend();
 }
@@ -104,8 +104,8 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
   }  // Destroy mirror
 
   // Ensure data is copied back to the host
-  eigenvalues_host.waitLocalTiles();
-  eigenvectors_host.waitLocalTiles();
+  // eigenvalues_host.waitLocalTiles();
+  // eigenvectors_host.waitLocalTiles();
 
   pika::suspend();
 

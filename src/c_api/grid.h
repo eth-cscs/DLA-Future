@@ -14,4 +14,8 @@
 
 #include <dlaf/communication/communicator_grid.h>
 
+/// Dictionary of allocated DLA-Future communication grids
+///
+/// The grids are indexed by a integer context (DLA-Future context or BLACS
+/// context)
 extern std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;

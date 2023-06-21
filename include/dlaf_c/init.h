@@ -12,5 +12,13 @@
 
 #include <dlaf_c/utils.h>
 
+/// Initialize pika runtime and DLA-Future
+///
+/// The pika runtime is automatically suspended within this function
+///
+/// @param argc Number of arguments
+/// @param argv Arguments
 DLAF_EXTERN_C void dlaf_initialize(int argc, const char** argv);
+
+/// Finalize DLA-Future and pika runtime
 DLAF_EXTERN_C void dlaf_finalize();

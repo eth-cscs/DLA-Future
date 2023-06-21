@@ -10,14 +10,15 @@
 
 #pragma once
 
+/// DLA-Future descriptor
 struct DLAF_descriptor {
-  int m;
-  int n;
-  int mb;
-  int nb;
-  int isrc;
-  int jsrc;
-  int i;
-  int j;
-  int ld;
+  int m;     ///< Number of rows in the global matrix
+  int n;     ///< Number of columns in the global matrix
+  int mb;    ///< Row blocking factor
+  int nb;    ///< Column blocking factor
+  int isrc;  ///< Process row of the first row of the global matrix
+  int jsrc;  ///< Process column of the first column of the global matrix
+  int i;     ///< First row of the submatrix within global matrix, UNSUPPORTED
+  int j;     ///< First column of the submatrix within global matrix, UNSUPPORTED
+  int ld;    ///< Leading fimension of the local matrix
 };

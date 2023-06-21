@@ -158,6 +158,8 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
+  
+  pika::suspend();
 
   dlaf_free_grid(dlaf_context);
   dlaf_finalize();
@@ -197,9 +199,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
     }
   }
 }
-#endif
 
-#ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {

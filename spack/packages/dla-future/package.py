@@ -143,12 +143,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 )
             )
-            args.append(
-                self.define(
-                    "SCALAPACK_LIBRARY",
-                    " ".join(spec["scalapack"].libs.ld_flags),
-                )
-            )
 
         if "+c_api" in spec:
             args.append(self.define_from_variant("DLAF_WITH_C_API", "c_api"))

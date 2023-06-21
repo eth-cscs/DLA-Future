@@ -75,11 +75,6 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   const char* argv[] = {"test_cholesky_c_api", nullptr};
   dlaf_initialize(1, argv);
 
-  // In normal use the runtime is resumed by the C API call
-  // The pika runtime is suspended by dlaf_initialize
-  // Here we need to resume it manually to build the matrices with DLA-Future
-  pika::resume();
-
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
                                   grid.rank().row(), grid.rank().col());
 
@@ -96,6 +91,11 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     // Create DLAF grid from BLACS context
     dlaf_create_grid_from_blacs(dlaf_context);
   }
+
+  // In normal use the runtime is resumed by the C API call
+  // The pika runtime is suspended by dlaf_initialize
+  // Here we need to resume it manually to build the matrices with DLA-Future
+  pika::resume();
 
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -158,7 +158,8 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
-  
+
+  // Suspend pika to make sure dla_finalize resumes it
   pika::suspend();
 
   dlaf_free_grid(dlaf_context);

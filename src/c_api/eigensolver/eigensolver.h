@@ -21,6 +21,7 @@
 #include <dlaf_c/grid.h>
 
 #include "../grid.h"
+#include "../blacs.h"
 
 template <typename T>
 void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, T* w, T* z,

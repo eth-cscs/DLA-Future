@@ -14,11 +14,6 @@
 
 #include "dlaf_c/utils.h"
 
-// TODO: Move to internal header!
-DLAF_EXTERN_C MPI_Comm Cblacs2sys_handle(int ictxt);
-DLAF_EXTERN_C void Cblacs_get(int ictxt, int what, int* val);
-DLAF_EXTERN_C void Cblacs_gridinfo(int ictxt, int* np, int* mp, int* px, int* py);
-
 /// Create communication grid
 ///
 /// Grids created here are indexed starting from INT_MAX, to avoid clashes with

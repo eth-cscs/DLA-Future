@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 
+#include <dlaf_test/blacs.h>
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_matrix.h>
@@ -35,9 +36,6 @@ using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
-
-DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);
-DLAF_EXTERN_C void Cblacs_gridexit(int ictxt);
 
 // TODO Parametrise tests on C and R
 

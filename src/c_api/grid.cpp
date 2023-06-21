@@ -20,6 +20,8 @@
 
 #include "dlaf/communication/error.h"
 
+#include "blacs.h"
+
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
 int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {

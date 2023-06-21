@@ -28,6 +28,7 @@
 
 #include <gtest/gtest.h>
 
+#include <dlaf_test/blacs.h>
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
 #include <dlaf_test/matrix/matrix_local.h>
@@ -71,9 +72,6 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 };
 
 enum class API { dlaf, scalapack };
-
-DLAF_EXTERN_C void Cblacs_gridinit(int* ictxt, char* layout, int nprow, int npcol);
-DLAF_EXTERN_C void Cblacs_gridexit(int ictxt);
 
 template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {

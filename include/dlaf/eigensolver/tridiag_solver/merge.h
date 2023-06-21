@@ -973,8 +973,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                            const SizeType i_end, const LocalTileIndex ij_begin_lc,
                            const LocalTileSize sz_loc_tiles, KSender&& k, RhoSender&& rho,
                            Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
-                           Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& delta,
-                           Matrix<const SizeType, Device::CPU>& i2, Matrix<T, Device::CPU>& evecs) {
+                           Matrix<T, Device::CPU>& evals, Matrix<const SizeType, Device::CPU>& i2,
+                           Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   namespace tt = pika::this_thread::experimental;
@@ -1041,8 +1041,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                    std::forward<CommSender>(col_comm), std::forward<CommSender>(row_comm),
                    std::forward<KSender>(k), std::forward<RhoSender>(rho),
                    ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.readwrite(z)),
-                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.readwrite(delta)),
-                   ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
+                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.read(i2)),
+                   ex::when_all_vector(tc.readwrite(evecs)),
                    // additional workspaces
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
@@ -1052,8 +1052,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
                              const std::size_t thread_idx, auto& barrier_ptr, auto& col_comm_wrapper,
                              auto& row_comm_wrapper, const auto& k, const auto& rho,
                              const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
-                             const auto& delta_tile_arr, const auto& i2_tile_arr, const auto& evec_tiles,
-                             auto& ws_vecs, auto& ws_rowvec) {
+                             const auto& i2_tile_arr, const auto& evec_tiles, auto& ws_cols,
+                             auto& ws_row) {
         using dlaf::comm::internal::transformMPI;
 
         const dlaf::comm::Communicator& row_comm = row_comm_wrapper.get();
@@ -1101,14 +1101,29 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // STEP 0b: Initialize workspaces (single-thread)
         if (thread_idx == 0) {
-          // Note: nthreads + 1 to get additional workspace for reduction
-          ws_vecs.reserve(nthreads + 1);
-          for (std::size_t i = 0; i < nthreads + 1; ++i)
-            ws_vecs.emplace_back(m_subm_el_lc);
+          // Note:
+          // - nthreads are used for both LAED4 and weight calculation (one per worker thread)
+          // - last one is used for reducing weights from all workers
+          ws_cols.reserve(nthreads + 1);
 
-          ws_rowvec = memory::MemoryView<T, Device::CPU>(n_subm_el_lc);
-          std::fill_n(ws_rowvec(), n_subm_el_lc, 0);
+          // Note:
+          // Considering that
+          // - LAED4 requires working on k elements
+          // - Weight computaiton requires working on m_subm_el_lc
+          //
+          // and they are needed at two steps that cannot happen in parallel, we opted for allocating the
+          // workspace with the highest requirement of memory, and reuse them for both steps.
+          const SizeType max_size = std::max(k, m_subm_el_lc);
+          for (std::size_t i = 0; i < nthreads; ++i)
+            ws_cols.emplace_back(max_size);
+          ws_cols.emplace_back(m_subm_el_lc);
+
+          ws_row = memory::MemoryView<T, Device::CPU>(n_subm_el_lc);
+          std::fill_n(ws_row(), n_subm_el_lc, 0);
         }
+
+        // Note: we have to wait that LAED4 workspaces are ready to be used
+        barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         const T* d_ptr = d_tiles_futs[0].get().ptr();
         const T* z_ptr = z_tiles[0].ptr();
@@ -1118,7 +1133,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           common::internal::SingleThreadedBlasScope single;
 
           T* eval_ptr = eval_tiles[0].ptr();
-          T* delta_ptr = delta_tile_arr[0].ptr();
+          T* delta_ptr = ws_cols[thread_idx]();
 
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
@@ -1184,7 +1199,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
         // STEP 2 Compute weights (multi-thread)
         auto& q = evec_tiles;
-        T* w = ws_vecs[thread_idx]();
+        T* w = ws_cols[thread_idx]();
 
         // STEP 2a: copy diagonal from q -> w (or just initialize with 1)
         if (thread_idx == 0) {
@@ -1275,7 +1290,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           // local reduction from all bulk workers
           for (int i = 0; i < m_subm_el_lc; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
-              const T* w_partial = ws_vecs[tidx]();
+              const T* w_partial = ws_cols[tidx]();
               w[i] *= w_partial[i];
             }
           }
@@ -1283,7 +1298,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
           tt::sync_wait(transformMPI(allReduceInPlace_o, ex::just(std::cref(row_comm), MPI_PROD,
                                                                   common::make_data(w, m_subm_el_lc))));
 
-          T* weights = ws_vecs[nthreads]();
+          T* weights = ws_cols[nthreads]();
           for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
             const SizeType i_subm_lc = i_subm_el_lc / dist.blockSize().rows();
             const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
@@ -1307,8 +1322,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         {
           common::internal::SingleThreadedBlasScope single;
 
-          const T* w = ws_vecs[nthreads]();
-          T* sum_squares = ws_rowvec();
+          const T* w = ws_cols[nthreads]();
+          T* sum_squares = ws_row();
 
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
@@ -1357,7 +1372,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         if (thread_idx == 0)
           tt::sync_wait(transformMPI(allReduceInPlace_o,
                                      ex::just(std::cref(col_comm), MPI_SUM,
-                                              common::make_data(ws_rowvec(), n_subm_el_lc))));
+                                              common::make_data(ws_row(), n_subm_el_lc))));
 
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
@@ -1365,7 +1380,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
         {
           common::internal::SingleThreadedBlasScope single;
 
-          const T* sum_squares = ws_rowvec();
+          const T* sum_squares = ws_row();
 
           for (SizeType j_subm_lc = begin; j_subm_lc < end; ++j_subm_lc) {
             const SizeType j_lc = ij_begin_lc.col() + to_SizeType(j_subm_lc);
@@ -1490,8 +1505,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
   solveRank1ProblemDist(col_task_chain(), row_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
-                        k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.z0, ws_hm.i2,
-                        ws_hm.e2);
+                        k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //

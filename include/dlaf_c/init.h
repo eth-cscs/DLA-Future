@@ -16,9 +16,12 @@
 ///
 /// The pika runtime is automatically suspended within this function
 ///
-/// @param argc Number of arguments
-/// @param argv Arguments
-DLAF_EXTERN_C void dlaf_initialize(int argc, const char** argv);
+/// @param argc_pika Number of arguments for pika
+/// @param argv_pika Arguments for pika
+/// @param argc_dlaf Number of arguments for DLA-Future
+/// @param argv_dlaf Arguments for DLA-Future
+DLAF_EXTERN_C void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
+                                   const char** argv_dlaf);
 
 /// Finalize DLA-Future and pika runtime
 DLAF_EXTERN_C void dlaf_finalize();

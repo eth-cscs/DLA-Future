@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +miniapps +c_api +ci-test ~ci-check-threads ^intel-mkl threads=openmp ^mpich
+    - dla-future@master +miniapps +c_api +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich
 
   packages:
     all:

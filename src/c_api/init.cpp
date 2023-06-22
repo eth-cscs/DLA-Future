@@ -18,7 +18,7 @@
 
 static bool dlaf_initialized = false;
 
-void dlaf_initialize(int argc, const char** argv) {
+void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const char** argv_dlaf) {
   if (!dlaf_initialized) {
     pika::program_options::options_description desc("");
     desc.add(dlaf::getOptionsDescription());
@@ -27,10 +27,10 @@ void dlaf_initialize(int argc, const char** argv) {
     pika::init_params params;
     params.rp_callback = dlaf::initResourcePartitionerHandler;
     params.desc_cmdline = desc;
-    pika::start(nullptr, argc, argv, params);
+    pika::start(nullptr, argc_pika, argv_pika, params);
 
     // DLA-Future initialization
-    dlaf::initialize(argc, argv);
+    dlaf::initialize(argc_dlaf, argv_dlaf);
     dlaf_initialized = true;
 
     pika::suspend();

@@ -70,8 +70,9 @@ enum class API { dlaf, scalapack };
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
-  const char* argv[] = {"test_cholesky_c_api", nullptr};
-  dlaf_initialize(1, argv);
+  const char* pika_argv[] = {"test_cholesky_c_api", "--pika:print-bind", nullptr};
+  const char* dlaf_argv[] = {"test_cholesky_c_api", nullptr};
+  dlaf_initialize(2, pika_argv, 1, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
                                   grid.rank().row(), grid.rank().col());

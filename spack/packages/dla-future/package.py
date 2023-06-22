@@ -25,7 +25,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("c_api", default=False, description="Build C API")
+    variant("c", default=False, description="Build C API")
     variant("ci-check-threads", default=False, description="Check number of spawned threads in CI (Advanced usage).")
 
     depends_on("cmake@3.22:", type="build")

@@ -20,7 +20,6 @@ packages:
     version:
       - 3.4.2
     variants:
-      - '~fortran'
       - '~libxml2'
   hwloc:
     variants:

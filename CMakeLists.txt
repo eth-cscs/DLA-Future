@@ -163,6 +163,9 @@ if(DLAF_WITH_MKL)
   endif()
 else()
   find_package(LAPACK REQUIRED)
+  if(DLAF_WITH_C_API)
+    find_package(SCALAPACK REQUIRED)
+  endif()
 endif()
 
 # ----- pika

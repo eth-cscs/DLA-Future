@@ -969,7 +969,7 @@ void reduceSumScalingVector(common::Pipeline<comm::Communicator>& col_task_chain
 }
 
 template <class T, class CommSender, class KSender, class RhoSender>
-void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const SizeType i_begin,
+void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const SizeType i_begin,
                            const SizeType i_end, const LocalTileIndex ij_begin_lc,
                            const LocalTileSize sz_loc_tiles, KSender&& k, RhoSender&& rho,
                            Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
@@ -1038,7 +1038,7 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
 
   ex::start_detached(
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)),
-                   std::forward<CommSender>(col_comm), std::forward<CommSender>(row_comm),
+                   std::forward<CommSender>(row_comm), std::forward<CommSender>(col_comm),
                    std::forward<KSender>(k), std::forward<RhoSender>(rho),
                    ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.readwrite(z)),
                    ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.read(i2)),
@@ -1049,8 +1049,8 @@ void solveRank1ProblemDist(CommSender&& col_comm, CommSender&& row_comm, const S
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, i_end, ij_begin_lc,
                           sz_loc_tiles, dist, bcast_evals, allReduceInPlace_o](
-                             const std::size_t thread_idx, auto& barrier_ptr, auto& col_comm_wrapper,
-                             auto& row_comm_wrapper, const auto& k, const auto& rho,
+                             const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
+                             auto& col_comm_wrapper, const auto& k, const auto& rho,
                              const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
                              const auto& i2_tile_arr, const auto& evec_tiles, auto& ws_cols,
                              auto& ws_row) {
@@ -1504,7 +1504,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1ProblemDist(col_task_chain(), row_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
+  solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
                         k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U

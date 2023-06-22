@@ -33,7 +33,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
-    depends_on("scalapack", when="+c_api") # TODO: Make optional?
+    depends_on("scalapack", when="+c") # TODO: Make optional?
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
@@ -129,7 +129,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     f"mkl::mkl_intel_32bit_{mkl_threads}_dyn",
                 ),
             ]
-            if "+c_api" in spec: # TODO: Make ScaLAPACK optional?
+            if "+c" in spec: # TODO: Make ScaLAPACK optional?
                 if "^mpich" in spec or "^cray-mpich" in spec:
                     mkl_mpi = "mpich"
                 elif "+openmpi" in spec:
@@ -144,8 +144,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 )
             )
 
-        if "+c_api" in spec:
-            args.append(self.define_from_variant("DLAF_WITH_C_API", "c_api"))
+        if "+c" in spec:
+            args.append(self.define_from_variant("DLAF_WITH_C_API", "c"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

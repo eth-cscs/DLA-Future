@@ -22,13 +22,8 @@ namespace dlaf::internal {
 template <typename...>
 struct TypeList {};
 
-template <typename ValueTypes>
-struct SenderSingleValueTypeImpl {};
-
-template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
-  using type = T;
-};
+template <typename... Ts>
+using DecayedTypeList = TypeList<std::decay_t<Ts>...>;
 
 template <typename T>
 struct IsFalse : std::integral_constant<bool, !(bool) T::value> {};
@@ -79,6 +74,14 @@ using UniqueType = typename Unique<Pack>::type;
 
 struct EmptyEnv {};
 
+template <typename ValueTypes>
+struct SenderSingleValueTypeImpl {};
+
+template <typename T>
+struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
+  using type = T;
+};
+
 // We are only interested in the types wrapped by future and shared_future since
 // we will internally unwrap them.
 template <typename T>
@@ -109,9 +112,6 @@ struct SenderSingleValueTypeImpl<
         RWType, RType, pika::execution::experimental::async_rw_mutex_access_type::read>>>> {
   using type = RType;
 };
-
-template <typename... Ts>
-using DecayedTypeList = TypeList<std::decay_t<Ts>...>;
 
 // The type sent by Sender, if Sender sends exactly one type.
 #if defined(PIKA_HAVE_STDEXEC)

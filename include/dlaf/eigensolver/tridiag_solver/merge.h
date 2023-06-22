@@ -1029,6 +1029,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                                         comm, req));
   };
 
+  // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
   const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = getTridiagRank1NWorkers();

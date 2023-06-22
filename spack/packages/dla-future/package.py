@@ -16,7 +16,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/eth-cscs/DLA-Future.git"
     maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
-    version("0.1.0", sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1")
+    version(
+        "0.1.0",
+        sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1",
+    )
     version("master", branch="master")
 
     variant("shared", default=True, description="Build shared libraries.")
@@ -26,14 +29,18 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("miniapps", default=False, description="Build miniapps.")
 
     variant("c", default=False, description="Build C API")
-    variant("ci-check-threads", default=False, description="Check number of spawned threads in CI (Advanced usage).")
+    variant(
+        "ci-check-threads",
+        default=False,
+        description="Check number of spawned threads in CI (Advanced usage).",
+    )
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
-    depends_on("scalapack", when="+c") # TODO: Make optional?
+    depends_on("scalapack", when="+c")  # TODO: Make optional?
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
@@ -60,28 +67,43 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     with when("+rocm"):
         for val in ROCmPackage.amdgpu_targets:
-            depends_on("pika amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
             depends_on(
-                "rocsolver amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+                "pika amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
             )
             depends_on(
-                "rocblas amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+                "rocsolver amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
             )
             depends_on(
-                "rocprim amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+                "rocblas amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
             )
             depends_on(
-                "rocthrust amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+                "rocprim amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
             )
-            depends_on("whip amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
             depends_on(
-                "umpire amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+                "rocthrust amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
+            )
+            depends_on(
+                "whip amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
+            )
+            depends_on(
+                "umpire amdgpu_target={0}".format(val),
+                when="amdgpu_target={0}".format(val),
             )
 
     with when("+cuda"):
         for val in CudaPackage.cuda_arch_values:
-            depends_on("pika cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
-            depends_on("umpire cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
+            depends_on(
+                "pika cuda_arch={0}".format(val), when="cuda_arch={0}".format(val)
+            )
+            depends_on(
+                "umpire cuda_arch={0}".format(val), when="cuda_arch={0}".format(val)
+            )
 
     ### Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")
@@ -95,7 +117,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     for cxxstd in cxxstds:
         depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
+        depends_on(
+            "pika-algorithms cxxstd={0}".format(cxxstd),
+            when="cxxstd={0}".format(cxxstd),
+        )
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")
@@ -129,12 +154,17 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     f"mkl::mkl_intel_32bit_{mkl_threads}_dyn",
                 ),
             ]
-            if "+c" in spec: # TODO: Make ScaLAPACK optional?
+            if "+c" in spec:  # TODO: Make ScaLAPACK optional?
                 if "^mpich" in spec or "^cray-mpich" in spec:
                     mkl_mpi = "mpich"
                 elif "+openmpi" in spec:
                     mkl_mpi = "omp"
-                args.append(self.define("MKL_SCALAPACK_TARGET", f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn"))
+                args.append(
+                    self.define(
+                        "MKL_SCALAPACK_TARGET",
+                        f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
+                    )
+                )
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(
@@ -143,6 +173,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 )
             )
+            if "+c" in spec:
+                args.append(
+                    self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags)
+                )
 
         if "+c" in spec:
             args.append(self.define_from_variant("DLAF_WITH_C_API", "c"))

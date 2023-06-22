@@ -16,8 +16,10 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
+#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
@@ -998,7 +1000,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   }();
 
   auto bcast_evals = [i_begin, i_end,
-                      dist](const dlaf::comm::Communicator& row_comm,
+                      dist](common::Pipeline<comm::Communicator>& row_comm_chain,
                             const std::vector<matrix::Tile<T, Device::CPU>>& eval_tiles) {
     using dlaf::comm::internal::sendBcast_o;
     using dlaf::comm::internal::recvBcast_o;
@@ -1013,17 +1015,18 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
       auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
       if (evecs_tile_rank == this_rank.col())
-        comms.emplace_back(transformMPI(sendBcast_o, ex::just(std::cref(row_comm), std::cref(tile))));
+        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(std::cref(tile))) |
+                           transformMPI(sendBcast_o));
       else
-        comms.emplace_back(transformMPI(recvBcast_o, ex::just(std::cref(row_comm), evecs_tile_rank,
-                                                              std::cref(tile))));
+        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(evecs_tile_rank, std::cref(tile))) |
+                           transformMPI(recvBcast_o));
     }
 
     return ex::ensure_started(ex::when_all_vector(std::move(comms)));
   };
 
-  auto allReduceInPlace_o = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op, const auto& data,
-                               MPI_Request* req) {
+  auto all_reduce_in_place_o = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op,
+                                  const auto& data, MPI_Request* req) {
     auto msg = comm::make_message(data);
     DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                                         comm, req));
@@ -1049,7 +1052,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, i_end, ij_begin_lc,
-                          sz_loc_tiles, dist, bcast_evals, allReduceInPlace_o](
+                          sz_loc_tiles, dist, bcast_evals, all_reduce_in_place_o](
                              const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
                              auto& col_comm_wrapper, const auto& k, const auto& rho,
                              const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
@@ -1057,11 +1060,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                              auto& ws_row) {
         using dlaf::comm::internal::transformMPI;
 
-        const dlaf::comm::Communicator& row_comm = row_comm_wrapper.get();
+        common::Pipeline<comm::Communicator> row_comm_chain(row_comm_wrapper.get());
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
-
         const std::size_t batch_size =
             std::max<std::size_t>(2, util::ceilDiv(to_sizet(sz_loc_tiles.cols()), nthreads));
         const SizeType begin = to_SizeType(thread_idx * batch_size);
@@ -1192,7 +1194,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         } bcast_barrier;
 
         if (thread_idx == 0)
-          bcast_barrier.sender_ = bcast_evals(row_comm, eval_tiles);
+          bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);
 
         // Note: laed4 handles k <= 2 cases differently
         if (k <= 2)
@@ -1296,8 +1298,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
             }
           }
 
-          tt::sync_wait(transformMPI(allReduceInPlace_o, ex::just(std::cref(row_comm), MPI_PROD,
-                                                                  common::make_data(w, m_subm_el_lc))));
+          tt::sync_wait(ex::when_all(row_comm_chain(),
+                                     ex::just(MPI_PROD, common::make_data(w, m_subm_el_lc))) |
+                        transformMPI(all_reduce_in_place_o));
 
           T* weights = ws_cols[nthreads]();
           for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
@@ -1371,9 +1374,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         // STEP 3b: Reduce to get the sum of all squares on all ranks
         if (thread_idx == 0)
-          tt::sync_wait(transformMPI(allReduceInPlace_o,
-                                     ex::just(std::cref(col_comm), MPI_SUM,
-                                              common::make_data(ws_row(), n_subm_el_lc))));
+          tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM,
+                                 common::make_data(ws_row(), n_subm_el_lc)) |
+                        transformMPI(all_reduce_in_place_o));
 
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 

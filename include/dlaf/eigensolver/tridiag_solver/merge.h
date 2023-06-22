@@ -1051,7 +1051,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
-      ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, i_end, ij_begin_lc,
+      ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, ij_begin_lc,
                           sz_loc_tiles, dist, bcast_evals, all_reduce_in_place_o](
                              const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
                              auto& col_comm_wrapper, const auto& k, const auto& rho,

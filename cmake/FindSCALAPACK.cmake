@@ -13,12 +13,18 @@ find_package(PkgConfig REQUIRED)
 
 pkg_search_module(_SCALAPACK scalapack)
 
-find_library(SCALAPACK_LIBRARIES
-  NAME scalapack
+find_library(
+  SCALAPACK_LIBRARIES NAME scalapack
   HINTS ${_SCALAPACK_LIBRARY_DIRS}
-  ENV SCALAPACKROOT SCALAPACK_ROOT SCALAPACK_PREFIX SCALAPACK_DIR SCALAPACKDIR
-  /usr
-  PATH_SUFFIXES lib)
+        ENV
+        SCALAPACKROOT
+        SCALAPACK_ROOT
+        SCALAPACK_PREFIX
+        SCALAPACK_DIR
+        SCALAPACKDIR
+        /usr
+  PATH_SUFFIXES lib
+)
 
 find_package_handle_standard_args(SCALAPACK DEFAULT_MSG SCALAPACK_LIBRARIES)
 

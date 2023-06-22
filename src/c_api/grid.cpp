@@ -18,9 +18,8 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/grid.h>
 
-#include "dlaf/communication/error.h"
-
 #include "blacs.h"
+#include "dlaf/communication/error.h"
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 

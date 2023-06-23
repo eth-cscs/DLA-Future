@@ -27,7 +27,7 @@ void check_dlaf(char uplo, DLAF_descriptor desca, DLAF_descriptor descz) {
 }
 
 void check_scalapack(char uplo, int* desca, int* descz) {
-  if (uplo != 'L' or uplo != 'l') {
+  if (uplo != 'L' and uplo != 'l') {
     std::cerr << "ERROR: The eigensolver currently supports only UPLO=='L'\n";
     exit(-1);
   }

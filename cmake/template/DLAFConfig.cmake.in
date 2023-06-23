@@ -66,10 +66,12 @@ if(DLAF_WITH_MKL)
   endif()
 else()
   set(LAPACK_LIBRARY "@LAPACK_LIBRARY@")
-
   find_dependency(LAPACK)
 
-  # TODO: DLAF_WITH_C_API
+  if(DLAF_WITH_C_API)
+    find_dependency(SCALAPACK)
+    set(SCALAPACK_LIBRARY "@SCALAPACK_LIBRARY@")
+  endif()
 endif()
 
 # ----- pika

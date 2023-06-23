@@ -23,25 +23,27 @@
 #include "../blacs.h"
 #include "../grid.h"
 
+void check_dlaf(char uplo, DLAF_descriptor desca, DLAF_descriptor descz);
+void check_scalapack(char uplo, int* desca, int* descz);
+
 template <typename T>
 void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, T* w, T* z,
                  DLAF_descriptor dlaf_descz) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
+  check_dlaf(uplo, dlaf_desca, dlaf_descz);
+
   pika::resume();
 
-  // TODO: Check uplo
   [[maybe_unused]] auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
-
-  // TODO: Check desca and descz match
 
   auto communicator_grid = dlaf_grids.at(dlaf_context);
 
   dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
   dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
 
-  dlaf::comm::Index2D src_rank_index(0, 0);  // WARN: Is this always the case?
+  dlaf::comm::Index2D src_rank_index(0, 0);  // TODO: Use actual source rank
 
   dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
                                           communicator_grid.rank(), src_rank_index);
@@ -76,7 +78,7 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  // TODO: Add checks
+  check_scalapack(uplo, desca, descz);
 
   pika::resume();
 

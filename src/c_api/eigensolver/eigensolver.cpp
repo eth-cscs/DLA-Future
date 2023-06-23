@@ -11,6 +11,38 @@
 #include "eigensolver.h"
 
 #include <dlaf_c/eigensolver/eigensolver.h>
+#include <dlaf_c/init.h>
+
+void check_dlaf(char uplo, DLAF_descriptor desca, DLAF_descriptor descz) {
+  if (uplo != 'L' and uplo != 'l') {
+    std::cerr << "ERROR: The eigensolver currently supports only UPLO=='L'\n";
+    exit(-1);
+  }
+
+  bool dims = (desca.m == desca.n and descz.m == descz.n and desca.m == descz.m);
+  if (!dims) {
+    std::cerr << "ERROR: Matrices A and Z need to have the same dimension.\n";
+    exit(-1);
+  }
+}
+
+void check_scalapack(char uplo, int* desca, int* descz) {
+  if (uplo != 'L' or uplo != 'l') {
+    std::cerr << "ERROR: The eigensolver currently supports only UPLO=='L'\n";
+    exit(-1);
+  }
+
+  if (desca[0] != 1 or descz[0] != 1) {
+    std::cerr << "ERROR: DLA-Future only supports dense matrices.\n";
+    exit(-1);
+  }
+
+  bool dims = (desca[2] == desca[3] and descz[2] == descz[3] and desca[2] == descz[2]);
+  if (!dims) {
+    std::cerr << "ERROR: Matrices A and Z need to have the same dimension.\n";
+    exit(-1);
+  }
+}
 
 void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz, int* info) {
   pxsyevd<float>(uplo, m, a, desca, w, z, descz, *info);

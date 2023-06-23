@@ -23,13 +23,18 @@
 #include "../blacs.h"
 #include "../grid.h"
 
+void check_dlaf(char uplo, DLAF_descriptor desca);
+
+void check_scalapack(char uplo, int* desca);
+
 template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
+  check_dlaf(uplo, dlaf_desca);
+
   pika::resume();
 
-  // TODO: Check uplo
   auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
 
   auto communicator_grid = dlaf_grids.at(dlaf_context);
@@ -64,11 +69,7 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
              int* desca, int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  // TODO: Add checks
-  // utils::check(uplo, desca, info);
-  // if (info == -1)
-  //   return;
-  // info = -1;  // Reset info to bad state
+  check_scalapack(uplo, desca);
 
   pika::resume();
 

@@ -8,6 +8,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <algorithm>
+#include <array>
+#include <cctype>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -121,6 +124,24 @@ struct parseFromString<SizeType> {
   static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
   };
+};
+
+template <>
+struct parseFromString<bool> {
+  static std::optional<std::size_t> call(const std::string& var) {
+    if (is_one_of_ignore_case(var, {"ON", "TRUE", "YES", "1"}))
+      return true;
+    if (is_one_of_ignore_case(var, {"OFF", "FALSE", "NO", "0"}))
+      return false;
+    return std::nullopt;
+  };
+
+private:
+  static bool is_one_of_ignore_case(std::string value, const std::array<std::string, 4>& values) {
+    std::transform(value.cbegin(), value.cend(), value.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+    return (values.cend()) != std::find(values.cbegin(), values.cend(), value);
+  }
 };
 
 template <class T>

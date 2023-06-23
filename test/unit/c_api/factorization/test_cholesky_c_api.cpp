@@ -40,7 +40,7 @@ using namespace dlaf::test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksCAPIEnvironment);
 
 template <class T>
 struct CholeskyTestMC : public TestWithCommGrids {};

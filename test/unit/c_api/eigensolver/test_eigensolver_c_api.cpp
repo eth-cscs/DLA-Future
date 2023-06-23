@@ -44,7 +44,7 @@ using namespace dlaf::test;
 using namespace testing;
 
 ::testing::Environment* const comm_grids_env =
-    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksCAPIEnvironment);
 
 template <typename Type>
 class EigensolverTest : public TestWithCommGrids {};

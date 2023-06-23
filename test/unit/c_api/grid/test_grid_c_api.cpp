@@ -37,8 +37,6 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
-// TODO Parametrise tests on C and R
-
 TEST(GridTest, GridScaLAPACKOrderingR) {
   char order = 'R';
 

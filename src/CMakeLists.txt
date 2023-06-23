@@ -276,7 +276,7 @@ DLAF_addSublibrary(
   LIBRARIES dlaf.core
 )
 
-# Define DLAF's interface library
+# Define DLAF's C API library
 if(DLAF_WITH_C_API)
   DLAF_addSublibrary(
     c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/factorization/cholesky.cpp c_api/grid.cpp

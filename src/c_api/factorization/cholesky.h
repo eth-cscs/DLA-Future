@@ -25,8 +25,6 @@
 
 void check_dlaf(char uplo, DLAF_descriptor desca);
 
-void check_scalapack(char uplo, int* desca);
-
 template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
@@ -64,6 +62,10 @@ void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   pika::suspend();
 }
 
+#ifdef DLAF_WITH_SCALAPACK
+
+void check_scalapack(char uplo, int* desca);
+
 template <typename T>
 void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja,
              int* desca, int& info) {
@@ -99,3 +101,5 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
 
   info = 0;
 }
+
+#endif

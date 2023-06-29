@@ -13,6 +13,7 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/eigensolver/eigensolver.h>
 
+#ifdef DLAF_WITH_SCALAPACK
 void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z, int* descz,
                     int* info) {
   dlaf_pdsyevd(uplo, m, a, desca, w, z, descz, info);
@@ -21,6 +22,7 @@ void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* 
 void C_dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz, int* info) {
   dlaf_pssyevd(uplo, m, a, desca, w, z, descz, info);
 }
+#endif
 
 void C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca,
                           double* w, double* z, struct DLAF_descriptor descz) {

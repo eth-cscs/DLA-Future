@@ -13,6 +13,8 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
+#ifdef DLAF_WITH_SCALAPACK
+
 /// Cholesky decomposition
 ///
 /// The matrix @param a is assumed to be distributed and in host memory. Moving to and from
@@ -52,6 +54,8 @@ DLAF_EXTERN_C void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int
 /// @param desca ScaLAPACK descriptor of @param a
 /// @param info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
+
+#endif
 
 /// Cholesky decomposition
 ///

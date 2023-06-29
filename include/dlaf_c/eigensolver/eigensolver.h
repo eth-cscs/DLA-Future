@@ -13,6 +13,8 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
+#ifdef DLAF_WITH_SCALAPACK
+
 /// Eigensolver
 ///
 /// The matrix @param a is assumed to be distributed and in host memory. Moving to and from
@@ -57,6 +59,8 @@ DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w
 /// @param info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z,
                                 int* descz, int* info);
+
+#endif
 
 /// Eigensolver
 ///

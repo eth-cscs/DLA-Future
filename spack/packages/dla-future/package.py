@@ -28,7 +28,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("c", default=False, description="Build C API")
+    variant("scalapack", default=False, description="Build ScaLAPACK-like C API")
     variant(
         "ci-check-threads",
         default=False,
@@ -40,7 +40,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
-    depends_on("scalapack", when="+c")  # TODO: Make optional?
+    depends_on("scalapack", when="+scalapack")
 
     depends_on("umpire~examples")
     depends_on("umpire+cuda~shared", when="+cuda")
@@ -154,7 +154,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     f"mkl::mkl_intel_32bit_{mkl_threads}_dyn",
                 ),
             ]
-            if "+c" in spec:  # TODO: Make ScaLAPACK optional?
+            if "+scalapack" in spec:
                 if "^mpich" in spec or "^cray-mpich" in spec:
                     mkl_mpi = "mpich"
                 elif "+openmpi" in spec:
@@ -173,13 +173,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 )
             )
-            if "+c" in spec:
+            if "+scalapack" in spec:
                 args.append(
                     self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags)
                 )
 
-        if "+c" in spec:
-            args.append(self.define_from_variant("DLAF_WITH_C_API", "c"))
+        if "+scalapack" in spec:
+            args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

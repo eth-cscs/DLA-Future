@@ -88,12 +88,14 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     dlaf_context = dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
   }
   else if constexpr (api == API::scalapack) {
+#ifdef DLAF_WITH_SCALAPACK
     // Create BLACS grid
     Cblacs_get(0, 0, &dlaf_context);  // Default system context
     Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
 
     // Create DLAF grid from BLACS context
     dlaf_create_grid_from_blacs(dlaf_context);
+#endif
   }
 
   // In normal use the runtime is resumed by the C API call
@@ -166,6 +168,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       }
     }
     else if constexpr (api == API::scalapack) {
+#ifdef DLAF_WITH_SCALAPACK
       int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_a};
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
@@ -177,6 +180,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
         C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
                        desc_z, &info);
       }
+#endif
     }
 
     return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
@@ -196,9 +200,11 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   dlaf_free_grid(dlaf_context);
   dlaf_finalize();
 
+#ifdef DLAF_WITH_SCALAPACK
   if constexpr (api == API::scalapack) {
     Cblacs_gridexit(dlaf_context);
   }
+#endif
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
@@ -212,6 +218,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   }
 }
 
+#ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
@@ -221,6 +228,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
     }
   }
 }
+#endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
@@ -234,6 +242,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   }
 }
 
+#ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
@@ -243,4 +252,5 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
     }
   }
 }
+#endif
 #endif

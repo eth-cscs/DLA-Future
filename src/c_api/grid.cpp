@@ -38,6 +38,8 @@ int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
   return dlaf_context;
 }
 
+#ifdef DLAF_WITH_SCALAPACK
+
 void dlaf_create_grid_from_blacs(int blacs_ctxt) {
   int system_ctxt;
   int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
@@ -59,6 +61,7 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt) {
 
   dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], dlaf_order);
 }
+#endif
 
 void dlaf_free_grid(int blacs_ctxt) {
   dlaf_grids.erase(blacs_ctxt);

@@ -24,7 +24,10 @@
 
 #include <gtest/gtest.h>
 
+#ifdef DLAF_WITH_SCALAPACK
 #include <dlaf_test/blacs.h>
+#endif
+
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_matrix.h>
@@ -37,6 +40,7 @@ using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
+#ifdef DLAF_WITH_SCALAPACK
 TEST(GridTest, GridScaLAPACKOrderingR) {
   char order = 'R';
 
@@ -80,6 +84,7 @@ TEST(GridTest, GridScaLAPACKOrderingC) {
 
   Cblacs_gridexit(context);
 }
+#endif
 
 TEST(GridTest, GridDLAFOrderingR) {
   comm::Communicator world(MPI_COMM_WORLD);

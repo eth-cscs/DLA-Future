@@ -26,6 +26,8 @@ void check_dlaf(char uplo, DLAF_descriptor desca, DLAF_descriptor descz) {
   }
 }
 
+#ifdef DLAF_WITH_SCALAPACK
+
 void check_scalapack(char uplo, int* desca, int* descz) {
   if (uplo != 'L' and uplo != 'l') {
     std::cerr << "ERROR: The eigensolver currently supports only UPLO=='L'\n";
@@ -51,6 +53,8 @@ void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, in
 void dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z, int* descz, int* info) {
   pxsyevd<double>(uplo, m, a, desca, w, z, descz, *info);
 }
+
+#endif
 
 void dlaf_eigensolver_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor dlaf_desca,
                         float* w, float* z, struct DLAF_descriptor dlaf_descz) {

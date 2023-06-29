@@ -26,7 +26,9 @@
 
 #include <gtest/gtest.h>
 
+#ifdef DLAF_WITH_SCALAPACK
 #include <dlaf_test/blacs.h>
+#endif
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_matrix.h>
@@ -83,12 +85,14 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     dlaf_context = dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
   }
   else if constexpr (api == API::scalapack) {
+#ifdef DLAF_WITH_SCALAPACK
     // Create BLACS grid
     Cblacs_get(0, 0, &dlaf_context);
     Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
 
     // Create DLAF grid from BLACS context
     dlaf_create_grid_from_blacs(dlaf_context);
+#endif
   }
 
   // In normal use the runtime is resumed by the C API call
@@ -134,6 +138,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     }
   }
   else if constexpr (api == API::scalapack) {
+#ifdef DLAF_WITH_SCALAPACK
     int desc_a[] = {1,
                     dlaf_context,
                     (int) m,
@@ -150,6 +155,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       C_dlaf_pspotrf(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, &info);
     }
+#endif
   }
 
   // Resume pika for the checks (suspended by the C API)
@@ -164,9 +170,11 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   dlaf_free_grid(dlaf_context);
   dlaf_finalize();
 
+#ifdef DLAF_WITH_SCALAPACK
   if constexpr (api == API::scalapack) {
     Cblacs_gridexit(dlaf_context);
   }
+#endif
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {

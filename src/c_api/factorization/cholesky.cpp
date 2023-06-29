@@ -25,6 +25,16 @@ void check_dlaf(char uplo, DLAF_descriptor desca) {
   }
 }
 
+void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
+  cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
+}
+
+void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf_desca) {
+  cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
+}
+
+#ifdef DLAF_WITH_SCALAPACK
+
 void check_scalapack(char uplo, int* desca) {
   if (uplo != 'L' && uplo != 'l' && uplo != 'U' && uplo != 'u') {
     std::cerr << "ERROR: Unknown value for parameter UPLO.\n";
@@ -51,10 +61,4 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* i
   pxpotrf<float>(uplo, n, a, ia, ja, desca, *info);
 }
 
-void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
-  cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
-}
-
-void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf_desca) {
-  cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
-}
+#endif

@@ -24,7 +24,6 @@
 #include "../grid.h"
 
 void check_dlaf(char uplo, DLAF_descriptor desca, DLAF_descriptor descz);
-void check_scalapack(char uplo, int* desca, int* descz);
 
 template <typename T>
 void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, T* w, T* z,
@@ -73,6 +72,10 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   pika::suspend();
 }
 
+#ifdef DLAF_WITH_SCALAPACK
+
+void check_scalapack(char uplo, int* desca, int* descz);
+
 template <typename T>
 void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, int* descz, int& info) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
@@ -115,3 +118,5 @@ void pxsyevd(char uplo, [[maybe_unused]] int m, T* a, int* desca, T* w, T* z, in
 
   info = 0;
 }
+
+#endif

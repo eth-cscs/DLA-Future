@@ -29,6 +29,16 @@
 /// @return DLA-Future context
 DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order);
 
+/// Free communicator grid for the given context
+///
+/// This function only frees the DLA-Future grids stored internally. If you
+/// created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit
+///
+/// @param context BLACS or DLA-Future context associated to the grid being released
+DLAF_EXTERN_C void dlaf_free_grid(int context);
+
+#ifdef DLAF_WITH_SCALAPACK
+
 /// Create communication grid from BLACS context
 ///
 /// Grids created here are indexed by their corresponding BLACS context
@@ -40,14 +50,7 @@ DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char ord
 ///
 /// @param blacs_ctxt BLACS context
 DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
-
-/// Free communicator grid for the given context
-///
-/// This function only frees the DLA-Future grids stored internally. If you
-/// created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit
-///
-/// @param context BLACS or DLA-Future context associated to the grid being released
-DLAF_EXTERN_C void dlaf_free_grid(int context);
+#endif
 
 /// Determine grid ordering
 ///

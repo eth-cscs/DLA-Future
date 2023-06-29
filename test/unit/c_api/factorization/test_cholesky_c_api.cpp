@@ -187,6 +187,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
   }
 }
 
+#ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
@@ -196,6 +197,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
     }
   }
 }
+#endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
@@ -208,6 +210,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
   }
 }
 
+#ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
@@ -217,4 +220,5 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
     }
   }
 }
+#endif
 #endif

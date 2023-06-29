@@ -67,8 +67,8 @@ void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
 void check_scalapack(char uplo, int* desca);
 
 template <typename T>
-void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja,
-             int* desca, int& info) {
+void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
+             int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
   check_scalapack(uplo, desca);
@@ -80,9 +80,8 @@ void pxpotrf(char uplo, [[maybe_unused]] int n, T* a, [[maybe_unused]] int ia, [
   // Get grid corresponding to blacs context in desca
   // The grid needs to be created with dlaf_create_grid_from_blacs
   auto communicator_grid = dlaf_grids.at(desca[1]);
-  dlaf::matrix::Distribution distribution({desca[2], desca[3]}, {desca[4], desca[5]},
-                                          communicator_grid.size(), communicator_grid.rank(),
-                                          {desca[6], desca[7]});
+  dlaf::matrix::Distribution distribution({n, n}, {desca[4], desca[5]}, communicator_grid.size(),
+                                          communicator_grid.rank(), {desca[6], desca[7]});
   dlaf::matrix::LayoutInfo layout_info = colMajorLayout(distribution, desca[8]);
 
   dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout_info, a);

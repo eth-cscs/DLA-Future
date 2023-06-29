@@ -14,11 +14,11 @@
 #include <dlaf_c/utils.h>
 
 #ifdef DLAF_WITH_SCALAPACK
-DLAF_EXTERN_C void C_dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z,
-                                  int* descz, int* info);
+DLAF_EXTERN_C void C_dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w,
+                                  double* z, int iz, int jz, int* descz, int* info);
 
-DLAF_EXTERN_C void C_dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz,
-                                  int* info);
+DLAF_EXTERN_C void C_dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w,
+                                  float* z, int iz, int jz, int* descz, int* info);
 #endif
 
 DLAF_EXTERN_C void C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,

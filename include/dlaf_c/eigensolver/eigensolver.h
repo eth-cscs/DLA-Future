@@ -27,15 +27,19 @@
 /// (ignored, extracted from @param desca).
 ///
 /// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
-/// @param m UNSUPPORTED, ignored
+/// @param m Number of rovs and columns to be operated on
 /// @param a Local part of the global matrix
+/// @param ia Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
+/// @param ja Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
 /// @param desca ScaLAPACK descriptor of @param a
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the eigenvectors matrix
+/// @param iz Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
+/// @param jz Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
 /// @param descz ScaLAPACK descriptor of @param z
 /// @param info 0 if the factorization completed normally
-DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w, float* z, int* descz,
-                                int* info);
+DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w,
+                                float* z, int iz, int jz, int* descz, int* info);
 
 /// Eigensolver
 ///
@@ -52,13 +56,17 @@ DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int m, float* a, int* desca, float* w
 /// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
 /// @param m UNSUPPORTED, ignored
 /// @param a Local part of the global matrix
+/// @param ia Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
+/// @param ja Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
 /// @param desca ScaLAPACK descriptor of @param a
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the eigenvectors matrix
+/// @param iz Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
+/// @param jz Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
 /// @param descz ScaLAPACK descriptor of @param z
 /// @param info 0 if the factorization completed normally
-DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int m, double* a, int* desca, double* w, double* z,
-                                int* descz, int* info);
+DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w,
+                                double* z, int iz, int jz, int* descz, int* info);
 
 #endif
 

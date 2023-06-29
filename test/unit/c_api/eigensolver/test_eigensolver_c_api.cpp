@@ -173,12 +173,12 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
-                       desc_z, &info);
+        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 0, 0, desc_z, &info);
       }
       else {
-        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, desc_a, eigenvalues_ptr, local_eigenvectors_ptr,
-                       desc_z, &info);
+        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 0, 0, desc_z, &info);
       }
 #endif
     }

@@ -30,13 +30,12 @@
 /// @post The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-///
 /// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
 /// @param n order of the sumbatrix \f$\mathbf{A}\f$ used in the computation
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param ia row index of the global matrix \f$\mathbf{A}\f$ identifying the first row of the submatrix
-/// $A$, has to be 1
+/// \f$\mathbf{A}\f$, has to be 1
 /// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the firs column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$

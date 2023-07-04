@@ -761,6 +761,9 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
       //
       //                    +-------+
       //                sub-sub pipeline
+      //
+      // NOTE: The above is the ideal case. The current implementation does not
+      // merge read-only accesses between a pipeline and a sub-pipeline.
 
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
@@ -778,38 +781,45 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
         EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
         auto [rosenders2b, senders3] = [&]() {
-          auto rosenders2b = getReadSendersUsingGlobalIndex(mat_sub);
+          auto mat_sub_sub = mat_sub.subPipeline();
+
+          auto rosenders2b = getReadSendersUsingGlobalIndex(mat_sub_sub);
           EXPECT_TRUE(checkSendersStep(0, rosenders2b));
 
-          auto senders3 = getReadWriteSendersUsingLocalIndex(mat_sub);
+          auto senders3 = getReadWriteSendersUsingLocalIndex(mat_sub_sub);
           EXPECT_TRUE(checkSendersStep(0, senders3));
           return std::tuple(std::move(rosenders2b), std::move(senders3));
         }();
 
-        auto rosenders4a = getReadSendersUsingGlobalIndex(mat);
+        auto rosenders4a = getReadSendersUsingGlobalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders4a));
 
         return std::tuple(std::move(rosenders2a), std::move(rosenders2b), std::move(senders3),
                           std::move(rosenders4a));
       }();
 
+      auto rosenders4b = getReadSendersUsingLocalIndex(mat);
+      auto senders5 = getReadWriteSendersUsingGlobalIndex(mat);
+
+      EXPECT_TRUE(checkSendersStep(0, senders1));
       CHECK_MATRIX_SENDERS(true, senders1, senders0);
+
       EXPECT_TRUE(checkSendersStep(0, rosenders2b));
-      CHECK_MATRIX_SENDERS(true, rosenders2b, senders1);
+      CHECK_MATRIX_SENDERS(false, rosenders2b, senders1);
+
       EXPECT_TRUE(checkSendersStep(rosenders2a.size(), rosenders2a));
+      CHECK_MATRIX_SENDERS(true, rosenders2b, rosenders2a);
 
-      CHECK_MATRIX_SENDERS(false, senders3, rosenders2b);
-      CHECK_MATRIX_SENDERS(true, senders3, rosenders2a);
+      EXPECT_TRUE(checkSendersStep(0, senders3));
+      CHECK_MATRIX_SENDERS(true, senders3, rosenders2b);
 
+      EXPECT_TRUE(checkSendersStep(0, rosenders4a));
       CHECK_MATRIX_SENDERS(true, rosenders4a, senders3);
 
-      auto rosenders4b = getReadSendersUsingLocalIndex(mat);
-      EXPECT_TRUE(checkSendersStep(rosenders4b.size(), rosenders4b));
+      EXPECT_TRUE(checkSendersStep(0, rosenders4b));
+      CHECK_MATRIX_SENDERS(true, rosenders4b, rosenders4a);
 
-      auto senders5 = getReadWriteSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, senders5));
-
-      CHECK_MATRIX_SENDERS(false, senders5, rosenders4a);
       CHECK_MATRIX_SENDERS(true, senders5, rosenders4b);
     }
   }

@@ -35,7 +35,6 @@ namespace dlaf::eigensolver {
 /// @pre mat_a is a local matrix
 /// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
-// TODO: Pass in reference to taus matrix?
 Matrix<T, Device::CPU> reductionToBand(Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

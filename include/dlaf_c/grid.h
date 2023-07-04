@@ -55,9 +55,9 @@ DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
 
 /// Determine grid ordering
 ///
-/// @remark For DLA-Future grids, the MPI communicator needs to be the original 
-/// communicator used to create the grid, not the full communicator stored within 
-/// the grid (after creation). DLA-Future automatically re-orders the communicator 
+/// @remark For DLA-Future grids, the MPI communicator needs to be the original
+/// communicator used to create the grid, not the full communicator stored within
+/// the grid (after creation). DLA-Future automatically re-orders the communicator
 /// within a DLA-Future grid in a row-major format.
 ///
 /// @param comm MPI communicator

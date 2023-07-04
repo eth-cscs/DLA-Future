@@ -40,7 +40,6 @@
 /// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the firs column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$
-/// @param desca ScaLAPACK descriptor of the global matrix
 /// @param info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info);
 
@@ -69,7 +68,7 @@ DLAF_EXTERN_C void dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int
 /// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
-/// @param dlaf_desca DLA-Duture descriptor of the global matrix \f$\mathbf{A}\f$
+/// @param dlaf_desca DLA-Future descriptor of the global matrix \f$\mathbf{A}\f$
 DLAF_EXTERN_C void dlaf_cholesky_d(int dlaf_context, char uplo, double* a,
                                    struct DLAF_descriptor dlaf_desca);
 

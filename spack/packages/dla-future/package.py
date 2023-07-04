@@ -126,7 +126,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
             ]
             if "+scalapack" in spec:
-                if "^mpich" in spec or "^cray-mpich" in spec or "^intel-mpi":
+                if (
+                    "^mpich" in spec
+                    or "^cray-mpich" in spec
+                    or "^intel-mpi" in spec
+                    or "^mvapich" in spec
+                    or "^mvapich2" in spec
+                ):
                     mkl_mpi = "mpich"
                 elif "+openmpi" in spec:
                     mkl_mpi = "ompi"

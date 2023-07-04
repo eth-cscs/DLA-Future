@@ -23,49 +23,25 @@
 /// The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-/// Submatrices are currently not supported, so @param m is the size of the full matrix
-/// (ignored, extracted from @param desca).
+/// Submatrices are currently not supported, so @param n is the size of the full matrix.
 ///
 /// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
-/// @param m Number of rovs and columns to be operated on
+/// @param n order of the sumbatrix used in the computation
 /// @param a Local part of the global matrix
-/// @param ia Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param ja Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
+/// @param ia Global row index denoting the beginning of the submatrix to be operated on, has to be 1
+/// @param ja Global column index denoting the beginning of the submatrix to be operated on, has to be 1
 /// @param desca ScaLAPACK descriptor of @param a
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the eigenvectors matrix
-/// @param iz Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param jz Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param descz ScaLAPACK descriptor of @param z
+/// @param iz Global row index denoting the beginning of the submatrix to be operated on, has to be 1
+/// @param jz Global column index denoting the beginning of the submatrix to be operated on, has to be 1
+/// @param descz ScaLAPACK descriptor of the global eigenvectors matrix
 /// @param info 0 if the factorization completed normally
-DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w,
+DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int n, float* a, int ia, int ja, int* desca, float* w,
                                 float* z, int iz, int jz, int* descz, int* info);
 
-/// Eigensolver
-///
-/// The matrices @param a and @param z are assumed to be distributed and in host memory.
-/// Moving to and from GPU memory is handled internally. The vector of eigenvalues @param w
-/// is assumed to be local (non-distributed).
-///
-/// The pika runtime is resumed when this function is called and suspended when the call
-/// terminates.
-///
-/// Submatrices are currently not supported, so @param m is the size of the full matrices
-/// (ignored, extracted from @param desca).
-///
-/// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
-/// @param m UNSUPPORTED, ignored
-/// @param a Local part of the global matrix
-/// @param ia Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param ja Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param desca ScaLAPACK descriptor of @param a
-/// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the eigenvectors matrix
-/// @param iz Global row index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param jz Global column index denoting the beginning of the submatrix to be operated on, UNSUPPORTED
-/// @param descz ScaLAPACK descriptor of @param z
-/// @param info 0 if the factorization completed normally
-DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w,
+/// \overload
+DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int n, double* a, int ia, int ja, int* desca, double* w,
                                 double* z, int iz, int jz, int* descz, int* info);
 
 #endif
@@ -80,32 +56,17 @@ DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int
 /// terminates.
 ///
 /// @param dlaf_context context associated to the DLA-Future grid created with dlaf_create_grid
-/// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
+/// @param uplo Specify if upper ('U') or lowegular part of @param a will be referenced
 /// @param a Local part of the global matrix
-/// @param dlaf_desca DLA-Duture descriptor of @param a
+/// @param dlaf_desca DLA-Future descriptor of the global matrix
 /// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the golbal eigenvalues matrix
-/// @param dlaf_descz DLA-Duture descriptor of @param z
-DLAF_EXTERN_C void dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
-                                      struct DLAF_descriptor dlaf_desca, float* w, float* z,
-                                      struct DLAF_descriptor dlaf_descz);
-
-/// Eigensolver
-///
-/// The matrices @param a and @param z are assumed to be distributed and in host memory.
-/// Moving to and from GPU memory is handled internally. The vector of eigenvalues @param w
-/// is assumed to be local (non-distributed).
-///
-/// The pika runtime is resumed when this function is called and suspended when the call
-/// terminates.
-///
-/// @param dlaf_context context associated to the DLA-Future grid created with dlaf_create_grid
-/// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
-/// @param a Local part of the global matrix
-/// @param dlaf_desca DLA-Duture descriptor of @param a
-/// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the golbal eigenvalues matrix
-/// @param dlaf_descz DLA-Duture descriptor of @param z
+/// @param z Local part of the golbal eigenvectors matrix
+/// @param dlaf_descz DLA-Future descriptor of the global eigenvalues matrix
 DLAF_EXTERN_C void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
                                       struct DLAF_descriptor dlaf_desca, double* w, double* z,
+                                      struct DLAF_descriptor dlaf_descz);
+
+/// \overload
+DLAF_EXTERN_C void dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
+                                      struct DLAF_descriptor dlaf_desca, float* w, float* z,
                                       struct DLAF_descriptor dlaf_descz);

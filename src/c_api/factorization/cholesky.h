@@ -74,6 +74,8 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
   
   DLAF_ASSERT(uplo == 'L' || uplo == 'l' || uplo == 'U' || uplo == 'u', uplo);
   DLAF_ASSERT(desca[0] == 1, desca[0]);
+  DLAF_ASSERT(ia == 1, ia);
+  DLAF_ASSERT(ja == 1, ja);
 
   pika::resume();
 

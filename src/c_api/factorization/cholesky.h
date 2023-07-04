@@ -28,7 +28,7 @@ void check_dlaf(char uplo, DLAF_descriptor desca);
 template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-  
+
   DLAF_ASSERT(uplo == 'L' || uplo == 'l' || uplo == 'U' || uplo == 'u', uplo);
   DLAF_ASSERT(dlaf_desca.m == dlaf_desca.n, dlaf_desca.m, dlaf_desca.n);
 
@@ -71,7 +71,7 @@ template <typename T>
 void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
              int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-  
+
   DLAF_ASSERT(uplo == 'L' || uplo == 'l' || uplo == 'U' || uplo == 'u', uplo);
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(ia == 1, ia);

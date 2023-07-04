@@ -8,9 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
 #include <functional>
 #include <sstream>
 #include <tuple>
+#include <type_traits>
 
 #include <pika/init.hpp>
 #include <pika/runtime.hpp>
@@ -47,13 +49,13 @@ using namespace testing;
 template <class T>
 struct CholeskyTestMC : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(CholeskyTestMC, RealMatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
 struct CholeskyTestGPU : public TestWithCommGrids {};
 
-TYPED_TEST_SUITE(CholeskyTestGPU, RealMatrixElementTypes);
+TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 #endif
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
@@ -133,8 +135,17 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
-    else {
+    else if constexpr (std::is_same_v<T, float>) {
       C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+    }
+    else if constexpr (std::is_same_v<T, std::complex<double>>) {
+      C_dlaf_cholesky_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+    }
+    else if constexpr (std::is_same_v<T, std::complex<float>>) {
+      C_dlaf_cholesky_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+    }
+    else {
+      DLAF_ASSERT(false, typeid(T).name());
     }
   }
   else if constexpr (api == API::scalapack) {
@@ -150,10 +161,19 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
                     lld};
     int info = -1;
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_pdpotrf(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, &info);
+      C_dlaf_pdpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+    }
+    else if constexpr (std::is_same_v<T, float>) {
+      C_dlaf_pspotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+    }
+    else if constexpr (std::is_same_v<T, std::complex<double>>) {
+      C_dlaf_pzpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
+    }
+    else if constexpr (std::is_same_v<T, std::complex<float>>) {
+      C_dlaf_pcpotrf(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, &info);
     }
     else {
-      C_dlaf_pspotrf(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, &info);
+      DLAF_ASSERT(false, typeid(T).name());
     }
 #endif
   }

@@ -960,22 +960,22 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
       auto rosenders2a = getReadSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-      decltype(rosenders2a) rosenders2b;
-      {
+      auto rosenders2b = [&]() {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        rosenders2b = getReadSendersUsingLocalIndex(const_mat);
+        auto rosenders2b = getReadSendersUsingLocalIndex(const_mat);
         EXPECT_TRUE(checkSendersStep(0, rosenders2b));
-      }
+        return rosenders2b;
+      }();
 
       auto senders3 = getReadWriteSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, senders3));
 
-      decltype(rosenders2a) rosenders4a;
-      {
+      auto rosenders4a = [&]() {
         Matrix<const Type, Device::CPU>& const_mat = mat;
-        rosenders4a = getReadSendersUsingLocalIndex(const_mat);
+        auto rosenders4a = getReadSendersUsingLocalIndex(const_mat);
         EXPECT_TRUE(checkSendersStep(0, rosenders4a));
-      }
+        return rosenders4a;
+      }();
 
       CHECK_MATRIX_SENDERS(true, senders1, senders0);
       EXPECT_TRUE(checkSendersStep(0, rosenders2b));
@@ -1025,22 +1025,22 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
       auto rosenders2a = getReadSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-      decltype(rosenders2a) rosenders2b;
-      {
+      auto rosenders2b = [&]() {
         auto mat_sub = mat.subPipelineConst();
-        rosenders2b = getReadSendersUsingLocalIndex(mat_sub);
+        auto rosenders2b = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders2b));
-      }
+        return rosenders2b;
+      }();
 
       auto senders3 = getReadWriteSendersUsingGlobalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, senders3));
 
-      decltype(rosenders2a) rosenders4a;
-      {
+      auto rosenders4a = [&]() {
         auto mat_sub = mat.subPipelineConst();
-        rosenders4a = getReadSendersUsingLocalIndex(mat_sub);
+        auto rosenders4a = getReadSendersUsingLocalIndex(mat_sub);
         EXPECT_TRUE(checkSendersStep(0, rosenders4a));
-      }
+        return rosenders4a;
+      }();
 
       CHECK_MATRIX_SENDERS(true, senders1, senders0);
 
@@ -1088,22 +1088,22 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
       auto rosenders2a = getReadSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, rosenders2a));
 
-      decltype(rosenders2a) rosenders2b;
-      {
+      auto rosenders2b = [&]() {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        rosenders2b = getReadSendersUsingGlobalIndex(*const_mat);
+        auto rosenders2b = getReadSendersUsingGlobalIndex(*const_mat);
         EXPECT_TRUE(checkSendersStep(0, rosenders2b));
-      }
+        return rosenders2b;
+      }();
 
       auto senders3 = getReadWriteSendersUsingLocalIndex(mat);
       EXPECT_TRUE(checkSendersStep(0, senders3));
 
-      decltype(rosenders2a) rosenders4a;
-      {
+      auto rosenders4a = [&]() {
         Matrix<const Type, Device::CPU>* const_mat = &mat;
-        rosenders4a = getReadSendersUsingGlobalIndex(*const_mat);
+        auto rosenders4a = getReadSendersUsingGlobalIndex(*const_mat);
         EXPECT_TRUE(checkSendersStep(0, rosenders4a));
-      }
+        return rosenders4a;
+      }();
 
       CHECK_MATRIX_SENDERS(true, senders1, senders0);
       EXPECT_TRUE(checkSendersStep(0, rosenders2b));

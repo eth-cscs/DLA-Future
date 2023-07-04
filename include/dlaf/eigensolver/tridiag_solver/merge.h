@@ -1025,8 +1025,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
     return ex::ensure_started(ex::when_all_vector(std::move(comms)));
   };
 
-  auto all_reduce_in_place_o = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op,
-                                  const auto& data, MPI_Request* req) {
+  auto all_reduce_in_place = [](const dlaf::comm::Communicator& comm, MPI_Op reduce_op, const auto& data,
+                                MPI_Request* req) {
     auto msg = comm::make_message(data);
     DLAF_MPI_CHECK_ERROR(MPI_Iallreduce(MPI_IN_PLACE, msg.data(), msg.count(), msg.mpi_type(), reduce_op,
                                         comm, req));
@@ -1052,7 +1052,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, ij_begin_lc, sz_loc_tiles,
-                          dist, bcast_evals, all_reduce_in_place_o](
+                          dist, bcast_evals, all_reduce_in_place](
                              const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
                              auto& col_comm_wrapper, const auto& k, const auto& rho,
                              const auto& d_tiles_futs, auto& z_tiles, const auto& eval_tiles,
@@ -1300,7 +1300,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
           tt::sync_wait(ex::when_all(row_comm_chain(),
                                      ex::just(MPI_PROD, common::make_data(w, m_subm_el_lc))) |
-                        transformMPI(all_reduce_in_place_o));
+                        transformMPI(all_reduce_in_place));
 
           T* weights = ws_cols[nthreads]();
           for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
@@ -1376,7 +1376,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         if (thread_idx == 0)
           tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM,
                                  common::make_data(ws_row(), n_subm_el_lc)) |
-                        transformMPI(all_reduce_in_place_o));
+                        transformMPI(all_reduce_in_place));
 
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 

@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 

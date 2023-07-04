@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 /// DLA-Future descriptor
 struct DLAF_descriptor {
   int m;     ///< Number of rows in the global matrix

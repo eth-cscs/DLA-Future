@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #include <dlaf_c/utils.h>
 
 /// Initialize pika runtime and DLA-Future

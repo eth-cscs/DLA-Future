@@ -10,6 +10,8 @@
 
 #pragma once
 
+/// @file
+
 #ifdef __cplusplus
 #define DLAF_EXTERN_C extern "C"
 #else
@@ -18,10 +20,10 @@
 
 #ifdef __cplusplus
 #include <complex>
-using dlaf_complex_c = std::complex<float>;
-using dlaf_complex_z = std::complex<double>;
+using dlaf_complex_c = std::complex<float>;   ///< Single precision complex number
+using dlaf_complex_z = std::complex<double>;  ///< Double precision complex number
 #else
 #include <complex.h>
-typedef float complex dlaf_complex_c;
-typedef double complex dlaf_complex_z;
+typedef float complex dlaf_complex_c;   ///< Single precision complex number
+typedef double complex dlaf_complex_z;  ///< Double precision complex number
 #endif

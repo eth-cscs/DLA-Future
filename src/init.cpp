@@ -159,6 +159,9 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   if (env_var_value) {
     if (auto parsed_value = parseFromString<T>::call(env_var_value))
       var = parsed_value.value();
+    else
+      std::cerr << "Environment variable " << dlaf_env_var << " has an invalid value (='"
+                << env_var_value << "').\n";
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;

@@ -195,7 +195,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                        local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
+        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
                        local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {

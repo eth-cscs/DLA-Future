@@ -1005,10 +1005,13 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
-      // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
-      //           \ ro2b /    \ ro4b /
-      //             +--+        +--+
-      //              sub pipelines
+      // rw0 - rw1 - ro2a ------- rw3 - ro4a ------- rw5
+      //           \ ------ ro2b /    \ ------ ro4b /
+      //                    +--+        +--+
+      //                     sub pipelines
+      //
+      // NOTE: The above is the ideal case. The current implementation does not
+      // merge read-only accesses between a pipeline and a sub-pipeline.
 
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);

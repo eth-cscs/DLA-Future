@@ -41,10 +41,12 @@ DLAF_EXTERN_C void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int
 DLAF_EXTERN_C void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
 
 /// \overload
-DLAF_EXTERN_C void dlaf_pcpotrf(char uplo, int n, complex_c* a, int ia, int ja, int* desca, int* info);
+DLAF_EXTERN_C void dlaf_pcpotrf(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* desca,
+                                int* info);
 
 /// \overload
-DLAF_EXTERN_C void dlaf_pzpotrf(char uplo, int n, complex_z* a, int ia, int ja, int* desca, int* info);
+DLAF_EXTERN_C void dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int ja, int* desca,
+                                int* info);
 
 #endif
 
@@ -69,8 +71,8 @@ DLAF_EXTERN_C void dlaf_cholesky_s(int dlaf_context, char uplo, float* a,
                                    struct DLAF_descriptor dlaf_desca);
 
 /// \overload
-DLAF_EXTERN_C void dlaf_cholesky_c(int dlaf_context, char uplo, complex_c* a,
+DLAF_EXTERN_C void dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a,
                                    struct DLAF_descriptor dlaf_desca);
 /// \overload
-DLAF_EXTERN_C void dlaf_cholesky_z(int dlaf_context, char uplo, complex_z* a,
+DLAF_EXTERN_C void dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a,
                                    struct DLAF_descriptor dlaf_desca);

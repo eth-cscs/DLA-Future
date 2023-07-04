@@ -21,11 +21,11 @@ void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf
   cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-void dlaf_cholesky_z(int dlaf_context, char uplo, complex_z* a, DLAF_descriptor dlaf_desca) {
+void dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, DLAF_descriptor dlaf_desca) {
   cholesky<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-void dlaf_cholesky_c(int dlaf_context, char uplo, complex_c* a, DLAF_descriptor dlaf_desca) {
+void dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, DLAF_descriptor dlaf_desca) {
   cholesky<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
@@ -39,11 +39,11 @@ void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* i
   pxpotrf<float>(uplo, n, a, ia, ja, desca, *info);
 }
 
-void dlaf_pzpotrf(char uplo, int n, complex_z* a, int ia, int ja, int* desca, int* info) {
+void dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int ja, int* desca, int* info) {
   pxpotrf<std::complex<double>>(uplo, n, a, ia, ja, desca, *info);
 }
 
-void dlaf_pcpotrf(char uplo, int n, complex_c* a, int ia, int ja, int* desca, int* info) {
+void dlaf_pcpotrf(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* desca, int* info) {
   pxpotrf<std::complex<float>>(uplo, n, a, ia, ja, desca, *info);
 }
 

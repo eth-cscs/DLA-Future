@@ -18,10 +18,10 @@
 
 #ifdef __cplusplus
 #include <complex>
-using complex_c = std::complex<float>;
-using complex_z = std::complex<double>;
+using dlaf_complex_c = std::complex<float>;
+using dlaf_complex_z = std::complex<double>;
 #else
 #include <complex.h>
-typedef float complex complex_c;
-typedef double complex complex_z;
+typedef float complex dlaf_complex_c;
+typedef double complex dlaf_complex_z;
 #endif

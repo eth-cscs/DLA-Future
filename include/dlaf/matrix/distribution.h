@@ -458,8 +458,6 @@ public:
     return localElementDistanceFromLocalTile<rc>(i_loc_begin, i_loc_end);
   }
 
-  /// \overload localElementDistanceFromGlobalTile
-  ///
   /// This overload implements the 2D version of the function.
   LocalElementSize localElementDistanceFromGlobalTile(GlobalTileIndex begin,
                                                       GlobalTileIndex end) const noexcept {
@@ -489,8 +487,6 @@ public:
     return i_el_end - i_el_begin;
   }
 
-  /// \overload localElementDistanceFromLocalTile
-  ///
   /// This overload implements the 2D version of the function.
   LocalElementSize localElementDistanceFromLocalTile(LocalTileIndex begin,
                                                      LocalTileIndex end) const noexcept {

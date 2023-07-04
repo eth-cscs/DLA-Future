@@ -151,14 +151,13 @@ struct Helpers<Backend::GPU, Device::GPU, T> {
       const SizeType k = tile_t.size().cols();
       DLAF_ASSERT(tile_v.size().cols() == k, tile_v.size().cols(), k);
       DLAF_ASSERT(taus.size().rows() == k, taus.size().rows(), k);
+      DLAF_ASSERT(taus.size().cols() == 1, taus.size().cols());
 
       if (first_row_tile == 0) {
         whip::stream_t stream;
         DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
 
-        // Assume taus is a column vector with column major layout, i.e. elements are contiguous
-        // TODO: Can this be asserted more directly?
-        DLAF_ASSERT(taus.size().cols() == 1, taus);
+        // This assumes that elements in taus are contiguous, i.e. that it is a column vector of size k
         whip::memcpy_2d_async(tile_t.ptr(), to_sizet(tile_t.ld() + 1) * sizeof(T), taus.ptr(), sizeof(T),
                               sizeof(T), to_sizet(k), whip::memcpy_default, stream);
       }

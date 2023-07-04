@@ -128,7 +128,7 @@ struct parseFromString<SizeType> {
 
 template <>
 struct parseFromString<bool> {
-  static std::optional<std::size_t> call(const std::string& var) {
+  static std::optional<bool> call(const std::string& var) {
     if (is_one_of_ignore_case(var, {"ON", "TRUE", "YES", "1"}))
       return true;
     if (is_one_of_ignore_case(var, {"OFF", "FALSE", "NO", "0"}))

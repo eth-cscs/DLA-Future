@@ -211,7 +211,6 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        // getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
       }
     }
@@ -235,7 +234,6 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        // getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
       }
     }

@@ -18,6 +18,7 @@
 #include <dlaf/eigensolver/eigensolver.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/types.h>
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
 
@@ -25,10 +26,12 @@
 #include "../grid.h"
 
 template <typename T>
-void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, T* w, T* z,
-                 DLAF_descriptor dlaf_descz) {
+void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
+                 T* z, DLAF_descriptor dlaf_descz) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+  using MatrixBaseMirror =
+      dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
   DLAF_ASSERT(uplo == 'L' || uplo == 'l', uplo);
   DLAF_ASSERT(dlaf_desca.m == dlaf_desca.n, dlaf_desca.m, dlaf_desca.n);
@@ -59,7 +62,7 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   {
     MatrixMirror matrix(matrix_host);
     MatrixMirror eigenvectors(eigenvectors_host);
-    MatrixMirror eigenvalues(eigenvalues_host);
+    MatrixBaseMirror eigenvalues(eigenvalues_host);
 
     // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
     // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future
@@ -77,10 +80,13 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxsyevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca, T* w,
-             T* z, [[maybe_unused]] int iz, [[maybe_unused]] int jz, int* descz, int& info) {
+void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
+             dlaf::BaseType<T>* w, T* z, [[maybe_unused]] int iz, [[maybe_unused]] int jz, int* descz,
+             int& info) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+  using MatrixBaseMirror =
+      dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
   DLAF_ASSERT(uplo == 'L' || uplo == 'l', uplo);
   DLAF_ASSERT(desca[0] == 1, desca[0]);
@@ -108,7 +114,7 @@ void pxsyevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
   {
     MatrixMirror matrix(matrix_host);
     MatrixMirror eigenvectors(eigenvectors_host);
-    MatrixMirror eigenvalues(eigenvalues_host);
+    MatrixBaseMirror eigenvalues(eigenvalues_host);
 
     // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
     // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future

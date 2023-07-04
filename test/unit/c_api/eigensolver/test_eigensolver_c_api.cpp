@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <complex>
 #include <functional>
 #include <tuple>
 
@@ -52,13 +53,13 @@ class EigensolverTest : public TestWithCommGrids {};
 template <class T>
 using EigensolverTestMC = EigensolverTest<T>;
 
-TYPED_TEST_SUITE(EigensolverTestMC, RealMatrixElementTypes);
+TYPED_TEST_SUITE(EigensolverTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
 using EigensolverTestGPU = EigensolverTest<T>;
 
-TYPED_TEST_SUITE(EigensolverTestGPU, RealMatrixElementTypes);
+TYPED_TEST_SUITE(EigensolverTestGPU, MatrixElementTypes);
 #endif
 
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
@@ -76,7 +77,7 @@ enum class API { dlaf, scalapack };
 template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {
   const char* pika_argv[] = {"test_eigensolver_c_api", "--pika:print-bind", nullptr};
-  const char* dlaf_argv[] = {"test_eigensolver_c_api", "--pika:print-bind", nullptr};
+  const char* dlaf_argv[] = {"test_eigensolver_c_api", nullptr};
   dlaf_initialize(2, pika_argv, 1, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
@@ -132,7 +133,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
     // Get top left local tiles
     int lld_a, lld_eigenvectors;
-    T *local_a_ptr, *local_eigenvectors_ptr, *eigenvalues_ptr;
+    T* local_a_ptr;
+    T* local_eigenvectors_ptr;
+    dlaf::BaseType<T>* eigenvalues_ptr;
     {
       auto toplefttile_a =
           pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
@@ -162,9 +165,20 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
         C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
                              local_eigenvectors_ptr, dlaf_desc_eigenvectors);
       }
-      else {
+      else if constexpr (std::is_same_v<T, float>) {
         C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
                              local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
+      else if constexpr (std::is_same_v<T, std::complex<double>>) {
+        C_dlaf_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
+      else if constexpr (std::is_same_v<T, std::complex<float>>) {
+        C_dlaf_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
+      else {
+        DLAF_ASSERT(false, typeid(T).name());
       }
     }
     else if constexpr (api == API::scalapack) {
@@ -173,12 +187,23 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 0, 0, desc_z, &info);
+        C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+      }
+      else if constexpr (std::is_same_v<T, float>) {
+        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+      }
+      else if constexpr (std::is_same_v<T, std::complex<double>>) {
+        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
+      }
+      else if constexpr (std::is_same_v<T, std::complex<float>>) {
+        C_dlaf_pcheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+                       local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else {
-        C_dlaf_pssyevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
-                       local_eigenvectors_ptr, 0, 0, desc_z, &info);
+        DLAF_ASSERT(false, typeid(T).name());
       }
 #endif
     }

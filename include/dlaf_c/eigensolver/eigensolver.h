@@ -23,14 +23,15 @@
 /// The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-/// Submatrices are currently not supported, so @param n is the size of the full matrix.
+/// Submatrices are currently not supported, so @param n is the size of the full matrix
+/// and @param ia, @param ja, @param iz, and @param jz need to be 1.
 ///
 /// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
 /// @param n order of the sumbatrix used in the computation
 /// @param a Local part of the global matrix
 /// @param ia Global row index denoting the beginning of the submatrix to be operated on, has to be 1
 /// @param ja Global column index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param desca ScaLAPACK descriptor of @param a
+/// @param desca ScaLAPACK descriptor of the global matrix
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the eigenvectors matrix
 /// @param iz Global row index denoting the beginning of the submatrix to be operated on, has to be 1
@@ -56,12 +57,12 @@ DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int n, double* a, int ia, int ja, int
 /// terminates.
 ///
 /// @param dlaf_context context associated to the DLA-Future grid created with dlaf_create_grid
-/// @param uplo Specify if upper ('U') or lowegular part of @param a will be referenced
+/// @param uplo Specify if upper ('U') or lower ('L') trianglular part of @param a will be referenced
 /// @param a Local part of the global matrix
 /// @param dlaf_desca DLA-Future descriptor of the global matrix
 /// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the golbal eigenvectors matrix
-/// @param dlaf_descz DLA-Future descriptor of the global eigenvalues matrix
+/// @param z Local part of the global eigenvectors matrix
+/// @param dlaf_descz DLA-Future descriptor of the global eigenvectors matrix
 DLAF_EXTERN_C void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
                                       struct DLAF_descriptor dlaf_desca, double* w, double* z,
                                       struct DLAF_descriptor dlaf_descz);

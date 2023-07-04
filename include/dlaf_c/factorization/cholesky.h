@@ -31,7 +31,7 @@
 /// @param a Local part of the global matrix
 /// @param ia Global row index denoting the beginning of the submatrix to be operated on, has to be 1
 /// @param ja Global column index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param desca ScaLAPACK descriptor of @param a
+/// @param desca ScaLAPACK descriptor of the global matrix
 /// @param info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info);
 
@@ -51,7 +51,7 @@ DLAF_EXTERN_C void dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int*
 /// @param dlaf_context context associated to the DLA-Future grid created with dlaf_create_grid
 /// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
 /// @param a Local part of the global matrix
-/// @param dlaf_desca DLA-Duture descriptor of @param a
+/// @param dlaf_desca DLA-Duture descriptor of the global matrix
 DLAF_EXTERN_C void dlaf_cholesky_d(int dlaf_context, char uplo, double* a,
                                    struct DLAF_descriptor dlaf_desca);
 

@@ -17,26 +17,28 @@
 
 /// Eigensolver
 ///
-/// The matrix @param a is assumed to be distributed and in host memory. Moving to and from
-/// GPU memory is handled internally.
+/// The matrices $A$ and $Z$ are assumed to be distributed and in host memory.
+/// Moving to and from GPU memory is handled internally. The vector of eigenvalues $w$
+/// is assumed to be local (non-distributed).
 ///
 /// The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-/// Submatrices are currently not supported, so @param n is the size of the full matrix
+/// Submatrices are currently not supported, so @param n is the size of the full matrix $A$
 /// and @param ia, @param ja, @param iz, and @param jz need to be 1.
 ///
-/// @param uplo Specify if upper ('U') or lower ('L') triangular part of @param a will be referenced
-/// @param n order of the sumbatrix used in the computation
-/// @param a Local part of the global matrix
-/// @param ia Global row index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param ja Global column index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param desca ScaLAPACK descriptor of the global matrix
+/// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
+/// $A$ is referenced
+/// @param n order of the sumbatrix $A$ used in the computation
+/// @param a Local part of the global matrix $A$
+/// @param ia row index of the global matrix $A$ identifying the first row of the submatrix $A$, has to be 1
+/// @param ja column index of the global matrix $A$ identifying the firs column of the submatrix $A$, has to be 1
+/// @param desca ScaLAPACK array descriptor of the global matrix $A$
 /// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the eigenvectors matrix
-/// @param iz Global row index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param jz Global column index denoting the beginning of the submatrix to be operated on, has to be 1
-/// @param descz ScaLAPACK descriptor of the global eigenvectors matrix
+/// @param z Local part of the global eigenvectors matrix $Z$
+/// @param iz row index of the global matrix $Z$ identifying the first row of the submatrix $Z$, has to be 1
+/// @param jz column index of the global matrix $Z$ identifying the firs column of the submatrix $Z$, has to be 1
+/// @param descz ScaLAPACK array descriptor of the global eigenvectors matrix $Z$
 /// @param info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int n, float* a, int ia, int ja, int* desca, float* w,
                                 float* z, int iz, int jz, int* descz, int* info);
@@ -49,20 +51,21 @@ DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int n, double* a, int ia, int ja, int
 
 /// Eigensolver
 ///
-/// The matrices @param a and @param z are assumed to be distributed and in host memory.
-/// Moving to and from GPU memory is handled internally. The vector of eigenvalues @param w
+/// The matrices $A$ and $Z$ are assumed to be distributed and in host memory.
+/// Moving to and from GPU memory is handled internally. The vector of eigenvalues $w$
 /// is assumed to be local (non-distributed).
 ///
 /// The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-/// @param dlaf_context context associated to the DLA-Future grid created with dlaf_create_grid
-/// @param uplo Specify if upper ('U') or lower ('L') trianglular part of @param a will be referenced
-/// @param a Local part of the global matrix
-/// @param dlaf_desca DLA-Future descriptor of the global matrix
+/// @param dlaf_context context associated to the DLA-Future grid created with  #dlaf_create_grid
+/// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
+/// $A$ is referenced
+/// @param a Local part of the global matrix $A$
+/// @param dlaf_desca DLA-Future descriptor of the global matrix $A$
 /// @param w Local vector of eigenvalues (non-distributed)
-/// @param z Local part of the global eigenvectors matrix
-/// @param dlaf_descz DLA-Future descriptor of the global eigenvectors matrix
+/// @param z Local part of the global eigenvectors matrix $Z$
+/// @param dlaf_descz DLA-Future descriptor of the global eigenvectors matrix $Z$
 DLAF_EXTERN_C void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
                                       struct DLAF_descriptor dlaf_desca, double* w, double* z,
                                       struct DLAF_descriptor dlaf_descz);

@@ -16,7 +16,7 @@
 
 /// Initialize pika runtime and DLA-Future
 ///
-/// The pika runtime is automatically suspended within this function
+/// @post The pika runtime is automatically suspended when this function returns
 ///
 /// @param argc_pika Number of arguments for pika
 /// @param argv_pika Arguments for pika

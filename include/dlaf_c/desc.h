@@ -12,7 +12,7 @@
 
 /// @file
 
-/// DLA-Future descriptor
+/// DLA-Future matrix descriptor
 struct DLAF_descriptor {
   int m;     ///< Number of rows in the global matrix
   int n;     ///< Number of columns in the global matrix

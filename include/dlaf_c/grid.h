@@ -18,11 +18,10 @@
 
 /// Create communication grid
 ///
-/// Grids created here are indexed starting from INT_MAX, to avoid clashes with
-/// BLACS contexts (which start from 0)
+/// @warning Grids created here are indexed starting from INT_MAX, to avoid clashes with
+/// BLACS contexts (which start from 0).
 ///
-/// Grid ordering can be column-major ("C") or rowp-major ("R"). Row-major is the
-/// default ordering.
+/// Grid ordering can be column-major ("C") or rowp-major ("R").
 ///
 /// @param MPI communicator
 /// @param nprow Number of process rows in the communicator grid
@@ -33,7 +32,7 @@ DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char ord
 
 /// Free communicator grid for the given context
 ///
-/// This function only frees the DLA-Future grids stored internally. If you
+/// @warning This function only frees the DLA-Future grids stored internally. If you
 /// created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit
 ///
 /// @param context BLACS or DLA-Future context associated to the grid being released
@@ -56,14 +55,15 @@ DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
 
 /// Determine grid ordering
 ///
-/// When working with DLA-Future grids, @param comm is the original communicator
-/// used to create the grid, not the full communicator stored withn the grid (
-/// which is automatically re-ordered in row-major format)
+/// @remark For DLA-Future grids, the MPI communicator needs to be the original 
+/// communicator used to create the grid, not the full communicator stored within 
+/// the grid (after creation). DLA-Future automatically re-orders the communicator 
+/// within a DLA-Future grid in a row-major format.
 ///
 /// @param comm MPI communicator
 /// @param nprow Number of process rows in the grid
 /// @param npcol Number of process columns in the grid
 /// @param myprow Process row of the calling process
-/// @param mypcol Process column of teh calling order
-/// @return Grid ordering ("R" for row-major, "C" cor column-major)
+/// @param mypcol Process column of the calling process
+/// @return Grid order ("R" for row-major, "C" cor column-major)
 DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol);

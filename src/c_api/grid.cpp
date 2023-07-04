@@ -63,8 +63,8 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt) {
 }
 #endif
 
-void dlaf_free_grid(int blacs_ctxt) {
-  dlaf_grids.erase(blacs_ctxt);
+void dlaf_free_grid(int ctxt) {
+  dlaf_grids.erase(ctxt);
 }
 
 char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) {

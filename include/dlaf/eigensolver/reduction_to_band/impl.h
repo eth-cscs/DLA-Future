@@ -930,8 +930,7 @@ protected:
 
 }
 
-/// Local implementation of reduction to band
-/// @return a column vector of taus with block size mat_a.blockSize().cols()
+// Local implementation of reduction to band
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const SizeType band_size) {
   using dlaf::matrix::Matrix;
@@ -1076,8 +1075,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   return mat_taus;
 }
 
-/// Distributed implementation of reduction to band
-/// @return a column vector of taus with block size mat_a.blockSize().cols()
+// Distributed implementation of reduction to band
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
                                                       const SizeType band_size) {

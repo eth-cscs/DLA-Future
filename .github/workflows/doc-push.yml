@@ -7,6 +7,7 @@ on:
 
 jobs:
   doc:
+    if: "github.repository == 'eth-cscs/DLA-Future'"
     runs-on: ubuntu-22.04
 
     steps:

@@ -28,6 +28,7 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/tile.h>
 #include <dlaf/memory/memory_view.h>
 #include <dlaf/sender/traits.h>
 #include <dlaf/sender/transform_mpi.h>
@@ -1389,7 +1390,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
                 ex::start_detached(comm::scheduleRecv(
                     ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v.row(), bottom),
-                    ex::make_unique_any_sender(ex::when_all(std::move(tile_v), std::move(dep)))));
+                    matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
+                                                                             std::move(dep)))));
               }
             };
 

@@ -175,7 +175,16 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
         C_dlaf_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                             local_eigenvectors_ptr, dlaf_desc_eigenvectors)nt) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
+                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+      }
+      else {
+        DLAF_ASSERT(false, typeid(T).name());
+      }
+    }
+    else if constexpr (api == API::scalapack) {
+#ifdef DLAF_WITH_SCALAPACK
+      int desc_a[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_a};
+      int desc_z[] = {1, dlaf_context, (int) m, (int) m, (int) mb, (int) mb, 0, 0, lld_eigenvectors};
       int info = -1;
       if constexpr (std::is_same_v<T, double>) {
         C_dlaf_pdsyevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
@@ -186,7 +195,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                        local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 1, 1, desc_a, eigenvalues_ptr,
+        C_dlaf_pzheevd(dlaf_uplo, (int) m, local_a_ptr, 0, 0, desc_a, eigenvalues_ptr,
                        local_eigenvectors_ptr, 1, 1, desc_z, &info);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {

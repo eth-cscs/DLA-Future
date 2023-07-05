@@ -209,6 +209,13 @@ auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
 template <class T>
 auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
                    comm::CommunicatorGrid comm_grid) {
+  const auto local_num_tiles = mat_taus.distribution().localNrTiles().rows();
+  const auto num_tiles = mat_taus.distribution().nrTiles().rows();
+  const auto local_num_tiles_expected =
+      num_tiles / comm_grid.size().cols() +
+      (comm_grid.rank().col() < (num_tiles % comm_grid.size().cols()) ? 1 : 0);
+  EXPECT_EQ(local_num_tiles, local_num_tiles_expected);
+
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 

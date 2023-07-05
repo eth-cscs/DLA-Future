@@ -23,25 +23,15 @@ include:
 image: $IMAGE
 
 stages:
-  - allocate
   - test
   - upload
-  - cleanup
 
 variables:
-  ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
   MPICH_MAX_THREAD_SAFETY: multiple
-
-allocate:
-  stage: allocate
-  extends: .daint_alloc
-  variables:
-    PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '1:00:00'
 
 {{JOBS}}
 
@@ -54,10 +44,6 @@ upload_reports:
     SLURM_TIMELIMIT: '5:00'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: upload_codecov
-
-deallocate:
-  stage: cleanup
-  extends: .daint_dealloc
 "
 JOB_TEMPLATE="
 
@@ -68,7 +54,7 @@ JOB_TEMPLATE="
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
     SLURM_TIMELIMIT: '15:00'
-    PULL_IMAGE: 'NO'
+    PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: mpi-ctest -L {{LABEL}}
@@ -83,30 +69,16 @@ include:
 image: $IMAGE
 
 stages:
-  - allocate
   - test
-  - cleanup
 
 variables:
-  ALLOCATION_NAME: dlaf-ci-job-\$CI_PIPELINE_ID
   SLURM_EXCLUSIVE: ''
   SLURM_EXACT: ''
   SLURM_CONSTRAINT: $SLURM_CONSTRAINT
   CRAY_CUDA_MPS: 1
   MPICH_MAX_THREAD_SAFETY: multiple
 
-allocate:
-  stage: allocate
-  extends: .daint_alloc
-  variables:
-    PULL_IMAGE: 'YES'
-    SLURM_TIMELIMIT: '40:00'
-
 {{JOBS}}
-
-deallocate:
-  stage: cleanup
-  extends: .daint_dealloc
 "
 
 JOB_TEMPLATE="
@@ -117,7 +89,7 @@ JOB_TEMPLATE="
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
     SLURM_TIMELIMIT: '10:00'
-    PULL_IMAGE: 'NO'
+    PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
   script: mpi-ctest -L {{LABEL}}"

@@ -10,10 +10,9 @@
 
 #pragma once
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 
 #include <dlaf/common/pipeline.h>
-#include <dlaf/common/vector.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
@@ -43,7 +42,7 @@ struct QR_Tfactor {
   /// @param k the number of elementary reflectors to use (from the beginning of the tile)
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus array of taus, associated with the related elementary reflector
+  /// @param taus tile of the taus vector, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
   /// TileElementSize(k, k)
   ///
@@ -51,7 +50,7 @@ struct QR_Tfactor {
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& panel_view,
-                   pika::shared_future<common::internal::vector<T>> taus,
+                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t);
 
   /// Forms the triangular factor T of a block of reflectors H, which is defined as a product of k
@@ -71,7 +70,7 @@ struct QR_Tfactor {
   /// @param k the number of elementary reflectors to use (from the beginning of the tile)
   /// @param v where the elementary reflectors are stored
   /// @param v_start tile in @p v where the column of reflectors starts
-  /// @param taus array of taus, associated with the related elementary reflector
+  /// @param taus tile of the taus vector, associated with the related elementary reflector
   /// @param t tile where the resulting T factor will be stored in its top-left sub-matrix of size
   /// TileElementSize(k, k)
   /// @param mpi_col_task_chain where internal communications are issued
@@ -80,7 +79,7 @@ struct QR_Tfactor {
   /// @pre k >= 0
   /// @pre v_start.isIn(v.nrTiles())
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                   pika::shared_future<common::internal::vector<T>> taus,
+                   matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
                    common::Pipeline<comm::Communicator>& mpi_col_task_chain);
 };

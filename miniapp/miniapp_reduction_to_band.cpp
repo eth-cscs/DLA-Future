@@ -122,6 +122,7 @@ struct reductionToBandMiniapp {
 
         // wait and barrier for all ranks
         matrix.waitLocalTiles();
+        taus.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         elapsed_time = timeit.elapsed();

@@ -9,9 +9,11 @@
 //
 #pragma once
 
+#include <functional>
+#include <type_traits>
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
-#include <pika/future.hpp>
 
 #include <dlaf/types.h>
 
@@ -19,25 +21,63 @@ namespace dlaf::internal {
 template <typename...>
 struct TypeList {};
 
+template <typename... Ts>
+using DecayedTypeList = TypeList<std::decay_t<Ts>...>;
+
+template <typename T>
+struct IsFalse : std::integral_constant<bool, !(bool) T::value> {};
+
+template <typename T>
+inline constexpr bool IsFalseValue = IsFalse<T>::value;
+
+template <typename... Ts>
+struct AlwaysFalse : std::false_type {};
+
+template <typename... Ts>
+static std::true_type AnyOfImpl(...);
+
+template <typename... Ts>
+static auto AnyOfImpl(int) -> AlwaysFalse<std::enable_if_t<IsFalseValue<Ts>>...>;
+
+template <typename... Ts>
+struct AnyOf : decltype(AnyOfImpl<Ts...>(0)) {};
+
+template <>
+struct AnyOf<> : std::false_type {};
+
+template <typename T, typename... Ts>
+struct Contains : AnyOf<std::is_same<T, Ts>...> {};
+
+template <typename PackUnique, typename PackRest>
+struct UniqueHelper;
+
+template <template <typename...> class Pack, typename... Ts>
+struct UniqueHelper<Pack<Ts...>, Pack<>> {
+  using type = Pack<Ts...>;
+};
+
+template <template <typename...> class Pack, typename... Ts, typename U, typename... Us>
+struct UniqueHelper<Pack<Ts...>, Pack<U, Us...>>
+    : std::conditional<Contains<U, Ts...>::value, UniqueHelper<Pack<Ts...>, Pack<Us...>>,
+                       UniqueHelper<Pack<Ts..., U>, Pack<Us...>>>::type {};
+
+template <typename Pack>
+struct Unique;
+
+template <template <typename...> class Pack, typename... Ts>
+struct Unique<Pack<Ts...>> : UniqueHelper<Pack<>, Pack<Ts...>> {};
+
+/// Remove duplicate types in the given pack.
+template <typename Pack>
+using UniqueType = typename Unique<Pack>::type;
+
+struct EmptyEnv {};
+
 template <typename ValueTypes>
 struct SenderSingleValueTypeImpl {};
 
 template <typename T>
 struct SenderSingleValueTypeImpl<TypeList<TypeList<T>>> {
-  using type = T;
-};
-
-struct empty_env {};
-
-// We are only interested in the types wrapped by future and shared_future since
-// we will internally unwrap them.
-template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::future<T>>>> {
-  using type = T;
-};
-
-template <typename T>
-struct SenderSingleValueTypeImpl<TypeList<TypeList<pika::shared_future<T>>>> {
   using type = T;
 };
 
@@ -61,11 +101,11 @@ struct SenderSingleValueTypeImpl<
 };
 
 // The type sent by Sender, if Sender sends exactly one type.
-#if defined(PIKA_HAVE_P2300_REFERENCE_IMPLEMENTATION)
+#if defined(PIKA_HAVE_STDEXEC)
 template <typename Sender>
 using SenderSingleValueType =
-    typename SenderSingleValueTypeImpl<pika::execution::experimental::value_types_of_t<
-        std::decay_t<Sender>, empty_env, TypeList, TypeList>>::type;
+    typename SenderSingleValueTypeImpl<UniqueType<pika::execution::experimental::value_types_of_t<
+        std::decay_t<Sender>, EmptyEnv, DecayedTypeList, DecayedTypeList>>>::type;
 #else
 template <typename Sender>
 using SenderSingleValueType =
@@ -82,13 +122,4 @@ using SenderElementType = typename SenderSingleValueType<Sender>::ElementType;
 // exists and Sender sends exactly one type.
 template <typename Sender>
 inline constexpr Device sender_device = SenderSingleValueType<Sender>::device;
-
-template <typename T>
-struct IsSharedFuture : std::false_type {};
-
-template <typename U>
-struct IsSharedFuture<pika::shared_future<U>> : std::true_type {};
-
-template <typename T>
-inline constexpr bool is_shared_future_v = IsSharedFuture<std::decay_t<T>>::value;
 }

@@ -465,7 +465,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
   const std::size_t nthreads = getTridiagRank1NWorkers();
   ex::start_detached(
-      ex::when_all(ex::just(std::make_shared<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
+      ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.readwrite(evecs)),

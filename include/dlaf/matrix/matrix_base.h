@@ -35,7 +35,8 @@ public:
                       distribution.commGridSize(), distribution.rankIndex(),
                       distribution.sourceRankIndex()) {
     DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
-                "distribution should be the distribution of the original Matrix.");
+                "distribution should be the distribution of the original Matrix.",
+                distribution.blockSize(), distribution.baseTileSize());
     DLAF_ASSERT(distribution.blockSize() == distribution_.blockSize(), distribution.blockSize(),
                 distribution_.blockSize());
   }
@@ -66,6 +67,11 @@ public:
   /// Returns the id associated to the matrix of this rank.
   const comm::Index2D& rankIndex() const noexcept {
     return distribution_.rankIndex();
+  }
+
+  ///
+  const comm::Index2D& sourceRankIndex() const noexcept {
+    return distribution_.sourceRankIndex();
   }
 
   /// Returns the size of the communicator grid associated to the matrix.

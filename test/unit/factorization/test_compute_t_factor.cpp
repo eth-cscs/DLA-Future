@@ -39,6 +39,8 @@ using namespace dlaf::test;
 using dlaf::comm::CommunicatorGrid;
 using dlaf::matrix::test::MatrixLocal;
 
+using pika::execution::experimental::any_sender;
+using pika::execution::experimental::just;
 using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
@@ -98,8 +100,9 @@ void is_orthogonal(const MatrixLocal<const T>& matrix) {
 }
 
 template <class T>
-std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor(
-    const SizeType k, const MatrixLocal<const T>& v, GlobalElementIndex v_start) {
+std::tuple<Matrix<T, Device::CPU>, MatrixLocal<T>> computeHAndTFactor(const SizeType k,
+                                                                      const MatrixLocal<const T>& v,
+                                                                      GlobalElementIndex v_start) {
   // PRE: m >= k
   dlaf::common::internal::SingleThreadedBlasScope single;
 
@@ -107,8 +110,10 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
   const TileElementSize block_size = v.blockSize();
 
   // compute taus and H_exp
-  common::internal::vector<T> taus;
-  taus.reserve(k);
+  Matrix<T, Device::CPU> mat_taus(matrix::Distribution(GlobalElementSize(k, 1), TileElementSize(k, 1),
+                                                       comm::Size2D(1, 1), comm::Index2D(0, 0),
+                                                       comm::Index2D(0, 0)));
+  auto taus_tile = sync_wait(mat_taus.readwrite(GlobalTileIndex(0, 0)));
 
   MatrixLocal<T> h_expected({m, m}, block_size);
   set(h_expected, preset_eye<T>);
@@ -120,7 +125,7 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
     const auto norm = blas::nrm2(reflector_size, data_ptr, 1);
     const T tau = 2 / (norm * norm);
 
-    taus.push_back(tau);
+    taus_tile(TileElementIndex(j, 0)) = tau;
 
     MatrixLocal<T> h_i({reflector_size, reflector_size}, block_size);
     set(h_i, preset_eye<T>);
@@ -153,7 +158,7 @@ std::tuple<dlaf::common::internal::vector<T>, MatrixLocal<T>> computeHAndTFactor
               h_expected.ptr(h_offset));
   }
 
-  return std::make_tuple(taus, std::move(h_expected));
+  return std::make_tuple(std::move(mat_taus), std::move(h_expected));
 }
 
 template <class T>
@@ -275,9 +280,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 
   auto v_local = dlaf::matrix::test::allGather<const T>(blas::Uplo::General, v_h);
 
-  auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
-  pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
+  auto [mat_taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
 
   is_orthogonal(h_expected);
 
@@ -296,7 +299,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx));
+    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx));
   }
 
   // Note:
@@ -356,9 +359,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
   if (dist_v.rankIndex().col() != source_rank_index.col())
     return;
 
-  auto [taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
-  pika::shared_future<dlaf::common::internal::vector<T>> taus_input =
-      pika::make_ready_future<dlaf::common::internal::vector<T>>(std::move(taus));
+  auto [mat_taus, h_expected] = computeHAndTFactor(k, v_local, v_start);
 
   is_orthogonal(h_expected);
 
@@ -379,7 +380,8 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
     }
 
     using dlaf::factorization::internal::computeTFactor;
-    computeTFactor<B>(panel_v, taus_input, t_output.get().readwrite(t_idx), serial_comm);
+    computeTFactor<B>(panel_v, mat_taus.read(GlobalTileIndex(0, 0)), t_output.get().readwrite(t_idx),
+                      serial_comm);
   }
 
   // Note:

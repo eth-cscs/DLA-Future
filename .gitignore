@@ -8,7 +8,7 @@
 !build.sh
 .clangd
 .cache
-
+/doc/html/
 
 # ------------------- C++
 

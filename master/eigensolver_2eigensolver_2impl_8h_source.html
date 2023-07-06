@@ -111,13 +111,13 @@ $(function() {
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keywordflow">if</span> (uplo != blas::Uplo::Lower)</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;    DLAF_UNIMPLEMENTED(uplo);</div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">auto</span> taus = reductionToBand&lt;B&gt;(mat_a, band_size);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  <span class="keyword">auto</span> mat_taus = reductionToBand&lt;B&gt;(mat_a, band_size);</div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <span class="keyword">auto</span> ret = bandToTridiag&lt;Backend::MC&gt;(uplo, band_size, mat_a);</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
 <div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  eigensolver::tridiagSolver&lt;B&gt;(ret.tridiagonal, evals, mat_e);</div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
 <div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  backTransformationBandToTridiag&lt;B&gt;(band_size, mat_e, ret.hh_reflectors);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  backTransformationReductionToBand&lt;B&gt;(band_size, mat_e, mat_a, taus);</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  backTransformationReductionToBand&lt;B&gt;(band_size, mat_e, mat_a, mat_taus);</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;}</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
@@ -129,13 +129,13 @@ $(function() {
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keywordflow">if</span> (uplo != blas::Uplo::Lower)</div>
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;    DLAF_UNIMPLEMENTED(uplo);</div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">auto</span> taus = reductionToBand&lt;B&gt;(grid, mat_a, band_size);</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">auto</span> mat_taus = reductionToBand&lt;B&gt;(grid, mat_a, band_size);</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">auto</span> ret = bandToTridiag&lt;Backend::MC&gt;(grid, uplo, band_size, mat_a);</div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
 <div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  eigensolver::tridiagSolver&lt;B&gt;(grid, ret.tridiagonal, evals, mat_e);</div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  backTransformationBandToTridiag&lt;B&gt;(grid, band_size, mat_e, ret.hh_reflectors);</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  backTransformationReductionToBand&lt;B&gt;(grid, band_size, mat_e, mat_a, taus);</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  backTransformationReductionToBand&lt;B&gt;(grid, band_size, mat_e, mat_a, mat_taus);</div>
 <div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;}</div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;}</div>
 <div class="ttc" id="aband__to__tridiag_8h_html"><div class="ttname"><a href="band__to__tridiag_8h.html">band_to_tridiag.h</a></div></div>

@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a42199518801bc5f53812272a806042d3"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a42199518801bc5f53812272a806042d3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#a42199518801bc5f53812272a806042d3">dlaf::eigensolver::backTransformationReductionToBand</a> (const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, common::internal::vector&lt; pika::shared_future&lt; common::internal::vector&lt; T &gt;&gt;&gt; taus)</td></tr>
-<tr class="separator:a42199518801bc5f53812272a806042d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a82021dddb5910fa62d8d38fa8b00f6d3"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a82021dddb5910fa62d8d38fa8b00f6d3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#a82021dddb5910fa62d8d38fa8b00f6d3">dlaf::eigensolver::backTransformationReductionToBand</a> (comm::CommunicatorGrid grid, const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, common::internal::vector&lt; pika::shared_future&lt; common::internal::vector&lt; T &gt;&gt;&gt; taus)</td></tr>
-<tr class="separator:a82021dddb5910fa62d8d38fa8b00f6d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a04e50376b3136f312c5c4114b917ae03"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a04e50376b3136f312c5c4114b917ae03"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">dlaf::eigensolver::backTransformationReductionToBand</a> (const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
+<tr class="separator:a04e50376b3136f312c5c4114b917ae03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#aa0009f01a9bcae7b94d16e3696433ef8">dlaf::eigensolver::backTransformationReductionToBand</a> (comm::CommunicatorGrid grid, const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
+<tr class="separator:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a82021dddb5910fa62d8d38fa8b00f6d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a82021dddb5910fa62d8d38fa8b00f6d3">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[1/2]</span></h2>
+<a id="aa0009f01a9bcae7b94d16e3696433ef8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0009f01a9bcae7b94d16e3696433ef8">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -125,8 +125,8 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt;&gt;&#160;</td>
-          <td class="paramname"><em>taus</em>&#160;</td>
+          <td class="paramtype">Matrix&lt; const T, Device::CPU &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_taus</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -141,7 +141,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
   <table class="params">
     <tr><td class="paramname">mat_c</td><td>contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C. </td></tr>
     <tr><td class="paramname">mat_v</td><td>is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors. The j-th HH reflector is v_j = (1, V(mb + j : n, j)). </td></tr>
-    <tr><td class="paramname">taus</td><td>is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
+    <tr><td class="paramname">mat_taus</td><td>is the tau vector as returned by reductionToBand. The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
   </table>
   </dd>
 </dl>
@@ -151,8 +151,8 @@ mat_v is distributed according to grid. </dd></dl>
 
 </div>
 </div>
-<a id="a42199518801bc5f53812272a806042d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a42199518801bc5f53812272a806042d3">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[2/2]</span></h2>
+<a id="a04e50376b3136f312c5c4114b917ae03"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a04e50376b3136f312c5c4114b917ae03">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -180,8 +180,8 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt;&gt;&#160;</td>
-          <td class="paramname"><em>taus</em>&#160;</td>
+          <td class="paramtype">Matrix&lt; const T, Device::CPU &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_taus</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -196,7 +196,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
   <table class="params">
     <tr><td class="paramname">mat_c</td><td>contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C. </td></tr>
     <tr><td class="paramname">mat_v</td><td>is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors. The j-th HH reflector is v_j = (1, V(mb + j : n, j)). </td></tr>
-    <tr><td class="paramname">taus</td><td>is a (blocked) vector of size m (blocksize mb). The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
+    <tr><td class="paramname">mat_taus</td><td>is the tau vector as returned by reductionToBand. The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
   </table>
   </dd>
 </dl>

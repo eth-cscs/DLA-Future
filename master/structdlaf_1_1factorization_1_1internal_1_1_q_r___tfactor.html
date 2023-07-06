@@ -75,14 +75,14 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a88bd9c17befff93a720bb00d5b8581db"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a88bd9c17befff93a720bb00d5b8581db">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;panel_view, pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
-<tr class="separator:a88bd9c17befff93a720bb00d5b8581db"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9ecf9450fb6c9553a4f48a733d93302e"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a9ecf9450fb6c9553a4f48a733d93302e">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;mpi_col_task_chain)</td></tr>
-<tr class="separator:a9ecf9450fb6c9553a4f48a733d93302e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1d9391570e947628f8c23668f944f7d4"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;panel_view, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
+<tr class="separator:a1d9391570e947628f8c23668f944f7d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac73f315af163e45f509e230f362d1310"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#ac73f315af163e45f509e230f362d1310">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;mpi_col_task_chain)</td></tr>
+<tr class="separator:ac73f315af163e45f509e230f362d1310"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a9ecf9450fb6c9553a4f48a733d93302e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9ecf9450fb6c9553a4f48a733d93302e">&#9670;&nbsp;</a></span>call() <span class="overload">[1/2]</span></h2>
+<a id="ac73f315af163e45f509e230f362d1310"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac73f315af163e45f509e230f362d1310">&#9670;&nbsp;</a></span>call() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -101,7 +101,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt;&#160;</td>
+          <td class="paramtype">matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt;&#160;</td>
           <td class="paramname"><em>taus</em>, </td>
         </tr>
         <tr>
@@ -138,7 +138,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
     <tr><td class="paramname">k</td><td>the number of elementary reflectors to use (from the beginning of the tile) </td></tr>
     <tr><td class="paramname">v</td><td>where the elementary reflectors are stored </td></tr>
     <tr><td class="paramname">v_start</td><td>tile in <code>v</code> where the column of reflectors starts </td></tr>
-    <tr><td class="paramname">taus</td><td>array of taus, associated with the related elementary reflector </td></tr>
+    <tr><td class="paramname">taus</td><td>tile of the taus vector, associated with the related elementary reflector </td></tr>
     <tr><td class="paramname">t</td><td>tile where the resulting T factor will be stored in its top-left sub-matrix of size TileElementSize(k, k) </td></tr>
     <tr><td class="paramname">mpi_col_task_chain</td><td>where internal communications are issued</td></tr>
   </table>
@@ -152,8 +152,8 @@ v_start.isIn(v.nrTiles()) </dd></dl>
 
 </div>
 </div>
-<a id="a88bd9c17befff93a720bb00d5b8581db"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a88bd9c17befff93a720bb00d5b8581db">&#9670;&nbsp;</a></span>call() <span class="overload">[2/2]</span></h2>
+<a id="a1d9391570e947628f8c23668f944f7d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1d9391570e947628f8c23668f944f7d4">&#9670;&nbsp;</a></span>call() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -172,7 +172,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt;&#160;</td>
+          <td class="paramtype">matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt;&#160;</td>
           <td class="paramname"><em>taus</em>, </td>
         </tr>
         <tr>
@@ -203,7 +203,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
     <tr><td class="paramname">k</td><td>the number of elementary reflectors to use (from the beginning of the tile) </td></tr>
     <tr><td class="paramname">v</td><td>where the elementary reflectors are stored </td></tr>
     <tr><td class="paramname">v_start</td><td>tile in <code>v</code> where the column of reflectors starts </td></tr>
-    <tr><td class="paramname">taus</td><td>array of taus, associated with the related elementary reflector </td></tr>
+    <tr><td class="paramname">taus</td><td>tile of the taus vector, associated with the related elementary reflector </td></tr>
     <tr><td class="paramname">t</td><td>tile where the resulting T factor will be stored in its top-left sub-matrix of size TileElementSize(k, k)</td></tr>
   </table>
   </dd>

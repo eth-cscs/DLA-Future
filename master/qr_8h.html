@@ -79,17 +79,17 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a203cb008cc85f9154ce40cb4b119afe7"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a203cb008cc85f9154ce40cb4b119afe7"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a203cb008cc85f9154ce40cb4b119afe7">dlaf::factorization::internal::computeTFactor</a> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, pika::shared_future&lt; common::internal::vector&lt; T &gt;&gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
-<tr class="separator:a203cb008cc85f9154ce40cb4b119afe7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a13817ff12909b12377776a94537897c2"><td class="memTemplParams" colspan="2"><a id="a13817ff12909b12377776a94537897c2"></a>
+<tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a4654c00202b44c6c9365d1a03eff9e99">dlaf::factorization::internal::computeTFactor</a> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
+<tr class="separator:a4654c00202b44c6c9365d1a03eff9e99"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a410cbb6a0f304714562624328a9c2168"><td class="memTemplParams" colspan="2"><a id="a410cbb6a0f304714562624328a9c2168"></a>
 template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a13817ff12909b12377776a94537897c2"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::factorization::internal::computeTFactor</b> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, pika::shared_future&lt; common::internal::vector&lt; T &gt;&gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, common::Pipeline&lt; comm::Communicator &gt; &amp;mpi_col_task_chain)</td></tr>
-<tr class="separator:a13817ff12909b12377776a94537897c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a410cbb6a0f304714562624328a9c2168"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::factorization::internal::computeTFactor</b> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, common::Pipeline&lt; comm::Communicator &gt; &amp;mpi_col_task_chain)</td></tr>
+<tr class="separator:a410cbb6a0f304714562624328a9c2168"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a203cb008cc85f9154ce40cb4b119afe7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a203cb008cc85f9154ce40cb4b119afe7">&#9670;&nbsp;</a></span>computeTFactor()</h2>
+<a id="a4654c00202b44c6c9365d1a03eff9e99"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4654c00202b44c6c9365d1a03eff9e99">&#9670;&nbsp;</a></span>computeTFactor()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -105,7 +105,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">pika::shared_future&lt; <a class="el" href="structdlaf_1_1common_1_1internal_1_1vector.html">common::internal::vector</a>&lt; T &gt;&gt;&#160;</td>
+          <td class="paramtype">matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt;&#160;</td>
           <td class="paramname"><em>taus</em>, </td>
         </tr>
         <tr>

@@ -988,15 +988,15 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   const SizeType n = problemSize(i_begin, i_end, dist);
 
   const SizeType m_subm_el_lc = [=]() {
-    const auto i_loc_being = ij_begin_lc.row();
+    const auto i_loc_begin = ij_begin_lc.row();
     const auto i_loc_end = ij_begin_lc.row() + sz_loc_tiles.rows();
-    return dist.localElementDistanceFromLocalTile<Coord::Row>(i_loc_being, i_loc_end);
+    return dist.localElementDistanceFromLocalTile<Coord::Row>(i_loc_begin, i_loc_end);
   }();
 
   const SizeType n_subm_el_lc = [=]() {
-    const auto i_loc_being = ij_begin_lc.col();
+    const auto i_loc_begin = ij_begin_lc.col();
     const auto i_loc_end = ij_begin_lc.col() + sz_loc_tiles.cols();
-    return dist.localElementDistanceFromLocalTile<Coord::Col>(i_loc_being, i_loc_end);
+    return dist.localElementDistanceFromLocalTile<Coord::Col>(i_loc_begin, i_loc_end);
   }();
 
   auto bcast_evals = [i_begin, i_end,

@@ -22,17 +22,15 @@
 
 #include "../blacs.h"
 #include "../grid.h"
+#include "../utils.h"
 
 template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(uplo == 'L' || uplo == 'l' || uplo == 'U' || uplo == 'u', uplo);
-  DLAF_ASSERT(dlaf_desca.m == dlaf_desca.n, dlaf_desca.m, dlaf_desca.n);
-
   pika::resume();
 
-  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
   auto communicator_grid = dlaf_grids.at(dlaf_context);
 
@@ -68,14 +66,13 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
              int& info) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(uplo == 'L' || uplo == 'l' || uplo == 'U' || uplo == 'u', uplo);
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(ia == 1, ia);
   DLAF_ASSERT(ja == 1, ja);
 
   pika::resume();
 
-  auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
   // Get grid corresponding to blacs context in desca
   // The grid needs to be created with dlaf_create_grid_from_blacs

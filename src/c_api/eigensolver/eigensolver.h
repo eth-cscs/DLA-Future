@@ -24,6 +24,7 @@
 
 #include "../blacs.h"
 #include "../grid.h"
+#include "../utils.h"
 
 template <typename T>
 void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
@@ -33,14 +34,9 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   using MatrixBaseMirror =
       dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(uplo == 'L' || uplo == 'l', uplo);
-  DLAF_ASSERT(dlaf_desca.m == dlaf_desca.n, dlaf_desca.m, dlaf_desca.n);
-  DLAF_ASSERT(dlaf_descz.m == dlaf_descz.n, dlaf_descz.m, dlaf_descz.n);
-  DLAF_ASSERT(dlaf_desca.m == dlaf_descz.m, dlaf_desca.m, dlaf_descz.n);
-
   pika::resume();
 
-  [[maybe_unused]] auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
   auto communicator_grid = dlaf_grids.at(dlaf_context);
 
@@ -64,10 +60,8 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
     MatrixMirror eigenvectors(eigenvectors_host);
     MatrixBaseMirror eigenvalues(eigenvalues_host);
 
-    // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
-    // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future
     dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, blas::Uplo::Lower, matrix.get(), eigenvalues.get(), eigenvectors.get());
+        communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
   }  // Destroy mirror
 
   // Ensure data is copied back to the host
@@ -88,7 +82,6 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
   using MatrixBaseMirror =
       dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(uplo == 'L' || uplo == 'l', uplo);
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(descz[0] == 1, descz[0]);
   DLAF_ASSERT(ia == 1, ia);
@@ -98,7 +91,7 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
 
   pika::resume();
 
-  [[maybe_unused]] auto dlaf_uplo = (uplo == 'U' or uplo == 'u') ? blas::Uplo::Upper : blas::Uplo::Lower;
+  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
   // Get grid corresponding to blacs context in desca
   // The grid needs to be created with dlaf_create_grid_from_blacs
@@ -116,10 +109,8 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
     MatrixMirror eigenvectors(eigenvectors_host);
     MatrixBaseMirror eigenvalues(eigenvalues_host);
 
-    // TODO: Use dlaf_uplo instead of hard-coded blas::Uplo::Lower
-    // TODO: blas::Uplo::Uppper is not yet supported in DLA-Future
     dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, blas::Uplo::Lower, matrix.get(), eigenvalues.get(), eigenvectors.get());
+        communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
   }  // Destroy mirror
 
   // Ensure data is copied back to the host

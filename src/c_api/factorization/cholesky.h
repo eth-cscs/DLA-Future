@@ -28,6 +28,9 @@ template <typename T>
 void cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
+  DLAF_ASSERT(dlaf_desca.i == 1, dlaf_desca.i);
+  DLAF_ASSERT(dlaf_desca.j == 1, dlaf_desca.j);
+
   pika::resume();
 
   auto dlaf_uplo = dlaf_uplo_from_char(uplo);

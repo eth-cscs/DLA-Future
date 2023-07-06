@@ -131,7 +131,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   if constexpr (api == API::dlaf) {
     DLAF_descriptor dlaf_desc =
-        {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld};
+        {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 1, 1, lld};
     if constexpr (std::is_same_v<T, double>) {
       C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }

@@ -34,6 +34,11 @@ void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, 
   using MatrixBaseMirror =
       dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
+  DLAF_ASSERT(dlaf_desca.i == 1, dlaf_desca.i);
+  DLAF_ASSERT(dlaf_desca.j == 1, dlaf_desca.j);
+  DLAF_ASSERT(dlaf_descz.i == 1, dlaf_descz.i);
+  DLAF_ASSERT(dlaf_descz.j == 1, dlaf_descz.j);
+
   pika::resume();
 
   auto dlaf_uplo = dlaf_uplo_from_char(uplo);

@@ -130,10 +130,6 @@ public:
     return !operator==(rhs);
   }
 
-  const GlobalElementIndex& offset() const noexcept {
-    return offset_;
-  }
-
   const GlobalElementSize& size() const noexcept {
     return size_;
   }

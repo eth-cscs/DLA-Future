@@ -54,7 +54,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocsolver", when="+rocm")
     depends_on("rocthrust", when="+rocm")
 
-    depends_on("hdf5 +cxx+mpi+threadsafe", when="+hdf5")
+    depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
 
     conflicts("+cuda", when="+rocm")
 

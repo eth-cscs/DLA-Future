@@ -17,7 +17,8 @@ var searchData=
   ['source_5flocation_697',['source_location',['../structdlaf_1_1common_1_1internal_1_1source__location.html',1,'dlaf::common::internal']]],
   ['submatrixview_698',['SubMatrixView',['../structdlaf_1_1matrix_1_1_sub_matrix_view.html',1,'dlaf::matrix']]],
   ['subpanelview_699',['SubPanelView',['../structdlaf_1_1matrix_1_1_sub_panel_view.html',1,'dlaf::matrix']]],
-  ['subtilespec_700',['SubTileSpec',['../structdlaf_1_1matrix_1_1_sub_tile_spec.html',1,'dlaf::matrix']]],
-  ['sweepworker_701',['SweepWorker',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html',1,'dlaf::eigensolver::internal']]],
-  ['sweepworkerdist_702',['SweepWorkerDist',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html',1,'dlaf::eigensolver::internal']]]
+  ['subpipelinetag_700',['SubPipelineTag',['../structdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_1_1_sub_pipeline_tag.html',1,'dlaf::matrix::Matrix&lt; const T, D &gt;']]],
+  ['subtilespec_701',['SubTileSpec',['../structdlaf_1_1matrix_1_1_sub_tile_spec.html',1,'dlaf::matrix']]],
+  ['sweepworker_702',['SweepWorker',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html',1,'dlaf::eigensolver::internal']]],
+  ['sweepworkerdist_703',['SweepWorkerDist',['../classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker_dist.html',1,'dlaf::eigensolver::internal']]]
 ];

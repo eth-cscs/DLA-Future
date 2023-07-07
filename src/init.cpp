@@ -12,6 +12,7 @@
 #include <array>
 #include <cctype>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -157,11 +158,14 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
-    if (auto parsed_value = parseFromString<T>::call(env_var_value))
+    if (auto parsed_value = parseFromString<T>::call(env_var_value)) {
       var = parsed_value.value();
-    else
+    }
+    else {
       std::cerr << "Environment variable " << dlaf_env_var << " has an invalid value (='"
                 << env_var_value << "').\n";
+      std::terminate();
+    }
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;

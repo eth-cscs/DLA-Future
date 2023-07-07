@@ -8,9 +8,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <algorithm>
+#include <array>
+#include <cctype>
 #include <cstdlib>
+#include <exception>
 #include <iostream>
 #include <memory>
+#include <optional>
 
 #include <pika/runtime.hpp>
 
@@ -103,23 +108,41 @@ struct Init<Backend::GPU> {
 
 template <class T>
 struct parseFromString {
-  static T call(const std::string& val) {
+  static std::optional<T> call(const std::string& val) {
     return val;
   };
 };
 
 template <>
 struct parseFromString<std::size_t> {
-  static std::size_t call(const std::string& var) {
+  static std::optional<std::size_t> call(const std::string& var) {
     return std::stoull(var);
   };
 };
 
 template <>
 struct parseFromString<SizeType> {
-  static SizeType call(const std::string& var) {
+  static std::optional<SizeType> call(const std::string& var) {
     return std::stoll(var);
   };
+};
+
+template <>
+struct parseFromString<bool> {
+  static std::optional<bool> call(const std::string& var) {
+    if (is_one_of_ignore_case(var, {"ON", "TRUE", "YES", "1"}))
+      return true;
+    if (is_one_of_ignore_case(var, {"OFF", "FALSE", "NO", "0"}))
+      return false;
+    return std::nullopt;
+  };
+
+private:
+  static bool is_one_of_ignore_case(std::string value, const std::array<std::string, 4>& values) {
+    std::transform(value.cbegin(), value.cend(), value.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+    return (values.cend()) != std::find(values.cbegin(), values.cend(), value);
+  }
 };
 
 template <class T>
@@ -135,7 +158,14 @@ void updateConfigurationValue(const pika::program_options::variables_map& vm, T&
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
-    var = parseFromString<T>::call(env_var_value);
+    if (auto parsed_value = parseFromString<T>::call(env_var_value)) {
+      var = parsed_value.value();
+    }
+    else {
+      std::cerr << "Environment variable " << dlaf_env_var << " has an invalid value (='"
+                << env_var_value << "').\n";
+      std::terminate();
+    }
   }
 
   const std::string dlaf_cmdline_option = "dlaf:" + cmdline_option;

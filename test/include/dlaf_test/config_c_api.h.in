@@ -8,6 +8,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+// Configuration for C API tests
+// PIKA parameters from CMake to be used in C API tests
+// C API tests are not registered as PIKA tests since the PIKA runtime is
+// initialized and stipped for every test
+
 #pragma once
 
 #include <iterator>

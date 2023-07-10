@@ -25,8 +25,8 @@
 #include <dlaf_c/grid.h>
 #include <dlaf_c/init.h>
 
-#include "test_eigensolver_c_api_wrapper.h"
 #include "config.h"
+#include "test_eigensolver_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
 

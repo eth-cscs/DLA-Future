@@ -209,7 +209,7 @@ function(DLAF_addTest test_target_name)
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
 
     configure_file(
-      ${CMAKE_SOURCE_DIR}/test/include/dlaf_test/config_c_api.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h
+      ${PROJECT_SOURCE_DIR}/test/include/dlaf_c_test/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h
     )
 
   endif()
@@ -223,7 +223,7 @@ function(DLAF_addTest test_target_name)
     ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
                                 NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
   )
-  target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS})
+  target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
   target_add_warnings(${test_target_name})
   DLAF_addPrecompiledHeaders(${test_target_name})
   add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})

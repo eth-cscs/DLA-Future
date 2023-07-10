@@ -45,9 +45,6 @@
 *.out
 *.app
 
-test/unit/**/config.h
-
-
 # ------------------- CMake
 
 CMakeLists.txt.user

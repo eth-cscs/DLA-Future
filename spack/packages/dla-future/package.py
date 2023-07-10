@@ -134,7 +134,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     or "^mvapich2" in spec
                 ):
                     mkl_mpi = "mpich"
-                elif "+openmpi" in spec:
+                elif "^openmpi" in spec:
                     mkl_mpi = "ompi"
                 args.append(
                     self.define(

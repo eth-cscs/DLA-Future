@@ -24,7 +24,7 @@
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
 int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
-  // dlaf_context starts from INT_MAX to reeduce the likelihood of clashes with blacs contexts
+  // dlaf_context starts from INT_MAX to reduce the likelihood of clashes with blacs contexts
   // blacs starts to number contexts from 0
   int dlaf_context = std::numeric_limits<int>::max() - static_cast<int>(std::size(dlaf_grids));
 
@@ -85,7 +85,7 @@ char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) 
   MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, comm);
 
   if (!row_major and !col_major) {
-    std::cout << "Grid layout must be row major or columns majord." << std::endl;
+    std::cout << "Grid layout must be row major or column major." << std::endl;
     exit(-1);
   }
 

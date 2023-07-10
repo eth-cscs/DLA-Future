@@ -216,7 +216,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   if (!mat_a_h.size().isEmpty())
     testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
 
-  // Suspend pika to make sure dla_finalize resumes it
+  // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
 
   dlaf_free_grid(dlaf_context);

@@ -36,7 +36,7 @@
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param ia row index of the global matrix \f$\mathbf{A}\f$ identifying the first row of the submatrix
 /// \f$\mathbf{A}\f$, has to be 1
-/// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the firs column of the
+/// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the first column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$
 /// @param info 0 if the factorization completed normally

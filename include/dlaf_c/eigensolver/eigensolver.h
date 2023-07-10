@@ -37,14 +37,14 @@
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param ia row index of the global matrix \f$\mathbf{A}\f$ identifying the first row of the submatrix
 /// $A$, has to be 1
-/// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the firs column of the
+/// @param ja column index of the global matrix \f$\mathbf{A}\f$ identifying the first column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the global matrix \f$\mathbf{Z}\f$
 /// @param iz row index of the global matrix \f$\mathbf{Z}\f$ identifying the first row of the submatrix
 /// \f$\mathbf{Z}\f$, has to be 1
-/// @param jz column index of the global matrix \f$\mathbf{A}\f$ identifying the firs column of the
+/// @param jz column index of the global matrix \f$\mathbf{A}\f$ identifying the first column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param descz ScaLAPACK array descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @param info 0 if the eigensolver completed normally

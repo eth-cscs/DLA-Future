@@ -123,7 +123,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
     local_a_ptr = toplefttile_a.ptr();
     lld = static_cast<int>(toplefttile_a.ld());
-  }  // Destroy tile (avoids deoendency issues down the line)
+  }  // Destroy tile (avoids dependency issues down the line)
 
   // Suspend pika to ensure it is resumed by the C API
   pika::suspend();
@@ -183,7 +183,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
 
-  // Suspend pika to make sure dla_finalize resumes it
+  // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
 
   dlaf_free_grid(dlaf_context);

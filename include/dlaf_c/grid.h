@@ -21,7 +21,7 @@
 /// @warning Grids created here are indexed starting from INT_MAX, to avoid clashes with
 /// BLACS contexts (which start from 0).
 ///
-/// Grid ordering can be column-major ("C") or rowp-major ("R").
+/// Grid ordering can be column-major ("C") or row-major ("R").
 ///
 /// @param MPI communicator
 /// @param nprow Number of process rows in the communicator grid

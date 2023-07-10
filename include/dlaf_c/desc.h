@@ -22,5 +22,5 @@ struct DLAF_descriptor {
   int jsrc;  ///< Process column of the first column of the global matrix
   int i;     ///< First row of the submatrix within global matrix, has to be 1
   int j;     ///< First column of the submatrix within global matrix, has to be 1
-  int ld;    ///< Leading fimension of the local matrix
+  int ld;    ///< Leading dimension of the local matrix
 };

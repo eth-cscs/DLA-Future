@@ -73,8 +73,8 @@ else()
   find_dependency(LAPACK)
 
   if(DLAF_WITH_SCALAPACK)
-    find_dependency(SCALAPACK)
     set(SCALAPACK_LIBRARY "@SCALAPACK_LIBRARY@")
+    find_dependency(SCALAPACK)
   endif()
 endif()
 

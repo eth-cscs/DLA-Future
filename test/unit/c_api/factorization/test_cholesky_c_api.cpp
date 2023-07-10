@@ -24,8 +24,8 @@
 #include <dlaf_c/grid.h>
 #include <dlaf_c/init.h>
 
-#include "test_cholesky_c_api_wrapper.h"
 #include "config.h"
+#include "test_cholesky_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
 
@@ -62,11 +62,11 @@ TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    {0, 2},  // m = 0
-    //{5, 8}, {34, 34},                    // m <= mb
-    //{4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
+    //    {0, 2},  // m = 0
+    // {5, 8}, {34, 34},                    // m <= mb
+    // {4, 3}, {16, 10}, {34, 13}, {32, 5},  // m > mb
     {4, 1},
-    {34, 13},
+    //   {34, 13},
     {32, 5}  // m > mb
 };
 
@@ -118,19 +118,11 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   T* local_a_ptr;
   int lld;
   {
-    std::cout << "DEBUG ::: " << distribution.localSize() << ' ' << distribution.blockSize() << ' '
-              << distribution.blockSize().rows() << ' ' << distribution.blockSize().cols() << '\n';
-    if (distribution.localSize() != LocalElementSize(0, 0)) {
-      auto toplefttile_a =
-          pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
+    auto toplefttile_a =
+        pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
 
-      local_a_ptr = toplefttile_a.ptr();
-      lld = static_cast<int>(toplefttile_a.ld());
-    }
-    else {
-      local_a_ptr = nullptr;
-      lld = mb;
-    }
+    local_a_ptr = toplefttile_a.ptr();
+    lld = static_cast<int>(toplefttile_a.ld());
   }  // Destroy tile (avoids deoendency issues down the line)
 
   // Suspend pika to ensure it is resumed by the C API

@@ -119,6 +119,17 @@ public:
 
   Distribution& operator=(Distribution&& rhs) noexcept;
 
+  /// Constructs a sub-distribution based on the given distribution @p dist with
+  /// an @p offset and @p size.
+  ///
+  /// @param[in] dist is the input distribution,
+  /// @param[in] offset is the offset of the new distribution relative to the input distribution,
+  /// @param[in] size is the size of the new distribution relative to the offset,
+  /// @pre origin.isValid()
+  /// @pre size.isValid()
+  /// @pre origin + size <= dist.size()
+  Distribution(Distribution dist, const GlobalElementIndex& offset, const GlobalElementSize& size);
+
   bool operator==(const Distribution& rhs) const noexcept {
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && tile_size_ == rhs.tile_size_ &&
            block_size_ == rhs.block_size_ && global_nr_tiles_ == rhs.global_nr_tiles_ &&

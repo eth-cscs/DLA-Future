@@ -88,6 +88,21 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   return *this;
 }
 
+Distribution::Distribution(Distribution rhs, const GlobalElementIndex& origin,
+                           const GlobalElementSize& size)
+    : Distribution(std::move(rhs)) {
+  DLAF_ASSERT(origin.isValid(), origin);
+  DLAF_ASSERT(size.isValid(), size);
+  DLAF_ASSERT(origin.row() + size.rows() <= size_.rows(), origin, size_);
+  DLAF_ASSERT(origin.col() + size.cols() <= size_.cols(), origin, size_);
+
+  offset_ = GlobalElementIndex(offset_.get<Coord::Row>() + origin.get<Coord::Row>(),
+                               offset_.get<Coord::Col>() + origin.get<Coord::Col>());
+  size_ = size;
+
+  computeGlobalAndLocalNrTilesAndLocalSize();
+}
+
 void Distribution::computeGlobalSizeForNonDistr() noexcept {
   size_ = GlobalElementSize(local_size_.rows(), local_size_.cols());
 }

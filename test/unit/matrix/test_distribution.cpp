@@ -633,3 +633,61 @@ TEST(DistributionTest, LocalElementDistanceFromGlobalTile) {
               obj.localElementDistanceFromGlobalTile(test.global_tile_begin, test.global_tile_end));
   }
 }
+
+struct ParametersSubDistribution {
+  // Distribution settings
+  GlobalElementSize size;
+  TileElementSize block_size;
+  comm::Index2D rank;
+  comm::Size2D grid_size;
+  comm::Index2D src_rank;
+  GlobalElementIndex offset;
+  // Sub-distribution settings
+  GlobalElementIndex suboffset;
+  GlobalElementSize subsize;
+  // Valid indices
+  GlobalElementIndex global_element;
+  GlobalTileIndex global_tile;
+  comm::Index2D rank_tile;
+  std::array<SizeType, 2> local_tile;  // can be an invalid LocalTileIndex
+};
+
+const std::vector<ParametersSubDistribution> tests_sub_distribution = {
+    // {size, block_size, rank, grid_size, src_rank, offset, suboffset, subsize,
+    // global_element, global_tile, rank_tile, local_tile}
+
+    // TODO: More tests
+
+    // Sub-distribution == distribution
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {3, 4}, {1, 3}, {0, 1}, {0, 0}, {0, 1}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {0, 0}, {5, 9}, {1, 3}, {0, 2}, {0, 0}, {-1, -1}},
+};
+
+TEST(DistributionTest, SubDistribution) {
+  for (const auto& test : tests_sub_distribution) {
+    Distribution dist(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    Distribution sub_dist(dist, test.suboffset, test.subsize);
+
+    EXPECT_EQ(sub_dist.size(), test.subsize);
+
+    EXPECT_EQ(sub_dist.blockSize(), dist.blockSize());
+    EXPECT_EQ(sub_dist.baseTileSize(), dist.baseTileSize());
+    EXPECT_EQ(sub_dist.rankIndex(), dist.rankIndex());
+    EXPECT_EQ(sub_dist.commGridSize(), dist.commGridSize());
+
+    EXPECT_LE(sub_dist.localSize().rows(), dist.localSize().rows());
+    EXPECT_LE(sub_dist.localSize().cols(), dist.localSize().cols());
+    EXPECT_LE(sub_dist.localNrTiles().rows(), dist.localNrTiles().rows());
+    EXPECT_LE(sub_dist.localNrTiles().cols(), dist.localNrTiles().cols());
+    EXPECT_LE(sub_dist.nrTiles().rows(), dist.nrTiles().rows());
+    EXPECT_LE(sub_dist.nrTiles().cols(), dist.nrTiles().cols());
+
+    EXPECT_EQ(sub_dist.globalTileIndex(test.global_element), test.global_tile);
+    EXPECT_EQ(sub_dist.rankGlobalTile(sub_dist.globalTileIndex(test.global_element)), test.rank_tile);
+
+    EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Row>(test.global_element.get<Coord::Row>()),
+              test.local_tile[0]);
+    EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Col>(test.global_element.get<Coord::Col>()),
+              test.local_tile[1]);
+  }
+}

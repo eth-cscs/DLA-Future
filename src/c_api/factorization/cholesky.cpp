@@ -13,20 +13,20 @@
 #include <dlaf_c/factorization/cholesky.h>
 #include <dlaf_c/utils.h>
 
-void dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
-  cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_d(int dlaf_context, char uplo, double* a, DLAF_descriptor dlaf_desca) {
+  return cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-void dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf_desca) {
-  cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_s(int dlaf_context, char uplo, float* a, DLAF_descriptor dlaf_desca) {
+  return cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-void dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, DLAF_descriptor dlaf_desca) {
-  cholesky<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, DLAF_descriptor dlaf_desca) {
+  return cholesky<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-void dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, DLAF_descriptor dlaf_desca) {
-  cholesky<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, DLAF_descriptor dlaf_desca) {
+  return cholesky<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
 #ifdef DLAF_WITH_SCALAPACK

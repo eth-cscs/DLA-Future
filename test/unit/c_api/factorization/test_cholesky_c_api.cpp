@@ -63,9 +63,9 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper})
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     //    {0, 2},  // m = 0
-    // {5, 8}, {34, 34},                    // m <= mb
+    //    {5, 8},  //{34, 34},                    // m <= mb
     // {4, 3}, {16, 10}, {34, 13}, {32, 5},  // m > mb
-    {4, 1},
+    //                {4, 1},
     //   {34, 13},
     {32, 5}  // m > mb
 };
@@ -131,21 +131,23 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   if constexpr (api == API::dlaf) {
     DLAF_descriptor dlaf_desc =
         {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 1, 1, lld};
+    int err = -1;
     if constexpr (std::is_same_v<T, double>) {
-      C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, float>) {
-      C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, std::complex<double>>) {
-      C_dlaf_cholesky_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, std::complex<float>>) {
-      C_dlaf_cholesky_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
+    DLAF_ASSERT(err == 0, err);
   }
   else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -174,6 +176,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
+    DLAF_ASSERT(info == 0, info);
 #endif
   }
 

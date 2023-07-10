@@ -31,18 +31,18 @@ void C_dlaf_pcpotrf(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* de
 }
 #endif
 
-void C_dlaf_cholesky_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca) {
-  dlaf_cholesky_d(dlaf_context, uplo, a, desca);
+int C_dlaf_cholesky_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca) {
+  return dlaf_cholesky_d(dlaf_context, uplo, a, desca);
 }
 
-void C_dlaf_cholesky_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor desca) {
-  dlaf_cholesky_s(dlaf_context, uplo, a, desca);
+int C_dlaf_cholesky_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor desca) {
+  return dlaf_cholesky_s(dlaf_context, uplo, a, desca);
 }
 
-void C_dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor desca) {
-  dlaf_cholesky_z(dlaf_context, uplo, a, desca);
+int C_dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor desca) {
+  return dlaf_cholesky_z(dlaf_context, uplo, a, desca);
 }
 
-void C_dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor desca) {
-  dlaf_cholesky_c(dlaf_context, uplo, a, desca);
+int C_dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor desca) {
+  return dlaf_cholesky_c(dlaf_context, uplo, a, desca);
 }

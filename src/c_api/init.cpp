@@ -27,7 +27,8 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const
     pika::init_params params;
     params.rp_callback = dlaf::initResourcePartitionerHandler;
     params.desc_cmdline = desc;
-    pika::start(nullptr, argc_pika, argv_pika, params);
+    auto pika_started = pika::start(nullptr, argc_pika, argv_pika, params);
+    DLAF_ASSERT(pika_started, pika_started);
 
     // DLA-Future initialization
     dlaf::initialize(argc_dlaf, argv_dlaf);
@@ -41,7 +42,8 @@ void dlaf_finalize() {
   pika::resume();
   pika::finalize();
   dlaf::finalize();
-  pika::stop();
+  auto pika_stopped = pika::stop();
+  DLAF_ASSERT(pika_stopped == 0, pika_stopped);
 
   dlaf_initialized = false;
 }

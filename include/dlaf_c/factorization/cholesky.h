@@ -69,15 +69,15 @@ DLAF_EXTERN_C void dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param dlaf_desca DLA-Future descriptor of the global matrix \f$\mathbf{A}\f$
 DLAF_EXTERN_C int dlaf_cholesky_d(int dlaf_context, char uplo, double* a,
-                                   struct DLAF_descriptor dlaf_desca);
+                                  struct DLAF_descriptor dlaf_desca);
 
 /// @copydoc dlaf_cholesky_d
 DLAF_EXTERN_C int dlaf_cholesky_s(int dlaf_context, char uplo, float* a,
-                                   struct DLAF_descriptor dlaf_desca);
+                                  struct DLAF_descriptor dlaf_desca);
 
 /// @copydoc dlaf_cholesky_d
 DLAF_EXTERN_C int dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a,
-                                   struct DLAF_descriptor dlaf_desca);
+                                  struct DLAF_descriptor dlaf_desca);
 /// @copydoc dlaf_cholesky_d
 DLAF_EXTERN_C int dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a,
-                                   struct DLAF_descriptor dlaf_desca);
+                                  struct DLAF_descriptor dlaf_desca);

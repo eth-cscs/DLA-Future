@@ -89,6 +89,7 @@ target_link_libraries(
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
     $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
     $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
+    $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared>
 )
 target_compile_definitions(
   dlaf.prop
@@ -103,6 +104,7 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_WITH_HIP}>:DLAF_WITH_HIP>
             $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
             $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
+            $<$<BOOL:${DLAF_WITH_HDF5}>:DLAF_WITH_HDF5>
             $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF_WITH_SCALAPACK>
 )
 
@@ -199,6 +201,7 @@ DLAF_addSublibrary(
           matrix/tile.cpp
           matrix.cpp
           matrix_mirror.cpp
+          matrix/hdf5.cpp
           memory/memory_view.cpp
           memory/memory_chunk.cpp
           tune.cpp

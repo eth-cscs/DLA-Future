@@ -26,6 +26,7 @@
 #include <dlaf_c/init.h>
 
 #include "test_eigensolver_c_api_wrapper.h"
+#include "config.h"
 
 #include <gtest/gtest.h>
 
@@ -76,9 +77,7 @@ enum class API { dlaf, scalapack };
 
 template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {
-  const char* pika_argv[] = {"test_eigensolver_c_api", "--pika:print-bind", nullptr};
-  const char* dlaf_argv[] = {"test_eigensolver_c_api", nullptr};
-  dlaf_initialize(2, pika_argv, 1, dlaf_argv);
+  dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
                                   grid.rank().row(), grid.rank().col());
@@ -211,13 +210,11 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
-  if (mat_a_h.size().isEmpty())
-    return;
-
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
+  if (!mat_a_h.size().isEmpty())
+    testEigensolverCorrectness(uplo, reference, ret.eigenvalues, ret.eigenvectors, grid);
 
   // Suspend pika to make sure dla_finalize resumes it
   pika::suspend();

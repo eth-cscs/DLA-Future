@@ -1,0 +1,23 @@
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2023, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
+
+#pragma once
+
+#include <iterator>
+
+const char* pika_argv[] = {
+    "@test_target_name@",
+    "@PIKA_EXTRA_ARGS_LIST_CAPI@",
+    "--pika:print-bind",
+};
+const char* dlaf_argv[] = {"@test_target_name@"};
+
+const int pika_argc = std::size(pika_argv);
+const int dlaf_argc = std::size(dlaf_argv);

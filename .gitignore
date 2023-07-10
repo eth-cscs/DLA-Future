@@ -45,6 +45,8 @@
 *.out
 *.app
 
+test/unit/**/config.h
+
 
 # ------------------- CMake
 

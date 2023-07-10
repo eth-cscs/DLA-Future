@@ -88,6 +88,9 @@ function(DLAF_addTest test_target_name)
     set(_gtest_tgt DLAF_gtest_mpipika_main)
     set(IS_AN_MPI_TEST TRUE)
     set(IS_AN_PIKA_TEST TRUE)
+  elseif(DLAF_AT_USE_MAIN STREQUAL CAPI)
+    set(_gtest_tgt DLAF_gtest_mpi_main)
+    set(IS_AN_MPI_TEST TRUE)
   else()
     message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
   endif()
@@ -179,6 +182,34 @@ function(DLAF_addTest test_target_name)
     endif()
 
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})
+  endif()
+
+  # Special treatment for CAPI tests
+  # Require pika arguments to be hard-coded in the test file
+  if(DLAF_AT_USE_MAIN STREQUAL CAPI)
+    separate_arguments(_PIKA_EXTRA_ARGS_LIST_CAPI UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
+
+    # --pika:bind=none is useful just in case more ranks are going to be allocated on the same node.
+    if((DLAF_AT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
+      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST_CAPI "--pika:bind" "--pika:bind=none")
+    endif()
+
+    if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+
+      if(_DLAF_PIKA_THREADS LESS 2)
+        set(_DLAF_PIKA_THREADS 2)
+      endif()
+
+      _set_element_to_fallback_value(
+        _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
+      )
+    endif()
+
+    string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
+
   endif()
 
   ### Test executable target

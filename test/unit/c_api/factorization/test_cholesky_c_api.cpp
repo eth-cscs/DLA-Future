@@ -25,6 +25,7 @@
 #include <dlaf_c/init.h>
 
 #include "test_cholesky_c_api_wrapper.h"
+#include "config.h"
 
 #include <gtest/gtest.h>
 
@@ -61,7 +62,7 @@ TYPED_TEST_SUITE(CholeskyTestGPU, MatrixElementTypes);
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
 
 const std::vector<std::tuple<SizeType, SizeType>> sizes = {
-    //{0, 2},                              // m = 0
+    {0, 2},  // m = 0
     //{5, 8}, {34, 34},                    // m <= mb
     //{4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
     {4, 1},
@@ -74,9 +75,7 @@ enum class API { dlaf, scalapack };
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
-  const char* pika_argv[] = {"test_cholesky_c_api", "--pika:print-bind", nullptr};
-  const char* dlaf_argv[] = {"test_cholesky_c_api", nullptr};
-  dlaf_initialize(2, pika_argv, 1, dlaf_argv);
+  dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
 
   char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
                                   grid.rank().row(), grid.rank().col());
@@ -119,11 +118,19 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   T* local_a_ptr;
   int lld;
   {
-    auto toplefttile_a =
-        pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
+    std::cout << "DEBUG ::: " << distribution.localSize() << ' ' << distribution.blockSize() << ' '
+              << distribution.blockSize().rows() << ' ' << distribution.blockSize().cols() << '\n';
+    if (distribution.localSize() != LocalElementSize(0, 0)) {
+      auto toplefttile_a =
+          pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
 
-    local_a_ptr = toplefttile_a.ptr();
-    lld = static_cast<int>(toplefttile_a.ld());
+      local_a_ptr = toplefttile_a.ptr();
+      lld = static_cast<int>(toplefttile_a.ld());
+    }
+    else {
+      local_a_ptr = nullptr;
+      lld = mb;
+    }
   }  // Destroy tile (avoids deoendency issues down the line)
 
   // Suspend pika to ensure it is resumed by the C API

@@ -223,7 +223,9 @@ function(DLAF_addTest test_target_name)
     ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
                                 NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
   )
-  target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(
+    ${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}
+  )
   target_add_warnings(${test_target_name})
   DLAF_addPrecompiledHeaders(${test_target_name})
   add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})

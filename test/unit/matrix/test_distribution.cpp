@@ -643,8 +643,8 @@ struct ParametersSubDistribution {
   comm::Index2D src_rank;
   GlobalElementIndex offset;
   // Sub-distribution settings
-  GlobalElementIndex suboffset;
-  GlobalElementSize subsize;
+  GlobalElementIndex sub_offset;
+  GlobalElementSize sub_size;
   // Valid indices
   GlobalElementIndex global_element;
   GlobalTileIndex global_tile;
@@ -653,22 +653,37 @@ struct ParametersSubDistribution {
 };
 
 const std::vector<ParametersSubDistribution> tests_sub_distribution = {
-    // {size, block_size, rank, grid_size, src_rank, offset, suboffset, subsize,
+    // {size, block_size, rank, grid_size, src_rank, offset, sub_offset, sub_size,
     // global_element, global_tile, rank_tile, local_tile}
-
-    // TODO: More tests
-
+    // Empty distribution
+    {{0, 0}, {2, 5}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {2, 5}, {0, 0}, {1, 1}, {0, 0}, {4, 8}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    // Empty sub-distribution
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {2, 3}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {4, 5}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
     // Sub-distribution == distribution
     {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {3, 4}, {1, 3}, {0, 1}, {0, 0}, {0, 1}},
     {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {0, 0}, {5, 9}, {1, 3}, {0, 2}, {0, 0}, {-1, -1}},
+    // clang-format off
+    {{123, 59}, {32, 16}, {3, 3}, {5, 7}, {3, 1}, {1, 1}, {0, 0}, {123, 59}, {30, 30}, {0, 1}, {3, 2}, {0, -1}},
+    // clang-format on
+    // Other sub-distributions
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 2}, {2, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 2}, {2, 1}, {1, 0}, {1, 0}, {0, 0}, {1, 0}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {3, 4}, {2, 3}, {0, 0}, {0, 0}, {1, 0}, {0, -1}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {3, 4}, {2, 3}, {1, 2}, {0, 1}, {1, 1}, {0, 0}},
+    // clang-format off
+    {{123, 59}, {32, 16}, {3, 3}, {5, 7}, {3, 1}, {1, 1}, {50, 17}, {40, 20}, {20, 10}, {1, 0}, {0, 2}, {-1, -1}},
+    // clang-format on
 };
 
 TEST(DistributionTest, SubDistribution) {
   for (const auto& test : tests_sub_distribution) {
     Distribution dist(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution sub_dist(dist, test.suboffset, test.subsize);
+    Distribution sub_dist(dist, test.sub_offset, test.sub_size);
 
-    EXPECT_EQ(sub_dist.size(), test.subsize);
+    EXPECT_EQ(sub_dist.size(), test.sub_size);
 
     EXPECT_EQ(sub_dist.blockSize(), dist.blockSize());
     EXPECT_EQ(sub_dist.baseTileSize(), dist.baseTileSize());
@@ -682,12 +697,14 @@ TEST(DistributionTest, SubDistribution) {
     EXPECT_LE(sub_dist.nrTiles().rows(), dist.nrTiles().rows());
     EXPECT_LE(sub_dist.nrTiles().cols(), dist.nrTiles().cols());
 
-    EXPECT_EQ(sub_dist.globalTileIndex(test.global_element), test.global_tile);
-    EXPECT_EQ(sub_dist.rankGlobalTile(sub_dist.globalTileIndex(test.global_element)), test.rank_tile);
+    if (!test.sub_size.isEmpty()) {
+      EXPECT_EQ(sub_dist.globalTileIndex(test.global_element), test.global_tile);
+      EXPECT_EQ(sub_dist.rankGlobalTile(sub_dist.globalTileIndex(test.global_element)), test.rank_tile);
 
-    EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Row>(test.global_element.get<Coord::Row>()),
-              test.local_tile[0]);
-    EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Col>(test.global_element.get<Coord::Col>()),
-              test.local_tile[1]);
+      EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Row>(test.global_element.get<Coord::Row>()),
+                test.local_tile[0]);
+      EXPECT_EQ(sub_dist.localTileFromGlobalElement<Coord::Col>(test.global_element.get<Coord::Col>()),
+                test.local_tile[1]);
+    }
   }
 }

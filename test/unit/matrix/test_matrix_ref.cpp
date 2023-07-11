@@ -53,8 +53,8 @@ struct TestSubMatrix {
 };
 
 const std::vector<TestSubMatrix> tests_sub_matrix({
-    // Empty matrix TODO: support?
-    // {{0, 0}, {1, 1}, {0, 0}, {0, 0}},
+    // Empty matrix
+    {{0, 0}, {1, 1}, {0, 0}, {0, 0}},
     // Empty sub-matrices
     {{3, 4}, {3, 4}, {0, 0}, {0, 0}},
     {{3, 4}, {3, 4}, {2, 3}, {0, 0}},
@@ -88,11 +88,6 @@ inline bool indexInSubMatrix(const GlobalElementIndex& index, const GlobalElemen
 TYPED_TEST(MatrixRefTest, Basic) {
   using Type = TypeParam;
   constexpr Device device = Device::CPU;
-  constexpr Type el_submatrix(1);
-  constexpr Type el_border(-1);
-
-  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
-  const auto f_el_border = [](const GlobalElementIndex&) { return el_border; };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {

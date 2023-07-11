@@ -49,7 +49,7 @@ public:
   /// @pre origin + size <= mat.size()
   MatrixRef(Matrix<const T, D>& mat, const GlobalElementIndex& offset, const GlobalElementSize& size)
       : internal::MatrixBase(Distribution(mat.distribution(), offset, size)), mat_const_(mat),
-        offset_(offset), tile_offset_(mat.distribution().globalTileIndex(offset)) {}
+        offset_(offset) {}
 
   // TODO: default, copy, move construction?
   // - default: no, don't want empty MatrixRef
@@ -76,8 +76,8 @@ public:
   ReadOnlySenderType read(const GlobalTileIndex& index) {
     DLAF_ASSERT(index.isIn(distribution().nrTiles()), index, distribution().nrTiles());
 
-    const GlobalTileIndex parent_index(tile_offset_.row() + index.row(),
-                                       tile_offset_.col() + index.col());
+    const GlobalTileIndex tile_offset = mat_const_.distribution().globalTileIndex(offset_);
+    const GlobalTileIndex parent_index(tile_offset.row() + index.row(), tile_offset.col() + index.col());
     auto tile_sender = mat_const_.read(parent_index);
 
     const auto parent_dist = mat_const_.distribution();
@@ -108,7 +108,6 @@ private:
 
 protected:
   GlobalElementIndex offset_;
-  GlobalTileIndex tile_offset_;
 };
 
 template <class T, Device D>
@@ -158,8 +157,8 @@ public:
     DLAF_ASSERT(index.isIn(this->distribution().nrTiles()), index, this->distribution().nrTiles());
     // TODO: add helpers for distribution vs. sub-distribution arithmetic
 
-    const GlobalTileIndex parent_index(tile_offset_.row() + index.row(),
-                                       tile_offset_.col() + index.col());
+    const GlobalTileIndex tile_offset = mat_.distribution().globalTileIndex(offset_);
+    const GlobalTileIndex parent_index(tile_offset.row() + index.row(), tile_offset.col() + index.col());
     auto tile_sender = mat_.readwrite(parent_index);
 
     const auto parent_dist = mat_.distribution();
@@ -188,6 +187,5 @@ public:
 private:
   Matrix<T, D>& mat_;
   using MatrixRef<const T, D>::offset_;
-  using MatrixRef<const T, D>::tile_offset_;
 };
 }

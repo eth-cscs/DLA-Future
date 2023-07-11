@@ -155,9 +155,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     pika::suspend();
 
     if constexpr (api == API::dlaf) {
-      DLAF_descriptor dlaf_desc_a = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 1, 1, lld_a};
+      DLAF_descriptor dlaf_desc_a = {(int) m, (int) m, (int) mb, (int) mb, 0, 0, 0, 0, lld_a};
       DLAF_descriptor dlaf_desc_eigenvectors = {(int) m, (int) m, (int) mb, (int) mb,        0,
-                                                0,       1,       1,        lld_eigenvectors};
+                                                0,       0,       0,        lld_eigenvectors};
 
       int err = -1;
       if constexpr (std::is_same_v<T, double>) {

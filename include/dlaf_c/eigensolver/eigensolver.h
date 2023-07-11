@@ -47,7 +47,7 @@
 /// @param jz column index of the global matrix \f$\mathbf{A}\f$ identifying the first column of the
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param descz ScaLAPACK array descriptor of the global matrix \f$\mathbf{Z}\f$
-/// @param info 0 if the eigensolver completed normally
+/// @param[out] info 0 if the eigensolver completed normally
 DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int n, float* a, int ia, int ja, int* desca, float* w,
                                 float* z, int iz, int jz, int* descz, int* info);
 
@@ -82,6 +82,7 @@ DLAF_EXTERN_C void dlaf_pzheevd(char uplo, int n, dlaf_complex_z* a, int ia, int
 /// @param w Local vector of eigenvalues (non-distributed)
 /// @param z Local part of the global matrix \f$\mathbf{Z}\f$
 /// @param dlaf_descz DLA-Future descriptor of the global matrix \f$\mathbf{Z}\f$
+/// @return 0 if the eigensolver completed normally
 DLAF_EXTERN_C void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
                                       struct DLAF_descriptor dlaf_desca, double* w, double* z,
                                       struct DLAF_descriptor dlaf_descz);

@@ -39,11 +39,13 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const
 }
 
 void dlaf_finalize() {
-  pika::resume();
-  pika::finalize();
-  dlaf::finalize();
-  auto pika_stopped = pika::stop();
-  DLAF_ASSERT(pika_stopped == 0, pika_stopped);
+  if (dlaf_initialized) {
+    pika::resume();
+    pika::finalize();
+    dlaf::finalize();
+    auto pika_stopped = pika::stop();
+    DLAF_ASSERT(pika_stopped == 0, pika_stopped);
 
-  dlaf_initialized = false;
+    dlaf_initialized = false;
+  }
 }

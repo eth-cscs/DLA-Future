@@ -16,6 +16,8 @@
 
 /// Initialize pika runtime and DLA-Future
 ///
+/// @remark If DLA-Future has already been initialized, this function does nothing
+///
 /// @post The pika runtime is automatically suspended when this function returns
 ///
 /// @param argc_pika Number of arguments for pika
@@ -26,4 +28,8 @@ DLAF_EXTERN_C void dlaf_initialize(int argc_pika, const char** argv_pika, int ar
                                    const char** argv_dlaf);
 
 /// Finalize DLA-Future and pika runtime
+///
+/// @post The pika runtime is fnialized and stopped when this function returns
+///
+/// @remark If DLA-Future has already been finalized, this function does nothing
 DLAF_EXTERN_C void dlaf_finalize();

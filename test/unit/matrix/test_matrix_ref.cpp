@@ -75,6 +75,7 @@ const std::vector<TestSubMatrix> tests_sub_matrix({
     {{10, 15}, {5, 5}, {6, 7}, {2, 2}},
     {{10, 15}, {5, 5}, {6, 7}, {4, 7}},
     {{10, 15}, {5, 5}, {1, 2}, {8, 7}},
+    {{256, 512}, {32, 16}, {45, 71}, {87, 55}},
 });
 
 inline bool indexInSubMatrix(const GlobalElementIndex& index, const GlobalElementIndex& offset,
@@ -85,6 +86,38 @@ inline bool indexInSubMatrix(const GlobalElementIndex& index, const GlobalElemen
 }
 
 TYPED_TEST(MatrixRefTest, Basic) {
+  using Type = TypeParam;
+  constexpr Device device = Device::CPU;
+  constexpr Type el_submatrix(1);
+  constexpr Type el_border(-1);
+
+  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+  const auto f_el_border = [](const GlobalElementIndex&) { return el_border; };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : tests_sub_matrix) {
+      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<const Type, device>& mat_const = mat;
+
+      MatrixRef<Type, device> mat_ref(mat, test.sub_offset, test.sub_size);
+      MatrixRef<Type, device> mat_const_ref1(mat, test.sub_offset, test.sub_size);
+      MatrixRef<const Type, device> mat_const_ref2(mat_const, test.sub_offset, test.sub_size);
+
+      EXPECT_EQ(mat_ref.distribution(), mat_const_ref1.distribution());
+      EXPECT_EQ(mat_ref.distribution(), mat_const_ref2.distribution());
+      EXPECT_EQ(mat_ref.size(), test.sub_size);
+      EXPECT_EQ(mat_ref.blockSize(), mat.blockSize());
+      EXPECT_EQ(mat_ref.baseTileSize(), mat.baseTileSize());
+      EXPECT_EQ(mat_ref.rankIndex(), mat.rankIndex());
+      EXPECT_EQ(mat_ref.commGridSize(), mat.commGridSize());
+      if (test.sub_offset.isIn(GlobalElementSize(test.block_size.rows(), test.block_size.cols()))) {
+        EXPECT_EQ(mat_ref.sourceRankIndex(), mat.sourceRankIndex());
+      }
+    }
+  }
+}
+
+TYPED_TEST(MatrixRefTest, NonConstRefFromNonConstMatrix) {
   using Type = TypeParam;
   constexpr Device device = Device::CPU;
   constexpr Type el_submatrix(1);
@@ -115,6 +148,61 @@ TYPED_TEST(MatrixRefTest, Basic) {
 
       CHECK_MATRIX_EQ(f_el_full, mat);
       CHECK_MATRIX_EQ(f_el_submatrix, mat_ref);
+    }
+  }
+}
+
+TYPED_TEST(MatrixRefTest, ConstRefFromNonConstMatrix) {
+  using Type = TypeParam;
+  constexpr Device device = Device::CPU;
+  constexpr Type el_submatrix(1);
+  constexpr Type el_border(-1);
+
+  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : tests_sub_matrix) {
+      const auto f_el_full = [&](const GlobalElementIndex& index) {
+        return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
+      };
+
+      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      MatrixRef<const Type, device> mat_const_ref(mat, test.sub_offset, test.sub_size);
+
+      set(mat_expected, f_el_full);
+      set(mat, f_el_full);
+
+      CHECK_MATRIX_EQ(f_el_full, mat);
+      CHECK_MATRIX_EQ(f_el_submatrix, mat_const_ref);
+    }
+  }
+}
+
+TYPED_TEST(MatrixRefTest, ConstRefFromConstMatrix) {
+  using Type = TypeParam;
+  constexpr Device device = Device::CPU;
+  constexpr Type el_submatrix(1);
+  constexpr Type el_border(-1);
+
+  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : tests_sub_matrix) {
+      const auto f_el_full = [&](const GlobalElementIndex& index) {
+        return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
+      };
+
+      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      Matrix<const Type, device>& mat_const = mat;
+      MatrixRef<const Type, device> mat_const_ref(mat_const, test.sub_offset, test.sub_size);
+
+      set(mat_expected, f_el_full);
+      set(mat, f_el_full);
+
+      CHECK_MATRIX_EQ(f_el_full, mat);
+      CHECK_MATRIX_EQ(f_el_submatrix, mat_const_ref);
     }
   }
 }

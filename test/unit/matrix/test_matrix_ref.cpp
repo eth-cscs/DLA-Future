@@ -1,0 +1,120 @@
+//
+// Distributed Linear Algebra with Future (DLAF)
+//
+// Copyright (c) 2018-2023, ETH Zurich
+// All rights reserved.
+//
+// Please, refer to the LICENSE file in the root directory.
+// SPDX-License-Identifier: BSD-3-Clause
+//
+
+#include <atomic>
+#include <chrono>
+#include <vector>
+
+#include <pika/execution.hpp>
+
+#include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
+#include <dlaf/sender/transform.h>
+#include <dlaf/util_matrix.h>
+
+#include <gtest/gtest.h>
+
+#include <dlaf_test/comm_grids/grids_6_ranks.h>
+#include <dlaf_test/matrix/util_matrix.h>
+#include <dlaf_test/util_types.h>
+
+using namespace std::chrono_literals;
+
+using namespace dlaf;
+using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
+using namespace dlaf::test;
+using namespace testing;
+
+namespace ex = pika::execution::experimental;
+namespace tt = pika::this_thread::experimental;
+
+::testing::Environment* const comm_grids_env =
+    ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
+
+template <typename Type>
+struct MatrixRefTest : public TestWithCommGrids {};
+
+TYPED_TEST_SUITE(MatrixRefTest, MatrixElementTypes);
+
+struct TestSubMatrix {
+  GlobalElementSize size;
+  TileElementSize block_size;
+  GlobalElementIndex sub_offset;
+  GlobalElementSize sub_size;
+};
+
+const std::vector<TestSubMatrix> tests_sub_matrix({
+    // Empty matrix TODO: support?
+    // {{0, 0}, {1, 1}, {0, 0}, {0, 0}},
+    // Empty sub-matrices
+    {{3, 4}, {3, 4}, {0, 0}, {0, 0}},
+    {{3, 4}, {3, 4}, {2, 3}, {0, 0}},
+    // Single-block matrix
+    {{3, 4}, {3, 4}, {0, 0}, {3, 4}},
+    {{3, 4}, {3, 4}, {0, 0}, {2, 1}},
+    {{3, 4}, {3, 4}, {1, 2}, {2, 1}},
+    {{3, 4}, {8, 6}, {0, 0}, {3, 4}},
+    {{3, 4}, {8, 6}, {0, 0}, {2, 1}},
+    {{3, 4}, {8, 6}, {1, 2}, {2, 1}},
+    // Larger matrices
+    {{10, 15}, {5, 5}, {6, 7}, {0, 0}},
+    {{10, 15}, {5, 5}, {6, 7}, {0, 0}},
+    {{10, 15}, {5, 5}, {1, 2}, {0, 0}},
+    {{10, 15}, {5, 5}, {0, 0}, {10, 15}},
+    {{10, 15}, {5, 5}, {0, 0}, {10, 15}},
+    {{10, 15}, {5, 5}, {0, 0}, {10, 15}},
+    {{10, 15}, {5, 5}, {6, 7}, {2, 2}},
+    {{10, 15}, {5, 5}, {6, 7}, {4, 7}},
+    {{10, 15}, {5, 5}, {1, 2}, {8, 7}},
+});
+
+inline bool indexInSubMatrix(const GlobalElementIndex& index, const GlobalElementIndex& offset,
+                             const GlobalElementSize& size) {
+  bool r = offset.row() <= index.row() && index.row() < offset.row() + size.rows() &&
+           offset.col() <= index.col() && index.col() < offset.col() + size.cols();
+  return r;
+}
+
+TYPED_TEST(MatrixRefTest, Basic) {
+  using Type = TypeParam;
+  constexpr Device device = Device::CPU;
+  constexpr Type el_submatrix(1);
+  constexpr Type el_border(-1);
+
+  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+  const auto f_el_border = [](const GlobalElementIndex&) { return el_border; };
+
+  for (const auto& comm_grid : this->commGrids()) {
+    for (const auto& test : tests_sub_matrix) {
+      const auto f_el_full = [&](const GlobalElementIndex& index) {
+        return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
+      };
+
+      Matrix<Type, device> mat_expected(test.size, test.block_size, comm_grid);
+      Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
+      MatrixRef<Type, device> mat_ref(mat, test.sub_offset, test.sub_size);
+
+      set(mat_expected, f_el_full);
+      set(mat, f_el_border);
+      for (const auto& ij_local : iterate_range2d(mat_ref.distribution().localNrTiles())) {
+        ex::start_detached(mat_ref.readwrite(ij_local) |
+                           dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
+                                                     [&](const auto& tile) {
+                                                       set(tile, el_submatrix);
+                                                     }));
+      }
+
+      CHECK_MATRIX_EQ(f_el_full, mat);
+      CHECK_MATRIX_EQ(f_el_submatrix, mat_ref);
+    }
+  }
+}

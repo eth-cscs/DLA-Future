@@ -64,12 +64,9 @@ public:
   ///
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
-    DLAF_ASSERT(index.isIn(distribution().localNrTiles()), index, distribution().localNrTiles());
-
-    // Note: the overload with GlobalTileIndex handles taking a subtile if needed
-    const GlobalTileIndex global_index(distribution().globalTileFromLocalTile<Coord::Row>(index.row()),
-                                       distribution().globalTileFromLocalTile<Coord::Col>(index.col()));
-    return read(global_index);
+    // Note: this forwards to the overload with GlobalTileIndex which will
+    // handle taking a subtile if needed
+    return read(distribution().globalTileIndex(index));
   }
 
   /// Returns a read-only sender of the Tile with global index @p index.
@@ -79,8 +76,8 @@ public:
   ReadOnlySenderType read(const GlobalTileIndex& index) {
     DLAF_ASSERT(index.isIn(distribution().nrTiles()), index, distribution().nrTiles());
 
-    const GlobalTileIndex tile_offset = mat_const_.distribution().globalTileIndex(offset_);
-    const GlobalTileIndex parent_index(tile_offset + sizeFromOrigin(index));
+    const auto parent_index(
+        mat_const_.distribution().globalTileIndexFromSubDistribution(offset_, distribution(), index));
     auto tile_sender = mat_const_.read(parent_index);
 
     const auto parent_dist = mat_const_.distribution();
@@ -89,20 +86,15 @@ public:
 
     // If the corresponding tile in the parent distribution is exactly the same
     // size as the tile in the sub-distribution, we don't need to take a subtile
-    // and can return the tile sender directly.
+    // and can return the tile sender directly. This avoids unnecessary wrapping.
     if (parent_tile_size == tile_size) {
       return tile_sender;
     }
 
     // Otherwise we have to extract a subtile from the tile in the parent
     // distribution.
-    const TileElementIndex ij_tile{
-        index.row() == 0 ? parent_dist.template tileElementFromGlobalElement<Coord::Row>(offset_.row())
-                         : 0,
-        index.col() == 0 ? parent_dist.template tileElementFromGlobalElement<Coord::Col>(offset_.col())
-                         : 0,
-    };
-
+    const auto ij_tile =
+        parent_dist.tileElementOffsetFromSubDistribution(offset_, distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 
@@ -142,14 +134,9 @@ public:
   ///
   /// @pre index.isIn(distribution().localNrTiles()).
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
-    DLAF_ASSERT(index.isIn(this->distribution().localNrTiles()), index,
-                this->distribution().localNrTiles());
-    const GlobalTileIndex parent_index(
-        this->distribution().template globalTileFromLocalTile<Coord::Row>(index.row()),
-        this->distribution().template globalTileFromLocalTile<Coord::Col>(index.col()));
-
-    // Note: the overload with GlobalTileIndex handles taking a subtile if needed
-    return readwrite(parent_index);
+    // Note: this forwards to the overload with GlobalTileIndex which will
+    // handle taking a subtile if needed
+    return readwrite(this->distribution().globalTileIndex(index));
   }
 
   /// Returns a sender of the Tile with global index @p index.
@@ -158,10 +145,9 @@ public:
   /// @pre index.isIn(globalNrTiles()).
   ReadWriteSenderType readwrite(const GlobalTileIndex& index) {
     DLAF_ASSERT(index.isIn(this->distribution().nrTiles()), index, this->distribution().nrTiles());
-    // TODO: add helpers for distribution vs. sub-distribution arithmetic
 
-    const GlobalTileIndex tile_offset = mat_.distribution().globalTileIndex(offset_);
-    const GlobalTileIndex parent_index(tile_offset + sizeFromOrigin(index));
+    const auto parent_index(
+        mat_.distribution().globalTileIndexFromSubDistribution(offset_, this->distribution(), index));
     auto tile_sender = mat_.readwrite(parent_index);
 
     const auto parent_dist = mat_.distribution();
@@ -170,20 +156,15 @@ public:
 
     // If the corresponding tile in the parent distribution is exactly the same
     // size as the tile in the sub-distribution, we don't need to take a subtile
-    // and can return the tile sender directly.
+    // and can return the tile sender directly. This avoids unnecessary wrapping.
     if (parent_tile_size == tile_size) {
       return tile_sender;
     }
 
     // Otherwise we have to extract a subtile from the tile in the parent
     // distribution.
-    const TileElementIndex ij_tile{
-        index.row() == 0 ? parent_dist.template tileElementFromGlobalElement<Coord::Row>(offset_.row())
-                         : 0,
-        index.col() == 0 ? parent_dist.template tileElementFromGlobalElement<Coord::Col>(offset_.col())
-                         : 0,
-    };
-
+    const auto ij_tile =
+        parent_dist.tileElementOffsetFromSubDistribution(offset_, this->distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 

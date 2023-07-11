@@ -1833,6 +1833,39 @@ TYPED_TEST(MatrixTest, GPUCopySubPipeline) {
 }
 #endif
 
+struct TestReshuffling {
+  const GlobalElementSize size;
+  const TileElementSize src_tilesize;
+  const TileElementSize dst_tilesize;
+};
+std::vector<TestReshuffling> sizes_reshuffling_tests{
+    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},
+    TestReshuffling{{10, 15}, {4, 3}, {2, 6}},
+};
+
+TYPED_TEST(MatrixTest, CopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& [size, src_tilesize, dst_tilesize] : sizes_reshuffling_tests) {
+      const comm::Index2D origin_rank_src(0, 0);
+      matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
+      const comm::Index2D origin_rank_dst(0, 0);
+      matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
+
+      matrix::Matrix<TypeParam, Device::CPU> src(dist_src);  // TODO this should be const
+      matrix::Matrix<TypeParam, Device::CPU> dst(dist_dst);
+
+      auto fixedValues = [](const GlobalElementIndex index) {
+        return TypeParam(index.row() * 1000 + index.col());
+      };
+      matrix::util::set(src, fixedValues);
+
+      copy(src, dst, grid);
+
+      CHECK_MATRIX_EQ(fixedValues, dst);
+    }
+  }
+}
+
 struct MatrixGenericTest : public TestWithCommGrids {};
 
 TEST_F(MatrixGenericTest, SelectTilesReadonly) {

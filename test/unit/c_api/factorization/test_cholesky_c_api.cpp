@@ -147,7 +147,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
-    EXPECT_EQ(err, 0);
+    EXPECT_EQ(0, err);
   }
   else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -176,7 +176,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
-    EXPECT_EQ(info, 0);
+    EXPECT_EQ(0, info);
 #endif
   }
 

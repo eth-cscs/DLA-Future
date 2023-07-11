@@ -33,7 +33,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
 
-    depends_on("umpire~examples)
+    depends_on("umpire~examples")
     depends_on("umpire~cuda~rocm", when="~cuda~rocm")
     depends_on("umpire+cuda~shared", when="+cuda")
     depends_on("umpire+rocm~shared", when="+rocm")

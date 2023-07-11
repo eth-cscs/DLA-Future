@@ -23,6 +23,7 @@ jobs:
 
       - name: Install tools
         run: |
+          sudo apt-get update
           sudo apt-get install --no-install-recommends clang-format-15 python3
           pip3 install black==23.03.0
           pip3 install cmakelang==0.6.13

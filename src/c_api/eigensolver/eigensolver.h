@@ -134,7 +134,7 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
 
     info = 0;
   }
-  catch (std::exception& e) {
+  catch (const std::exception& e) {
     std::cerr << e.what() << '\n';
     info = -1;
   }

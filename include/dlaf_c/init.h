@@ -29,7 +29,7 @@ DLAF_EXTERN_C void dlaf_initialize(int argc_pika, const char** argv_pika, int ar
 
 /// Finalize DLA-Future and pika runtime
 ///
-/// @post The pika runtime is fnialized and stopped when this function returns
+/// @post The pika runtime is finalized and stopped when this function returns
 ///
 /// @remark If DLA-Future has already been finalized, this function does nothing
 DLAF_EXTERN_C void dlaf_finalize();

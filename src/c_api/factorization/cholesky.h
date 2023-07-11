@@ -68,6 +68,10 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noex
     std::cerr << e.what() << '\n';
     return -1;
   }
+  catch (...) {
+    std::cerr << "ERROR: Unknown exception caught in DLA-Future's Cholesky decomposition." << '\n';
+    return -1;
+  }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
@@ -112,6 +116,10 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
   catch (std::exception& e) {
     std::cerr << e.what() << '\n';
     info = -1;
+  }
+  catch (...) {
+    std::cerr << "ERROR: Unknown exception caught in DLA-Future's Cholesky decomposition." << '\n';
+    return -1;
   }
 }
 

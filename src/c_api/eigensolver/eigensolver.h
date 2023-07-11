@@ -27,53 +27,64 @@
 #include "../utils.h"
 
 template <typename T>
-void eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
-                 T* z, DLAF_descriptor dlaf_descz) {
-  using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
-  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-  using MatrixBaseMirror =
-      dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
+int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
+                T* z, DLAF_descriptor dlaf_descz) {
+  try {
+    using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
+    using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+    using MatrixBaseMirror =
+        dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(dlaf_desca.i == 1, dlaf_desca.i);
-  DLAF_ASSERT(dlaf_desca.j == 1, dlaf_desca.j);
-  DLAF_ASSERT(dlaf_descz.i == 1, dlaf_descz.i);
-  DLAF_ASSERT(dlaf_descz.j == 1, dlaf_descz.j);
+    DLAF_ASSERT(dlaf_desca.i == 1, dlaf_desca.i);
+    DLAF_ASSERT(dlaf_desca.j == 1, dlaf_desca.j);
+    DLAF_ASSERT(dlaf_descz.i == 1, dlaf_descz.i);
+    DLAF_ASSERT(dlaf_descz.j == 1, dlaf_descz.j);
 
-  pika::resume();
+    pika::resume();
 
-  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
+    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
-  auto communicator_grid = dlaf_grids.at(dlaf_context);
+    auto communicator_grid = dlaf_grids.at(dlaf_context);
 
-  dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
-  dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
+    dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
+    dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
 
-  dlaf::comm::Index2D src_rank_index(dlaf_desca.isrc, dlaf_desca.jsrc);
+    dlaf::comm::Index2D src_rank_index(dlaf_desca.isrc, dlaf_desca.jsrc);
 
-  dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
-                                          communicator_grid.rank(), src_rank_index);
+    dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
+                                            communicator_grid.rank(), src_rank_index);
 
-  dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desca.ld);
+    dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desca.ld);
 
-  MatrixHost matrix_host(distribution, layout, a);
-  MatrixHost eigenvectors_host(distribution, layout, z);
-  auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-      {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, dlaf_descz.m, w);
+    MatrixHost matrix_host(distribution, layout, a);
+    MatrixHost eigenvectors_host(distribution, layout, z);
+    auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
+        {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, dlaf_descz.m, w);
 
-  {
-    MatrixMirror matrix(matrix_host);
-    MatrixMirror eigenvectors(eigenvectors_host);
-    MatrixBaseMirror eigenvalues(eigenvalues_host);
+    {
+      MatrixMirror matrix(matrix_host);
+      MatrixMirror eigenvectors(eigenvectors_host);
+      MatrixBaseMirror eigenvalues(eigenvalues_host);
 
-    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
-  }  // Destroy mirror
+      dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
+          communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
+    }  // Destroy mirror
 
-  // Ensure data is copied back to the host
-  eigenvalues_host.waitLocalTiles();
-  eigenvectors_host.waitLocalTiles();
+    // Ensure data is copied back to the host
+    eigenvalues_host.waitLocalTiles();
+    eigenvectors_host.waitLocalTiles();
 
-  pika::suspend();
+    pika::suspend();
+    return 0;
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << '\n';
+    return -1;
+  }
+  catch (...) {
+    std::cerr << "ERROR: Unknown exception caught in DLA-Future's eigensolver." << '\n';
+    return -1;
+  }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
@@ -82,49 +93,59 @@ template <typename T>
 void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
              dlaf::BaseType<T>* w, T* z, [[maybe_unused]] int iz, [[maybe_unused]] int jz, int* descz,
              int& info) {
-  using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
-  using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
-  using MatrixBaseMirror =
-      dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
+  try {
+    using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
+    using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+    using MatrixBaseMirror =
+        dlaf::matrix::MatrixMirror<dlaf::BaseType<T>, dlaf::Device::Default, dlaf::Device::CPU>;
 
-  DLAF_ASSERT(desca[0] == 1, desca[0]);
-  DLAF_ASSERT(descz[0] == 1, descz[0]);
-  DLAF_ASSERT(ia == 1, ia);
-  DLAF_ASSERT(ja == 1, ja);
-  DLAF_ASSERT(iz == 1, iz);
-  DLAF_ASSERT(iz == 1, iz);
+    DLAF_ASSERT(desca[0] == 1, desca[0]);
+    DLAF_ASSERT(descz[0] == 1, descz[0]);
+    DLAF_ASSERT(ia == 1, ia);
+    DLAF_ASSERT(ja == 1, ja);
+    DLAF_ASSERT(iz == 1, iz);
+    DLAF_ASSERT(iz == 1, iz);
 
-  pika::resume();
+    pika::resume();
 
-  auto dlaf_uplo = dlaf_uplo_from_char(uplo);
+    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
-  // Get grid corresponding to blacs context in desca
-  // The grid needs to be created with dlaf_create_grid_from_blacs
-  auto communicator_grid = dlaf_grids.at(desca[1]);
-  dlaf::matrix::Distribution distribution({m, m}, {desca[4], desca[5]}, communicator_grid.size(),
-                                          communicator_grid.rank(), {desca[6], desca[7]});
-  dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, desca[8]);
+    // Get grid corresponding to blacs context in desca
+    // The grid needs to be created with dlaf_create_grid_from_blacs
+    auto communicator_grid = dlaf_grids.at(desca[1]);
+    dlaf::matrix::Distribution distribution({m, m}, {desca[4], desca[5]}, communicator_grid.size(),
+                                            communicator_grid.rank(), {desca[6], desca[7]});
+    dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, desca[8]);
 
-  MatrixHost matrix_host(distribution, layout, a);
-  MatrixHost eigenvectors_host(distribution, layout, z);
-  auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-      {m, 1}, {distribution.blockSize().rows(), 1}, m, w);
-  {
-    MatrixMirror matrix(matrix_host);
-    MatrixMirror eigenvectors(eigenvectors_host);
-    MatrixBaseMirror eigenvalues(eigenvalues_host);
+    MatrixHost matrix_host(distribution, layout, a);
+    MatrixHost eigenvectors_host(distribution, layout, z);
+    auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
+        {m, 1}, {distribution.blockSize().rows(), 1}, m, w);
+    {
+      MatrixMirror matrix(matrix_host);
+      MatrixMirror eigenvectors(eigenvectors_host);
+      MatrixBaseMirror eigenvalues(eigenvalues_host);
 
-    dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-        communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
-  }  // Destroy mirror
+      dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
+          communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
+    }  // Destroy mirror
 
-  // Ensure data is copied back to the host
-  eigenvalues_host.waitLocalTiles();
-  eigenvectors_host.waitLocalTiles();
+    // Ensure data is copied back to the host
+    eigenvalues_host.waitLocalTiles();
+    eigenvectors_host.waitLocalTiles();
 
-  pika::suspend();
+    pika::suspend();
 
-  info = 0;
+    info = 0;
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << '\n';
+    info = -1;
+  }
+  catch (...) {
+    std::cerr << "ERROR: Unknown exception caught in DLA-Future's eigensolver." << '\n';
+    info = -1;
+  }
 }
 
 #endif

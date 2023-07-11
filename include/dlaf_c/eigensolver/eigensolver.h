@@ -83,21 +83,21 @@ DLAF_EXTERN_C void dlaf_pzheevd(char uplo, int n, dlaf_complex_z* a, int ia, int
 /// @param z Local part of the global matrix \f$\mathbf{Z}\f$
 /// @param dlaf_descz DLA-Future descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @return 0 if the eigensolver completed normally
-DLAF_EXTERN_C void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
-                                      struct DLAF_descriptor dlaf_desca, double* w, double* z,
-                                      struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
+                                     struct DLAF_descriptor dlaf_desca, double* w, double* z,
+                                     struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_d
-DLAF_EXTERN_C void dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
-                                      struct DLAF_descriptor dlaf_desca, float* w, float* z,
-                                      struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
+                                     struct DLAF_descriptor dlaf_desca, float* w, float* z,
+                                     struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_d
-DLAF_EXTERN_C void dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a,
-                                      struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
-                                      struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a,
+                                     struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
+                                     struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_d
-DLAF_EXTERN_C void dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a,
-                                      struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
-                                      struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a,
+                                     struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
+                                     struct DLAF_descriptor dlaf_descz);

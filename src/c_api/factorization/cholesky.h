@@ -119,7 +119,7 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
   }
   catch (...) {
     std::cerr << "ERROR: Unknown exception caught in DLA-Future's Cholesky decomposition." << '\n';
-    return -1;
+    info = -1;
   }
 }
 

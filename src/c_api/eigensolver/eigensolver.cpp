@@ -16,26 +16,24 @@
 #include <dlaf_c/init.h>
 #include <dlaf_c/utils.h>
 
-void dlaf_eigensolver_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor dlaf_desca,
-                        float* w, float* z, struct DLAF_descriptor dlaf_descz) {
-  eigensolver<float>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_eigensolver_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor dlaf_desca,
+                       float* w, float* z, struct DLAF_descriptor dlaf_descz) {
+  return eigensolver<float>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-void dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor dlaf_desca,
-                        double* w, double* z, struct DLAF_descriptor dlaf_descz) {
-  eigensolver<double>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor dlaf_desca,
+                       double* w, double* z, struct DLAF_descriptor dlaf_descz) {
+  return eigensolver<double>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-void dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a,
-                        struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
-                        struct DLAF_descriptor dlaf_descz) {
-  eigensolver<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor dlaf_desca,
+                       float* w, dlaf_complex_c* z, struct DLAF_descriptor dlaf_descz) {
+  return eigensolver<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-void dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a,
-                        struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
-                        struct DLAF_descriptor dlaf_descz) {
-  eigensolver<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor dlaf_desca,
+                       double* w, dlaf_complex_z* z, struct DLAF_descriptor dlaf_descz) {
+  return eigensolver<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
 #ifdef DLAF_WITH_SCALAPACK

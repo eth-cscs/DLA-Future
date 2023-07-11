@@ -107,10 +107,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {
-    auto reference = [&]() -> auto{
+    auto reference = [&]() -> auto {
       return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid);
-    }
-    ();
+    }();
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
@@ -160,25 +159,27 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       DLAF_descriptor dlaf_desc_eigenvectors = {(int) m, (int) m, (int) mb, (int) mb,        0,
                                                 0,       1,       1,        lld_eigenvectors};
 
+      int err = -1;
       if constexpr (std::is_same_v<T, double>) {
-        C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, float>) {
-        C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        C_dlaf_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        C_dlaf_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                             local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
+                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
       }
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
+      EXPECT_EQ(err, 0);
     }
     else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -204,6 +205,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
+      EXPECT_EQ(info, 0);
 #endif
     }
 

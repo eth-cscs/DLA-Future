@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <blas.hh>
+#include <blas/util.hh>
 #include <mpi.h>
 
 #include <pika/init.hpp>
@@ -22,7 +24,6 @@
 
 #include "../blacs.h"
 #include "../grid.h"
-#include "../utils.h"
 
 template <typename T>
 int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noexcept {
@@ -33,8 +34,6 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noex
     DLAF_ASSERT(dlaf_desca.j == 1, dlaf_desca.j);
 
     pika::resume();
-
-    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
     auto communicator_grid = dlaf_grids.at(dlaf_context);
 
@@ -53,9 +52,8 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noex
     {
       MatrixMirror matrix(matrix_host);
 
-      dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                      dlaf_uplo,
-                                                                                      matrix.get());
+      dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(
+          communicator_grid, blas::char2uplo(uplo), matrix.get());
     }  // Destroy mirror
 
     matrix_host.waitLocalTiles();
@@ -88,8 +86,6 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
 
     pika::resume();
 
-    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
-
     // Get grid corresponding to blacs context in desca
     // The grid needs to be created with dlaf_create_grid_from_blacs
     auto communicator_grid = dlaf_grids.at(desca[1]);
@@ -102,9 +98,8 @@ void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
     {
       MatrixMirror matrix(matrix_host);
 
-      dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(communicator_grid,
-                                                                                      dlaf_uplo,
-                                                                                      matrix.get());
+      dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(
+          communicator_grid, blas::char2uplo(uplo), matrix.get());
     }  // Destroy mirror
 
     matrix_host.waitLocalTiles();

@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <blas.hh>
 #include <mpi.h>
 
 #include <pika/init.hpp>
@@ -24,7 +25,6 @@
 
 #include "../blacs.h"
 #include "../grid.h"
-#include "../utils.h"
 
 template <typename T>
 int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
@@ -41,8 +41,6 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
     DLAF_ASSERT(dlaf_descz.j == 1, dlaf_descz.j);
 
     pika::resume();
-
-    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
 
     auto communicator_grid = dlaf_grids.at(dlaf_context);
 
@@ -67,7 +65,7 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
       MatrixBaseMirror eigenvalues(eigenvalues_host);
 
       dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-          communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
+          communicator_grid, blas::char2uplo(uplo), matrix.get(), eigenvalues.get(), eigenvectors.get());
     }  // Destroy mirror
 
     // Ensure data is copied back to the host
@@ -108,8 +106,6 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
 
     pika::resume();
 
-    auto dlaf_uplo = dlaf_uplo_from_char(uplo);
-
     // Get grid corresponding to blacs context in desca
     // The grid needs to be created with dlaf_create_grid_from_blacs
     auto communicator_grid = dlaf_grids.at(desca[1]);
@@ -127,7 +123,7 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
       MatrixBaseMirror eigenvalues(eigenvalues_host);
 
       dlaf::eigensolver::eigensolver<dlaf::Backend::Default, dlaf::Device::Default, T>(
-          communicator_grid, dlaf_uplo, matrix.get(), eigenvalues.get(), eigenvectors.get());
+          communicator_grid, blas::char2uplo(uplo), matrix.get(), eigenvalues.get(), eigenvectors.get());
     }  // Destroy mirror
 
     // Ensure data is copied back to the host

@@ -80,7 +80,7 @@ public:
     DLAF_ASSERT(index.isIn(distribution().nrTiles()), index, distribution().nrTiles());
 
     const GlobalTileIndex tile_offset = mat_const_.distribution().globalTileIndex(offset_);
-    const GlobalTileIndex parent_index(tile_offset.row() + index.row(), tile_offset.col() + index.col());
+    const GlobalTileIndex parent_index(tile_offset + sizeFromOrigin(index));
     auto tile_sender = mat_const_.read(parent_index);
 
     const auto parent_dist = mat_const_.distribution();
@@ -161,7 +161,7 @@ public:
     // TODO: add helpers for distribution vs. sub-distribution arithmetic
 
     const GlobalTileIndex tile_offset = mat_.distribution().globalTileIndex(offset_);
-    const GlobalTileIndex parent_index(tile_offset.row() + index.row(), tile_offset.col() + index.col());
+    const GlobalTileIndex parent_index(tile_offset + sizeFromOrigin(index));
     auto tile_sender = mat_.readwrite(parent_index);
 
     const auto parent_dist = mat_.distribution();

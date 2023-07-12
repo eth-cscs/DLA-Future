@@ -57,9 +57,6 @@ public:
   // - move: implement as copy, i.e. still refer to original matrix?
   MatrixRef() = delete;
 
-  // TODO: Do we need access to the original matrix? e.g:
-  // Matrix& get() const noexcept { return mat_const_; }
-
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
   /// @pre index.isIn(distribution().localNrTiles()).

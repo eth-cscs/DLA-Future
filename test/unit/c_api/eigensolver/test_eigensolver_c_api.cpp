@@ -67,7 +67,7 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, eigensolver_min_band}
-    //    {0, 2, 100},  // m = 0
+    {0, 2, 100},                                              // m = 0
     {5, 8, 100}, {34, 34, 100},                               // m <= mb
     {4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band

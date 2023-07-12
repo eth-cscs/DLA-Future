@@ -58,7 +58,7 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
     MatrixHost matrix_host(distribution, layout_a, a);
     MatrixHost eigenvectors_host(distribution, layout_z, z);
     auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-        {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, dlaf_descz.m, w);
+        {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, std::max(dlaf_descz.m, 1), w);
 
     {
       MatrixMirror matrix(matrix_host);
@@ -122,7 +122,7 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
     MatrixHost matrix_host(distribution_a, layout_a, a);
     MatrixHost eigenvectors_host(distribution_z, layout_z, z);
     auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-        {m, 1}, {distribution_z.blockSize().rows(), 1}, m, w);
+        {m, 1}, {distribution_z.blockSize().rows(), 1}, std::max(m, 1), w);
 
     {
       MatrixMirror matrix(matrix_host);

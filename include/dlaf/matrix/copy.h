@@ -79,69 +79,61 @@ void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
           Matrix<T, Device::CPU>& dst, comm::CommunicatorGrid grid) {
   namespace ex = pika::execution::experimental;
 
-  using namespace dlaf;
+  DLAF_ASSERT_MODERATE(equal_size(src, dst), src.size(), dst.size());
+  DLAF_ASSERT_MODERATE(equal_process_grid(src, grid), src.commGridSize(), grid.size());
+  DLAF_ASSERT_MODERATE(equal_process_grid(dst, grid), dst.commGridSize(), grid.size());
 
-  // VERIFY CONSTRAINTS
-  // - same global size
-  // - same grid
-  // - over/sub scale with integral factor
+  const TileElementSize tile_size_src = src.blockSize();
+  const TileElementSize tile_size_dst = dst.blockSize();
 
-  DLAF_ASSERT_MODERATE(matrix::equal_size(src, dst), src.size(), dst.size());
-  DLAF_ASSERT_MODERATE(matrix::equal_process_grid(src, grid), src.commGridSize(), grid.size());
-  DLAF_ASSERT_MODERATE(matrix::equal_process_grid(dst, grid), dst.commGridSize(), grid.size());
+  const SizeType mb = std::min<SizeType>(tile_size_src.rows(), tile_size_dst.rows());
+  const SizeType nb = std::min<SizeType>(tile_size_src.cols(), tile_size_dst.cols());
 
-  const TileElementSize src_block = src.blockSize();
-  const TileElementSize dst_block = dst.blockSize();
+  DLAF_ASSERT_MODERATE(tile_size_src.rows() % mb == 0, tile_size_src.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_size_dst.rows() % mb == 0, tile_size_dst.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_size_src.cols() % nb == 0, tile_size_src.cols(), nb);
+  DLAF_ASSERT_MODERATE(tile_size_dst.cols() % nb == 0, tile_size_dst.cols(), nb);
 
-  const SizeType mb = std::min<SizeType>(src_block.rows(), dst_block.rows());
-  const SizeType nb = std::min<SizeType>(src_block.cols(), dst_block.cols());
-
-  DLAF_ASSERT_MODERATE(src_block.rows() % mb == 0, src_block.rows(), mb);
-  DLAF_ASSERT_MODERATE(dst_block.rows() % mb == 0, dst_block.rows(), mb);
-  DLAF_ASSERT_MODERATE(src_block.cols() % nb == 0, src_block.cols(), nb);
-  DLAF_ASSERT_MODERATE(dst_block.cols() % nb == 0, dst_block.cols(), nb);
-
-  const LocalTileSize src_tiles_per_block{src_block.rows() / mb, src_block.cols() / nb};
-  const LocalTileSize dst_tiles_per_block{dst_block.rows() / mb, dst_block.cols() / nb};
+  const LocalTileSize tiles_per_block_src{tile_size_src.rows() / mb, tile_size_src.cols() / nb};
+  const LocalTileSize tiles_per_block_dst{tile_size_dst.rows() / mb, tile_size_dst.cols() / nb};
 
   // TODO src_ should be const
-  matrix::RetiledMatrix<T, Device::CPU> src_(src, src_tiles_per_block);
-  matrix::RetiledMatrix<T, Device::CPU> dst_(dst, dst_tiles_per_block);
+  RetiledMatrix<T, Device::CPU> src_retiled(src, tiles_per_block_src);
+  RetiledMatrix<T, Device::CPU> dst_retiled(dst, tiles_per_block_dst);
 
   const comm::Index2D rank = grid.rank();
-  common::Pipeline<comm::Communicator> pipeline(grid.fullCommunicator().clone());
+  common::Pipeline<comm::Communicator> comm_pipeline(grid.fullCommunicator().clone());
 
-  for (const LocalTileIndex ij_loc : common::iterate_range2d(src_.distribution().localNrTiles())) {
-    const GlobalTileIndex ij = src_.distribution().globalTileIndex(ij_loc);
-    const comm::Index2D src_rank = src_.distribution().rankGlobalTile(ij);
-    const comm::Index2D dst_rank = dst_.distribution().rankGlobalTile(ij);
+  for (const LocalTileIndex ij_lc : common::iterate_range2d(src_retiled.distribution().localNrTiles())) {
+    const GlobalTileIndex ij = src_retiled.distribution().globalTileIndex(ij_lc);
+    const comm::Index2D src_rank = src_retiled.distribution().rankGlobalTile(ij);
+    const comm::Index2D dst_rank = dst_retiled.distribution().rankGlobalTile(ij);
 
     const bool src_is_mine = rank == src_rank;
     const bool dst_is_mine = rank == dst_rank;
 
     if (src_is_mine != dst_is_mine) {
-      ex::start_detached(comm::scheduleSend(pipeline(), grid.rankFullCommunicator(dst_rank), 0,
-                                            src_.read(ij_loc)));
+      ex::start_detached(comm::scheduleSend(comm_pipeline(), grid.rankFullCommunicator(dst_rank), 0,
+                                            src_retiled.read(ij_lc)));
     }
   }
 
-  for (const LocalTileIndex ij_loc : common::iterate_range2d(dst_.distribution().localNrTiles())) {
-    const GlobalTileIndex ij = dst_.distribution().globalTileIndex(ij_loc);
-    const comm::Index2D src_rank = src_.distribution().rankGlobalTile(ij);
-    const comm::Index2D dst_rank = dst_.distribution().rankGlobalTile(ij);
+  const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::CPU, Device::CPU>> policy;
+  for (const LocalTileIndex ij_lc : common::iterate_range2d(dst_retiled.distribution().localNrTiles())) {
+    const GlobalTileIndex ij = dst_retiled.distribution().globalTileIndex(ij_lc);
+    const comm::Index2D src_rank = src_retiled.distribution().rankGlobalTile(ij);
+    const comm::Index2D dst_rank = dst_retiled.distribution().rankGlobalTile(ij);
 
     const bool src_is_mine = rank == src_rank;
     const bool dst_is_mine = rank == dst_rank;
 
     if (src_is_mine == dst_is_mine) {
-      namespace di = dlaf::internal;
-      ex::start_detached(
-          ex::when_all(src_.read(ij), dst_.readwrite(ij_loc)) |
-          matrix::copy(di::Policy<matrix::internal::CopyBackend_v<Device::CPU, Device::CPU>>{}));
+      ex::start_detached(ex::when_all(src_retiled.read(ij), dst_retiled.readwrite(ij_lc)) |
+                         matrix::copy(policy));
     }
     else {
-      ex::start_detached(comm::scheduleRecv(pipeline(), grid.rankFullCommunicator(src_rank), 0,
-                                            dst_.readwrite(ij_loc)));
+      ex::start_detached(comm::scheduleRecv(comm_pipeline(), grid.rankFullCommunicator(src_rank), 0,
+                                            dst_retiled.readwrite(ij_lc)));
     }
   }
 }

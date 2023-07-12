@@ -84,7 +84,7 @@ char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) 
   MPI_Allreduce(&_row_major, &row_major, 1, MPI_C_BOOL, MPI_LAND, comm);
   MPI_Allreduce(&_col_major, &col_major, 1, MPI_C_BOOL, MPI_LAND, comm);
 
-  if (!row_major and !col_major) {
+  if (!row_major && !col_major) {
     std::cerr << "Grid layout must be row major or column major." << std::endl;
     exit(-1);
   }

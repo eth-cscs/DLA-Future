@@ -501,7 +501,8 @@ public:
             localElementDistanceFromLocalTile<Coord::Col>(begin.col(), end.col())};
   }
 
-  /// TODO
+  /// Returns the tile index in the current distribution corresponding to a tile index @p sub_index in a
+  /// sub-distribution (defined by @p sub_offset and @p sub_distribution)
   GlobalTileIndex globalTileIndexFromSubDistribution(const GlobalElementIndex& sub_offset,
                                                      const Distribution& sub_distribution,
                                                      const GlobalTileIndex& sub_index) const noexcept {
@@ -511,6 +512,8 @@ public:
     return tile_offset + common::sizeFromOrigin(sub_index);
   }
 
+  /// Returns the element offset within the tile in the current distribution corresponding to a tile
+  /// index @p sub_index in a sub-distribution (defined by @p sub_offset and @p sub_distribution)
   TileElementIndex tileElementOffsetFromSubDistribution(
       const GlobalElementIndex& sub_offset, const Distribution& sub_distribution,
       const GlobalTileIndex& sub_index) const noexcept {

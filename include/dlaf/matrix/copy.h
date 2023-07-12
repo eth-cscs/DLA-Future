@@ -14,6 +14,7 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/common/assert.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/kernels/p2p.h>
@@ -94,22 +95,24 @@ void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
   DLAF_ASSERT_MODERATE(equal_process_grid(src, grid), src.commGridSize(), grid.size());
   DLAF_ASSERT_MODERATE(equal_process_grid(dst, grid), dst.commGridSize(), grid.size());
 
-  const TileElementSize tile_size_src = src.blockSize();
-  const TileElementSize tile_size_dst = dst.blockSize();
+  // TODO Currently multiple tile per blocks cannot be tested, as Matrix does not support it yet.
+  DLAF_ASSERT_MODERATE(src.baseTileSize() == src.blockSize(), src.baseTileSize(), src.blockSize());
+  DLAF_ASSERT_MODERATE(dst.baseTileSize() == dst.blockSize(), dst.baseTileSize(), dst.blockSize());
+  const TileElementSize block_size_src = src.blockSize();
+  const TileElementSize block_size_dst = dst.blockSize();
 
-  const SizeType mb = std::min<SizeType>(tile_size_src.rows(), tile_size_dst.rows());
-  const SizeType nb = std::min<SizeType>(tile_size_src.cols(), tile_size_dst.cols());
+  const SizeType mb = std::min<SizeType>(block_size_src.rows(), block_size_dst.rows());
+  const SizeType nb = std::min<SizeType>(block_size_src.cols(), block_size_dst.cols());
 
-  DLAF_ASSERT_MODERATE(tile_size_src.rows() % mb == 0, tile_size_src.rows(), mb);
-  DLAF_ASSERT_MODERATE(tile_size_dst.rows() % mb == 0, tile_size_dst.rows(), mb);
-  DLAF_ASSERT_MODERATE(tile_size_src.cols() % nb == 0, tile_size_src.cols(), nb);
-  DLAF_ASSERT_MODERATE(tile_size_dst.cols() % nb == 0, tile_size_dst.cols(), nb);
+  DLAF_ASSERT_MODERATE(block_size_src.rows() % mb == 0, block_size_src.rows(), mb);
+  DLAF_ASSERT_MODERATE(block_size_dst.rows() % mb == 0, block_size_dst.rows(), mb);
+  DLAF_ASSERT_MODERATE(block_size_src.cols() % nb == 0, block_size_src.cols(), nb);
+  DLAF_ASSERT_MODERATE(block_size_dst.cols() % nb == 0, block_size_dst.cols(), nb);
 
-  const LocalTileSize tiles_per_block_src{tile_size_src.rows() / mb, tile_size_src.cols() / nb};
-  const LocalTileSize tiles_per_block_dst{tile_size_dst.rows() / mb, tile_size_dst.cols() / nb};
+  const LocalTileSize tiles_per_block_src{block_size_src.rows() / mb, block_size_src.cols() / nb};
+  const LocalTileSize tiles_per_block_dst{block_size_dst.rows() / mb, block_size_dst.cols() / nb};
 
-  // TODO src_ should be const
-  RetiledMatrix<T, Device::CPU> src_retiled(src, tiles_per_block_src);
+  RetiledMatrix<T, Device::CPU> src_retiled(src, tiles_per_block_src);  // TODO this should be const
   RetiledMatrix<T, Device::CPU> dst_retiled(dst, tiles_per_block_dst);
 
   const comm::Index2D rank = grid.rank();

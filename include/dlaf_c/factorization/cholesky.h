@@ -30,7 +30,7 @@
 /// @post The pika runtime is resumed when this function is called and suspended when the call
 /// terminates.
 ///
-/// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
+/// @param uplo indicates whether the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
 /// @param n order of the sumbatrix \f$\mathbf{A}\f$ used in the computation
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
@@ -64,7 +64,7 @@ DLAF_EXTERN_C void dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int
 /// terminates.
 ///
 /// @param dlaf_context context associated to the DLA-Future grid created with @ref dlaf_create_grid
-/// @param uplo indicates wheather the upper ('U') or lower ('L') triangular part of the global submatrix
+/// @param uplo indicates whether the upper ('U') or lower ('L') triangular part of the global submatrix
 /// \f$\mathbf{A}\f$ is referenced
 /// @param a Local part of the global matrix \f$\mathbf{A}\f$
 /// @param dlaf_desca DLA-Future descriptor of the global matrix \f$\mathbf{A}\f$

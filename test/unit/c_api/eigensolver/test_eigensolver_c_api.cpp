@@ -67,10 +67,10 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, eigensolver_min_band}
-    {34, 13, 100},
-    {32, 5, 100},  // m > mb
-    {34, 8, 3},
-    {32, 6, 3}  // m > mb, sub-band
+//    {0, 2, 100},                                              // m = 0
+    {5, 8, 100}, {34, 34, 100},                               // m <= mb
+    {4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
+    {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
 enum class API { dlaf, scalapack };
@@ -136,20 +136,38 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     T* local_eigenvectors_ptr;
     dlaf::BaseType<T>* eigenvalues_ptr;
     {
-      auto toplefttile_a =
-          pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
-      auto toplefttile_eigenvalues =
-          pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
-      auto toplefttile_eigenvectors =
-          pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
+      if (LocalTileIndex(0, 0).isIn(mat_a_h.distribution().localNrTiles())) {
+        auto toplefttile_a =
+            pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
 
-      lld_a = static_cast<int>(toplefttile_a.ld());
-      lld_eigenvectors = static_cast<int>(toplefttile_eigenvectors.ld());
+        lld_a = static_cast<int>(toplefttile_a.ld());
+        local_a_ptr = toplefttile_a.ptr();
+      }
+      else {
+        lld_a = 1;
+        local_a_ptr = nullptr;
+      }
 
-      local_a_ptr = toplefttile_a.ptr();
-      local_eigenvectors_ptr = toplefttile_eigenvectors.ptr();
-      eigenvalues_ptr = toplefttile_eigenvalues.ptr();
+      if (LocalTileIndex(0, 0).isIn(eigenvectors.distribution().localNrTiles())) {
+        auto toplefttile_eigenvectors =
+            pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
 
+        lld_eigenvectors = static_cast<int>(toplefttile_eigenvectors.ld());
+        local_eigenvectors_ptr = toplefttile_eigenvectors.ptr();
+      }
+      else {
+        lld_eigenvectors = 1;
+        local_eigenvectors_ptr = nullptr;
+      }
+
+      if (LocalTileIndex(0, 0).isIn(eigenvalues.distribution().localNrTiles())) {
+        auto toplefttile_eigenvalues =
+            pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
+        eigenvalues_ptr = toplefttile_eigenvalues.ptr();
+      }
+      else {
+        eigenvalues_ptr = nullptr;
+      }
     }  // Destroy tiles (avoid spurious dependencies)
 
     // Suspend pika to ensure it is resumed by the C API

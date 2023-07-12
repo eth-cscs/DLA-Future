@@ -118,12 +118,12 @@ TYPED_TEST(MatrixRefTest, NonConstRefFromNonConstMatrix) {
   constexpr Type el_submatrix(1);
   constexpr Type el_border(-1);
 
-  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
-  const auto f_el_border = [](const GlobalElementIndex&) { return el_border; };
+  const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
+  const auto f_el_border = [=](const GlobalElementIndex&) { return el_border; };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
-      const auto f_el_full = [&](const GlobalElementIndex& index) {
+      const auto f_el_full = [=](const GlobalElementIndex& index) {
         return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
       };
 
@@ -136,7 +136,7 @@ TYPED_TEST(MatrixRefTest, NonConstRefFromNonConstMatrix) {
       for (const auto& ij_local : iterate_range2d(mat_ref.distribution().localNrTiles())) {
         ex::start_detached(mat_ref.readwrite(ij_local) |
                            dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                     [&](const auto& tile) {
+                                                     [=](const auto& tile) {
                                                        set(tile, el_submatrix);
                                                      }));
       }
@@ -153,11 +153,11 @@ TYPED_TEST(MatrixRefTest, ConstRefFromNonConstMatrix) {
   constexpr Type el_submatrix(1);
   constexpr Type el_border(-1);
 
-  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+  const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
-      const auto f_el_full = [&](const GlobalElementIndex& index) {
+      const auto f_el_full = [=](const GlobalElementIndex& index) {
         return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
       };
 
@@ -180,11 +180,11 @@ TYPED_TEST(MatrixRefTest, ConstRefFromConstMatrix) {
   constexpr Type el_submatrix(1);
   constexpr Type el_border(-1);
 
-  const auto f_el_submatrix = [](const GlobalElementIndex&) { return el_submatrix; };
+  const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
-      const auto f_el_full = [&](const GlobalElementIndex& index) {
+      const auto f_el_full = [=](const GlobalElementIndex& index) {
         return indexInSubMatrix(index, test.sub_offset, test.sub_size) ? el_submatrix : el_border;
       };
 

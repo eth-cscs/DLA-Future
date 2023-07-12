@@ -39,7 +39,6 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
-#include <dlaf/matrix/retiled_matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/sender/policy.h>
 #include <dlaf/sender/traits.h>
@@ -621,7 +620,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
   const SizeType nsweeps = nrSweeps<T>(mat_hh.size().cols());
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
-  matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
+  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
 
   const auto& dist_hh = mat_hh.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();
@@ -746,7 +745,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   const SizeType group_size = getTuneParameters().bt_band_to_tridiag_hh_apply_group_size;
 
   const LocalTileSize tiles_per_block(mat_e.blockSize().rows() / b, 1);
-  matrix::RetiledMatrix<T, D> mat_e_rt(mat_e, tiles_per_block);
+  Matrix<T, D> mat_e_rt = mat_e.retiledSubPipeline(tiles_per_block);
 
   const auto& dist_hh = mat_hh.distribution();
   const auto& dist_e_rt = mat_e_rt.distribution();

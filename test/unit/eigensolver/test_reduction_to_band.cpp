@@ -102,7 +102,7 @@ std::vector<config_t> configs_subband{
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
-  return {matrix.size(), matrix.distribution().blockSize()};
+  return {matrix.size(), matrix.distribution().baseTileSize()};
 }
 
 template <class T>
@@ -125,7 +125,7 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
   DLAF_ASSERT(matrix.blockSize().rows() % band_size == 0, band_size, matrix.blockSize().rows());
 
   DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
-  DLAF_ASSERT(square_size(matrix), matrix.blockSize());
+  DLAF_ASSERT(square_size(matrix), matrix.size());
 
   dlaf::common::internal::SingleThreadedBlasScope single;
 

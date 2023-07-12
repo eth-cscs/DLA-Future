@@ -142,7 +142,7 @@ void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix
      << dlaf::matrix::internal::numpy_datatype<T>::typestring << ")\n";
 
   auto getTileTopLeft = [&](const GlobalTileIndex& ij) -> GlobalElementIndex {
-    return {ij.row() * matrix.tileSize().rows(), ij.col() * matrix.tileSize().cols()};
+    return {ij.row() * matrix.blockSize().rows(), ij.col() * matrix.blockSize().cols()};
   };
 
   for (const auto& ij : iterate_range2d(matrix.nrTiles())) {

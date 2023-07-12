@@ -62,7 +62,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
     const MatrixLocal<const TypeParam> mat(test.size, test.tile_size);
 
     EXPECT_EQ(test.size, mat.size());
-    EXPECT_EQ(test.tile_size, mat.tileSize());
+    EXPECT_EQ(test.tile_size, mat.blockSize());
 
     const GlobalTileSize nrTiles{
         dlaf::util::ceilDiv(test.size.rows(), test.tile_size.rows()),

@@ -97,7 +97,7 @@ struct MatrixLocal<const T> {
     return GlobalElementSize{layout_.size().rows(), layout_.size().cols()};
   }
 
-  TileElementSize tileSize() const noexcept {
+  TileElementSize blockSize() const noexcept {
     return layout_.blockSize();
   }
 
@@ -134,7 +134,7 @@ struct MatrixLocal : public MatrixLocal<const T> {
   using TileT = Tile<T, Device::CPU>;
 
   MatrixLocal(GlobalElementSize size, TileElementSize tilesize) noexcept
-      : MatrixLocal<const T>(size, tile) {}
+      : MatrixLocal<const T>(size, tilesize) {}
 
   MatrixLocal(const MatrixLocal&) = delete;
   MatrixLocal& operator=(const MatrixLocal&) = delete;

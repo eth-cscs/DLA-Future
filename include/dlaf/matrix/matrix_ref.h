@@ -172,4 +172,22 @@ private:
   Matrix<T, D>& mat_;
   using MatrixRef<const T, D>::offset_;
 };
+
+// ETI
+
+#define DLAF_MATRIX_REF_ETI(KWORD, DATATYPE, DEVICE) \
+  KWORD template class MatrixRef<DATATYPE, DEVICE>; \
+  KWORD template class MatrixRef<const DATATYPE, DEVICE>;
+
+DLAF_MATRIX_REF_ETI(extern, float, Device::CPU)
+DLAF_MATRIX_REF_ETI(extern, double, Device::CPU)
+DLAF_MATRIX_REF_ETI(extern, std::complex<float>, Device::CPU)
+DLAF_MATRIX_REF_ETI(extern, std::complex<double>, Device::CPU)
+
+#if defined(DLAF_WITH_GPU)
+DLAF_MATRIX_REF_ETI(extern, float, Device::GPU)
+DLAF_MATRIX_REF_ETI(extern, double, Device::GPU)
+DLAF_MATRIX_REF_ETI(extern, std::complex<float>, Device::GPU)
+DLAF_MATRIX_REF_ETI(extern, std::complex<double>, Device::GPU)
+#endif
 }

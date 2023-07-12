@@ -17,6 +17,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
@@ -1843,28 +1844,48 @@ std::vector<TestReshuffling> sizes_reshuffling_tests{
     TestReshuffling{{10, 15}, {4, 3}, {2, 6}},
 };
 
+template <class T, Device Source, Device Destination>
+void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
+  const auto& [size, src_tilesize, dst_tilesize] = config;
+  const comm::Index2D origin_rank_src(0, 0);
+  matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
+  const comm::Index2D origin_rank_dst(0, 0);
+  matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
+
+  matrix::Matrix<T, Device::CPU> src_host(dist_src);  // TODO this should be const
+  matrix::Matrix<T, Device::CPU> dst_host(dist_dst);
+
+  auto fixedValues = [](const GlobalElementIndex index) { return T(index.row() * 1000 + index.col()); };
+  matrix::util::set(src_host, fixedValues);
+
+  {
+    matrix::MatrixMirror<T, Source, Device::CPU> src(src_host);
+    matrix::MatrixMirror<T, Destination, Device::CPU> dst(dst_host);
+    matrix::copy(src.get(), dst.get(), grid);
+  }
+
+  CHECK_MATRIX_EQ(fixedValues, dst_host);
+}
+
 TYPED_TEST(MatrixTest, CopyReshuffling) {
   for (const auto& grid : this->commGrids()) {
-    for (const auto& [size, src_tilesize, dst_tilesize] : sizes_reshuffling_tests) {
-      const comm::Index2D origin_rank_src(0, 0);
-      matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
-      const comm::Index2D origin_rank_dst(0, 0);
-      matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
-
-      matrix::Matrix<TypeParam, Device::CPU> src(dist_src);  // TODO this should be const
-      matrix::Matrix<TypeParam, Device::CPU> dst(dist_dst);
-
-      auto fixedValues = [](const GlobalElementIndex index) {
-        return TypeParam(index.row() * 1000 + index.col());
-      };
-      matrix::util::set(src, fixedValues);
-
-      copy(src, dst, grid);
-
-      CHECK_MATRIX_EQ(fixedValues, dst);
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::CPU, Device::CPU>(config, grid);
     }
   }
 }
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(MatrixTest, GPUCopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::GPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::CPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::GPU, Device::CPU>(config, grid);
+    }
+  }
+}
+#endif
 
 struct MatrixGenericTest : public TestWithCommGrids {};
 

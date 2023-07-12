@@ -86,9 +86,9 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
 /// @pre nb = min(src.blockSize().cols(), dst.blockSize().cols())
 ///      src.blockSize().cols() % nb == 0
 ///      dst.blockSize().cols() % nb == 0
-template <class T>
-void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
-          Matrix<T, Device::CPU>& dst, comm::CommunicatorGrid grid) {
+template <class T, Device Source, Device Destination>
+void copy(Matrix<T, Source>& src,  // TODO this should be const
+          Matrix<T, Destination>& dst, comm::CommunicatorGrid grid) {
   namespace ex = pika::execution::experimental;
 
   DLAF_ASSERT_MODERATE(equal_size(src, dst), src.size(), dst.size());
@@ -112,8 +112,8 @@ void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
   const LocalTileSize tiles_per_block_src{block_size_src.rows() / mb, block_size_src.cols() / nb};
   const LocalTileSize tiles_per_block_dst{block_size_dst.rows() / mb, block_size_dst.cols() / nb};
 
-  RetiledMatrix<T, Device::CPU> src_retiled(src, tiles_per_block_src);  // TODO this should be const
-  RetiledMatrix<T, Device::CPU> dst_retiled(dst, tiles_per_block_dst);
+  RetiledMatrix<T, Source> src_retiled(src, tiles_per_block_src);  // TODO this should be const
+  RetiledMatrix<T, Destination> dst_retiled(dst, tiles_per_block_dst);
 
   const comm::Index2D rank = grid.rank();
   common::Pipeline<comm::Communicator> comm_pipeline(grid.fullCommunicator().clone());
@@ -132,7 +132,7 @@ void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
     }
   }
 
-  const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::CPU, Device::CPU>> policy;
+  const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>> policy;
   for (const LocalTileIndex ij_lc : common::iterate_range2d(dst_retiled.distribution().localNrTiles())) {
     const GlobalTileIndex ij = dst_retiled.distribution().globalTileIndex(ij_lc);
     const comm::Index2D src_rank = src_retiled.distribution().rankGlobalTile(ij);

@@ -546,13 +546,9 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
     const GlobalElementSize sz = subm_dist.size();
 
-    // [0, a)
+    // [0, a) and [b, end)
     applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
-                                       [a](SizeType i_perm) { return i_perm < a; });
-
-    // [b, end)
-    applyPermutationsFiltered<T, D, C>({0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles, mat_out_tiles,
-                                       [b](SizeType i_perm) { return i_perm >= b; });
+                                       [a, b](SizeType i_perm) { return i_perm < a || b <= i_perm; });
   };
 
   ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),

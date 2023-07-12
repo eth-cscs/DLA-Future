@@ -49,13 +49,13 @@ struct MatrixLocal<const T> {
   using MemoryT = memory::MemoryView<T, Device::CPU>;
   using ConstTileT = Tile<const T, Device::CPU>;
 
-  /// Create a matrix with given size and blocksize
+  /// Create a matrix with given size and tilesize
   //
   /// @pre !sz.isEmpty()
-  /// @pre !blocksize.isEmpty()
-  MatrixLocal(GlobalElementSize sz, TileElementSize blocksize) noexcept
-      : layout_{colMajorLayout({sz.rows(), sz.cols()}, blocksize, std::max(sz.rows(), SizeType(1)))} {
-    DLAF_ASSERT(!blocksize.isEmpty(), blocksize);
+  /// @pre !tilesize.isEmpty()
+  MatrixLocal(GlobalElementSize sz, TileElementSize tilesize) noexcept
+      : layout_{colMajorLayout({sz.rows(), sz.cols()}, tilesize, std::max(sz.rows(), SizeType(1)))} {
+    DLAF_ASSERT(!tilesize.isEmpty(), tilesize);
 
     if (sz.isEmpty())
       return;
@@ -97,7 +97,7 @@ struct MatrixLocal<const T> {
     return GlobalElementSize{layout_.size().rows(), layout_.size().cols()};
   }
 
-  TileElementSize blockSize() const noexcept {
+  TileElementSize tileSize() const noexcept {
     return layout_.blockSize();
   }
 
@@ -133,8 +133,8 @@ template <class T>
 struct MatrixLocal : public MatrixLocal<const T> {
   using TileT = Tile<T, Device::CPU>;
 
-  MatrixLocal(GlobalElementSize size, TileElementSize blocksize) noexcept
-      : MatrixLocal<const T>(size, blocksize) {}
+  MatrixLocal(GlobalElementSize size, TileElementSize tilesize) noexcept
+      : MatrixLocal<const T>(size, tile) {}
 
   MatrixLocal(const MatrixLocal&) = delete;
   MatrixLocal& operator=(const MatrixLocal&) = delete;

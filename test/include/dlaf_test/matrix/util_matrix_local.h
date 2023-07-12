@@ -79,7 +79,7 @@ template <class T>
 MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) {
   DLAF_ASSERT(matrix::local_matrix(source), source);
 
-  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
+  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.baseTileSize());
 
   auto targeted_tile = internal::checkerForIndexIn(uplo);
 
@@ -103,7 +103,7 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
                          comm::CommunicatorGrid comm_grid) {
   DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
 
-  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.blockSize());
+  MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.baseTileSize());
 
   const auto& dist_source = source.distribution();
   const auto rank = dist_source.rankIndex();
@@ -142,7 +142,7 @@ void print(format::numpy, std::string symbol, const MatrixLocal<const T>& matrix
      << dlaf::matrix::internal::numpy_datatype<T>::typestring << ")\n";
 
   auto getTileTopLeft = [&](const GlobalTileIndex& ij) -> GlobalElementIndex {
-    return {ij.row() * matrix.blockSize().rows(), ij.col() * matrix.blockSize().cols()};
+    return {ij.row() * matrix.tileSize().rows(), ij.col() * matrix.tileSize().cols()};
   };
 
   for (const auto& ij : iterate_range2d(matrix.nrTiles())) {

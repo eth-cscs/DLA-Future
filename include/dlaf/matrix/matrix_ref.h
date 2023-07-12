@@ -173,7 +173,7 @@ private:
 // ETI
 
 #define DLAF_MATRIX_REF_ETI(KWORD, DATATYPE, DEVICE) \
-  KWORD template class MatrixRef<DATATYPE, DEVICE>; \
+  KWORD template class MatrixRef<DATATYPE, DEVICE>;  \
   KWORD template class MatrixRef<const DATATYPE, DEVICE>;
 
 DLAF_MATRIX_REF_ETI(extern, float, Device::CPU)

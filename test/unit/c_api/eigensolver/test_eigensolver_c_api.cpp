@@ -67,7 +67,7 @@ const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     // {m, mb, eigensolver_min_band}
-//    {0, 2, 100},                                              // m = 0
+    //    {0, 2, 100},  // m = 0
     {5, 8, 100}, {34, 34, 100},                               // m <= mb
     {4, 3, 100}, {16, 10, 100}, {34, 13, 100}, {32, 5, 100},  // m > mb
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
@@ -163,6 +163,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
       if (LocalTileIndex(0, 0).isIn(eigenvalues.distribution().localNrTiles())) {
         auto toplefttile_eigenvalues =
             pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
+
         eigenvalues_ptr = toplefttile_eigenvalues.ptr();
       }
       else {

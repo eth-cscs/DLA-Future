@@ -52,10 +52,11 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
     dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
                                             communicator_grid.rank(), src_rank_index);
 
-    dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desca.ld);
+    dlaf::matrix::LayoutInfo layout_a = colMajorLayout(distribution, dlaf_desca.ld);
+    dlaf::matrix::LayoutInfo layout_z = colMajorLayout(distribution, dlaf_descz.ld);
 
-    MatrixHost matrix_host(distribution, layout, a);
-    MatrixHost eigenvectors_host(distribution, layout, z);
+    MatrixHost matrix_host(distribution, layout_a, a);
+    MatrixHost eigenvectors_host(distribution, layout_z, z);
     auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
         {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, dlaf_descz.m, w);
 
@@ -99,6 +100,7 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
 
     DLAF_ASSERT(desca[0] == 1, desca[0]);
     DLAF_ASSERT(descz[0] == 1, descz[0]);
+    DLAF_ASSERT(desca[1] == descz[1], desca[1], descz[1]);
     DLAF_ASSERT(ia == 1, ia);
     DLAF_ASSERT(ja == 1, ja);
     DLAF_ASSERT(iz == 1, iz);
@@ -109,14 +111,19 @@ void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] i
     // Get grid corresponding to blacs context in desca
     // The grid needs to be created with dlaf_create_grid_from_blacs
     auto communicator_grid = dlaf_grids.at(desca[1]);
-    dlaf::matrix::Distribution distribution({m, m}, {desca[4], desca[5]}, communicator_grid.size(),
-                                            communicator_grid.rank(), {desca[6], desca[7]});
-    dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, desca[8]);
+    dlaf::matrix::Distribution distribution_a({m, m}, {desca[4], desca[5]}, communicator_grid.size(),
+                                              communicator_grid.rank(), {desca[6], desca[7]});
+    dlaf::matrix::Distribution distribution_z({m, m}, {descz[4], descz[5]}, communicator_grid.size(),
+                                              communicator_grid.rank(), {descz[6], descz[7]});
 
-    MatrixHost matrix_host(distribution, layout, a);
-    MatrixHost eigenvectors_host(distribution, layout, z);
+    dlaf::matrix::LayoutInfo layout_a = colMajorLayout(distribution_a, desca[8]);
+    dlaf::matrix::LayoutInfo layout_z = colMajorLayout(distribution_z, descz[8]);
+
+    MatrixHost matrix_host(distribution_a, layout_a, a);
+    MatrixHost eigenvectors_host(distribution_z, layout_z, z);
     auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-        {m, 1}, {distribution.blockSize().rows(), 1}, m, w);
+        {m, 1}, {distribution_z.blockSize().rows(), 1}, m, w);
+
     {
       MatrixMirror matrix(matrix_host);
       MatrixMirror eigenvectors(eigenvectors_host);

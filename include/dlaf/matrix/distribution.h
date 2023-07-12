@@ -44,7 +44,7 @@ public:
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
   /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
-  /// @pre !tile_size.isEmpty(),
+  /// @pre !block_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
@@ -62,7 +62,7 @@ public:
   /// @param[in] element_offset is the element-wise offset of the top left tile
   ///            of the matrix, used in addition to @p tile_offset,
   /// @pre size.isValid(),
-  /// @pre !tile_size.isEmpty(),
+  /// @pre !block_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).

@@ -74,6 +74,17 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
   copy(source.distribution().localNrTiles(), LocalTileIndex(0, 0), source, LocalTileIndex(0, 0), dest);
 }
 
+/// Copy of a matrix performing data reshuffling
+///
+/// Copy @p src matrix to @p dst, re-distributing data according to the @p dst distribution.
+/// @pre src.size() == dst.size()
+/// @pre equal_process_grid(src, dst)
+/// @pre mb = min(src.blockSize().rows(), dst.blockSize().rows())
+///      src.blockSize().rows() % mb == 0
+///      dst.blockSize().rows() % mb == 0
+/// @pre nb = min(src.blockSize().cols(), dst.blockSize().cols())
+///      src.blockSize().cols() % nb == 0
+///      dst.blockSize().cols() % nb == 0
 template <class T>
 void copy(Matrix<T, Device::CPU>& src,  // TODO this should be const
           Matrix<T, Device::CPU>& dst, comm::CommunicatorGrid grid) {

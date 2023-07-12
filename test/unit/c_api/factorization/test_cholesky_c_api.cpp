@@ -203,10 +203,12 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
-  for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(comm_grid, uplo, m, mb);
+  for (int i = 0; i < 5; i++) {
+    for (const auto& comm_grid : this->commGrids()) {
+      for (auto uplo : blas_uplos) {
+        for (const auto& [m, mb] : sizes) {
+          testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(comm_grid, uplo, m, mb);
+        }
       }
     }
   }
@@ -214,10 +216,12 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
-  for (const auto& comm_grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(comm_grid, uplo, m, mb);
+  for (int i = 0; i < 5; i++) {
+    for (const auto& comm_grid : this->commGrids()) {
+      for (auto uplo : blas_uplos) {
+        for (const auto& [m, mb] : sizes) {
+          testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(comm_grid, uplo, m, mb);
+        }
       }
     }
   }

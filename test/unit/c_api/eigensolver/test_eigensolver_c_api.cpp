@@ -252,10 +252,12 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
+  for (int i = 0; i < 5; i++) {
+    for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+      for (auto uplo : blas_uplos) {
+        for (auto [m, mb, b_min] : sizes) {
+          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
+        }
       }
     }
   }
@@ -263,10 +265,12 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    for (auto uplo : blas_uplos) {
-      for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
+  for (int i = 0; i < 5; i++) {
+    for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+      for (auto uplo : blas_uplos) {
+        for (auto [m, mb, b_min] : sizes) {
+          testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
+        }
       }
     }
   }

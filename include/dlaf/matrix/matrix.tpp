@@ -12,13 +12,13 @@ namespace dlaf {
 namespace matrix {
 
 template <class T, Device D>
-Matrix<T, D>::Matrix(const LocalElementSize& size, const TileElementSize& tile_size)
-    : Matrix<T, D>(Distribution(size, tile_size)) {}
+Matrix<T, D>::Matrix(const LocalElementSize& size, const TileElementSize& block_size)
+    : Matrix<T, D>(Distribution(size, block_size)) {}
 
 template <class T, Device D>
-Matrix<T, D>::Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
+Matrix<T, D>::Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
                      const comm::CommunicatorGrid& comm)
-    : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0})) {}
+    : Matrix<T, D>(Distribution(size, block_size, comm.size(), comm.rank(), {0, 0})) {}
 
 template <class T, Device D>
 Matrix<T, D>::Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {

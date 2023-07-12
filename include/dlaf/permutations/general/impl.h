@@ -526,10 +526,11 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
                                        [a, b](SizeType i_perm) { return i_perm >= a && i_perm < b; });
   };
 
-  ex::when_all(send_counts_sender, recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               whenAllReadOnlyTilesArray(mat_send),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
-      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f));
+  ex::start_detached(ex::when_all(send_counts_sender, recv_counts_sender,
+                                  whenAllReadOnlyTilesArray(unpacking_index),
+                                  whenAllReadOnlyTilesArray(mat_send),
+                                  whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+                     di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_local_f)));
 
   // COMMUNICATION-dependent
   all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
@@ -551,10 +552,10 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
                                        [a, b](SizeType i_perm) { return i_perm < a || b <= i_perm; });
   };
 
-  ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-               whenAllReadOnlyTilesArray(mat_recv),
-               whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
-      di::transformDetach(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f));
+  ex::start_detached(ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
+                                  whenAllReadOnlyTilesArray(mat_recv),
+                                  whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
+                     di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(unpack_others_f)));
 }
 
 template <Backend B, Device D, class T, Coord C>

@@ -38,7 +38,7 @@ namespace eigensolver {
 /// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
 /// @pre mat_a and mat_b have the same square size,
 /// @pre mat_a and mat_b have the same square block size,
-/// @pre mat_a and mat_b have the same tile tile and block sizes,
+/// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are not distributed.
 template <Backend backend, Device device, class T>
 void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
@@ -83,7 +83,7 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
 /// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
 /// @pre mat_a and mat_b have the same square size,
 /// @pre mat_a and mat_b have the same square block size,
-/// @pre mat_a and mat_b have the same tile tile and block sizes,
+/// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are distributed according to the grid.
 template <Backend backend, Device device, class T>
 void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,

@@ -98,22 +98,30 @@ void copy(Matrix<T, Source>& src,  // TODO this should be const
   // TODO Currently multiple tile per blocks cannot be tested, as Matrix does not support it yet.
   DLAF_ASSERT_MODERATE(src.baseTileSize() == src.blockSize(), src.baseTileSize(), src.blockSize());
   DLAF_ASSERT_MODERATE(dst.baseTileSize() == dst.blockSize(), dst.baseTileSize(), dst.blockSize());
-  const TileElementSize block_size_src = src.blockSize();
-  const TileElementSize block_size_dst = dst.blockSize();
 
-  const SizeType mb = std::min<SizeType>(block_size_src.rows(), block_size_dst.rows());
-  const SizeType nb = std::min<SizeType>(block_size_src.cols(), block_size_dst.cols());
+  // Note:
+  // From an algorithmic point of view it would be better to reason in terms of block instead of tiles,
+  // with the aim of reducing the number of communications.
+  // Current implementation reasons in terms of tiles due to a limitation for "recursively retiled"
+  // matrices, which cannot access the original block of the original matrix, but just their specific
+  // tile size (i.e. tiles cannot be upscaled upto block). Dealing with tiles leads to a sub-optimal
+  // solution: smaller chunks are communicated, leading to a potentially higher number of communications.
+  const TileElementSize tile_size_src = src.baseTileSize();
+  const TileElementSize tile_size_dst = dst.baseTileSize();
 
-  DLAF_ASSERT_MODERATE(block_size_src.rows() % mb == 0, block_size_src.rows(), mb);
-  DLAF_ASSERT_MODERATE(block_size_dst.rows() % mb == 0, block_size_dst.rows(), mb);
-  DLAF_ASSERT_MODERATE(block_size_src.cols() % nb == 0, block_size_src.cols(), nb);
-  DLAF_ASSERT_MODERATE(block_size_dst.cols() % nb == 0, block_size_dst.cols(), nb);
+  const SizeType mb = std::min<SizeType>(tile_size_src.rows(), tile_size_dst.rows());
+  const SizeType nb = std::min<SizeType>(tile_size_src.cols(), tile_size_dst.cols());
 
-  const LocalTileSize tiles_per_block_src{block_size_src.rows() / mb, block_size_src.cols() / nb};
-  const LocalTileSize tiles_per_block_dst{block_size_dst.rows() / mb, block_size_dst.cols() / nb};
+  DLAF_ASSERT_MODERATE(tile_size_src.rows() % mb == 0, tile_size_src.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_size_dst.rows() % mb == 0, tile_size_dst.rows(), mb);
+  DLAF_ASSERT_MODERATE(tile_size_src.cols() % nb == 0, tile_size_src.cols(), nb);
+  DLAF_ASSERT_MODERATE(tile_size_dst.cols() % nb == 0, tile_size_dst.cols(), nb);
 
-  RetiledMatrix<T, Source> src_retiled(src, tiles_per_block_src);  // TODO this should be const
-  RetiledMatrix<T, Destination> dst_retiled(dst, tiles_per_block_dst);
+  const LocalTileSize scale_factor_src{tile_size_src.rows() / mb, tile_size_src.cols() / nb};
+  const LocalTileSize scale_factor_dst{tile_size_dst.rows() / mb, tile_size_dst.cols() / nb};
+
+  RetiledMatrix<T, Source> src_retiled(src, scale_factor_src);  // TODO this should be const
+  RetiledMatrix<T, Destination> dst_retiled(dst, scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
   common::Pipeline<comm::Communicator> comm_pipeline(grid.fullCommunicator().clone());

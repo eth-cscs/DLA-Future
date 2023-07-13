@@ -85,7 +85,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>debug_dump_trisolver_
 <tr class="memitem:a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memItemLeft" align="right" valign="top"><a id="a6d7a35956da99141f6bcd00f2a0cecc5"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>red2band_barrier_busy_wait_us</b> = 1000</td></tr>
 <tr class="separator:a6d7a35956da99141f6bcd00f2a0cecc5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_nworkers</b></td></tr>
+<tr class="memitem:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memItemLeft" align="right" valign="top"><a id="ad94d00453e4197e87b8a6616a55c7c4c"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_nworkers</b> = pika::resource::get_thread_pool(&quot;default&quot;).get_os_thread_count()</td></tr>
 <tr class="separator:ad94d00453e4197e87b8a6616a55c7c4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab468a066388750faccd2a30e399d70c8"><td class="memItemLeft" align="right" valign="top"><a id="ab468a066388750faccd2a30e399d70c8"></a>
 std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tridiag_rank1_barrier_busy_wait_us</b> = 0</td></tr>
@@ -122,22 +123,6 @@ SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>bt_band_to_tridia
       <table class="memname">
         <tr>
           <td class="memname">std::size_t dlaf::TuneParameters::red2band_panel_nworkers</td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line">=</div>
-<div class="line">      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2)</div>
-</div><!-- fragment -->
-</div>
-</div>
-<a id="ad94d00453e4197e87b8a6616a55c7c4c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad94d00453e4197e87b8a6616a55c7c4c">&#9670;&nbsp;</a></span>tridiag_rank1_nworkers</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">std::size_t dlaf::TuneParameters::tridiag_rank1_nworkers</td>
         </tr>
       </table>
 </div><div class="memdoc">

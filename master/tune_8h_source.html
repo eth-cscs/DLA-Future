@@ -93,18 +93,17 @@ $(function() {
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  std::size_t red2band_panel_nworkers =</div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2);</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  std::size_t red2band_barrier_busy_wait_us = 1000;</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  std::size_t tridiag_rank1_nworkers =</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2);</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160; </div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  SizeType eigensolver_min_band = 100;</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  SizeType band_to_tridiag_1d_block_size_base = 8192;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  SizeType bt_band_to_tridiag_hh_apply_group_size = 64;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;};</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160; </div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; getTuneParameters();</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;}</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  std::size_t tridiag_rank1_nworkers = pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count();</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160; </div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  SizeType eigensolver_min_band = 100;</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  SizeType band_to_tridiag_1d_block_size_base = 8192;</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  SizeType bt_band_to_tridiag_hh_apply_group_size = 64;</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;};</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; getTuneParameters();</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;}</div>
 <div class="ttc" id="astructdlaf_1_1_tune_parameters_html"><div class="ttname"><a href="structdlaf_1_1_tune_parameters.html">dlaf::TuneParameters</a></div><div class="ttdef"><b>Definition:</b> tune.h:58</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

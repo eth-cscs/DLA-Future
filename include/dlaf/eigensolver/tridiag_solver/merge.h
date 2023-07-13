@@ -469,7 +469,14 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
   TileCollector tc{i_begin, i_end};
 
-  const std::size_t nthreads = getTridiagRank1NWorkers();
+  // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
+  const std::size_t nthreads = [nrtiles = (i_end - i_begin)]() {
+    const std::size_t min_workers = 1;
+    const std::size_t available_workers = getTridiagRank1NWorkers();
+    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
+    return std::clamp(ideal_workers, min_workers, available_workers);
+  }();
+
   ex::start_detached(
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
@@ -825,10 +832,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   };
 
   // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
-  const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
+  const std::size_t nthreads = [nrtiles = sz_loc_tiles.cols()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = getTridiagRank1NWorkers();
-    const std::size_t ideal_workers = util::ceilDiv(to_sizet(size), to_sizet(2));
+    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 

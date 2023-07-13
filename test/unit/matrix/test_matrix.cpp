@@ -1840,8 +1840,9 @@ struct TestReshuffling {
   const TileElementSize dst_tilesize;
 };
 std::vector<TestReshuffling> sizes_reshuffling_tests{
-    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},
-    TestReshuffling{{10, 15}, {4, 3}, {2, 6}},
+    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},   // no-reshuffling
+    TestReshuffling{{10, 5}, {5, 10}, {10, 2}},  // x2 | /5
+    TestReshuffling{{26, 13}, {10, 3}, {5, 6}},  // /2 | x2
 };
 
 template <class T, Device Source, Device Destination>

@@ -1847,9 +1847,12 @@ std::vector<TestReshuffling> sizes_reshuffling_tests{
 template <class T, Device Source, Device Destination>
 void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
   const auto& [size, src_tilesize, dst_tilesize] = config;
-  const comm::Index2D origin_rank_src(0, 0);
+  const comm::Index2D origin_rank_src(std::max(0, grid.size().rows() - 1),
+                                      std::max(0, grid.size().cols() - 1));
   matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
-  const comm::Index2D origin_rank_dst(0, 0);
+  const comm::Index2D origin_rank_dst(
+      std::min(grid.size().rows() - 1, dlaf::util::ceilDiv(grid.size().rows(), 2)),
+      std::min(grid.size().cols() - 1, dlaf::util::ceilDiv(grid.size().cols(), 2)));
   matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
 
   matrix::Matrix<T, Device::CPU> src_host(dist_src);  // TODO this should be const

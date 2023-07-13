@@ -44,10 +44,10 @@ template <Backend backend, Device device, class T>
 dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
                        blas::Uplo uplo, Matrix<const T, device>& A) {
   using dlaf::matrix::equal_process_grid;
-  using dlaf::matrix::retiled;
+  using dlaf::matrix::single_tile_per_block;
 
   DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
-  DLAF_ASSERT(!retiled(A), A);
+  DLAF_ASSERT(single_tile_per_block(A), A);
 
   // LAPACK documentation specify that if any dimension is 0, the result is 0
   if (A.size().isEmpty())

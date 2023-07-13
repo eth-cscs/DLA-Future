@@ -45,8 +45,8 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
                 Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
 
@@ -117,8 +117,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
                 blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
 

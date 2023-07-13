@@ -47,8 +47,8 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
-  DLAF_ASSERT(!retiled(mat_c), mat_c);
-  DLAF_ASSERT(!retiled(mat_v), mat_v);
+  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);
+  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();
@@ -85,8 +85,8 @@ void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeTy
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
-  DLAF_ASSERT(!retiled(mat_c), mat_c);
-  DLAF_ASSERT(!retiled(mat_v), mat_v);
+  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);
+  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();

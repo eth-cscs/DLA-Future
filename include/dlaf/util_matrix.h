@@ -49,10 +49,10 @@ bool square_blocksize(const MatrixLike& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
-/// Returns true if the matrix is retiled, i.e. if block and tile size are unequal.
+/// Returns true if the matrix has a single tile per block.
 template <class MatrixLike>
-bool retiled(const MatrixLike& m) noexcept {
-  return m.blockSize() != m.baseTileSize();
+bool single_tile_per_block(const MatrixLike& m) noexcept {
+  return m.blockSize() == m.baseTileSize();
 }
 
 /// Returns true if matrices have equal sizes.

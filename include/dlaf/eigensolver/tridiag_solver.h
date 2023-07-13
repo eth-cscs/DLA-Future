@@ -44,7 +44,7 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
-  DLAF_ASSERT(!matrix::retiled(tridiag), tridiag);
+  DLAF_ASSERT(matrix::single_tile_per_block(tridiag), tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
@@ -53,8 +53,8 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
   DLAF_ASSERT(matrix::square_size(evecs), evecs);
   DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
 
-  DLAF_ASSERT(!matrix::retiled(evecs), evecs);
-  DLAF_ASSERT(!matrix::retiled(evals), evals);
+  DLAF_ASSERT(matrix::single_tile_per_block(evecs), evecs);
+  DLAF_ASSERT(matrix::single_tile_per_block(evals), evals);
 
   DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
               evecs.distribution().blockSize().rows(), tridiag.distribution().blockSize().rows());
@@ -96,7 +96,7 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
-  DLAF_ASSERT(!matrix::retiled(tridiag), tridiag);
+  DLAF_ASSERT(matrix::single_tile_per_block(tridiag), tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
@@ -105,8 +105,8 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>
   DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
   DLAF_ASSERT(matrix::equal_process_grid(evecs, grid), evecs, grid);
 
-  DLAF_ASSERT(!matrix::retiled(evecs), evecs);
-  DLAF_ASSERT(!matrix::retiled(evals), evals);
+  DLAF_ASSERT(matrix::single_tile_per_block(evecs), evecs);
+  DLAF_ASSERT(matrix::single_tile_per_block(evals), evals);
 
   DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
               evecs, tridiag);

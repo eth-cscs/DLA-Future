@@ -78,7 +78,7 @@ TridiagResult<T, Device::CPU> bandToTridiag(blas::Uplo uplo, SizeType band_size,
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(band_size >= 2, band_size);
 
   switch (uplo) {
@@ -150,7 +150,7 @@ TridiagResult<T, Device::CPU> bandToTridiag(comm::CommunicatorGrid grid, blas::U
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(band_size >= 2, band_size);
 
   // If the grid contains only one rank force local implementation.

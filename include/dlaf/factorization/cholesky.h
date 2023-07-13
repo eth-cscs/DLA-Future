@@ -40,7 +40,7 @@ template <Backend backend, Device device, class T>
 void cholesky(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
   if (uplo == blas::Uplo::Lower)
@@ -68,7 +68,7 @@ template <Backend backend, Device device, class T>
 void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   // Method only for Lower triangular matrix

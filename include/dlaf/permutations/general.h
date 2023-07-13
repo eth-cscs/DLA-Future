@@ -52,9 +52,9 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
 
-  DLAF_ASSERT(!matrix::retiled(perms), perms);
-  DLAF_ASSERT(!matrix::retiled(mat_in), mat_in);
-  DLAF_ASSERT(!matrix::retiled(mat_out), mat_out);
+  DLAF_ASSERT(matrix::single_tile_per_block(perms), perms);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_in), mat_in);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_out), mat_out);
 
   DLAF_ASSERT(perms.size().rows() == mat_in.size().rows(), perms, mat_in);
   DLAF_ASSERT(perms.size().cols() == 1, perms);
@@ -104,9 +104,9 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
   DLAF_ASSERT(matrix::equal_size(mat_in, mat_out), mat_in);
   DLAF_ASSERT(matrix::equal_blocksize(mat_in, mat_out), mat_in);
 
-  DLAF_ASSERT(!matrix::retiled(perms), perms);
-  DLAF_ASSERT(!matrix::retiled(mat_in), mat_in);
-  DLAF_ASSERT(!matrix::retiled(mat_out), mat_out);
+  DLAF_ASSERT(matrix::single_tile_per_block(perms), perms);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_in), mat_in);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_out), mat_out);
 
   DLAF_ASSERT(perms.size().rows() == mat_in.size().rows(), perms, mat_in);
   DLAF_ASSERT(perms.size().cols() == 1, perms);

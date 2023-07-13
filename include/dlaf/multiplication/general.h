@@ -53,9 +53,9 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_c), mat_c);
 
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
 
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
@@ -114,9 +114,9 @@ void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_c), mat_c);
 
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!dlaf::matrix::retiled(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
 
   // Note:
   // This is an over-constraint, since the algorithm just cares about the sub-matrix size (and its

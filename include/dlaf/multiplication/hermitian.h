@@ -43,9 +43,9 @@ void hermitian(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, 
                Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!matrix::retiled(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
@@ -95,9 +95,9 @@ void hermitian(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, co
                Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!matrix::retiled(mat_c), mat_c);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);

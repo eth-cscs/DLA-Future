@@ -58,10 +58,10 @@ void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
               eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!matrix::retiled(eigenvalues), eigenvalues);
-  DLAF_ASSERT(!matrix::retiled(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
 
   internal::GenEigensolver<B, D, T>::call(uplo, mat_a, mat_b, eigenvalues, eigenvectors);
 }
@@ -143,10 +143,10 @@ void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& 
               eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat_a.size(), eigenvectors, mat_a);
   DLAF_ASSERT(eigenvectors.blockSize() == mat_a.blockSize(), eigenvectors, mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
-  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
-  DLAF_ASSERT(!matrix::retiled(eigenvalues), eigenvalues);
-  DLAF_ASSERT(!matrix::retiled(eigenvectors), eigenvectors);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(matrix::single_tile_per_block(eigenvectors), eigenvectors);
 
   internal::GenEigensolver<B, D, T>::call(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors);
 }

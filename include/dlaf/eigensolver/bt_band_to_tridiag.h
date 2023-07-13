@@ -65,8 +65,8 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
   DLAF_ASSERT(mat_hh.size().rows() == mat_e.size().rows(), mat_hh, mat_e);
   DLAF_ASSERT(mat_hh.blockSize().rows() == mat_e.blockSize().rows(), mat_hh, mat_e);
 
-  DLAF_ASSERT(!matrix::retiled(mat_e), mat_e);
-  DLAF_ASSERT(!matrix::retiled(mat_hh), mat_hh);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_e), mat_e);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_hh), mat_hh);
 
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);

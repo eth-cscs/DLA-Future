@@ -618,17 +618,6 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       }));
 }
 
-template <class T, Device D, class KSender>
-void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix<T, D>& mat) {
-  // Iterate over diagonal tiles
-  const matrix::Distribution& distr = mat.distribution();
-  for (SizeType i_tile = i_begin; i_tile < i_end; ++i_tile) {
-    const SizeType tile_begin = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-
-    setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite(GlobalTileIndex(i_tile, i_tile)));
-  }
-}
-
 template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
                       RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,

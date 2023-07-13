@@ -93,20 +93,4 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& t
   }
 }
 
-template <class T>
-void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
-                     const matrix::Tile<T, Device::CPU>& tile) {
-  // If all elements of the tile are after the `k` index reset the offset
-  SizeType tile_offset = k - tile_begin;
-  if (tile_offset < 0)
-    tile_offset = 0;
-
-  // Set all diagonal elements of the tile to 1.
-  for (SizeType i = tile_offset; i < tile.size().rows(); ++i) {
-    tile(TileElementIndex(i, i)) = 1;
-  }
-}
-
-DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, float);
-DLAF_CPU_SET_UNIT_DIAGONAL_ETI(, double);
 }

@@ -33,14 +33,18 @@ namespace eigensolver {
 ///
 /// @pre tridiag and @p evals and @p evecs are local matrices
 /// @pre tridiag has 2 columns and column block size of 2
+/// @pre tridiag has equal tile and block sizes
 /// @pre evecs is a square matrix with number of rows equal to the number of rows of @p tridiag and @p evals
-/// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
+/// @pre evecs has a square block size with number of block rows equal to the block rows of @p tridiag and @p evals
+/// @pre evals has equal tile and block sizes
+/// @pre evecs has equal tile and block sizes
 template <Backend backend, Device device, class T>
 void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>, device>& evals,
                    Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
+  DLAF_ASSERT(!matrix::retiled(tridiag), tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
@@ -48,6 +52,9 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
   DLAF_ASSERT(matrix::local_matrix(evecs), evecs);
   DLAF_ASSERT(matrix::square_size(evecs), evecs);
   DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
+
+  DLAF_ASSERT(!matrix::retiled(evecs), evecs);
+  DLAF_ASSERT(!matrix::retiled(evals), evals);
 
   DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
               evecs.distribution().blockSize().rows(), tridiag.distribution().blockSize().rows());
@@ -70,19 +77,26 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
 ///                of the second column is not used.
 /// @param evals [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal
 ///              matrix
-/// @param evecs [out] (n x n) distributed matrix holding the eigenvectors of the the symmetric tridiagonal
+/// @param evecs [out] (n x n) distributed matrix holding the eigenvectors of the the symmetric
+/// tridiagonal
 ///              matrix on exit.
 ///
 /// @pre tridiag and @p evals are local matrices and are the same on all ranks
 /// @pre tridiag has 2 columns and column block size of 2
-/// @pre evecs is a square matrix with global number of rows equal to the number of rows of @p tridiag and @p evals
-/// @pre evecs has a square block size with number of block rows eqaul to the block rows of @p tridiag and @p evals
+/// @pre tridiag has equal tile and block sizes
+/// @pre evecs is a square matrix with global number of rows equal to the number of rows of @p tridiag
+/// and @p evals
+/// @pre evecs has a square block size with number of block rows equal to the block rows of @p tridiag
+/// and @p evals
+/// @pre evals has equal tile and block sizes
+/// @pre evecs has equal tile and block sizes
 template <Backend B, Device D, class T>
 void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
+  DLAF_ASSERT(!matrix::retiled(tridiag), tridiag);
 
   DLAF_ASSERT(matrix::local_matrix(evals), evals);
   DLAF_ASSERT(evals.distribution().size().cols() == 1, evals);
@@ -90,6 +104,9 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>
   DLAF_ASSERT(matrix::square_size(evecs), evecs);
   DLAF_ASSERT(matrix::square_blocksize(evecs), evecs);
   DLAF_ASSERT(matrix::equal_process_grid(evecs, grid), evecs, grid);
+
+  DLAF_ASSERT(!matrix::retiled(evecs), evecs);
+  DLAF_ASSERT(!matrix::retiled(evals), evals);
 
   DLAF_ASSERT(tridiag.distribution().blockSize().rows() == evecs.distribution().blockSize().rows(),
               evecs, tridiag);

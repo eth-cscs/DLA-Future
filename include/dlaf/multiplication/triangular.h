@@ -37,6 +37,7 @@ namespace multiplication {
 /// elements of the result.
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
+/// @pre mat_a and mat_b have equal tile and block sizes,
 /// @pre mat_a and mat_b are not distributed,
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
@@ -44,6 +45,8 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
                 Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
 
@@ -104,6 +107,7 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 /// elements of the result.
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
+/// @pre mat_a and mat_b have equal tile and block sizes,
 /// @pre mat_a and mat_b are distributed according to the grid,
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
@@ -111,6 +115,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
                 blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_b), mat_b);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
 

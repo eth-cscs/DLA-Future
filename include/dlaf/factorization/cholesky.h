@@ -34,11 +34,13 @@ namespace factorization {
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
+/// @pre mat_a has equal tile and block sizes
 /// @pre mat_a is not distributed.
 template <Backend backend, Device device, class T>
 void cholesky(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
   if (uplo == blas::Uplo::Lower)
@@ -60,11 +62,13 @@ void cholesky(blas::Uplo uplo, Matrix<T, device>& mat_a) {
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
 /// @pre mat_a has a square size,
 /// @pre mat_a has a square block size,
+/// @pre mat_a has equal tile and block sizes
 /// @pre mat_a is distributed according to grid.
 template <Backend backend, Device device, class T>
 void cholesky(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   // Method only for Lower triangular matrix

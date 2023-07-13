@@ -51,6 +51,8 @@ namespace dlaf::eigensolver {
 // @pre band_size is a divisor of mat_hh.blockSize().cols()
 // @pre mat_e is not distributed
 // @pre mat_hh is not distributed
+// @pre mat_e has equal tile and block sizes
+// @pre mat_hh has equal tile and block sizes
 template <Backend B, Device D, class T>
 void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, D>& mat_e,
                                      matrix::Matrix<const T, Device::CPU>& mat_hh) {
@@ -62,6 +64,9 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
 
   DLAF_ASSERT(mat_hh.size().rows() == mat_e.size().rows(), mat_hh, mat_e);
   DLAF_ASSERT(mat_hh.blockSize().rows() == mat_e.blockSize().rows(), mat_hh, mat_e);
+
+  DLAF_ASSERT(!matrix::retiled(mat_e), mat_e);
+  DLAF_ASSERT(!matrix::retiled(mat_hh), mat_hh);
 
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);

@@ -34,7 +34,9 @@ namespace eigensolver {
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 /// @pre mat_c is not distributed,
-/// @pre mat_v is not distributed.
+/// @pre mat_v is not distributed,
+/// @pre mat_c has equal tile and block sizes,
+/// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_c,
                                        Matrix<const T, device>& mat_v,
@@ -45,6 +47,8 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
+  DLAF_ASSERT(!retiled(mat_c), mat_c);
+  DLAF_ASSERT(!retiled(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();
@@ -68,7 +72,9 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 /// @pre mat_c is distributed,
-/// @pre mat_v is distributed according to grid.
+/// @pre mat_v is distributed according to grid,
+/// @pre mat_c has equal tile and block sizes,
+/// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
 void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeType b,
                                        Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
@@ -79,6 +85,8 @@ void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeTy
   DLAF_ASSERT(square_blocksize(mat_v), mat_v);
   DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);
   DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);
+  DLAF_ASSERT(!retiled(mat_c), mat_c);
+  DLAF_ASSERT(!retiled(mat_v), mat_v);
 
   [[maybe_unused]] auto nr_reflectors_blocks = [&b, &mat_v]() {
     const SizeType m = mat_v.size().rows();

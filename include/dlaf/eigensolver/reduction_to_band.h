@@ -32,12 +32,14 @@ namespace dlaf::eigensolver {
 ///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size
+/// @pre mat_a has equal tile and block sizes
 /// @pre mat_a is a local matrix
 /// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> reductionToBand(Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
 
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
 
@@ -97,6 +99,7 @@ v v v v * *
 ///
 /// @pre mat_a has a square size
 /// @pre mat_a has a square block size
+/// @pre mat_a has equal tile and block sizes
 /// @pre mat_a is distributed according to @p grid
 /// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
@@ -104,6 +107,7 @@ Matrix<T, Device::CPU> reductionToBand(comm::CommunicatorGrid grid, Matrix<T, D>
                                        const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
+  DLAF_ASSERT(!matrix::retiled(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
 
   DLAF_ASSERT(band_size >= 2, band_size);

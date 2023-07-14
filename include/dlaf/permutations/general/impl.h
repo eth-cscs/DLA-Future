@@ -132,49 +132,6 @@ void applyPermutations(
   }
 }
 
-// FilterFunc is a function with signature bool(*)(SizeType)
-template <class T, Device D, Coord C, class FilterFunc>
-void applyPermutationsFiltered(
-    const GlobalElementIndex out_begin, const GlobalElementSize sz, const SizeType in_offset,
-    const matrix::Distribution& subm_dist, const SizeType* perm_arr,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles_fut,
-    const std::vector<matrix::Tile<T, D>>& out_tiles, FilterFunc&& filter) {
-  constexpr auto OC = orthogonal(C);
-  std::vector<SizeType> splits =
-      dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                   subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                   subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-
-  const SizeType nperms = subm_dist.size().get<C>();
-
-  // Parallelized over the number of permutations
-  pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-    if (!filter(perm_arr[i_perm]))
-      return;
-
-    for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-      const SizeType split = splits[i_split];
-
-      GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<OC>(), out_begin.get<C>() + i_perm);
-      TileElementSize region(splits[i_split + 1] - split, 1);
-
-      if constexpr (C == Coord::Row) {
-        region.transpose();
-        i_split_gl_in.transpose();
-        i_split_gl_out.transpose();
-      }
-
-      const TileElementIndex i_subtile_in = subm_dist.tileElementIndex(i_split_gl_in);
-      const auto& tile_in = in_tiles_fut[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_in))].get();
-      const TileElementIndex i_subtile_out = subm_dist.tileElementIndex(i_split_gl_out);
-      auto& tile_out = out_tiles[to_sizet(subm_dist.globalTileLinearIndex(i_split_gl_out))];
-
-      dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-    }
-  });
-}
-
 template <class T, Device D, Coord C>
 void applyPermutation(
     const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,

@@ -89,15 +89,14 @@ namespace dlaf::permutations::internal {
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
 // TODO: Where should this doc be moved?
 
-// TODO: Remove Device D, only for CPU
 // TODO: sz unused
-template <class T, Device D, Coord C>
+template <class T, Coord C>
 void applyPermutation(
     const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
     const GlobalElementSize /*sz*/, const SizeType in_offset, const matrix::Distribution& subm_dist,
     const SizeType* perm_arr,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, D>>& in_tiles_fut,
-    const std::vector<matrix::Tile<T, D>>& out_tiles) {
+    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::CPU>>& in_tiles_fut,
+    const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
   constexpr auto OC = orthogonal(C);
 
   for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
@@ -163,8 +162,8 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
         DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
         DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
 
-        applyPermutation<T, Device::CPU, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset,
-                                            subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
+        applyPermutation<T, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset, subm_dist,
+                               perm_arr, mat_in_tiles, mat_out_tiles);
       });
     };
 
@@ -393,8 +392,8 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
         DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
         DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
 
-        applyPermutation<T, Device::CPU, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset,
-                                            subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
+        applyPermutation<T, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset, subm_dist,
+                               perm_arr, mat_in_tiles, mat_out_tiles);
       });
     };
 
@@ -478,8 +477,8 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
 
     // [a, b)
     if (a <= perm_arr[i_perm] && perm_arr[i_perm] < b) {
-      applyPermutation<T, Device::CPU, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr,
-                                          mat_in_tiles, mat_out_tiles);
+      applyPermutation<T, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles,
+                             mat_out_tiles);
     }
   };
 
@@ -529,8 +528,8 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
 
     // [0, a) and [b, end)
     if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
-      applyPermutation<T, Device::CPU, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr,
-                                          mat_in_tiles, mat_out_tiles);
+      applyPermutation<T, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles,
+                             mat_out_tiles);
     }
   };
 

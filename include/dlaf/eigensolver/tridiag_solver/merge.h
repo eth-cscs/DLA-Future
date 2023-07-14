@@ -537,11 +537,27 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
           }
 
-          // Note: for in-place row permutation implementation: The rows should be permuted for the k=2 case as well.
-
           // Note: laed4 handles k <= 2 cases differently
-          if (k <= 2)
+          if (k <= 2) {
+            // Note: The rows should be permuted for the k=2 case as well.
+            if (k == 2) {
+              T* ws = ws_vecs[thread_idx]();
+              for (int j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+                const SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, j));
+                const SizeType j_col = distr.tileElementFromGlobalElement<Coord::Col>(j);
+                T* evec = evec_tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_col));
+
+                std::copy(evec, evec + k, ws);
+                std::fill_n(evec, k, 0);  // by default "deflated"
+                for (int i = 0; i < n; ++i) {
+                  const SizeType ii = i2_perm[i];
+                  if (ii < k)
+                    evec[i] = ws[ii];
+                }
+              }
+            }
             return;
+          }
         }
 
         // Note: This barrier ensures that LAED4 finished, so from now on values are available

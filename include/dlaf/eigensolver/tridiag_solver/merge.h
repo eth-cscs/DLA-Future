@@ -460,7 +460,8 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
 template <class T, class KSender, class RhoSender>
 void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k, RhoSender&& rho,
                        Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
-                       Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+                       Matrix<T, Device::CPU>& evals, Matrix<const SizeType, Device::CPU>& i2,
+                       Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -474,13 +475,15 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
-                   ex::when_all_vector(tc.readwrite(evecs)),
+                   ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
-                                           auto& evec_tiles, auto& ws_vecs) {
+                                           const auto& i2_tile_arr, auto& evec_tiles, auto& ws_vecs) {
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+        const SizeType* i2_perm = i2_tile_arr[0].get().ptr();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
         const std::size_t batch_size = util::ceilDiv(to_sizet(k), nthreads);
@@ -700,19 +703,13 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // The input is not required to be zero for solveRank1Problem.
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);
+  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  //
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  // The following permutation will be removed in the future.
-  // (The copy is needed to simplify the removal)
-  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.e2, ws.e0);
-  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
                                                   T(1), ws.e1, ws.e2, T(0), ws.e0);
 
@@ -904,7 +901,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           // Note:
           // Considering that
           // - LAED4 requires working on k elements
-          // - Weight computaiton requires working on m_subm_el_lc
+          // - Weight computation requires working on m_subm_el_lc
           //
           // and they are needed at two steps that cannot happen in parallel, we opted for allocating the
           // workspace with the highest requirement of memory, and reuse them for both steps.

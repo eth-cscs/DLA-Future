@@ -210,7 +210,6 @@ template <Backend B, Device D, class T, Coord C>
 void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
-  namespace ut = matrix::util;
   namespace ex = pika::execution::experimental;
 
   if (i_begin == i_end)
@@ -244,14 +243,12 @@ template <class T, Device D>
 auto whenAllReadWriteTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix<T, D>& matrix) {
   const LocalTileSize sz{end.row() - begin.row(), end.col() - begin.col()};
   namespace ex = pika::execution::experimental;
-  namespace ut = matrix::util;
   return ex::when_all_vector(matrix::select(matrix, common::iterate_range2d(begin, sz)));
 }
 
 template <class T, Device D>
 auto whenAllReadWriteTilesArray(Matrix<T, D>& matrix) {
   namespace ex = pika::execution::experimental;
-  namespace ut = matrix::util;
   return ex::when_all_vector(matrix::select(
       matrix, common::iterate_range2d(LocalTileIndex(0, 0), matrix.distribution().localNrTiles())));
 }
@@ -260,14 +257,12 @@ template <class T, Device D>
 auto whenAllReadOnlyTilesArray(LocalTileIndex begin, LocalTileIndex end, Matrix<const T, D>& matrix) {
   const LocalTileSize sz{end.row() - begin.row(), end.col() - begin.col()};
   namespace ex = pika::execution::experimental;
-  namespace ut = matrix::util;
   return ex::when_all_vector(matrix::selectRead(matrix, common::iterate_range2d(begin, sz)));
 }
 
 template <class T, Device D>
 auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
   namespace ex = pika::execution::experimental;
-  namespace ut = matrix::util;
   return ex::when_all_vector(matrix::selectRead(
       matrix, common::iterate_range2d(LocalTileIndex(0, 0), matrix.distribution().localNrTiles())));
 }

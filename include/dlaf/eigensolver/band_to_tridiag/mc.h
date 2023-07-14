@@ -677,7 +677,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using util::ceilDiv;
 
   using pika::resource::get_num_threads;
-  using semaphore_ptr = std::shared_ptr<pika::counting_semaphore<>>;
+  using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
+  using TileVectorPtr = std::shared_ptr<std::vector<matrix::Tile<T, Device::CPU>>>;
 
   namespace ex = pika::execution::experimental;
 
@@ -730,8 +731,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   }
   ex::start_detached(std::move(prev_dep));
 
-  auto run_sweep = [a_ws, size, nb, b](semaphore_ptr&& sem, semaphore_ptr&& sem_next, SizeType sweep,
-                                       const std::vector<matrix::Tile<T, Device::CPU>>& tiles_v) {
+  auto run_sweep = [a_ws, size, nb, b](SemaphorePtr&& sem, SemaphorePtr&& sem_next, SizeType sweep,
+                                       const TileVectorPtr& tiles_v) {
     SweepWorker<T> worker(size, b);
     const SizeType nr_steps = nrStepsForSweep(sweep, size, b);
     worker.startSweep(sweep, *a_ws);
@@ -739,7 +740,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       SizeType j_el_tl = sweep % nb;
       // ii_el is the row element index with origin in the first row of the diagonal tile.
       SizeType i_el = j_el_tl / b * b + step * b;
-      worker.compactCopyToTile(tiles_v[to_sizet(i_el / nb)], TileElementIndex(i_el % nb, j_el_tl));
+      worker.compactCopyToTile((*tiles_v)[to_sizet(i_el / nb)], TileElementIndex(i_el % nb, j_el_tl));
       sem->acquire();
       worker.doStep(*a_ws);
       sem_next->release(1);
@@ -760,16 +761,17 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
   };
 
-  auto before_sweep = [](semaphore_ptr&& sem) { sem->acquire(); };
+  auto before_sweep = [](SemaphorePtr&& sem) { sem->acquire(); };
 
   auto before_sweep_copy_tridiag = [copy_tridiag_task,
-                                    nb](semaphore_ptr&& sem, SizeType sweep,
+                                    nb](SemaphorePtr&& sem, SizeType sweep,
                                         const matrix::Tile<BaseType<T>, Device::CPU>& tile_t) {
     sem->acquire();
     copy_tridiag_task(sweep - nb, nb, nb, tile_t);
   };
 
   const SizeType sweeps = nrSweeps<T>(size);
+  ex::any_sender<TileVectorPtr> tiles_v;
 
   for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
     auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
@@ -783,11 +785,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             dlaf::internal::transform(policy_hp, before_sweep_copy_tridiag);
     }
     const SizeType i = sweep / nb;
-    auto tiles_v =
-        matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}));
+    if (sweep % nb == 0) {
+      tiles_v = ex::when_all_vector(matrix::select(
+                    mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}))) |
+                ex::then([](auto&& vector) {
+                  return std::make_shared<typename TileVectorPtr::element_type>(std::move(vector));
+                }) |
+                ex::split();
+    }
     // TODO needs trasformDetach with policy_hp or the priority come from the dependency?
-    ex::start_detached(ex::when_all(ex::just(sem, sem_next, sweep),
-                                    ex::when_all_vector(std::move(tiles_v)), std::move(dep)) |
+    ex::start_detached(ex::when_all(ex::just(sem, sem_next, sweep), tiles_v, std::move(dep)) |
                        ex::then(run_sweep));
     sem = std::move(sem_next);
   }

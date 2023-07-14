@@ -778,24 +778,51 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   ex::unique_any_sender<semaphore_ptr> sem_sender =
       ex::just(std::move(sem)) | dlaf::internal::transform(policy_hp, before_sweep);
 
-  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
-    auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
+  for (SizeType sweep = 0; sweep < sweeps; sweep += nb) {
     const SizeType i = sweep / nb;
-    auto tiles_v =
-        matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}));
-    // TODO needs trasformDetach with policy_hp or the priority come from the dependency?
-    ex::start_detached(ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep),
-                                    ex::when_all_vector(std::move(tiles_v))) |
-                       ex::then(run_sweep));
+    auto tiles_v = ex::when_all_vector(
+        matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1})));
+    auto tile_t = mat_trid.readwrite(GlobalTileIndex{sweep / nb, 0});
+    auto sem_next_block = std::make_shared<pika::counting_semaphore<>>(0);
 
-    ex::unique_any_sender<> dep;
-    if ((sweep + 1) % nb != 0) {
-      sem_sender = ex::just(std::move(sem_next)) | dlaf::internal::transform(policy_hp, before_sweep);
+    SizeType sweep_start = sweep;
+    SizeType sweep_end = std::min(sweep_start + nb, sweeps);
+    ex::start_detached(
+        ex::when_all(std::move(sem_sender), ex::just(sem_next_block), std::move(tiles_v)) |
+        ex::let_value([sweep_start, sweep_end, before_sweep,
+                       run_sweep](semaphore_ptr& sem, semaphore_ptr& sem_next_block,
+                                  const std::vector<matrix::Tile<T, Device::CPU>>& tiles_v) {
+          const auto policy_hp =
+              dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
+
+          ex::unique_any_sender<semaphore_ptr> sem_sender = ex::just(sem);
+          ex::unique_any_sender<> last_sender;
+
+          for (SizeType sweep = sweep_start; sweep < sweep_end; ++sweep) {
+            auto sem_next = sweep == sweep_end - 1 ? std::move(sem_next_block)
+                                                   : std::make_shared<pika::counting_semaphore<>>(0);
+            last_sender =
+                ex::ensure_started(ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep),
+                                                ex::just(std::cref(tiles_v))) |
+                                   dlaf::internal::transform(policy_hp, run_sweep));
+
+            ex::unique_any_sender<> dep;
+            if (sweep < sweep_end - 1) {
+              sem_sender =
+                  ex::just(std::move(sem_next)) | dlaf::internal::transform(policy_hp, before_sweep);
+            }
+          }
+
+          return std::move(last_sender);
+        }));
+
+    if (sweep_end % nb != 0) {
+      sem_sender =
+          ex::just(std::move(sem_next_block)) | dlaf::internal::transform(policy_hp, before_sweep);
     }
     else {
-      const auto tile_index = sweep / nb;
-      sem_sender = ex::when_all(ex::just(std::move(sem_next), sweep + 1),
-                                mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
+      // This task should be outside of the let_value to release tile_t as soon as this task finished.
+      sem_sender = ex::when_all(ex::just(std::move(sem_next_block), sweep_end), std::move(tile_t)) |
                    dlaf::internal::transform(policy_hp, before_sweep_copy_tridiag);
     }
   }

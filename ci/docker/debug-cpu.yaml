@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - pika@git.fix-memory-leak-stackoverflow-detection +mpi
+    - pika@main +mpi
     - dla-future@master build_type=Debug +miniapps +ci-test +ci-check-threads ^openblas threads=openmp ^mpich
 
   packages:

@@ -495,12 +495,17 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // to be dropped soon.
         // Note: use last thread that in principle should have less work to do
         if (thread_idx == nthreads - 1) {
-          for (auto j = k; j < n; ++j) {
-            const GlobalElementIndex kk(j, j);
-            const auto diag_tile = distr.globalTileLinearIndex(kk);
-            const auto diag_element = distr.tileElementIndex(kk);
+          for (auto i = 0; i < n; ++i) {
+            const SizeType j = i2_perm[to_sizet(i)];
 
-            evec_tiles[to_sizet(diag_tile)](diag_element) = 1;
+            // if it is deflated
+            if (j >= k) {
+              const GlobalElementIndex ij(i, j);
+              const auto linear_ij = distr.globalTileLinearIndex(ij);
+              const auto ij_el = distr.tileElementIndex(ij);
+
+              evec_tiles[to_sizet(linear_ij)](ij_el) = 1;
+            }
           }
         }
 
@@ -539,6 +544,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             return;
         }
 
+        // Note: This barrier ensures that LAED4 finished, so from now on values are available
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2a Compute weights (multi-thread)
@@ -610,11 +616,15 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             const T vec_norm = blas::nrm2(k, s, 1);
 
-            for (auto i = 0; i < k; ++i) {
+            for (auto i = 0; i < n; ++i) {
+              const SizeType ii = i2_perm[i];
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
 
-              q[to_sizet(q_tile)](q_ij) = s[i] / vec_norm;
+              if (ii < k)
+                q[to_sizet(q_tile)](q_ij) = s[ii] / vec_norm;
+              else
+                q[to_sizet(q_tile)](q_ij) = 0;
             }
           }
         }

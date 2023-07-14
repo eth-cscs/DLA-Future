@@ -87,47 +87,10 @@ namespace dlaf::permutations::internal {
 // [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-template <class T, Coord C>
-void applyPermutationsOnCPU(
-    const GlobalElementIndex out_begin, const GlobalElementSize sz, const SizeType in_offset,
-    const matrix::Distribution& distr, const SizeType* perm_arr,
-    const std::vector<matrix::internal::TileAsyncRwMutexReadOnlyWrapper<T, Device::CPU>>& in_tiles,
-    const std::vector<matrix::Tile<T, Device::CPU>>& out_tiles) {
-  constexpr Coord orth_coord = orthogonal(C);
-  std::vector<SizeType> splits =
-      util::interleaveSplits(sz.get<orth_coord>(), distr.blockSize().get<orth_coord>(),
-                             distr.distanceToAdjacentTile<orth_coord>(in_offset),
-                             distr.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
+// TODO: Where should this doc be moved?
 
-  // Parallelized over the number of permuted columns or rows
-  const SizeType nperms = sz.get<C>();
-  pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-    DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-    DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
-
-    for (std::size_t i_split = 0; i_split < splits.size() - 1; ++i_split) {
-      const SizeType split = splits[i_split];
-
-      GlobalElementIndex i_split_gl_in(split + in_offset, perm_arr[i_perm]);
-      GlobalElementIndex i_split_gl_out(split + out_begin.get<orth_coord>(),
-                                        out_begin.get<C>() + i_perm);
-      TileElementSize region(splits[i_split + 1] - split, 1);
-      if constexpr (C == Coord::Row) {
-        region.transpose();
-        i_split_gl_in.transpose();
-        i_split_gl_out.transpose();
-      }
-
-      const TileElementIndex i_subtile_in = distr.tileElementIndex(i_split_gl_in);
-      const auto& tile_in = in_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_in))].get();
-      const TileElementIndex i_subtile_out = distr.tileElementIndex(i_split_gl_out);
-      auto& tile_out = out_tiles[to_sizet(distr.globalTileLinearIndex(i_split_gl_out))];
-
-      dlaf::tile::lacpy<T>(region, i_subtile_in, tile_in, i_subtile_out, tile_out);
-    }
-  });
-}
-
+// TODO: Remove Device D, only for CPU
+// TODO: sz unused
 template <class T, Device D, Coord C>
 void applyPermutation(
     const SizeType i_perm, const std::vector<SizeType>& splits, const GlobalElementIndex out_begin,
@@ -185,9 +148,24 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
     auto permute_fn = [subm_dist](const auto& index_tile_futs, const auto& mat_in_tiles,
                                   const auto& mat_out_tiles) {
       TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutationsOnCPU<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
-                                   mat_in_tiles, mat_out_tiles);
+      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
+      const GlobalElementIndex out_begin{0, 0};
+      const SizeType in_offset = 0;
+      constexpr Coord orth_coord = orthogonal(C);
+      std::vector<SizeType> splits = util::interleaveSplits(
+          subm_dist.size().get<orth_coord>(), subm_dist.blockSize().get<orth_coord>(),
+          subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
+          subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
+
+      // Parallelized over the number of permuted columns or rows
+      const SizeType nperms = subm_dist.size().get<C>();
+      pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+        DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+        DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
+        applyPermutation<T, Device::CPU, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset,
+                                            subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
+      });
     };
 
     ex::start_detached(dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn),
@@ -398,11 +376,26 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
 
   if constexpr (D == Device::CPU) {
     auto permute_fn = [subm_dist](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                  const auto& mat_out_tiles, auto&&... ts) {
+                                  const auto& mat_out_tiles) {
       TileElementIndex zero(0, 0);
-      const SizeType* i_ptr = index_tile_futs[0].get().ptr(zero);
-      applyPermutationsOnCPU<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
-                                   mat_in_tiles, mat_out_tiles);
+      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
+      const GlobalElementIndex out_begin{0, 0};
+      const SizeType in_offset = 0;
+      constexpr Coord orth_coord = orthogonal(C);
+      std::vector<SizeType> splits = util::interleaveSplits(
+          subm_dist.size().get<orth_coord>(), subm_dist.blockSize().get<orth_coord>(),
+          subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
+          subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
+
+      // Parallelized over the number of permuted columns or rows
+      const SizeType nperms = subm_dist.size().get<C>();
+      pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
+        DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+        DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
+        applyPermutation<T, Device::CPU, C>(i_perm, splits, out_begin, subm_dist.size(), in_offset,
+                                            subm_dist, perm_arr, mat_in_tiles, mat_out_tiles);
+      });
     };
 
     ex::start_detached(dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),

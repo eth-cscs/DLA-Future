@@ -435,6 +435,56 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                                    std::move(sender)));
 }
 
+template <class T, Coord C, class RecvCountsSender, class UnpackingIndexSender, class MatRecvSender,
+          class MatOutSender>
+void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Distribution& dist,
+                       RecvCountsSender&& recv_counts, UnpackingIndexSender&& unpacking_index,
+                       MatRecvSender&& mat_recv, MatOutSender&& mat_out) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  auto setup_unpack_f = [subm_dist,
+                         rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
+                                                           auto mat_in_tiles, auto mat_out_tiles) {
+    const size_t rank_index = to_sizet(rank);
+    const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
+    const int b = a + recv_counts[rank_index];
+
+    constexpr auto OC = orthogonal(C);
+    const GlobalElementSize sz = subm_dist.size();
+    // TODO: Always 0?
+    const SizeType in_offset = 0;
+    // TODO: Always {0, 0}?
+    const GlobalElementIndex out_begin{0, 0};
+
+    std::vector<SizeType> splits =
+        dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
+                                     subm_dist.distanceToAdjacentTile<OC>(in_offset),
+                                     subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
+    return std::tuple(a, b, std::move(splits), std::move(recv_counts), std::move(index_tile_futs),
+                      std::move(mat_in_tiles), std::move(mat_out_tiles));
+  };
+
+  auto permutations_unpack_f = [subm_dist](const auto i_perm, const auto& args) {
+    auto& [a, b, splits, recv_counts, index_tile_futs, mat_in_tiles, mat_out_tiles] = args;
+    const SizeType* perm_arr = index_tile_futs[0].get().ptr();
+    const GlobalElementSize sz = subm_dist.size();
+
+    // [0, a) and [b, end)
+    if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
+      applyPermutation<T, Device::CPU, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr,
+                                          mat_in_tiles, mat_out_tiles);
+    }
+  };
+
+  ex::start_detached(ex::when_all(std::forward<RecvCountsSender>(recv_counts),
+                                  std::forward<UnpackingIndexSender>(unpacking_index),
+                                  std::forward<MatRecvSender>(mat_recv),
+                                  std::forward<MatOutSender>(mat_out)) |
+                     di::transform(di::Policy<Backend::MC>(), std::move(setup_unpack_f)) |
+                     ex::bulk(subm_dist.size().get<C>(), std::move(permutations_unpack_f)));
+}
+
 template <class T, Coord C>
 void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
@@ -589,46 +639,10 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
   // COMMUNICATION-dependent
   all2allData<T, D, C>(sub_task_chain, nranks, sz_loc, send_counts_sender, mat_send, recv_counts_sender,
                        mat_recv);
-
-  auto setup_unpack_others_f =
-      [subm_dist, rank = dist.rankIndex().get<C>()](auto recv_counts, auto index_tile_futs,
-                                                    auto mat_in_tiles, auto mat_out_tiles) {
-        const size_t rank_index = to_sizet(rank);
-        const int a = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
-        const int b = a + recv_counts[rank_index];
-
-        constexpr auto OC = orthogonal(C);
-        const GlobalElementSize sz = subm_dist.size();
-        // TODO: Always 0?
-        const SizeType in_offset = 0;
-        // TODO: Always {0, 0}?
-        const GlobalElementIndex out_begin{0, 0};
-
-        std::vector<SizeType> splits =
-            dlaf::util::interleaveSplits(sz.get<OC>(), subm_dist.blockSize().get<OC>(),
-                                         subm_dist.distanceToAdjacentTile<OC>(in_offset),
-                                         subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
-        return std::tuple(a, b, std::move(splits), std::move(recv_counts), std::move(index_tile_futs),
-                          std::move(mat_in_tiles), std::move(mat_out_tiles));
-      };
-
-  auto permutations_unpack_others_f = [subm_dist](const auto i_perm, const auto& args) {
-    auto& [a, b, splits, recv_counts, index_tile_futs, mat_in_tiles, mat_out_tiles] = args;
-    const SizeType* perm_arr = index_tile_futs[0].get().ptr();
-    const GlobalElementSize sz = subm_dist.size();
-
-    // [0, a) and [b, end)
-    if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
-      applyPermutation<T, D, C>(i_perm, splits, {0, 0}, sz, 0, subm_dist, perm_arr, mat_in_tiles,
-                                mat_out_tiles);
-    }
-  };
-
-  ex::start_detached(ex::when_all(recv_counts_sender, whenAllReadOnlyTilesArray(unpacking_index),
-                                  whenAllReadOnlyTilesArray(mat_recv),
-                                  whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out)) |
-                     di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(setup_unpack_others_f)) |
-                     ex::bulk(subm_dist.size().get<C>(), std::move(permutations_unpack_others_f)));
+  unpackOthersOnCPU<T, C>(subm_dist, dist, std::move(recv_counts_sender),
+                          whenAllReadOnlyTilesArray(unpacking_index),
+                          whenAllReadOnlyTilesArray(mat_recv),
+                          whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
 
 template <Backend B, Device D, class T, Coord C>

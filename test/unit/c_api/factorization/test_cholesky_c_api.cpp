@@ -71,28 +71,7 @@ enum class API { dlaf, scalapack };
 
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
-                  const SizeType mb) {
-  dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-  char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                  grid.rank().row(), grid.rank().col());
-
-  int dlaf_context = -1;
-  if constexpr (api == API::dlaf) {
-    // Create DLAF grid directly
-    dlaf_context = dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
-  }
-  else if constexpr (api == API::scalapack) {
-#ifdef DLAF_WITH_SCALAPACK
-    // Create BLACS grid
-    Cblacs_get(0, 0, &dlaf_context);
-    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
-
-    // Create DLAF grid from BLACS context
-    dlaf_create_grid_from_blacs(dlaf_context);
-#endif
-  }
-
+                  const SizeType mb, int dlaf_context) {
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
@@ -191,58 +170,105 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
-
-  dlaf_free_grid(dlaf_context);
-  dlaf_finalize();
-
-#ifdef DLAF_WITH_SCALAPACK
-  if constexpr (api == API::scalapack) {
-    Cblacs_gridexit(dlaf_context);
-  }
-#endif
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& grid : this->commGrids()) {
+    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
+
+    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
+                                    grid.rank().row(), grid.rank().col());
+
+    auto dlaf_context =
+        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(grid, uplo, m, mb, dlaf_context);
       }
     }
+
+    dlaf_free_grid(dlaf_context);
+    dlaf_finalize();
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& grid : this->commGrids()) {
+    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
+
+    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
+                                    grid.rank().row(), grid.rank().col());
+    // Create BLACS grid
+    int dlaf_context = -1;
+    Cblacs_get(0, 0, &dlaf_context);
+    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
+
+    // Create DLAF grid from BLACS context
+    dlaf_create_grid_from_blacs(dlaf_context);
+
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb,
+                                                                          dlaf_context);
       }
     }
+    dlaf_free_grid(dlaf_context);
+    dlaf_finalize();
+
+    Cblacs_gridexit(dlaf_context);
   }
 }
 #endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& grid : this->commGrids()) {
+    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
+
+    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
+                                    grid.rank().row(), grid.rank().col());
+
+    auto dlaf_context =
+        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(grid, uplo, m, mb, dlaf_context);
       }
     }
+    dlaf_free_grid(dlaf_context);
+    dlaf_finalize();
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (const auto& grid : this->commGrids()) {
+    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
+
+    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
+                                    grid.rank().row(), grid.rank().col());
+    // Create BLACS grid
+    int dlaf_context = -1;
+    Cblacs_get(0, 0, &dlaf_context);
+    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
+
+    // Create DLAF grid from BLACS context
+    dlaf_create_grid_from_blacs(dlaf_context);
+
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(comm_grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(grid, uplo, m, mb,
+                                                                           dlaf_context);
       }
     }
+
+    dlaf_free_grid(dlaf_context);
+    dlaf_finalize();
+
+    Cblacs_gridexit(dlaf_context);
   }
 }
 #endif

@@ -79,8 +79,6 @@ public:
         return;
 
       comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
-      comm_grids.emplace_back(world, 2, 3, common::Ordering::RowMajor);
-      comm_grids.emplace_back(world, 2, 3, common::Ordering::ColumnMajor);
       comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor);
     }
   }

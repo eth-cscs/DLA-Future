@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - pika@mpi +mpi
+    - pika@main +mpi
     - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich
 
   packages:

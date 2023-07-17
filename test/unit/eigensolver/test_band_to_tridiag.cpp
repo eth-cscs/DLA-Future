@@ -127,7 +127,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 
   auto [mat_trid, mat_v] = [&]() {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::bandToTridiag<Backend::MC>(uplo, band_size, mat_a.get());
+    return eigensolver::band_to_tridiag<Backend::MC>(uplo, band_size, mat_a.get());
   }();
 
   if (m == 0)
@@ -147,7 +147,7 @@ void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType ba
 
   auto [mat_trid, mat_v] = [&]() {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a.get());
+    return eigensolver::band_to_tridiag<Backend::MC>(grid, uplo, band_size, mat_a.get());
   }();
 
   if (m == 0)

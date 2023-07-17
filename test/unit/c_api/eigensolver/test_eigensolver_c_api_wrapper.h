@@ -13,6 +13,9 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
+// Tests are in C++ (GTest + DLA-Future)
+// The C_ wrappers ensure that the DLA-Future C API can be used in C
+
 #ifdef DLAF_WITH_SCALAPACK
 DLAF_EXTERN_C void C_dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w,
                                   double* z, int iz, int jz, int* descz, int* info);

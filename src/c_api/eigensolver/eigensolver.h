@@ -83,7 +83,7 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxxxevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
+void pxheevd(char uplo, int m, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
              dlaf::BaseType<T>* w, T* z, [[maybe_unused]] int iz, [[maybe_unused]] int jz, int* descz,
              int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);

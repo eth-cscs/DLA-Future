@@ -40,22 +40,22 @@ int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DL
 
 void dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w, float* z, int iz,
                   int jz, int* descz, int* info) {
-  pxxxevd<float>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
+  pxheevd<float>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
 void dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w, double* z, int iz,
                   int jz, int* descz, int* info) {
-  pxxxevd<double>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
+  pxheevd<double>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
 void dlaf_pcheevd(char uplo, int m, dlaf_complex_c* a, int ia, int ja, int* desca, float* w,
                   dlaf_complex_c* z, int iz, int jz, int* descz, int* info) {
-  pxxxevd<std::complex<float>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
+  pxheevd<std::complex<float>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
 void dlaf_pzheevd(char uplo, int m, dlaf_complex_z* a, int ia, int ja, int* desca, double* w,
                   dlaf_complex_z* z, int iz, int jz, int* descz, int* info) {
-  pxxxevd<std::complex<double>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
+  pxheevd<std::complex<double>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
 #endif

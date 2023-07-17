@@ -126,56 +126,33 @@ struct WorkSpaceHost {
   Matrix<SizeType, Device::CPU> i3;
 };
 
-// forward declaration : Device::GPU - unused
+template <class T, Device D>
+using HostMirrorMatrix =
+    std::conditional_t<D == Device::CPU, Matrix<T, Device::CPU>&, Matrix<T, Device::CPU>>;
+
 template <class T, Device D>
 struct WorkSpaceHostMirror {
-  Matrix<T, Device::CPU> e2;
+  HostMirrorMatrix<T, D> e2;
 
-  Matrix<T, Device::CPU> d1;
+  HostMirrorMatrix<T, D> d1;
 
-  Matrix<T, Device::CPU> z0;
-  Matrix<T, Device::CPU> z1;
+  HostMirrorMatrix<T, D> z0;
+  HostMirrorMatrix<T, D> z1;
 
-  Matrix<SizeType, Device::CPU> i2;
+  HostMirrorMatrix<SizeType, D> i2;
 };
 
-template <class T>
-struct WorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& e2;
-
-  Matrix<T, Device::CPU>& d1;
-
-  Matrix<T, Device::CPU>& z0;
-  Matrix<T, Device::CPU>& z1;
-
-  Matrix<SizeType, Device::CPU>& i2;
-};
-
-// forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct DistWorkSpaceHostMirror {
-  Matrix<T, Device::CPU> e0;
-  Matrix<T, Device::CPU> e2;
+  HostMirrorMatrix<T, D> e0;
+  HostMirrorMatrix<T, D> e2;
 
-  Matrix<T, Device::CPU> d1;
+  HostMirrorMatrix<T, D> d1;
 
-  Matrix<T, Device::CPU> z0;
-  Matrix<T, Device::CPU> z1;
+  HostMirrorMatrix<T, D> z0;
+  HostMirrorMatrix<T, D> z1;
 
-  Matrix<SizeType, Device::CPU> i2;
-};
-
-template <class T>
-struct DistWorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& e0;
-  Matrix<T, Device::CPU>& e2;
-
-  Matrix<T, Device::CPU>& d1;
-
-  Matrix<T, Device::CPU>& z0;
-  Matrix<T, Device::CPU>& z1;
-
-  Matrix<SizeType, Device::CPU>& i2;
+  HostMirrorMatrix<SizeType, D> i2;
 };
 
 template <class T>

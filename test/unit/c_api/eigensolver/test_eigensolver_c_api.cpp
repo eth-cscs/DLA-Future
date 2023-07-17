@@ -222,14 +222,6 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   pika::suspend();
 }
 
-// TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
-//   for (int i = 0; i < 10000000; i++) {
-//     pika::start(nullptr, 0, nullptr);
-//     pika::finalize();
-//     pika::stop();
-//   }
-// }
-
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);

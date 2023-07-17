@@ -25,6 +25,7 @@
 
 #include "../blacs.h"
 #include "../grid.h"
+#include "../utils.h"
 
 template <typename T>
 int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
@@ -44,21 +45,14 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
 
     auto communicator_grid = dlaf_grids.at(dlaf_context);
 
-    dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
-    dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
+    auto [distribution_a, layout_a] = distribution_and_layout(dlaf_desca, communicator_grid);
+    auto [distribution_z, layout_z] = distribution_and_layout(dlaf_desca, communicator_grid);
 
-    dlaf::comm::Index2D src_rank_index(dlaf_desca.isrc, dlaf_desca.jsrc);
-
-    dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
-                                            communicator_grid.rank(), src_rank_index);
-
-    dlaf::matrix::LayoutInfo layout_a = colMajorLayout(distribution, dlaf_desca.ld);
-    dlaf::matrix::LayoutInfo layout_z = colMajorLayout(distribution, dlaf_descz.ld);
-
-    MatrixHost matrix_host(distribution, layout_a, a);
-    MatrixHost eigenvectors_host(distribution, layout_z, z);
-    auto eigenvalues_host = dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>(
-        {dlaf_descz.m, 1}, {distribution.blockSize().rows(), 1}, std::max(dlaf_descz.m, 1), w);
+    MatrixHost matrix_host(distribution_a, layout_a, a);
+    MatrixHost eigenvectors_host(distribution_z, layout_z, z);
+    auto eigenvalues_host =
+        dlaf::matrix::createMatrixFromColMajor<dlaf::Device::CPU>({dlaf_descz.m, 1}, {dlaf_descz.mb, 1},
+                                                                  std::max(dlaf_descz.m, 1), w);
 
     {
       MatrixMirror matrix(matrix_host);

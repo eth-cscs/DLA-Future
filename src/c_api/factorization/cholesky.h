@@ -25,6 +25,7 @@
 
 #include "../blacs.h"
 #include "../grid.h"
+#include "../utils.h"
 
 template <typename T>
 int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noexcept {
@@ -38,15 +39,7 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noex
 
     auto communicator_grid = dlaf_grids.at(dlaf_context);
 
-    dlaf::GlobalElementSize matrix_size(dlaf_desca.m, dlaf_desca.n);
-    dlaf::TileElementSize block_size(dlaf_desca.mb, dlaf_desca.nb);
-
-    dlaf::comm::Index2D src_rank_index(dlaf_desca.isrc, dlaf_desca.jsrc);
-
-    dlaf::matrix::Distribution distribution(matrix_size, block_size, communicator_grid.size(),
-                                            communicator_grid.rank(), src_rank_index);
-
-    dlaf::matrix::LayoutInfo layout = colMajorLayout(distribution, dlaf_desca.ld);
+    auto [distribution, layout] = distribution_and_layout(dlaf_desca, communicator_grid);
 
     dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout, a);
 

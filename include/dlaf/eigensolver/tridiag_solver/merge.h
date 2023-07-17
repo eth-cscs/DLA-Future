@@ -495,7 +495,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // to be dropped soon.
         // Note: use last thread that in principle should have less work to do
         if (thread_idx == nthreads - 1) {
-          for (auto i = 0; i < n; ++i) {
+          for (SizeType i = 0; i < n; ++i) {
             const SizeType j = i2_perm[to_sizet(i)];
 
             // if it is deflated
@@ -542,14 +542,14 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             // Note: The rows should be permuted for the k=2 case as well.
             if (k == 2) {
               T* ws = ws_vecs[thread_idx]();
-              for (int j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+              for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
                 const SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, j));
                 const SizeType j_col = distr.tileElementFromGlobalElement<Coord::Col>(j);
                 T* evec = evec_tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_col));
 
                 std::copy(evec, evec + k, ws);
                 std::fill_n(evec, k, 0);  // by default "deflated"
-                for (int i = 0; i < n; ++i) {
+                for (SizeType i = 0; i < n; ++i) {
                   const SizeType ii = i2_perm[i];
                   if (ii < k)
                     evec[i] = ws[ii];
@@ -569,7 +569,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // - copy diagonal from q -> w (or just initialize with 1)
         if (thread_idx == 0) {
-          for (auto i = 0; i < k; ++i) {
+          for (SizeType i = 0; i < k; ++i) {
             const GlobalElementIndex kk(i, i);
             const auto diag_tile = distr.globalTileLinearIndex(kk);
             const auto diag_element = distr.tileElementIndex(kk);
@@ -592,11 +592,11 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           w[i] *= q[to_sizet(q_tile)](q_ij) / (d_ptr[to_sizet(i)] - d_ptr[to_sizet(j)]);
         };
 
-        for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
-          for (auto i = 0; i < j; ++i)
+        for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+          for (SizeType i = 0; i < j; ++i)
             compute_w({i, j});
 
-          for (auto i = j + 1; i < k; ++i)
+          for (SizeType i = j + 1; i < k; ++i)
             compute_w({i, j});
         }
 
@@ -604,7 +604,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
-          for (int i = 0; i < k; ++i) {
+          for (SizeType i = 0; i < k; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
               const T* w_partial = ws_vecs[tidx]();
               w[i] *= w_partial[i];
@@ -622,8 +622,8 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           const T* w = z_ptr;
           T* s = ws_vecs[thread_idx]();
 
-          for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
-            for (int i = 0; i < k; ++i) {
+          for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+            for (SizeType i = 0; i < k; ++i) {
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
 
@@ -632,7 +632,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             const T vec_norm = blas::nrm2(k, s, 1);
 
-            for (auto i = 0; i < n; ++i) {
+            for (SizeType i = 0; i < n; ++i) {
               const SizeType ii = i2_perm[i];
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
@@ -1106,7 +1106,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // STEP 2c: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
           // local reduction from all bulk workers
-          for (int i = 0; i < m_subm_el_lc; ++i) {
+          for (SizeType i = 0; i < m_subm_el_lc; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
               const T* w_partial = ws_cols[tidx]();
               w[i] *= w_partial[i];
@@ -1118,7 +1118,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                         transformMPI(all_reduce_in_place));
 
           T* weights = ws_cols[nthreads]();
-          for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
+          for (SizeType i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
             const SizeType i_subm_lc = i_subm_el_lc / dist.blockSize().rows();
             const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
             const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);

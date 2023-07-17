@@ -21,6 +21,7 @@
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf_c/desc.h>
 #include <dlaf_c/grid.h>
+#include <dlaf_c/utils.h>
 
 #include "../blacs.h"
 #include "../grid.h"
@@ -77,45 +78,14 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) noex
 template <typename T>
 void pxpotrf(char uplo, int n, T* a, [[maybe_unused]] int ia, [[maybe_unused]] int ja, int* desca,
              int& info) noexcept {
-  try {
-    using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
+  DLAF_ASSERT(desca[0] == 1, desca[0]);
+  DLAF_ASSERT(ia == 1, ia);
+  DLAF_ASSERT(ja == 1, ja);
 
-    DLAF_ASSERT(desca[0] == 1, desca[0]);
-    DLAF_ASSERT(ia == 1, ia);
-    DLAF_ASSERT(ja == 1, ja);
+  auto dlaf_desca = make_dlaf_descriptor(n, n, ia, ja, desca);
 
-    pika::resume();
-
-    // Get grid corresponding to blacs context in desca
-    // The grid needs to be created with dlaf_create_grid_from_blacs
-    auto communicator_grid = dlaf_grids.at(desca[1]);
-    dlaf::matrix::Distribution distribution({n, n}, {desca[4], desca[5]}, communicator_grid.size(),
-                                            communicator_grid.rank(), {desca[6], desca[7]});
-    dlaf::matrix::LayoutInfo layout_info = colMajorLayout(distribution, desca[8]);
-
-    dlaf::matrix::Matrix<T, dlaf::Device::CPU> matrix_host(std::move(distribution), layout_info, a);
-
-    {
-      MatrixMirror matrix(matrix_host);
-
-      dlaf::factorization::cholesky<dlaf::Backend::Default, dlaf::Device::Default, T>(
-          communicator_grid, blas::char2uplo(uplo), matrix.get());
-    }  // Destroy mirror
-
-    matrix_host.waitLocalTiles();
-
-    pika::suspend();
-
-    info = 0;
-  }
-  catch (const std::exception& e) {
-    std::cerr << e.what() << '\n';
-    info = -1;
-  }
-  catch (...) {
-    std::cerr << "ERROR: Unknown exception caught in DLA-Future's Cholesky decomposition." << '\n';
-    info = -1;
-  }
+  auto _info = cholesky(desca[1], uplo, a, dlaf_desca);
+  info = _info;
 }
 
 #endif

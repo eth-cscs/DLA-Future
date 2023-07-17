@@ -27,3 +27,7 @@ using dlaf_complex_z = std::complex<double>;  ///< Double precision complex numb
 typedef float complex dlaf_complex_c;   ///< Single precision complex number
 typedef double complex dlaf_complex_z;  ///< Double precision complex number
 #endif
+
+#include <dlaf_c/desc.h>
+
+DLAF_EXTERN_C struct DLAF_descriptor make_dlaf_descriptor(int m, int n, int i, int j, int* desc);

@@ -11,6 +11,7 @@
 #include <complex>
 #include <functional>
 #include <tuple>
+#include <blas/util.hh>
 
 #include <pika/init.hpp>
 
@@ -105,7 +106,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     eigenvalues.waitLocalTiles();
     eigenvectors.waitLocalTiles();
 
-    char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
+    char dlaf_uplo = uplo == blas::uplo2char(uplo);
 
     // Get top left local tiles
     auto [local_a_ptr, lld_a] = top_left_tile(mat_a_h);

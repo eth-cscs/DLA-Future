@@ -86,7 +86,7 @@ TEST(GridTest, GridScaLAPACKOrderingC) {
 }
 #endif
 
-TEST(GridTest, GridDLAFOrderingR) {
+TEST(GridTest, GridDLAFOrdering) {
   comm::Communicator world(MPI_COMM_WORLD);
 
   comm::CommunicatorGrid row_major(world, 2, 3, common::Ordering::RowMajor);

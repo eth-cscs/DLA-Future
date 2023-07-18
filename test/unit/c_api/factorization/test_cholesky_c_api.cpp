@@ -13,6 +13,7 @@
 #include <sstream>
 #include <tuple>
 #include <type_traits>
+#include <blas/util.hh>
 
 #include <pika/init.hpp>
 #include <pika/runtime.hpp>
@@ -87,7 +88,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   set(mat_h, el);
   mat_h.waitLocalTiles();
 
-  char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
+  char dlaf_uplo = uplo == blas::uplo2char(uplo);
 
   // Get pointer to first element of local matrix
   auto [local_a_ptr, lld] = top_left_tile(mat_h);

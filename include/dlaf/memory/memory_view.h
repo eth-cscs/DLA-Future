@@ -55,7 +55,8 @@ public:
   /// @param size The size (in number of elements of type @c T) of the existing allocation,
   /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
   MemoryView(T* ptr, SizeType size)
-      : memory_(std::make_shared<MemoryChunk<ElementType, D>>(const_cast<ElementType*>(ptr), size)),
+      : memory_(ptr ? std::make_shared<MemoryChunk<ElementType, D>>(const_cast<ElementType*>(ptr), size)
+                    : nullptr),
         offset_(0), size_(size) {
     DLAF_ASSERT(size >= 0, size);
   }
@@ -73,8 +74,7 @@ public:
 
   template <class U = T, class = typename std::enable_if_t<std::is_const_v<U> && std::is_same_v<T, U>>>
   MemoryView(MemoryView<ElementType, D>&& rhs) noexcept
-      : memory_(rhs.memory_), offset_(rhs.offset_), size_(rhs.size_) {
-    rhs.memory_ = std::make_shared<MemoryChunk<ElementType, D>>();
+      : memory_(std::move(rhs.memory_)), offset_(rhs.offset_), size_(rhs.size_) {
     rhs.size_ = 0;
     rhs.offset_ = 0;
   }

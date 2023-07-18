@@ -185,10 +185,10 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
 
       applyPermutationsOnDevice<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
                                       mat_in_tiles, mat_out_tiles, stream);
-
-      ex::start_detached(std::move(sender) |
-                         dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn)));
     };
+
+    ex::start_detached(std::move(sender) |
+                       dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn)));
 #endif
   }
 }
@@ -423,11 +423,11 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
 
       applyPermutationsOnDevice<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
                                       mat_in_tiles, mat_out_tiles, stream);
-
-      ex::start_detached(std::move(sender) |
-                         dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(),
-                                                   std::move(permute_fn)));
     };
+
+    ex::start_detached(std::move(sender) |
+                       dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(),
+                                                 std::move(permute_fn)));
 #endif
   }
 }

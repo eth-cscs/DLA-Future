@@ -24,7 +24,6 @@
 #include <dlaf_c/grid.h>
 #include <dlaf_c/init.h>
 
-#include "config.h"
 #include "test_cholesky_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
@@ -32,6 +31,8 @@
 #ifdef DLAF_WITH_SCALAPACK
 #include <dlaf_test/blacs.h>
 #endif
+#include <dlaf_c_test/c_api_helpers.h>
+
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_matrix.h>
@@ -66,8 +67,6 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
     {5, 8}, {34, 34},                    // m <= mb
     {4, 3}, {16, 10}, {34, 13}, {32, 5}  // m > mb
 };
-
-enum class API { dlaf, scalapack };
 
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
@@ -173,102 +172,66 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
+  constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-
-    auto dlaf_context =
-        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, api>(grid, uplo, m, mb, dlaf_context);
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
+  constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-    // Create BLACS grid
-    int dlaf_context = -1;
-    Cblacs_get(0, 0, &dlaf_context);
-    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
-
-    // Create DLAF grid from BLACS context
-    dlaf_create_grid_from_blacs(dlaf_context);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb,
-                                                                          dlaf_context);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, api>(grid, uplo, m, mb, dlaf_context);
       }
     }
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
 
-    Cblacs_gridexit(dlaf_context);
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
+  constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-
-    auto dlaf_context =
-        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, api>(grid, uplo, m, mb, dlaf_context);
       }
     }
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
+
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
+  constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-    // Create BLACS grid
-    int dlaf_context = -1;
-    Cblacs_get(0, 0, &dlaf_context);
-    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
-
-    // Create DLAF grid from BLACS context
-    dlaf_create_grid_from_blacs(dlaf_context);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(grid, uplo, m, mb,
-                                                                           dlaf_context);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, api>(grid, uplo, m, mb, dlaf_context);
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
-
-    Cblacs_gridexit(dlaf_context);
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif

@@ -24,13 +24,12 @@
 #include <dlaf/types.h>
 #include <dlaf_c/grid.h>
 #include <dlaf_c/init.h>
+#include <dlaf_c_test/c_api_helpers.h>
 
-#include "config.h"
 #include "test_eigensolver_c_api_wrapper.h"
 
 #include <gtest/gtest.h>
 
-#include <dlaf_test/blacs.h>
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
 #include <dlaf_test/matrix/matrix_local.h>
@@ -73,8 +72,6 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
-enum class API { dlaf, scalapack };
-
 template <class T, Backend B, Device D, API api>
 void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid,
                      int dlaf_context) {
@@ -87,10 +84,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {
-    auto reference = [&]() -> auto{
+    auto reference = [&]() -> auto {
       return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid);
-    }
-    ();
+    }();
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
@@ -223,40 +219,26 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
+  constexpr API api = API::dlaf;
 
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-    auto dlaf_context =
-        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid, dlaf_context);
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, api>(uplo, m, mb, grid, dlaf_context);
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
+  constexpr API api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-
-    // Create BLACS grid
-    int dlaf_context = -1;
-    Cblacs_get(0, 0, &dlaf_context);  // Default system context
-    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
-
-    // Create DLAF grid from BLACS context
-    dlaf_create_grid_from_blacs(dlaf_context);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -265,23 +247,16 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
-
-    Cblacs_gridexit(dlaf_context);
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
+  constexpr API api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-    auto dlaf_context =
-        dlaf_create_grid(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(), grid_order);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -290,26 +265,16 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
+  constexpr API api = API::scalapack;
+
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    dlaf_initialize(pika_argc, pika_argv, dlaf_argc, dlaf_argv);
-
-    char grid_order = grid_ordering(MPI_COMM_WORLD, grid.size().rows(), grid.size().cols(),
-                                    grid.rank().row(), grid.rank().col());
-
-    // Create BLACS grid
-    int dlaf_context = -1;
-    Cblacs_get(0, 0, &dlaf_context);  // Default system context
-    Cblacs_gridinit(&dlaf_context, &grid_order, grid.size().rows(), grid.size().cols());
-
-    // Create DLAF grid from BLACS context
-    dlaf_create_grid_from_blacs(dlaf_context);
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -318,10 +283,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
       }
     }
 
-    dlaf_free_grid(dlaf_context);
-    dlaf_finalize();
-
-    Cblacs_gridexit(dlaf_context);
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif

@@ -10,7 +10,7 @@
 
 #include <cmath>
 
-#include <pika/future.hpp>
+#include <pika/execution.hpp>
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/index2d.h>
@@ -43,9 +43,12 @@
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace dlaf::comm;
+using namespace dlaf::memory;
 using namespace dlaf::matrix;
 using namespace dlaf::matrix::test;
 
+using pika::execution::experimental::any_sender;
+using pika::execution::experimental::when_all_vector;
 using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
@@ -188,72 +191,52 @@ void splitReflectorsAndBand(MatrixLocal<const T>& mat_v, MatrixLocal<T>& mat_b,
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size,
-                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus) {
+auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
+  auto local_taus_tiles = sync_wait(when_all_vector(selectRead(
+      mat_local_taus, common::iterate_range2d(LocalTileSize(mat_local_taus.nrTiles().rows(), 1)))));
+
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
-
-  pika::wait_all(fut_local_taus);
-  auto local_taus = pika::unwrap(fut_local_taus);
-
-  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
-
-  for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
-    std::vector<T> chunk_data;
-    const auto index_chunk_local = to_sizet(index_chunk);
-    chunk_data = local_taus.at(index_chunk_local);
-
-    // copy each chunk contiguously
-    std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
+  for (const auto& t : local_taus_tiles) {
+    std::copy(t.get().ptr(), t.get().ptr() + t.get().size().rows(), std::back_inserter(taus));
   }
+
+  DLAF_ASSERT(to_SizeType(taus.size()) == k, taus.size(), k);
 
   return taus;
 }
 
 template <class T>
-auto allGatherTaus(const SizeType k, const SizeType chunk_size,
-                   std::vector<pika::shared_future<common::internal::vector<T>>> fut_local_taus,
+auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
                    comm::CommunicatorGrid comm_grid) {
+  const auto local_num_tiles = mat_taus.distribution().localNrTiles().rows();
+  const auto num_tiles = mat_taus.distribution().nrTiles().rows();
+  const auto local_num_tiles_expected =
+      num_tiles / comm_grid.size().cols() +
+      (comm_grid.rank().col() < (num_tiles % comm_grid.size().cols()) ? 1 : 0);
+  EXPECT_EQ(local_num_tiles, local_num_tiles_expected);
+
   std::vector<T> taus;
   taus.reserve(to_sizet(k));
 
-  pika::wait_all(fut_local_taus);
-  auto local_taus = pika::unwrap(fut_local_taus);
-
-  const SizeType n_chunks = dlaf::util::ceilDiv(k, chunk_size);
-
-  // Note:
-  // this is just an early exit
-  const SizeType n_local_chunks =
-      n_chunks / comm_grid.size().cols() +
-      (comm_grid.rank().col() < (n_chunks % comm_grid.size().cols()) ? 1 : 0);
-
-  if (local_taus.size() != to_sizet(n_local_chunks))
-    return taus;
-
-  for (auto index_chunk = 0; index_chunk < n_chunks; ++index_chunk) {
-    const auto owner = index_chunk % comm_grid.size().cols();
+  for (SizeType i = 0; i < mat_taus.nrTiles().rows(); ++i) {
+    const auto owner = mat_taus.rankGlobalTile(GlobalTileIndex(i, 0)).row();
     const bool is_owner = owner == comm_grid.rank().col();
 
-    const auto this_chunk_size = std::min(k - index_chunk * chunk_size, chunk_size);
+    const auto chunk_size = mat_taus.tileSize(GlobalTileIndex(i, 0)).rows();
 
-    std::vector<T> chunk_data;
     if (is_owner) {
-      const auto index_chunk_local = to_sizet(index_chunk / comm_grid.size().cols());
-      chunk_data = local_taus.at(index_chunk_local);
-      sync::broadcast::send(comm_grid.rowCommunicator(),
-                            common::make_data(chunk_data.data(),
-                                              static_cast<SizeType>(chunk_data.size())));
+      auto tile_local = sync_wait(mat_taus.read(GlobalTileIndex(i, 0)));
+      sync::broadcast::send(comm_grid.rowCommunicator(), common::make_data(tile_local.get()));
+      std::copy(tile_local.get().ptr(), tile_local.get().ptr() + tile_local.get().size().rows(),
+                std::back_inserter(taus));
     }
     else {
-      chunk_data.resize(to_sizet(this_chunk_size));
-      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(),
-                                    common::make_data(chunk_data.data(),
-                                                      static_cast<SizeType>(chunk_data.size())));
+      Tile<T, Device::CPU> tile_local(TileElementSize(chunk_size, 1),
+                                      MemoryView<T, Device::CPU>(chunk_size), chunk_size);
+      sync::broadcast::receive_from(owner, comm_grid.rowCommunicator(), common::make_data(tile_local));
+      std::copy(tile_local.ptr(), tile_local.ptr() + tile_local.size().rows(), std::back_inserter(taus));
     }
-
-    // copy each chunk contiguously
-    std::copy(chunk_data.begin(), chunk_data.end(), std::back_inserter(taus));
   }
 
   return taus;
@@ -341,11 +324,12 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   Matrix<T, Device::CPU> mat_a_h(distribution);
   copy(reference, mat_a_h);
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
-  {
+  Matrix<T, Device::CPU> mat_local_taus = [&]() mutable {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    local_taus = eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
-  }
+    return eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
+  }();
+
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, mat_a_h);
 
@@ -353,9 +337,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
   auto mat_b = makeLocal(mat_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  // Note:
-  // chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by band)
-  auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus);
+  auto taus = allGatherTaus(k_reflectors, mat_local_taus);
   ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
@@ -413,22 +395,23 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   Matrix<T, Device::CPU> matrix_a_h(distribution);
   copy(reference, matrix_a_h);
 
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> local_taus;
-  {
+  Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    local_taus = eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
-    pika::threads::get_thread_manager().wait();
-  }
+    return eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
+  }();
+
+  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
 
   checkUpperPartUnchanged(reference, matrix_a_h);
+
+  // Wait for all work to finish before doing blocking communication
+  pika::threads::get_thread_manager().wait();
 
   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);
   splitReflectorsAndBand(mat_v, mat_b, band_size);
 
-  // Note:
-  // chunks are block_size.cols() wide, because algorithm group reflectors by tile (and not by band)
-  auto taus = allGatherTaus(k_reflectors, block_size.cols(), local_taus, grid);
+  auto taus = allGatherTaus(k_reflectors, mat_local_taus, grid);
   ASSERT_EQ(taus.size(), k_reflectors);
 
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);

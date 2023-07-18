@@ -9,14 +9,17 @@
 //
 
 #include <functional>
+#include <optional>
 #include <sstream>
 #include <tuple>
+#include <vector>
 
 #include <pika/runtime.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/bt_reduction_to_band.h>
 #include <dlaf/matrix/copy.h>
@@ -41,6 +44,8 @@ using namespace dlaf::matrix::internal;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
+
+using pika::this_thread::experimental::sync_wait;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
@@ -86,7 +91,10 @@ void getTau(std::complex<T>& tau, T dotprod, BaseType<T> tau_i) {
 // Generate the vector with all the taus and compute the reference result in c.
 // Note: v is modified as well.
 template <class T>
-common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal<T>& v) {
+Matrix<T, Device::CPU> setUpTest(
+    SizeType mb, SizeType b, MatrixLocal<T>& c, MatrixLocal<T>& v,
+    const std::optional<std::reference_wrapper<comm::CommunicatorGrid>>& grid = std::nullopt,
+    const comm::Index2D& src_rank_index = {0, 0}) {
   const auto m = c.size().rows();
 
   const SizeType nr_reflectors = std::max<SizeType>(0, m - b - 1);
@@ -113,6 +121,8 @@ common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal
     taus.push_back(tau);
   }
 
+  DLAF_ASSERT(taus.size() == nr_reflectors, taus.size(), nr_reflectors);
+
   const auto n = c.size().cols();
   if (n > 0) {
     for (SizeType k = nr_reflectors - 1; k >= 0; --k) {
@@ -122,7 +132,34 @@ common::internal::vector<T> setUpTest(SizeType b, MatrixLocal<T>& c, MatrixLocal
     }
   }
 
-  return taus;
+  const bool have_grid = grid.has_value();
+  const auto grid_cols = have_grid ? grid.value().get().size().cols() : 1;
+  const auto rank_col = have_grid ? grid.value().get().rank().col() : 0;
+  // mat_taus is a column vector to ensure elements are contiguous within each
+  // tile, which is why column indices and sizes are used for the row indices
+  // and sizes
+  Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                               TileElementSize(mb, 1), comm::Size2D(grid_cols, 1),
+                                               comm::Index2D(rank_col, 0),
+                                               comm::Index2D(src_rank_index.col(), 0)));
+  DLAF_ASSERT(std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)) == mat_taus.nrTiles().rows(),
+              std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb)), mat_taus.nrTiles().rows());
+  DLAF_ASSERT(mat_taus.nrTiles().cols() == 1, mat_taus.nrTiles().cols());
+  DLAF_ASSERT(mat_taus.size().cols() == 1, mat_taus.size().cols());
+
+  for (SizeType k = 0; k < nr_reflectors; k += mb) {
+    DLAF_ASSERT(nr_reflectors >= k, nr_reflectors, k);
+    if (rank_col == mat_taus.distribution().template rankGlobalTile<Coord::Row>(k / mb)) {
+      auto tau_tile = sync_wait(mat_taus.readwrite(GlobalTileIndex(k / mb, 0)));
+      DLAF_ASSERT(std::min(k + mb, nr_reflectors) - k == tau_tile.size().rows(),
+                  std::min(k + mb, nr_reflectors) - k, tau_tile.size().rows());
+      const auto b = taus.begin() + k;
+      const auto e = taus.begin() + std::min(k + mb, nr_reflectors);
+      std::copy(b, e, tau_tile.ptr(TileElementIndex(0, 0)));
+    }
+  }
+
+  return mat_taus;
 }
 
 template <class T, Backend B, Device D>
@@ -142,26 +179,12 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c_h);
   auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v_h);
 
-  auto taus_loc = setUpTest(b, c_loc, v_loc);
-  auto nr_reflectors = taus_loc.size();
-
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
-  SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(nr_reflectors, mb));
-  taus.reserve(nr_reflectors_blocks);
-
-  for (SizeType k = 0; k < nr_reflectors; k += mb) {
-    common::internal::vector<T> tau_tile;
-    tau_tile.reserve(mb);
-    for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
-      tau_tile.push_back(taus_loc[j]);
-    }
-    taus.push_back(pika::make_ready_future(tau_tile));
-  }
+  auto mat_taus = setUpTest(mb, b, c_loc, v_loc);
 
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(b, mat_c.get(), mat_v.get(), taus);
+    eigensolver::backTransformationReductionToBand<B, D, T>(b, mat_c.get(), mat_v.get(), mat_taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
@@ -194,28 +217,12 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   auto c_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::General, mat_c_h, grid);
   auto v_loc = dlaf::matrix::test::allGather<T>(blas::Uplo::Lower, mat_v_h, grid);
 
-  auto taus_loc = setUpTest(b, c_loc, v_loc);
-  auto nr_reflectors = taus_loc.size();
-
-  common::internal::vector<pika::shared_future<common::internal::vector<T>>> taus;
-  SizeType nr_reflectors_blocks = std::max<SizeType>(0, dlaf::util::ceilDiv(m - b - 1, mb));
-  taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, grid.size().cols()));
-
-  for (SizeType k = 0; k < nr_reflectors; k += mb) {
-    common::internal::vector<T> tau_tile;
-    tau_tile.reserve(mb);
-    if (grid.rank().col() == mat_v_h.distribution().template rankGlobalTile<Coord::Col>(k / mb)) {
-      for (SizeType j = k; j < std::min(k + mb, nr_reflectors); ++j) {
-        tau_tile.push_back(taus_loc[j]);
-      }
-      taus.push_back(pika::make_ready_future(tau_tile));
-    }
-  }
+  auto mat_taus = setUpTest(mb, b, c_loc, v_loc, std::optional(std::ref(grid)), src_rank_index);
 
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(grid, b, mat_c.get(), mat_v.get(), taus);
+    eigensolver::backTransformationReductionToBand<B, D, T>(grid, b, mat_c.get(), mat_v.get(), mat_taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };

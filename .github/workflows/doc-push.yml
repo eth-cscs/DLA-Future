@@ -7,11 +7,14 @@ on:
 
 jobs:
   doc:
+    if: "github.repository == 'eth-cscs/DLA-Future'"
     runs-on: ubuntu-22.04
 
     steps:
       - name: Install tools
-        run: sudo apt-get install --no-install-recommends doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends doxygen
       - name: Checkout
         uses: actions/checkout@v3
       - name: Fetch docs

@@ -26,25 +26,33 @@
 #include <dlaf/eigensolver/bt_reduction_to_band.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/miniapp/dispatch.h>
 #include <dlaf/miniapp/options.h>
 #include <dlaf/types.h>
+#include <dlaf/util_matrix.h>
 
 namespace {
 using dlaf::Backend;
 using dlaf::DefaultDevice_v;
 using dlaf::Device;
+using dlaf::GlobalElementIndex;
 using dlaf::GlobalElementSize;
 using dlaf::Matrix;
 using dlaf::SizeType;
 using dlaf::TileElementSize;
 using dlaf::comm::Communicator;
 using dlaf::comm::CommunicatorGrid;
+using dlaf::comm::Index2D;
+using dlaf::comm::Size2D;
 using dlaf::common::Ordering;
 using dlaf::common::internal::vector;
+using dlaf::matrix::Distribution;
 using dlaf::matrix::MatrixMirror;
+using dlaf::matrix::util::set;
 
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
@@ -80,6 +88,8 @@ struct BacktransformBandToTridiagMiniapp {
     using HostMatrixType = Matrix<T, Device::CPU>;
     using ConstHostMatrixType = Matrix<const T, Device::CPU>;
 
+    namespace ex = pika::execution::experimental;
+
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
@@ -111,21 +121,11 @@ struct BacktransformBandToTridiagMiniapp {
 
     auto nr_reflectors = std::max<SizeType>(0, opts.m - opts.b - 1);
 
-    vector<pika::shared_future<vector<T>>> taus;
-    SizeType nr_reflectors_blocks = dlaf::util::ceilDiv(nr_reflectors, opts.mb);
-    taus.reserve(dlaf::util::ceilDiv<SizeType>(nr_reflectors_blocks, comm_grid.size().cols()));
-
-    for (SizeType k = 0; k < nr_reflectors; k += opts.mb) {
-      vector<T> tau_tile;
-      tau_tile.reserve(opts.mb);
-      if (comm_grid.rank().col() ==
-          mat_hh_ref.distribution().template rankGlobalTile<dlaf::Coord::Col>(k / opts.mb)) {
-        for (SizeType j = k; j < std::min(k + opts.mb, nr_reflectors); ++j) {
-          tau_tile.push_back(T(2));
-        }
-        taus.push_back(pika::make_ready_future(tau_tile));
-      }
-    }
+    Matrix<T, Device::CPU> mat_taus(Distribution(GlobalElementSize(nr_reflectors, 1),
+                                                 TileElementSize(opts.mb, 1),
+                                                 Size2D(comm_grid.size().cols(), 1),
+                                                 Index2D(comm_grid.rank().col(), 0), Index2D(0, 0)));
+    set(mat_taus, [](const GlobalElementIndex&) { return T(2); });
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -145,15 +145,16 @@ struct BacktransformBandToTridiagMiniapp {
         // Wait for matrices to be copied
         mat_e.get().waitLocalTiles();
         mat_hh.get().waitLocalTiles();
+        mat_taus.waitLocalTiles();
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
         if (opts.local)
           dlaf::eigensolver::backTransformationReductionToBand<backend, DefaultDevice_v<backend>, T>(
-              opts.b, mat_e.get(), mat_hh.get(), taus);
+              opts.b, mat_e.get(), mat_hh.get(), mat_taus);
         else
           dlaf::eigensolver::backTransformationReductionToBand<backend, DefaultDevice_v<backend>, T>(
-              comm_grid, opts.b, mat_e.get(), mat_hh.get(), taus);
+              comm_grid, opts.b, mat_e.get(), mat_hh.get(), mat_taus);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

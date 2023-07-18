@@ -223,8 +223,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 }
 
 TYPED_TEST(EigensolverTestMC, pika) {
+  const char* argv[] = {"--pika:print-bind"};
   for (int i = 0; i < 1000; i++) {
-    pika::start(nullptr, 0, nullptr);
+    pika::start(nullptr, 1, argv);
     pika::finalize();
     pika::stop();
   }

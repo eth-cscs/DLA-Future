@@ -37,4 +37,5 @@ typedef double complex dlaf_complex_z;  ///< Double precision complex number
 /// @param i Row index in the global matrix indicating the first row of the submatrix
 /// @param j Column index in the global matrix indicating the first colum index of the submatrix
 /// @param desc ScaLAPACK descriptor
+/// @return DLA-Future descriptor
 DLAF_EXTERN_C struct DLAF_descriptor make_dlaf_descriptor(int m, int n, int i, int j, int* desc);

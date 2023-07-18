@@ -27,7 +27,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("scalapack", default=False, description="Build ScaLAPACK-like C API")
+    variant("scalapack", default=False, description="Build C API compatible with ScaLAPACK")
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")

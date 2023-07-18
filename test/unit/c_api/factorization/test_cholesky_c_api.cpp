@@ -162,6 +162,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -178,6 +179,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
   constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -195,6 +197,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -211,6 +214,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
   constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {

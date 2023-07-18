@@ -189,6 +189,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
 
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -205,6 +206,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
   constexpr API api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -223,6 +225,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {
@@ -241,6 +244,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
   constexpr API api = API::scalapack;
 
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
     for (auto uplo : blas_uplos) {

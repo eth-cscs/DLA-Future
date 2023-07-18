@@ -45,7 +45,7 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
   auto communicator_grid = dlaf_grids.at(dlaf_context);
 
   auto [distribution_a, layout_a] = distribution_and_layout(dlaf_desca, communicator_grid);
-  auto [distribution_z, layout_z] = distribution_and_layout(dlaf_desca, communicator_grid);
+  auto [distribution_z, layout_z] = distribution_and_layout(dlaf_descz, communicator_grid);
 
   MatrixHost matrix_host(distribution_a, layout_a, a);
   MatrixHost eigenvectors_host(distribution_z, layout_z, z);

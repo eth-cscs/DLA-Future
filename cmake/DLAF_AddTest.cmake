@@ -184,7 +184,7 @@ function(DLAF_addTest test_target_name)
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})
   endif()
 
-  # Special treatment for CAPI tests
+  # Special treatment for C API tests
   # C API tests require pika arguments to be hard-coded in the test file
   if(DLAF_AT_USE_MAIN STREQUAL CAPI)
     separate_arguments(_PIKA_EXTRA_ARGS_LIST_CAPI UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})

@@ -38,21 +38,6 @@ DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char ord
 /// @param context BLACS or DLA-Future context associated to the grid being released
 DLAF_EXTERN_C void dlaf_free_grid(int context);
 
-#ifdef DLAF_WITH_SCALAPACK
-
-/// Create communication grid from BLACS context
-///
-/// Grids created here are indexed by their corresponding BLACS context
-/// @param blacs_ctxt.
-///
-/// The grid ordering is automatically inferred from the BLACS grid ordering.
-/// Only row-major and column-major grids are supported (created with
-/// blacs_gridinit). Grids created with blacs_gridmap are not supported.
-///
-/// @param blacs_ctxt BLACS context
-DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
-#endif
-
 /// Determine grid ordering
 ///
 /// @remark For DLA-Future grids, the MPI communicator needs to be the original
@@ -67,3 +52,19 @@ DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
 /// @param mypcol Process column of the calling process
 /// @return Grid order ("R" for row-major, "C" cor column-major)
 DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol);
+
+#ifdef DLAF_WITH_SCALAPACK
+
+/// Create communication grid from BLACS context
+///
+/// Grids created here are indexed by their corresponding BLACS context
+/// @param blacs_ctxt.
+///
+/// The grid ordering is automatically inferred from the BLACS grid ordering.
+/// Only row-major and column-major grids are supported (created with
+/// blacs_gridinit). Grids created with blacs_gridmap are not supported.
+///
+/// @param blacs_ctxt BLACS context
+DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt);
+
+#endif

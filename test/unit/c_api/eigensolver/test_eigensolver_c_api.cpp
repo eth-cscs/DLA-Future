@@ -87,10 +87,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   const TileElementSize block_size(mb, mb);
 
   Matrix<const T, Device::CPU> reference = [&]() {
-    auto reference = [&]() -> auto{
+    auto reference = [&]() -> auto {
       return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid);
-    }
-    ();
+    }();
     matrix::util::set_random_hermitian(reference);
     return reference;
   }();
@@ -220,6 +219,14 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
+}
+
+TYPED_TEST(EigensolverTestMC, pika) {
+  for (int i = 0; i < 1000; i++) {
+    pika::start(nullptr, 0, nullptr);
+    pika::finalize();
+    pika::stop();
+  }
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {

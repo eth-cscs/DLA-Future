@@ -126,56 +126,33 @@ struct WorkSpaceHost {
   Matrix<SizeType, Device::CPU> i3;
 };
 
-// forward declaration : Device::GPU - unused
+template <class T, Device D>
+using HostMirrorMatrix =
+    std::conditional_t<D == Device::CPU, Matrix<T, Device::CPU>&, Matrix<T, Device::CPU>>;
+
 template <class T, Device D>
 struct WorkSpaceHostMirror {
-  Matrix<T, Device::CPU> e2;
+  HostMirrorMatrix<T, D> e2;
 
-  Matrix<T, Device::CPU> d1;
+  HostMirrorMatrix<T, D> d1;
 
-  Matrix<T, Device::CPU> z0;
-  Matrix<T, Device::CPU> z1;
+  HostMirrorMatrix<T, D> z0;
+  HostMirrorMatrix<T, D> z1;
 
-  Matrix<SizeType, Device::CPU> i2;
+  HostMirrorMatrix<SizeType, D> i2;
 };
 
-template <class T>
-struct WorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& e2;
-
-  Matrix<T, Device::CPU>& d1;
-
-  Matrix<T, Device::CPU>& z0;
-  Matrix<T, Device::CPU>& z1;
-
-  Matrix<SizeType, Device::CPU>& i2;
-};
-
-// forward declaration : Device::GPU - unused
 template <class T, Device D>
 struct DistWorkSpaceHostMirror {
-  Matrix<T, Device::CPU> e0;
-  Matrix<T, Device::CPU> e2;
+  HostMirrorMatrix<T, D> e0;
+  HostMirrorMatrix<T, D> e2;
 
-  Matrix<T, Device::CPU> d1;
+  HostMirrorMatrix<T, D> d1;
 
-  Matrix<T, Device::CPU> z0;
-  Matrix<T, Device::CPU> z1;
+  HostMirrorMatrix<T, D> z0;
+  HostMirrorMatrix<T, D> z1;
 
-  Matrix<SizeType, Device::CPU> i2;
-};
-
-template <class T>
-struct DistWorkSpaceHostMirror<T, Device::CPU> {
-  Matrix<T, Device::CPU>& e0;
-  Matrix<T, Device::CPU>& e2;
-
-  Matrix<T, Device::CPU>& d1;
-
-  Matrix<T, Device::CPU>& z0;
-  Matrix<T, Device::CPU>& z1;
-
-  Matrix<SizeType, Device::CPU>& i2;
+  HostMirrorMatrix<SizeType, D> i2;
 };
 
 template <class T>
@@ -469,7 +446,14 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
   TileCollector tc{i_begin, i_end};
 
-  const std::size_t nthreads = getTridiagRank1NWorkers();
+  // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
+  const std::size_t nthreads = [nrtiles = (i_end - i_begin)]() {
+    const std::size_t min_workers = 1;
+    const std::size_t available_workers = getTridiagRank1NWorkers();
+    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
+    return std::clamp(ideal_workers, min_workers, available_workers);
+  }();
+
   ex::start_detached(
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
@@ -825,10 +809,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   };
 
   // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
-  const std::size_t nthreads = [size = sz_loc_tiles.cols()]() {
+  const std::size_t nthreads = [nrtiles = sz_loc_tiles.cols()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = getTridiagRank1NWorkers();
-    const std::size_t ideal_workers = util::ceilDiv(to_sizet(size), to_sizet(2));
+    const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
     return std::clamp(ideal_workers, min_workers, available_workers);
   }();
 

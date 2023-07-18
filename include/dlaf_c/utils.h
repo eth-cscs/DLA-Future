@@ -30,4 +30,11 @@ typedef double complex dlaf_complex_z;  ///< Double precision complex number
 
 #include <dlaf_c/desc.h>
 
+/// Make a DLA-Future descriptor from a ScaLAPACK descriptor
+///
+/// @param m Number of rows to be operated on (number of rows in the distributed submatrix)
+/// @param n Number of columns to be operated on (number of columns in the distributed submatrix)
+/// @param i Row index in the global matrix indicating the first row of the submatrix
+/// @param j Column index in the global matrix indicating the first colum index of the submatrix 
+/// @param desc ScaLAPACK descriptor
 DLAF_EXTERN_C struct DLAF_descriptor make_dlaf_descriptor(int m, int n, int i, int j, int* desc);

@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - pika@main +mpi
+    - pika@git.fix-free_stack-no-guard-pages +mpi
     - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich
 
   packages:

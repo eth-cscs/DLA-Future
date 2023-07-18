@@ -9,7 +9,6 @@
 //
 
 #include <complex>
-#include <functional>
 #include <tuple>
 
 #include <blas/util.hh>
@@ -18,14 +17,8 @@
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>
-#include <dlaf/eigensolver/eigensolver/api.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/matrix_mirror.h>
-#include <dlaf/tune.h>
-#include <dlaf/types.h>
-#include <dlaf_c/grid.h>
-#include <dlaf_c/init.h>
 #include <dlaf_c_test/c_api_helpers.h>
 
 #include "test_eigensolver_c_api_wrapper.h"
@@ -34,15 +27,11 @@
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/eigensolver/test_eigensolver_correctness.h>
-#include <dlaf_test/matrix/matrix_local.h>
 #include <dlaf_test/matrix/util_matrix.h>
-#include <dlaf_test/matrix/util_matrix_local.h>
-#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
-using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 

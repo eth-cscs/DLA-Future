@@ -17,10 +17,11 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf_c/grid.h>
+#include <dlaf_c/init.h>
+#include <dlaf_c_test/blacs.h>
 
 #include "config.h"
-
-#include <dlaf_test/blacs.h>
 
 enum class API { dlaf, scalapack };
 

@@ -11,11 +11,12 @@
 #include <unordered_map>
 
 #include <dlaf/common/index2d.h>
+#include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/grid.h>
+#include <dlaf_c_test/blacs.h>
 
 #include <gtest/gtest.h>
-
-#include <dlaf_test/comm_grids/grids_6_ranks.h>
 
 std::unordered_map<char, dlaf::common::Ordering> ordering = {{'R', dlaf::common::Ordering::RowMajor},
                                                              {'C', dlaf::common::Ordering::ColumnMajor}};

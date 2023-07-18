@@ -9,36 +9,21 @@
 //
 
 #include <complex>
-#include <functional>
-#include <sstream>
 #include <tuple>
-#include <type_traits>
 
 #include <blas/util.hh>
 
 #include <pika/init.hpp>
-#include <pika/runtime.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
-#include <dlaf/factorization/cholesky.h>
 #include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/matrix_mirror.h>
-#include <dlaf_c/grid.h>
-#include <dlaf_c/init.h>
+#include <dlaf_c_test/c_api_helpers.h>
 
 #include "test_cholesky_c_api_wrapper.h"
-
-#include <gtest/gtest.h>
-
-#ifdef DLAF_WITH_SCALAPACK
-#include <dlaf_test/blacs.h>
-#endif
-#include <dlaf_c_test/c_api_helpers.h>
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_generic_lapack.h>
 #include <dlaf_test/matrix/util_matrix.h>
-#include <dlaf_test/util_types.h>
 
 using namespace dlaf;
 using namespace dlaf::comm;

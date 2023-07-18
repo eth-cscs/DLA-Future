@@ -12,7 +12,11 @@
 
 #include <mpi.h>
 
+#include <pika/execution.hpp>
+
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/matrix.h>
 
 #include "config.h"
 
@@ -55,4 +59,24 @@ void c_api_test_finalize(int dlaf_context) {
     Cblacs_gridexit(dlaf_context);
   }
 #endif
+}
+
+template <typename T, dlaf::Device D>
+std::pair<T*, int> top_left_tile(dlaf::matrix::Matrix<T, D>& mat) {
+  T* local_ptr;
+  int lld;
+
+  if (dlaf::LocalTileIndex(0, 0).isIn(mat.distribution().localNrTiles())) {
+    auto toplefttile =
+        pika::this_thread::experimental::sync_wait(mat.readwrite(dlaf::LocalTileIndex(0, 0)));
+
+    local_ptr = toplefttile.ptr();
+    lld = static_cast<int>(toplefttile.ld());
+  }
+  else {
+    local_ptr = nullptr;
+    lld = 1;
+  }
+
+  return std::make_pair(local_ptr, lld);
 }

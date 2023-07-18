@@ -107,45 +107,9 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
     char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
 
     // Get top left local tiles
-    int lld_a, lld_eigenvectors;
-    T* local_a_ptr;
-    T* local_eigenvectors_ptr;
-    dlaf::BaseType<T>* eigenvalues_ptr;
-    {
-      if (LocalTileIndex(0, 0).isIn(mat_a_h.distribution().localNrTiles())) {
-        auto toplefttile_a =
-            pika::this_thread::experimental::sync_wait(mat_a_h.readwrite(LocalTileIndex(0, 0)));
-
-        lld_a = static_cast<int>(toplefttile_a.ld());
-        local_a_ptr = toplefttile_a.ptr();
-      }
-      else {
-        lld_a = 1;
-        local_a_ptr = nullptr;
-      }
-
-      if (LocalTileIndex(0, 0).isIn(eigenvectors.distribution().localNrTiles())) {
-        auto toplefttile_eigenvectors =
-            pika::this_thread::experimental::sync_wait(eigenvectors.readwrite(LocalTileIndex(0, 0)));
-
-        lld_eigenvectors = static_cast<int>(toplefttile_eigenvectors.ld());
-        local_eigenvectors_ptr = toplefttile_eigenvectors.ptr();
-      }
-      else {
-        lld_eigenvectors = 1;
-        local_eigenvectors_ptr = nullptr;
-      }
-
-      if (LocalTileIndex(0, 0).isIn(eigenvalues.distribution().localNrTiles())) {
-        auto toplefttile_eigenvalues =
-            pika::this_thread::experimental::sync_wait(eigenvalues.readwrite(LocalTileIndex(0, 0)));
-
-        eigenvalues_ptr = toplefttile_eigenvalues.ptr();
-      }
-      else {
-        eigenvalues_ptr = nullptr;
-      }
-    }  // Destroy tiles (avoid spurious dependencies)
+    auto [local_a_ptr, lld_a] = top_left_tile(mat_a_h);
+    auto [local_eigenvectors_ptr, lld_eigenvectors] = top_left_tile(eigenvectors);
+    auto [eigenvalues_ptr, lld_eigenvalues] = top_left_tile(eigenvalues);
 
     // Suspend pika to ensure it is resumed by the C API
     pika::suspend();

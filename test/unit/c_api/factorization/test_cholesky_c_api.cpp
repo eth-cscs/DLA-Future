@@ -90,21 +90,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   char dlaf_uplo = uplo == blas::Uplo::Upper ? 'U' : 'L';
 
   // Get pointer to first element of local matrix
-  T* local_a_ptr;
-  int lld;
-  {
-    if (LocalTileIndex(0, 0).isIn(mat_h.distribution().localNrTiles())) {
-      auto toplefttile_a =
-          pika::this_thread::experimental::sync_wait(mat_h.readwrite(LocalTileIndex(0, 0)));
-
-      local_a_ptr = toplefttile_a.ptr();
-      lld = static_cast<int>(toplefttile_a.ld());
-    }
-    else {
-      local_a_ptr = nullptr;
-      lld = 1;
-    }
-  }  // Destroy tile (avoids dependency issues down the line)
+  auto [local_a_ptr, lld] = top_left_tile(mat_h);
 
   // Suspend pika to ensure it is resumed by the C API
   pika::suspend();

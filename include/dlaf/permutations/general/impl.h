@@ -14,7 +14,7 @@
 
 #include <mpi.h>
 
-#include <pika/algorithm.hpp>
+#include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/assert.h>

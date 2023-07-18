@@ -25,6 +25,7 @@ std::unordered_map<char, dlaf::common::Ordering> ordering = {{'R', dlaf::common:
 TEST(GridTest, GridScaLAPACKOrdering) {
   for (const auto& [key, value] : ordering) {
     char order = key;
+    EXPECT_EQ(order, key);
 
     int context;
     Cblacs_get(0, 0, &context);
@@ -33,13 +34,7 @@ TEST(GridTest, GridScaLAPACKOrdering) {
     int nprow, npcol, mynprow, mynpcol;
     Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
 
-    int system_context;
-    int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
-    Cblacs_get(context, get_blacs_contxt, &system_context);
-
-    MPI_Comm comm = Cblacs2sys_handle(system_context);
-
-    char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
+    char rm = grid_ordering(MPI_COMM_WORLD, nprow, npcol, mynprow, mynpcol);
     EXPECT_EQ(rm, key);
 
     Cblacs_gridexit(context);
@@ -48,7 +43,7 @@ TEST(GridTest, GridScaLAPACKOrdering) {
 #endif
 
 TEST(GridTest, GridDLAFOrdering) {
-  for (const auto& [key, value] : ordering) {
+  for (const auto [key, value] : ordering) {
     dlaf::comm::Communicator world(MPI_COMM_WORLD);
 
     dlaf::comm::CommunicatorGrid row_major(world, 2, 3, value);

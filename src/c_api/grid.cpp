@@ -20,6 +20,7 @@
 
 #include "blacs.h"
 #include "dlaf/communication/error.h"
+#include "utils.h"
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
@@ -28,8 +29,7 @@ int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
   // blacs starts to number contexts from 0
   int dlaf_context = std::numeric_limits<int>::max() - static_cast<int>(std::size(dlaf_grids));
 
-  auto dlaf_order = order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
-                                                 : dlaf::common::Ordering::RowMajor;
+  auto dlaf_order = char2order(order);
 
   DLAF_MPI_CHECK_ERROR(MPI_Barrier(comm));
 
@@ -56,8 +56,7 @@ void dlaf_create_grid_from_blacs(int blacs_ctxt) {
   Cblacs_gridinfo(blacs_ctxt, &dims[0], &dims[1], &coords[0], &coords[1]);
 
   auto order = grid_ordering(communicator, dims[0], dims[1], coords[0], coords[1]);
-  auto dlaf_order =
-      order == 'C' ? dlaf::common::Ordering::ColumnMajor : dlaf::common::Ordering::RowMajor;
+  auto dlaf_order = char2order(order);
 
   dlaf_grids.try_emplace(blacs_ctxt, world, dims[0], dims[1], dlaf_order);
 }

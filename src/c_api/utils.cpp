@@ -37,3 +37,8 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
 
   return std::make_tuple(distribution, layout);
 }
+
+dlaf::common::Ordering char2order(char order) {
+  return order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
+                                      : dlaf::common::Ordering::RowMajor;
+}

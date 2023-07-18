@@ -8,100 +8,52 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <functional>
-#include <sstream>
-#include <tuple>
+#include <unordered_map>
 
-#include <pika/init.hpp>
-#include <pika/runtime.hpp>
-
-#include <dlaf/communication/communicator_grid.h>
-#include <dlaf/factorization/cholesky.h>
-#include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/matrix_mirror.h>
+#include <dlaf/common/index2d.h>
 #include <dlaf_c/grid.h>
-#include <dlaf_c/init.h>
 
 #include <gtest/gtest.h>
 
-#ifdef DLAF_WITH_SCALAPACK
-#include <dlaf_test/blacs.h>
-#endif
-
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
-#include <dlaf_test/matrix/util_generic_lapack.h>
-#include <dlaf_test/matrix/util_matrix.h>
-#include <dlaf_test/util_types.h>
 
-using namespace dlaf;
-using namespace dlaf::comm;
-using namespace dlaf::matrix;
-using namespace dlaf::matrix::test;
-using namespace dlaf::test;
-using namespace testing;
+std::unordered_map<char, dlaf::common::Ordering> ordering = {{'R', dlaf::common::Ordering::RowMajor},
+                                                             {'C', dlaf::common::Ordering::ColumnMajor}};
 
 #ifdef DLAF_WITH_SCALAPACK
-TEST(GridTest, GridScaLAPACKOrderingR) {
-  char order = 'R';
+TEST(GridTest, GridScaLAPACKOrdering) {
+  for (const auto& [key, value] : ordering) {
+    char order = key;
 
-  int context;
-  Cblacs_get(0, 0, &context);
-  Cblacs_gridinit(&context, &order, 2, 3);
+    int context;
+    Cblacs_get(0, 0, &context);
+    Cblacs_gridinit(&context, &order, 2, 3);
 
-  int nprow, npcol, mynprow, mynpcol;
-  Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
+    int nprow, npcol, mynprow, mynpcol;
+    Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
 
-  int system_context;
-  int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
-  Cblacs_get(context, get_blacs_contxt, &system_context);
+    int system_context;
+    int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
+    Cblacs_get(context, get_blacs_contxt, &system_context);
 
-  MPI_Comm comm = Cblacs2sys_handle(system_context);
+    MPI_Comm comm = Cblacs2sys_handle(system_context);
 
-  char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
-  EXPECT_EQ(rm, 'R');
+    char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
+    EXPECT_EQ(rm, key);
 
-  Cblacs_gridexit(context);
-}
-
-TEST(GridTest, GridScaLAPACKOrderingC) {
-  char order = 'C';
-
-  int context;
-  Cblacs_get(0, 0, &context);
-  Cblacs_gridinit(&context, &order, 2, 3);
-
-  int nprow, npcol, mynprow, mynpcol;
-  Cblacs_gridinfo(context, &nprow, &npcol, &mynprow, &mynpcol);
-
-  int system_context;
-  int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
-  Cblacs_get(context, get_blacs_contxt, &system_context);
-
-  MPI_Comm comm = Cblacs2sys_handle(system_context);
-
-  char rm = grid_ordering(comm, nprow, npcol, mynprow, mynpcol);
-  EXPECT_EQ(rm, 'R');
-
-  Cblacs_gridexit(context);
+    Cblacs_gridexit(context);
+  }
 }
 #endif
 
 TEST(GridTest, GridDLAFOrdering) {
-  comm::Communicator world(MPI_COMM_WORLD);
+  for (const auto& [key, value] : ordering) {
+    dlaf::comm::Communicator world(MPI_COMM_WORLD);
 
-  comm::CommunicatorGrid row_major(world, 2, 3, common::Ordering::RowMajor);
+    dlaf::comm::CommunicatorGrid row_major(world, 2, 3, value);
 
-  char rm = grid_ordering(world, row_major.size().rows(), row_major.size().cols(),
-                          row_major.rank().row(), row_major.rank().col());
-  EXPECT_EQ(rm, 'R');
-}
-
-TEST(GridTest, GridDLAFOrderingC) {
-  comm::Communicator world(MPI_COMM_WORLD);
-
-  comm::CommunicatorGrid col_major(world, 2, 3, common::Ordering::ColumnMajor);
-
-  char cm = grid_ordering(world, col_major.size().rows(), col_major.size().cols(),
-                          col_major.rank().row(), col_major.rank().col());
-  EXPECT_EQ(cm, 'C');
+    char rm = grid_ordering(world, row_major.size().rows(), row_major.size().cols(),
+                            row_major.rank().row(), row_major.rank().col());
+    EXPECT_EQ(rm, key);
+  }
 }

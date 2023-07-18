@@ -380,10 +380,7 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
                              std::forward<OutSender>(out));
 
   if constexpr (D == Device::CPU) {
-    auto permute_fn = [subm_dist](const auto& index_tile_futs, const auto& mat_in_tiles,
-                                  const auto& mat_out_tiles) {
-      TileElementIndex zero(0, 0);
-      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
+    auto setup_permute_fn = [subm_dist](auto index_tile_futs, auto mat_in_tiles, auto mat_out_tiles) {
       const GlobalElementIndex out_begin{0, 0};
       const SizeType in_offset = 0;
       constexpr Coord orth_coord = orthogonal(C);
@@ -393,19 +390,29 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
           subm_dist.distanceToAdjacentTile<orth_coord>(in_offset),
           subm_dist.distanceToAdjacentTile<orth_coord>(out_begin.get<orth_coord>()));
 
-      // Parallelized over the number of permuted columns or rows
-      const SizeType nperms = subm_dist.size().get<C>();
-      pika::for_loop(pika::execution::par, to_sizet(0), to_sizet(nperms), [&](SizeType i_perm) {
-        DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
-        DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
-
-        applyPermutation<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr, mat_in_tiles,
-                               mat_out_tiles);
-      });
+      return std::tuple(std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
+                        std::move(mat_out_tiles));
     };
 
-    ex::start_detached(dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
-                                                 std::move(permute_fn), std::move(sender)));
+    auto permute_fn = [subm_dist](const auto i_perm, const auto& args) {
+      auto& [splits, index_tile_futs, mat_in_tiles, mat_out_tiles] = args;
+      TileElementIndex zero(0, 0);
+      const SizeType* perm_arr = index_tile_futs[0].get().ptr(zero);
+      const GlobalElementIndex out_begin{0, 0};
+      const SizeType in_offset = 0;
+
+      [[maybe_unused]] const SizeType nperms = subm_dist.size().get<C>();
+      DLAF_ASSERT_HEAVY(i_perm >= 0 && i_perm < nperms, i_perm, nperms);
+      DLAF_ASSERT_HEAVY(perm_arr[i_perm] >= 0 && perm_arr[i_perm] < nperms, i_perm, nperms);
+
+      applyPermutation<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr, mat_in_tiles,
+                             mat_out_tiles);
+    };
+
+    ex::start_detached(std::move(sender) |
+                       dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(),
+                                                 std::move(setup_permute_fn)) |
+                       ex::bulk(subm_dist.size().get<C>(), permute_fn));
   }
   else {
 #if defined(DLAF_WITH_GPU)
@@ -417,8 +424,9 @@ void applyPackingIndex(const matrix::Distribution& subm_dist, IndexMapSender&& i
       applyPermutationsOnDevice<T, C>(GlobalElementIndex(0, 0), subm_dist.size(), 0, subm_dist, i_ptr,
                                       mat_in_tiles, mat_out_tiles, stream);
 
-      ex::start_detached(dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(),
-                                                   std::move(permute_fn), std::move(sender)));
+      ex::start_detached(std::move(sender) |
+                         dlaf::internal::transform(dlaf::internal::Policy<Backend::GPU>(),
+                                                   std::move(permute_fn)));
     };
 #endif
   }

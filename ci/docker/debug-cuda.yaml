@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - pika@git.fix-free_stack-no-guard-pages +mpi +cuda
+    - pika +mpi +cuda
     - dla-future@master build_type=Debug +cuda +miniapps +ci-test ^openblas threads=openmp ^mpich
 
   packages:

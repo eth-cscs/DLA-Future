@@ -423,9 +423,9 @@ private:
 };
 
 template <class CommSender, class T, class DepSender>
-[[nodiscard]] auto scheduleSendCol(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
-                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
-                                   DepSender&& dep) {
+[[nodiscard]] auto schedule_send_col(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                     SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                     DepSender&& dep) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -441,9 +441,9 @@ template <class CommSender, class T, class DepSender>
 }
 
 template <class CommSender, class T, class DepSender>
-[[nodiscard]] auto scheduleRecvCol(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
-                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
-                                   DepSender&& dep) {
+[[nodiscard]] auto schedule_recv_Col(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                     SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                     DepSender&& dep) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -619,8 +619,8 @@ private:
 };
 
 template <class CommSender, class PromiseSender>
-[[nodiscard]] auto scheduleSendWorker(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
-                                      PromiseSender&& worker) {
+[[nodiscard]] auto schedule_send_worker(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                        PromiseSender&& worker) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -633,9 +633,9 @@ template <class CommSender, class PromiseSender>
 }
 
 template <class CommSender, class PromiseSender>
-[[nodiscard]] auto scheduleRecvWorker(SizeType sweep, SizeType step, CommSender&& pcomm,
-                                      comm::IndexT_MPI src, comm::IndexT_MPI tag,
-                                      PromiseSender&& worker) {
+[[nodiscard]] auto schedule_recv_worker(SizeType sweep, SizeType step, CommSender&& pcomm,
+                                        comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                        PromiseSender&& worker) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -650,27 +650,33 @@ template <class CommSender, class PromiseSender>
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  // TODO: Rewrite
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
-  // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
-  // Then the sweep continues applying steps.
-  // The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
-  // The steps in the same sweep has to be executed in order and the dependencies are managed by the
-  // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
+  // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag
+  // which act on the i-th column of the band matrix (copy tridiag on previous nb colums as well).
+  // Then the sweep is continued using run_sweep.
+  // Dependencies are tracked with counting semaphores.
+  // In the next schema above each sweep the acquisitions of the semaphore are depicted with an a.
+  // Below the sweep the releases are denoted with r.
   //
-  // assuming b = 4 and nb = 8 (i.e each task applies two steps):
-  // Copy of band: A A A A B B B B C C C C D D D D E ...
-  //                   deps[0]    |    deps[1]    | ...
-  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
-  //                |    deps[0]    |    deps[1]    | ...
-  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
-  //                  |    deps[0]    |    deps[1]    | ...
-  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3
+  // assuming b = 4 and nb = 8:
+  // Copy of band: A A A A B B B B C C C C D D D D E E E E F F F
+  //                            2r|             2r|         2r+r|
+  //               a|a      |a      |a      |a      |a      |a  |
+  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5
+  //                |      r|      r|      r|      r|      r|r+r|
+  //                 a|a      |a      |a      |a      |a      |
+  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 *
+  //                  |      r|      r|      r|      r|    r+r|
+  //                   a|a      |a      |a      |a      |a      |
+  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4
+  //                    |      r|      r|      r|      r|    r+r|
+  //                     a|a      |a      |a      |a      |a    |
+  // Sweep 3             I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4
+  //                      |      r|      r|      r|      r|  r+r|
   //                    ...
-  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depends explicitly only on deps[j+1],
-  //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on
-  //       deps[j] as well.
+  // Note: The last step has an extra release (+r) to ensure that the last step of the next sweep
+  //       can execute. E.g. see sweep 3 step 4.
 
   using common::Pipeline;
   using common::internal::vector;
@@ -694,7 +700,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   Matrix<BaseType<T>, Device::CPU> mat_trid({size, 2}, {nb, 2});
   Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
-  // const auto& dist_v = mat_v.distribution();
 
   if (size == 0) {
     return {std::move(mat_trid), std::move(mat_v)};
@@ -802,6 +807,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                       dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
     }
     if (sweep % nb == 0) {
+      // The run_sweep tasks writes a single column of elements of mat_v.
+      // To avoid to retile the matrix (to avoid to have too many tiles), each column of tiles should
+      // be shared in read/write mode by multiple tasks.
+      // Therefore whe extract the tiles of the column in a vector and move it to a shared_ptr,
+      // that can be copyed to the different tasks, but reference the same tiles.
       const SizeType i = sweep / nb;
       tiles_v = ex::when_all_vector(matrix::select(
                     mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}))) |
@@ -1294,9 +1304,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           const auto block_local_id = dist.localTileIndex(block_id + GlobalTileSize{0, 1}).col();
           auto a_block = a_ws[block_local_id];
           auto& deps_block = deps[block_local_id];
-          ex::start_detached(scheduleSendCol(comm, prev_rank,
-                                             compute_col_tag(block_id.col(), next_j == size - 1), b,
-                                             a_block, next_j, deps_block[0]));
+          ex::start_detached(schedule_send_col(comm, prev_rank,
+                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
+                                               a_block, next_j, deps_block[0]));
         }
       }
       else if (rank == rank_block) {
@@ -1313,9 +1323,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           copy_tridiag(a_block, sweep, std::move(dep));
         }
         else {
-          ex::start_detached(scheduleRecvWorker(sweep, init_step, comm, prev_rank,
-                                                compute_worker_tag(sweep, block_id.col()),
-                                                w_pipeline()));
+          ex::start_detached(schedule_recv_worker(sweep, init_step, comm, prev_rank,
+                                                  compute_worker_tag(sweep, block_id.col()),
+                                                  w_pipeline()));
         }
 
         // Index of the first column (currently) after this block (if exists).
@@ -1324,9 +1334,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
           // column before is sent here.
-          deps_block.push_back(scheduleRecvCol(comm, next_rank,
-                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
-                                               a_block, next_j, deps_block.back()) |
+          deps_block.push_back(schedule_recv_Col(comm, next_rank,
+                                                 compute_col_tag(block_id.col(), next_j == size - 1), b,
+                                                 a_block, next_j, deps_block.back()) |
                                ex::split());
         }
 
@@ -1353,7 +1363,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         deps_block.resize(ceilDiv(last_step, steps_per_task) + 1);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(scheduleSendWorker(
+          ex::start_detached(schedule_send_worker(
               comm, next_rank, compute_worker_tag(sweep, block_id.col() + 1), w_pipeline()));
         }
       }

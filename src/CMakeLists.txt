@@ -195,7 +195,6 @@ DLAF_addSublibrary(
           init.cpp
           matrix/distribution.cpp
           matrix/layout_info.cpp
-          matrix/retiled_matrix.cpp
           matrix/tile.cpp
           matrix.cpp
           matrix_mirror.cpp

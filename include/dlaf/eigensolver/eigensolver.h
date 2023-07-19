@@ -50,6 +50,9 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eig
   DLAF_ASSERT(square_blocksize(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);
   DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);
+  DLAF_ASSERT(single_tile_per_block(mat), mat);
+  DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
 
   internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors);
 }
@@ -107,6 +110,9 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
   DLAF_ASSERT(square_blocksize(eigenvectors), eigenvectors);
   DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);
   DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);
+  DLAF_ASSERT(single_tile_per_block(mat), mat);
+  DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
+  DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
 
   internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors);
 }

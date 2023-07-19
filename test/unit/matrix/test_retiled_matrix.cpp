@@ -12,7 +12,6 @@
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/retiled_matrix.h>
 
 #include <gtest/gtest.h>
 
@@ -78,23 +77,6 @@ const std::vector<std::tuple<LocalElementSize, TileElementSize, LocalTileSize>> 
     {{4, 4}, {4, 4}, {1, 1}},
 });
 
-template <class T, Device D>
-void testStaticAPI() {
-  using matrix_t = RetiledMatrix<T, D>;
-
-  // RetiledMatrixLike Traits
-  using ncT = std::remove_const_t<T>;
-  static_assert(std::is_same_v<ncT, typename matrix_t::ElementType>, "wrong ElementType");
-  static_assert(std::is_same_v<Tile<ncT, D>, typename matrix_t::TileType>, "wrong TileType");
-  static_assert(std::is_same_v<Tile<const T, D>, typename matrix_t::ConstTileType>,
-                "wrong ConstTileType");
-}
-
-TYPED_TEST(RetiledMatrixLocalTest, StaticAPI) {
-  testStaticAPI<TypeParam, Device::CPU>();
-  testStaticAPI<TypeParam, Device::GPU>();
-}
-
 TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
   using Type = TypeParam;
 
@@ -117,16 +99,45 @@ TYPED_TEST(RetiledMatrixTest, LocalConstructor) {
 
     Matrix<Type, Device::CPU> mat(size, block_size);
 
-    set(mat, el1);
+    // Non-const retiled matrix
     {
-      RetiledMatrix<Type, Device::CPU> rt_mat(mat, tiles_per_block);
-      EXPECT_EQ(expected_distribution, rt_mat.distribution());
-      CHECK_MATRIX_EQ(el1, rt_mat);
+      set(mat, el1);
 
-      set(rt_mat, el2);
-      CHECK_MATRIX_EQ(el2, rt_mat);
+      {
+        Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
+        EXPECT_EQ(expected_distribution, rt_mat.distribution());
+        CHECK_MATRIX_EQ(el1, rt_mat);
+
+        set(rt_mat, el2);
+        CHECK_MATRIX_EQ(el2, rt_mat);
+      }
+      CHECK_MATRIX_EQ(el2, mat);
     }
-    CHECK_MATRIX_EQ(el2, mat);
+
+    // Const retiled matrix from non-const matrix
+    {
+      set(mat, el1);
+
+      {
+        Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+        EXPECT_EQ(expected_distribution, rt_mat.distribution());
+        CHECK_MATRIX_EQ(el1, rt_mat);
+      }
+      CHECK_MATRIX_EQ(el1, mat);
+    }
+
+    // Const retiled matrix from const matrix
+    {
+      set(mat, el1);
+      Matrix<const Type, Device::CPU>& mat_const = mat;
+
+      {
+        Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+        EXPECT_EQ(expected_distribution, rt_mat.distribution());
+        CHECK_MATRIX_EQ(el1, rt_mat);
+      }
+      CHECK_MATRIX_EQ(el1, mat);
+    }
   }
 }
 
@@ -153,15 +164,45 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
 
       Matrix<Type, Device::CPU> mat(size, block_size, comm_grid);
 
-      set(mat, el1);
+      // Non-const retiled matrix
       {
-        RetiledMatrix<Type, Device::CPU> rt_mat(mat, tiles_per_block);
-        EXPECT_EQ(expected_distribution, rt_mat.distribution());
-        CHECK_MATRIX_EQ(el1, rt_mat);
+        set(mat, el1);
 
-        set(rt_mat, el2);
+        {
+          Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+
+          set(rt_mat, el2);
+          CHECK_MATRIX_EQ(el2, rt_mat);
+        }
+        CHECK_MATRIX_EQ(el2, mat);
       }
-      CHECK_MATRIX_EQ(el2, mat);
+
+      // Const retiled matrix from non-const matrix
+      {
+        set(mat, el1);
+
+        {
+          Matrix<const Type, Device::CPU> rt_mat = mat.retiledSubPipelineConst(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+        }
+        CHECK_MATRIX_EQ(el1, mat);
+      }
+
+      // Const retiled matrix from const matrix
+      {
+        set(mat, el1);
+        Matrix<const Type, Device::CPU>& mat_const = mat;
+
+        {
+          Matrix<const Type, Device::CPU> rt_mat = mat_const.retiledSubPipelineConst(tiles_per_block);
+          EXPECT_EQ(expected_distribution, rt_mat.distribution());
+          CHECK_MATRIX_EQ(el1, rt_mat);
+        }
+        CHECK_MATRIX_EQ(el1, mat);
+      }
     }
   }
 }
@@ -178,8 +219,8 @@ TYPED_TEST(RetiledMatrixTest, Dependencies) {
     ASSERT_GE(size.cols(), block_size.cols());
 
     // Dependencies graph:
-    // rw0 - rw1 - ro2a - rw3 - rw4
-    //           \ ro2b /
+    // rw0 - rw1 - ro2a - rw3 - rw4 - ro5a
+    //           \ ro2b /           \ ro5b
 
     Matrix<Type, Device::CPU> mat(size, block_size);
     EagerVoidSender rwsender0 = mat.readwrite(LocalTileIndex{0, 0});
@@ -187,10 +228,17 @@ TYPED_TEST(RetiledMatrixTest, Dependencies) {
 
     EagerVoidSender rwsender4;
     {
-      RetiledMatrix<Type, Device::CPU> rt_mat(mat, tiles_per_block);
+      Matrix<Type, Device::CPU> rt_mat = mat.retiledSubPipeline(tiles_per_block);
 
       rwsender4 = mat.readwrite(LocalTileIndex{0, 0});
       EXPECT_FALSE(rwsender4.is_ready());
+
+      Matrix<const Type, Device::CPU> rt_mat_const = mat.retiledSubPipeline(tiles_per_block);
+
+      EagerVoidSender rosender5a = rt_mat_const.read(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rosender5a.is_ready());
+      EagerVoidSender rosender5b = rt_mat_const.read(LocalTileIndex{0, 0});
+      EXPECT_FALSE(rosender5b.is_ready());
 
       EagerVoidSender rwsender1 = rt_mat.readwrite(LocalTileIndex{0, 0});
       EXPECT_FALSE(rwsender1.is_ready());
@@ -223,8 +271,24 @@ TYPED_TEST(RetiledMatrixTest, Dependencies) {
         EXPECT_TRUE(rwsender4.is_ready());
       else
         EXPECT_FALSE(rwsender4.is_ready());
-    }
 
-    EXPECT_TRUE(rwsender4.is_ready());
+      for (const auto tile : iterate_range2d(tiles_per_block)) {
+        // The first tile has already been marked done
+        if (tile == LocalTileIndex{0, 0}) {
+          continue;
+        }
+        else {
+          rt_mat.done(tile);
+        }
+      }
+
+      EXPECT_TRUE(rwsender4.is_ready());
+
+      EXPECT_FALSE(rosender5a.is_ready());
+      EXPECT_FALSE(rosender5b.is_ready());
+      std::move(rwsender4).get();
+      EXPECT_TRUE(rosender5a.is_ready());
+      EXPECT_TRUE(rosender5b.is_ready());
+    }
   }
 }

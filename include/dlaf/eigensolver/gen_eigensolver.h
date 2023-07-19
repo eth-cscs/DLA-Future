@@ -39,8 +39,8 @@ namespace dlaf::eigensolver {
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
-void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
-                    Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+void gen_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                     Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -82,7 +82,7 @@ void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
+EigensolverResult<T, D> gen_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -98,7 +98,7 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
                                              TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a.blockSize());
 
-  genEigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors);
+  gen_eigensolver<B, D, T>(uplo, mat_a, mat_b, eigenvalues, eigenvectors);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
@@ -123,9 +123,9 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
-void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                    Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
-                    Matrix<T, D>& eigenvectors) {
+void gen_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
+                     Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
+                     Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -168,8 +168,8 @@ void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& 
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                       Matrix<T, D>& mat_b) {
+EigensolverResult<T, D> gen_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                        Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -185,7 +185,7 @@ EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo u
                                              TileElementSize(mat_a.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a.blockSize(), grid);
 
-  genEigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors);
+  gen_eigensolver<B, D, T>(grid, uplo, mat_a, mat_b, eigenvalues, eigenvectors);
 
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }

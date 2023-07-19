@@ -163,10 +163,10 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
     MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
-        return eigensolver::genEigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
+        return eigensolver::gen_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get());
       }
       else {
-        return eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get());
+        return eigensolver::gen_eigensolver<B>(uplo, mat_a.get(), mat_b.get());
       }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
@@ -175,13 +175,13 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
-        eigensolver::genEigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
-                                       eigenvectors);
+        eigensolver::gen_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
+                                        eigenvectors);
         return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-        eigensolver::genEigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
+        eigensolver::gen_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
         return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }

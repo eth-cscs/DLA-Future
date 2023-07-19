@@ -130,11 +130,11 @@ struct GenEigensolverMiniapp {
 
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
+        using dlaf::eigensolver::gen_eigensolver;
         if (opts.local)
-          return dlaf::eigensolver::genEigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get());
+          return gen_eigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get());
         else
-          return dlaf::eigensolver::genEigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
-                                                            matrix_b->get());
+          return gen_eigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(), matrix_b->get());
       };
       auto [eigenvalues, eigenvectors] = bench();
 

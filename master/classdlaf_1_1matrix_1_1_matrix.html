@@ -128,9 +128,10 @@ Public Member Functions</h2></td></tr>
 <tr class="separator:ad11e9036fe317b6328ae71585b19c811"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af486e66243b57df94b9822bd2553ae38"><td class="memItemLeft" align="right" valign="top">ReadWriteSenderType&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html#af486e66243b57df94b9822bd2553ae38">readwrite</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index) noexcept</td></tr>
 <tr class="separator:af486e66243b57df94b9822bd2553ae38"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a720bcfeb6db4c2f2d6e144f8570b8e23"><td class="memItemLeft" align="right" valign="top"><a id="a720bcfeb6db4c2f2d6e144f8570b8e23"></a>
-<a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><b>subPipeline</b> ()</td></tr>
+<tr class="memitem:a720bcfeb6db4c2f2d6e144f8570b8e23"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html#a720bcfeb6db4c2f2d6e144f8570b8e23">subPipeline</a> ()</td></tr>
 <tr class="separator:a720bcfeb6db4c2f2d6e144f8570b8e23"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae1c8b22f9862944a006003f528595ff"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html#aae1c8b22f9862944a006003f528595ff">retiledSubPipeline</a> (const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> &amp;tiles_per_block)</td></tr>
+<tr class="separator:aae1c8b22f9862944a006003f528595ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -429,6 +430,68 @@ template&lt;class T , Device D&gt; </div>
 </div><div class="memdoc">
 <p>Returns a sender of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with local index <code>index</code>.</p>
 <dl class="section pre"><dt>Precondition</dt><dd>index.isIn(distribution().localNrTiles()). </dd></dl>
+
+</div>
+</div>
+<a id="aae1c8b22f9862944a006003f528595ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae1c8b22f9862944a006003f528595ff">&#9670;&nbsp;</a></span>retiledSubPipeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a> <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a>&lt; T, D &gt;::retiledSubPipeline </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> &amp;&#160;</td>
+          <td class="paramname"><em>tiles_per_block</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the original matrix</p>
+<p>All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined matrix.</p>
+<dl class="section pre"><dt>Precondition</dt><dd>blockSize() is divisible by <code>tiles_per_block</code> </dd>
+<dd>
+blockSize() == baseTileSize() </dd></dl>
+
+</div>
+</div>
+<a id="a720bcfeb6db4c2f2d6e144f8570b8e23"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a720bcfeb6db4c2f2d6e144f8570b8e23">&#9670;&nbsp;</a></span>subPipeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T , Device D&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a> <a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a>&lt; T, D &gt;::subPipeline </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original matrix</p>
+<p>All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined matrix. </p>
 
 </div>
 </div>

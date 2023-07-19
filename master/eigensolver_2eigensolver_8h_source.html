@@ -106,54 +106,60 @@ $(function() {
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  DLAF_ASSERT(square_blocksize(eigenvectors), eigenvectors);</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);</div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160; </div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">internal::Eigensolver&lt;B, D, T&gt;::call</a>(uplo, mat, eigenvalues, eigenvectors);</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat), mat);</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);</div>
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00070"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#a94fb08e9087b48ae5fe19b59c9e28db8">   70</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat) {</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <span class="keyword">const</span> SizeType size = mat.size().rows();</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;BaseType&lt;T&gt;</a>, D&gt; eigenvalues(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, 1),</div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;                                             <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>(mat.blockSize().rows(), 1));</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;T, D&gt;</a> eigenvectors(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, size), mat.blockSize());</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  eigensolver&lt;B, D, T&gt;(uplo, mat, eigenvalues, eigenvectors);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <span class="keywordflow">return</span> {std::move(eigenvalues), std::move(eigenvectors)};</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;}</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00096"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#a2b99692c7224f63a547cc6686d732490">   96</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat,</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;                 Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; eigenvalues, Matrix&lt;T, D&gt;&amp; eigenvectors) {</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;  DLAF_ASSERT(square_size(mat), mat);</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  DLAF_ASSERT(square_blocksize(mat), mat);</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,</div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;              eigenvectors);</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(eigenvectors, grid), eigenvectors);</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;  DLAF_ASSERT(square_size(eigenvectors), eigenvectors);</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;  DLAF_ASSERT(square_blocksize(eigenvectors), eigenvectors);</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;  DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;  DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160; </div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">internal::Eigensolver&lt;B, D, T&gt;::call</a>(grid, uplo, mat, eigenvalues, eigenvectors);</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;}</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160; </div>
-<div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00128"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#ad43e9ff356aafef70396fdc6b6d3a1f2">  128</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat) {</div>
-<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;  <span class="keyword">const</span> SizeType size = mat.size().rows();</div>
-<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;BaseType&lt;T&gt;</a>, D&gt; eigenvalues(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, 1),</div>
-<div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160;                                             <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>(mat.blockSize().rows(), 1));</div>
-<div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;T, D&gt;</a> eigenvectors(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">GlobalElementSize</a>(size, size), mat.blockSize(), grid);</div>
-<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160; </div>
-<div class="line"><a name="l00134"></a><span class="lineno">  134</span>&#160;  eigensolver&lt;B, D, T&gt;(grid, uplo, mat, eigenvalues, eigenvectors);</div>
-<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  <span class="keywordflow">return</span> {std::move(eigenvalues), std::move(eigenvectors)};</div>
-<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;}</div>
-<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;}</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">internal::Eigensolver&lt;B, D, T&gt;::call</a>(uplo, mat, eigenvalues, eigenvectors);</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;}</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00073"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#a94fb08e9087b48ae5fe19b59c9e28db8">   73</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat) {</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  <span class="keyword">const</span> SizeType size = mat.size().rows();</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;BaseType&lt;T&gt;</a>, D&gt; eigenvalues(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, 1),</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;                                             <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>(mat.blockSize().rows(), 1));</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;T, D&gt;</a> eigenvectors(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, size), mat.blockSize());</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160; </div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  eigensolver&lt;B, D, T&gt;(uplo, mat, eigenvalues, eigenvectors);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  <span class="keywordflow">return</span> {std::move(eigenvalues), std::move(eigenvectors)};</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;}</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00099"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#a2b99692c7224f63a547cc6686d732490">   99</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat,</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;                 Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; eigenvalues, Matrix&lt;T, D&gt;&amp; eigenvectors) {</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;  DLAF_ASSERT(square_size(mat), mat);</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;  DLAF_ASSERT(square_blocksize(mat), mat);</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;  DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;  DLAF_ASSERT(eigenvalues.size().rows() == eigenvectors.size().rows(), eigenvalues, eigenvectors);</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;  DLAF_ASSERT(eigenvalues.blockSize().rows() == eigenvectors.blockSize().rows(), eigenvalues,</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;              eigenvectors);</div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(eigenvectors, grid), eigenvectors);</div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;  DLAF_ASSERT(square_size(eigenvectors), eigenvectors);</div>
+<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;  DLAF_ASSERT(square_blocksize(eigenvectors), eigenvectors);</div>
+<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;  DLAF_ASSERT(eigenvectors.size() == mat.size(), eigenvectors, mat);</div>
+<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;  DLAF_ASSERT(eigenvectors.blockSize() == mat.blockSize(), eigenvectors, mat);</div>
+<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat), mat);</div>
+<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160;  DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);</div>
+<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;  DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);</div>
+<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160; </div>
+<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">internal::Eigensolver&lt;B, D, T&gt;::call</a>(grid, uplo, mat, eigenvalues, eigenvectors);</div>
+<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;}</div>
+<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160; </div>
+<div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00134"></a><span class="lineno"><a class="line" href="eigensolver_2eigensolver_8h.html#ad43e9ff356aafef70396fdc6b6d3a1f2">  134</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat) {</div>
+<div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;  <span class="keyword">const</span> SizeType size = mat.size().rows();</div>
+<div class="line"><a name="l00136"></a><span class="lineno">  136</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;BaseType&lt;T&gt;</a>, D&gt; eigenvalues(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, 1),</div>
+<div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;                                             <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>(mat.blockSize().rows(), 1));</div>
+<div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;T, D&gt;</a> eigenvectors(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">GlobalElementSize</a>(size, size), mat.blockSize(), grid);</div>
+<div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160; </div>
+<div class="line"><a name="l00140"></a><span class="lineno">  140</span>&#160;  eigensolver&lt;B, D, T&gt;(grid, uplo, mat, eigenvalues, eigenvectors);</div>
+<div class="line"><a name="l00141"></a><span class="lineno">  141</span>&#160;  <span class="keywordflow">return</span> {std::move(eigenvalues), std::move(eigenvectors)};</div>
+<div class="line"><a name="l00142"></a><span class="lineno">  142</span>&#160;}</div>
+<div class="line"><a name="l00143"></a><span class="lineno">  143</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:55</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:56</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="aeigensolver_2eigensolver_8h_html_a7aeed252a1783c24f778eb250d0efd72"><div class="ttname"><a href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">dlaf::eigensolver::eigensolver</a></div><div class="ttdeci">void eigensolver(blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</div><div class="ttdef"><b>Definition:</b> eigensolver.h:39</div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>

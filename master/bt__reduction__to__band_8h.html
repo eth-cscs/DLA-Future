@@ -147,7 +147,11 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd>mat_c is distributed, </dd>
 <dd>
-mat_v is distributed according to grid. </dd></dl>
+mat_v is distributed according to grid, </dd>
+<dd>
+mat_c has equal tile and block sizes, </dd>
+<dd>
+mat_v has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>
@@ -202,7 +206,11 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 </dl>
 <dl class="section pre"><dt>Precondition</dt><dd>mat_c is not distributed, </dd>
 <dd>
-mat_v is not distributed. </dd></dl>
+mat_v is not distributed, </dd>
+<dd>
+mat_c has equal tile and block sizes, </dd>
+<dd>
+mat_v has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>

@@ -162,6 +162,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dd>
 mat_a has a square block size, </dd>
 <dd>
+mat_a mat_b and mat_c have equal tile and block size, </dd>
+<dd>
 mat_a mat_b and mat_c are not distributed, </dd>
 <dd>
 mat_a mat_b are multipliable and the result can be summed to mat_c. </dd></dl>
@@ -245,6 +247,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
 <dd>
 mat_a has a square block size, </dd>
+<dd>
+mat_a, mat_b and mat_c have equal tile and block size, </dd>
 <dd>
 mat_a, mat_b and mat_c are distributed according to the grid, </dd>
 <dd>

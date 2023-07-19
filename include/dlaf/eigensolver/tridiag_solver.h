@@ -39,8 +39,8 @@ namespace eigensolver {
 /// @pre evals has equal tile and block sizes
 /// @pre evecs has equal tile and block sizes
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>, device>& evals,
-                   Matrix<T, device>& evecs) {
+void tridiag_solver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>, device>& evals,
+                    Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
@@ -91,8 +91,8 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
 /// @pre evals has equal tile and block sizes
 /// @pre evecs has equal tile and block sizes
 template <Backend B, Device D, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
-                   Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
+void tridiag_solver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
+                    Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);

@@ -100,7 +100,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
     matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
-    eigensolver::tridiagSolver<B>(grid, tridiag, evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiag_solver<B>(grid, tridiag, evals_mirror.get(), evecs_mirror.get());
   }
   if (n == 0)
     return;
@@ -221,7 +221,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
     // Find eigenvalues and eigenvectors of the tridiagonal matrix.
     //
     // Note: this modifies `tridiag`
-    eigensolver::tridiagSolver<B>(grid, tridiag, evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiag_solver<B>(grid, tridiag, evals_mirror.get(), evecs_mirror.get());
   }
 
   if (n == 0)

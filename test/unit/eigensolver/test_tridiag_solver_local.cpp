@@ -80,7 +80,7 @@ void solveLaplace1D(SizeType n, SizeType nb) {
     matrix::MatrixMirror<RealParam, D, Device::CPU> evals_mirror(evals);
     matrix::MatrixMirror<T, D, Device::CPU> evecs_mirror(evecs);
 
-    eigensolver::tridiagSolver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiag_solver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
   }
   if (n == 0)
     return;
@@ -167,7 +167,7 @@ void solveRandomTridiagMatrix(SizeType n, SizeType nb) {
     // Find eigenvalues and eigenvectors of the tridiagonal matrix.
     //
     // Note: this modifies `tridiag`
-    eigensolver::tridiagSolver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
+    eigensolver::tridiag_solver<B>(tridiag, evals_mirror.get(), evecs_mirror.get());
   }
 
   if (n == 0)

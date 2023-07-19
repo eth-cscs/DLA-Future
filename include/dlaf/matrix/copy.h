@@ -102,10 +102,10 @@ void copy(Matrix<T, Source>& src,  // TODO this should be const
   // Note:
   // From an algorithmic point of view it would be better to reason in terms of block instead of tiles,
   // with the aim of reducing the number of communications.
-  // Current implementation reasons in terms of tiles due to a limitation for "recursively retiled"
-  // matrices, which cannot access the original block of the original matrix, but just their specific
-  // tile size (i.e. tiles cannot be upscaled upto block). Dealing with tiles leads to a sub-optimal
-  // solution: smaller chunks are communicated, leading to a potentially higher number of communications.
+  // Current implementation reasons in terms of tiles due to a limitation for retiled matrices, which
+  // cannot access the original block of the original matrix, but just their specific tile size (i.e.
+  // tiles cannot be upscaled upto block). Dealing with tiles leads to a sub-optimal solution: smaller
+  // chunks are communicated, leading to a potentially higher number of communications.
   const TileElementSize tile_size_src = src.baseTileSize();
   const TileElementSize tile_size_dst = dst.baseTileSize();
 

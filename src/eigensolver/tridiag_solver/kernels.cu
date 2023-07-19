@@ -185,60 +185,6 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& t
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
-struct StrideOp {
-  SizeType ld;
-  SizeType offset;
-
-  __host__ __device__ __forceinline__ SizeType operator()(const SizeType i) const {
-    return offset + i * ld;
-  }
-};
-
-template <class T>
-struct Row2ColMajor {
-  SizeType ld;
-  SizeType ncols;
-  T* data;
-
-  __host__ __device__ __forceinline__ T operator()(const SizeType idx) const {
-    SizeType i = idx / ncols;
-    SizeType j = idx - i * ncols;
-    return data[i + j * ld];
-  }
-};
-
-constexpr unsigned set_diag_kernel_sz = 256;
-
-template <class T>
-__global__ void setUnitDiagTileOnDevice(SizeType len, SizeType ld, T* tile) {
-  const SizeType i = blockIdx.x * set_diag_kernel_sz + threadIdx.x;
-  if (i >= len)
-    return;
-
-  tile[i + i * ld] = T(1);
-}
-
-template <class T>
-void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
-                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream) {
-  SizeType tile_offset = k - tile_begin;
-  if (tile_offset < 0)
-    tile_offset = 0;
-  else if (tile_offset >= tile.size().rows())
-    return;
-
-  SizeType len = tile.size().rows() - tile_offset;
-  SizeType ld = tile.ld();
-  T* tile_ptr = tile.ptr(TileElementIndex(tile_offset, tile_offset));
-
-  dim3 nr_threads(set_diag_kernel_sz);
-  dim3 nr_blocks(util::ceilDiv(to_uint(len), set_diag_kernel_sz));
-  setUnitDiagTileOnDevice<<<nr_blocks, nr_threads, 0, stream>>>(len, ld, tile_ptr);
-}
-
-DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, float);
-DLAF_GPU_SET_UNIT_DIAGONAL_ETI(, double);
-
 // -----------------------------------------
 // This is a separate struct with a call operator instead of a lambda, because
 // nvcc does not compile the file with a lambda.

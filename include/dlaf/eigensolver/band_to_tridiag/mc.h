@@ -441,7 +441,7 @@ template <class CommSender, class T, class DepSender>
 }
 
 template <class CommSender, class T, class DepSender>
-[[nodiscard]] auto schedule_recv_Col(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
+[[nodiscard]] auto schedule_recv_col(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
                                      SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
                                      DepSender&& dep) {
   using dlaf::comm::internal::transformMPI;
@@ -718,16 +718,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   ex::unique_any_sender<> prev_dep = ex::just();
   // Copy the band matrix
   for (SizeType k = 0; k < n; ++k) {
-    SizeType nr_release = nb / b;
+    SizeType nr_releases = nb / b;
     ex::unique_any_sender<> dep = copy_diag(k * nb, mat_a.read(GlobalTileIndex{k, k}));
     if (k < n - 1) {
       dep = copy_offdiag(k * nb, ex::when_all(std::move(dep), mat_a.read(GlobalTileIndex{k + 1, k})));
     }
     else {
       // Add one to make sure to unlock the last step of the first sweep.
-      nr_release = ceilDiv(size - k * nb, b) + 1;
+      nr_releases = ceilDiv(size - k * nb, b) + 1;
     }
-    prev_dep = ex::when_all(ex::just(nr_release, sem), std::move(prev_dep), std::move(dep)) |
+    prev_dep = ex::when_all(ex::just(nr_releases, sem), std::move(prev_dep), std::move(dep)) |
                dlaf::internal::transform(policy_hp, [](SizeType nr, auto&& sem) { sem->release(nr); });
   }
   ex::start_detached(std::move(prev_dep));
@@ -1333,7 +1333,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
           // column before is sent here.
-          deps_block.push_back(schedule_recv_Col(comm, next_rank,
+          deps_block.push_back(schedule_recv_col(comm, next_rank,
                                                  compute_col_tag(block_id.col(), next_j == size - 1), b,
                                                  a_block, next_j, deps_block.back()) |
                                ex::split());

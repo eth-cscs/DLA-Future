@@ -741,7 +741,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   for (SizeType i = 0; i < max_workers; ++i)
     workers.emplace_back(SweepWorker<T>(size, b));
 
-
   auto run_sweep = [a_ws, size, nb, b](SemaphorePtr&& sem, SemaphorePtr&& sem_next, SizeType sweep,
                                        SweepWorker<T>& worker, const TileVectorPtr& tiles_v) {
     const SizeType nr_steps = nrStepsForSweep(sweep, size, b);

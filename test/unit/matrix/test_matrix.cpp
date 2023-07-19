@@ -1840,7 +1840,7 @@ struct TestReshuffling {
   const TileElementSize dst_tilesize;
 };
 std::vector<TestReshuffling> sizes_reshuffling_tests{
-    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},   // no-reshuffling
+    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},   // same shape
     TestReshuffling{{10, 5}, {5, 10}, {10, 2}},  // x2 | /5
     TestReshuffling{{26, 13}, {10, 3}, {5, 6}},  // /2 | x2
 };
@@ -1856,14 +1856,17 @@ void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
       std::min(grid.size().cols() - 1, dlaf::util::ceilDiv(grid.size().cols(), 2)));
   matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
 
-  matrix::Matrix<T, Device::CPU> src_host(dist_src);  // TODO this should be const
+  auto fixedValues = [](const GlobalElementIndex index) { return T(index.row() * 1000 + index.col()); };
+
+  matrix::Matrix<const T, Device::CPU> src_host = [dist_src, fixedValues]() {
+    matrix::Matrix<T, Device::CPU> src_host(dist_src);
+    matrix::util::set(src_host, fixedValues);
+    return src_host;
+  }();
   matrix::Matrix<T, Device::CPU> dst_host(dist_dst);
 
-  auto fixedValues = [](const GlobalElementIndex index) { return T(index.row() * 1000 + index.col()); };
-  matrix::util::set(src_host, fixedValues);
-
   {
-    matrix::MatrixMirror<T, Source, Device::CPU> src(src_host);
+    matrix::MatrixMirror<const T, Source, Device::CPU> src(src_host);
     matrix::MatrixMirror<T, Destination, Device::CPU> dst(dst_host);
     matrix::copy(src.get(), dst.get(), grid);
   }

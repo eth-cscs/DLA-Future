@@ -20,7 +20,6 @@
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/matrix.h>
-#include <dlaf/matrix/retiled_matrix.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
@@ -86,18 +85,18 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
 /// @pre nb = min(src.blockSize().cols(), dst.blockSize().cols())
 ///      src.blockSize().cols() % nb == 0
 ///      dst.blockSize().cols() % nb == 0
+/// @pre src has equal tile and block sizes.
+/// @pre dst has equal tile and block sizes.
 template <class T, Device Source, Device Destination>
-void copy(Matrix<T, Source>& src,  // TODO this should be const
-          Matrix<T, Destination>& dst, comm::CommunicatorGrid grid) {
+void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::CommunicatorGrid grid) {
   namespace ex = pika::execution::experimental;
 
   DLAF_ASSERT_MODERATE(equal_size(src, dst), src.size(), dst.size());
   DLAF_ASSERT_MODERATE(equal_process_grid(src, grid), src.commGridSize(), grid.size());
   DLAF_ASSERT_MODERATE(equal_process_grid(dst, grid), dst.commGridSize(), grid.size());
 
-  // TODO Currently multiple tile per blocks cannot be tested, as Matrix does not support it yet.
-  DLAF_ASSERT_MODERATE(src.baseTileSize() == src.blockSize(), src.baseTileSize(), src.blockSize());
-  DLAF_ASSERT_MODERATE(dst.baseTileSize() == dst.blockSize(), dst.baseTileSize(), dst.blockSize());
+  DLAF_ASSERT_MODERATE(single_tile_per_block(src), src);
+  DLAF_ASSERT_MODERATE(single_tile_per_block(src), dst);
 
   // Note:
   // From an algorithmic point of view it would be better to reason in terms of block instead of tiles,
@@ -120,8 +119,8 @@ void copy(Matrix<T, Source>& src,  // TODO this should be const
   const LocalTileSize scale_factor_src{tile_size_src.rows() / mb, tile_size_src.cols() / nb};
   const LocalTileSize scale_factor_dst{tile_size_dst.rows() / mb, tile_size_dst.cols() / nb};
 
-  RetiledMatrix<T, Source> src_retiled(src, scale_factor_src);  // TODO this should be const
-  RetiledMatrix<T, Destination> dst_retiled(dst, scale_factor_dst);
+  Matrix<const T, Source> src_retiled = src.retiledSubPipelineConst(scale_factor_src);
+  Matrix<T, Destination> dst_retiled = dst.retiledSubPipeline(scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
   common::Pipeline<comm::Communicator> comm_pipeline(grid.fullCommunicator().clone());

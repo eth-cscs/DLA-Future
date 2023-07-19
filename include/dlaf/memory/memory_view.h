@@ -53,7 +53,7 @@ public:
   ///
   /// @param ptr  The pointer to the already allocated memory,
   /// @param size The size (in number of elements of type @c T) of the existing allocation,
-  /// @pre @p ptr+i can be deferenced for 0 < @c i < @p size.
+  /// @pre @p ptr+i can be dereferenced for 0 <= @c i < @p size.
   MemoryView(T* ptr, SizeType size)
       : memory_(ptr ? std::make_shared<MemoryChunk<ElementType, D>>(const_cast<ElementType*>(ptr), size)
                     : nullptr),

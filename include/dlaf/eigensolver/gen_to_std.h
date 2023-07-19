@@ -41,7 +41,7 @@ namespace eigensolver {
 /// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are not distributed.
 template <Backend backend, Device device, class T>
-void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
+void gen_to_std(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
@@ -86,8 +86,8 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
 /// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are distributed according to the grid.
 template <Backend backend, Device device, class T>
-void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
-              Matrix<T, device>& mat_b) {
+void gen_to_std(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
+                Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);

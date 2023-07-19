@@ -47,7 +47,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 
   eigensolver::tridiagSolver<B>(ret.tridiagonal, evals, mat_e);
 
-  backTransformationBandToTridiag<B>(band_size, mat_e, ret.hh_reflectors);
+  bt_band_to_tridiag<B>(band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(band_size, mat_e, mat_a, mat_taus);
 }
 
@@ -81,7 +81,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
   }
 #endif
 
-  backTransformationBandToTridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
+  bt_band_to_tridiag<B>(grid, band_size, mat_e, ret.hh_reflectors);
   backTransformationReductionToBand<B>(grid, band_size, mat_e, mat_a, mat_taus);
 }
 }

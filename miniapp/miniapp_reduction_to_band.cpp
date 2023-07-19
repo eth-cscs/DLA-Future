@@ -114,9 +114,9 @@ struct reductionToBandMiniapp {
         dlaf::common::Timer<> timeit;
         auto bench = [&]() {
           if (opts.local)
-            return dlaf::eigensolver::reductionToBand<backend>(matrix, opts.b);
+            return dlaf::eigensolver::reduction_to_band<backend>(matrix, opts.b);
           else
-            return dlaf::eigensolver::reductionToBand<backend>(comm_grid, matrix, opts.b);
+            return dlaf::eigensolver::reduction_to_band<backend>(comm_grid, matrix, opts.b);
         };
         auto taus = bench();
 

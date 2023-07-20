@@ -437,7 +437,8 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
 template <class T, class KSender, class RhoSender>
 void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k, RhoSender&& rho,
                        Matrix<const T, Device::CPU>& d, Matrix<T, Device::CPU>& z,
-                       Matrix<T, Device::CPU>& evals, Matrix<T, Device::CPU>& evecs) {
+                       Matrix<T, Device::CPU>& evals, Matrix<const SizeType, Device::CPU>& i2,
+                       Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -458,20 +459,41 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       ex::when_all(ex::just(std::make_unique<pika::barrier<>>(nthreads)), std::forward<KSender>(k),
                    std::forward<RhoSender>(rho), ex::when_all_vector(tc.read(d)),
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
-                   ex::when_all_vector(tc.readwrite(evecs)),
+                   ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
-                                           auto& evec_tiles, auto& ws_vecs) {
+                                           const auto& i2_tile_arr, auto& evec_tiles, auto& ws_vecs) {
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
+
+        const SizeType* i2_perm = i2_tile_arr[0].get().ptr();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
         const std::size_t batch_size = util::ceilDiv(to_sizet(k), nthreads);
         const std::size_t begin = thread_idx * batch_size;
         const std::size_t end = std::min(thread_idx * batch_size + batch_size, to_sizet(k));
 
-        // STEP 0: Initialize workspaces (single-thread)
+        // STEP 0a: Fill ones for deflated Eigenvectors. (single-thread)
+        // Note: this step is completely independent from the rest, but it is small and it is going
+        // to be dropped soon.
+        // Note: use last thread that in principle should have less work to do
+        if (thread_idx == nthreads - 1) {
+          for (SizeType i = 0; i < n; ++i) {
+            const SizeType j = i2_perm[to_sizet(i)];
+
+            // if it is deflated
+            if (j >= k) {
+              const GlobalElementIndex ij(i, j);
+              const auto linear_ij = distr.globalTileLinearIndex(ij);
+              const auto ij_el = distr.tileElementIndex(ij);
+
+              evec_tiles[to_sizet(linear_ij)](ij_el) = 1;
+            }
+          }
+        }
+
+        // STEP 0b: Initialize workspaces (single-thread)
         if (thread_idx == 0) {
           ws_vecs.reserve(nthreads);
           for (std::size_t i = 0; i < nthreads; ++i)
@@ -499,13 +521,30 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
             lapack::laed4(to_int(k), to_int(i), d_ptr, z_ptr, delta, rho, &eigenval);
           }
 
-          // Note: for in-place row permutation implementation: The rows should be permuted for the k=2 case as well.
-
           // Note: laed4 handles k <= 2 cases differently
-          if (k <= 2)
+          if (k <= 2) {
+            // Note: The rows should be permuted for the k=2 case as well.
+            if (k == 2) {
+              T* ws = ws_vecs[thread_idx]();
+              for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+                const SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, j));
+                const SizeType j_col = distr.tileElementFromGlobalElement<Coord::Col>(j);
+                T* evec = evec_tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_col));
+
+                std::copy(evec, evec + k, ws);
+                std::fill_n(evec, k, 0);  // by default "deflated"
+                for (SizeType i = 0; i < n; ++i) {
+                  const SizeType ii = i2_perm[i];
+                  if (ii < k)
+                    evec[i] = ws[ii];
+                }
+              }
+            }
             return;
+          }
         }
 
+        // Note: This barrier ensures that LAED4 finished, so from now on values are available
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 2a Compute weights (multi-thread)
@@ -514,7 +553,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // - copy diagonal from q -> w (or just initialize with 1)
         if (thread_idx == 0) {
-          for (auto i = 0; i < k; ++i) {
+          for (SizeType i = 0; i < k; ++i) {
             const GlobalElementIndex kk(i, i);
             const auto diag_tile = distr.globalTileLinearIndex(kk);
             const auto diag_element = distr.tileElementIndex(kk);
@@ -537,11 +576,11 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           w[i] *= q[to_sizet(q_tile)](q_ij) / (d_ptr[to_sizet(i)] - d_ptr[to_sizet(j)]);
         };
 
-        for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
-          for (auto i = 0; i < j; ++i)
+        for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+          for (SizeType i = 0; i < j; ++i)
             compute_w({i, j});
 
-          for (auto i = j + 1; i < k; ++i)
+          for (SizeType i = j + 1; i < k; ++i)
             compute_w({i, j});
         }
 
@@ -549,7 +588,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
         // STEP 2B: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
-          for (int i = 0; i < k; ++i) {
+          for (SizeType i = 0; i < k; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
               const T* w_partial = ws_vecs[tidx]();
               w[i] *= w_partial[i];
@@ -567,8 +606,8 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
           const T* w = z_ptr;
           T* s = ws_vecs[thread_idx]();
 
-          for (auto j = to_SizeType(begin); j < to_SizeType(end); ++j) {
-            for (int i = 0; i < k; ++i) {
+          for (SizeType j = to_SizeType(begin); j < to_SizeType(end); ++j) {
+            for (SizeType i = 0; i < k; ++i) {
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
 
@@ -577,26 +616,19 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             const T vec_norm = blas::nrm2(k, s, 1);
 
-            for (auto i = 0; i < k; ++i) {
+            for (SizeType i = 0; i < n; ++i) {
+              const SizeType ii = i2_perm[i];
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
 
-              q[to_sizet(q_tile)](q_ij) = s[i] / vec_norm;
+              if (ii < k)
+                q[to_sizet(q_tile)](q_ij) = s[ii] / vec_norm;
+              else
+                q[to_sizet(q_tile)](q_ij) = 0;
             }
           }
         }
       }));
-}
-
-template <class T, Device D, class KSender>
-void setUnitDiag(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix<T, D>& mat) {
-  // Iterate over diagonal tiles
-  const matrix::Distribution& distr = mat.distribution();
-  for (SizeType i_tile = i_begin; i_tile < i_end; ++i_tile) {
-    const SizeType tile_begin = distr.globalTileElementDistance<Coord::Row>(i_begin, i_tile);
-
-    setUnitDiagonalAsync<D>(k, tile_begin, mat.readwrite(GlobalTileIndex(i_tile, i_tile)));
-  }
 }
 
 template <Backend B, Device D, class T, class RhoSender>
@@ -681,22 +713,13 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // The input is not required to be zero for solveRank1Problem.
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.e2);
-
+  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-
-  setUnitDiag(i_begin, i_end, k, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  //
-  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i2, ws.i2);
-  // The following permutation will be removed in the future.
-  // (The copy is needed to simplify the removal)
-  dlaf::permutations::permute<B, D, T, Coord::Row>(i_begin, i_end, ws.i2, ws.e2, ws.e0);
-  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e2);
   dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
                                                   T(1), ws.e1, ws.e2, T(0), ws.e0);
 
@@ -888,7 +911,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           // Note:
           // Considering that
           // - LAED4 requires working on k elements
-          // - Weight computaiton requires working on m_subm_el_lc
+          // - Weight computation requires working on m_subm_el_lc
           //
           // and they are needed at two steps that cannot happen in parallel, we opted for allocating the
           // workspace with the highest requirement of memory, and reuse them for both steps.
@@ -1067,7 +1090,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // STEP 2c: reduce, then finalize computation with sign and square root (single-thread)
         if (thread_idx == 0) {
           // local reduction from all bulk workers
-          for (int i = 0; i < m_subm_el_lc; ++i) {
+          for (SizeType i = 0; i < m_subm_el_lc; ++i) {
             for (std::size_t tidx = 1; tidx < nthreads; ++tidx) {
               const T* w_partial = ws_cols[tidx]();
               w[i] *= w_partial[i];
@@ -1079,7 +1102,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                         transformMPI(all_reduce_in_place));
 
           T* weights = ws_cols[nthreads]();
-          for (int i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
+          for (SizeType i_subm_el_lc = 0; i_subm_el_lc < m_subm_el_lc; ++i_subm_el_lc) {
             const SizeType i_subm_lc = i_subm_el_lc / dist.blockSize().rows();
             const SizeType i_lc = ij_begin_lc.row() + i_subm_lc;
             const SizeType i = dist.globalTileFromLocalTile<Coord::Row>(i_lc);

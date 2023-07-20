@@ -38,6 +38,7 @@ namespace eigensolver {
 /// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
 /// @pre mat_a and mat_b have the same square size,
 /// @pre mat_a and mat_b have the same square block size,
+/// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are not distributed.
 template <Backend backend, Device device, class T>
 void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
@@ -47,6 +48,8 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
 
@@ -80,6 +83,7 @@ void genToStd(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_
 /// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
 /// @pre mat_a and mat_b have the same square size,
 /// @pre mat_a and mat_b have the same square block size,
+/// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are distributed according to the grid.
 template <Backend backend, Device device, class T>
 void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
@@ -90,6 +94,8 @@ void genToStd(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& m
   DLAF_ASSERT(matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(mat_a.size() == mat_b.size(), mat_a, mat_b);
   DLAF_ASSERT(mat_a.blockSize() == mat_b.blockSize(), mat_a, mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
 

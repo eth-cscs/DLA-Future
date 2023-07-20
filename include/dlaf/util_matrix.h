@@ -49,6 +49,12 @@ bool square_blocksize(const MatrixLike& m) noexcept {
   return m.blockSize().rows() == m.blockSize().cols();
 }
 
+/// Returns true if the matrix has a single tile per block.
+template <class MatrixLike>
+bool single_tile_per_block(const MatrixLike& m) noexcept {
+  return m.blockSize() == m.baseTileSize();
+}
+
 /// Returns true if matrices have equal sizes.
 template <class MatrixLikeA, class MatrixLikeB>
 bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {

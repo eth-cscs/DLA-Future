@@ -42,6 +42,7 @@ namespace dlaf::multiplication {
 ///         Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed.
 /// @pre mat_a, mat_b and mat_c have the same square block size,
 /// @pre mat_a, mat_b and mat_c have the same size,
+/// @pre mat_a, mat_b and mat_c have equal tile and block sizes,
 /// @pre mat_a, mat_b and mat_c are not distributed,
 /// @pre a <= b <= mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
@@ -51,6 +52,10 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_c), mat_c);
+
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
 
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
   DLAF_ASSERT(matrix::local_matrix(mat_b), mat_b);
@@ -93,6 +98,7 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 /// @pre mat_a, mat_b and mat_c are distributed in the same way,
 /// @pre mat_a, mat_b and mat_c have the same square block size,
 /// @pre mat_a, mat_b and mat_c have the same size,
+/// @pre mat_a, mat_b and mat_c have equal tile and block sizes,
 /// @pre a <= b <= mat_a.nrTiles().rows()
 template <Backend B, Device D, class T>
 void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
@@ -107,6 +113,10 @@ void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_c), mat_c);
+
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_b), mat_b);
+  DLAF_ASSERT(matrix::single_tile_per_block(mat_c), mat_c);
 
   // Note:
   // This is an over-constraint, since the algorithm just cares about the sub-matrix size (and its

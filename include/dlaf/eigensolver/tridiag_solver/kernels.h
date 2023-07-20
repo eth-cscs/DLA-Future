@@ -273,43 +273,6 @@ void initIndexTileAsync(SizeType tile_row, TileSender&& tile) {
   di::transformDetach(di::Policy<DefaultBackend_v<D>>(), initIndexTile_o, std::move(sender));
 }
 
-template <class T>
-void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
-                     const matrix::Tile<T, Device::CPU>& tile);
-
-#define DLAF_CPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
-  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
-                                      const matrix::Tile<Type, Device::CPU>& tile)
-
-DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, float);
-DLAF_CPU_SET_UNIT_DIAGONAL_ETI(extern, double);
-
-#ifdef DLAF_WITH_GPU
-template <class T>
-void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin,
-                     const matrix::Tile<T, Device::GPU>& tile, whip::stream_t stream);
-
-#define DLAF_GPU_SET_UNIT_DIAGONAL_ETI(kword, Type)                                  \
-  kword template void setUnitDiagonal(const SizeType& k, const SizeType& tile_begin, \
-                                      const matrix::Tile<Type, Device::GPU>& tile,   \
-                                      whip::stream_t stream)
-
-DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, float);
-DLAF_GPU_SET_UNIT_DIAGONAL_ETI(extern, double);
-
-#endif
-
-DLAF_MAKE_CALLABLE_OBJECT(setUnitDiagonal);
-
-template <Device D, class KSender, class TileSender>
-void setUnitDiagonalAsync(KSender&& k, SizeType tile_begin, TileSender&& tile) {
-  namespace di = dlaf::internal;
-  auto sender = di::whenAllLift(std::forward<KSender>(k), tile_begin, std::forward<TileSender>(tile));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), setUnitDiagonal_o, std::move(sender));
-}
-
-// ---------------------------
-
 #ifdef DLAF_WITH_GPU
 
 // Returns the number of non-deflated entries

@@ -42,7 +42,6 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/panel.h>
-#include <dlaf/matrix/retiled_matrix.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
 #include <dlaf/schedulers.h>
@@ -829,15 +828,15 @@ template <class T>
 struct ComputePanelHelper<Backend::MC, Device::CPU, T> {
   ComputePanelHelper(const std::size_t, matrix::Distribution) {}
 
-  void call(Matrix<T, Device::CPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
-            const SizeType j_sub, const matrix::SubPanelView& panel_view) {
+  void call(Matrix<T, Device::CPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+            const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
     computePanelReflectors(mat_a, mat_taus, j_sub, panel_view);
   }
 
   template <Device D, class CommSender, class TriggerSender>
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+            Matrix<T, D>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     using red2band::distributed::computePanelReflectors;
     computePanelReflectors(std::forward<TriggerSender>(trigger), rank_v0,
@@ -852,8 +851,8 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
   ComputePanelHelper(const std::size_t n_workspaces, matrix::Distribution dist_a)
       : panels_v(n_workspaces, dist_a) {}
 
-  void call(Matrix<T, Device::GPU>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus,
-            const SizeType j_sub, const matrix::SubPanelView& panel_view) {
+  void call(Matrix<T, Device::GPU>& mat_a, Matrix<T, Device::CPU>& mat_taus, const SizeType j_sub,
+            const matrix::SubPanelView& panel_view) {
     using red2band::local::computePanelReflectors;
 
     namespace ex = pika::execution::experimental;
@@ -872,7 +871,7 @@ struct ComputePanelHelper<Backend::GPU, Device::GPU, T> {
 
   template <Device D, class CommSender, class TriggerSender>
   void call(TriggerSender&& trigger, comm::IndexT_MPI rank_v0, CommSender&& mpi_col_chain_panel,
-            Matrix<T, D>& mat_a, matrix::RetiledMatrix<T, Device::CPU>& mat_taus, SizeType j_sub,
+            Matrix<T, D>& mat_a, Matrix<T, Device::CPU>& mat_taus, SizeType j_sub,
             const matrix::SubPanelView& panel_view) {
     auto& v = panels_v.nextResource();
 
@@ -962,8 +961,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
   if (nrefls == 0)
     return mat_taus;
 
-  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
-      mat_taus, LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
+  Matrix<T, Device::CPU> mat_taus_retiled =
+      mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
   DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().rows(), ntiles, mat_taus_retiled.nrTiles().rows());
@@ -1113,8 +1112,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   if (nrefls == 0)
     return mat_taus;
 
-  matrix::RetiledMatrix<T, Device::CPU> mat_taus_retiled(
-      mat_taus, LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
+  Matrix<T, Device::CPU> mat_taus_retiled =
+      mat_taus.retiledSubPipeline(LocalTileSize(mat_a.blockSize().cols() / band_size, 1));
 
   const SizeType ntiles = (nrefls - 1) / band_size + 1;
   DLAF_ASSERT(ntiles == mat_taus_retiled.nrTiles().rows(), ntiles, mat_taus_retiled.nrTiles().rows());

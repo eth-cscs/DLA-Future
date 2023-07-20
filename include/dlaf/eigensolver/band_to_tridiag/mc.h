@@ -684,7 +684,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   using pika::resource::get_num_threads;
   using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
-  using TileVectorPtr = std::shared_ptr<std::vector<matrix::Tile<T, Device::CPU>>>;
+  using TileVector = std::vector<matrix::Tile<T, Device::CPU>>;
+  using TileVectorPtr = std::shared_ptr<TileVector>;
 
   namespace ex = pika::execution::experimental;
 
@@ -728,7 +729,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       nr_releases = ceilDiv(size - k * nb, b) + 1;
     }
     prev_dep = ex::when_all(ex::just(nr_releases, sem), std::move(prev_dep), std::move(dep)) |
-               dlaf::internal::transform(policy_hp, [](SizeType nr, auto&& sem) { sem->release(nr); });
+               ex::then([](SizeType nr, auto&& sem) { sem->release(nr); });
   }
   ex::start_detached(std::move(prev_dep));
 
@@ -809,13 +810,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       // The run_sweep tasks writes a single column of elements of mat_v.
       // To avoid to retile the matrix (to avoid to have too many tiles), each column of tiles should
       // be shared in read/write mode by multiple tasks.
-      // Therefore whe extract the tiles of the column in a vector and move it to a shared_ptr,
-      // that can be copyed to the different tasks, but reference the same tiles.
+      // Therefore we extract the tiles of the column in a vector and move it to a shared_ptr,
+      // that can be copied to the different tasks, but reference the same tiles.
       const SizeType i = sweep / nb;
       tiles_v = ex::when_all_vector(matrix::select(
                     mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}))) |
-                ex::then([](auto&& vector) {
-                  return std::make_shared<typename TileVectorPtr::element_type>(std::move(vector));
+                ex::then([](TileVector&& vector) {
+                  return std::make_shared<TileVector>(std::move(vector));
                 }) |
                 ex::split();
     }
@@ -833,7 +834,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
   };
 
-  auto dep = ex::just(sem) |
+  auto dep = ex::just(std::move(sem)) |
              dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) |
              ex::split();
 

@@ -151,7 +151,7 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @pre mat_b has a square size
 /// @pre mat_b has a square blocksize
 /// @pre mat_b has equal tile and block sizes
-/// @pre eigenvalues is distributed according to grid ?? TODO
+/// @pre eigenvalues is not distributed
 /// @pre eigenvalues has equal tile and block sizes
 /// @pre eigenvectors is distributed according to grid
 /// @pre eigenvectors has a square blocksize

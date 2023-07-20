@@ -38,6 +38,19 @@ namespace dlaf::eigensolver {
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+/// @pre mat_a is not distributed
+/// @pre mat_a has a square size
+/// @pre mat_a has a square blocksize
+/// @pre mat_a has equal tile and block sizes
+/// @pre mat_b is not distributed
+/// @pre mat_b has a square size
+/// @pre mat_b has a square blocksize
+/// @pre mat_b has equal tile and block sizes
+/// @pre eigenvalues is not distributed
+/// @pre eigenvalues has equal tile and block sizes
+/// @pre eigenvectors is not distributed
+/// @pre eigenvectors has a square blocksize
+/// @pre eigenvectors has equal tile and block sizes
 template <Backend B, Device D, class T>
 void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
                     Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -81,6 +94,14 @@ void genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
+/// @pre mat_a is not distributed
+/// @pre mat_a has a square size
+/// @pre mat_a has a square blocksize
+/// @pre mat_a has equal tile and block sizes
+/// @pre mat_b is not distributed
+/// @pre mat_b has a square size
+/// @pre mat_b has a square blocksize
+/// @pre mat_b has equal tile and block sizes
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);
@@ -122,6 +143,19 @@ EigensolverResult<T, D> genEigensolver(blas::Uplo uplo, Matrix<T, D>& mat_a, Mat
 /// @param mat_b contains the Hermitian positive definite matrix B
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+/// @pre mat_a is distributed according to grid
+/// @pre mat_a has a square size
+/// @pre mat_a has a square blocksize
+/// @pre mat_a has equal tile and block sizes
+/// @pre mat_b is distributed according to grid
+/// @pre mat_b has a square size
+/// @pre mat_b has a square blocksize
+/// @pre mat_b has equal tile and block sizes
+/// @pre eigenvalues is distributed according to grid ?? TODO
+/// @pre eigenvalues has equal tile and block sizes
+/// @pre eigenvectors is distributed according to grid
+/// @pre eigenvectors has a square blocksize
+/// @pre eigenvectors has equal tile and block sizes
 template <Backend B, Device D, class T>
 void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                     Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
@@ -167,6 +201,14 @@ void genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& 
 /// @param uplo specifies if upper or lower triangular part of @p mat_a and @p mat_b will be referenced
 /// @param mat_a contains the Hermitian matrix A
 /// @param mat_b contains the Hermitian positive definite matrix B
+/// @pre mat_a is distributed according to grid
+/// @pre mat_a has a square size
+/// @pre mat_a has a square blocksize
+/// @pre mat_a has equal tile and block sizes
+/// @pre mat_b is distributed according to grid
+/// @pre mat_b has a square size
+/// @pre mat_b has a square blocksize
+/// @pre mat_b has equal tile and block sizes
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> genEigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                        Matrix<T, D>& mat_b) {

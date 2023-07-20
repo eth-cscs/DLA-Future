@@ -35,6 +35,15 @@ namespace dlaf::eigensolver {
 /// @param mat contains the Hermitian matrix A
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+/// @pre mat is not distributed
+/// @pre mat has a square size
+/// @pre mat has a square blocksize
+/// @pre mat has equal tile and block sizes
+/// @pre eigenvalues is not distributed
+/// @pre eigenvalues has equal tile and block sizes
+/// @pre eigenvectors is not distributed
+/// @pre eigenvectors has a square blocksize
+/// @pre eigenvectors has equal tile and block sizes
 template <Backend B, Device D, class T>
 void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                  Matrix<T, D>& eigenvectors) {
@@ -69,6 +78,10 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eig
 /// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
+/// @pre mat is not distributed
+/// @pre mat has a square size
+/// @pre mat has a square blocksize
+/// @pre mat has equal tile and block sizes
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
@@ -95,6 +108,15 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 /// @param mat contains the Hermitian matrix A
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+/// @pre mat is distributed according to grid
+/// @pre mat has a square size
+/// @pre mat has a square blocksize
+/// @pre mat has equal tile and block sizes
+/// @pre eigenvalues is distributed according to grid ?? TODO
+/// @pre eigenvalues has equal tile and block sizes
+/// @pre eigenvectors is distributed according to grid
+/// @pre eigenvectors has a square blocksize
+/// @pre eigenvectors has equal tile and block sizes
 template <Backend B, Device D, class T>
 void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
                  Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -130,6 +152,10 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
 /// @param grid is the communicator grid on which the matrix @p mat has been distributed,
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
+/// @pre mat is distributed according to grid
+/// @pre mat has a square size
+/// @pre mat has a square blocksize
+/// @pre mat has equal tile and block sizes
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();

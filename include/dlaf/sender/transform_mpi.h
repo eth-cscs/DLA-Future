@@ -34,7 +34,7 @@ void consumeCommunicatorWrapper(T&) {}
 ///
 /// Wrapper type around calls to MPI functions. Provides a call operator that
 /// creates an MPI request and passes it as the last argument to the provided
-/// callable. The wrapper then waits for the the request to complete with
+/// callable. The wrapper then waits for the request to complete with
 /// yield_while.
 ///
 /// This could in theory be a lambda inside transformMPI.  However, clang at

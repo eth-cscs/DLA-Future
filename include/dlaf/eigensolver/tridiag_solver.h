@@ -26,10 +26,9 @@ namespace eigensolver {
 /// @param tridiag [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
 ///                tridiagonal matrix in the first column and second columns respectively. The last entry
 ///                of the second column is not used.
-/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal
-///              matrix
-/// @param evecs [out] (n x n) local matrix holding the eigenvectors of the the symmetric tridiagonal
-///              matrix on exit.
+/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the symmetric tridiagonal matrix
+/// @param evecs [out] (n x n) local matrix holding the eigenvectors of the symmetric tridiagonal matrix
+///              on exit.
 ///
 /// @pre tridiag and @p evals and @p evecs are local matrices
 /// @pre tridiag has 2 columns and column block size of 2
@@ -75,10 +74,8 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
 /// @param tridiag [in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric
 ///                tridiagonal matrix in the first column and second columns respectively. The last entry
 ///                of the second column is not used.
-/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal
-///              matrix
-/// @param evecs [out] (n x n) distributed matrix holding the eigenvectors of the the symmetric
-/// tridiagonal
+/// @param evals [out] (n x 1) local matrix holding the eigenvalues of the symmetric tridiagonal matrix
+/// @param evecs [out] (n x n) distributed matrix holding the eigenvectors of the symmetric tridiagonal
 ///              matrix on exit.
 ///
 /// @pre tridiag and @p evals are local matrices and are the same on all ranks

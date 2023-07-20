@@ -34,7 +34,16 @@ namespace dlaf::permutations {
 ///        the range [i_begin,i_end) are accessed in read-only mode.
 /// @param mat_out is the output matrix. Only tiles whose both row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in write-only mode.
-///
+/// @pre perms is not distributed
+/// @pre perms has equal tile and block sizes
+/// @pre mat_in is not distributed
+/// @pre mat_in has equal tile and block sizes
+/// @pre mat_in has a square size
+/// @pre mat_in has a square blocksize
+/// @pre mat_out is not distributed
+/// @pre mat_out has equal tile and block sizes
+/// @pre mat_out has a square size
+/// @pre mat_out has a square blocksize
 template <Backend B, Device D, class T, Coord coord>
 void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
@@ -83,6 +92,16 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 ///        the range [i_begin,i_end) are accessed in readwrite-mode.
 /// @param mat_out is the distributed output matrix. Only tiles whose both global row and col tile coords are in
 ///        the range [i_begin,i_end) are accessed in readwrite-mode.
+/// @pre perms is not distributed
+/// @pre perms has equal tile and block sizes
+/// @pre mat_in is distributed according to grid
+/// @pre mat_in has equal tile and block sizes
+/// @pre mat_in has a square size
+/// @pre mat_in has a square blocksize
+/// @pre mat_out is distributed according to grid
+/// @pre mat_out has equal tile and block sizes
+/// @pre mat_out has a square size
+/// @pre mat_out has a square blocksize
 ///
 /// Note: The Pipeline<> API allows to use permute() within other algorithms without having to clone communicators
 ///       internally.
@@ -122,7 +141,6 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
 ///
 /// This overload clones the row communicator (if Coord::Col) or column communicator (if Coord::Row) of
 /// @p grid internally.
-///
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {

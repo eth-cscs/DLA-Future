@@ -847,13 +847,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   return {std::move(mat_trid), std::move(mat_v)};
 }
 
-/*
 struct VAccessHelper {
   // As panel_v are populated in the following way (e.g. with 4 ranks, nb = 2b and tiles_per_block = 2):
   //   Rank 0  Rank1  Rank2  Rank3     Rank 0  Rank1  Rank2  Rank3
   //   A0      A4      A8      A12     B0      B4      B8      B12
   //   A1      A5      A9      A13     B1      B5      B9      B13
-  //   --      --      ---     ---     --      --      ---     ---
   //   A2      A6      A10     A14     B2      B6      B10     B14
   //   A3      A7      A11     A15     B3      B7      B11     B15
   //   ---     ---     ---     ---     ---     ---     ---     ---
@@ -872,137 +870,107 @@ struct VAccessHelper {
   //   A4 B3 | C2 D1 | E0 ..
   //   .. .. | .. .. | .. ..
   //
-  // the communication of a tile of a panel might be splitted in two parts (e.g. B2 B3 tile).
-  // If copyIsSplitted() is true the copy/communication has to happen in two parts Top and Bottom,
-  // otherwise only Top is set.
+  // the communication of a tile of a panel might be splitted in multiple parts (e.g. B2 B3 tile).
 
-  VAccessHelper(const comm::CommunicatorGrid& grid, const SizeType band, const SizeType sweeps,
-                const SizeType sweep0, const SizeType step0, const matrix::Distribution& dist_band,
-                const matrix::Distribution& dist_panel, const matrix::Distribution& dist_v) noexcept {
-    rank_panel_ = rankPanel(band, step0, dist_band);
-    const auto rank = grid.rankFullCommunicator(grid.rank());
-    if (rank == rank_panel_)
-      index_panel_ = indexPanel(band, step0, dist_band, dist_panel);
+  VAccessHelper(const comm::CommunicatorGrid& grid, const SizeType sweeps, const SizeType sweep0,
+                const SizeType step0, const matrix::Distribution& dist_panel,
+                const matrix::Distribution& dist_v) noexcept
+      : grid_(grid), dist_v_(dist_v) {
+    const SizeType b = dist_panel.baseTileSize().cols();
+    const SizeType nb = dist_v.baseTileSize().rows();
 
-    const GlobalElementIndex id_v{(sweep0 / band + step0) * band, sweep0};
-    index_v_ = dist_v.globalTileIndex(id_v);
-    index_element_tile_v_ = dist_v.tileElementIndex(id_v);
+    DLAF_ASSERT_HEAVY(sweep0 % b == 0, sweep0, b);
+    DLAF_ASSERT_HEAVY(step0 * b % dist_panel.baseTileSize().rows() == 0, step0, b,
+                      dist_panel.baseTileSize().rows());
 
-    rank_v_top_ = grid.rankFullCommunicator(dist_v.rankGlobalTile(index_v_));
+    index_panel_ = dist_panel.globalTileIndex(GlobalElementIndex{step0 * b, 0});
+    rank_panel_ = dist_panel.rankGlobalTile(index_panel_).row();
+
+    DLAF_ASSERT_HEAVY(dist_panel.tileSize(index_panel_).rows() > 0,
+                      dist_panel.tileSize(index_panel_).rows());
+
+    const GlobalElementIndex ij_el_v_top{(sweep0 / b + step0) * b, sweep0};
+    ij_v_top_ = dist_v.globalTileIndex(ij_el_v_top);
+    offset_v_top_ = dist_v.tileElementIndex(ij_el_v_top);
 
     const SizeType rows_panel =
-        std::min(dist_panel.blockSize().rows(), dist_v.size().rows() - 1 - id_v.row());
-    const SizeType rows_v_top = dist_v.tileSize(index_v_).rows() - index_element_tile_v_.row();
+        std::min(dist_panel.tileSize(index_panel_).rows(), dist_v.size().rows() - 1 - ij_el_v_top.row());
 
-    const SizeType cols = std::min(rows_panel, std::min(band, sweeps - sweep0));
+    const SizeType cols = std::min(rows_panel, std::min(b, sweeps - sweep0));
 
-    if (rows_v_top < rows_panel) {
-      rank_v_bottom_ = grid.rankFullCommunicator(dist_v.rankGlobalTile(indexVBottomInternal(index_v_)));
-      size_top_ = TileElementSize{rows_v_top, cols};
-      size_bottom_ = TileElementSize{rows_panel - rows_v_top, cols};
-    }
-    else {
-      rank_v_bottom_ = -1;
-      size_top_ = TileElementSize{rows_panel, cols};
-      size_bottom_ = TileElementSize{0, 0};
-    }
+    size_top_ = {std::min(nb - offset_v_top_.row(), rows_panel), cols};
+    size_middle_ = {nb, cols};
+
+    nr_tiles_ = 1 + util::ceilDiv(rows_panel - size_top_.rows(), nb);
+
+    size_bottom_ = {rows_panel - size_top_.rows() - (nr_tiles_ - 2) * size_middle_.rows(), cols};
   }
 
-  bool copyIsSplitted() const noexcept {
-    return size_bottom_.rows() > 0;
-  }
-
-  LocalTileIndex indexPanel() const noexcept {
+  GlobalTileIndex index_panel() const noexcept {
     DLAF_ASSERT_HEAVY(index_panel_.isValid(), index_panel_);
     return index_panel_;
   }
-  comm::IndexT_MPI rankPanel() const noexcept {
+  comm::IndexT_MPI rank_panel() const noexcept {
     return rank_panel_;
   }
 
-  matrix::SubTileSpec specPanelTop() const noexcept {
-    return {{0, 0}, size_top_};
-  }
-  matrix::SubTileSpec specPanelBottom() const noexcept {
-    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);
-    return {{size_top_.rows(), 0}, size_bottom_};
+  SizeType nr_tiles() const noexcept {
+    return nr_tiles_;
   }
 
-  GlobalTileIndex indexVTop() const noexcept {
-    return index_v_;
-  }
-  matrix::SubTileSpec specVTop() const noexcept {
-    return {index_element_tile_v_, size_top_};
-  }
-  comm::IndexT_MPI rankVTop() const noexcept {
-    return rank_v_top_;
-  }
-  GlobalTileIndex indexVBottom() const noexcept {
-    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);
-    return indexVBottomInternal(index_v_);
-  }
-  matrix::SubTileSpec specVBottom() const noexcept {
-    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);
-    return {{0, index_element_tile_v_.col()}, size_bottom_};
-  }
-  comm::IndexT_MPI rankVBottom() const noexcept {
-    DLAF_ASSERT_HEAVY(copyIsSplitted(), size_bottom_);
-    return rank_v_bottom_;
+  TileElementIndex spec_panel_origin(SizeType i) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= i && i < nr_tiles_, i, nr_tiles_);
+    if (i == 0)
+      return {0, 0};
+
+    return {size_top_.rows() + (i - 1) * size_middle_.rows(), 0};
   }
 
-  static comm::IndexT_MPI rankPanel(const SizeType band, const SizeType step,
-                                    const matrix::Distribution& dist_band) noexcept {
-    // Need to use dist_band to identify the rank
-    // as the panel distribution is local (mismatch between tile size and distribution block-size).
-    const GlobalElementIndex id{0, step * band};
-    const GlobalTileIndex index = dist_band.globalTileIndex(id);
+  TileElementSize spec_size(SizeType i) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= i && i < nr_tiles_, i, nr_tiles_);
+    if (i == 0)
+      return size_top_;
+    else if (i == nr_tiles_ - 1)
+      return size_bottom_;
 
-    return dist_band.rankGlobalTile(index).col();
+    return size_middle_;
   }
 
-  static LocalTileIndex indexPanel(const SizeType band, const SizeType step,
-                                   const matrix::Distribution& dist_band,
-                                   const matrix::Distribution& dist_panel) noexcept {
-    // Need to use dist_band to compute the local element index
-    // as dist_panel is local (mismatch between tile size and distribution block-size).
-    // Then dist_panel is used to compute the local tile index.
-    const GlobalElementIndex id{0, step * band};
-    const GlobalTileIndex index = dist_band.globalTileIndex(id);
+  GlobalTileIndex index_v(SizeType i) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= i && i < nr_tiles_, i, nr_tiles_);
+    return ij_v_top_ + GlobalTileSize{i, 0};
+    ;
+  }
 
-    DLAF_ASSERT_HEAVY(dist_band.rankIndex() == dist_band.rankGlobalTile(index), dist_band.rankIndex(),
-                      dist_band.rankGlobalTile(index));
+  comm::IndexT_MPI rank_v(SizeType i) const noexcept {
+    return grid_.rankFullCommunicator(dist_v_.rankGlobalTile(index_v(i)));
+  }
 
-    const SizeType local_row_panel_v =
-        dist_band.localTileIndex(index).col() * dist_band.blockSize().cols() +
-        dist_band.tileElementIndex(id).col();
+  TileElementIndex spec_v_origin(SizeType i) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= i && i < nr_tiles_, i, nr_tiles_);
+    if (i == 0)
+      return offset_v_top_;
 
-    DLAF_ASSERT_HEAVY(dist_panel.tileElementIndex(GlobalElementIndex{local_row_panel_v, 0}) ==
-                          TileElementIndex(0, 0),
-                      local_row_panel_v, dist_panel.blockSize().rows());
-
-    return dist_panel.localTileIndex(dist_panel.globalTileIndex(GlobalElementIndex{local_row_panel_v,
-                                                                                   0}));
+    return {0, offset_v_top_.col()};
   }
 
 private:
-  static GlobalTileIndex indexVBottomInternal(const GlobalTileIndex& index_v_top) noexcept {
-    return index_v_top + GlobalTileSize{1, 0};
-  }
-
-  LocalTileIndex index_panel_;
+  const comm::CommunicatorGrid& grid_;
+  const matrix::Distribution& dist_v_;
+  GlobalTileIndex index_panel_;
   comm::IndexT_MPI rank_panel_;
-  GlobalTileIndex index_v_;
-  TileElementIndex index_element_tile_v_;
-  comm::IndexT_MPI rank_v_top_;
-  comm::IndexT_MPI rank_v_bottom_;
+  SizeType nr_tiles_;
+  GlobalTileIndex ij_v_top_;
+  TileElementIndex offset_v_top_;
   TileElementSize size_top_{0, 0};
+  TileElementSize size_middle_{0, 0};
   TileElementSize size_bottom_{0, 0};
 };
-*/
 
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+  // TODO rewrite
   // Note on the algorithm, data distribution and dependency tracking:
   // The band matrix is redistribuited in 1D block cyclic. The new block size is a multiple of the
   // block_size of mat_a. As sweeps are performed the matrix is shifted one column to the left (The
@@ -1041,7 +1009,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   using pika::resource::get_num_threads;
   using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
-  using TilePtr = std::shared_ptr<matrix::Tile<T, Device::CPU>>;
+  using Tile = matrix::Tile<T, Device::CPU>;
+  using TilePtr = std::shared_ptr<Tile>;
 
   namespace ex = pika::execution::experimental;
 
@@ -1135,17 +1104,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   vector<std::shared_ptr<BandBlock<T, true>>> a_ws;
   a_ws.reserve(dist.localNrTiles().cols());
 
-  vector<ex::unique_any_sender<>> deps;
-  deps.reserve(dist.localNrTiles().cols());
-
   vector<SemaphorePtr> sems;
   sems.reserve(dist.localNrTiles().cols());
 
   for (SizeType i = 0; i < dist.localNrTiles().cols(); ++i) {
     a_ws.emplace_back(std::make_shared<BandBlock<T, true>>(size, b, rank + i * ranks, nb_band));
-    deps.emplace_back(ex::just());
     sems.emplace_back(std::make_shared<pika::counting_semaphore<>>(0));
   }
+
+  vector<ex::any_sender<TilePtr>> tiles_v(dist.localNrTiles().cols());
+  vector<ex::unique_any_sender<>> deps(dist.localNrTiles().cols());
 
   {
     constexpr std::size_t n_workspaces = 4;
@@ -1205,8 +1173,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                   comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_offdiag, tag_offdiag,
                                      splitTile(temp.readwrite(LocalTileIndex{0, 0}),
                                                {{0, 0}, dist_a.tileSize(index_offdiag)}));
-              dep = ex::ensure_started(copy_offdiag(a_ws[k_block_local], k * nb,
-                                 ex::when_all(std::move(dep), std::move(offdiag_tile))));
+              dep = ex::ensure_started(copy_offdiag(
+                  a_ws[k_block_local], k * nb, ex::when_all(std::move(dep), std::move(offdiag_tile))));
             }
           }
           else {
@@ -1232,7 +1200,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
         }
       }
-      ex::start_detached(std::move(prev_dep));
+      if (rank == rank_block) {
+        const auto k_block_local = dist.localTileFromGlobalTile<Coord::Col>(k_block);
+        deps[k_block_local] = ex::ensure_started(std::move(prev_dep));
+      }
     }
   }
 
@@ -1243,24 +1214,15 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       workers_block.emplace_back(SweepWorkerDist<T>(size, b));
   }
 
-  /*
   constexpr std::size_t n_workspaces = 2;
-  // TODO
-  // As the panel has tiles of size (nb x b), while it should be distributed with a row block-size
-  // of nb * tiles_per_block, we use a local distribution and we manage the computation of the
-  // local panel index with VAccessHelper.
-  matrix::Distribution dist_panel({dist.localSize().cols(), b}, {nb, b});
+  matrix::Distribution dist_panel({size, b}, {nb_band, b}, {ranks, 1}, {rank, 0}, {0, 0});
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> v_panels(n_workspaces, dist_panel);
-  */
 
-  auto run_steps = [](std::shared_ptr<BandBlock<T, true>>&& a_bl, SemaphorePtr&& sem,
-                      SemaphorePtr&& sem_next, SizeType nr_steps, bool last_step,
-                      SweepWorkerDist<T>& worker /*, const TileVectorPtr& tiles_v*/) {
+  auto run_steps = [b](std::shared_ptr<BandBlock<T, true>>&& a_bl, SemaphorePtr&& sem,
+                       SemaphorePtr&& sem_next, SizeType nr_steps, bool last_step,
+                       SweepWorkerDist<T>& worker, const TilePtr& tile_v, SizeType j_el_tl) {
     for (SizeType step = 0; step < nr_steps; ++step) {
-      // SizeType j_el_tl = sweep % nb;
-      // ii_el is the row element index with origin in the first row of the diagonal tile.
-      // SizeType i_el = j_el_tl / b * b + step * b;
-      // worker.compact_copy_to_tile((*tiles_v)[to_sizet(i_el / nb)], TileElementIndex(i_el % nb, j_el_tl));
+      worker.compact_copy_to_tile(*tile_v, TileElementIndex(step * b, j_el_tl));
       sem->acquire();
       worker.do_step(*a_bl);
       sem_next->release(1);
@@ -1313,24 +1275,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     return std::move(sem);
   };
 
-  /*
-  auto cont_sweep = [b](std::shared_ptr<BandBlock<T, true>> a_block, SizeType nr_steps,
-                        SweepWorkerDist<T>& worker, matrix::Tile<T, Device::CPU>&& tile_v,
-                        TileElementIndex index) {
-    for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.compact_copy_to_tile(tile_v, index + TileElementSize(j * b, 0));
-      worker.do_step(*a_block);
-    }
-  };
-  */
-
   const SizeType steps_per_block = nb_band / b;
   const SizeType sweeps = nrSweeps<T>(size);
 
   for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
     const SizeType steps = nrStepsForSweep(sweep, size, b);
 
-    // auto& v_panel = sweep % b == 0 ? v_panels.nextResource() : v_panels.currentResource();
+    auto& panel_v = sweep % b == 0 ? v_panels.nextResource() : v_panels.currentResource();
 
     ex::any_sender<> send_col_dep;
     for (SizeType init_step = 0; init_step < steps; init_step += steps_per_block) {
@@ -1344,8 +1295,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           auto& a_block = a_ws[id_block_local];
           auto& sem = sems[id_block_local];
 
-          send_col_dep = ex::just(sem) |
-                     dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) | ex::split();
+          send_col_dep =
+              ex::just(sem) |
+              dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) |
+              ex::split();
           ex::start_detached(schedule_send_col(comm, prev_rank,
                                                compute_col_tag(id_block.col(), next_j == size - 1), b,
                                                a_block, next_j, send_col_dep));
@@ -1357,16 +1310,27 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         auto& sem = sems[id_block_local];
         auto& w_pipeline = workers[id_block_local][sweep % workers_per_block];
         auto& dep_block = deps[id_block_local];
+        auto& tile_v = tiles_v[id_block_local];
+
+        if (sweep % b == 0) {
+          tile_v = panel_v.readwrite(LocalTileIndex{id_block_local, 0}) |
+                   ex::then([](Tile&& tile) { return std::make_shared<Tile>(std::move(tile)); }) |
+                   ex::split();
+        }
 
         ex::unique_any_sender<SemaphorePtr> sem_sender;
 
         // Index of the first column (currently) after this block (if exists).
         const SizeType next_j = sweep + (init_step + steps_per_block) * b;
         if (next_j < size) {
-          // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
-          // before dep_block gets ready, and the Worker is needed in the next rank to update the
-          // column before is sent here.
-          // Therefore sem can be released without extra dependencies
+          // Sweep 0:
+          //   As copy are independent we need to make sure all that the band matrix copy is finished
+          //   before releasing the semaphore.
+          // Sweeps 1, 2, ...:
+          //   The dependency on the operation of the previous sweep is real as the Worker cannot be sent
+          //   before dep_block gets ready, and the Worker is needed in the next rank to update the
+          //   column before is sent here.
+          // Therefore sem can be released without other dependencies
           ex::start_detached(
               ex::when_all(ex::just(sem),
                            schedule_recv_col(comm, next_rank,
@@ -1399,7 +1363,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           sem_sender = ex::when_all(ex::just(std::move(sem)), std::move(send_col_dep));
         }
 
-
         auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
 
         // When doing the last step of the sweep that receive the col size-2 the extra semaphore
@@ -1409,7 +1372,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
         dep_block = ex::ensure_started(ex::when_all(ex::just(a_block), std::move(sem_sender),
                                                     ex::just(sem_next, block_steps, last_step),
-                                                    w_pipeline() /*, tiles_v*/) |
+                                                    w_pipeline(), tile_v, ex::just(sweep % b)) |
                                        dlaf::internal::transform(policy_hp, run_steps));
         sem = std::move(sem_next);
 
@@ -1419,78 +1382,75 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         }
       }
     }
-    /*
     // send HH reflector to the correct rank.
     if ((sweep + 1) % b == 0 || sweep + 1 == sweeps) {
       const SizeType base_sweep = sweep / b * b;
       const SizeType base_sweep_steps = nrStepsForSweep(base_sweep, size, b);
 
       for (SizeType init_step = 0; init_step < base_sweep_steps; init_step += steps_per_block) {
-        const SizeType base_sweep_block_steps = std::min(steps_per_block, base_sweep_steps - init_step);
+        VAccessHelper helper(grid, sweeps, base_sweep, init_step, dist_panel, dist_v);
 
-        for (SizeType block_step = 0; block_step < base_sweep_block_steps;
-             block_step += steps_per_task) {
-          VAccessHelper helper(grid, b, sweeps, base_sweep, init_step + block_step, dist, dist_panel,
-                               dist_v);
+        const auto id_panel = helper.index_panel();
+        const auto rank_panel = helper.rank_panel();
 
-          if (rank == helper.rankPanel()) {
-            auto copy_or_send =
-                [&comm, rank, &v_panel, &mat_v,
-                 &compute_v_tag](const LocalTileIndex index_panel, const matrix::SubTileSpec spec_panel,
-                                 const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
-                                 const matrix::SubTileSpec spec_v, const bool bottom) {
-                  auto tile_v_panel = splitTile(v_panel.read(index_panel), spec_panel);
-                  if (rank == rank_v) {
-                    auto tile_v = splitTile(mat_v.readwrite(index_v), spec_v);
-                    ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
-                                       copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
-                  }
-                  else {
-                    ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
-                                                          compute_v_tag(index_v.row(), bottom),
-                                                          std::move(tile_v_panel)));
-                  }
-                };
+        if (rank == rank_panel) {
+          const auto id_panel_local = dist_panel.localTileIndex(id_panel);
+          tiles_v[id_panel_local.row()] = ex::any_sender<TilePtr>{};
 
-            copy_or_send(helper.indexPanel(), helper.specPanelTop(), helper.rankVTop(),
-                         helper.indexVTop(), helper.specVTop(), false);
-            if (helper.copyIsSplitted()) {
-              copy_or_send(helper.indexPanel(), helper.specPanelBottom(), helper.rankVBottom(),
-                           helper.indexVBottom(), helper.specVBottom(), true);
-            }
+          auto copy_or_send =
+              [&comm, rank, &panel_v, &mat_v,
+               &compute_v_tag](const LocalTileIndex index_panel,
+                               const TileElementIndex spec_panel_origin, const TileElementSize spec_size,
+                               const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
+                               const TileElementIndex spec_v_origin, const bool bottom) {
+                auto tile_v_panel = splitTile(panel_v.read(index_panel), {spec_panel_origin, spec_size});
+                if (rank == rank_v) {
+                  auto tile_v = splitTile(mat_v.readwrite(index_v), {spec_v_origin, spec_size});
+                  ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
+                                     copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
+                }
+                else {
+                  ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
+                                                        compute_v_tag(index_v.row(), bottom),
+                                                        std::move(tile_v_panel)));
+                }
+              };
+
+          for (SizeType i = 0; i < helper.nr_tiles(); ++i) {
+            copy_or_send(id_panel_local, helper.spec_panel_origin(i), helper.spec_size(i),
+                         helper.rank_v(i), helper.index_v(i), helper.spec_v_origin(i), (i != 0));
           }
-          else {
-            auto recv = [&comm, rank, &dist_v, &mat_v,
-                         &compute_v_tag](const comm::IndexT_MPI rank_panel,
-                                         const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
-                                         const matrix::SubTileSpec spec_v, const bool bottom) {
-              if (rank == rank_v) {
-                auto tile_v = splitTile(mat_v.readwrite(index_v), spec_v);
-                auto local_index_v = dist_v.localTileIndex(index_v);
+        }
+        else {
+          auto recv = [&comm, rank, &dist_v, &mat_v,
+                       &compute_v_tag](const comm::IndexT_MPI rank_panel, const comm::IndexT_MPI rank_v,
+                                       const GlobalTileIndex index_v,
+                                       const TileElementIndex spec_v_origin,
+                                       const TileElementSize spec_size, const bool bottom) {
+            if (rank == rank_v) {
+              auto tile_v = splitTile(mat_v.readwrite(index_v), {spec_v_origin, spec_size});
+              auto local_index_v = dist_v.localTileIndex(index_v);
 
-                ex::any_sender<> dep;
-                if (local_index_v.col() == 0)
-                  dep = ex::just();
-                else
-                  dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
+              ex::any_sender<> dep;
+              if (local_index_v.col() == 0)
+                dep = ex::just();
+              else
+                dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
-                ex::start_detached(comm::scheduleRecv(
-                    ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v.row(), bottom),
-                    matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
-                                                                             std::move(dep)))));
-              }
-            };
-
-            recv(helper.rankPanel(), helper.rankVTop(), helper.indexVTop(), helper.specVTop(), false);
-            if (helper.copyIsSplitted()) {
-              recv(helper.rankPanel(), helper.rankVBottom(), helper.indexVBottom(), helper.specVBottom(),
-                   true);
+              ex::start_detached(comm::scheduleRecv(
+                  ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v.row(), bottom),
+                  matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
+                                                                           std::move(dep)))));
             }
+          };
+
+          for (SizeType i = 0; i < helper.nr_tiles(); ++i) {
+            recv(rank_panel, helper.rank_v(i), helper.index_v(i), helper.spec_v_origin(i),
+                 helper.spec_size(i), i != 0);
           }
         }
       }
     }
-      */
   }
 
   // Rank 0 (owner of the first band matrix block) copies the last parts of the tridiag matrix.

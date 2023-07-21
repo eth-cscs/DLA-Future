@@ -37,14 +37,17 @@ namespace dlaf::auxiliary {
 ///
 /// @pre `A.blockSize().rows() == A.blockSize().cols()`,
 /// @pre @p A is distributed according to @p grid,
+/// @pre @p A has equal tile and block sizes,
 /// @return the norm @p norm_type of the Matrix @p A or 0 if `A.size().isEmpty()` (see LAPACK doc for
 /// additional info).
 template <Backend backend, Device device, class T>
 dlaf::BaseType<T> norm(comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type,
                        blas::Uplo uplo, Matrix<const T, device>& A) {
   using dlaf::matrix::equal_process_grid;
+  using dlaf::matrix::single_tile_per_block;
 
   DLAF_ASSERT(equal_process_grid(A, grid), A, grid);
+  DLAF_ASSERT(single_tile_per_block(A), A);
 
   // LAPACK documentation specify that if any dimension is 0, the result is 0
   if (A.size().isEmpty())

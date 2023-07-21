@@ -107,3 +107,13 @@ DLAF_addTest(
   USE_MAIN MPIPIKA
   MPIRANKS 6
 )
+
+if(DLAF_WITH_HDF5)
+  DLAF_addTest(
+    test_matrix_hdf5
+    SOURCES test_matrix_hdf5.cpp
+    LIBRARIES dlaf.core
+    USE_MAIN MPIPIKA
+    MPIRANKS 2
+  )
+endif()

@@ -56,5 +56,12 @@ Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout, Elemen
 template <class T, Device D>
 Matrix<T, D>::Matrix(const LayoutInfo& layout, ElementType* ptr) : Matrix<const T, D>(layout, ptr) {}
 
+template <class T, Device D>
+Matrix<T, D>::Matrix(Matrix<T, D>& mat, const SubPipelineTag tag) : Matrix<const T, D>(mat, tag) {}
+
+template <class T, Device D>
+Matrix<T, D>::Matrix(Matrix<T, D>& mat, const LocalTileSize& tiles_per_block)
+    : Matrix<const T, D>(mat, tiles_per_block) {}
+
 }
 }

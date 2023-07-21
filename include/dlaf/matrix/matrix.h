@@ -18,6 +18,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/range2d.h>
+#include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/internal/tile_pipeline.h>
@@ -130,10 +131,38 @@ public:
     return readwrite(this->distribution().localTileIndex(index));
   }
 
+public:
+  /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
+  /// matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  Matrix subPipeline() {
+    return Matrix(*this, SubPipelineTag{});
+  }
+
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == baseTileSize()
+  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) {
+    return Matrix(*this, tiles_per_block);
+  }
+
 protected:
   using Matrix<const T, D>::tileLinearIndex;
 
 private:
+  using typename Matrix<const T, D>::SubPipelineTag;
+  Matrix(Matrix& mat, const SubPipelineTag);
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block);
+
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
 };
@@ -187,10 +216,55 @@ public:
   /// involving any of the locally available tiles are completed.
   void waitLocalTiles() noexcept;
 
+  /// Create a sub-pipelined matrix which can be accessed thread-safely with respect to the original
+  /// matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  Matrix subPipelineConst() {
+    return Matrix(*this, SubPipelineTag{});
+  }
+
+  /// Create a sub-pipelined, retiled matrix which can be accessed thread-safely with respect to the
+  /// original matrix
+  ///
+  /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
+  /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
+  /// matrix.
+  ///
+  /// @pre blockSize() is divisible by @p tiles_per_block
+  /// @pre blockSize() == baseTileSize()
+  Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
+    return Matrix(*this, tiles_per_block);
+  }
+
+  /// Mark the tile at @p index as done
+  ///
+  /// Marking a tile as done means it can no longer be accessed. Marking a tile as done also disallows
+  /// creation of sub pipelines from the full matrix.
+  void done(const LocalTileIndex& index) noexcept {
+    const auto i = tileLinearIndex(index);
+    tile_managers_[i].reset();
+  }
+
+  /// Mark the tile at @p index as done
+  ///
+  /// Marking a tile as done means it can no longer be accessed.  Marking a tile as done also disallows
+  /// creation of sub pipelines from the full matrix.
+  void done(const GlobalTileIndex& index) noexcept {
+    done(distribution().localTileIndex(index));
+  }
+
 protected:
   Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
+  struct SubPipelineTag {};
+  Matrix(Matrix& mat, const SubPipelineTag);
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block);
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
+  void setUpSubPipelines(Matrix<const T, D>&) noexcept;
+  void setUpRetiledSubPipelines(Matrix<const T, D>&, const LocalTileSize& tiles_per_block) noexcept;
 
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };

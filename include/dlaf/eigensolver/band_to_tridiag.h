@@ -72,8 +72,8 @@ namespace eigensolver {
 /// @pre mat_a is not distributed,
 /// @pre mat_a has equal tile and block sizes.
 template <Backend B, Device D, class T>
-TridiagResult<T, Device::CPU> bandToTridiag(blas::Uplo uplo, SizeType band_size,
-                                            Matrix<const T, D>& mat_a) {
+TridiagResult<T, Device::CPU> band_to_tridiag(blas::Uplo uplo, SizeType band_size,
+                                              Matrix<const T, D>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
@@ -145,8 +145,8 @@ TridiagResult<T, Device::CPU> bandToTridiag(blas::Uplo uplo, SizeType band_size,
 /// @pre mat_a is distributed according to grid,
 /// @pre mat_a has equal tile and block sizes.
 template <Backend backend, Device device, class T>
-TridiagResult<T, Device::CPU> bandToTridiag(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                            SizeType band_size, Matrix<const T, device>& mat_a) {
+TridiagResult<T, Device::CPU> band_to_tridiag(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                              SizeType band_size, Matrix<const T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
@@ -155,7 +155,7 @@ TridiagResult<T, Device::CPU> bandToTridiag(comm::CommunicatorGrid grid, blas::U
 
   // If the grid contains only one rank force local implementation.
   if (grid.size() == comm::Size2D(1, 1))
-    return bandToTridiag<backend, device, T>(uplo, band_size, mat_a);
+    return band_to_tridiag<backend, device, T>(uplo, band_size, mat_a);
 
   switch (uplo) {
     case blas::Uplo::Lower:

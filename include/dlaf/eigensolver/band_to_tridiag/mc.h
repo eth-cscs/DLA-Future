@@ -11,6 +11,7 @@
 #pragma once
 
 #include <pika/execution.hpp>
+#include <pika/semaphore.hpp>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/index2d.h>
@@ -41,7 +42,7 @@
 namespace dlaf::eigensolver::internal {
 
 template <class T>
-void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
+void HH_reflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
   using dlaf::util::size_t::mul;
@@ -57,8 +58,8 @@ void HHReflector(const SizeType n, T& tau, T* v, T* vec) noexcept {
 }
 
 template <class T>
-void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
-                          T* w) noexcept {
+void apply_HH_left_right_herm(const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
+                              T* w) noexcept {
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
   constexpr auto Lower = blas::Uplo::Lower;
@@ -74,8 +75,8 @@ void applyHHLeftRightHerm(const SizeType n, const T tau, const T* v, T* a, const
 }
 
 template <class T>
-void applyHHLeft(const SizeType m, const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
-                 T* w) noexcept {
+void apply_HH_left(const SizeType m, const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
+                   T* w) noexcept {
   DLAF_ASSERT_HEAVY(m >= 0, m);
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
@@ -89,8 +90,8 @@ void applyHHLeft(const SizeType m, const SizeType n, const T tau, const T* v, T*
 }
 
 template <class T>
-void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T* a, const SizeType lda,
-                  T* w) noexcept {
+void apply_HH_right(const SizeType m, const SizeType n, const T tau, const T* v, T* a,
+                    const SizeType lda, T* w) noexcept {
   DLAF_ASSERT_HEAVY(m >= 0, m);
   DLAF_ASSERT_HEAVY(n >= 0, n);
 
@@ -107,8 +108,8 @@ void applyHHRight(const SizeType m, const SizeType n, const T tau, const T* v, T
 // have to act on a matrix which lays on the last columns and first columns of the buffer.
 // The following versions take care of this case.
 template <class T>
-void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1, T* a2,
-                          const SizeType lda, T* w) {
+void apply_HH_left_right_herm(const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1,
+                              T* a2, const SizeType lda, T* w) {
   DLAF_ASSERT_HEAVY(n1 > 0, n1);
   DLAF_ASSERT_HEAVY(n2 > 0, n2);
   const auto n = n1 + n2;
@@ -134,15 +135,15 @@ void applyHHLeftRightHerm(const SizeType n1, const SizeType n2, const T tau, con
 }
 
 template <class T>
-void applyHHLeft(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1,
-                 T* a2, const SizeType lda, T* w) {
-  applyHHLeft(m, n1, tau, v, a1, lda, w);
-  applyHHLeft(m, n2, tau, v, a2, lda, w);
+void apply_HH_left(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v,
+                   T* a1, T* a2, const SizeType lda, T* w) {
+  apply_HH_left(m, n1, tau, v, a1, lda, w);
+  apply_HH_left(m, n2, tau, v, a2, lda, w);
 }
 
 template <class T>
-void applyHHRight(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v, T* a1,
-                  T* a2, const SizeType lda, T* w) {
+void apply_HH_right(const SizeType m, const SizeType n1, const SizeType n2, const T tau, const T* v,
+                    T* a1, T* a2, const SizeType lda, T* w) {
   DLAF_ASSERT_HEAVY(m >= 0, m);
   DLAF_ASSERT_HEAVY(n1 > 0, n1);
   DLAF_ASSERT_HEAVY(n2 > 0, n2);
@@ -214,7 +215,7 @@ public:
     DLAF_ASSERT_HEAVY(0 <= j && j < size_, j, size_);
 
     if constexpr (dist) {
-      return mem_(memoryIndex(j) * (ld_ + 1) + offset);
+      return mem_(memory_index(j) * (ld_ + 1) + offset);
     }
     else {
       return mem_(j * (ld_ + 1) + offset);
@@ -226,7 +227,7 @@ public:
   }
 
   template <Device D, class Sender>
-  auto copyDiag(SizeType j, Sender source) noexcept {
+  auto copy_diag(SizeType j, Sender source) noexcept {
     using dlaf::internal::transform;
     namespace ex = pika::execution::experimental;
 
@@ -266,7 +267,7 @@ public:
     }
 #ifdef DLAF_WITH_GPU
     else if constexpr (D == Device::GPU) {
-      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
+      DLAF_ASSERT_HEAVY(is_accessible_from_GPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
@@ -303,7 +304,7 @@ public:
   }
 
   template <Device D, class Sender>
-  auto copyOffDiag(const SizeType j, Sender source) noexcept {
+  auto copy_off_diag(const SizeType j, Sender source) noexcept {
     using dlaf::internal::transform;
 
     namespace ex = pika::execution::experimental;
@@ -343,7 +344,7 @@ public:
     }
 #ifdef DLAF_WITH_GPU
     else if constexpr (D == Device::GPU) {
-      DLAF_ASSERT_HEAVY(isAccessibleFromGPU(), "BandBlock memory should be accessible from GPU");
+      DLAF_ASSERT_HEAVY(is_accessible_from_GPU(), "BandBlock memory should be accessible from GPU");
       return transform(
           dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
           [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
@@ -377,13 +378,13 @@ public:
     }
   }
 
-  SizeType nextSplit(SizeType j) {
-    return mem_size_col_ - memoryIndex(j);
+  SizeType next_split(SizeType j) {
+    return mem_size_col_ - memory_index(j);
   }
 
 private:
 #ifdef DLAF_WITH_GPU
-  bool isAccessibleFromGPU() const {
+  bool is_accessible_from_GPU() const {
 #ifdef DLAF_WITH_CUDA
     cudaPointerAttributes attrs;
     if (auto status = cudaPointerGetAttributes(&attrs, mem_()); status != cudaSuccess) {
@@ -399,7 +400,7 @@ private:
   }
 #endif
 
-  SizeType memoryIndex(SizeType j) {
+  SizeType memory_index(SizeType j) {
     if constexpr (dist) {
       DLAF_ASSERT_HEAVY(block_size_ * id_ <= j && j < size_, j, id_, block_size_, size_);
       return (j - block_size_ * id_) % mem_size_col_;
@@ -422,9 +423,9 @@ private:
 };
 
 template <class CommSender, class T, class DepSender>
-[[nodiscard]] auto scheduleSendCol(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
-                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
-                                   DepSender&& dep) {
+[[nodiscard]] auto schedule_send_col(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                     SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                     DepSender&& dep) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -440,9 +441,9 @@ template <class CommSender, class T, class DepSender>
 }
 
 template <class CommSender, class T, class DepSender>
-[[nodiscard]] auto scheduleRecvCol(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
-                                   SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
-                                   DepSender&& dep) {
+[[nodiscard]] auto schedule_recv_col(CommSender&& pcomm, comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                     SizeType b, std::shared_ptr<BandBlock<T, true>> a_block, SizeType j,
+                                     DepSender&& dep) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -471,58 +472,59 @@ public:
   SweepWorker& operator=(const SweepWorker&) = delete;
   SweepWorker& operator=(SweepWorker&&) = default;
 
-  void startSweep(SizeType sweep, BandBlock<T>& a) noexcept {
-    startSweepInternal(sweep, a);
+  void start_sweep(SizeType sweep, BandBlock<T>& a) noexcept {
+    start_sweep_internal(sweep, a);
   }
 
-  void compactCopyToTile(matrix::Tile<T, Device::CPU>& tile_v, TileElementIndex index) const noexcept {
+  void compact_copy_to_tile(const matrix::Tile<T, Device::CPU>& tile_v,
+                            TileElementIndex index) const noexcept {
     tile_v(index) = tau();
     common::internal::SingleThreadedBlasScope single;
-    blas::copy(sizeHHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
+    blas::copy(size_HHR() - 1, v() + 1, 1, tile_v.ptr(index) + 1, 1);
   }
 
-  void doStep(BandBlock<T>& a) noexcept {
-    doStepFull(a);
+  void do_step(BandBlock<T>& a) noexcept {
+    do_step_full(a);
   }
 
 protected:
   template <class BandBlockType>
-  void startSweepInternal(SizeType sweep, BandBlockType& a) noexcept {
+  void start_sweep_internal(SizeType sweep, BandBlockType& a) noexcept {
     SizeType n = std::min(size_ - sweep - 1, band_size_);
-    HHReflector(n, tau(), v(), a.ptr(1, sweep));
+    HH_reflector(n, tau(), v(), a.ptr(1, sweep));
 
-    setId(sweep, 0);
+    set_id(sweep, 0);
   }
 
   template <class BandBlockType>
-  void doStepFull(BandBlockType& a) noexcept {
-    SizeType j = firstRowHHR();
-    SizeType n = sizeHHR();  // size diagonal tile and width off-diag tile
+  void do_step_full(BandBlockType& a) noexcept {
+    SizeType j = first_row_HHR();
+    SizeType n = size_HHR();  // size diagonal tile and width off-diag tile
     SizeType m = std::min(band_size_, size_ - band_size_ - j);  // height off diagonal tile
 
-    applyHHLeftRightHerm(n, tau(), v(), a.ptr(0, j), a.ld(), w());
+    apply_HH_left_right_herm(n, tau(), v(), a.ptr(0, j), a.ld(), w());
     if (m > 0) {
-      applyHHRight(m, n, tau(), v(), a.ptr(n, j), a.ld(), w());
+      apply_HH_right(m, n, tau(), v(), a.ptr(n, j), a.ld(), w());
     }
     if (m > 1) {
-      HHReflector(m, tau(), v(), a.ptr(n, j));
-      applyHHLeft(m, n - 1, tau(), v(), a.ptr(n - 1, j + 1), a.ld(), w());
+      HH_reflector(m, tau(), v(), a.ptr(n, j));
+      apply_HH_left(m, n - 1, tau(), v(), a.ptr(n - 1, j + 1), a.ld(), w());
     }
     step_ += 1;
     // Note: the sweep is completed if m <= 1.
   }
 
-  void setId(SizeType sweep, SizeType step) noexcept {
+  void set_id(SizeType sweep, SizeType step) noexcept {
     sweep_ = sweep;
     step_ = step;
   }
 
-  SizeType firstRowHHR() const noexcept {
+  SizeType first_row_HHR() const noexcept {
     return 1 + sweep_ + step_ * band_size_;
   }
 
-  SizeType sizeHHR() const noexcept {
-    return std::min(band_size_, size_ - firstRowHHR());
+  SizeType size_HHR() const noexcept {
+    return std::min(band_size_, size_ - first_row_HHR());
   }
 
   T& tau() noexcept {
@@ -555,20 +557,20 @@ class SweepWorkerDist : private SweepWorker<T> {
 public:
   SweepWorkerDist(SizeType size, SizeType band_size) : SweepWorker<T>(size, band_size) {}
 
-  void startSweep(SizeType sweep, BandBlockDist<T>& a) {
-    this->startSweepInternal(sweep, a);
+  void start_sweep(SizeType sweep, BandBlockDist<T>& a) {
+    this->start_sweep_internal(sweep, a);
   }
 
-  void doStep(BandBlockDist<T>& a) noexcept {
-    SizeType j = this->firstRowHHR();
-    SizeType n = this->sizeHHR();  // size diagonal tile and width off-diag tile
+  void do_step(BandBlockDist<T>& a) noexcept {
+    SizeType j = this->first_row_HHR();
+    SizeType n = this->size_HHR();  // size diagonal tile and width off-diag tile
 
-    const auto n1 = a.nextSplit(j);
+    const auto n1 = a.next_split(j);
     if (n1 < n) {
-      doStepSplit(a, n1);
+      do_step_split(a, n1);
     }
     else {
-      this->doStepFull(a);
+      this->do_step_full(a);
     }
   }
 
@@ -580,27 +582,27 @@ public:
 
   void recv(SizeType sweep, SizeType step, const comm::Communicator& comm, comm::IndexT_MPI src,
             comm::IndexT_MPI tag, MPI_Request* req) noexcept {
-    SweepWorker<T>::setId(sweep, step);
+    SweepWorker<T>::set_id(sweep, step);
     DLAF_MPI_CHECK_ERROR(MPI_Irecv(data_(), to_int(band_size_ + 1), comm::mpi_datatype<T>::type, src,
                                    tag, comm, req));
   }
 
-  using SweepWorker<T>::compactCopyToTile;
+  using SweepWorker<T>::compact_copy_to_tile;
 
 private:
-  void doStepSplit(BandBlockDist<T>& a, SizeType n1) noexcept {
-    SizeType j = this->firstRowHHR();
-    SizeType n = this->sizeHHR();  // size diagonal tile and width off-diag tile
+  void do_step_split(BandBlockDist<T>& a, SizeType n1) noexcept {
+    SizeType j = this->first_row_HHR();
+    SizeType n = this->size_HHR();  // size diagonal tile and width off-diag tile
     SizeType m = std::min(band_size_, size_ - band_size_ - j);  // height off diagonal tile
     const auto n2 = n - n1;
 
-    applyHHLeftRightHerm(n1, n2, tau(), v(), a.ptr(0, j), a.ptr(0, j + n1), a.ld(), w());
+    apply_HH_left_right_herm(n1, n2, tau(), v(), a.ptr(0, j), a.ptr(0, j + n1), a.ld(), w());
     if (m > 0) {
-      applyHHRight(m, n1, n2, tau(), v(), a.ptr(n, j), a.ptr(n2, j + n1), a.ld(), w());
+      apply_HH_right(m, n1, n2, tau(), v(), a.ptr(n, j), a.ptr(n2, j + n1), a.ld(), w());
     }
     if (m > 1) {
-      HHReflector(m, tau(), v(), a.ptr(n, j));
-      applyHHLeft(m, n1 - 1, n2, tau(), v(), a.ptr(n - 1, j + 1), a.ptr(n2, j + n1), a.ld(), w());
+      HH_reflector(m, tau(), v(), a.ptr(n, j));
+      apply_HH_left(m, n1 - 1, n2, tau(), v(), a.ptr(n - 1, j + 1), a.ptr(n2, j + n1), a.ld(), w());
     }
     step_ += 1;
     // Note: the sweep is completed if m <= 1.
@@ -617,8 +619,8 @@ private:
 };
 
 template <class CommSender, class PromiseSender>
-[[nodiscard]] auto scheduleSendWorker(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
-                                      PromiseSender&& worker) {
+[[nodiscard]] auto schedule_send_worker(CommSender&& pcomm, comm::IndexT_MPI dest, comm::IndexT_MPI tag,
+                                        PromiseSender&& worker) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -631,9 +633,9 @@ template <class CommSender, class PromiseSender>
 }
 
 template <class CommSender, class PromiseSender>
-[[nodiscard]] auto scheduleRecvWorker(SizeType sweep, SizeType step, CommSender&& pcomm,
-                                      comm::IndexT_MPI src, comm::IndexT_MPI tag,
-                                      PromiseSender&& worker) {
+[[nodiscard]] auto schedule_recv_worker(SizeType sweep, SizeType step, CommSender&& pcomm,
+                                        comm::IndexT_MPI src, comm::IndexT_MPI tag,
+                                        PromiseSender&& worker) {
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::whenAllLift;
 
@@ -650,36 +652,48 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
-  // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
-  // Then the sweep continues applying steps.
-  // The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
-  // The steps in the same sweep has to be executed in order and the dependencies are managed by the
-  // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
+  // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag
+  // which act on the i-th column of the band matrix (copy tridiag on previous nb colums as well).
+  // Then the sweep is continued using run_sweep.
+  // Dependencies are tracked with counting semaphores.
+  // In the next schema above each sweep the acquisitions of the semaphore are depicted with an a.
+  // Below the sweep the releases are denoted with r.
   //
-  // assuming b = 4 and nb = 8 (i.e each task applies two steps):
-  // Copy of band: A A A A B B B B C C C C D D D D E ...
-  //                   deps[0]    |    deps[1]    | ...
-  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
-  //                |    deps[0]    |    deps[1]    | ...
-  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
-  //                  |    deps[0]    |    deps[1]    | ...
-  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3
+  // assuming b = 4 and nb = 8:
+  // Copy of band: A A A A B B B B C C C C D D D D E E E E F F F
+  //                            2r|             2r|         2r+r|
+  //               a|a      |a      |a      |a      |a      |a  |
+  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 5 5
+  //                |      r|      r|      r|      r|      r|r+r|
+  //                 a|a      |a      |a      |a      |a      |
+  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4 *
+  //                  |      r|      r|      r|      r|    r+r|
+  //                   a|a      |a      |a      |a      |a      |
+  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4 4
+  //                    |      r|      r|      r|      r|    r+r|
+  //                     a|a      |a      |a      |a      |a    |
+  // Sweep 3             I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 4 4 4
+  //                      |      r|      r|      r|      r|  r+r|
   //                    ...
-  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depends explicitly only on deps[j+1],
-  //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on
-  //       deps[j] as well.
+  // Note: The last step has an extra release (+r) to ensure that the last step of the next sweep
+  //       can execute. E.g. see sweep 3 step 4.
 
   using common::Pipeline;
   using common::internal::vector;
   using util::ceilDiv;
 
   using pika::resource::get_num_threads;
+  using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
+  using TileVector = std::vector<matrix::Tile<T, Device::CPU>>;
+  using TileVectorPtr = std::shared_ptr<TileVector>;
 
   namespace ex = pika::execution::experimental;
 
+  const auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
+
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
-  const SizeType nrtiles = mat_a.nrTiles().cols();
+  const SizeType n = mat_a.nrTiles().cols();
   const SizeType nb = mat_a.blockSize().cols();
 
   // Need share pointer to keep the allocation until all the tasks are executed.
@@ -687,128 +701,148 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   Matrix<BaseType<T>, Device::CPU> mat_trid({size, 2}, {nb, 2});
   Matrix<T, Device::CPU> mat_v({size, size}, {nb, nb});
-  const auto& dist_v = mat_v.distribution();
 
   if (size == 0) {
     return {std::move(mat_trid), std::move(mat_v)};
   }
 
-  const auto max_deps_size = nrtiles;
-  vector<pika::execution::experimental::any_sender<>> deps;
-  deps.reserve(max_deps_size);
-
   auto copy_diag = [a_ws](SizeType j, auto source) {
-    return a_ws->template copyDiag<D>(j, std::move(source));
+    return a_ws->template copy_diag<D>(j, std::move(source));
   };
 
   auto copy_offdiag = [a_ws](SizeType j, auto source) {
-    return a_ws->template copyOffDiag<D>(j, std::move(source));
+    return a_ws->template copy_off_diag<D>(j, std::move(source));
   };
 
+  auto sem = std::make_shared<pika::counting_semaphore<>>(0);
+
+  ex::unique_any_sender<> prev_dep = ex::just();
   // Copy the band matrix
-  for (SizeType k = 0; k < nrtiles; ++k) {
-    auto sf = copy_diag(k * nb, mat_a.read(GlobalTileIndex{k, k})) | ex::split();
-    if (k < nrtiles - 1) {
-      auto sf2 =
-          copy_offdiag(k * nb, ex::when_all(std::move(sf), mat_a.read(GlobalTileIndex{k + 1, k}))) |
-          ex::split();
-      deps.push_back(std::move(sf2));
+  for (SizeType k = 0; k < n; ++k) {
+    SizeType nr_releases = nb / b;
+    ex::unique_any_sender<> dep = copy_diag(k * nb, mat_a.read(GlobalTileIndex{k, k}));
+    if (k < n - 1) {
+      dep = copy_offdiag(k * nb, ex::when_all(std::move(dep), mat_a.read(GlobalTileIndex{k + 1, k})));
     }
     else {
-      deps.push_back(sf);
+      // Add one to make sure to unlock the last step of the first sweep.
+      nr_releases = ceilDiv(size - k * nb, b) + 1;
     }
+    prev_dep = ex::when_all(ex::just(nr_releases, sem), std::move(prev_dep), std::move(dep)) |
+               ex::then([](SizeType nr, auto&& sem) { sem->release(nr); });
   }
+  ex::start_detached(std::move(prev_dep));
 
-  // Maximum size / (2b-1) sweeps can be executed in parallel, however due to task combination it reduces
-  // to size / (2nb-1).
+  // Maximum size / (2b-1) sweeps can be executed in parallel.
   const auto max_workers =
-      std::min(ceilDiv(size, 2 * nb - 1), 2 * to_SizeType(get_num_threads("default")));
+      std::min(ceilDiv(size, 2 * b - 1), 2 * to_SizeType(get_num_threads("default")));
 
   vector<Pipeline<SweepWorker<T>>> workers;
   workers.reserve(max_workers);
   for (SizeType i = 0; i < max_workers; ++i)
     workers.emplace_back(SweepWorker<T>(size, b));
 
-  auto init_sweep = [a_ws](SizeType sweep, SweepWorker<T>& worker) { worker.startSweep(sweep, *a_ws); };
-  auto cont_sweep = [a_ws, b](SizeType nr_steps, SweepWorker<T>& worker,
-                              matrix::Tile<T, Device::CPU>&& tile_v, TileElementIndex index) {
-    for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
-      worker.doStep(*a_ws);
+  auto run_sweep = [a_ws, size, nb, b](SemaphorePtr&& sem, SemaphorePtr&& sem_next, SizeType sweep,
+                                       SweepWorker<T>& worker, const TileVectorPtr& tiles_v) {
+    const SizeType nr_steps = nrStepsForSweep(sweep, size, b);
+    for (SizeType step = 0; step < nr_steps; ++step) {
+      SizeType j_el_tl = sweep % nb;
+      // i_el is the row element index with origin in the first row of the diagonal tile.
+      SizeType i_el = j_el_tl / b * b + step * b;
+      worker.compact_copy_to_tile((*tiles_v)[to_sizet(i_el / nb)], TileElementIndex(i_el % nb, j_el_tl));
+      sem->acquire();
+      worker.do_step(*a_ws);
+      sem_next->release(1);
     }
+    // Make sure to unlock the last step of the next sweep
+    sem_next->release(1);
   };
 
-  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
-  auto copy_tridiag = [policy_hp, a_ws, &mat_trid](SizeType sweep, auto&& dep) {
-    auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e, auto tile_t) {
-      auto inc = a_ws->ld() + 1;
-      if (isComplex_v<T>)
-        // skip imaginary part if Complex.
-        inc *= 2;
+  auto copy_tridiag_task = [a_ws](SizeType start, SizeType n_d, SizeType n_e,
+                                  const matrix::Tile<BaseType<T>, Device::CPU>& tile_t) {
+    DLAF_ASSERT_HEAVY(n_e >= 0 && (n_e == n_d || n_e == n_d - 1), n_e, n_d);
+    DLAF_ASSERT_HEAVY(tile_t.size().cols() == 2, tile_t);
+    DLAF_ASSERT_HEAVY(tile_t.size().rows() >= n_d, tile_t, n_d);
 
-      common::internal::SingleThreadedBlasScope single;
-      blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
-      blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
-    };
+    auto inc = a_ws->ld() + 1;
+    if (isComplex_v<T>)
+      // skip imaginary part if Complex.
+      inc *= 2;
 
-    const auto size = mat_trid.size().rows();
-    const auto nb = mat_trid.blockSize().rows();
-    if (sweep % nb == nb - 1 || sweep == size - 1) {
-      const auto tile_index = sweep / nb;
-      const auto start = tile_index * nb;
-      dlaf::internal::whenAllLift(start, std::min(nb, size - start), std::min(nb, size - 1 - start),
-                                  mat_trid.readwrite(GlobalTileIndex{tile_index, 0}),
-                                  std::forward<decltype(dep)>(dep)) |
-          dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
+    common::internal::SingleThreadedBlasScope single;
+    blas::copy(n_d, (BaseType<T>*) a_ws->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
+    blas::copy(n_e, (BaseType<T>*) a_ws->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
+  };
+
+  auto init_sweep = [a_ws](SemaphorePtr&& sem, SizeType sweep, SweepWorker<T>& worker) {
+    sem->acquire();
+    worker.start_sweep(sweep, *a_ws);
+    return std::move(sem);
+  };
+
+  auto init_sweep_copy_tridiag = [a_ws, copy_tridiag_task,
+                                  nb](SemaphorePtr&& sem, SizeType sweep, SweepWorker<T>& worker,
+                                      const matrix::Tile<BaseType<T>, Device::CPU>& tile_t) {
+    sem->acquire();
+    worker.start_sweep(sweep, *a_ws);
+    copy_tridiag_task(sweep - (nb - 1), nb, nb, tile_t);
+    return std::move(sem);
+  };
+
+  const SizeType sweeps = nrSweeps<T>(size);
+  ex::any_sender<TileVectorPtr> tiles_v;
+
+  for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
+    auto& w_pipeline = workers[sweep % max_workers];
+    auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
+    ex::unique_any_sender<SemaphorePtr> sem_sender;
+    if ((sweep + 1) % nb != 0) {
+      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline()) |
+                                      dlaf::internal::transform(policy_hp, init_sweep));
     }
     else {
-      ex::start_detached(std::forward<decltype(dep)>(dep));
+      const auto tile_index = sweep / nb;
+      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline(),
+                                                   mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
+                                      dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
     }
+    if (sweep % nb == 0) {
+      // The run_sweep tasks writes a single column of elements of mat_v.
+      // To avoid to retile the matrix (to avoid to have too many tiles), each column of tiles should
+      // be shared in read/write mode by multiple tasks.
+      // Therefore we extract the tiles of the column in a vector and move it to a shared_ptr,
+      // that can be copied to the different tasks, but reference the same tiles.
+      const SizeType i = sweep / nb;
+      tiles_v =
+          ex::when_all_vector(matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i},
+                                                                            LocalTileSize{n - i, 1}))) |
+          ex::then([](TileVector&& vector) { return std::make_shared<TileVector>(std::move(vector)); }) |
+          ex::split();
+    }
+
+    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline(), tiles_v) |
+        dlaf::internal::transformDetach(policy_hp, run_sweep);
+    sem = std::move(sem_next);
+  }
+
+  auto copy_tridiag = [policy_hp, a_ws, size, nb, &mat_trid, copy_tridiag_task](SizeType i, auto&& dep) {
+    const auto tile_index = (i - 1) / nb;
+    const auto start = tile_index * nb;
+    ex::when_all(ex::just(start, std::min(nb, size - start), std::min(nb, size - 1 - start)),
+                 mat_trid.readwrite(GlobalTileIndex{tile_index, 0}), std::forward<decltype(dep)>(dep)) |
+        dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
   };
 
-  const SizeType steps_per_task = nb / b;
-  const SizeType sweeps = nrSweeps<T>(size);
-  for (SizeType sweep = 0, last_dep = deps.size() - 1; sweep < sweeps; ++sweep) {
-    auto& w_pipeline = workers[sweep % max_workers];
-
-    auto dep = dlaf::internal::whenAllLift(sweep, w_pipeline(), deps[0]) |
-               dlaf::internal::transform(policy_hp, init_sweep);
-    copy_tridiag(sweep, std::move(dep));
-
-    const SizeType steps = nrStepsForSweep(sweep, size, b);
-
-    SizeType last_dep_new = 0;
-    for (SizeType step = 0; step < steps;) {
-      // First task might apply less steps to align with the boundaries of the HHR tile v.
-      SizeType nr_steps = steps_per_task - (step == 0 ? (sweep % nb) / b : 0);
-      // Last task only applies the remaining steps
-      nr_steps = std::min(nr_steps, steps - step);
-
-      auto dep_index = std::min(ceilDiv(step + nr_steps, nb / b), last_dep);
-
-      const GlobalElementIndex index_v((sweep / b + step) * b, sweep);
-
-      SizeType set_index = ceilDiv(step, nb / b);
-
-      deps[set_index] = dlaf::internal::whenAllLift(nr_steps, w_pipeline(),
-                                                    mat_v.readwrite(dist_v.globalTileIndex(index_v)),
-                                                    dist_v.tileElementIndex(index_v), deps[dep_index]) |
-                        dlaf::internal::transform(policy_hp, cont_sweep) | ex::split();
-
-      last_dep_new = set_index;
-      step += nr_steps;
-    }
-
-    // Limit next sweep to only use valid senders from this sweep.
-    last_dep = last_dep_new;
-  }
+  auto dep = ex::just(std::move(sem)) |
+             dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) |
+             ex::split();
 
   // copy the last elements of the diagonals
-  if (!isComplex_v<T>) {
-    // only needed for real types as they don't perform sweep size-2
-    copy_tridiag(size - 2, deps[0]);
+  // As for real types only size - 2 sweeps are performed, make sure that all the elements are copied.
+  if (!isComplex_v<T> && (size - 1) % nb == 0) {
+    copy_tridiag(size - 1, dep);
   }
-  copy_tridiag(size - 1, std::move(deps[0]));
+  copy_tridiag(size, std::move(dep));
 
   return {std::move(mat_trid), std::move(mat_v)};
 }
@@ -964,7 +998,6 @@ private:
   TileElementSize size_bottom_{0, 0};
 };
 
-// Distributed implementation of bandToTridiag.
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
@@ -1110,12 +1143,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
     auto copy_diag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
       constexpr Device device = dlaf::internal::sender_device<decltype(source)>;
-      return a_block->template copyDiag<device>(j, std::move(source));
+      return a_block->template copy_diag<device>(j, std::move(source));
     };
 
     auto copy_offdiag = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType j, auto source) {
       constexpr Device device = dlaf::internal::sender_device<decltype(source)>;
-      return a_block->template copyOffDiag<device>(j, std::move(source));
+      return a_block->template copy_off_diag<device>(j, std::move(source));
     };
 
     // Copy the band matrix
@@ -1195,13 +1228,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   common::RoundRobin<matrix::Panel<Coord::Col, T, Device::CPU>> v_panels(n_workspaces, dist_panel);
 
   auto init_sweep = [](std::shared_ptr<BandBlock<T, true>> a_block, SizeType sweep,
-                       SweepWorkerDist<T>& worker) { worker.startSweep(sweep, *a_block); };
+                       SweepWorkerDist<T>& worker) { worker.start_sweep(sweep, *a_block); };
   auto cont_sweep = [b](std::shared_ptr<BandBlock<T, true>> a_block, SizeType nr_steps,
                         SweepWorkerDist<T>& worker, matrix::Tile<T, Device::CPU>&& tile_v,
                         TileElementIndex index) {
     for (SizeType j = 0; j < nr_steps; ++j) {
-      worker.compactCopyToTile(tile_v, index + TileElementSize(j * b, 0));
-      worker.doStep(*a_block);
+      worker.compact_copy_to_tile(tile_v, index + TileElementSize(j * b, 0));
+      worker.do_step(*a_block);
     }
   };
 
@@ -1221,7 +1254,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
       common::internal::SingleThreadedBlasScope single;
 
-      if (auto n1 = a_block->nextSplit(start); n1 < n_d) {
+      if (auto n1 = a_block->next_split(start); n1 < n_d) {
         blas::copy(n1, (BaseType<T>*) a_block->ptr(0, start), inc, tile_t.ptr({0, 0}), 1);
         blas::copy(n_d - n1, (BaseType<T>*) a_block->ptr(0, start + n1), inc, tile_t.ptr({n1, 0}), 1);
         blas::copy(n1, (BaseType<T>*) a_block->ptr(1, start), inc, tile_t.ptr({0, 1}), 1);
@@ -1270,9 +1303,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           const auto block_local_id = dist.localTileIndex(block_id + GlobalTileSize{0, 1}).col();
           auto a_block = a_ws[block_local_id];
           auto& deps_block = deps[block_local_id];
-          ex::start_detached(scheduleSendCol(comm, prev_rank,
-                                             compute_col_tag(block_id.col(), next_j == size - 1), b,
-                                             a_block, next_j, deps_block[0]));
+          ex::start_detached(schedule_send_col(comm, prev_rank,
+                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
+                                               a_block, next_j, deps_block[0]));
         }
       }
       else if (rank == rank_block) {
@@ -1289,9 +1322,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           copy_tridiag(a_block, sweep, std::move(dep));
         }
         else {
-          ex::start_detached(scheduleRecvWorker(sweep, init_step, comm, prev_rank,
-                                                compute_worker_tag(sweep, block_id.col()),
-                                                w_pipeline()));
+          ex::start_detached(schedule_recv_worker(sweep, init_step, comm, prev_rank,
+                                                  compute_worker_tag(sweep, block_id.col()),
+                                                  w_pipeline()));
         }
 
         // Index of the first column (currently) after this block (if exists).
@@ -1300,9 +1333,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           // The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           // before deps_block.back() gets ready, and the Worker is needed in the next rank to update the
           // column before is sent here.
-          deps_block.push_back(scheduleRecvCol(comm, next_rank,
-                                               compute_col_tag(block_id.col(), next_j == size - 1), b,
-                                               a_block, next_j, deps_block.back()) |
+          deps_block.push_back(schedule_recv_col(comm, next_rank,
+                                                 compute_col_tag(block_id.col(), next_j == size - 1), b,
+                                                 a_block, next_j, deps_block.back()) |
                                ex::split());
         }
 
@@ -1329,7 +1362,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         deps_block.resize(ceilDiv(last_step, steps_per_task) + 1);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(scheduleSendWorker(
+          ex::start_detached(schedule_send_worker(
               comm, next_rank, compute_worker_tag(sweep, block_id.col() + 1), w_pipeline()));
         }
       }

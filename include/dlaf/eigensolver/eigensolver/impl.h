@@ -43,7 +43,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
     DLAF_UNIMPLEMENTED(uplo);
 
   auto mat_taus = reductionToBand<B>(mat_a, band_size);
-  auto ret = bandToTridiag<Backend::MC>(uplo, band_size, mat_a);
+  auto ret = band_to_tridiag<Backend::MC>(uplo, band_size, mat_a);
 
   eigensolver::tridiagSolver<B>(ret.tridiagonal, evals, mat_e);
 
@@ -61,7 +61,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Ma
     DLAF_UNIMPLEMENTED(uplo);
 
   auto mat_taus = reductionToBand<B>(grid, mat_a, band_size);
-  auto ret = bandToTridiag<Backend::MC>(grid, uplo, band_size, mat_a);
+  auto ret = band_to_tridiag<Backend::MC>(grid, uplo, band_size, mat_a);
 
 #ifdef DLAF_WITH_HDF5
   std::optional<matrix::internal::FileHDF5> file;

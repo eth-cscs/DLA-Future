@@ -94,8 +94,8 @@ $(function() {
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">namespace </span><a class="code" href="eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a> {</div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
 <div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00075"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#a5389b4333d5882eb71a9ccf6a24b2434">   75</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#a5389b4333d5882eb71a9ccf6a24b2434">bandToTridiag</a>(blas::Uplo uplo, SizeType band_size,</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;                                            Matrix&lt;const T, D&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00075"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#a5c2d84091dc7e60a386d2b1d5f46745a">   75</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#a5c2d84091dc7e60a386d2b1d5f46745a">band_to_tridiag</a>(blas::Uplo uplo, SizeType band_size,</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;                                              Matrix&lt;const T, D&gt;&amp; mat_a) {</div>
 <div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
 <div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
@@ -119,8 +119,8 @@ $(function() {
 <div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;}</div>
 <div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
 <div class="line"><a name="l00147"></a><span class="lineno">  147</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00148"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#ad81b7972326c06b90ed419d9169351fc">  148</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#a5389b4333d5882eb71a9ccf6a24b2434">bandToTridiag</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo,</div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;                                            SizeType band_size, Matrix&lt;const T, device&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00148"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#a401482b31e1a057dae99ee76ab00a41f">  148</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#a5c2d84091dc7e60a386d2b1d5f46745a">band_to_tridiag</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo,</div>
+<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;                                              SizeType band_size, Matrix&lt;const T, device&gt;&amp; mat_a) {</div>
 <div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
 <div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
 <div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
@@ -129,7 +129,7 @@ $(function() {
 <div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160; </div>
 <div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;  <span class="comment">// If the grid contains only one rank force local implementation.</span></div>
 <div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;  <span class="keywordflow">if</span> (grid.<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a>() == <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">comm::Size2D</a>(1, 1))</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;    <span class="keywordflow">return</span> bandToTridiag&lt;backend, device, T&gt;(uplo, band_size, mat_a);</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;    <span class="keywordflow">return</span> band_to_tridiag&lt;backend, device, T&gt;(uplo, band_size, mat_a);</div>
 <div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160; </div>
 <div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;  <span class="keywordflow">switch</span> (uplo) {</div>
 <div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
@@ -148,7 +148,7 @@ $(function() {
 <div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
 <div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;}</div>
 <div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;}</div>
-<div class="ttc" id="aband__to__tridiag_8h_html_a5389b4333d5882eb71a9ccf6a24b2434"><div class="ttname"><a href="band__to__tridiag_8h.html#a5389b4333d5882eb71a9ccf6a24b2434">dlaf::eigensolver::bandToTridiag</a></div><div class="ttdeci">TridiagResult&lt; T, Device::CPU &gt; bandToTridiag(blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> band_to_tridiag.h:75</div></div>
+<div class="ttc" id="aband__to__tridiag_8h_html_a5c2d84091dc7e60a386d2b1d5f46745a"><div class="ttname"><a href="band__to__tridiag_8h.html#a5c2d84091dc7e60a386d2b1d5f46745a">dlaf::eigensolver::band_to_tridiag</a></div><div class="ttdeci">TridiagResult&lt; T, Device::CPU &gt; band_to_tridiag(blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> band_to_tridiag.h:75</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_a9307e8d79bffad58211c317c92c7dc77"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">dlaf::comm::CommunicatorGrid::size</a></div><div class="ttdeci">Size2D size() const noexcept</div><div class="ttdoc">Return the number of rows in the grid.</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:68</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>

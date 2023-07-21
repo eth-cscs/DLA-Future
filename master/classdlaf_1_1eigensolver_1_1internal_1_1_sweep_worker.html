@@ -101,35 +101,35 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac6d6e38a2aa1e3ddaed5da790d8e1b9f"><td class="memItemLeft" align="right" valign="top"><a id="ac6d6e38a2aa1e3ddaed5da790d8e1b9f"></a>
 <a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html">SweepWorker</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_sweep_worker.html">SweepWorker</a> &amp;&amp;)=default</td></tr>
 <tr class="separator:ac6d6e38a2aa1e3ddaed5da790d8e1b9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60af8600ec4922b4f7b7238ca2d5c8ae"><td class="memItemLeft" align="right" valign="top"><a id="a60af8600ec4922b4f7b7238ca2d5c8ae"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>startSweep</b> (SizeType sweep, <a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">BandBlock</a>&lt; T &gt; &amp;a) noexcept</td></tr>
-<tr class="separator:a60af8600ec4922b4f7b7238ca2d5c8ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a422fb4edd64445fb4e21866adc0f644e"><td class="memItemLeft" align="right" valign="top"><a id="a422fb4edd64445fb4e21866adc0f644e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>compactCopyToTile</b> (<a class="el" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile</a>&lt; T, Device::CPU &gt; &amp;tile_v, <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> index) const noexcept</td></tr>
-<tr class="separator:a422fb4edd64445fb4e21866adc0f644e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a310c798c3815d88e81648dc834fc878d"><td class="memItemLeft" align="right" valign="top"><a id="a310c798c3815d88e81648dc834fc878d"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>doStep</b> (<a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">BandBlock</a>&lt; T &gt; &amp;a) noexcept</td></tr>
-<tr class="separator:a310c798c3815d88e81648dc834fc878d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0f6cb0f9332fe0c5dcff04528687f8f7"><td class="memItemLeft" align="right" valign="top"><a id="a0f6cb0f9332fe0c5dcff04528687f8f7"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>start_sweep</b> (SizeType sweep, <a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">BandBlock</a>&lt; T &gt; &amp;a) noexcept</td></tr>
+<tr class="separator:a0f6cb0f9332fe0c5dcff04528687f8f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a23908e9afc42178a62c7b430713e5f"><td class="memItemLeft" align="right" valign="top"><a id="a8a23908e9afc42178a62c7b430713e5f"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>compact_copy_to_tile</b> (const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile</a>&lt; T, Device::CPU &gt; &amp;tile_v, <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> index) const noexcept</td></tr>
+<tr class="separator:a8a23908e9afc42178a62c7b430713e5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a456e5e8b62cfe63ee61adeb623cac991"><td class="memItemLeft" align="right" valign="top"><a id="a456e5e8b62cfe63ee61adeb623cac991"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>do_step</b> (<a class="el" href="classdlaf_1_1eigensolver_1_1internal_1_1_band_block.html">BandBlock</a>&lt; T &gt; &amp;a) noexcept</td></tr>
+<tr class="separator:a456e5e8b62cfe63ee61adeb623cac991"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a5c149828dc1a5d2c050332f28aabf63d"><td class="memTemplParams" colspan="2"><a id="a5c149828dc1a5d2c050332f28aabf63d"></a>
+<tr class="memitem:ae2b71f125f5ccdc24a014bd6410cde38"><td class="memTemplParams" colspan="2"><a id="ae2b71f125f5ccdc24a014bd6410cde38"></a>
 template&lt;class BandBlockType &gt; </td></tr>
-<tr class="memitem:a5c149828dc1a5d2c050332f28aabf63d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>startSweepInternal</b> (SizeType sweep, BandBlockType &amp;a) noexcept</td></tr>
-<tr class="separator:a5c149828dc1a5d2c050332f28aabf63d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aef2f6289edc5b67cbd3ee6dc5bcd3e2a"><td class="memTemplParams" colspan="2"><a id="aef2f6289edc5b67cbd3ee6dc5bcd3e2a"></a>
+<tr class="memitem:ae2b71f125f5ccdc24a014bd6410cde38"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>start_sweep_internal</b> (SizeType sweep, BandBlockType &amp;a) noexcept</td></tr>
+<tr class="separator:ae2b71f125f5ccdc24a014bd6410cde38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab252f43f4c4431a3e541196e3dff0cad"><td class="memTemplParams" colspan="2"><a id="ab252f43f4c4431a3e541196e3dff0cad"></a>
 template&lt;class BandBlockType &gt; </td></tr>
-<tr class="memitem:aef2f6289edc5b67cbd3ee6dc5bcd3e2a"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>doStepFull</b> (BandBlockType &amp;a) noexcept</td></tr>
-<tr class="separator:aef2f6289edc5b67cbd3ee6dc5bcd3e2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e65775dfd0090f186ba2cab401be7b3"><td class="memItemLeft" align="right" valign="top"><a id="a7e65775dfd0090f186ba2cab401be7b3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>setId</b> (SizeType sweep, SizeType step) noexcept</td></tr>
-<tr class="separator:a7e65775dfd0090f186ba2cab401be7b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a924e626e80b84b5ff2fa2cfd79f99818"><td class="memItemLeft" align="right" valign="top"><a id="a924e626e80b84b5ff2fa2cfd79f99818"></a>
-SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>firstRowHHR</b> () const noexcept</td></tr>
-<tr class="separator:a924e626e80b84b5ff2fa2cfd79f99818"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad705065eef9f5aa2924d7826a1d6cccd"><td class="memItemLeft" align="right" valign="top"><a id="ad705065eef9f5aa2924d7826a1d6cccd"></a>
-SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>sizeHHR</b> () const noexcept</td></tr>
-<tr class="separator:ad705065eef9f5aa2924d7826a1d6cccd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab252f43f4c4431a3e541196e3dff0cad"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>do_step_full</b> (BandBlockType &amp;a) noexcept</td></tr>
+<tr class="separator:ab252f43f4c4431a3e541196e3dff0cad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4aa752f8556c044f788c5d7ecd25e0c9"><td class="memItemLeft" align="right" valign="top"><a id="a4aa752f8556c044f788c5d7ecd25e0c9"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>set_id</b> (SizeType sweep, SizeType step) noexcept</td></tr>
+<tr class="separator:a4aa752f8556c044f788c5d7ecd25e0c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a690bd942f3b7a56229b4c9496489cc3d"><td class="memItemLeft" align="right" valign="top"><a id="a690bd942f3b7a56229b4c9496489cc3d"></a>
+SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>first_row_HHR</b> () const noexcept</td></tr>
+<tr class="separator:a690bd942f3b7a56229b4c9496489cc3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8ee136640892014bf1034fdd48ea0cf"><td class="memItemLeft" align="right" valign="top"><a id="aa8ee136640892014bf1034fdd48ea0cf"></a>
+SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>size_HHR</b> () const noexcept</td></tr>
+<tr class="separator:aa8ee136640892014bf1034fdd48ea0cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af2f01b39bf2d5d565a764ab3fcde7ba9"><td class="memItemLeft" align="right" valign="top"><a id="af2f01b39bf2d5d565a764ab3fcde7ba9"></a>
 T &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>tau</b> () noexcept</td></tr>
 <tr class="separator:af2f01b39bf2d5d565a764ab3fcde7ba9"><td class="memSeparator" colspan="2">&#160;</td></tr>

@@ -747,7 +747,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     const SizeType nr_steps = nrStepsForSweep(sweep, size, b);
     for (SizeType step = 0; step < nr_steps; ++step) {
       SizeType j_el_tl = sweep % nb;
-      // ii_el is the row element index with origin in the first row of the diagonal tile.
+      // i_el is the row element index with origin in the first row of the diagonal tile.
       SizeType i_el = j_el_tl / b * b + step * b;
       worker.compact_copy_to_tile((*tiles_v)[to_sizet(i_el / nb)], TileElementIndex(i_el % nb, j_el_tl));
       sem->acquire();
@@ -813,12 +813,11 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
       // Therefore we extract the tiles of the column in a vector and move it to a shared_ptr,
       // that can be copied to the different tasks, but reference the same tiles.
       const SizeType i = sweep / nb;
-      tiles_v = ex::when_all_vector(matrix::select(
-                    mat_v, common::iterate_range2d(LocalTileIndex{i, i}, LocalTileSize{n - i, 1}))) |
-                ex::then([](TileVector&& vector) {
-                  return std::make_shared<TileVector>(std::move(vector));
-                }) |
-                ex::split();
+      tiles_v =
+          ex::when_all_vector(matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i},
+                                                                            LocalTileSize{n - i, 1}))) |
+          ex::then([](TileVector&& vector) { return std::make_shared<TileVector>(std::move(vector)); }) |
+          ex::split();
     }
 
     ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline(), tiles_v) |

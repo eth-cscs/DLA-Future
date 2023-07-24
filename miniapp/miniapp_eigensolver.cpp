@@ -116,9 +116,9 @@ struct EigensolverMiniapp {
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
         if (opts.local)
-          return dlaf::eigensolver::eigensolver<backend>(opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get());
         else
-          return dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
       };
       auto [eigenvalues, eigenvectors] = bench();
 

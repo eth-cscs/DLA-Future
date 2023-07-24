@@ -25,7 +25,7 @@ void GenEigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<
   factorization::cholesky<B>(uplo, mat_b);
   eigensolver::gen_to_std<B>(uplo, mat_a, mat_b);
 
-  eigensolver::eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B>(uplo, mat_a, eigenvalues, eigenvectors);
 
   solver::triangular<B>(blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1), mat_b,
                         eigenvectors);
@@ -38,7 +38,7 @@ void GenEigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo,
   factorization::cholesky<B>(grid, uplo, mat_b);
   eigensolver::gen_to_std<B>(grid, uplo, mat_a, mat_b);
 
-  eigensolver::eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B>(grid, uplo, mat_a, eigenvalues, eigenvectors);
 
   solver::triangular<B>(grid, blas::Side::Left, uplo, blas::Op::ConjTrans, blas::Diag::NonUnit, T(1),
                         mat_b, eigenvectors);

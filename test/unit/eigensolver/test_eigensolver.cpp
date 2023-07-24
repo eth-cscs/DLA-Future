@@ -88,15 +88,15 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   Matrix<T, Device::CPU> mat_a_h(reference.distribution());
   copy(reference, mat_a_h);
 
-  eigensolver::EigensolverResult<T, D> ret = [&]() {
+  EigensolverResult<T, D> ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
 
     if constexpr (allocation == Allocation::do_allocation) {
       if constexpr (isDistributed) {
-        return eigensolver::eigensolver<B>(grid..., uplo, mat_a.get());
+        return hermitian_eigensolver<B>(grid..., uplo, mat_a.get());
       }
       else {
-        return eigensolver::eigensolver<B>(uplo, mat_a.get());
+        return hermitian_eigensolver<B>(uplo, mat_a.get());
       }
     }
     else if constexpr (allocation == Allocation::use_preallocated) {
@@ -105,13 +105,13 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
                                          TileElementSize(mat_a_h.blockSize().rows(), 1));
       if constexpr (isDistributed) {
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
-        eigensolver::eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors);
-        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+        hermitian_eigensolver<B>(grid..., uplo, mat_a.get(), eigenvalues, eigenvectors);
+        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
-        eigensolver::eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors);
-        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+        hermitian_eigensolver<B>(uplo, mat_a.get(), eigenvalues, eigenvectors);
+        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
   }();

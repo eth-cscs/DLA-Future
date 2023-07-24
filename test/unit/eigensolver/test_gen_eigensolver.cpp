@@ -67,8 +67,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 template <class T, Device D, class... GridIfDistributed>
 void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
                                    Matrix<const T, Device::CPU>& reference_b,
-                                   eigensolver::EigensolverResult<T, D>& ret,
-                                   GridIfDistributed... grid) {
+                                   EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
   // calls that might lead to deadlocks.
@@ -158,7 +157,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
   copy(reference_b, mat_b_h);
 
-  eigensolver::EigensolverResult<T, D> ret = [&]() {
+  EigensolverResult<T, D> ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_b_h);
     if constexpr (allocation == Allocation::do_allocation) {
@@ -177,12 +176,12 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat_a_h.blockSize(), grid...);
         eigensolver::gen_eigensolver<B>(grid..., uplo, mat_a.get(), mat_b.get(), eigenvalues,
                                         eigenvectors);
-        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
       else {
         Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat_a_h.blockSize());
         eigensolver::gen_eigensolver<B>(uplo, mat_a.get(), mat_b.get(), eigenvalues, eigenvectors);
-        return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+        return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
       }
     }
   }();

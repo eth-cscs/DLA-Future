@@ -19,7 +19,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::eigensolver {
+namespace dlaf {
 
 /// Standard Eigensolver.
 ///
@@ -36,8 +36,8 @@ namespace dlaf::eigensolver {
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
-void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
-                 Matrix<T, D>& eigenvectors) {
+void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
+                           Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::local_matrix(mat), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -54,7 +54,7 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eig
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
 
-  internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors);
+  eigensolver::internal::Eigensolver<B, D, T>::call(uplo, mat, eigenvalues, eigenvectors);
 }
 
 /// Standard Eigensolver.
@@ -70,13 +70,13 @@ void eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eig
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
+EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                              TileElementSize(mat.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(LocalElementSize(size, size), mat.blockSize());
 
-  eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B, D, T>(uplo, mat, eigenvalues, eigenvectors);
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 
@@ -96,8 +96,8 @@ EigensolverResult<T, D> eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
 /// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
 /// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
 template <Backend B, Device D, class T>
-void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
-                 Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
+void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
+                           Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
   DLAF_ASSERT(square_size(mat), mat);
   DLAF_ASSERT(square_blocksize(mat), mat);
@@ -114,7 +114,7 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
   DLAF_ASSERT(single_tile_per_block(eigenvalues), eigenvalues);
   DLAF_ASSERT(single_tile_per_block(eigenvectors), eigenvectors);
 
-  internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors);
+  eigensolver::internal::Eigensolver<B, D, T>::call(grid, uplo, mat, eigenvalues, eigenvectors);
 }
 
 /// Standard Eigensolver.
@@ -131,13 +131,14 @@ void eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 /// @param mat contains the Hermitian matrix A
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat) {
+EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                              Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                              TileElementSize(mat.blockSize().rows(), 1));
   matrix::Matrix<T, D> eigenvectors(GlobalElementSize(size, size), mat.blockSize(), grid);
 
-  eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors);
+  hermitian_eigensolver<B, D, T>(grid, uplo, mat, eigenvalues, eigenvectors);
   return {std::move(eigenvalues), std::move(eigenvectors)};
 }
 }

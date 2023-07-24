@@ -94,7 +94,7 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
 
-    multiplication::triangular<B>(side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
+    triangular_multiplication<B>(side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
   }
 
   CHECK_MATRIX_NEAR(res_b, mat_bh, 40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,
@@ -135,7 +135,7 @@ void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, 
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
 
-    multiplication::triangular<B, D, T>(grid, side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
+    triangular_multiplication<B, D, T>(grid, side, uplo, op, diag, alpha, mat_a.get(), mat_b.get());
   }
 
   CHECK_MATRIX_NEAR(res_b, mat_bh, 40 * (mat_bh.size().rows() + 1) * TypeUtilities<T>::error,

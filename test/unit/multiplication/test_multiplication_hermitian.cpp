@@ -91,7 +91,7 @@ void testHermitianMultiplication(const blas::Side side, const blas::Uplo uplo, c
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::hermitian<B>(side, uplo, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
+    hermitian_multiplication<B>(side, uplo, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
   // SCOPED_TRACE cannot yield.
@@ -136,7 +136,7 @@ void testHermitianMultiplication(comm::CommunicatorGrid grid, const blas::Side s
     MatrixMirror<T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::hermitian<B>(grid, side, uplo, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
+    hermitian_multiplication<B>(grid, side, uplo, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
   // SCOPED_TRACE cannot yield.

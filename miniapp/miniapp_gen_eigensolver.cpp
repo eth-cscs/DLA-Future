@@ -241,8 +241,8 @@ void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<con
   Matrix<T, Device::CPU> C(E.distribution());
   Matrix<T, Device::CPU> C2(E.distribution());
   dlaf::miniapp::scaleEigenvectors(evalues, E, C2);
-  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{1}, B, C2, T{0}, C);
-  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{1}, B, C2, T{0}, C);
+  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =

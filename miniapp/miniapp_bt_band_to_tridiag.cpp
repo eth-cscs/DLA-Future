@@ -130,13 +130,11 @@ struct BacktransformBandToTridiagMiniapp {
 
         dlaf::common::Timer<> timeit;
         if (opts.local)
-          dlaf::eigensolver::bt_band_to_tridiag<backend, DefaultDevice_v<backend>, T>(opts.b,
-                                                                                      mat_e.get(),
-                                                                                      mat_hh);
+          dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
+              opts.b, mat_e.get(), mat_hh);
         else
-          dlaf::eigensolver::bt_band_to_tridiag<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.b,
-                                                                                      mat_e.get(),
-                                                                                      mat_hh);
+          dlaf::eigensolver::internal::bt_band_to_tridiagonal<backend, DefaultDevice_v<backend>, T>(
+              comm_grid, opts.b, mat_e.get(), mat_hh);
 
         // wait and barrier for all ranks
         mat_e.get().waitLocalTiles();

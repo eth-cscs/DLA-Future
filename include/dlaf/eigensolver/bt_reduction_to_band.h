@@ -19,8 +19,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///
@@ -56,7 +55,7 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
   };
   DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
+  BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory.
@@ -95,7 +94,6 @@ void bt_reduction_to_band(comm::CommunicatorGrid grid, const SizeType b, Matrix<
   DLAF_ASSERT(mat_taus.distribution().localNrTiles().rows() == nr_reflectors_blocks(), mat_taus, mat_v,
               b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);
-}
+  BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);
 }
 }

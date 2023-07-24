@@ -139,11 +139,11 @@ struct TridiagSolverMiniapp {
         DLAF_MPI_CHECK_ERROR(MPI_Barrier(world));
 
         dlaf::common::Timer<> timeit;
-        using dlaf::eigensolver::tridiag_solver;
+        using dlaf::eigensolver::internal::tridiagonal_eigensolver;
         if (opts.local)
-          tridiag_solver<backend>(tridiag, evals_mirror.get(), evecs_mirror.get());
+          tridiagonal_eigensolver<backend>(tridiag, evals_mirror.get(), evecs_mirror.get());
         else
-          tridiag_solver<backend>(comm_grid, tridiag, evals_mirror.get(), evecs_mirror.get());
+          tridiagonal_eigensolver<backend>(comm_grid, tridiag, evals_mirror.get(), evecs_mirror.get());
 
         // wait and barrier for all ranks
         tridiag.waitLocalTiles();

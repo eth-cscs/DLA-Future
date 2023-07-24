@@ -18,7 +18,7 @@
 #include <dlaf/sender/when_all_lift.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Reduce a local lower Hermitian matrix to symmetric band-diagonal form, with specified band_size.
 ///
@@ -46,7 +46,7 @@ Matrix<T, Device::CPU> reduction_to_band(Matrix<T, D>& mat_a, const SizeType ban
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
 
-  return internal::ReductionToBand<B, D, T>::call(mat_a, band_size);
+  return ReductionToBand<B, D, T>::call(mat_a, band_size);
 }
 
 /// Reduce a distributed lower Hermitian matrix to symmetric band-diagonal form, with specified band_size.
@@ -113,6 +113,6 @@ Matrix<T, Device::CPU> reduction_to_band(comm::CommunicatorGrid grid, Matrix<T, 
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
 
-  return internal::ReductionToBand<B, D, T>::call(grid, mat_a, band_size);
+  return ReductionToBand<B, D, T>::call(grid, mat_a, band_size);
 }
 }

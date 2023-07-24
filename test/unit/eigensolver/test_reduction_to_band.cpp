@@ -326,7 +326,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() mutable {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::reduction_to_band<B, D, T>(mat_a.get(), band_size);
+    return eigensolver::internal::reduction_to_band<B, D, T>(mat_a.get(), band_size);
   }();
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
@@ -397,7 +397,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    return eigensolver::reduction_to_band<B>(grid, matrix_a.get(), band_size);
+    return eigensolver::internal::reduction_to_band<B>(grid, matrix_a.get(), band_size);
   }();
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());

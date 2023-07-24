@@ -68,7 +68,7 @@ void testCholesky(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
 
   {
     MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    factorization::cholesky<B, D, T>(uplo, mat.get());
+    cholesky_factorization<B, D, T>(uplo, mat.get());
   }
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
@@ -91,7 +91,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   {
     MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    factorization::cholesky<B, D, T>(grid, uplo, mat.get());
+    cholesky_factorization<B, D, T>(grid, uplo, mat.get());
   }
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,

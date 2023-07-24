@@ -140,10 +140,10 @@ struct choleskyMiniapp {
 
         dlaf::common::Timer<> timeit;
         if (opts.local)
-          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix.get());
+          dlaf::cholesky_factorization<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix.get());
         else
-          dlaf::factorization::cholesky<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                              matrix.get());
+          dlaf::cholesky_factorization<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
+                                                                             matrix.get());
 
         // wait and barrier for all ranks
         matrix.get().waitLocalTiles();

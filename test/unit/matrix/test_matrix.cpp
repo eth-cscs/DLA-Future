@@ -1872,6 +1872,10 @@ void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
   }
 
   CHECK_MATRIX_EQ(fixedValues, dst_host);
+
+  // Note: ensure that everything finishes before next call to Communicator::clone() that might block a
+  // working thread (and if it is just one, it would deadlock)
+  pika::threads::get_thread_manager().wait();
 }
 
 TYPED_TEST(MatrixTest, CopyReshuffling) {

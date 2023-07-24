@@ -222,8 +222,7 @@ void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const 
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::General, C);
+      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

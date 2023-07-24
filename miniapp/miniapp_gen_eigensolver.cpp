@@ -233,8 +233,7 @@ void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<con
   const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
   const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
                                std::norm(sync_wait(evalues.read(last_ev_tile)).get()(last_ev_el_tile)));
-  const auto norm_B =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, B);
+  const auto norm_B = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, B);
 
   // 2.
   // Compute C = E D - A E
@@ -246,8 +245,7 @@ void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<con
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::General, C);
+      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

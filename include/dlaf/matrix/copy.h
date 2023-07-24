@@ -17,10 +17,13 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
+#include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/matrix/copy_tile.h>
+#include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
+#include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
 
 namespace dlaf::matrix {
@@ -123,7 +126,19 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
   Matrix<T, Destination> dst_retiled = dst.retiledSubPipeline(scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
-  common::Pipeline<comm::Communicator> comm_pipeline(grid.fullCommunicator().clone());
+  auto comm_sender = ex::just(grid.fullCommunicator().clone());
+
+  auto tag = [dist = src_retiled.distribution()](GlobalTileIndex ij) -> comm::IndexT_MPI {
+    // Note:
+    // Source distribution is used as reference for both sending and receiving side.
+    // The tag is computed as a function of local tile index, in order to keep its value as small as
+    // possible. Moreover, since the local size of the matrix might change on different ranks, linear
+    // local tile index is computed using a rank-independent ld.
+    const auto size = dist.commGridSize();
+    const LocalTileIndex source_ij_lc{ij.row() / size.rows(), ij.col() / size.cols()};
+    const SizeType ld = dlaf::util::ceilDiv(dist.nrTiles().rows(), to_SizeType(size.rows()));
+    return to_int(ij.row() + ij.col() * ld);
+  };
 
   for (const LocalTileIndex ij_lc : common::iterate_range2d(src_retiled.distribution().localNrTiles())) {
     const GlobalTileIndex ij = src_retiled.distribution().globalTileIndex(ij_lc);
@@ -134,7 +149,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
     const bool dst_is_mine = rank == dst_rank;
 
     if (src_is_mine != dst_is_mine) {
-      ex::start_detached(comm::scheduleSend(comm_pipeline(), grid.rankFullCommunicator(dst_rank), 0,
+      ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm_sender),
+                                            grid.rankFullCommunicator(dst_rank), tag(ij),
                                             src_retiled.read(ij_lc)));
     }
   }
@@ -153,7 +169,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
                          matrix::copy(policy));
     }
     else {
-      ex::start_detached(comm::scheduleRecv(comm_pipeline(), grid.rankFullCommunicator(src_rank), 0,
+      ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(comm_sender),
+                                            grid.rankFullCommunicator(src_rank), tag(ij),
                                             dst_retiled.readwrite(ij_lc)));
     }
   }

@@ -12,9 +12,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 template <Backend backend, Device device, class T>
 struct GenToStd {
@@ -39,6 +37,4 @@ DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_GENTOSTD_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-}
-}
 }

@@ -19,8 +19,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Reduce a Hermitian definite generalized eigenproblem to standard form.
 ///
@@ -41,7 +40,7 @@ namespace eigensolver {
 /// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are not distributed.
 template <Backend backend, Device device, class T>
-void gen_to_std(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
+void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
@@ -55,10 +54,10 @@ void gen_to_std(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& ma
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      internal::GenToStd<backend, device, T>::call_L(mat_a, mat_b);
+      GenToStd<backend, device, T>::call_L(mat_a, mat_b);
       break;
     case blas::Uplo::Upper:
-      internal::GenToStd<backend, device, T>::call_U(mat_a, mat_b);
+      GenToStd<backend, device, T>::call_U(mat_a, mat_b);
       break;
     case blas::Uplo::General:
       DLAF_UNIMPLEMENTED(uplo);
@@ -86,8 +85,8 @@ void gen_to_std(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& ma
 /// @pre mat_a and mat_b have the same tile and block sizes,
 /// @pre mat_a and mat_b are distributed according to the grid.
 template <Backend backend, Device device, class T>
-void gen_to_std(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
-                Matrix<T, device>& mat_b) {
+void generalized_to_standard(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
+                             Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_size(mat_b), mat_b);
@@ -101,10 +100,10 @@ void gen_to_std(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>&
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      internal::GenToStd<backend, device, T>::call_L(grid, mat_a, mat_b);
+      GenToStd<backend, device, T>::call_L(grid, mat_a, mat_b);
       break;
     case blas::Uplo::Upper:
-      internal::GenToStd<backend, device, T>::call_U(grid, mat_a, mat_b);
+      GenToStd<backend, device, T>::call_U(grid, mat_a, mat_b);
       break;
     case blas::Uplo::General:
       DLAF_UNIMPLEMENTED(uplo);
@@ -112,5 +111,4 @@ void gen_to_std(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>&
   }
 }
 
-}
 }

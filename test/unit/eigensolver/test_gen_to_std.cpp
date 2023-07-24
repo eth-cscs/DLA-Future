@@ -74,7 +74,7 @@ void testGenToStdEigensolver(const blas::Uplo uplo, const SizeType m, const Size
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_t(mat_th);
 
-    eigensolver::gen_to_std<B>(uplo, mat_a.get(), mat_t.get());
+    eigensolver::internal::generalized_to_standard<B>(uplo, mat_a.get(), mat_t.get());
   }
 
   CHECK_MATRIX_NEAR(res_a, mat_ah, 0, 10 * (mat_ah.size().rows() + 1) * TypeUtilities<T>::error);
@@ -104,7 +104,7 @@ void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo,
     MatrixMirror<T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<T, D, Device::CPU> mat_t(mat_th);
 
-    eigensolver::gen_to_std<B>(grid, uplo, mat_a.get(), mat_t.get());
+    eigensolver::internal::generalized_to_standard<B>(grid, uplo, mat_a.get(), mat_t.get());
   }
 
   CHECK_MATRIX_NEAR(res_a, mat_ah, 0, 10 * (mat_ah.size().rows() + 1) * TypeUtilities<T>::error);

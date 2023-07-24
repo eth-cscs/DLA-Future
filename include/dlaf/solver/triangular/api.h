@@ -14,9 +14,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
-namespace solver {
-namespace internal {
+namespace dlaf::solver::internal {
 template <Backend backend, Device device, class T>
 struct Triangular {
   static void call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
@@ -68,6 +66,4 @@ DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_SOLVER_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-}
-}
 }

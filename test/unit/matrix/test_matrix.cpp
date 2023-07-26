@@ -17,6 +17,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
@@ -1828,6 +1829,70 @@ TYPED_TEST(MatrixTest, GPUCopySubPipeline) {
       }
 
       CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
+    }
+  }
+}
+#endif
+
+struct TestReshuffling {
+  const GlobalElementSize size;
+  const TileElementSize src_tilesize;
+  const TileElementSize dst_tilesize;
+};
+std::vector<TestReshuffling> sizes_reshuffling_tests{
+    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},   // same shape
+    TestReshuffling{{10, 5}, {5, 10}, {10, 2}},  // x2 | /5
+    TestReshuffling{{26, 13}, {10, 3}, {5, 6}},  // /2 | x2
+};
+
+template <class T, Device Source, Device Destination>
+void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
+  const auto& [size, src_tilesize, dst_tilesize] = config;
+  const comm::Index2D origin_rank_src(std::max(0, grid.size().rows() - 1),
+                                      std::max(0, grid.size().cols() - 1));
+  matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
+  const comm::Index2D origin_rank_dst(
+      std::min(grid.size().rows() - 1, dlaf::util::ceilDiv(grid.size().rows(), 2)),
+      std::min(grid.size().cols() - 1, dlaf::util::ceilDiv(grid.size().cols(), 2)));
+  matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
+
+  auto fixedValues = [](const GlobalElementIndex index) { return T(index.row() * 1000 + index.col()); };
+
+  matrix::Matrix<const T, Device::CPU> src_host = [dist_src, fixedValues]() {
+    matrix::Matrix<T, Device::CPU> src_host(dist_src);
+    matrix::util::set(src_host, fixedValues);
+    return src_host;
+  }();
+  matrix::Matrix<T, Device::CPU> dst_host(dist_dst);
+
+  {
+    matrix::MatrixMirror<const T, Source, Device::CPU> src(src_host);
+    matrix::MatrixMirror<T, Destination, Device::CPU> dst(dst_host);
+    matrix::copy(src.get(), dst.get(), grid);
+  }
+
+  CHECK_MATRIX_EQ(fixedValues, dst_host);
+
+  // Note: ensure that everything finishes before next call to Communicator::clone() that might block a
+  // working thread (and if it is just one, it would deadlock)
+  pika::threads::get_thread_manager().wait();
+}
+
+TYPED_TEST(MatrixTest, CopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::CPU, Device::CPU>(config, grid);
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(MatrixTest, GPUCopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::GPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::CPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::GPU, Device::CPU>(config, grid);
     }
   }
 }

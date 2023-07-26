@@ -72,10 +72,17 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><code>#include &lt;pika/execution.hpp&gt;</code><br />
+<code>#include &lt;dlaf/common/assert.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="range2d_8h_source.html">dlaf/common/range2d.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="p2p_8h_source.html">dlaf/communication/kernels/p2p.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="copy__tile_8h_source.html">dlaf/matrix/copy_tile.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="util__math_8h_source.html">dlaf/util_math.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
 </div>
 <p><a href="copy_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -92,10 +99,13 @@ template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 <tr class="memitem:ad10d0589a12343c067f93822fbad6aed"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::copy</b> (Matrix&lt; const T, Source &gt; &amp;source, Matrix&lt; T, Destination &gt; &amp;dest)</td></tr>
 <tr class="separator:ad10d0589a12343c067f93822fbad6aed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplParams" colspan="2">template&lt;class T , Device Source, Device Destination&gt; </td></tr>
+<tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="copy_8h.html#a4e9f34de930792a328db5561dc67a788">dlaf::matrix::copy</a> (Matrix&lt; const T, Source &gt; &amp;src, Matrix&lt; T, Destination &gt; &amp;dst, comm::CommunicatorGrid grid)</td></tr>
+<tr class="separator:a4e9f34de930792a328db5561dc67a788"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="abc90df94f398c001b29a9d62a5714043"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#abc90df94f398c001b29a9d62a5714043">&#9670;&nbsp;</a></span>copy()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#abc90df94f398c001b29a9d62a5714043">&#9670;&nbsp;</a></span>copy() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -141,6 +151,54 @@ template&lt;class T , Device Source, Device Destination&gt; </div>
 </div><div class="memdoc">
 <p>Copy subset of local tiles from <code>source</code> in the range <code>idx_source_begin</code>, <code>sz</code> to local subset of tiles in <code>dest</code> in the range <code>idx_dest_begin</code>, <code>sz</code>.</p>
 <p>Note: If <code>source</code> and <code>dest</code> are the same matrix and iteration ranges overlap partially, the result of the copy will be incorrect. </p>
+
+</div>
+</div>
+<a id="a4e9f34de930792a328db5561dc67a788"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4e9f34de930792a328db5561dc67a788">&#9670;&nbsp;</a></span>copy() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T , Device Source, Device Destination&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::matrix::copy </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; const T, Source &gt; &amp;&#160;</td>
+          <td class="paramname"><em>src</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; T, Destination &gt; &amp;&#160;</td>
+          <td class="paramname"><em>dst</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramname"><em>grid</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Copy of a matrix performing data reshuffling</p>
+<p>Copy <code>src</code> matrix to <code>dst</code>, re-distributing data according to the <code>dst</code> distribution. </p><dl class="section pre"><dt>Precondition</dt><dd>src.size() == dst.size() </dd>
+<dd>
+equal_process_grid(src, dst) </dd>
+<dd>
+mb = min(src.blockSize().rows(), dst.blockSize().rows()) src.blockSize().rows() % mb == 0 dst.blockSize().rows() % mb == 0 </dd>
+<dd>
+nb = min(src.blockSize().cols(), dst.blockSize().cols()) src.blockSize().cols() % nb == 0 dst.blockSize().cols() % nb == 0 </dd>
+<dd>
+src has equal tile and block sizes. </dd>
+<dd>
+dst has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>

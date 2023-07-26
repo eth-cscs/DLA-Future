@@ -33,24 +33,24 @@
 /// @param z Local part of the global matrix \f$\mathbf{Z}\f$
 /// @param dlaf_descz DLA-Future descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @return 0 if the eigensolver completed normally
-DLAF_EXTERN_C int dlaf_eigensolver_s(const int dlaf_context, const char uplo, float* a,
-                                     const struct DLAF_descriptor dlaf_desca, float* w, float* z,
-                                     const struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_symmetric_eigensolver_s(const int dlaf_context, const char uplo, float* a,
+                                               const struct DLAF_descriptor dlaf_desca, float* w,
+                                               float* z, const struct DLAF_descriptor dlaf_descz);
 
-/// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_d(const int dlaf_context, const char uplo, double* a,
-                                     const struct DLAF_descriptor dlaf_desca, double* w, double* z,
-                                     const struct DLAF_descriptor dlaf_descz);
+/// @copydoc dlaf_symmetric_eigensolver_s
+DLAF_EXTERN_C int dlaf_symmetric_eigensolver_d(const int dlaf_context, const char uplo, double* a,
+                                               const struct DLAF_descriptor dlaf_desca, double* w,
+                                               double* z, const struct DLAF_descriptor dlaf_descz);
 
-/// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
-                                     const struct DLAF_descriptor dlaf_desca, float* w,
-                                     dlaf_complex_c* z, const struct DLAF_descriptor dlaf_descz);
+/// @copydoc dlaf_symmetric_eigensolver_s
+DLAF_EXTERN_C int dlaf_hermitian_eigensolver_c(
+    const int dlaf_context, const char uplo, dlaf_complex_c* a, const struct DLAF_descriptor dlaf_desca,
+    float* w, dlaf_complex_c* z, const struct DLAF_descriptor dlaf_descz);
 
-/// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
-                                     const struct DLAF_descriptor dlaf_desca, double* w,
-                                     dlaf_complex_z* z, const struct DLAF_descriptor dlaf_descz);
+/// @copydoc dlaf_symmetric_eigensolver_s
+DLAF_EXTERN_C int dlaf_hermitian_eigensolver_z(
+    const int dlaf_context, const char uplo, dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
+    double* w, dlaf_complex_z* z, const struct DLAF_descriptor dlaf_descz);
 
 #ifdef DLAF_WITH_SCALAPACK
 

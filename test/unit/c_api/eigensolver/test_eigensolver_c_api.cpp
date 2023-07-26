@@ -113,20 +113,24 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 
       int err = -1;
       if constexpr (std::is_same_v<T, double>) {
-        err = C_dlaf_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_symmetric_eigensolver_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                             eigenvalues_ptr, local_eigenvectors_ptr,
+                                             dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, float>) {
-        err = C_dlaf_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_symmetric_eigensolver_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                             eigenvalues_ptr, local_eigenvectors_ptr,
+                                             dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, std::complex<double>>) {
-        err = C_dlaf_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_hermitian_eigensolver_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                             eigenvalues_ptr, local_eigenvectors_ptr,
+                                             dlaf_desc_eigenvectors);
       }
       else if constexpr (std::is_same_v<T, std::complex<float>>) {
-        err = C_dlaf_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a, eigenvalues_ptr,
-                                   local_eigenvectors_ptr, dlaf_desc_eigenvectors);
+        err = C_dlaf_hermitian_eigensolver_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc_a,
+                                             eigenvalues_ptr, local_eigenvectors_ptr,
+                                             dlaf_desc_eigenvectors);
       }
       else {
         DLAF_ASSERT(false, typeid(T).name());

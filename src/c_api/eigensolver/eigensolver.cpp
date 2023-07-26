@@ -16,28 +16,29 @@
 #include <dlaf_c/init.h>
 #include <dlaf_c/utils.h>
 
-int dlaf_eigensolver_s(const int dlaf_context, const char uplo, float* a,
-                       const struct DLAF_descriptor dlaf_desca, float* w, float* z,
-                       const struct DLAF_descriptor dlaf_descz) {
-  return eigensolver<float>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_symmetric_eigensolver_s(const int dlaf_context, const char uplo, float* a,
+                                 const struct DLAF_descriptor dlaf_desca, float* w, float* z,
+                                 const struct DLAF_descriptor dlaf_descz) {
+  return hermitian_eigensolver<float>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_d(const int dlaf_context, const char uplo, double* a,
-                       const struct DLAF_descriptor dlaf_desca, double* w, double* z,
-                       const struct DLAF_descriptor dlaf_descz) {
-  return eigensolver<double>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_symmetric_eigensolver_d(const int dlaf_context, const char uplo, double* a,
+                                 const struct DLAF_descriptor dlaf_desca, double* w, double* z,
+                                 const struct DLAF_descriptor dlaf_descz) {
+  return hermitian_eigensolver<double>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
-                       const struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
-                       const struct DLAF_descriptor dlaf_descz) {
-  return eigensolver<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_hermitian_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                                 const struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
+                                 const struct DLAF_descriptor dlaf_descz) {
+  return hermitian_eigensolver<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
-                       const struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
-                       const struct DLAF_descriptor dlaf_descz) {
-  return eigensolver<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
+int dlaf_hermitian_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                                 const struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
+                                 const struct DLAF_descriptor dlaf_descz) {
+  return hermitian_eigensolver<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca, w, z,
+                                                     dlaf_descz);
 }
 
 #ifdef DLAF_WITH_SCALAPACK

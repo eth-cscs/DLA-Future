@@ -87,16 +87,16 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
         {(int) m, (int) m, (int) mb, (int) mb, src_rank_index.row(), src_rank_index.col(), 0, 0, lld};
     int err = -1;
     if constexpr (std::is_same_v<T, double>) {
-      err = C_dlaf_cholesky_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_factorization_d(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, float>) {
-      err = C_dlaf_cholesky_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_factorization_s(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, std::complex<double>>) {
-      err = C_dlaf_cholesky_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_factorization_z(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else if constexpr (std::is_same_v<T, std::complex<float>>) {
-      err = C_dlaf_cholesky_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
+      err = C_dlaf_cholesky_factorization_c(dlaf_context, dlaf_uplo, local_a_ptr, dlaf_desc);
     }
     else {
       DLAF_ASSERT(false, typeid(T).name());

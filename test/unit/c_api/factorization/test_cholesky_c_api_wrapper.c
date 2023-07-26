@@ -13,36 +13,44 @@
 #include <dlaf_c/factorization/cholesky.h>
 #include <dlaf_c/utils.h>
 
+int C_dlaf_cholesky_factorization_s(const int dlaf_context, const char uplo, float* a,
+                                    const struct DLAF_descriptor desca) {
+  return dlaf_cholesky_factorization_s(dlaf_context, uplo, a, desca);
+}
+
+int C_dlaf_cholesky_factorization_d(const int dlaf_context, const char uplo, double* a,
+                                    const struct DLAF_descriptor desca) {
+  return dlaf_cholesky_factorization_d(dlaf_context, uplo, a, desca);
+}
+
+int C_dlaf_cholesky_factorization_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                                    const struct DLAF_descriptor desca) {
+  return dlaf_cholesky_factorization_c(dlaf_context, uplo, a, desca);
+}
+
+int C_dlaf_cholesky_factorization_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                                    const struct DLAF_descriptor desca) {
+  return dlaf_cholesky_factorization_z(dlaf_context, uplo, a, desca);
+}
+
 #ifdef DLAF_WITH_SCALAPACK
-void C_dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info) {
+void C_dlaf_pdpotrf(const char uplo, const int n, double* a, const int ia, const int ja,
+                    const int desca[9], int* info) {
   dlaf_pdpotrf(uplo, n, a, ia, ja, desca, info);
 }
 
-void C_dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info) {
+void C_dlaf_pspotrf(const char uplo, const int n, float* a, const int ia, const int ja,
+                    const int desca[9], int* info) {
   dlaf_pspotrf(uplo, n, a, ia, ja, desca, info);
 }
 
-void C_dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int ja, int* desca, int* info) {
+void C_dlaf_pzpotrf(const char uplo, const int n, dlaf_complex_z* a, const int ia, const int ja,
+                    const int desca[9], int* info) {
   dlaf_pzpotrf(uplo, n, a, ia, ja, desca, info);
 }
 
-void C_dlaf_pcpotrf(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* desca, int* info) {
+void C_dlaf_pcpotrf(const char uplo, const int n, dlaf_complex_c* a, const int ia, const int ja,
+                    const int desca[9], int* info) {
   dlaf_pcpotrf(uplo, n, a, ia, ja, desca, info);
 }
 #endif
-
-int C_dlaf_cholesky_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca) {
-  return dlaf_cholesky_d(dlaf_context, uplo, a, desca);
-}
-
-int C_dlaf_cholesky_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor desca) {
-  return dlaf_cholesky_s(dlaf_context, uplo, a, desca);
-}
-
-int C_dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor desca) {
-  return dlaf_cholesky_z(dlaf_context, uplo, a, desca);
-}
-
-int C_dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor desca) {
-  return dlaf_cholesky_c(dlaf_context, uplo, a, desca);
-}

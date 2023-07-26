@@ -14,44 +14,52 @@
 #include <dlaf_c/eigensolver/eigensolver.h>
 #include <dlaf_c/utils.h>
 
-#ifdef DLAF_WITH_SCALAPACK
-void C_dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w, double* z,
-                    int iz, int jz, int* descz, int* info) {
-  dlaf_pdsyevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
+int C_dlaf_symmetric_eigensolver_s(const int dlaf_context, const char uplo, float* a,
+                                   const struct DLAF_descriptor desca, float* w, float* z,
+                                   const struct DLAF_descriptor descz) {
+  return dlaf_symmetric_eigensolver_s(dlaf_context, uplo, a, desca, w, z, descz);
 }
 
-void C_dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w, float* z, int iz,
-                    int jz, int* descz, int* info) {
+int C_dlaf_symmetric_eigensolver_d(const int dlaf_context, const char uplo, double* a,
+                                   const struct DLAF_descriptor desca, double* w, double* z,
+                                   const struct DLAF_descriptor descz) {
+  return dlaf_symmetric_eigensolver_d(dlaf_context, uplo, a, desca, w, z, descz);
+}
+
+int C_dlaf_hermitian_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                                   const struct DLAF_descriptor desca, float* w, dlaf_complex_c* z,
+                                   const struct DLAF_descriptor descz) {
+  return dlaf_hermitian_eigensolver_c(dlaf_context, uplo, a, desca, w, z, descz);
+}
+
+int C_dlaf_hermitian_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                                   const struct DLAF_descriptor desca, double* w, dlaf_complex_z* z,
+                                   const struct DLAF_descriptor descz) {
+  return dlaf_hermitian_eigensolver_z(dlaf_context, uplo, a, desca, w, z, descz);
+}
+
+#ifdef DLAF_WITH_SCALAPACK
+
+void C_dlaf_pssyevd(char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
+                    float* w, float* z, const int iz, const int jz, const int descz[9], int* info) {
   dlaf_pssyevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
 }
 
-void C_dlaf_pzheevd(char uplo, int m, dlaf_complex_z* a, int ia, int ja, int* desca, double* w,
-                    dlaf_complex_z* z, int iz, int jz, int* descz, int* info) {
-  dlaf_pzheevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
+void C_dlaf_pdsyevd(const char uplo, const int m, double* a, const int ia, const int ja,
+                    const int desca[9], double* w, double* z, const int iz, const int jz,
+                    const int descz[9], int* info) {
+  dlaf_pdsyevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
 }
 
-void C_dlaf_pcheevd(char uplo, int m, dlaf_complex_c* a, int ia, int ja, int* desca, float* w,
-                    dlaf_complex_c* z, int iz, int jz, int* descz, int* info) {
+void C_dlaf_pcheevd(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
+                    const int desca[9], float* w, dlaf_complex_c* z, const int iz, const int jz,
+                    const int descz[9], int* info) {
   dlaf_pcheevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
 }
+
+void C_dlaf_pzheevd(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
+                    const int desca[9], double* w, dlaf_complex_z* z, const int iz, const int jz,
+                    const int descz[9], int* info) {
+  dlaf_pzheevd(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, info);
+}
 #endif
-
-int C_dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor desca, double* w,
-                         double* z, struct DLAF_descriptor descz) {
-  return dlaf_eigensolver_d(dlaf_context, uplo, a, desca, w, z, descz);
-}
-
-int C_dlaf_eigensolver_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor desca, float* w,
-                         float* z, struct DLAF_descriptor descz) {
-  return dlaf_eigensolver_s(dlaf_context, uplo, a, desca, w, z, descz);
-}
-
-int C_dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor desca,
-                         double* w, dlaf_complex_z* z, struct DLAF_descriptor descz) {
-  return dlaf_eigensolver_z(dlaf_context, uplo, a, desca, w, z, descz);
-}
-
-int C_dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor desca,
-                         float* w, dlaf_complex_c* z, struct DLAF_descriptor descz) {
-  return dlaf_eigensolver_c(dlaf_context, uplo, a, desca, w, z, descz);
-}

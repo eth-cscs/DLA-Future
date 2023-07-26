@@ -16,25 +16,28 @@
 // Tests are in C++ (GTest + DLA-Future)
 // The C_ wrappers ensure that the DLA-Future C API can be used in C
 
+DLAF_EXTERN_C int C_dlaf_cholesky_factorization_s(const int dlaf_context, const char uplo, float* a,
+                                                  const struct DLAF_descriptor desca);
+
+DLAF_EXTERN_C int C_dlaf_cholesky_factorization_d(const int dlaf_context, const char uplo, double* a,
+                                                  const struct DLAF_descriptor desca);
+
+DLAF_EXTERN_C int C_dlaf_cholesky_factorization_c(const int dlaf_context, const char uplo,
+                                                  dlaf_complex_c* a, const struct DLAF_descriptor desca);
+
+DLAF_EXTERN_C int C_dlaf_cholesky_factorization_z(const int dlaf_context, const char uplo,
+                                                  dlaf_complex_z* a, const struct DLAF_descriptor desca);
+
 #ifdef DLAF_WITH_SCALAPACK
-DLAF_EXTERN_C void C_dlaf_pdpotrf(char uplo, int n, double* a, int ia, int ja, int* desca, int* info);
+DLAF_EXTERN_C void C_dlaf_pspotrf(const char uplo, const int n, float* a, const int ia, const int ja,
+                                  const int desca[9], int* info);
 
-DLAF_EXTERN_C void C_dlaf_pspotrf(char uplo, int n, float* a, int ia, int ja, int* desca, int* info);
+DLAF_EXTERN_C void C_dlaf_pdpotrf(const char uplo, const int n, double* a, const int ia, const int ja,
+                                  const int desca[9], int* info);
 
-DLAF_EXTERN_C void C_dlaf_pzpotrf(char uplo, int n, dlaf_complex_z* a, int ia, int ja, int* desca,
-                                  int* info);
+DLAF_EXTERN_C void C_dlaf_pcpotrf(const char uplo, const int n, dlaf_complex_c* a, const int ia,
+                                  const int ja, const int desca[9], int* info);
 
-DLAF_EXTERN_C void C_dlaf_pcpotrf(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* desca,
-                                  int* info);
+DLAF_EXTERN_C void C_dlaf_pzpotrf(const char uplo, const int n, dlaf_complex_z* a, const int ia,
+                                  const int ja, const int desca[9], int* info);
 #endif
-
-DLAF_EXTERN_C int C_dlaf_cholesky_d(int dlaf_context, char uplo, double* a,
-                                    struct DLAF_descriptor desca);
-
-DLAF_EXTERN_C int C_dlaf_cholesky_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor desca);
-
-DLAF_EXTERN_C int C_dlaf_cholesky_z(int dlaf_context, char uplo, dlaf_complex_z* a,
-                                    struct DLAF_descriptor desca);
-
-DLAF_EXTERN_C int C_dlaf_cholesky_c(int dlaf_context, char uplo, dlaf_complex_c* a,
-                                    struct DLAF_descriptor desca);

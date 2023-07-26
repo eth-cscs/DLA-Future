@@ -13,24 +13,24 @@
 #include <dlaf_c/factorization/cholesky.h>
 #include <dlaf_c/utils.h>
 
-int dlaf_cholesky_s(const int dlaf_context, const char uplo, float* a,
-                    const DLAF_descriptor dlaf_desca) {
-  return cholesky<float>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_factorization_s(const int dlaf_context, const char uplo, float* a,
+                                  const DLAF_descriptor dlaf_desca) {
+  return cholesky_factorization<float>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-int dlaf_cholesky_d(const int dlaf_context, const char uplo, double* a,
-                    const DLAF_descriptor dlaf_desca) {
-  return cholesky<double>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_factorization_d(const int dlaf_context, const char uplo, double* a,
+                                  const DLAF_descriptor dlaf_desca) {
+  return cholesky_factorization<double>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-int dlaf_cholesky_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
-                    const DLAF_descriptor dlaf_desca) {
-  return cholesky<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_factorization_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                                  const DLAF_descriptor dlaf_desca) {
+  return cholesky_factorization<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
-int dlaf_cholesky_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
-                    const DLAF_descriptor dlaf_desca) {
-  return cholesky<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca);
+int dlaf_cholesky_factorization_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                                  const DLAF_descriptor dlaf_desca) {
+  return cholesky_factorization<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca);
 }
 
 #ifdef DLAF_WITH_SCALAPACK

@@ -28,8 +28,9 @@
 #include "../utils.h"
 
 template <typename T>
-int eigensolver(const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca,
-                dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz) {
+int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
+                          const DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w, T* z,
+                          const DLAF_descriptor dlaf_descz) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
   using MatrixBaseMirror =
@@ -86,7 +87,7 @@ void pxheevd(const char uplo, const int m, T* a, const int ia, const int ja, con
   auto dlaf_desca = make_dlaf_descriptor(m, m, ia, ja, desca);
   auto dlaf_descz = make_dlaf_descriptor(m, m, iz, jz, descz);
 
-  auto _info = eigensolver(desca[1], uplo, a, dlaf_desca, w, z, dlaf_descz);
+  auto _info = hermitian_eigensolver(desca[1], uplo, a, dlaf_desca, w, z, dlaf_descz);
   info = _info;
 }
 

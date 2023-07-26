@@ -28,7 +28,8 @@
 #include "../utils.h"
 
 template <typename T>
-int cholesky(const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca) {
+int cholesky_factorization(const int dlaf_context, const char uplo, T* a,
+                           const DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
   DLAF_ASSERT(dlaf_desca.i == 0, dlaf_desca.i);
@@ -67,7 +68,7 @@ void pxpotrf(const char uplo, const int n, T* a, const int ia, const int ja, con
 
   auto dlaf_desca = make_dlaf_descriptor(n, n, ia, ja, desca);
 
-  auto _info = cholesky(desca[1], uplo, a, dlaf_desca);
+  auto _info = cholesky_factorization(desca[1], uplo, a, dlaf_desca);
   info = _info;
 }
 

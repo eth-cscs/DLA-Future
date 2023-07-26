@@ -28,8 +28,8 @@
 #include "../utils.h"
 
 template <typename T>
-int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, dlaf::BaseType<T>* w,
-                T* z, DLAF_descriptor dlaf_descz) {
+int eigensolver(const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca,
+                dlaf::BaseType<T>* w, T* z, const DLAF_descriptor dlaf_descz) {
   using MatrixHost = dlaf::matrix::Matrix<T, dlaf::Device::CPU>;
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
   using MatrixBaseMirror =
@@ -73,8 +73,8 @@ int eigensolver(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca, d
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxheevd(char uplo, int m, T* a, int ia, int ja, int* desca, dlaf::BaseType<T>* w, T* z, int iz,
-             int jz, int* descz, int& info) {
+void pxheevd(const char uplo, const int m, T* a, const int ia, const int ja, const int desca[9],
+             dlaf::BaseType<T>* w, T* z, const int iz, int jz, const int descz[9], int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(descz[0] == 1, descz[0]);
   DLAF_ASSERT(desca[1] == descz[1], desca[1], descz[1]);

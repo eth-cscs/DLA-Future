@@ -33,24 +33,24 @@
 /// @param z Local part of the global matrix \f$\mathbf{Z}\f$
 /// @param dlaf_descz DLA-Future descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @return 0 if the eigensolver completed normally
-DLAF_EXTERN_C int dlaf_eigensolver_s(int dlaf_context, char uplo, float* a,
-                                     struct DLAF_descriptor dlaf_desca, float* w, float* z,
-                                     struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_s(const int dlaf_context, const char uplo, float* a,
+                                     const struct DLAF_descriptor dlaf_desca, float* w, float* z,
+                                     const struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_d(int dlaf_context, char uplo, double* a,
-                                     struct DLAF_descriptor dlaf_desca, double* w, double* z,
-                                     struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_d(const int dlaf_context, const char uplo, double* a,
+                                     const struct DLAF_descriptor dlaf_desca, double* w, double* z,
+                                     const struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a,
-                                     struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
-                                     struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                                     const struct DLAF_descriptor dlaf_desca, float* w,
+                                     dlaf_complex_c* z, const struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_eigensolver_s
-DLAF_EXTERN_C int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a,
-                                     struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
-                                     struct DLAF_descriptor dlaf_descz);
+DLAF_EXTERN_C int dlaf_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                                     const struct DLAF_descriptor dlaf_desca, double* w,
+                                     dlaf_complex_z* z, const struct DLAF_descriptor dlaf_descz);
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -85,19 +85,23 @@ DLAF_EXTERN_C int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z
 /// submatrix \f$\mathbf{A}\f$, has to be 1
 /// @param descz ScaLAPACK array descriptor of the global matrix \f$\mathbf{Z}\f$
 /// @param[out] info 0 if the eigensolver completed normally
-DLAF_EXTERN_C void dlaf_pssyevd(char uplo, int n, float* a, int ia, int ja, int* desca, float* w,
-                                float* z, int iz, int jz, int* descz, int* info);
+DLAF_EXTERN_C void dlaf_pssyevd(const char uplo, const int n, float* a, const int ia, const int ja,
+                                const int desca[9], float* w, float* z, const int iz, const int jz,
+                                const int descz[9], int* info);
 
 /// @copydoc dlaf_pssyevd
-DLAF_EXTERN_C void dlaf_pdsyevd(char uplo, int n, double* a, int ia, int ja, int* desca, double* w,
-                                double* z, int iz, int jz, int* descz, int* info);
+DLAF_EXTERN_C void dlaf_pdsyevd(const char uplo, const int n, double* a, const int ia, const int ja,
+                                const int desca[9], double* w, double* z, const int iz, const int jz,
+                                const int descz[9], int* info);
 
 /// @copydoc dlaf_pssyevd
-DLAF_EXTERN_C void dlaf_pcheevd(char uplo, int n, dlaf_complex_c* a, int ia, int ja, int* desca,
-                                float* w, dlaf_complex_c* z, int iz, int jz, int* descz, int* info);
+DLAF_EXTERN_C void dlaf_pcheevd(const char uplo, const int n, dlaf_complex_c* a, const int ia,
+                                const int ja, const int desca[9], float* w, dlaf_complex_c* z,
+                                const int iz, const int jz, const int descz[9], int* info);
 
 /// @copydoc dlaf_pssyevd
-DLAF_EXTERN_C void dlaf_pzheevd(char uplo, int n, dlaf_complex_z* a, int ia, int ja, int* desca,
-                                double* w, dlaf_complex_z* z, int iz, int jz, int* descz, int* info);
+DLAF_EXTERN_C void dlaf_pzheevd(const char uplo, const int n, dlaf_complex_z* a, const int ia,
+                                const int ja, const int desca[9], double* w, dlaf_complex_z* z,
+                                const int iz, const int jz, const int descz[9], int* info);
 
 #endif

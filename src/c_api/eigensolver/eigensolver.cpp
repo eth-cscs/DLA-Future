@@ -16,45 +16,52 @@
 #include <dlaf_c/init.h>
 #include <dlaf_c/utils.h>
 
-int dlaf_eigensolver_s(int dlaf_context, char uplo, float* a, struct DLAF_descriptor dlaf_desca,
-                       float* w, float* z, struct DLAF_descriptor dlaf_descz) {
+int dlaf_eigensolver_s(const int dlaf_context, const char uplo, float* a,
+                       const struct DLAF_descriptor dlaf_desca, float* w, float* z,
+                       const struct DLAF_descriptor dlaf_descz) {
   return eigensolver<float>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_d(int dlaf_context, char uplo, double* a, struct DLAF_descriptor dlaf_desca,
-                       double* w, double* z, struct DLAF_descriptor dlaf_descz) {
+int dlaf_eigensolver_d(const int dlaf_context, const char uplo, double* a,
+                       const struct DLAF_descriptor dlaf_desca, double* w, double* z,
+                       const struct DLAF_descriptor dlaf_descz) {
   return eigensolver<double>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_c(int dlaf_context, char uplo, dlaf_complex_c* a, struct DLAF_descriptor dlaf_desca,
-                       float* w, dlaf_complex_c* z, struct DLAF_descriptor dlaf_descz) {
+int dlaf_eigensolver_c(const int dlaf_context, const char uplo, dlaf_complex_c* a,
+                       const struct DLAF_descriptor dlaf_desca, float* w, dlaf_complex_c* z,
+                       const struct DLAF_descriptor dlaf_descz) {
   return eigensolver<std::complex<float>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
-int dlaf_eigensolver_z(int dlaf_context, char uplo, dlaf_complex_z* a, struct DLAF_descriptor dlaf_desca,
-                       double* w, dlaf_complex_z* z, struct DLAF_descriptor dlaf_descz) {
+int dlaf_eigensolver_z(const int dlaf_context, const char uplo, dlaf_complex_z* a,
+                       const struct DLAF_descriptor dlaf_desca, double* w, dlaf_complex_z* z,
+                       const struct DLAF_descriptor dlaf_descz) {
   return eigensolver<std::complex<double>>(dlaf_context, uplo, a, dlaf_desca, w, z, dlaf_descz);
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 
-void dlaf_pssyevd(char uplo, int m, float* a, int ia, int ja, int* desca, float* w, float* z, int iz,
-                  int jz, int* descz, int* info) {
+void dlaf_pssyevd(const char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
+                  float* w, float* z, const int iz, const int jz, const int descz[9], int* info) {
   pxheevd<float>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pdsyevd(char uplo, int m, double* a, int ia, int ja, int* desca, double* w, double* z, int iz,
-                  int jz, int* descz, int* info) {
+void dlaf_pdsyevd(const char uplo, const int m, double* a, const int ia, const int ja,
+                  const int desca[9], double* w, double* z, const int iz, const int jz,
+                  const int descz[9], int* info) {
   pxheevd<double>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pcheevd(char uplo, int m, dlaf_complex_c* a, int ia, int ja, int* desca, float* w,
-                  dlaf_complex_c* z, int iz, int jz, int* descz, int* info) {
+void dlaf_pcheevd(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
+                  const int desca[9], float* w, dlaf_complex_c* z, const int iz, const int jz,
+                  const int descz[9], int* info) {
   pxheevd<std::complex<float>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 
-void dlaf_pzheevd(char uplo, int m, dlaf_complex_z* a, int ia, int ja, int* desca, double* w,
-                  dlaf_complex_z* z, int iz, int jz, int* descz, int* info) {
+void dlaf_pzheevd(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
+                  const int desca[9], double* w, dlaf_complex_z* z, const int iz, const int jz,
+                  const int descz[9], int* info) {
   pxheevd<std::complex<double>>(uplo, m, a, ia, ja, desca, w, z, iz, jz, descz, *info);
 }
 

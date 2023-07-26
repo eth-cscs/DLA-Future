@@ -28,7 +28,7 @@
 #include "../utils.h"
 
 template <typename T>
-int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
+int cholesky(const int dlaf_context, const char uplo, T* a, const DLAF_descriptor dlaf_desca) {
   using MatrixMirror = dlaf::matrix::MatrixMirror<T, dlaf::Device::Default, dlaf::Device::CPU>;
 
   DLAF_ASSERT(dlaf_desca.i == 0, dlaf_desca.i);
@@ -59,7 +59,8 @@ int cholesky(int dlaf_context, char uplo, T* a, DLAF_descriptor dlaf_desca) {
 #ifdef DLAF_WITH_SCALAPACK
 
 template <typename T>
-void pxpotrf(char uplo, int n, T* a, int ia, int ja, int* desca, int& info) {
+void pxpotrf(const char uplo, const int n, T* a, const int ia, const int ja, const int desca[9],
+             int& info) {
   DLAF_ASSERT(desca[0] == 1, desca[0]);
   DLAF_ASSERT(ia == 1, ia);
   DLAF_ASSERT(ja == 1, ja);

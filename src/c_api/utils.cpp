@@ -14,7 +14,8 @@
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
 
-struct DLAF_descriptor make_dlaf_descriptor(int m, int n, int i, int j, int* desc) {
+struct DLAF_descriptor make_dlaf_descriptor(const int m, const int n, const int i, const int j,
+                                            const int desc[9]) {
   DLAF_ASSERT(i == 1, i);
   DLAF_ASSERT(j == 1, j);
 
@@ -24,7 +25,7 @@ struct DLAF_descriptor make_dlaf_descriptor(int m, int n, int i, int j, int* des
 }
 
 std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-    struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid) {
+    const struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid) {
   dlaf::GlobalElementSize matrix_size(dlaf_desc.m, dlaf_desc.n);
   dlaf::TileElementSize block_size(dlaf_desc.mb, dlaf_desc.nb);
 
@@ -38,7 +39,7 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
   return std::make_tuple(distribution, layout);
 }
 
-dlaf::common::Ordering char2order(char order) {
+dlaf::common::Ordering char2order(const char order) {
   return order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
                                       : dlaf::common::Ordering::RowMajor;
 }

@@ -13,6 +13,6 @@
 #include <dlaf/matrix/layout_info.h>
 
 std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_and_layout(
-    struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid);
+    const struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid);
 
-dlaf::common::Ordering char2order(char order);
+dlaf::common::Ordering char2order(const char order);

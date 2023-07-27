@@ -56,7 +56,7 @@ DLAF_EXTERN_C int dlaf_hermitian_eigensolver_z(
 
 /// Eigensolver
 ///
-/// @remark This function is available only when DLAF_WITH_SCALAPACK=ON.
+/// @remark This function is only available when DLAF_WITH_SCALAPACK=ON.
 ///
 /// @pre The matrices \f$\mathbf{A}\f$ and \f$\mathbf{Z}\f$ are assumed to be distributed and in host
 /// memory. The vector of eigenvalues \f$\mathbf{w}\f$ is assumed to be local (non-distributed) and in

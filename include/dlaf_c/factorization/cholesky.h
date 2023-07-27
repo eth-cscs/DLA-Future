@@ -50,7 +50,7 @@ DLAF_EXTERN_C int dlaf_cholesky_factorization_z(const int dlaf_context, const ch
 
 /// Cholesky decomposition
 ///
-/// @remark This function is available only when DLAF_WITH_SCALAPACK=ON.
+/// @remark This function is only available when DLAF_WITH_SCALAPACK=ON.
 ///
 /// @pre The matrix \f$\mathbf{A}\f$ is assumed to be distributed and in host memory. Moving to and from
 /// GPU memory is handled internally.

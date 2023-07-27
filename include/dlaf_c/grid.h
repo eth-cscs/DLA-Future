@@ -57,6 +57,8 @@ DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow
 
 /// Create communication grid from BLACS context
 ///
+/// @remark This function is available only when DLAF_WITH_SCALAPACK=ON.
+///
 /// Grids created here are indexed by their corresponding BLACS context
 /// @param blacs_ctxt.
 ///

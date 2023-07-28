@@ -20,10 +20,15 @@
 namespace dlaf {
 namespace matrix {
 
+/// Contains information to create a sub-distribution.
+struct SubDistributionSpec {
+  GlobalElementIndex origin;
+  GlobalElementSize size;
+};
+
 /// Distribution contains the information about the size and distribution of a matrix.
 ///
 /// More details available in misc/matrix_distribution.md.
-
 class Distribution {
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
@@ -119,16 +124,14 @@ public:
 
   Distribution& operator=(Distribution&& rhs) noexcept;
 
-  /// Constructs a sub-distribution based on the given distribution @p dist with
-  /// an @p offset and @p size.
+  /// Constructs a sub-distribution based on the given distribution @p dist specified by @p spec.
   ///
   /// @param[in] dist is the input distribution,
-  /// @param[in] offset is the offset of the new distribution relative to the input distribution,
-  /// @param[in] size is the size of the new distribution relative to the offset,
-  /// @pre origin.isValid()
-  /// @pre size.isValid()
-  /// @pre origin + size <= dist.size()
-  Distribution(Distribution dist, const GlobalElementIndex& offset, const GlobalElementSize& size);
+  /// @param[in] spec contains the origin and size of the new distribution relative to the input distribution,
+  /// @pre spec.origin.isValid()
+  /// @pre spec.size.isValid()
+  /// @pre spec.origin + spec.size <= dist.size()
+  Distribution(Distribution dist, const SubDistributionSpec& spec);
 
   bool operator==(const Distribution& rhs) const noexcept {
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && tile_size_ == rhs.tile_size_ &&

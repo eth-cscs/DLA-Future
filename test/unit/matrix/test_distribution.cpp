@@ -643,7 +643,7 @@ struct ParametersSubDistribution {
   comm::Index2D src_rank;
   GlobalElementIndex offset;
   // Sub-distribution settings
-  GlobalElementIndex sub_offset;
+  GlobalElementIndex sub_origin;
   GlobalElementSize sub_size;
   // Valid indices
   GlobalElementIndex global_element;
@@ -653,7 +653,7 @@ struct ParametersSubDistribution {
 };
 
 const std::vector<ParametersSubDistribution> tests_sub_distribution = {
-    // {size, block_size, rank, grid_size, src_rank, offset, sub_offset, sub_size,
+    // {size, block_size, rank, grid_size, src_rank, offset, sub_origin, sub_size,
     // global_element, global_tile, rank_tile, local_tile}
     // Empty distribution
     {{0, 0}, {2, 5}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
@@ -681,7 +681,8 @@ const std::vector<ParametersSubDistribution> tests_sub_distribution = {
 TEST(DistributionTest, SubDistribution) {
   for (const auto& test : tests_sub_distribution) {
     Distribution dist(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
-    Distribution sub_dist(dist, test.sub_offset, test.sub_size);
+    const SubDistributionSpec spec{test.sub_origin, test.sub_size};
+    Distribution sub_dist(dist, spec);
 
     EXPECT_EQ(sub_dist.size(), test.sub_size);
 

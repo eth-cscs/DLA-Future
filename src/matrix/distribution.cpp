@@ -88,16 +88,15 @@ Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   return *this;
 }
 
-Distribution::Distribution(Distribution rhs, const GlobalElementIndex& sub_offset,
-                           const GlobalElementSize& size)
+Distribution::Distribution(Distribution rhs, const SubDistributionSpec& spec)
     : Distribution(std::move(rhs)) {
-  DLAF_ASSERT(sub_offset.isValid(), sub_offset);
-  DLAF_ASSERT(size.isValid(), size);
-  DLAF_ASSERT(sub_offset.row() + size.rows() <= size_.rows(), sub_offset, size_);
-  DLAF_ASSERT(sub_offset.col() + size.cols() <= size_.cols(), sub_offset, size_);
+  DLAF_ASSERT(spec.origin.isValid(), spec.origin);
+  DLAF_ASSERT(spec.size.isValid(), spec.size);
+  DLAF_ASSERT(spec.origin.row() + spec.size.rows() <= size_.rows(), spec.origin, spec.size, size_);
+  DLAF_ASSERT(spec.origin.col() + spec.size.cols() <= size_.cols(), spec.origin, spec.size, size_);
 
-  offset_ = offset_ + sizeFromOrigin(sub_offset);
-  size_ = size;
+  offset_ = offset_ + sizeFromOrigin(spec.origin);
+  size_ = spec.size;
 
   computeGlobalAndLocalNrTilesAndLocalSize();
 }

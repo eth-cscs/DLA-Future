@@ -19,6 +19,9 @@
 #include <dlaf/types.h>
 
 namespace dlaf::matrix {
+/// Contains information to create a sub-matrix.
+using SubMatrixSpec = SubDistributionSpec;
+
 /// A @c MatrixRef represents a sub-matrix of a @c Matrix.
 ///
 /// The class has reference semantics, meaning accesses to a @c MatrixRef and
@@ -39,17 +42,16 @@ public:
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
 
-  /// Create a sub-matrix of @p mat with an @p offset and @p size.
+  /// Create a sub-matrix of @p mat specified by @p spec.
   ///
   /// @param[in] mat is the input matrix,
-  /// @param[in] offset is the offset of the new matrix relative to the input matrix,
-  /// @param[in] size is the size of the new matrix relative to the offset,
-  /// @pre origin.isValid()
-  /// @pre size.isValid()
-  /// @pre origin + size <= mat.size()
-  MatrixRef(Matrix<const T, D>& mat, const GlobalElementIndex& offset, const GlobalElementSize& size)
-      : internal::MatrixBase(Distribution(mat.distribution(), offset, size)), mat_const_(mat),
-        offset_(offset) {}
+  /// @param[in] spec contains the origin and size of the new matrix relative to the input matrix,
+  /// @pre spec.origin.isValid(),
+  /// @pre spec.size.isValid(),
+  /// @pre spec.origin + spec.size <= mat.size().
+  MatrixRef(Matrix<const T, D>& mat, const SubMatrixSpec& spec)
+      : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
+        origin_(spec.origin) {}
 
   // TODO: default, copy, move construction?
   // - default: no, don't want empty MatrixRef
@@ -74,7 +76,7 @@ public:
     DLAF_ASSERT(index.isIn(distribution().nrTiles()), index, distribution().nrTiles());
 
     const auto parent_index(
-        mat_const_.distribution().globalTileIndexFromSubDistribution(offset_, distribution(), index));
+        mat_const_.distribution().globalTileIndexFromSubDistribution(origin_, distribution(), index));
     auto tile_sender = mat_const_.read(parent_index);
 
     const auto parent_dist = mat_const_.distribution();
@@ -91,7 +93,7 @@ public:
     // Otherwise we have to extract a subtile from the tile in the parent
     // distribution.
     const auto ij_tile =
-        parent_dist.tileElementOffsetFromSubDistribution(offset_, distribution(), index);
+        parent_dist.tileElementOffsetFromSubDistribution(origin_, distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 
@@ -99,7 +101,7 @@ private:
   Matrix<const T, D>& mat_const_;
 
 protected:
-  GlobalElementIndex offset_;
+  GlobalElementIndex origin_;
 };
 
 template <class T, Device D>
@@ -113,16 +115,15 @@ public:
   using TileDataType = internal::TileData<ElementType, D>;
   using ReadWriteSenderType = ReadWriteTileSender<T, D>;
 
-  /// Create a sub-matrix of @p mat with an @p offset and @p size.
+  /// Create a sub-matrix of @p mat specified by @p spec.
   ///
   /// @param[in] mat is the input matrix,
-  /// @param[in] offset is the offset of the new matrix relative to the input matrix,
-  /// @param[in] size is the size of the new matrix relative to the offset,
-  /// @pre origin.isValid()
-  /// @pre size.isValid()
-  /// @pre origin + size <= mat.size()
-  MatrixRef(Matrix<T, D>& mat, const GlobalElementIndex& offset, const GlobalElementSize& size)
-      : MatrixRef<const T, D>(mat, offset, size), mat_(mat) {}
+  /// @param[in] spec contains the origin and size of the new matrix relative to the input matrix,
+  /// @pre spec.origin.isValid(),
+  /// @pre spec.size.isValid(),
+  /// @pre spec.origin + spec.size <= mat.size().
+  MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
+      : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
 
   // TODO: default, copy, move construction?
   MatrixRef() = delete;
@@ -144,7 +145,7 @@ public:
     DLAF_ASSERT(index.isIn(this->distribution().nrTiles()), index, this->distribution().nrTiles());
 
     const auto parent_index(
-        mat_.distribution().globalTileIndexFromSubDistribution(offset_, this->distribution(), index));
+        mat_.distribution().globalTileIndexFromSubDistribution(origin_, this->distribution(), index));
     auto tile_sender = mat_.readwrite(parent_index);
 
     const auto parent_dist = mat_.distribution();
@@ -161,13 +162,13 @@ public:
     // Otherwise we have to extract a subtile from the tile in the parent
     // distribution.
     const auto ij_tile =
-        parent_dist.tileElementOffsetFromSubDistribution(offset_, this->distribution(), index);
+        parent_dist.tileElementOffsetFromSubDistribution(origin_, this->distribution(), index);
     return splitTile(std::move(tile_sender), SubTileSpec{ij_tile, tile_size});
   }
 
 private:
   Matrix<T, D>& mat_;
-  using MatrixRef<const T, D>::offset_;
+  using MatrixRef<const T, D>::origin_;
 };
 
 // ETI

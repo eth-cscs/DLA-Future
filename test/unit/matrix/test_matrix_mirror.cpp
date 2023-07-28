@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 
@@ -41,16 +42,17 @@ TYPED_TEST_SUITE(MatrixMirrorTest, MatrixElementTypes);
 struct TestSizes {
   LocalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
-    {{0, 0}, {11, 13}},
-    {{3, 0}, {1, 2}},
-    {{0, 1}, {7, 32}},
-    {{15, 18}, {5, 9}},
-    {{6, 6}, {2, 2}},
-    {{3, 4}, {24, 15}},
-    {{16, 24}, {3, 5}},
+    {{0, 0}, {11, 13}, {11, 13}},
+    {{3, 0}, {1, 2}, {1, 1}},
+    {{0, 1}, {7, 32}, {7, 8}},
+    {{15, 18}, {5, 9}, {5, 3}},
+    {{6, 6}, {2, 2}, {1, 1}},
+    {{3, 4}, {24, 15}, {8, 15}},
+    {{16, 24}, {3, 5}, {3, 5}},
 });
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
@@ -60,7 +62,8 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& gri
 template <typename T, Device Target, Device Source>
 void basicsTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+  Matrix<T, Source> mat(dist);
   MatrixMirror<T, Target, Source> mat_mirror(mat);
   EXPECT_EQ(mat.distribution(), mat_mirror.get().distribution());
 }
@@ -81,8 +84,8 @@ TYPED_TEST(MatrixMirrorTest, Basics) {
 template <typename T, Device Target, Device Source>
 void getTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+  Matrix<T, Source> mat(dist);
 
   {
     MatrixMirror<T, Target, Source> mat_mirror(mat);
@@ -124,8 +127,8 @@ TYPED_TEST(MatrixMirrorTest, Get) {
 template <typename T, Device Target, Device Source>
 void getSourceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+  Matrix<T, Source> mat(dist);
 
   {
     MatrixMirror<T, Target, Source> mat_mirror(mat);
@@ -162,14 +165,15 @@ void copyTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   };
 
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   // CPU support matrices for setting values to source and target matrices
-  Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
-  Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
+  Matrix<T, Device::CPU> mat_source_cpu(dist);
+  Matrix<T, Device::CPU> mat_target_cpu(dist);
 
   set(mat_source_cpu, el);
 
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Matrix<T, Source> mat(dist);
   matrix::copy(mat_source_cpu, mat);
 
   {
@@ -230,14 +234,15 @@ void copyConstTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   };
 
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   // CPU support matrices for setting values to source and target matrices
-  Matrix<T, Device::CPU> mat_source_cpu(size, test.block_size, comm_grid);
-  Matrix<T, Device::CPU> mat_target_cpu(size, test.block_size, comm_grid);
+  Matrix<T, Device::CPU> mat_source_cpu(dist);
+  Matrix<T, Device::CPU> mat_target_cpu(dist);
 
   set(mat_source_cpu, el);
 
-  Matrix<T, Source> mat_nonconst(size, test.block_size, comm_grid);
+  Matrix<T, Source> mat_nonconst(dist);
   copy(mat_source_cpu, mat_nonconst);
   Matrix<const T, Source> mat(std::move(mat_nonconst));
 
@@ -265,8 +270,9 @@ TYPED_TEST(MatrixMirrorTest, CopyConst) {
 template <typename T, Device Target, Device Source>
 void sameDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Matrix<T, Source> mat(dist);
   MatrixMirror<T, Target, Source> mat_mirror(mat);
 
   // We assume that the distribution of mat and mat_mirror are identical here.
@@ -298,8 +304,9 @@ TYPED_TEST(MatrixMirrorTest, SameDevicesSameMemory) {
 template <typename T, Device Target, Device Source>
 void differentDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
   GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+  Distribution dist(size, test.block_size, test.tile_size, comm_grid.size(), comm_grid.rank(), {0, 0});
 
-  Matrix<T, Source> mat(size, test.block_size, comm_grid);
+  Matrix<T, Source> mat(dist);
   MatrixMirror<T, Target, Source> mat_mirror(mat);
 
   // We assume that the distribution of mat and mat_mirror are identical here.

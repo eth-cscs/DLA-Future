@@ -16,6 +16,7 @@
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/util_matrix.h>
@@ -55,16 +56,17 @@ TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 struct TestSizes {
   LocalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
-    {{0, 0}, {11, 13}},
-    {{3, 0}, {1, 2}},
-    {{0, 1}, {7, 32}},
-    {{15, 18}, {5, 9}},
-    {{6, 6}, {2, 2}},
-    {{3, 4}, {24, 15}},
-    {{16, 24}, {3, 5}},
+    {{0, 0}, {11, 13}, {11, 13}},
+    {{3, 0}, {1, 2}, {1, 1}},
+    {{0, 1}, {7, 32}, {7, 8}},
+    {{15, 18}, {5, 9}, {5, 3}},
+    {{6, 6}, {2, 2}, {2, 2}},
+    {{3, 4}, {24, 15}, {8, 15}},
+    {{16, 24}, {3, 5}, {3, 5}},
 });
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
@@ -195,8 +197,8 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                    std::min(1, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-                                src_rank_index);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), src_rank_index);
 
       // Copy distribution for testing purpose.
       Distribution distribution_copy(distribution);
@@ -519,22 +521,34 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
   SizeType ld;
   SizeType row_offset;
   SizeType col_offset;
 };
 
 const std::vector<ExistingLocalTestSizes> existing_local_tests({
-    {{10, 7}, {3, 4}, 10, 3, 40},  // Column major layout
-    {{10, 7}, {3, 4}, 11, 3, 44},  // with padding (ld)
-    {{10, 7}, {3, 4}, 13, 4, 52},  // with padding (row)
-    {{10, 7}, {3, 4}, 10, 3, 41},  // with padding (col)
-    {{6, 11}, {4, 3}, 4, 12, 24},  // Tile layout
-    {{6, 11}, {4, 3}, 5, 15, 30},  // with padding (ld)
-    {{6, 11}, {4, 3}, 4, 13, 26},  // with padding (row)
-    {{6, 11}, {4, 3}, 4, 12, 31},  // with padding (col)
-    {{6, 11}, {4, 3}, 4, 12, 28},  // compressed col_offset
-    {{0, 0}, {1, 1}, 1, 1, 1},
+    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 40},  // Column major layout
+    {{10, 7}, {3, 4}, {3, 4}, 11, 3, 44},  // with padding (ld)
+    {{10, 7}, {3, 4}, {3, 4}, 13, 4, 52},  // with padding (row)
+    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 41},  // with padding (col)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 24},  // Tile layout
+    {{6, 11}, {4, 3}, {4, 3}, 5, 15, 30},  // with padding (ld)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 13, 26},  // with padding (row)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 31},  // with padding (col)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 28},  // compressed col_offset
+    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
+    // Same, but with block_size != tile_size
+    {{10, 7}, {3, 4}, {3, 2}, 10, 3, 40},  // Column major layout
+    {{10, 7}, {3, 4}, {3, 2}, 11, 3, 44},  // with padding (ld)
+    {{10, 7}, {3, 4}, {3, 2}, 13, 4, 52},  // with padding (row)
+    {{10, 7}, {3, 4}, {3, 1}, 10, 3, 41},  // with padding (col)
+    {{6, 11}, {4, 3}, {2, 3}, 4, 12, 24},  // Tile layout
+    {{6, 11}, {4, 3}, {2, 3}, 5, 15, 30},  // with padding (ld)
+    {{6, 11}, {4, 3}, {2, 3}, 4, 13, 26},  // with padding (row)
+    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 31},  // with padding (col)
+    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 28},  // compressed col_offset
+    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
 });
 
 TYPED_TEST(MatrixLocalTest, ConstructorExisting) {
@@ -585,8 +599,9 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
       // Copy distribution for testing purpose.
@@ -615,8 +630,9 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.block_size,
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.tile_size,
                                          std::max<SizeType>(1, distribution.localSize().rows()));
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
@@ -916,8 +932,9 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
       Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);

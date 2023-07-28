@@ -53,11 +53,11 @@ public:
       : internal::MatrixBase(Distribution(mat.distribution(), spec)), mat_const_(mat),
         origin_(spec.origin) {}
 
-  // TODO: default, copy, move construction?
-  // - default: no, don't want empty MatrixRef
-  // - copy: implementable, still refer to the original matrix
-  // - move: implement as copy, i.e. still refer to original matrix?
   MatrixRef() = delete;
+  MatrixRef(MatrixRef&&) = delete;
+  MatrixRef(const MatrixRef&) = delete;
+  MatrixRef& operator=(MatrixRef&&) = delete;
+  MatrixRef& operator=(const MatrixRef&) = delete;
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
@@ -125,8 +125,11 @@ public:
   MatrixRef(Matrix<T, D>& mat, const SubMatrixSpec& spec)
       : MatrixRef<const T, D>(mat, spec), mat_(mat) {}
 
-  // TODO: default, copy, move construction?
   MatrixRef() = delete;
+  MatrixRef(MatrixRef&&) = delete;
+  MatrixRef(const MatrixRef&) = delete;
+  MatrixRef& operator=(MatrixRef&&) = delete;
+  MatrixRef& operator=(const MatrixRef&) = delete;
 
   /// Returns a sender of the Tile with local index @p index.
   ///

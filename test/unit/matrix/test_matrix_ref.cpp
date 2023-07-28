@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <atomic>
-#include <chrono>
 #include <vector>
 
 #include <pika/execution.hpp>
@@ -25,8 +23,6 @@
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
 #include <dlaf_test/matrix/util_matrix.h>
 #include <dlaf_test/util_types.h>
-
-using namespace std::chrono_literals;
 
 using namespace dlaf;
 using namespace dlaf::matrix;

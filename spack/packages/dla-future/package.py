@@ -27,11 +27,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("miniapps", default=False, description="Build miniapps.")
 
+    variant("scalapack", default=False, description="Build C API compatible with ScaLAPACK")
+
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
     depends_on("mpi")
     depends_on("blaspp@2022.05.00:")
     depends_on("lapackpp@2022.05.00:")
+    depends_on("scalapack", when="+scalapack")
 
     depends_on("umpire~examples")
     depends_on("umpire~cuda", when="~cuda")
@@ -122,16 +125,29 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                 "openmp": "omp",
                 "tbb": "tbb",
             }  # Map MKL variants to LAPACK target name
+            mkl_threads = vmap[spec["intel-mkl"].variants["threads"].value]
             # TODO: Generalise for intel-oneapi-mkl
             args += [
                 self.define("DLAF_WITH_MKL", True),
-                self.define(
-                    "MKL_LAPACK_TARGET",
-                    "mkl::mkl_intel_32bit_{0}_dyn".format(
-                        vmap[spec["intel-mkl"].variants["threads"].value]
-                    ),
-                ),
+                self.define("MKL_LAPACK_TARGET", f"mkl::mkl_intel_32bit_{mkl_threads}_dyn"),
             ]
+            if "+scalapack" in spec:
+                if (
+                    "^mpich" in spec
+                    or "^cray-mpich" in spec
+                    or "^intel-mpi" in spec
+                    or "^mvapich" in spec
+                    or "^mvapich2" in spec
+                ):
+                    mkl_mpi = "mpich"
+                elif "^openmpi" in spec:
+                    mkl_mpi = "ompi"
+                args.append(
+                    self.define(
+                        "MKL_SCALAPACK_TARGET",
+                        f"mkl::scalapack_{mkl_mpi}_intel_32bit_{mkl_threads}_dyn",
+                    )
+                )
         else:
             args.append(self.define("DLAF_WITH_MKL", False))
             args.append(
@@ -140,6 +156,11 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
                     " ".join([spec[dep].libs.ld_flags for dep in ["blas", "lapack"]]),
                 )
             )
+            if "+scalapack" in spec:
+                args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
+
+        if "+scalapack" in spec:
+            args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

@@ -88,6 +88,9 @@ function(DLAF_addTest test_target_name)
     set(_gtest_tgt DLAF_gtest_mpipika_main)
     set(IS_AN_MPI_TEST TRUE)
     set(IS_AN_PIKA_TEST TRUE)
+  elseif(DLAF_AT_USE_MAIN STREQUAL CAPI)
+    set(_gtest_tgt DLAF_gtest_mpi_main)
+    set(IS_AN_MPI_TEST TRUE)
   else()
     message(FATAL_ERROR "USE_MAIN=${DLAF_AT_USE_MAIN} is not a supported option")
   endif()
@@ -181,6 +184,36 @@ function(DLAF_addTest test_target_name)
     list(APPEND _TEST_ARGUMENTS ${_PIKA_EXTRA_ARGS_LIST})
   endif()
 
+  # Special treatment for C API tests
+  # C API tests require pika arguments to be hard-coded in the test file
+  if(DLAF_AT_USE_MAIN STREQUAL CAPI)
+    separate_arguments(_PIKA_EXTRA_ARGS_LIST_CAPI UNIX_COMMAND ${DLAF_PIKATEST_EXTRA_ARGS})
+
+    # --pika:bind=none is useful just in case more ranks are going to be allocated on the same node.
+    if((DLAF_AT_MPIRANKS GREATER 1) AND (NOT DLAF_TEST_THREAD_BINDING_ENABLED))
+      _set_element_to_fallback_value(_PIKA_EXTRA_ARGS_LIST_CAPI "--pika:bind" "--pika:bind=none")
+    endif()
+
+    if(IS_AN_MPI_TEST AND DLAF_MPI_PRESET STREQUAL "plain-mpi")
+      math(EXPR _DLAF_PIKA_THREADS "${MPIEXEC_MAX_NUMPROCS}/${DLAF_AT_MPIRANKS}")
+
+      if(_DLAF_PIKA_THREADS LESS 2)
+        set(_DLAF_PIKA_THREADS 2)
+      endif()
+
+      _set_element_to_fallback_value(
+        _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
+      )
+    endif()
+
+    string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
+
+    configure_file(
+      ${PROJECT_SOURCE_DIR}/test/include/dlaf_c_test/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h
+    )
+
+  endif()
+
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})
   target_link_libraries(
@@ -190,7 +223,9 @@ function(DLAF_addTest test_target_name)
     ${test_target_name} PRIVATE ${DLAF_AT_COMPILE_DEFINITIONS} $<$<BOOL:${IS_AN_MPI_TEST}>:
                                 NUM_MPI_RANKS=${DLAF_AT_MPIRANKS}>
   )
-  target_include_directories(${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS})
+  target_include_directories(
+    ${test_target_name} PRIVATE ${DLAF_AT_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}
+  )
   target_add_warnings(${test_target_name})
   DLAF_addPrecompiledHeaders(${test_target_name})
   add_test(NAME ${test_target_name} COMMAND ${_TEST_COMMAND} ${_TEST_ARGUMENTS})

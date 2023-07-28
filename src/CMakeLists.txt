@@ -75,6 +75,7 @@ target_link_libraries(
     MPI::MPI_CXX
     $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
     DLAF::LAPACK
+    $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF::SCALAPACK>
     pika::pika
     pika-algorithms::pika_algorithms
     lapackpp
@@ -104,6 +105,7 @@ target_compile_definitions(
             $<$<BOOL:${DLAF_WITH_HIP}>:ROCM_MATHLIBS_API_USE_HIP_COMPLEX>
             $<$<BOOL:${DLAF_WITH_CUDA_MPI_RDMA}>:DLAF_WITH_CUDA_MPI_RDMA>
             $<$<BOOL:${DLAF_WITH_HDF5}>:DLAF_WITH_HDF5>
+            $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF_WITH_SCALAPACK>
 )
 
 # Precompiled headers
@@ -277,6 +279,12 @@ DLAF_addSublibrary(
   LIBRARIES dlaf.core
 )
 
+# Define DLAF's C API library
+DLAF_addSublibrary(
+  c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/factorization/cholesky.cpp c_api/grid.cpp
+                c_api/init.cpp c_api/utils.cpp LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
+)
+
 # Define DLAF's complete library
 add_library(
   DLAF
@@ -288,6 +296,7 @@ add_library(
   $<TARGET_OBJECTS:dlaf.multiplication_object>
   $<TARGET_OBJECTS:dlaf.permutations_object>
   $<TARGET_OBJECTS:dlaf.solver_object>
+  $<TARGET_OBJECTS:dlaf.c_api_object>
 )
 target_link_libraries(DLAF PUBLIC dlaf.prop)
 target_link_libraries(DLAF PRIVATE dlaf.prop_private)

@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['start_5f_1097',['start_',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#ac49583acc02b6ba394d9b4e3b7450e53',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]],
-  ['start_5foffset_5f_1098',['start_offset_',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#a8603ffce77527952a466a9630d98cd5c',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;']]]
+  ['j_1163',['j',['../struct_d_l_a_f__descriptor.html#ad83b86ea0c6cad9304e36866243ce8a7',1,'DLAF_descriptor']]],
+  ['jsrc_1164',['jsrc',['../struct_d_l_a_f__descriptor.html#a63124d265688490f0d87e9f7ce754bdc',1,'DLAF_descriptor']]]
 ];

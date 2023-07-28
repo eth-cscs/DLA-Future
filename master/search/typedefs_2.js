@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['size2d_1103',['Size2D',['../communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a',1,'dlaf::comm']]],
-  ['submatrixspec_1104',['SubMatrixSpec',['../matrix__ref_8h.html#a4806acd75bd31c5913a7c20b49da1e62',1,'dlaf::matrix::internal']]]
+  ['index2d_1176',['Index2D',['../communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e',1,'dlaf::comm']]],
+  ['indext_5fmpi_1177',['IndexT_MPI',['../communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9',1,'dlaf::comm']]]
 ];

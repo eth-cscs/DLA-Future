@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['index2d_1101',['Index2D',['../communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e',1,'dlaf::comm']]],
-  ['indext_5fmpi_1102',['IndexT_MPI',['../communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9',1,'dlaf::comm']]]
+  ['enable_5fif_5fconvertible_5ft_1174',['enable_if_convertible_t',['../traits_8h.html#a234bd5c290fe869e9856e7e2d3667baf',1,'dlaf']]],
+  ['enable_5fif_5fsignature_5ft_1175',['enable_if_signature_t',['../traits_8h.html#ada84be4e014ed8f3d91175b3856104e5',1,'dlaf']]]
 ];

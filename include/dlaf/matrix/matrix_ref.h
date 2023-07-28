@@ -18,7 +18,7 @@
 #include <dlaf/matrix/tile.h>
 #include <dlaf/types.h>
 
-namespace dlaf::matrix {
+namespace dlaf::matrix::internal {
 /// Contains information to create a sub-matrix.
 using SubMatrixSpec = SubDistributionSpec;
 

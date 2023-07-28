@@ -10,7 +10,7 @@
 
 #include <dlaf/matrix/matrix_ref.h>
 
-namespace dlaf::matrix {
+namespace dlaf::matrix::internal {
 
 DLAF_MATRIX_REF_ETI(, float, Device::CPU)
 DLAF_MATRIX_REF_ETI(, double, Device::CPU)

@@ -30,6 +30,7 @@ using namespace std::chrono_literals;
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::internal;
 using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;

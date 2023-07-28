@@ -27,5 +27,6 @@ var searchData=
   ['globaltilefromglobalelement_180',['globalTileFromGlobalElement',['../classdlaf_1_1matrix_1_1_distribution.html#ae63d662d123b38f1150b553b2cdb259d',1,'dlaf::matrix::Distribution']]],
   ['globaltilefromlocaltile_181',['globalTileFromLocalTile',['../classdlaf_1_1matrix_1_1_distribution.html#add4b487f6603fb6099dce376ee2e8c3c',1,'dlaf::matrix::Distribution::globalTileFromLocalTile()'],['../util__distribution_8h.html#a3fa80781a6b118e00015b9751e2f6ead',1,'dlaf::util::matrix::globalTileFromLocalTile()']]],
   ['globaltileindex_182',['globalTileIndex',['../classdlaf_1_1matrix_1_1_distribution.html#a7a0027799c7c187d8f7135a1242ca3f5',1,'dlaf::matrix::Distribution::globalTileIndex(const LocalTileIndex &amp;local_tile) const noexcept'],['../classdlaf_1_1matrix_1_1_distribution.html#ae49ef916d77bf8de7e8e4710a1034299',1,'dlaf::matrix::Distribution::globalTileIndex(const GlobalElementIndex &amp;global_element) const noexcept']]],
-  ['globaltilelinearindex_183',['globalTileLinearIndex',['../classdlaf_1_1matrix_1_1_distribution.html#a0b174a696d5fe710ecb2bc081081c137',1,'dlaf::matrix::Distribution']]]
+  ['globaltileindexfromsubdistribution_183',['globalTileIndexFromSubDistribution',['../classdlaf_1_1matrix_1_1_distribution.html#a57c5eb606080d00e05f11a22d3566b2d',1,'dlaf::matrix::Distribution']]],
+  ['globaltilelinearindex_184',['globalTileLinearIndex',['../classdlaf_1_1matrix_1_1_distribution.html#a0b174a696d5fe710ecb2bc081081c137',1,'dlaf::matrix::Distribution']]]
 ];

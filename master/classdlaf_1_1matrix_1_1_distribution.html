@@ -103,6 +103,8 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac5166ac022de197e365d7362a1505b83"><td class="memItemLeft" align="right" valign="top"><a id="ac5166ac022de197e365d7362a1505b83"></a>
 <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;&amp;rhs) noexcept</td></tr>
 <tr class="separator:ac5166ac022de197e365d7362a1505b83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac72129a4040378f9343d7bc85a1dad4f"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html#ac72129a4040378f9343d7bc85a1dad4f">Distribution</a> (<a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> dist, const <a class="el" href="structdlaf_1_1matrix_1_1_sub_distribution_spec.html">SubDistributionSpec</a> &amp;spec)</td></tr>
+<tr class="separator:ac72129a4040378f9343d7bc85a1dad4f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae3003befc575569845b87cc121298f94"><td class="memItemLeft" align="right" valign="top"><a id="ae3003befc575569845b87cc121298f94"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;rhs) const noexcept</td></tr>
 <tr class="separator:ae3003befc575569845b87cc121298f94"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -229,13 +231,17 @@ template&lt;Coord rc&gt; </td></tr>
 <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html#ab590472ea7c2132b30b725954f8ea3c0">localElementDistanceFromLocalTile</a> (<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> begin, <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> end) const noexcept</td></tr>
 <tr class="memdesc:ab590472ea7c2132b30b725954f8ea3c0"><td class="mdescLeft">&#160;</td><td class="mdescRight">This overload implements the 2D version of the function. <br /></td></tr>
 <tr class="separator:ab590472ea7c2132b30b725954f8ea3c0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a57c5eb606080d00e05f11a22d3566b2d"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html#a57c5eb606080d00e05f11a22d3566b2d">globalTileIndexFromSubDistribution</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> &amp;sub_offset, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;sub_distribution, const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;sub_index) const noexcept</td></tr>
+<tr class="separator:a57c5eb606080d00e05f11a22d3566b2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a7dbaaf24fe56d7ba8e74d0fb7dc01b"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html#a3a7dbaaf24fe56d7ba8e74d0fb7dc01b">tileElementOffsetFromSubDistribution</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> &amp;sub_offset, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;sub_distribution, const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;sub_index) const noexcept</td></tr>
+<tr class="separator:a3a7dbaaf24fe56d7ba8e74d0fb7dc01b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> contains the information about the size and distribution of a matrix.</p>
 <p>More details available in misc/matrix_distribution.md. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
 <a id="a146465cb553b8a9d9f32bf63ff7e7375"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a146465cb553b8a9d9f32bf63ff7e7375">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[1/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a146465cb553b8a9d9f32bf63ff7e7375">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[1/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -279,7 +285,7 @@ template&lt;Coord rc&gt; </td></tr>
 </div>
 </div>
 <a id="a97b363d57f32add582ce1774a6b9a147"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a97b363d57f32add582ce1774a6b9a147">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[2/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a97b363d57f32add582ce1774a6b9a147">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[2/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -349,7 +355,7 @@ source_rank_index.isIn(grid_size). </dd></dl>
 </div>
 </div>
 <a id="a47b322556c713fd38223538f50f58e14"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a47b322556c713fd38223538f50f58e14">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[3/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a47b322556c713fd38223538f50f58e14">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[3/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -426,7 +432,7 @@ source_rank_index.isIn(grid_size). </dd></dl>
 </div>
 </div>
 <a id="a51c38487398212457417f784dd3d2594"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a51c38487398212457417f784dd3d2594">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[4/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a51c38487398212457417f784dd3d2594">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[4/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -506,7 +512,7 @@ source_rank_index.isIn(grid_size). </dd></dl>
 </div>
 </div>
 <a id="a012f931d7acdf168a42445bcbbce5dd3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a012f931d7acdf168a42445bcbbce5dd3">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[5/5]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a012f931d7acdf168a42445bcbbce5dd3">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[5/6]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -589,6 +595,47 @@ block_size is divisible by tile_size, </dd>
 rank_index.isIn(grid_size), </dd>
 <dd>
 source_rank_index.isIn(grid_size). </dd></dl>
+
+</div>
+</div>
+<a id="ac72129a4040378f9343d7bc85a1dad4f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac72129a4040378f9343d7bc85a1dad4f">&#9670;&nbsp;</a></span>Distribution() <span class="overload">[6/6]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">dlaf::matrix::Distribution::Distribution </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&#160;</td>
+          <td class="paramname"><em>dist</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="structdlaf_1_1matrix_1_1_sub_distribution_spec.html">SubDistributionSpec</a> &amp;&#160;</td>
+          <td class="paramname"><em>spec</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Constructs a sub-distribution based on the given distribution <code>dist</code> specified by <code>spec</code>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">dist</td><td>is the input distribution, </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">spec</td><td>contains the origin and size of the new distribution relative to the input distribution, </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd>spec.origin.isValid() </dd>
+<dd>
+spec.size.isValid() </dd>
+<dd>
+spec.origin + spec.size &lt;= dist.size() </dd></dl>
 
 </div>
 </div>
@@ -859,6 +906,49 @@ template&lt;Coord rc&gt; </div>
 </div><div class="memdoc">
 <p>Returns the global 2D index of the tile that has index <code>local_tile</code> in the current rank.</p>
 <dl class="section pre"><dt>Precondition</dt><dd>local_tile.isIn(localNrTiles()). </dd></dl>
+
+</div>
+</div>
+<a id="a57c5eb606080d00e05f11a22d3566b2d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a57c5eb606080d00e05f11a22d3566b2d">&#9670;&nbsp;</a></span>globalTileIndexFromSubDistribution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> dlaf::matrix::Distribution::globalTileIndexFromSubDistribution </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_offset</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_distribution</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_index</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Returns the tile index in the current distribution corresponding to a tile index <code>sub_index</code> in a sub-distribution (defined by <code>sub_offset</code> and <code>sub_distribution</code>) </p>
 
 </div>
 </div>
@@ -1233,6 +1323,49 @@ template&lt;Coord rc&gt; </div>
 </div><div class="memdoc">
 <p>Returns the local index in current process of the global element whose index is the smallest index larger or equal <code>global_element</code> and which is stored in current process.</p>
 <dl class="section pre"><dt>Precondition</dt><dd>global_element.isIn(size()). </dd></dl>
+
+</div>
+</div>
+<a id="a3a7dbaaf24fe56d7ba8e74d0fb7dc01b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a7dbaaf24fe56d7ba8e74d0fb7dc01b">&#9670;&nbsp;</a></span>tileElementOffsetFromSubDistribution()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a> dlaf::matrix::Distribution::tileElementOffsetFromSubDistribution </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_offset</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_distribution</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;&#160;</td>
+          <td class="paramname"><em>sub_index</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Returns the element offset within the tile in the current distribution corresponding to a tile index <code>sub_index</code> in a sub-distribution (defined by <code>sub_offset</code> and <code>sub_distribution</code>) </p>
 
 </div>
 </div>

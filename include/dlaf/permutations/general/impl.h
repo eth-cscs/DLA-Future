@@ -462,9 +462,9 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
     // at index 1 in mat_recv.
     const int a_r = std::accumulate(recv_counts.cbegin(), recv_counts.cbegin() + rank, 0);
     const SizeType offset = to_SizeType(a - a_r);
-    // TODO: back_insert directly into perm_offseted?
-    std::vector<SizeType> perm_offseted(perm_arr, perm_arr + subm_dist.size().get<C>());
-    std::transform(perm_offseted.begin(), perm_offseted.end(), perm_offseted.begin(),
+    std::vector<SizeType> perm_offseted;
+    perm_offseted.reserve(to_sizet(subm_dist.size().get<C>()));
+    std::transform(perm_arr, perm_arr + subm_dist.size().get<C>(), std::back_inserter(perm_offseted),
                    [offset](const SizeType perm) { return perm + offset; });
 
     constexpr auto OC = orthogonal(C);

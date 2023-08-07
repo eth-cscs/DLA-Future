@@ -468,9 +468,7 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
                    [offset](const SizeType perm) { return perm + offset; });
 
     constexpr auto OC = orthogonal(C);
-    // TODO: Always 0?
     const SizeType in_offset = 0;
-    // TODO: Always {0, 0}?
     const GlobalElementIndex out_begin{0, 0};
 
     std::vector<SizeType> splits =
@@ -478,21 +476,20 @@ void unpackLocalOnCPU(const matrix::Distribution& subm_dist, const matrix::Distr
                                      subm_dist.distanceToAdjacentTile<OC>(in_offset),
                                      subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
 
-    // TODO: send/recv_counts not really needed in next step?
-    return std::tuple(a, b, std::move(splits), std::move(perm_offseted), std::move(send_counts),
-                      std::move(recv_counts), std::move(index_tile_futs), std::move(mat_in_tiles),
+    return std::tuple(a, b, std::move(splits), std::move(perm_offseted), std::move(mat_in_tiles),
                       std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_local_f = [subm_dist](const auto i_perm, const auto& args) {
-    auto& [a, b, splits, perm_offseted, send_counts, recv_counts, index_tile_futs, mat_in_tiles,
-           mat_out_tiles] = args;
-    const SizeType* perm_arr = perm_offseted.data();  // index_tile_futs[0].get().ptr();
+    auto& [a, b, splits, perm_offseted, mat_in_tiles, mat_out_tiles] = args;
+    const SizeType* perm_arr = perm_offseted.data();
 
     // [a, b)
     if (a <= perm_arr[i_perm] && perm_arr[i_perm] < b) {
-      applyPermutationOnCPU<T, C>(i_perm, splits, {0, 0}, 0, subm_dist, perm_arr, mat_in_tiles,
-                                  mat_out_tiles);
+      const SizeType in_offset = 0;
+      const GlobalElementIndex out_begin{0, 0};
+      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
+                                  mat_in_tiles, mat_out_tiles);
     }
   };
 
@@ -522,9 +519,7 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
 
     constexpr auto OC = orthogonal(C);
     const GlobalElementSize sz = subm_dist.size();
-    // TODO: Always 0?
     const SizeType in_offset = 0;
-    // TODO: Always {0, 0}?
     const GlobalElementIndex out_begin{0, 0};
 
     std::vector<SizeType> splits =
@@ -532,18 +527,20 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
                                      subm_dist.distanceToAdjacentTile<OC>(in_offset),
                                      subm_dist.distanceToAdjacentTile<OC>(out_begin.get<OC>()));
 
-    return std::tuple(a, b, std::move(splits), std::move(recv_counts), std::move(index_tile_futs),
-                      std::move(mat_in_tiles), std::move(mat_out_tiles));
+    return std::tuple(a, b, std::move(splits), std::move(index_tile_futs), std::move(mat_in_tiles),
+                      std::move(mat_out_tiles));
   };
 
   auto permutations_unpack_f = [subm_dist](const auto i_perm, const auto& args) {
-    auto& [a, b, splits, recv_counts, index_tile_futs, mat_in_tiles, mat_out_tiles] = args;
+    auto& [a, b, splits, index_tile_futs, mat_in_tiles, mat_out_tiles] = args;
     const SizeType* perm_arr = index_tile_futs[0].get().ptr();
 
     // [0, a) and [b, end)
     if (perm_arr[i_perm] < a || b <= perm_arr[i_perm]) {
-      applyPermutationOnCPU<T, C>(i_perm, splits, {0, 0}, 0, subm_dist, perm_arr, mat_in_tiles,
-                                  mat_out_tiles);
+      const SizeType in_offset = 0;
+      const GlobalElementIndex out_begin{0, 0};
+      applyPermutationOnCPU<T, C>(i_perm, splits, out_begin, in_offset, subm_dist, perm_arr,
+                                  mat_in_tiles, mat_out_tiles);
     }
   };
 

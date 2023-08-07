@@ -87,7 +87,6 @@ namespace dlaf::permutations::internal {
 // [2]: The input submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `in_tiles`
 // [3]: The subregion is defined by `begin` and `sz`
 // [4]: The output submatrix is defined by `begin_tiles`, `ld_tiles`, `distr` and `out_tiles`
-// TODO: Where should this doc be moved?
 
 template <class T, Coord C>
 void applyPermutation(

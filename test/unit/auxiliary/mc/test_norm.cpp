@@ -44,7 +44,7 @@ const std::vector<lapack::Norm> lapack_norms({lapack::Norm::Fro, lapack::Norm::I
                                               lapack::Norm::One, lapack::Norm::Two});
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper, blas::Uplo::General});
 
-TYPED_TEST(NormDistributedTest, EmptyMatrices) {
+TYPED_TEST(NormDistributedTest, MaxNorm_EmptyMatrix) {
   const std::vector<GlobalElementSize> sizes({{13, 0}, {0, 13}, {0, 0}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
@@ -56,14 +56,12 @@ TYPED_TEST(NormDistributedTest, EmptyMatrices) {
         Distribution distribution(size, block_size, comm_grid.size(), comm_grid.rank(), src_rank_index);
         Matrix<TypeParam, Device::CPU> matrix(std::move(distribution));
 
-        for (const auto& norm_type : lapack_norms) {
-          for (const auto& uplo : blas_uplos) {
-            const NormT<TypeParam> norm =
-                auxiliary::max_norm<Backend::MC>(comm_grid, {0, 0}, uplo, matrix);
+        for (const auto& uplo : blas_uplos) {
+          const NormT<TypeParam> norm =
+              auxiliary::max_norm<Backend::MC>(comm_grid, {0, 0}, uplo, matrix);
 
-            if (Index2D{0, 0} == comm_grid.rank()) {
-              EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
-            }
+          if (Index2D{0, 0} == comm_grid.rank()) {
+            EXPECT_NEAR(0, norm, std::numeric_limits<NormT<TypeParam>>::epsilon());
           }
         }
       }
@@ -110,8 +108,8 @@ void set_and_test(CommunicatorGrid comm_grid, comm::Index2D rank, Matrix<T, Devi
   }
 }
 
-TYPED_TEST(NormDistributedTest, NormMax) {
-  const lapack::Norm norm_type = lapack::Norm::Max;
+TYPED_TEST(NormDistributedTest, MaxNorm_Correctness) {
+  constexpr lapack::Norm norm_type = lapack::Norm::Max;
 
   const std::vector<GlobalElementSize> sizes({{10, 10}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});

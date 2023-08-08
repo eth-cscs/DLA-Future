@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a8f0b0f0094c0185dc428f69f8506ba8f"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a8f0b0f0094c0185dc428f69f8506ba8f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="gen__to__std_8h.html#a8f0b0f0094c0185dc428f69f8506ba8f">dlaf::eigensolver::genToStd</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
-<tr class="separator:a8f0b0f0094c0185dc428f69f8506ba8f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1c178c1c870afbc1c4928a4dbe078aa4"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a1c178c1c870afbc1c4928a4dbe078aa4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="gen__to__std_8h.html#a1c178c1c870afbc1c4928a4dbe078aa4">dlaf::eigensolver::genToStd</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
-<tr class="separator:a1c178c1c870afbc1c4928a4dbe078aa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a163cfb5342dd23266e4d824850825af6"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a163cfb5342dd23266e4d824850825af6"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="gen__to__std_8h.html#a163cfb5342dd23266e4d824850825af6">dlaf::eigensolver::internal::generalized_to_standard</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:a163cfb5342dd23266e4d824850825af6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9729c59fec6c17d9242dcbcee85a1079"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a9729c59fec6c17d9242dcbcee85a1079"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="gen__to__std_8h.html#a9729c59fec6c17d9242dcbcee85a1079">dlaf::eigensolver::internal::generalized_to_standard</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:a9729c59fec6c17d9242dcbcee85a1079"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a8f0b0f0094c0185dc428f69f8506ba8f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8f0b0f0094c0185dc428f69f8506ba8f">&#9670;&nbsp;</a></span>genToStd() <span class="overload">[1/2]</span></h2>
+<a id="a163cfb5342dd23266e4d824850825af6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a163cfb5342dd23266e4d824850825af6">&#9670;&nbsp;</a></span>generalized_to_standard() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::genToStd </td>
+          <td class="memname">void dlaf::eigensolver::internal::generalized_to_standard </td>
           <td>(</td>
           <td class="paramtype">blas::Uplo&#160;</td>
           <td class="paramname"><em>uplo</em>, </td>
@@ -143,8 +143,8 @@ mat_a and mat_b are not distributed. </dd></dl>
 
 </div>
 </div>
-<a id="a1c178c1c870afbc1c4928a4dbe078aa4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1c178c1c870afbc1c4928a4dbe078aa4">&#9670;&nbsp;</a></span>genToStd() <span class="overload">[2/2]</span></h2>
+<a id="a9729c59fec6c17d9242dcbcee85a1079"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9729c59fec6c17d9242dcbcee85a1079">&#9670;&nbsp;</a></span>generalized_to_standard() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -152,7 +152,7 @@ mat_a and mat_b are not distributed. </dd></dl>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::genToStd </td>
+          <td class="memname">void dlaf::eigensolver::internal::generalized_to_standard </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>

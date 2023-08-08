@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a016f168408d2fe4c2803538e486d7241"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a016f168408d2fe4c2803538e486d7241"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#a016f168408d2fe4c2803538e486d7241">dlaf::factorization::cholesky</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:a016f168408d2fe4c2803538e486d7241"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aed7e035a7eff7eb31eea293621b0c8fa"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:aed7e035a7eff7eb31eea293621b0c8fa"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#aed7e035a7eff7eb31eea293621b0c8fa">dlaf::factorization::cholesky</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:aed7e035a7eff7eb31eea293621b0c8fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adaa1f64029b23ea42e9ba15219c1d06d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:adaa1f64029b23ea42e9ba15219c1d06d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#adaa1f64029b23ea42e9ba15219c1d06d">dlaf::cholesky_factorization</a> (blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:adaa1f64029b23ea42e9ba15219c1d06d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7eb54a489fc89c0e4027b4017ae8bccb"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a7eb54a489fc89c0e4027b4017ae8bccb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="factorization_2cholesky_8h.html#a7eb54a489fc89c0e4027b4017ae8bccb">dlaf::cholesky_factorization</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:a7eb54a489fc89c0e4027b4017ae8bccb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a016f168408d2fe4c2803538e486d7241"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a016f168408d2fe4c2803538e486d7241">&#9670;&nbsp;</a></span>cholesky() <span class="overload">[1/2]</span></h2>
+<a id="adaa1f64029b23ea42e9ba15219c1d06d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adaa1f64029b23ea42e9ba15219c1d06d">&#9670;&nbsp;</a></span>cholesky_factorization() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::factorization::cholesky </td>
+          <td class="memname">void dlaf::cholesky_factorization </td>
           <td>(</td>
           <td class="paramtype">blas::Uplo&#160;</td>
           <td class="paramname"><em>uplo</em>, </td>
@@ -135,8 +135,8 @@ mat_a is not distributed. </dd></dl>
 
 </div>
 </div>
-<a id="aed7e035a7eff7eb31eea293621b0c8fa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aed7e035a7eff7eb31eea293621b0c8fa">&#9670;&nbsp;</a></span>cholesky() <span class="overload">[2/2]</span></h2>
+<a id="a7eb54a489fc89c0e4027b4017ae8bccb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7eb54a489fc89c0e4027b4017ae8bccb">&#9670;&nbsp;</a></span>cholesky_factorization() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -144,7 +144,7 @@ mat_a is not distributed. </dd></dl>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::factorization::cholesky </td>
+          <td class="memname">void dlaf::cholesky_factorization </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>

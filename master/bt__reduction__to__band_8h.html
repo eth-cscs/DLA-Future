@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a04e50376b3136f312c5c4114b917ae03"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a04e50376b3136f312c5c4114b917ae03"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">dlaf::eigensolver::backTransformationReductionToBand</a> (const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
-<tr class="separator:a04e50376b3136f312c5c4114b917ae03"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#aa0009f01a9bcae7b94d16e3696433ef8">dlaf::eigensolver::backTransformationReductionToBand</a> (comm::CommunicatorGrid grid, const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
-<tr class="separator:aa0009f01a9bcae7b94d16e3696433ef8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a06ab2b4750275e88bdd416ab0d091165"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a06ab2b4750275e88bdd416ab0d091165"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#a06ab2b4750275e88bdd416ab0d091165">dlaf::eigensolver::internal::bt_reduction_to_band</a> (const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
+<tr class="separator:a06ab2b4750275e88bdd416ab0d091165"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa3286b3c80ea7311bacfa009309b9753"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:aa3286b3c80ea7311bacfa009309b9753"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bt__reduction__to__band_8h.html#aa3286b3c80ea7311bacfa009309b9753">dlaf::eigensolver::internal::bt_reduction_to_band</a> (comm::CommunicatorGrid grid, const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</td></tr>
+<tr class="separator:aa3286b3c80ea7311bacfa009309b9753"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="aa0009f01a9bcae7b94d16e3696433ef8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa0009f01a9bcae7b94d16e3696433ef8">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[1/2]</span></h2>
+<a id="aa3286b3c80ea7311bacfa009309b9753"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa3286b3c80ea7311bacfa009309b9753">&#9670;&nbsp;</a></span>bt_reduction_to_band() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::backTransformationReductionToBand </td>
+          <td class="memname">void dlaf::eigensolver::internal::bt_reduction_to_band </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -155,8 +155,8 @@ mat_v has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>
-<a id="a04e50376b3136f312c5c4114b917ae03"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a04e50376b3136f312c5c4114b917ae03">&#9670;&nbsp;</a></span>backTransformationReductionToBand() <span class="overload">[2/2]</span></h2>
+<a id="a06ab2b4750275e88bdd416ab0d091165"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a06ab2b4750275e88bdd416ab0d091165">&#9670;&nbsp;</a></span>bt_reduction_to_band() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -164,7 +164,7 @@ mat_v has equal tile and block sizes. </dd></dl>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::backTransformationReductionToBand </td>
+          <td class="memname">void dlaf::eigensolver::internal::bt_reduction_to_band </td>
           <td>(</td>
           <td class="paramtype">const SizeType&#160;</td>
           <td class="paramname"><em>b</em>, </td>

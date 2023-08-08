@@ -85,13 +85,13 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a2d0adfb7be9cfe934f96e9dd1c38d839"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a2d0adfb7be9cfe934f96e9dd1c38d839"><td class="memTemplItemLeft" align="right" valign="top">dlaf::BaseType&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="norm_8h.html#a2d0adfb7be9cfe934f96e9dd1c38d839">dlaf::auxiliary::norm</a> (comm::CommunicatorGrid grid, comm::Index2D rank, lapack::Norm norm_type, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</td></tr>
-<tr class="separator:a2d0adfb7be9cfe934f96e9dd1c38d839"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf429e381ebd046e1d217d233dcdc81e"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:abf429e381ebd046e1d217d233dcdc81e"><td class="memTemplItemLeft" align="right" valign="top">dlaf::BaseType&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="norm_8h.html#abf429e381ebd046e1d217d233dcdc81e">dlaf::auxiliary::max_norm</a> (comm::CommunicatorGrid grid, comm::Index2D rank, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</td></tr>
+<tr class="separator:abf429e381ebd046e1d217d233dcdc81e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a2d0adfb7be9cfe934f96e9dd1c38d839"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2d0adfb7be9cfe934f96e9dd1c38d839">&#9670;&nbsp;</a></span>norm()</h2>
+<a id="abf429e381ebd046e1d217d233dcdc81e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abf429e381ebd046e1d217d233dcdc81e">&#9670;&nbsp;</a></span>max_norm()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">dlaf::BaseType&lt;T&gt; dlaf::auxiliary::norm </td>
+          <td class="memname">dlaf::BaseType&lt;T&gt; dlaf::auxiliary::max_norm </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -109,12 +109,6 @@ template&lt;Backend backend, Device device, class T &gt; </div>
           <td></td>
           <td class="paramtype"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a>&#160;</td>
           <td class="paramname"><em>rank</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">lapack::Norm&#160;</td>
-          <td class="paramname"><em>norm_type</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
@@ -135,26 +129,14 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
-<p>Compute the norm <code>norm_type</code> of the distributed Matrix <code>A</code> (ge/sy/he)</p>
-<ul>
-<li>With <code>norm_type</code> == lapack::Norm::Max:<ul>
-<li>With <code>uplo</code> == blas::uplo::Lower <dl class="section pre"><dt>Precondition</dt><dd><code>A</code> must be square matrix, A.size().rows() == A.size().cols()</dd></dl>
-</li>
-<li>With <code>uplo</code> == blas::uplo::Upper <dl class="section note"><dt>Note</dt><dd>not yet implemented</dd></dl>
-</li>
-<li>With <code>uplo</code> == blas::uplo::General <dl class="section note"><dt>Note</dt><dd>not yet implemented</dd></dl>
-</li>
-</ul>
-</li>
-<li>With <code>norm_type</code> = lapack::Norm::{One, Two, Inf, Fro} <dl class="section note"><dt>Note</dt><dd>not yet implemented</dd></dl>
+<p>Compute the max norm of the distributed Matrix <code>A</code> (ge/sy/he)</p>
+<dl class="section note"><dt>Note</dt><dd><code>uplo</code> == blas::uplo::Upper not yet implemented</dd></dl>
 <dl class="section pre"><dt>Precondition</dt><dd><code>A.blockSize().rows() == A.blockSize().cols()</code>, </dd>
 <dd>
 <code>A</code> is distributed according to <code>grid</code>, </dd>
 <dd>
 <code>A</code> has equal tile and block sizes, </dd></dl>
-<dl class="section return"><dt>Returns</dt><dd>the norm <code>norm_type</code> of the Matrix <code>A</code> or 0 if <code>A.size().isEmpty()</code> (see LAPACK doc for additional info). </dd></dl>
-</li>
-</ul>
+<dl class="section return"><dt>Returns</dt><dd>the max norm of the Matrix <code>A</code> or 0 if <code>A.size().isEmpty()</code> </dd></dl>
 
 </div>
 </div>

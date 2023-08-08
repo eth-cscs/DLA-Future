@@ -81,16 +81,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a00574f61da45042c5276b043d7c33617"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a00574f61da45042c5276b043d7c33617"><td class="memTemplItemLeft" align="right" valign="top">Matrix&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="reduction__to__band_8h.html#a00574f61da45042c5276b043d7c33617">dlaf::eigensolver::reductionToBand</a> (Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</td></tr>
-<tr class="separator:a00574f61da45042c5276b043d7c33617"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a143b74447a1f72d4d5368b9bad10b331"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a143b74447a1f72d4d5368b9bad10b331"><td class="memTemplItemLeft" align="right" valign="top">Matrix&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="reduction__to__band_8h.html#a143b74447a1f72d4d5368b9bad10b331">dlaf::eigensolver::reductionToBand</a> (comm::CommunicatorGrid grid, Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</td></tr>
-<tr class="separator:a143b74447a1f72d4d5368b9bad10b331"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9b25dc548d7158468c9428f7155b6aa0"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a9b25dc548d7158468c9428f7155b6aa0"><td class="memTemplItemLeft" align="right" valign="top">Matrix&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="reduction__to__band_8h.html#a9b25dc548d7158468c9428f7155b6aa0">dlaf::eigensolver::internal::reduction_to_band</a> (Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</td></tr>
+<tr class="separator:a9b25dc548d7158468c9428f7155b6aa0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a3228ff1f7fa77896db5c9df2e95184"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a5a3228ff1f7fa77896db5c9df2e95184"><td class="memTemplItemLeft" align="right" valign="top">Matrix&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="reduction__to__band_8h.html#a5a3228ff1f7fa77896db5c9df2e95184">dlaf::eigensolver::internal::reduction_to_band</a> (comm::CommunicatorGrid grid, Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</td></tr>
+<tr class="separator:a5a3228ff1f7fa77896db5c9df2e95184"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a143b74447a1f72d4d5368b9bad10b331"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a143b74447a1f72d4d5368b9bad10b331">&#9670;&nbsp;</a></span>reductionToBand() <span class="overload">[1/2]</span></h2>
+<a id="a5a3228ff1f7fa77896db5c9df2e95184"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5a3228ff1f7fa77896db5c9df2e95184">&#9670;&nbsp;</a></span>reduction_to_band() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -98,7 +98,7 @@ Functions</h2></td></tr>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">Matrix&lt;T, Device::CPU&gt; dlaf::eigensolver::reductionToBand </td>
+          <td class="memname">Matrix&lt;T, Device::CPU&gt; dlaf::eigensolver::internal::reduction_to_band </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -161,8 +161,8 @@ mat_a.blockSize().rows() % band_size == 0 </dd></dl>
 
 </div>
 </div>
-<a id="a00574f61da45042c5276b043d7c33617"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a00574f61da45042c5276b043d7c33617">&#9670;&nbsp;</a></span>reductionToBand() <span class="overload">[2/2]</span></h2>
+<a id="a9b25dc548d7158468c9428f7155b6aa0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9b25dc548d7158468c9428f7155b6aa0">&#9670;&nbsp;</a></span>reduction_to_band() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -170,7 +170,7 @@ mat_a.blockSize().rows() % band_size == 0 </dd></dl>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">Matrix&lt;T, Device::CPU&gt; dlaf::eigensolver::reductionToBand </td>
+          <td class="memname">Matrix&lt;T, Device::CPU&gt; dlaf::eigensolver::internal::reduction_to_band </td>
           <td>(</td>
           <td class="paramtype">Matrix&lt; T, D &gt; &amp;&#160;</td>
           <td class="paramname"><em>mat_a</em>, </td>

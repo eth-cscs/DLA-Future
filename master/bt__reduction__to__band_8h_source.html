@@ -89,62 +89,57 @@ $(function() {
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160; </div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span><a class="code" href="dlaf_2eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">eigensolver</a> {</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00041"></a><span class="lineno"><a class="line" href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">   41</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">backTransformationReductionToBand</a>(<span class="keyword">const</span> SizeType b, Matrix&lt;T, device&gt;&amp; mat_c,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;                                       Matrix&lt;const T, device&gt;&amp; mat_v,</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                                       Matrix&lt;const T, Device::CPU&gt;&amp; mat_taus) {</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  [[maybe_unused]] <span class="keyword">auto</span> nr_reflectors_blocks = [&amp;b, &amp;mat_v]() {</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keyword">const</span> SizeType m = mat_v.size().rows();</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <span class="keyword">const</span> SizeType mb = mat_v.blockSize().rows();</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    <span class="keywordflow">return</span> std::max&lt;SizeType&gt;(0, util::ceilDiv(m - b - 1, mb));</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  };</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band.html">internal::BackTransformationReductionToBand&lt;backend, device, T&gt;::call</a>(b, mat_c, mat_v, mat_taus);</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;}</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00079"></a><span class="lineno"><a class="line" href="bt__reduction__to__band_8h.html#aa0009f01a9bcae7b94d16e3696433ef8">   79</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">backTransformationReductionToBand</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, <span class="keyword">const</span> SizeType b,</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;                                       Matrix&lt;T, device&gt;&amp; mat_c, Matrix&lt;const T, device&gt;&amp; mat_v,</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;                                       Matrix&lt;const T, Device::CPU&gt;&amp; mat_taus) {</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160; </div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  [[maybe_unused]] <span class="keyword">auto</span> nr_reflectors_blocks = [&amp;b, &amp;mat_v]() {</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    <span class="keyword">const</span> SizeType m = mat_v.size().rows();</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;    <span class="keyword">const</span> SizeType mb = mat_v.blockSize().rows();</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;    <span class="keywordflow">return</span> mat_v.distribution().template nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;        std::max&lt;SizeType&gt;(0, util::ceilDiv(m - b - 1, mb)));</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;  };</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  DLAF_ASSERT(mat_taus.distribution().localNrTiles().rows() == nr_reflectors_blocks(), mat_taus, mat_v,</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;              b);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band.html">internal::BackTransformationReductionToBand&lt;backend, device, T&gt;::call</a>(grid, b, mat_c, mat_v, mat_taus);</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;}</div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;}</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;}</div>
-<div class="ttc" id="abt__reduction__to__band_8h_html_a04e50376b3136f312c5c4114b917ae03"><div class="ttname"><a href="bt__reduction__to__band_8h.html#a04e50376b3136f312c5c4114b917ae03">dlaf::eigensolver::backTransformationReductionToBand</a></div><div class="ttdeci">void backTransformationReductionToBand(const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</div><div class="ttdef"><b>Definition:</b> bt_reduction_to_band.h:41</div></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00040"></a><span class="lineno"><a class="line" href="bt__reduction__to__band_8h.html#a06ab2b4750275e88bdd416ab0d091165">   40</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="bt__reduction__to__band_8h.html#a06ab2b4750275e88bdd416ab0d091165">bt_reduction_to_band</a>(<span class="keyword">const</span> SizeType b, Matrix&lt;T, device&gt;&amp; mat_c, Matrix&lt;const T, device&gt;&amp; mat_v,</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;                          Matrix&lt;const T, Device::CPU&gt;&amp; mat_taus) {</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160; </div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;  [[maybe_unused]] <span class="keyword">auto</span> nr_reflectors_blocks = [&amp;b, &amp;mat_v]() {</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keyword">const</span> SizeType m = mat_v.size().rows();</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    <span class="keyword">const</span> SizeType mb = mat_v.blockSize().rows();</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    <span class="keywordflow">return</span> std::max&lt;SizeType&gt;(0, util::ceilDiv(m - b - 1, mb));</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;  };</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band.html">BackTransformationReductionToBand&lt;backend, device, T&gt;::call</a>(b, mat_c, mat_v, mat_taus);</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;}</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00077"></a><span class="lineno"><a class="line" href="bt__reduction__to__band_8h.html#aa3286b3c80ea7311bacfa009309b9753">   77</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="bt__reduction__to__band_8h.html#a06ab2b4750275e88bdd416ab0d091165">bt_reduction_to_band</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, <span class="keyword">const</span> SizeType b, Matrix&lt;T, device&gt;&amp; mat_c,</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;                          Matrix&lt;const T, device&gt;&amp; mat_v, Matrix&lt;const T, Device::CPU&gt;&amp; mat_taus) {</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  DLAF_ASSERT(square_size(mat_v), mat_v);</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  DLAF_ASSERT(square_blocksize(mat_v), mat_v);</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  DLAF_ASSERT(mat_c.size().rows() == mat_v.size().rows(), mat_c, mat_v);</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  DLAF_ASSERT(mat_c.blockSize().rows() == mat_v.blockSize().rows(), mat_c, mat_v);</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_c), mat_c);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  DLAF_ASSERT(single_tile_per_block(mat_v), mat_v);</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  [[maybe_unused]] <span class="keyword">auto</span> nr_reflectors_blocks = [&amp;b, &amp;mat_v]() {</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;    <span class="keyword">const</span> SizeType m = mat_v.size().rows();</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    <span class="keyword">const</span> SizeType mb = mat_v.blockSize().rows();</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;    <span class="keywordflow">return</span> mat_v.distribution().template nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;        std::max&lt;SizeType&gt;(0, util::ceilDiv(m - b - 1, mb)));</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;  };</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  DLAF_ASSERT(mat_taus.distribution().localNrTiles().rows() == nr_reflectors_blocks(), mat_taus, mat_v,</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;              b);</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;  <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band.html">BackTransformationReductionToBand&lt;backend, device, T&gt;::call</a>(grid, b, mat_c, mat_v, mat_taus);</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;}</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;}</div>
+<div class="ttc" id="abt__reduction__to__band_8h_html_a06ab2b4750275e88bdd416ab0d091165"><div class="ttname"><a href="bt__reduction__to__band_8h.html#a06ab2b4750275e88bdd416ab0d091165">dlaf::eigensolver::internal::bt_reduction_to_band</a></div><div class="ttdeci">void bt_reduction_to_band(const SizeType b, Matrix&lt; T, device &gt; &amp;mat_c, Matrix&lt; const T, device &gt; &amp;mat_v, Matrix&lt; const T, Device::CPU &gt; &amp;mat_taus)</div><div class="ttdef"><b>Definition:</b> bt_reduction_to_band.h:40</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
-<div class="ttc" id="adlaf_2eigensolver_2eigensolver_8h_html_a7aeed252a1783c24f778eb250d0efd72"><div class="ttname"><a href="dlaf_2eigensolver_2eigensolver_8h.html#a7aeed252a1783c24f778eb250d0efd72">dlaf::eigensolver::eigensolver</a></div><div class="ttdeci">void eigensolver(blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</div><div class="ttdef"><b>Definition:</b> eigensolver.h:39</div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band_html"><div class="ttname"><a href="structdlaf_1_1eigensolver_1_1internal_1_1_back_transformation_reduction_to_band.html">dlaf::eigensolver::internal::BackTransformationReductionToBand</a></div><div class="ttdef"><b>Definition:</b> api.h:18</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>

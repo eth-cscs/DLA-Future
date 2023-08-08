@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a117a0b955e26513fecdc562da0f96922"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a117a0b955e26513fecdc562da0f96922"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="hermitian_8h.html#a117a0b955e26513fecdc562da0f96922">dlaf::multiplication::hermitian</a> (blas::Side side, blas::Uplo uplo, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
-<tr class="separator:a117a0b955e26513fecdc562da0f96922"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3a63ff51bec2e9383f3dfd8b2914673e"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a3a63ff51bec2e9383f3dfd8b2914673e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="hermitian_8h.html#a3a63ff51bec2e9383f3dfd8b2914673e">dlaf::multiplication::hermitian</a> (comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
-<tr class="separator:a3a63ff51bec2e9383f3dfd8b2914673e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab6234e4eda7adaa1469c1c09fd59cc33"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:ab6234e4eda7adaa1469c1c09fd59cc33"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="hermitian_8h.html#ab6234e4eda7adaa1469c1c09fd59cc33">dlaf::hermitian_multiplication</a> (blas::Side side, blas::Uplo uplo, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:ab6234e4eda7adaa1469c1c09fd59cc33"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad652788e7c1989506e984896766fa2cb"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:ad652788e7c1989506e984896766fa2cb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="hermitian_8h.html#ad652788e7c1989506e984896766fa2cb">dlaf::hermitian_multiplication</a> (comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:ad652788e7c1989506e984896766fa2cb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a117a0b955e26513fecdc562da0f96922"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a117a0b955e26513fecdc562da0f96922">&#9670;&nbsp;</a></span>hermitian() <span class="overload">[1/2]</span></h2>
+<a id="ab6234e4eda7adaa1469c1c09fd59cc33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab6234e4eda7adaa1469c1c09fd59cc33">&#9670;&nbsp;</a></span>hermitian_multiplication() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::multiplication::hermitian </td>
+          <td class="memname">void dlaf::hermitian_multiplication </td>
           <td>(</td>
           <td class="paramtype">blas::Side&#160;</td>
           <td class="paramname"><em>side</em>, </td>
@@ -170,8 +170,8 @@ mat_a mat_b are multipliable and the result can be summed to mat_c. </dd></dl>
 
 </div>
 </div>
-<a id="a3a63ff51bec2e9383f3dfd8b2914673e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3a63ff51bec2e9383f3dfd8b2914673e">&#9670;&nbsp;</a></span>hermitian() <span class="overload">[2/2]</span></h2>
+<a id="ad652788e7c1989506e984896766fa2cb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad652788e7c1989506e984896766fa2cb">&#9670;&nbsp;</a></span>hermitian_multiplication() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -179,7 +179,7 @@ mat_a mat_b are multipliable and the result can be summed to mat_c. </dd></dl>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::multiplication::hermitian </td>
+          <td class="memname">void dlaf::hermitian_multiplication </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>

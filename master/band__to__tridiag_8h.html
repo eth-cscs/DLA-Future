@@ -83,16 +83,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a5c2d84091dc7e60a386d2b1d5f46745a"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a5c2d84091dc7e60a386d2b1d5f46745a"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#a5c2d84091dc7e60a386d2b1d5f46745a">dlaf::eigensolver::band_to_tridiag</a> (blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</td></tr>
-<tr class="separator:a5c2d84091dc7e60a386d2b1d5f46745a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a401482b31e1a057dae99ee76ab00a41f"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a401482b31e1a057dae99ee76ab00a41f"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#a401482b31e1a057dae99ee76ab00a41f">dlaf::eigensolver::band_to_tridiag</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:a401482b31e1a057dae99ee76ab00a41f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">dlaf::eigensolver::internal::band_to_tridiagonal</a> (blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</td></tr>
+<tr class="separator:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aec7c92ceba0e074c2634b07f12a0f059"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:aec7c92ceba0e074c2634b07f12a0f059"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#aec7c92ceba0e074c2634b07f12a0f059">dlaf::eigensolver::internal::band_to_tridiagonal</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:aec7c92ceba0e074c2634b07f12a0f059"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a5c2d84091dc7e60a386d2b1d5f46745a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5c2d84091dc7e60a386d2b1d5f46745a">&#9670;&nbsp;</a></span>band_to_tridiag() <span class="overload">[1/2]</span></h2>
+<a id="ac2f294844a92af6854e4ef81e41eb4fe"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac2f294844a92af6854e4ef81e41eb4fe">&#9670;&nbsp;</a></span>band_to_tridiagonal() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -100,7 +100,7 @@ Functions</h2></td></tr>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">TridiagResult&lt;T, Device::CPU&gt; dlaf::eigensolver::band_to_tridiag </td>
+          <td class="memname">TridiagResult&lt;T, Device::CPU&gt; dlaf::eigensolver::internal::band_to_tridiagonal </td>
           <td>(</td>
           <td class="paramtype">blas::Uplo&#160;</td>
           <td class="paramname"><em>uplo</em>, </td>
@@ -157,8 +157,8 @@ mat_a has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>
-<a id="a401482b31e1a057dae99ee76ab00a41f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a401482b31e1a057dae99ee76ab00a41f">&#9670;&nbsp;</a></span>band_to_tridiag() <span class="overload">[2/2]</span></h2>
+<a id="aec7c92ceba0e074c2634b07f12a0f059"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aec7c92ceba0e074c2634b07f12a0f059">&#9670;&nbsp;</a></span>band_to_tridiagonal() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -166,7 +166,7 @@ mat_a has equal tile and block sizes. </dd></dl>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">TridiagResult&lt;T, Device::CPU&gt; dlaf::eigensolver::band_to_tridiag </td>
+          <td class="memname">TridiagResult&lt;T, Device::CPU&gt; dlaf::eigensolver::internal::band_to_tridiagonal </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>

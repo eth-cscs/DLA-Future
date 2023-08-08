@@ -82,16 +82,16 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a52f0bd4b681a2d1c3e47bfd6a6ebf15a"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a52f0bd4b681a2d1c3e47bfd6a6ebf15a"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tridiag__solver_8h.html#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">dlaf::eigensolver::tridiagSolver</a> (Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;tridiag, Matrix&lt; BaseType&lt; T &gt;, device &gt; &amp;evals, Matrix&lt; T, device &gt; &amp;evecs)</td></tr>
-<tr class="separator:a52f0bd4b681a2d1c3e47bfd6a6ebf15a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0cfeab14e9e1dc7a2fb703006cd7e957"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a0cfeab14e9e1dc7a2fb703006cd7e957"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tridiag__solver_8h.html#a0cfeab14e9e1dc7a2fb703006cd7e957">dlaf::eigensolver::tridiagSolver</a> (comm::CommunicatorGrid grid, Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;tridiag, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;evals, Matrix&lt; T, D &gt; &amp;evecs)</td></tr>
-<tr class="separator:a0cfeab14e9e1dc7a2fb703006cd7e957"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5ddcff86d6f4a5b727f48987c17a2c9"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:af5ddcff86d6f4a5b727f48987c17a2c9"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tridiag__solver_8h.html#af5ddcff86d6f4a5b727f48987c17a2c9">dlaf::eigensolver::internal::tridiagonal_eigensolver</a> (Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;tridiag, Matrix&lt; BaseType&lt; T &gt;, device &gt; &amp;evals, Matrix&lt; T, device &gt; &amp;evecs)</td></tr>
+<tr class="separator:af5ddcff86d6f4a5b727f48987c17a2c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab18e652b7cf9e159b1d69a8a5d017306"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:ab18e652b7cf9e159b1d69a8a5d017306"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tridiag__solver_8h.html#ab18e652b7cf9e159b1d69a8a5d017306">dlaf::eigensolver::internal::tridiagonal_eigensolver</a> (comm::CommunicatorGrid grid, Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;tridiag, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;evals, Matrix&lt; T, D &gt; &amp;evecs)</td></tr>
+<tr class="separator:ab18e652b7cf9e159b1d69a8a5d017306"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a0cfeab14e9e1dc7a2fb703006cd7e957"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0cfeab14e9e1dc7a2fb703006cd7e957">&#9670;&nbsp;</a></span>tridiagSolver() <span class="overload">[1/2]</span></h2>
+<a id="ab18e652b7cf9e159b1d69a8a5d017306"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab18e652b7cf9e159b1d69a8a5d017306">&#9670;&nbsp;</a></span>tridiagonal_eigensolver() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -99,7 +99,7 @@ Functions</h2></td></tr>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::tridiagSolver </td>
+          <td class="memname">void dlaf::eigensolver::internal::tridiagonal_eigensolver </td>
           <td>(</td>
           <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -154,8 +154,8 @@ evecs has equal tile and block sizes </dd></dl>
 
 </div>
 </div>
-<a id="a52f0bd4b681a2d1c3e47bfd6a6ebf15a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a52f0bd4b681a2d1c3e47bfd6a6ebf15a">&#9670;&nbsp;</a></span>tridiagSolver() <span class="overload">[2/2]</span></h2>
+<a id="af5ddcff86d6f4a5b727f48987c17a2c9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af5ddcff86d6f4a5b727f48987c17a2c9">&#9670;&nbsp;</a></span>tridiagonal_eigensolver() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -163,7 +163,7 @@ evecs has equal tile and block sizes </dd></dl>
 template&lt;Backend backend, Device device, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::eigensolver::tridiagSolver </td>
+          <td class="memname">void dlaf::eigensolver::internal::tridiagonal_eigensolver </td>
           <td>(</td>
           <td class="paramtype">Matrix&lt; BaseType&lt; T &gt;, Device::CPU &gt; &amp;&#160;</td>
           <td class="paramname"><em>tridiag</em>, </td>

@@ -85,20 +85,20 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a45f04fd24259c413a07a210a17b91b93"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a45f04fd24259c413a07a210a17b91b93"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a45f04fd24259c413a07a210a17b91b93">dlaf::multiplication::generalSubMatrix</a> (const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
-<tr class="separator:a45f04fd24259c413a07a210a17b91b93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0aa788470aca6ca60202513251578a36"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a0aa788470aca6ca60202513251578a36"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a0aa788470aca6ca60202513251578a36">dlaf::multiplication::generalSubMatrix</a> ([[maybe_unused]] comm::CommunicatorGrid grid, common::Pipeline&lt; comm::Communicator &gt; &amp;row_task_chain, common::Pipeline&lt; comm::Communicator &gt; &amp;col_task_chain, const SizeType a, const SizeType b, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
-<tr class="separator:a0aa788470aca6ca60202513251578a36"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b57fb8e1e59f246c39c64247542c948"><td class="memTemplParams" colspan="2"><a id="a7b57fb8e1e59f246c39c64247542c948"></a>
+<tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a177b6617b7f042d3e9d316a6233261bb">dlaf::multiplication::internal::generalSubMatrix</a> (const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:a177b6617b7f042d3e9d316a6233261bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af41fafb5c5852615a5c47b0f4986b56b"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:af41fafb5c5852615a5c47b0f4986b56b"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#af41fafb5c5852615a5c47b0f4986b56b">dlaf::multiplication::internal::generalSubMatrix</a> ([[maybe_unused]] comm::CommunicatorGrid grid, common::Pipeline&lt; comm::Communicator &gt; &amp;row_task_chain, common::Pipeline&lt; comm::Communicator &gt; &amp;col_task_chain, const SizeType a, const SizeType b, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:af41fafb5c5852615a5c47b0f4986b56b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60d09d7084585e0aebd34dd93e548f5f"><td class="memTemplParams" colspan="2"><a id="a60d09d7084585e0aebd34dd93e548f5f"></a>
 template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a7b57fb8e1e59f246c39c64247542c948"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::multiplication::generalSubMatrix</b> (comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
-<tr class="separator:a7b57fb8e1e59f246c39c64247542c948"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a60d09d7084585e0aebd34dd93e548f5f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::multiplication::internal::generalSubMatrix</b> (comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:a60d09d7084585e0aebd34dd93e548f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a0aa788470aca6ca60202513251578a36"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0aa788470aca6ca60202513251578a36">&#9670;&nbsp;</a></span>generalSubMatrix() <span class="overload">[1/2]</span></h2>
+<a id="af41fafb5c5852615a5c47b0f4986b56b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af41fafb5c5852615a5c47b0f4986b56b">&#9670;&nbsp;</a></span>generalSubMatrix() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -106,7 +106,7 @@ template&lt;Backend B, Device D, class T &gt; </td></tr>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::multiplication::generalSubMatrix </td>
+          <td class="memname">void dlaf::multiplication::internal::generalSubMatrix </td>
           <td>(</td>
           <td class="paramtype">[[maybe_unused] ] <a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
@@ -193,8 +193,8 @@ a &lt;= b &lt;= mat_a.nrTiles().rows() </dd></dl>
 
 </div>
 </div>
-<a id="a45f04fd24259c413a07a210a17b91b93"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a45f04fd24259c413a07a210a17b91b93">&#9670;&nbsp;</a></span>generalSubMatrix() <span class="overload">[2/2]</span></h2>
+<a id="a177b6617b7f042d3e9d316a6233261bb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a177b6617b7f042d3e9d316a6233261bb">&#9670;&nbsp;</a></span>generalSubMatrix() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -202,7 +202,7 @@ a &lt;= b &lt;= mat_a.nrTiles().rows() </dd></dl>
 template&lt;Backend B, Device D, class T &gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">void dlaf::multiplication::generalSubMatrix </td>
+          <td class="memname">void dlaf::multiplication::internal::generalSubMatrix </td>
           <td>(</td>
           <td class="paramtype">const SizeType&#160;</td>
           <td class="paramname"><em>a</em>, </td>

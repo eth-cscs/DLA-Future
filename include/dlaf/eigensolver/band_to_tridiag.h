@@ -20,8 +20,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Reduces a Hermitian band matrix A (with the given band_size(*)) to real symmetric tridiagonal
 /// form T by a unitary similarity transformation Q**H * A * Q = T.
@@ -72,8 +71,8 @@ namespace eigensolver {
 /// @pre mat_a is not distributed,
 /// @pre mat_a has equal tile and block sizes.
 template <Backend B, Device D, class T>
-TridiagResult<T, Device::CPU> band_to_tridiag(blas::Uplo uplo, SizeType band_size,
-                                              Matrix<const T, D>& mat_a) {
+TridiagResult<T, Device::CPU> band_to_tridiagonal(blas::Uplo uplo, SizeType band_size,
+                                                  Matrix<const T, D>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);
@@ -83,7 +82,7 @@ TridiagResult<T, Device::CPU> band_to_tridiag(blas::Uplo uplo, SizeType band_siz
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      return internal::BandToTridiag<B, D, T>::call_L(band_size, mat_a);
+      return BandToTridiag<B, D, T>::call_L(band_size, mat_a);
       break;
     case blas::Uplo::Upper:
       DLAF_UNIMPLEMENTED(uplo);
@@ -145,8 +144,8 @@ TridiagResult<T, Device::CPU> band_to_tridiag(blas::Uplo uplo, SizeType band_siz
 /// @pre mat_a is distributed according to grid,
 /// @pre mat_a has equal tile and block sizes.
 template <Backend backend, Device device, class T>
-TridiagResult<T, Device::CPU> band_to_tridiag(comm::CommunicatorGrid grid, blas::Uplo uplo,
-                                              SizeType band_size, Matrix<const T, device>& mat_a) {
+TridiagResult<T, Device::CPU> band_to_tridiagonal(comm::CommunicatorGrid grid, blas::Uplo uplo,
+                                                  SizeType band_size, Matrix<const T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
@@ -155,11 +154,11 @@ TridiagResult<T, Device::CPU> band_to_tridiag(comm::CommunicatorGrid grid, blas:
 
   // If the grid contains only one rank force local implementation.
   if (grid.size() == comm::Size2D(1, 1))
-    return band_to_tridiag<backend, device, T>(uplo, band_size, mat_a);
+    return band_to_tridiagonal<backend, device, T>(uplo, band_size, mat_a);
 
   switch (uplo) {
     case blas::Uplo::Lower:
-      return internal::BandToTridiag<backend, device, T>::call_L(grid, band_size, mat_a);
+      return BandToTridiag<backend, device, T>::call_L(grid, band_size, mat_a);
       break;
     case blas::Uplo::Upper:
       DLAF_UNIMPLEMENTED(uplo);
@@ -172,5 +171,4 @@ TridiagResult<T, Device::CPU> band_to_tridiag(comm::CommunicatorGrid grid, blas:
   return DLAF_UNREACHABLE(TridiagResult<T, Device::CPU>);
 }
 
-}
 }

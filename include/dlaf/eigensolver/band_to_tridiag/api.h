@@ -13,15 +13,13 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf::eigensolver {
+namespace dlaf::eigensolver::internal {
 
 template <class T, Device D>
 struct TridiagResult {
   Matrix<BaseType<T>, D> tridiagonal;
   Matrix<T, D> hh_reflectors;
 };
-
-namespace internal {
 
 template <class T>
 SizeType nrSweeps(SizeType size) noexcept {
@@ -62,5 +60,4 @@ DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, double)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, std::complex<float>)
 DLAF_EIGENSOLVER_B2T_ETI(extern, Backend::MC, Device::GPU, std::complex<double>)
 #endif
-}
 }

@@ -117,10 +117,11 @@ struct BandToTridiagMiniapp {
         dlaf::common::Timer<> timeit;
         auto bench = [&]() {
           if (opts.local)
-            return dlaf::eigensolver::band_to_tridiag<Backend::MC>(opts.uplo, opts.b, matrix.get());
+            return dlaf::eigensolver::internal::band_to_tridiagonal<Backend::MC>(opts.uplo, opts.b,
+                                                                                 matrix.get());
           else
-            return dlaf::eigensolver::band_to_tridiag<Backend::MC>(comm_grid, opts.uplo, opts.b,
-                                                                   matrix.get());
+            return dlaf::eigensolver::internal::band_to_tridiagonal<Backend::MC>(comm_grid, opts.uplo,
+                                                                                 opts.b, matrix.get());
         };
         auto [trid, hhr] = bench();
 

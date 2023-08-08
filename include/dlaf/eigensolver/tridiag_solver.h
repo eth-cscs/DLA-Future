@@ -18,8 +18,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Finds the eigenvalues and eigenvectors of the local symmetric tridiagonal matrix @p tridiag.
 ///
@@ -39,8 +38,8 @@ namespace eigensolver {
 /// @pre evals has equal tile and block sizes
 /// @pre evecs has equal tile and block sizes
 template <Backend backend, Device device, class T>
-void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>, device>& evals,
-                   Matrix<T, device>& evecs) {
+void tridiagonal_eigensolver(Matrix<BaseType<T>, Device::CPU>& tridiag,
+                             Matrix<BaseType<T>, device>& evals, Matrix<T, device>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
@@ -65,7 +64,7 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(),
               tridiag.distribution().size().rows(), evals.distribution().size().rows());
 
-  internal::TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
+  TridiagSolver<backend, device, BaseType<T>>::call(tridiag, evals, evecs);
 }
 
 /// Finds the eigenvalues and eigenvectors of the symmetric tridiagonal matrix @p tridiag stored locally
@@ -91,8 +90,8 @@ void tridiagSolver(Matrix<BaseType<T>, Device::CPU>& tridiag, Matrix<BaseType<T>
 /// @pre evals has equal tile and block sizes
 /// @pre evecs has equal tile and block sizes
 template <Backend B, Device D, class T>
-void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
-                   Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
+void tridiagonal_eigensolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
+                             Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);
   DLAF_ASSERT(tridiag.distribution().blockSize().cols() == 2, tridiag);
@@ -117,8 +116,7 @@ void tridiagSolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>
   DLAF_ASSERT(tridiag.distribution().size().rows() == evals.distribution().size().rows(), tridiag,
               evals);
 
-  internal::TridiagSolver<B, D, BaseType<T>>::call(grid, tridiag, evals, evecs);
+  TridiagSolver<B, D, BaseType<T>>::call(grid, tridiag, evals, evecs);
 }
 
-}
 }

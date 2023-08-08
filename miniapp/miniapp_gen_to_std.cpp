@@ -131,12 +131,11 @@ struct GenToStdMiniapp {
 
         dlaf::common::Timer<> timeit;
         if (opts.local)
-          dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(opts.uplo, matrix_a.get(),
-                                                                            matrix_b.get());
+          dlaf::eigensolver::internal::generalized_to_standard<backend, DefaultDevice_v<backend>, T>(
+              opts.uplo, matrix_a.get(), matrix_b.get());
         else
-          dlaf::eigensolver::genToStd<backend, DefaultDevice_v<backend>, T>(comm_grid, opts.uplo,
-                                                                            matrix_a.get(),
-                                                                            matrix_b.get());
+          dlaf::eigensolver::internal::generalized_to_standard<backend, DefaultDevice_v<backend>, T>(
+              comm_grid, opts.uplo, matrix_a.get(), matrix_b.get());
 
         // wait and barrier for all ranks
         matrix_a.get().waitLocalTiles();

@@ -20,7 +20,6 @@
 #include <dlaf/util_matrix.h>
 
 namespace dlaf {
-namespace multiplication {
 
 /// Triangular Matrix multiplication implementation on local memory, computing B = alpha op(A)  B
 /// (when side == Left) and B = alpha B op(A) (when side == Right)
@@ -41,8 +40,8 @@ namespace multiplication {
 /// @pre mat_a and mat_b are not distributed,
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
-void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+void triangular_multiplication(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
+                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -55,18 +54,20 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LLN(diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LLT(op, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LLT(op, diag, alpha, mat_a,
+                                                                           mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LUN(diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LUT(op, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LUT(op, diag, alpha, mat_a,
+                                                                           mat_b);
       }
     }
   }
@@ -75,18 +76,20 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RLN(diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RLT(op, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RLT(op, diag, alpha, mat_a,
+                                                                           mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RUN(diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RUT(op, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RUT(op, diag, alpha, mat_a,
+                                                                           mat_b);
       }
     }
   }
@@ -111,8 +114,9 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 /// @pre mat_a and mat_b are distributed according to the grid,
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
-void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
-                blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+void triangular_multiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
+                               blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                               Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -125,7 +129,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LLN(grid, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LLN(grid, diag, alpha, mat_a,
+                                                                           mat_b);
       }
       else {
         // Left Lower Trans/ConjTrans
@@ -134,7 +139,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LUN(grid, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_LUN(grid, diag, alpha, mat_a,
+                                                                           mat_b);
       }
       else {
         // Left Upper Trans/ConjTrans
@@ -147,7 +153,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a,
+                                                                           mat_b);
       }
       else {
         // Right Lower Trans/ConjTrans
@@ -156,7 +163,8 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a, mat_b);
+        multiplication::internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a,
+                                                                           mat_b);
       }
       else {
         // Right Upper Trans/ConjTrans
@@ -164,7 +172,5 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
       }
     }
   }
-}
-
 }
 }

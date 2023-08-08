@@ -19,7 +19,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::multiplication {
+namespace dlaf {
 
 /// Hermitian Matrix multiplication implementation on local memory, computing C = beta C + alpha A B
 /// (when side == Left) or C + alpha B A (when side == Right), where A is a Hermitian matrix.
@@ -39,8 +39,8 @@ namespace dlaf::multiplication {
 /// @pre mat_a mat_b and mat_c are not distributed,
 /// @pre mat_a mat_b are multipliable and the result can be summed to mat_c.
 template <Backend B, Device D, class T>
-void hermitian(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, D>& mat_a,
-               Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, D>& mat_a,
+                              Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -55,7 +55,7 @@ void hermitian(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, 
                 mat_b, mat_c);
     switch (uplo) {
       case blas::Uplo::Lower:
-        return internal::Hermitian<B, D, T>::call_LL(alpha, mat_a, mat_b, beta, mat_c);
+        return multiplication::internal::Hermitian<B, D, T>::call_LL(alpha, mat_a, mat_b, beta, mat_c);
         break;
       case blas::Uplo::Upper:
         DLAF_UNIMPLEMENTED(uplo);
@@ -91,8 +91,9 @@ void hermitian(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, 
 /// @pre mat_a, mat_b and mat_c are distributed according to the grid,
 /// @pre mat_a mat_b are multipliable and the result can be summed to mat_c.
 template <Backend B, Device D, class T>
-void hermitian(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, const T alpha,
-               Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
+void hermitian_multiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
+                              const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,
+                              const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -107,7 +108,8 @@ void hermitian(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, co
                 mat_b, mat_c);
     switch (uplo) {
       case blas::Uplo::Lower:
-        return internal::Hermitian<B, D, T>::call_LL(grid, alpha, mat_a, mat_b, beta, mat_c);
+        return multiplication::internal::Hermitian<B, D, T>::call_LL(grid, alpha, mat_a, mat_b, beta,
+                                                                     mat_c);
         break;
       case blas::Uplo::Upper:
         DLAF_UNIMPLEMENTED(uplo);

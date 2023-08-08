@@ -29,9 +29,7 @@
 #include <dlaf/sender/when_all_lift.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
@@ -720,8 +718,5 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     a_panel.reset();
     b_panel.reset();
   }
-}
-
-}
 }
 }

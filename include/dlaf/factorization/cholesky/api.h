@@ -12,9 +12,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
-namespace factorization {
-namespace internal {
+namespace dlaf::factorization::internal {
 template <Backend backend, Device device, class T>
 struct Cholesky {
   static void call_L(Matrix<T, device>& mat_a);
@@ -38,6 +36,4 @@ DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_FACTORIZATION_CHOLESKY_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-}
-}
 }

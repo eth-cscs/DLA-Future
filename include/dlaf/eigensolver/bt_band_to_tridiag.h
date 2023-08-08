@@ -17,7 +17,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::eigensolver {
+namespace dlaf::eigensolver::internal {
 
 // Eigenvalue back-transformation implementation on local memory, which applies the inverse of the
 // transformation used to get a tridiagonal matrix from a band one.
@@ -54,8 +54,8 @@ namespace dlaf::eigensolver {
 // @pre mat_e has equal tile and block sizes
 // @pre mat_hh has equal tile and block sizes
 template <Backend B, Device D, class T>
-void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T, D>& mat_e,
-                                     matrix::Matrix<const T, Device::CPU>& mat_hh) {
+void bt_band_to_tridiagonal(const SizeType band_size, matrix::Matrix<T, D>& mat_e,
+                            matrix::Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::local_matrix(mat_e), mat_e);
   DLAF_ASSERT(matrix::local_matrix(mat_hh), mat_hh);
 
@@ -71,13 +71,12 @@ void backTransformationBandToTridiag(const SizeType band_size, matrix::Matrix<T,
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
 
-  internal::BackTransformationT2B<B, D, T>::call(band_size, mat_e, mat_hh);
+  BackTransformationT2B<B, D, T>::call(band_size, mat_e, mat_hh);
 }
 
 template <Backend B, Device D, class T>
-void backTransformationBandToTridiag(comm::CommunicatorGrid grid, const SizeType band_size,
-                                     matrix::Matrix<T, D>& mat_e,
-                                     matrix::Matrix<const T, Device::CPU>& mat_hh) {
+void bt_band_to_tridiagonal(comm::CommunicatorGrid grid, const SizeType band_size,
+                            matrix::Matrix<T, D>& mat_e, matrix::Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_e, grid), mat_e, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_hh, grid), mat_hh, grid);
 
@@ -90,6 +89,6 @@ void backTransformationBandToTridiag(comm::CommunicatorGrid grid, const SizeType
   DLAF_ASSERT(band_size >= 2, band_size);
   DLAF_ASSERT(mat_hh.blockSize().rows() % band_size == 0, mat_hh.blockSize(), band_size);
 
-  internal::BackTransformationT2B<B, D, T>::call(grid, band_size, mat_e, mat_hh);
+  BackTransformationT2B<B, D, T>::call(grid, band_size, mat_e, mat_hh);
 }
 }

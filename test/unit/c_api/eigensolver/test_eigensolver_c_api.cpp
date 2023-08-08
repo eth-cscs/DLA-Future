@@ -87,7 +87,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
   copy(reference, mat_a_h);
   mat_a_h.waitLocalTiles();
 
-  eigensolver::EigensolverResult<T, D> ret = [&]() {
+  EigensolverResult<T, D> ret = [&]() {
     const SizeType size = mat_a_h.size().rows();
     Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),
                                        TileElementSize(mat_a_h.blockSize().rows(), 1));
@@ -165,7 +165,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 #endif
     }
 
-    return eigensolver::EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
+    return EigensolverResult<T, D>{std::move(eigenvalues), std::move(eigenvectors)};
   }();
 
   // Resume pika runtime suspended by C API for correctness checks

@@ -28,9 +28,7 @@
 #include <dlaf/sender/traits.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
-namespace internal {
+namespace dlaf::eigensolver::internal {
 
 namespace gentostd_l {
 template <Backend backend, class AKKSender, class LKKSender>
@@ -722,6 +720,4 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   }
 }
 
-}
-}
 }

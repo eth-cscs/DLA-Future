@@ -16,7 +16,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf::eigensolver {
+namespace dlaf {
 
 template <class T, Device D>
 struct EigensolverResult {
@@ -24,7 +24,7 @@ struct EigensolverResult {
   Matrix<T, D> eigenvectors;
 };
 
-namespace internal {
+namespace eigensolver::internal {
 
 template <Backend B, Device D, class T>
 struct Eigensolver {

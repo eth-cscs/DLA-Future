@@ -165,7 +165,6 @@ cscs["hohgant-amdgpu"] = {
     "Allowed rpns": [8],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm",
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --showtoponuma

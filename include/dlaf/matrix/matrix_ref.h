@@ -27,7 +27,7 @@ using SubMatrixSpec = SubDistributionSpec;
 /// The class has reference semantics, meaning accesses to a @c MatrixRef and
 /// it's corresponding @c Matrix are interleaved if calls to read/readwrite are
 /// interleaved. Access to a @c MatrixRef and its corresponding @c Matrix is not
-/// thread-safe. A @c MatrixRef must outlive its corresponding @c Matrix.
+/// thread-safe. A @c Matrix must outlive its corresponding @c MatrixRef.
 template <class T, Device D>
 class MatrixRef;
 

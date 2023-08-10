@@ -35,8 +35,10 @@
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/memory/memory_view.h>
 #include <dlaf/multiplication/general.h>
+#include <dlaf/multiplication/general/api.h>
 #include <dlaf/permutations/general.h>
 #include <dlaf/permutations/general/impl.h>
 #include <dlaf/schedulers.h>
@@ -914,9 +916,18 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
-                                                            blas::Op::NoTrans, T(1), ws.e1, ws.e2, T(0),
-                                                            ws.e0);
+  const auto& dist = ws.e0.distribution();
+  matrix::internal::SubMatrixSpec
+      submat_spec{{dist.template globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0),
+                   dist.template globalElementFromGlobalTileAndTileElement<Coord::Col>(i_begin, 0)},
+                  {dist.template globalTileElementDistance<Coord::Row>(i_begin, i_end),
+                   dist.template globalTileElementDistance<Coord::Col>(i_begin, i_end)}};
+
+  dlaf::matrix::internal::MatrixRef<T, D> sub_e0(ws.e0, submat_spec);
+  dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(ws.e1, submat_spec);
+  dlaf::matrix::internal::MatrixRef<const T, D> sub_e2(ws.e2, submat_spec);
+  dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1),
+                                                              sub_e1, sub_e2, T(0), sub_e0);
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

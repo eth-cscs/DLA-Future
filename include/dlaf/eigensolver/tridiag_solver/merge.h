@@ -926,8 +926,24 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   dlaf::matrix::internal::MatrixRef<T, D> sub_e0(ws.e0, submat_spec);
   dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(ws.e1, submat_spec);
   dlaf::matrix::internal::MatrixRef<const T, D> sub_e2(ws.e2, submat_spec);
+  // TODO restrict to just top-left k by k
   dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1),
                                                               sub_e1, sub_e2, T(0), sub_e0);
+  // copy deflated from e1 to e0
+  ex::start_detached(
+      ex::when_all(k) | ex::then([i_begin, i_end, dist = ws.e0.distribution(), e0 = ws.e0.subPipeline(),
+                                  e1 = ws.e1.subPipeline()](const SizeType k) mutable {
+        const SizeType n = problemSize(i_begin, i_end, dist);
+
+        // [0:n, k:n]
+        const SizeType sub_offset = dist.template globalTileElementDistance<Coord::Row>(0, i_begin);
+        const matrix::internal::SubMatrixSpec submat_spec{{sub_offset, sub_offset + k}, {n, n - k}};
+
+        dlaf::matrix::internal::MatrixRef<T, D> sub_e0(e0, submat_spec);
+        dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(e1, submat_spec);
+
+        copy(sub_e1, sub_e0);
+      }));
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

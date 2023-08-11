@@ -659,21 +659,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         const std::size_t begin = thread_idx * batch_size;
         const std::size_t end = std::min(thread_idx * batch_size + batch_size, to_sizet(k));
 
-        // STEP 0a: Fill ones for deflated Eigenvectors. (single-thread)
-        // Note: this step is completely independent from the rest, but it is small and it is going
-        // to be dropped soon.
-        // Note: use last thread that in principle should have less work to do
-        if (thread_idx == nthreads - 1) {
-          for (SizeType j = k; j < n; ++j) {
-            const GlobalElementIndex jj(j, j);
-            const auto linear_jj = distr.globalTileLinearIndex(jj);
-            const auto jj_el = distr.tileElementIndex(jj);
-
-            evec_tiles[to_sizet(linear_jj)](jj_el) = 1;
-          }
-        }
-
-        // STEP 0b: Initialize workspaces (single-thread)
+        // STEP 0: Initialize workspaces (single-thread)
         if (thread_idx == 0) {
           ws_vecs.reserve(nthreads);
           for (std::size_t i = 0; i < nthreads; ++i)
@@ -922,7 +908,6 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // Note:
   // This is needed to set to zero elements of e2 outside of the k by k top-left part.
   // The input is not required to be zero for solveRank1Problem.
-  matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
   solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
 

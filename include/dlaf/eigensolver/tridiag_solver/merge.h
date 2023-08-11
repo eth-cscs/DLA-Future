@@ -92,8 +92,8 @@ namespace dlaf::eigensolver::internal {
 //
 //        pre_sorted <--- deflated
 //
-// 3. Sort index based on updated diagonal values in ascending order. The diagonal conatins eigenvalues
-//    of the deflated problem and deflated entreis from the initial diagonal
+// 3. Sort index based on updated diagonal values in ascending order. The diagonal contains eigenvalues
+//    of the deflated problem and deflated entries from the initial diagonal
 //
 //        deflated <--- post_sorted
 //

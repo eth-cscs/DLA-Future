@@ -259,7 +259,7 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
 // Note:
 // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
 // shape that allows to reduce the number of following operations (i.e. gemm)
-std::size_t coltype_index(const ColType coltype) {
+inline std::size_t coltype_index(const ColType coltype) {
   switch (coltype) {
     case ColType::UpperHalf:
       return 0;

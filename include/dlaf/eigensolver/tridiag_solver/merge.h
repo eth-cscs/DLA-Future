@@ -965,7 +965,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // copy deflated from e1 to e0
   ex::start_detached(
       ex::when_all(k) | ex::then([sub_offset, n, e0 = ws.e0.subPipeline(),
-                                  e1 = ws.e1.subPipeline()](const SizeType k) mutable {
+                                  e1 = ws.e1.subPipelineConst()](const SizeType k) mutable {
         // [0:n, k:n]
         const matrix::internal::SubMatrixSpec submat_spec{{sub_offset, sub_offset + k}, {n, n - k}};
 

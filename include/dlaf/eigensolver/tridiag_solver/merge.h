@@ -916,27 +916,29 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  const auto& dist = ws.e0.distribution();
-  matrix::internal::SubMatrixSpec
-      submat_spec{{dist.template globalElementFromGlobalTileAndTileElement<Coord::Row>(i_begin, 0),
-                   dist.template globalElementFromGlobalTileAndTileElement<Coord::Col>(i_begin, 0)},
-                  {dist.template globalTileElementDistance<Coord::Row>(i_begin, i_end),
-                   dist.template globalTileElementDistance<Coord::Col>(i_begin, i_end)}};
+  const SizeType sub_offset =
+      ws.e0.distribution().template globalTileElementDistance<Coord::Row>(0, i_begin);
+  const SizeType n = problemSize(i_begin, i_end, ws.e0.distribution());
 
-  dlaf::matrix::internal::MatrixRef<T, D> sub_e0(ws.e0, submat_spec);
-  dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(ws.e1, submat_spec);
-  dlaf::matrix::internal::MatrixRef<const T, D> sub_e2(ws.e2, submat_spec);
-  // TODO restrict to just top-left k by k
-  dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1),
-                                                              sub_e1, sub_e2, T(0), sub_e0);
+  ex::start_detached(
+      ex::when_all(k) | ex::then([sub_offset, n, e0 = ws.e0.subPipeline(), e1 = ws.e1.subPipelineConst(),
+                                  e2 = ws.e2.subPipelineConst()](const SizeType /*k*/) mutable {
+        // TODO it is still doing the full multiplication, it has to be range-limited to k
+        const matrix::internal::SubMatrixSpec submat_spec{{sub_offset, sub_offset}, {n, n}};
+
+        dlaf::matrix::internal::MatrixRef<T, D> sub_e0(e0, submat_spec);
+        dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(e1, submat_spec);
+        dlaf::matrix::internal::MatrixRef<const T, D> sub_e2(e2, submat_spec);
+
+        dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans,
+                                                                    T(1), sub_e1, sub_e2, T(0), sub_e0);
+      }));
+
   // copy deflated from e1 to e0
   ex::start_detached(
-      ex::when_all(k) | ex::then([i_begin, i_end, dist = ws.e0.distribution(), e0 = ws.e0.subPipeline(),
+      ex::when_all(k) | ex::then([sub_offset, n, e0 = ws.e0.subPipeline(),
                                   e1 = ws.e1.subPipeline()](const SizeType k) mutable {
-        const SizeType n = problemSize(i_begin, i_end, dist);
-
         // [0:n, k:n]
-        const SizeType sub_offset = dist.template globalTileElementDistance<Coord::Row>(0, i_begin);
         const matrix::internal::SubMatrixSpec submat_spec{{sub_offset, sub_offset + k}, {n, n - k}};
 
         dlaf::matrix::internal::MatrixRef<T, D> sub_e0(e0, submat_spec);

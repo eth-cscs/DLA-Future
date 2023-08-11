@@ -922,16 +922,16 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 
   ex::start_detached(
       ex::when_all(k) | ex::then([sub_offset, n, e0 = ws.e0.subPipeline(), e1 = ws.e1.subPipelineConst(),
-                                  e2 = ws.e2.subPipelineConst()](const SizeType /*k*/) mutable {
-        // TODO it is still doing the full multiplication, it has to be range-limited to k
-        const matrix::internal::SubMatrixSpec submat_spec{{sub_offset, sub_offset}, {n, n}};
+                                  e2 = ws.e2.subPipelineConst()](const SizeType k) mutable {
+        using dlaf::matrix::internal::MatrixRef;
 
-        dlaf::matrix::internal::MatrixRef<T, D> sub_e0(e0, submat_spec);
-        dlaf::matrix::internal::MatrixRef<const T, D> sub_e1(e1, submat_spec);
-        dlaf::matrix::internal::MatrixRef<const T, D> sub_e2(e2, submat_spec);
+        // TODO it has to be further improved by splitting gemm in two blocks
+        MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n, k}});
+        MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {k, k}});
+        MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n, k}});
 
         dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans,
-                                                                    T(1), sub_e1, sub_e2, T(0), sub_e0);
+                                                                    T(1), e1_sub, e2_sub, T(0), e0_sub);
       }));
 
   // copy deflated from e1 to e0

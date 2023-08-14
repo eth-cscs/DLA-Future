@@ -9,7 +9,8 @@
 //
 #pragma once
 
-#include <pika/algorithm.hpp>
+#include <algorithm>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>
@@ -93,8 +94,7 @@ void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix
     auto end_it = in_index_ptr + n;
     if constexpr (D == Device::CPU) {
       auto cmp = [v_ptr](const SizeType i1, const SizeType i2) { return v_ptr[i1] < v_ptr[i2]; };
-      pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
-                  std::move(cmp));
+      std::merge(begin_it, split_it, split_it, end_it, out_index_ptr, std::move(cmp));
     }
     else {
 #ifdef DLAF_WITH_GPU

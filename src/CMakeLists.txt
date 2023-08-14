@@ -113,31 +113,31 @@ if(DLAF_WITH_PRECOMPILED_HEADERS)
   # We create two separate targets whose precompiled headers will be reused, one
   # for libraries and one for executables. Separate targets are needed because
   # the compilation flags for executables and libraries may differ.
-  add_library(dlaf.pch_lib OBJECT dummy.cpp)
+  add_library(dlaf.pch_lib OBJECT dummy.cpp dummy.c)
   target_link_libraries(dlaf.pch_lib PRIVATE dlaf.prop dlaf.prop_private)
   target_add_warnings(dlaf.pch_lib)
 
-  add_executable(dlaf.pch_exe dummy.cpp)
+  add_executable(dlaf.pch_exe dummy.cpp dummy.c)
   target_link_libraries(dlaf.pch_exe PRIVATE dlaf.prop dlaf.prop_private)
   target_add_warnings(dlaf.pch_exe)
 
   set(precompiled_headers
       <mpi.h>
-      $<$<BOOL:${DLAF_WITH_CUDA}>:<pika/cuda.hpp$<ANGLE-R>>
-      <pika/execution.hpp>
-      <pika/mutex.hpp>
-      <pika/program_options.hpp>
-      <pika/runtime.hpp>
-      <pika/thread.hpp>
-      <blas.hh>
+      $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<BOOL:${DLAF_WITH_CUDA}>>:<pika/cuda.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<pika/execution.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<pika/mutex.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<pika/program_options.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<pika/runtime.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<pika/thread.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<blas.hh$<ANGLE-R>>
       # We exclude lapack.hh because it pulls in complex.h and defines I as a
       # macro. I is a commonly used e.g. as template parameter names and defining
       # it as a macro breaks compilation. Undefining I for the precompiled header
       # is a bigger hassle than excluding the header since it's a cheap header to
       # compile.
-      # <lapack.hh>
-      <umpire/Allocator.hpp>
-      <umpire/ResourceManager.hpp>
+      # $<$<COMPILE_LANGUAGE:CXX>:<lapack.hh$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<umpire/Allocator.hpp$<ANGLE-R>>
+      $<$<COMPILE_LANGUAGE:CXX>:<umpire/ResourceManager.hpp$<ANGLE-R>>
       $<$<BOOL:${DLAF_WITH_CUDA}>:<cublas_v2.h$<ANGLE-R>>
       $<$<BOOL:${DLAF_WITH_CUDA}>:<cuda_runtime.h$<ANGLE-R>>
       $<$<BOOL:${DLAF_WITH_CUDA}>:<cusolverDn.h$<ANGLE-R>>

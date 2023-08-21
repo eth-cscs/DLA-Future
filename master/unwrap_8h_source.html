@@ -121,15 +121,21 @@ $(function() {
 <div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;  std::decay_t&lt;F&gt; f;</div>
 <div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
 <div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span>... Ts&gt;</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">auto</span> operator()(Ts&amp;&amp;... ts)</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;      -&gt; decltype(std::move(f)(<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper</a>&lt;std::decay_t&lt;Ts&gt;&gt;::<a class="code" href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">unwrap</a>(std::forward&lt;Ts&gt;(ts))...)) {</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">auto</span> operator()(Ts&amp;&amp;... ts) &amp;&amp; -&gt; decltype(std::move(f)(</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;      <a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper</a>&lt;std::decay_t&lt;Ts&gt;&gt;::<a class="code" href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">unwrap</a>(std::forward&lt;Ts&gt;(ts))...)) {</div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="keywordflow">return</span> std::move(f)(<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper&lt;std::decay_t&lt;Ts&gt;</a>&gt;::unwrap(std::forward&lt;Ts&gt;(ts))...);</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  }</div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;};</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160; </div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F&gt;</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">Unwrapping</a>(F&amp;&amp;) -&gt; <a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">Unwrapping&lt;std::decay_t&lt;F&gt;</a>&gt;;</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;}</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="keyword">template</span> &lt;<span class="keyword">typename</span>... Ts&gt;</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">auto</span> operator()(</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;      Ts&amp;&amp;... ts) &amp; -&gt; decltype(f(<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper</a>&lt;std::decay_t&lt;Ts&gt;&gt;::<a class="code" href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">unwrap</a>(std::forward&lt;Ts&gt;(ts))...)) {</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    <span class="keywordflow">return</span> f(<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper</a>&lt;std::decay_t&lt;Ts&gt;&gt;::<a class="code" href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">unwrap</a>(std::forward&lt;Ts&gt;(ts))...);</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  }</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;};</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">typename</span> F&gt;</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">Unwrapping</a>(F&amp;&amp;) -&gt; <a class="code" href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">Unwrapping&lt;std::decay_t&lt;F&gt;</a>&gt;;</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;}</div>
 <div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1_unwrapper_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">dlaf::common::internal::Unwrapper</a></div><div class="ttdef"><b>Definition:</b> unwrap.h:23</div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1_unwrapping_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">dlaf::common::internal::Unwrapping</a></div><div class="ttdef"><b>Definition:</b> unwrap.h:55</div></div>
 <div class="ttc" id="aunwrap_8h_html_a8da70a5535ac987a8f6ca7f8b195547d"><div class="ttname"><a href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">dlaf::common::internal::unwrap</a></div><div class="ttdeci">decltype(auto) unwrap(T &amp;&amp;t)</div><div class="ttdoc">unwrap unwraps things in a way specified by Unwrapper.</div><div class="ttdef"><b>Definition:</b> unwrap.h:48</div></div>

@@ -12,8 +12,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <pika/unwrap.hpp>
-
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/communicator.h>

@@ -31,7 +31,6 @@ using namespace testing;
 
 namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
-using pika::unwrapping;
 
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);

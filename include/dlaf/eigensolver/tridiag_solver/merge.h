@@ -388,7 +388,7 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, const SizeTy
     // `s` is not negated.
     //
     // [1] LAPACK 3.10.0, file dlaed2.f, line 393
-    T r = std::sqrt(z1 * z1 + z2 * z2);
+    T r = std::hypot(z1, z2);
     T c = z1 / r;
     T s = z2 / r;
 

@@ -264,21 +264,16 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
     if (c_ptr[ii] == ColType::Deflated) {
       const T a = d0_ptr[ii];
 
-      for (SizeType j = i2; j >= k; --j) {
-        if (j == k) {
-          out_ptr[j] = ii;
-          ++i2;
+      SizeType j = i2;
+      for (; j > k; --j) {
+        const T b = d0_ptr[out_ptr[j - 1]];
+        if (a > b) {
+          break;
         }
-        else {
-          const T b = d0_ptr[out_ptr[j - 1]];
-          if (a > b) {
-            out_ptr[j] = ii;
-            ++i2;
-            break;
-          }
-          out_ptr[j] = out_ptr[j - 1];
-        }
+        out_ptr[j] = out_ptr[j - 1];
       }
+      out_ptr[j] = ii;
+      ++i2;
     }
     else {
       out_ptr[i1] = ii;

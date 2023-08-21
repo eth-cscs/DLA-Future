@@ -247,8 +247,9 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
 // ColType::Deflated entries are moved to the end. The `c_ptr` array is implicitly ordered according to
 // `in_ptr` on entry.
 //
-inline SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* c_ptr,
-                                                       const SizeType* in_ptr, SizeType* out_ptr) {
+template <class T>
+SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* c_ptr, const T* d0_ptr,
+                                                const SizeType* in_ptr, SizeType* out_ptr) {
   // Get the number of non-deflated entries
   SizeType k = 0;
   for (SizeType i = 0; i < n; ++i) {
@@ -260,17 +261,37 @@ inline SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const C
   SizeType i2 = k;  // index of deflated values
   for (SizeType i = 0; i < n; ++i) {
     const SizeType ii = in_ptr[i];
-    SizeType& io = (c_ptr[ii] != ColType::Deflated) ? i1 : i2;
-    out_ptr[io] = ii;
-    ++io;
+    if (c_ptr[ii] == ColType::Deflated) {
+      const T a = d0_ptr[ii];
+
+      for (SizeType j = i2; j >= k; --j) {
+        if (j == k) {
+          out_ptr[j] = ii;
+          ++i2;
+        }
+        else {
+          const T b = d0_ptr[out_ptr[j - 1]];
+          if (a > b) {
+            out_ptr[j] = ii;
+            ++i2;
+            break;
+          }
+          out_ptr[j] = out_ptr[j - 1];
+        }
+      }
+    }
+    else {
+      out_ptr[i1] = ii;
+      ++i1;
+    }
   }
   return k;
 }
 
-template <Device D>
+template <class T, Device D>
 auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_end,
-                                      Matrix<const ColType, D>& c, Matrix<const SizeType, D>& in,
-                                      Matrix<SizeType, D>& out) {
+                                      Matrix<const ColType, D>& c, Matrix<const T, D>& d0,
+                                      Matrix<const SizeType, D>& in, Matrix<SizeType, D>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -278,18 +299,20 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
   if constexpr (D == Device::CPU) {
-    auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles) {
+    auto part_fn = [n](const auto& c_tiles_futs, const auto& d0_tiles_fut, const auto& in_tiles_futs,
+                       const auto& out_tiles) {
       const TileElementIndex zero_idx(0, 0);
       const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+      const T* d0_ptr = d0_tiles_fut[0].get().ptr(zero_idx);
       const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
       SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
 
-      return stablePartitionIndexForDeflationArrays(n, c_ptr, in_ptr, out_ptr);
+      return stablePartitionIndexForDeflationArrays(n, c_ptr, d0_ptr, in_ptr, out_ptr);
     };
 
     TileCollector tc{i_begin, i_end};
-    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
-                        ex::when_all_vector(tc.readwrite(out))) |
+    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(d0)),
+                        ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out))) |
            di::transform(di::Policy<backend>(), std::move(part_fn));
   }
   else {
@@ -696,7 +719,8 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_hm.i2, ws_h.i3) | ex::split();
+  auto k =
+      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2, ws_h.i3) | ex::split();
 
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
   applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
@@ -1294,7 +1318,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_hm.i2, ws_h.i3) | ex::split();
+  auto k =
+      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2, ws_h.i3) | ex::split();
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
   applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws_h.d0);

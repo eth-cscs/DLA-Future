@@ -56,9 +56,15 @@ struct Unwrapping {
   std::decay_t<F> f;
 
   template <typename... Ts>
-  auto operator()(Ts&&... ts)
-      -> decltype(std::move(f)(Unwrapper<std::decay_t<Ts>>::unwrap(std::forward<Ts>(ts))...)) {
+  auto operator()(Ts&&... ts) && -> decltype(std::move(f)(
+      Unwrapper<std::decay_t<Ts>>::unwrap(std::forward<Ts>(ts))...)) {
     return std::move(f)(Unwrapper<std::decay_t<Ts>>::unwrap(std::forward<Ts>(ts))...);
+  }
+
+  template <typename... Ts>
+  auto operator()(
+      Ts&&... ts) & -> decltype(f(Unwrapper<std::decay_t<Ts>>::unwrap(std::forward<Ts>(ts))...)) {
+    return f(Unwrapper<std::decay_t<Ts>>::unwrap(std::forward<Ts>(ts))...);
   }
 };
 

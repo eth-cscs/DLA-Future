@@ -176,7 +176,7 @@ DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(dlaf::internal::TransformDispatchType::Plai
 template <Device Destination>
 struct Duplicate {
   template <typename T, Device Source, typename... Ts>
-  Tile<T, Destination> operator()(const Tile<const T, Source>& source, Ts&&... ts) {
+  Tile<T, Destination> operator()(const Tile<const T, Source>& source, Ts&&... ts) const {
     auto source_size = source.size();
     dlaf::memory::MemoryView<T, Destination> mem_view(source_size.linear_size());
     Tile<T, Destination> destination(source_size, std::move(mem_view), source_size.rows());
@@ -196,7 +196,7 @@ struct Duplicate {
 template <Device Destination>
 struct DuplicateNoCopy {
   template <typename T, Device Source>
-  Tile<T, Destination> operator()(const Tile<const T, Source>& source) {
+  Tile<T, Destination> operator()(const Tile<const T, Source>& source) const {
     auto source_size = source.size();
     dlaf::memory::MemoryView<T, Destination> mem_view(source_size.linear_size());
     Tile<T, Destination> destination(source_size, std::move(mem_view), source_size.rows());

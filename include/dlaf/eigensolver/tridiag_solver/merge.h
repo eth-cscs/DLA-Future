@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <numeric>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -114,6 +115,7 @@ struct WorkSpace {
   Matrix<T, D> z1;
 
   Matrix<SizeType, D> i2;
+  Matrix<SizeType, D> i5;
 };
 
 template <class T>
@@ -124,6 +126,7 @@ struct WorkSpaceHost {
 
   Matrix<SizeType, Device::CPU> i1;
   Matrix<SizeType, Device::CPU> i3;
+  Matrix<SizeType, Device::CPU> i4;
 };
 
 template <class T, Device D>
@@ -140,6 +143,7 @@ struct WorkSpaceHostMirror {
   HostMirrorMatrix<T, D> z1;
 
   HostMirrorMatrix<SizeType, D> i2;
+  HostMirrorMatrix<SizeType, D> i5;
 };
 
 template <class T, Device D>
@@ -248,8 +252,9 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
 // `in_ptr` on entry.
 //
 template <class T>
-SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* c_ptr, const T* d0_ptr,
-                                                const SizeType* in_ptr, SizeType* out_ptr) {
+SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* c_ptr,
+                                                const T* evals_ptr, const SizeType* in_ptr,
+                                                SizeType* out_ptr) {
   // Get the number of non-deflated entries
   SizeType k = 0;
   for (SizeType i = 0; i < n; ++i) {
@@ -262,11 +267,11 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   for (SizeType i = 0; i < n; ++i) {
     const SizeType ii = in_ptr[i];
     if (c_ptr[ii] == ColType::Deflated) {
-      const T a = d0_ptr[ii];
+      const T a = evals_ptr[ii];
 
       SizeType j = i2;
       for (; j > k; --j) {
-        const T b = d0_ptr[out_ptr[j - 1]];
+        const T b = evals_ptr[out_ptr[j - 1]];
         if (a > b) {
           break;
         }
@@ -283,55 +288,134 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   return k;
 }
 
-template <class T, Device D>
+template <class T>
+SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* types, const T* evals,
+                                                const SizeType* in_ptr, SizeType* index_sorted,
+                                                SizeType* index_sorted_coltype) {
+  // Note:
+  // (in)  types
+  //    column type of the initial indexing
+  // (in)  in_ptr
+  //    initial <-- sorted by ascending eigenvalue
+  // (out) index_sorted
+  //    initial <-- sorted by ascending eigenvalue in two groups (non-deflated | deflated)
+  // (out) index_sorted_coltype
+  //    initial <-- sorted by ascending eigenvalue in four groups (upper | dense | lower | deflated)
+
+  // Note:
+  // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
+  // shape that allows to reduce the number of following operations (i.e. gemm)
+  auto coltype_index = [](const ColType coltype) -> std::size_t {
+    switch (coltype) {
+      case ColType::UpperHalf:
+        return 0;
+      case ColType::Dense:
+        return 1;
+      case ColType::LowerHalf:
+        return 2;
+      case ColType::Deflated:
+        return 3;
+    }
+    return DLAF_UNREACHABLE(std::size_t);
+  };
+
+  std::array<std::size_t, 4> offsets{0, 0, 0, 0};
+  std::for_each(types, types + n, [&offsets, &coltype_index](const auto& coltype) {
+    if (coltype != ColType::Deflated)
+      offsets[1 + coltype_index(coltype)]++;
+  });
+  std::partial_sum(offsets.cbegin(), offsets.cend(), offsets.begin());
+
+  const SizeType k = to_SizeType(offsets[coltype_index(ColType::Deflated)]);
+
+  // Compute index_sorted
+  SizeType i1 = 0;  // index of non-deflated values in out
+  SizeType i2 = k;  // index of deflated values
+  for (SizeType i = 0; i < n; ++i) {
+    const SizeType ii = in_ptr[i];
+    if (types[ii] == ColType::Deflated) {
+      const T a = evals[ii];
+
+      SizeType j = i2;
+      for (; j > k; --j) {
+        const T b = evals[index_sorted[j - 1]];
+        if (a > b) {
+          break;
+        }
+        index_sorted[j] = index_sorted[j - 1];
+      }
+      index_sorted[j] = ii;
+      ++i2;
+    }
+    else {
+      index_sorted[i1] = ii;
+      ++i1;
+    }
+  }
+  // Compute index_sorted_coltype
+  for (SizeType j = 0; j < n; ++j) {
+    const ColType& coltype = types[to_sizet(j)];
+    if (coltype != ColType::Deflated)
+      index_sorted_coltype[offsets[coltype_index(coltype)]++] = j;
+  }
+  std::copy(index_sorted + k, index_sorted + n, index_sorted_coltype + k);
+
+  return k;
+}
+
+template <class T>
 auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_end,
-                                      Matrix<const ColType, D>& c, Matrix<const T, D>& d0,
-                                      Matrix<const SizeType, D>& in, Matrix<SizeType, D>& out) {
+                                      Matrix<const ColType, Device::CPU>& c,
+                                      Matrix<const T, Device::CPU>& evals,
+                                      Matrix<const SizeType, Device::CPU>& in,
+                                      Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
-  constexpr auto backend = dlaf::DefaultBackend_v<D>;
+  const SizeType n = problemSize(i_begin, i_end, in.distribution());
+  auto part_fn = [n](const auto& c_tiles_futs, const auto& evals_tiles_futs, const auto& in_tiles_futs,
+                     const auto& out_tiles) {
+    const TileElementIndex zero_idx(0, 0);
+    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+    const T* evals_ptr = evals_tiles_futs[0].get().ptr(zero_idx);
+    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+    SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
+
+    return stablePartitionIndexForDeflationArrays(n, c_ptr, evals_ptr, in_ptr, out_ptr);
+  };
+
+  TileCollector tc{i_begin, i_end};
+  return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
+                      ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out))) |
+         di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
+}
+
+template <class T>
+auto stablePartitionIndexForDeflation(
+    const SizeType i_begin, const SizeType i_end, Matrix<const ColType, Device::CPU>& c,
+    Matrix<const T, Device::CPU>& evals, Matrix<const SizeType, Device::CPU>& in,
+    Matrix<SizeType, Device::CPU>& out, Matrix<SizeType, Device::CPU>& out_by_coltype) {
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
-  if constexpr (D == Device::CPU) {
-    auto part_fn = [n](const auto& c_tiles_futs, const auto& d0_tiles_fut, const auto& in_tiles_futs,
-                       const auto& out_tiles) {
-      const TileElementIndex zero_idx(0, 0);
-      const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-      const T* d0_ptr = d0_tiles_fut[0].get().ptr(zero_idx);
-      const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
-      SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
+  auto part_fn = [n](const auto& c_tiles_futs, const auto& evals_tiles_futs, const auto& in_tiles_futs,
+                     const auto& out_tiles, const auto& out_coltype_tiles) {
+    const TileElementIndex zero_idx(0, 0);
+    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
+    const T* evals_ptr = evals_tiles_futs[0].get().ptr(zero_idx);
+    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+    SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
+    SizeType* out_coltype_ptr = out_coltype_tiles[0].ptr(zero_idx);
 
-      return stablePartitionIndexForDeflationArrays(n, c_ptr, d0_ptr, in_ptr, out_ptr);
-    };
+    return stablePartitionIndexForDeflationArrays(n, c_ptr, evals_ptr, in_ptr, out_ptr, out_coltype_ptr);
+  };
 
-    TileCollector tc{i_begin, i_end};
-    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(d0)),
-                        ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out))) |
-           di::transform(di::Policy<backend>(), std::move(part_fn));
-  }
-  else {
-#ifdef DLAF_WITH_GPU
-    auto part_fn = [n](const auto& c_tiles_futs, const auto& in_tiles_futs, const auto& out_tiles,
-                       auto& host_k, auto& device_k) {
-      const TileElementIndex zero_idx(0, 0);
-      const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-      const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
-      SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
-
-      return ex::just(n, c_ptr, in_ptr, out_ptr, host_k(), device_k()) |
-             di::transform(di::Policy<backend>(), stablePartitionIndexOnDevice) |
-             ex::then([&host_k]() { return *host_k(); });
-    };
-
-    TileCollector tc{i_begin, i_end};
-    return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(in)),
-                        ex::when_all_vector(tc.readwrite(out)),
-                        ex::just(memory::MemoryChunk<SizeType, Device::CPU>{1},
-                                 memory::MemoryChunk<SizeType, Device::GPU>{1})) |
-           ex::let_value(std::move(part_fn));
-#endif
-  }
+  TileCollector tc{i_begin, i_end};
+  return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
+                      ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)),
+                      ex::when_all_vector(tc.readwrite(out_by_coltype))) |
+         di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
 }
 
 template <Device D>
@@ -497,17 +581,12 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         // to be dropped soon.
         // Note: use last thread that in principle should have less work to do
         if (thread_idx == nthreads - 1) {
-          for (SizeType i = 0; i < n; ++i) {
-            const SizeType j = i2_perm[to_sizet(i)];
+          for (SizeType j = k; j < n; ++j) {
+            const GlobalElementIndex jj(j, j);
+            const auto linear_jj = distr.globalTileLinearIndex(jj);
+            const auto jj_el = distr.tileElementIndex(jj);
 
-            // if it is deflated
-            if (j >= k) {
-              const GlobalElementIndex ij(i, j);
-              const auto linear_ij = distr.globalTileLinearIndex(ij);
-              const auto ij_el = distr.tileElementIndex(ij);
-
-              evec_tiles[to_sizet(linear_ij)](ij_el) = 1;
-            }
+            evec_tiles[to_sizet(linear_jj)](jj_el) = 1;
           }
         }
 
@@ -634,15 +713,12 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
 
             const T vec_norm = blas::nrm2(k, s, 1);
 
-            for (SizeType i = 0; i < n; ++i) {
+            for (SizeType i = 0; i < k; ++i) {
               const SizeType ii = i2_perm[i];
               const auto q_tile = distr.globalTileLinearIndex({i, j});
               const auto q_ij = distr.tileElementIndex({i, j});
 
-              if (ii < k)
-                q[to_sizet(q_tile)](q_ij) = s[ii] / vec_norm;
-              else
-                q[to_sizet(q_tile)](q_ij) = 0;
+              q[to_sizet(q_tile)](q_ij) = s[ii] / vec_norm;
             }
           }
         }
@@ -654,6 +730,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
                       RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                       WorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   const LocalTileIndex idx_loc_begin(i_begin, i_begin);
@@ -679,60 +756,86 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // Initialize the column types vector `c`
   initColTypes(i_begin, i_split, i_end, ws_h.c);
 
-  // Step #1
-  //
-  //    i1 (out) : initial <--- initial (identity map)
-  //    i2 (out) : initial <--- pre_sorted
-  //
-  // - deflate `d`, `z` and `c`
-  // - apply Givens rotations to `Q` - `evecs`
-  //
+  // Initialize `i1` as identity just for single tile sub-problems
   if (i_split == i_begin + 1) {
     initIndex(i_begin, i_split, ws_h.i1);
   }
   if (i_split + 1 == i_end) {
     initIndex(i_split, i_end, ws_h.i1);
   }
+
+  // Update indices of second sub-problem
   addIndex(i_split, i_end, n1, ws_h.i1);
+
+  // Step #1
+  //
+  //    i1 (in)  : initial <--- pre_sorted per sub-problem
+  //    i2 (out) : initial <--- pre_sorted
+  //
+  // - deflate `d`, `z` and `c`
+  // - apply Givens rotations to `Q` - `evecs`
+  //
   sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);
 
   auto rots =
       applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);
 
-  // ---
-
   applyGivensRotationsToMatrixColumns(i_begin, i_end, std::move(rots), ws.e0);
-  // Placeholder for rearranging the eigenvectors: (local permutation)
-  copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 
   // Step #2
   //
-  //    i2 (in)  : initial <--- pre_sorted
-  //    i3 (out) : initial <--- deflated
+  //    i2 (in)  : initial  <--- pre_sorted
+  //    i5 (out) : initial  <--- sorted by coltype
+  //    i3 (out) : initial  <--- deflated
+  //    i4 (out) : deflated <--- sorted by coltype
   //
+  // Note: `i3[k:] == i5[k:]` (i.e. deflated part are sorted in the same way)
+  //
+  // - permute eigenvectors in `e0` using `i5` so that they are sorted by column type in `e1`
   // - reorder `d0 -> d1`, `z0 -> z1`, using `i3` such that deflated entries are at the bottom.
-  // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
+  // - compute permutation `i4`: sorted by col type ---> deflated
+  // - solve rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2` (sorted
+  // by coltype)
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
   //
+  //  | U | U | D | D |   |   | DF | DF |  U:  UpperHalf
+  //  | U | U | D | D |   |   | DF | DF |  D:  Dense
+  //  |   |   | D | D | L | L | DF | DF |  L:  LowerHalf
+  //  |   |   | D | D | L | L | DF | DF |  DF: Deflated
+  //  |   |   | D | D | L | L | DF | DF |
+  //
   auto k =
-      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2, ws_h.i3) | ex::split();
+      stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2, ws_h.i3, ws_hm.i5) |
+      ex::split();
+
+  copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);
+  dlaf::permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i5, ws.e0, ws.e1);
 
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
   applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.d1, ws_h.d0);
 
   //
-  //    i3 (in)  : initial <--- deflated
-  //    i2 (out) : initial ---> deflated
+  //    i3 (in)  : initial  <--- deflated
+  //    i2 (out) : deflated <--- initial
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
 
+  //
+  //    i5 (in)  : initial  <--- sort by coltype
+  //    i2 (in)  : deflated <--- initial
+  //    i4 (out) : deflated <--- sort by col type
+  //
+  // This allows to work in rank1 solver with columns sorted by type, so that they are well-shaped for
+  // an optimized gemm, but still keeping track of where the actual position sorted by eigenvalues is.
+  applyIndex(i_begin, i_end, ws_hm.i5, ws_hm.i2, ws_h.i4);
+
   // Note:
-  // This is neeeded to set to zero elements of e2 outside of the k by k top-left part.
+  // This is needed to set to zero elements of e2 outside of the k by k top-left part.
   // The input is not required to be zero for solveRank1Problem.
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
+  solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
@@ -933,8 +1036,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           // - LAED4 requires working on k elements
           // - Weight computation requires working on m_subm_el_lc
           //
-          // and they are needed at two steps that cannot happen in parallel, we opted for allocating the
-          // workspace with the highest requirement of memory, and reuse them for both steps.
+          // and they are needed at two steps that cannot happen in parallel, we opted for allocating
+          // the workspace with the highest requirement of memory, and reuse them for both steps.
           const SizeType max_size = std::max(k, m_subm_el_lc);
           for (std::size_t i = 0; i < nthreads; ++i)
             ws_cols.emplace_back(max_size);
@@ -1292,8 +1395,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   auto rots =
       applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);
-
-  // ---
 
   // Make sure Isend/Irecv messages don't match between calls by providing a unique `tag`
   //

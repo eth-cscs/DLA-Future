@@ -16,6 +16,17 @@
 #include <utility>
 
 namespace dlaf::common::internal {
+
+template <typename T>
+T consume_rvalue(T&& x) {
+  return std::move(x);
+}
+
+template <typename T>
+T& consume_rvalue(T& x) {
+  return x;
+}
+
 /// ConsumeRvalues is a callable object wrapper that consumes rvalues passed as arguments
 /// after calling the wrapped callable.
 template <typename F>
@@ -23,17 +34,8 @@ struct ConsumeRvalues {
   std::decay_t<F> f;
 
   template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(std::move(f)(std::forward<Ts>(ts)...)) {
-    using result_type = decltype(std::move(f)(std::forward<Ts>(ts)...));
-    if constexpr (std::is_void_v<result_type>) {
-      std::move(f)(std::forward<Ts>(ts)...);
-      std::tuple<Ts...>(std::forward<Ts>(ts)...);
-    }
-    else {
-      auto r = std::move(f)(std::forward<Ts>(ts)...);
-      std::tuple<Ts...>(std::forward<Ts>(ts)...);
-      return r;
-    }
+  auto operator()(Ts&&... ts) -> decltype(std::move(f)(consume_rvalue(std::forward<Ts>(ts))...)) {
+    return std::move(f)(consume_rvalue(std::forward<Ts>(ts))...);
   }
 };
 

@@ -243,10 +243,19 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
          ex::ensure_started();
 }
 
-// The index array `out_ptr` holds the indices of elements of `c_ptr` that order it such that
-// ColType::Deflated entries are moved to the end. The `c_ptr` array is implicitly ordered according to
-// `in_ptr` on entry.
+// This function returns number of non-deflated eigenvectors, together with a permutation @p out_ptr
+// that represent mapping (sorted non-deflated | sorted deflated) -> initial.
 //
+// The permutation will allow to keep the mapping between sorted eigenvalues and unsorted eigenvectors,
+// which is useful since eigenvectors are more expensive to permuted, so we can keep them in their initial order.
+//
+// @param n number of eigenvalues
+// @param c_ptr     array[n] containing the column type of each eigenvector after deflation (initial order)
+// @param evals_ptr array[n] of eigenvalues sorted as in_ptr
+// @param in_ptr    array[n] representing permutation current -> initial (i.e. evals[i] -> c_ptr[in_ptr[i]])
+// @param out_ptr   array[n] permutation (sorted non-deflated | sorted deflated) -> initial
+//
+// @return k        number of non-deflated eigenvectors
 template <class T>
 SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* c_ptr,
                                                 const T* evals_ptr, const SizeType* in_ptr,
@@ -258,14 +267,27 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
       ++k;
   }
 
+  // Create the permutation (sorted non-deflated | sorted deflated) -> initial
+  // Note:
+  // Since during deflation, eigenvalues related to deflated eigenvectors, might not be sorted anymore,
+  // this step also take care of sorting eigenvalues (actually just their related index) by their ascending value.
   SizeType i1 = 0;  // index of non-deflated values in out
   SizeType i2 = k;  // index of deflated values
   for (SizeType i = 0; i < n; ++i) {
     const SizeType ii = in_ptr[i];
-    if (c_ptr[ii] == ColType::Deflated) {
+
+    // non-deflated are untouched, just squeeze them at the beginning as they appear
+    if (c_ptr[ii] != ColType::Deflated) {
+      out_ptr[i1] = ii;
+      ++i1;
+    }
+    // deflated are the ones that can have been moved "out-of-order" by deflation...
+    // ... so each time insert it in the right place based on eigenvalue value
+    else {
       const T a = evals_ptr[ii];
 
       SizeType j = i2;
+      // shift all greater values to the end of the currently sorted array (shift just indices)
       for (; j > k; --j) {
         const T b = evals_ptr[out_ptr[j - 1]];
         if (a > b) {
@@ -273,12 +295,9 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
         }
         out_ptr[j] = out_ptr[j - 1];
       }
+      // and put the current one in the first place found where all greater values have been moved right
       out_ptr[j] = ii;
       ++i2;
-    }
-    else {
-      out_ptr[i1] = ii;
-      ++i1;
     }
   }
   return k;

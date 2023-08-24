@@ -185,41 +185,6 @@ void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::GPU>& t
   initIndexTile<<<nr_blocks, nr_threads, 0, stream>>>(offset, len, index_arr);
 }
 
-// -----------------------------------------
-// This is a separate struct with a call operator instead of a lambda, because
-// nvcc does not compile the file with a lambda.
-struct PartitionIndicesPredicate {
-  const ColType* c_ptr;
-  __device__ bool operator()(const SizeType i) {
-    return c_ptr[i] != ColType::Deflated;
-  }
-};
-
-__global__ void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                             SizeType* out_ptr, SizeType* device_k_ptr) {
-#ifdef DLAF_WITH_CUDA
-  constexpr auto par = thrust::cuda::par;
-#elif defined(DLAF_WITH_HIP)
-  constexpr auto par = thrust::hip::par;
-#endif
-
-  SizeType& k = *device_k_ptr;
-
-  // The number of non-deflated values
-  k = n - thrust::count(par, c_ptr, c_ptr + n, ColType::Deflated);
-
-  // Partition while preserving relative order such that deflated entries are at the end
-  thrust::stable_partition_copy(par, in_ptr, in_ptr + n, out_ptr, out_ptr + k,
-                                PartitionIndicesPredicate{c_ptr});
-}
-
-void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
-                                  whip::stream_t stream) {
-  stablePartitionIndexOnDevice<<<1, 1, 0, stream>>>(n, c_ptr, in_ptr, out_ptr, device_k_ptr);
-  whip::memcpy_async(host_k_ptr, device_k_ptr, sizeof(SizeType), whip::memcpy_device_to_host, stream);
-}
-
 template <class T>
 __global__ void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr,
                                      const SizeType* end_ptr, SizeType* out_ptr, const T* v_ptr) {

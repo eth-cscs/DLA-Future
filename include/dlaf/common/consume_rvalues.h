@@ -34,8 +34,13 @@ struct ConsumeRvalues {
   std::decay_t<F> f;
 
   template <typename... Ts>
-  auto operator()(Ts&&... ts) -> decltype(std::move(f)(consume_rvalue(std::forward<Ts>(ts))...)) {
+  auto operator()(Ts&&... ts) && -> decltype(std::move(f)(consume_rvalue(std::forward<Ts>(ts))...)) {
     return std::move(f)(consume_rvalue(std::forward<Ts>(ts))...);
+  }
+
+  template <typename... Ts>
+  auto operator()(Ts&&... ts) & -> decltype(f(consume_rvalue(std::forward<Ts>(ts))...)) {
+    return f(consume_rvalue(std::forward<Ts>(ts))...);
   }
 };
 

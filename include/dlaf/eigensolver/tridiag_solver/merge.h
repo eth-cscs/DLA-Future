@@ -92,8 +92,8 @@ namespace dlaf::eigensolver::internal {
 //
 //        pre_sorted <--- deflated
 //
-// 3. Sort index based on updated diagonal values in ascending order. The diagonal conatins eigenvalues
-//    of the deflated problem and deflated entreis from the initial diagonal
+// 3. Sort index based on updated diagonal values in ascending order. The diagonal contains eigenvalues
+//    of the deflated problem and deflated entries from the initial diagonal
 //
 //        deflated <--- post_sorted
 //
@@ -720,8 +720,9 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  dlaf::multiplication::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans, blas::Op::NoTrans,
-                                                  T(1), ws.e1, ws.e2, T(0), ws.e0);
+  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(i_begin, i_end, blas::Op::NoTrans,
+                                                            blas::Op::NoTrans, T(1), ws.e1, ws.e2, T(0),
+                                                            ws.e0);
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
@@ -1315,8 +1316,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-  dlaf::multiplication::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, i_begin, i_end,
-                                                  T(1), ws.e1, ws.e2, T(0), ws.e0);
+  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain,
+                                                            i_begin, i_end, T(1), ws.e1, ws.e2, T(0),
+                                                            ws.e0);
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

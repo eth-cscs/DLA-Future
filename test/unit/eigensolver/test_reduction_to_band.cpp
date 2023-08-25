@@ -102,7 +102,7 @@ std::vector<config_t> configs_subband{
 
 template <class T>
 MatrixLocal<T> makeLocal(const Matrix<const T, Device::CPU>& matrix) {
-  return {matrix.size(), matrix.distribution().blockSize()};
+  return {matrix.size(), matrix.distribution().baseTileSize()};
 }
 
 template <class T>
@@ -125,7 +125,7 @@ void setupHermitianBand(MatrixLocal<T>& matrix, const SizeType band_size) {
   DLAF_ASSERT(matrix.blockSize().rows() % band_size == 0, band_size, matrix.blockSize().rows());
 
   DLAF_ASSERT(square_blocksize(matrix), matrix.blockSize());
-  DLAF_ASSERT(square_size(matrix), matrix.blockSize());
+  DLAF_ASSERT(square_size(matrix), matrix.size());
 
   dlaf::common::internal::SingleThreadedBlasScope single;
 
@@ -326,7 +326,7 @@ void testReductionToBandLocal(const LocalElementSize size, const TileElementSize
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() mutable {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
-    return eigensolver::reductionToBand<B, D, T>(mat_a.get(), band_size);
+    return eigensolver::internal::reduction_to_band<B, D, T>(mat_a.get(), band_size);
   }();
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
@@ -397,7 +397,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    return eigensolver::reductionToBand<B>(grid, matrix_a.get(), band_size);
+    return eigensolver::internal::reduction_to_band<B>(grid, matrix_a.get(), band_size);
   }();
 
   ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());

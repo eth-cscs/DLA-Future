@@ -16,7 +16,9 @@
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
@@ -54,16 +56,17 @@ TYPED_TEST_SUITE(MatrixTest, MatrixElementTypes);
 struct TestSizes {
   LocalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
-    {{0, 0}, {11, 13}},
-    {{3, 0}, {1, 2}},
-    {{0, 1}, {7, 32}},
-    {{15, 18}, {5, 9}},
-    {{6, 6}, {2, 2}},
-    {{3, 4}, {24, 15}},
-    {{16, 24}, {3, 5}},
+    {{0, 0}, {11, 13}, {11, 13}},
+    {{3, 0}, {1, 2}, {1, 1}},
+    {{0, 1}, {7, 32}, {7, 8}},
+    {{15, 18}, {5, 9}, {5, 3}},
+    {{6, 6}, {2, 2}, {2, 2}},
+    {{3, 4}, {24, 15}, {8, 15}},
+    {{16, 24}, {3, 5}, {3, 5}},
 });
 
 GlobalElementSize globalTestSize(const LocalElementSize& size, const Size2D& grid_size) {
@@ -194,8 +197,8 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                    std::min(1, comm_grid.size().cols() - 1));
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(),
-                                src_rank_index);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), src_rank_index);
 
       // Copy distribution for testing purpose.
       Distribution distribution_copy(distribution);
@@ -518,22 +521,34 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
 struct ExistingLocalTestSizes {
   LocalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
   SizeType ld;
   SizeType row_offset;
   SizeType col_offset;
 };
 
 const std::vector<ExistingLocalTestSizes> existing_local_tests({
-    {{10, 7}, {3, 4}, 10, 3, 40},  // Column major layout
-    {{10, 7}, {3, 4}, 11, 3, 44},  // with padding (ld)
-    {{10, 7}, {3, 4}, 13, 4, 52},  // with padding (row)
-    {{10, 7}, {3, 4}, 10, 3, 41},  // with padding (col)
-    {{6, 11}, {4, 3}, 4, 12, 24},  // Tile layout
-    {{6, 11}, {4, 3}, 5, 15, 30},  // with padding (ld)
-    {{6, 11}, {4, 3}, 4, 13, 26},  // with padding (row)
-    {{6, 11}, {4, 3}, 4, 12, 31},  // with padding (col)
-    {{6, 11}, {4, 3}, 4, 12, 28},  // compressed col_offset
-    {{0, 0}, {1, 1}, 1, 1, 1},
+    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 40},  // Column major layout
+    {{10, 7}, {3, 4}, {3, 4}, 11, 3, 44},  // with padding (ld)
+    {{10, 7}, {3, 4}, {3, 4}, 13, 4, 52},  // with padding (row)
+    {{10, 7}, {3, 4}, {3, 4}, 10, 3, 41},  // with padding (col)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 24},  // Tile layout
+    {{6, 11}, {4, 3}, {4, 3}, 5, 15, 30},  // with padding (ld)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 13, 26},  // with padding (row)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 31},  // with padding (col)
+    {{6, 11}, {4, 3}, {4, 3}, 4, 12, 28},  // compressed col_offset
+    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
+    // Same, but with block_size != tile_size
+    {{10, 7}, {3, 4}, {3, 2}, 10, 3, 40},  // Column major layout
+    {{10, 7}, {3, 4}, {3, 2}, 11, 3, 44},  // with padding (ld)
+    {{10, 7}, {3, 4}, {3, 2}, 13, 4, 52},  // with padding (row)
+    {{10, 7}, {3, 4}, {3, 1}, 10, 3, 41},  // with padding (col)
+    {{6, 11}, {4, 3}, {2, 3}, 4, 12, 24},  // Tile layout
+    {{6, 11}, {4, 3}, {2, 3}, 5, 15, 30},  // with padding (ld)
+    {{6, 11}, {4, 3}, {2, 3}, 4, 13, 26},  // with padding (row)
+    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 31},  // with padding (col)
+    {{6, 11}, {4, 3}, {1, 3}, 4, 12, 28},  // compressed col_offset
+    {{0, 0}, {1, 1}, {1, 1}, 1, 1, 1},
 });
 
 TYPED_TEST(MatrixLocalTest, ConstructorExisting) {
@@ -584,8 +599,9 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
       // Copy distribution for testing purpose.
@@ -614,8 +630,9 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.block_size,
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = colMajorLayout(distribution.localSize(), test.tile_size,
                                          std::max<SizeType>(1, distribution.localSize().rows()));
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
 
@@ -915,8 +932,9 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
+                                comm_grid.rank(), {0, 0});
+      LayoutInfo layout = tileLayout(distribution.localSize(), test.tile_size);
       memory::MemoryView<Type, Device::CPU> mem(layout.minMemSize());
       const Type* p = mem();
       Matrix<const Type, Device::CPU> mat(std::move(distribution), layout, p);
@@ -1828,6 +1846,70 @@ TYPED_TEST(MatrixTest, GPUCopySubPipeline) {
       }
 
       CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
+    }
+  }
+}
+#endif
+
+struct TestReshuffling {
+  const GlobalElementSize size;
+  const TileElementSize src_tilesize;
+  const TileElementSize dst_tilesize;
+};
+std::vector<TestReshuffling> sizes_reshuffling_tests{
+    TestReshuffling{{10, 10}, {3, 3}, {3, 3}},   // same shape
+    TestReshuffling{{10, 5}, {5, 10}, {10, 2}},  // x2 | /5
+    TestReshuffling{{26, 13}, {10, 3}, {5, 6}},  // /2 | x2
+};
+
+template <class T, Device Source, Device Destination>
+void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
+  const auto& [size, src_tilesize, dst_tilesize] = config;
+  const comm::Index2D origin_rank_src(std::max(0, grid.size().rows() - 1),
+                                      std::max(0, grid.size().cols() - 1));
+  matrix::Distribution dist_src(size, src_tilesize, grid.size(), grid.rank(), origin_rank_src);
+  const comm::Index2D origin_rank_dst(
+      std::min(grid.size().rows() - 1, dlaf::util::ceilDiv(grid.size().rows(), 2)),
+      std::min(grid.size().cols() - 1, dlaf::util::ceilDiv(grid.size().cols(), 2)));
+  matrix::Distribution dist_dst(size, dst_tilesize, grid.size(), grid.rank(), origin_rank_dst);
+
+  auto fixedValues = [](const GlobalElementIndex index) { return T(index.row() * 1000 + index.col()); };
+
+  matrix::Matrix<const T, Device::CPU> src_host = [dist_src, fixedValues]() {
+    matrix::Matrix<T, Device::CPU> src_host(dist_src);
+    matrix::util::set(src_host, fixedValues);
+    return src_host;
+  }();
+  matrix::Matrix<T, Device::CPU> dst_host(dist_dst);
+
+  {
+    matrix::MatrixMirror<const T, Source, Device::CPU> src(src_host);
+    matrix::MatrixMirror<T, Destination, Device::CPU> dst(dst_host);
+    matrix::copy(src.get(), dst.get(), grid);
+  }
+
+  CHECK_MATRIX_EQ(fixedValues, dst_host);
+
+  // Note: ensure that everything finishes before next call to Communicator::clone() that might block a
+  // working thread (and if it is just one, it would deadlock)
+  pika::threads::get_thread_manager().wait();
+}
+
+TYPED_TEST(MatrixTest, CopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::CPU, Device::CPU>(config, grid);
+    }
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(MatrixTest, GPUCopyReshuffling) {
+  for (const auto& grid : this->commGrids()) {
+    for (const auto& config : sizes_reshuffling_tests) {
+      testReshuffling<TypeParam, Device::GPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::CPU, Device::GPU>(config, grid);
+      testReshuffling<TypeParam, Device::GPU, Device::CPU>(config, grid);
     }
   }
 }

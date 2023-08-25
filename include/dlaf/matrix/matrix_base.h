@@ -23,10 +23,7 @@ namespace internal {
 
 class MatrixBase {
 public:
-  MatrixBase(Distribution distribution) : distribution_(std::move(distribution)) {
-    DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
-                "Multi Tile distribution block is not supperted by Matrix yet.");
-  }
+  MatrixBase(Distribution distribution) : distribution_(std::move(distribution)) {}
 
   MatrixBase(const Distribution& distribution, const LocalTileSize& tiles_per_block)
       : distribution_(distribution.size(), distribution.blockSize(),

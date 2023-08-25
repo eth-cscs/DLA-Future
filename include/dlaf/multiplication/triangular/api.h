@@ -14,9 +14,7 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
-namespace dlaf {
-namespace multiplication {
-namespace internal {
+namespace dlaf::multiplication::internal {
 template <Backend backend, Device device, class T>
 struct Triangular {
   static void call_LLN(blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
@@ -60,6 +58,4 @@ DLAF_MULTIPLICATION_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, double)
 DLAF_MULTIPLICATION_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<float>)
 DLAF_MULTIPLICATION_TRIANGULAR_ETI(extern, Backend::GPU, Device::GPU, std::complex<double>)
 #endif
-}
-}
 }

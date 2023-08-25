@@ -54,7 +54,6 @@ std::vector<config_t> test_params{
 template <class TypeParam, Coord panel_axis, StoreTransposed Storage>
 void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using pika::unwrapping;
 
   const matrix::Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
 
@@ -119,7 +118,6 @@ std::vector<config_t> test_params_bcast_transpose{
 template <class TypeParam, Coord AxisSrc, StoreTransposed storageT>
 void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
-  using pika::unwrapping;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
   const auto rank = dist.rankIndex().get(AxisSrc);

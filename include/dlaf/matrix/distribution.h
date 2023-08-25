@@ -20,10 +20,15 @@
 namespace dlaf {
 namespace matrix {
 
+/// Contains information to create a sub-distribution.
+struct SubDistributionSpec {
+  GlobalElementIndex origin;
+  GlobalElementSize size;
+};
+
 /// Distribution contains the information about the size and distribution of a matrix.
 ///
 /// More details available in misc/matrix_distribution.md.
-
 class Distribution {
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
@@ -44,7 +49,7 @@ public:
   /// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
   /// @param[in] element_offset is the element-wise offset of the top left tile of the matrix ,
   /// @pre size.isValid(),
-  /// @pre !tile_size.isEmpty(),
+  /// @pre !block_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
@@ -62,7 +67,7 @@ public:
   /// @param[in] element_offset is the element-wise offset of the top left tile
   ///            of the matrix, used in addition to @p tile_offset,
   /// @pre size.isValid(),
-  /// @pre !tile_size.isEmpty(),
+  /// @pre !block_size.isEmpty(),
   /// @pre !grid_size.isEmpty(),
   /// @pre rank_index.isIn(grid_size),
   /// @pre source_rank_index.isIn(grid_size).
@@ -118,6 +123,15 @@ public:
   Distribution& operator=(const Distribution& rhs) = default;
 
   Distribution& operator=(Distribution&& rhs) noexcept;
+
+  /// Constructs a sub-distribution based on the given distribution @p dist specified by @p spec.
+  ///
+  /// @param[in] dist is the input distribution,
+  /// @param[in] spec contains the origin and size of the new distribution relative to the input distribution,
+  /// @pre spec.origin.isValid()
+  /// @pre spec.size.isValid()
+  /// @pre spec.origin + spec.size <= dist.size()
+  Distribution(Distribution dist, const SubDistributionSpec& spec);
 
   bool operator==(const Distribution& rhs) const noexcept {
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && tile_size_ == rhs.tile_size_ &&
@@ -490,6 +504,30 @@ public:
             localElementDistanceFromLocalTile<Coord::Col>(begin.col(), end.col())};
   }
 
+  /// Returns the tile index in the current distribution corresponding to a tile index @p sub_index in a
+  /// sub-distribution (defined by @p sub_offset and @p sub_distribution)
+  GlobalTileIndex globalTileIndexFromSubDistribution(const GlobalElementIndex& sub_offset,
+                                                     const Distribution& sub_distribution,
+                                                     const GlobalTileIndex& sub_index) const noexcept {
+    DLAF_ASSERT(sub_index.isIn(sub_distribution.nrTiles()), sub_index, sub_distribution.nrTiles());
+    DLAF_ASSERT(isCompatibleSubDistribution(sub_offset, sub_distribution), "");
+    const GlobalTileIndex tile_offset = globalTileIndex(sub_offset);
+    return tile_offset + common::sizeFromOrigin(sub_index);
+  }
+
+  /// Returns the element offset within the tile in the current distribution corresponding to a tile
+  /// index @p sub_index in a sub-distribution (defined by @p sub_offset and @p sub_distribution)
+  TileElementIndex tileElementOffsetFromSubDistribution(
+      const GlobalElementIndex& sub_offset, const Distribution& sub_distribution,
+      const GlobalTileIndex& sub_index) const noexcept {
+    DLAF_ASSERT(sub_index.isIn(sub_distribution.nrTiles()), sub_index, sub_distribution.nrTiles());
+    DLAF_ASSERT(isCompatibleSubDistribution(sub_offset, sub_distribution), "");
+    return {
+        sub_index.row() == 0 ? tileElementFromGlobalElement<Coord::Row>(sub_offset.row()) : 0,
+        sub_index.col() == 0 ? tileElementFromGlobalElement<Coord::Col>(sub_offset.col()) : 0,
+    };
+  }
+
 private:
   /// @pre block_size_, and tile_size_ are already set correctly.
   template <Coord rc>
@@ -563,6 +601,25 @@ private:
   /// @pre offset_ and source_rank_index_ are already set correctly.
   /// @post offset_.row() < block_size_.rows() && offset_.col() < block_size_.cols()
   void normalizeSourceRankAndOffset() noexcept;
+
+  /// Checks if another distribution is a compatible sub-distribution of the current distribution.
+  ///
+  /// Compatible means that the block size, tile size, rank index, and grid size are equal.
+  /// Sub-distribution means that the source rank index of the sub-distribution is the rank index
+  /// of the tile at sub_offset in the current distribution. Additionally, the size and offset of
+  /// the sub-distribution must be within the size of the current distribution.
+  bool isCompatibleSubDistribution(const GlobalElementIndex& sub_offset,
+                                   const Distribution& sub_distribution) const noexcept {
+    const bool compatibleGrid = blockSize() == sub_distribution.blockSize() &&
+                                baseTileSize() == sub_distribution.baseTileSize() &&
+                                rankIndex() == sub_distribution.rankIndex() &&
+                                commGridSize() == sub_distribution.commGridSize();
+    const bool compatibleSourceRankIndex =
+        rankGlobalTile(globalTileIndex(sub_offset)) == sub_distribution.sourceRankIndex();
+    const bool compatibleSize = sub_offset.row() + sub_distribution.size().rows() <= size().rows() &&
+                                sub_offset.col() + sub_distribution.size().cols() <= size().cols();
+    return compatibleGrid && compatibleSourceRankIndex && compatibleSize;
+  }
 
   /// Sets default values.
   ///

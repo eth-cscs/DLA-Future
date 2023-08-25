@@ -130,10 +130,11 @@ struct GenEigensolverMiniapp {
 
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
+        using dlaf::hermitian_generalized_eigensolver;
         if (opts.local)
-          return dlaf::eigensolver::genEigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get());
+          return hermitian_generalized_eigensolver<backend>(opts.uplo, matrix_a->get(), matrix_b->get());
         else
-          return dlaf::eigensolver::genEigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
+          return hermitian_generalized_eigensolver<backend>(comm_grid, opts.uplo, matrix_a->get(),
                                                             matrix_b->get());
       };
       auto [eigenvalues, eigenvectors] = bench();
@@ -232,21 +233,19 @@ void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<con
   const TileElementIndex last_ev_el_tile = evalues.distribution().tileElementIndex(last_ev);
   const auto norm_A = std::max(std::norm(sync_wait(evalues.read(GlobalTileIndex{0, 0})).get()({0, 0})),
                                std::norm(sync_wait(evalues.read(last_ev_tile)).get()(last_ev_el_tile)));
-  const auto norm_B =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max, uplo, B);
+  const auto norm_B = dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, uplo, B);
 
   // 2.
   // Compute C = E D - A E
   Matrix<T, Device::CPU> C(E.distribution());
   Matrix<T, Device::CPU> C2(E.distribution());
   dlaf::miniapp::scaleEigenvectors(evalues, E, C2);
-  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{1}, B, C2, T{0}, C);
-  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{1}, B, C2, T{0}, C);
+  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::General, C);
+      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

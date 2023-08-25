@@ -20,7 +20,6 @@
 #include <dlaf/util_matrix.h>
 
 namespace dlaf {
-namespace solver {
 
 /// Triangular Solve implementation on local memory, solving op(A) X = alpha B (when side == Left)
 /// or X op(A) = alpha B (when side == Right).
@@ -41,8 +40,8 @@ namespace solver {
 /// @pre mat_a and mat_b are not distributed,
 /// @pre mat_a and mat_b are multipliable.
 template <Backend backend, Device device, class T>
-void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
-                Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
+                       Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -55,18 +54,18 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LLN(diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LLT(op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LLT(op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LUN(diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LUT(op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LUT(op, diag, alpha, mat_a, mat_b);
       }
     }
   }
@@ -75,18 +74,18 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RLN(diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RLN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RLT(op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RLT(op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RUN(diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RUN(diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RUT(op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RUT(op, diag, alpha, mat_a, mat_b);
       }
     }
   }
@@ -113,8 +112,9 @@ void triangular(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, 
 /// @pre matrix A and matrix B are distributed according to the grid,
 /// @pre matrix A and matrix B are multipliable.
 template <Backend backend, Device device, class T>
-void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
-                blas::Diag diag, T alpha, Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
+void triangular_solver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+                       blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
+                       Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);
@@ -127,18 +127,18 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LLN(grid, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LLT(grid, op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LLT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_LUN(grid, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LUN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_LUT(grid, op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_LUT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
   }
@@ -147,22 +147,21 @@ void triangular(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, b
 
     if (uplo == blas::Uplo::Lower) {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RLN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RLT(grid, op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RLT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
     else {
       if (op == blas::Op::NoTrans) {
-        internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RUN(grid, diag, alpha, mat_a, mat_b);
       }
       else {
-        internal::Triangular<backend, device, T>::call_RUT(grid, op, diag, alpha, mat_a, mat_b);
+        solver::internal::Triangular<backend, device, T>::call_RUT(grid, op, diag, alpha, mat_a, mat_b);
       }
     }
   }
 }
 
-}
 }

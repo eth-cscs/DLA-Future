@@ -184,7 +184,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(b, mat_c.get(), mat_v.get(), mat_taus);
+    eigensolver::internal::bt_reduction_to_band<B, D, T>(b, mat_c.get(), mat_v.get(), mat_taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };
@@ -222,7 +222,7 @@ void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType
   {
     MatrixMirror<T, D, Device::CPU> mat_c(mat_c_h);
     MatrixMirror<const T, D, Device::CPU> mat_v(mat_v_h);
-    eigensolver::backTransformationReductionToBand<B, D, T>(grid, b, mat_c.get(), mat_v.get(), mat_taus);
+    eigensolver::internal::bt_reduction_to_band<B, D, T>(grid, b, mat_c.get(), mat_v.get(), mat_taus);
   }
 
   auto result = [&c_loc](const GlobalElementIndex& index) { return c_loc(index); };

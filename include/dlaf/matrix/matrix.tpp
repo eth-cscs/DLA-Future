@@ -27,7 +27,7 @@ Matrix<T, D>::Matrix(Distribution distribution) : Matrix<const T, D>(std::move(d
       std::max<SizeType>(1,
                          util::ceilDiv(this->distribution().localSize().rows(), alignment) * alignment);
 
-  auto layout = colMajorLayout(this->distribution().localSize(), this->blockSize(), ld);
+  auto layout = colMajorLayout(this->distribution().localSize(), this->baseTileSize(), ld);
 
   SizeType memory_size = layout.minMemSize();
   memory::MemoryView<ElementType, D> mem(memory_size);
@@ -41,7 +41,7 @@ Matrix<T, D>::Matrix(Distribution distribution, const LayoutInfo& layout) noexce
   DLAF_ASSERT(this->distribution().localSize() == layout.size(),
               "Size of distribution does not match layout size!", distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
+  DLAF_ASSERT(this->distribution().baseTileSize() == layout.blockSize(), distribution.baseTileSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, D> mem(layout.minMemSize());

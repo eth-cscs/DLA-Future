@@ -116,9 +116,9 @@ struct EigensolverMiniapp {
       dlaf::common::Timer<> timeit;
       auto bench = [&]() {
         if (opts.local)
-          return dlaf::eigensolver::eigensolver<backend>(opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(opts.uplo, matrix->get());
         else
-          return dlaf::eigensolver::eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
+          return dlaf::hermitian_eigensolver<backend>(comm_grid, opts.uplo, matrix->get());
       };
       auto [eigenvalues, eigenvectors] = bench();
 
@@ -218,12 +218,11 @@ void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const 
   // Compute C = E D - A E
   Matrix<T, Device::CPU> C(E.distribution());
   dlaf::miniapp::scaleEigenvectors(evalues, E, C);
-  dlaf::multiplication::hermitian<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
+  dlaf::hermitian_multiplication<Backend::MC>(comm_grid, blas::Side::Left, uplo, T{-1}, A, E, T{1}, C);
 
   // 3. Compute the max norm of the difference
   const auto norm_diff =
-      dlaf::auxiliary::norm<dlaf::Backend::MC>(comm_grid, rank_result, lapack::Norm::Max,
-                                               blas::Uplo::General, C);
+      dlaf::auxiliary::max_norm<dlaf::Backend::MC>(comm_grid, rank_result, blas::Uplo::General, C);
 
   // 4.
   // Evaluation of correctness is done just by the master rank

@@ -87,8 +87,8 @@ void testGeneralMultiplication(const SizeType a, const SizeType b, const T alpha
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::generalSubMatrix<B>(a, b, blas::Op::NoTrans, blas::Op::NoTrans, alpha, mat_a.get(),
-                                        mat_b.get(), beta, mat_c.get());
+    multiplication::internal::generalSubMatrix<B>(a, b, blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                                  mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
@@ -157,7 +157,8 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    multiplication::generalSubMatrix<B>(grid, a, b, alpha, mat_a.get(), mat_b.get(), beta, mat_c.get());
+    multiplication::internal::generalSubMatrix<B>(grid, a, b, alpha, mat_a.get(), mat_b.get(), beta,
+                                                  mat_c.get());
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,

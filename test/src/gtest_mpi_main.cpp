@@ -48,7 +48,15 @@
 GTEST_API_ int main(int argc, char* argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
 
-  MPI_Init(&argc, &argv);
+  // Initialize MPI
+  int threading_required = MPI_THREAD_MULTIPLE;
+  int threading_provided;
+  MPI_Init_thread(&argc, &argv, threading_required, &threading_provided);
+
+  if (threading_provided != threading_required) {
+    std::fprintf(stderr, "Provided MPI threading model does not match the required one.\n");
+    MPI_Abort(MPI_COMM_WORLD, 1);
+  }
 
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 

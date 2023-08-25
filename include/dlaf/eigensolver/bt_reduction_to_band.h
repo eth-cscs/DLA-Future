@@ -19,8 +19,7 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace eigensolver {
+namespace dlaf::eigensolver::internal {
 
 /// Eigenvalue back-transformation implementation on local memory.
 ///
@@ -38,9 +37,8 @@ namespace eigensolver {
 /// @pre mat_c has equal tile and block sizes,
 /// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
-void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_c,
-                                       Matrix<const T, device>& mat_v,
-                                       Matrix<const T, Device::CPU>& mat_taus) {
+void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
+                          Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::local_matrix(mat_c), mat_c);
   DLAF_ASSERT(matrix::local_matrix(mat_v), mat_v);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -57,7 +55,7 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
   };
   DLAF_ASSERT(mat_taus.nrTiles().rows() == nr_reflectors_blocks(), mat_taus.size().rows(), mat_v, b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
+  BackTransformationReductionToBand<backend, device, T>::call(b, mat_c, mat_v, mat_taus);
 }
 
 /// Eigenvalue back-transformation implementation on distributed memory.
@@ -76,9 +74,8 @@ void backTransformationReductionToBand(const SizeType b, Matrix<T, device>& mat_
 /// @pre mat_c has equal tile and block sizes,
 /// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
-void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeType b,
-                                       Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
-                                       Matrix<const T, Device::CPU>& mat_taus) {
+void bt_reduction_to_band(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
+                          Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);
   DLAF_ASSERT(square_size(mat_v), mat_v);
@@ -97,7 +94,6 @@ void backTransformationReductionToBand(comm::CommunicatorGrid grid, const SizeTy
   DLAF_ASSERT(mat_taus.distribution().localNrTiles().rows() == nr_reflectors_blocks(), mat_taus, mat_v,
               b);
 
-  internal::BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);
-}
+  BackTransformationReductionToBand<backend, device, T>::call(grid, b, mat_c, mat_v, mat_taus);
 }
 }

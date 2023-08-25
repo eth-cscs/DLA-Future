@@ -27,7 +27,7 @@ Matrix<const T, D>::Matrix(Distribution distribution, const matrix::LayoutInfo& 
     : MatrixBase(std::move(distribution)) {
   DLAF_ASSERT(this->distribution().localSize() == layout.size(), distribution.localSize(),
               layout.size());
-  DLAF_ASSERT(this->distribution().blockSize() == layout.blockSize(), distribution.blockSize(),
+  DLAF_ASSERT(this->distribution().baseTileSize() == layout.blockSize(), distribution.baseTileSize(),
               layout.blockSize());
 
   memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());

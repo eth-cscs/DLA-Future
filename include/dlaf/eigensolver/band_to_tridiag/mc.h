@@ -1064,14 +1064,21 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // The offset is set to the first unused tag by compute_copy_tag.
   const comm::IndexT_MPI offset_v_tag = compute_copy_tag(n, false);
 
-  auto compute_v_tag = [offset_v_tag](SizeType i, bool is_bottom) {
-    // only the row index is needed as dependencies are added to avoid
-    // more columns of the same row at the same time.
-    return offset_v_tag + static_cast<comm::IndexT_MPI>(2 * i) + (is_bottom ? 1 : 0);
+  auto compute_v_tag = [offset_v_tag, tiles_v = mat_v.nrTiles(),
+                        ranks2d = grid.size()](GlobalTileIndex ij, bool is_bottom) {
+    auto i = static_cast<comm::IndexT_MPI>(ij.row() / ranks2d.rows());
+    auto j = static_cast<comm::IndexT_MPI>(ij.col() / ranks2d.cols());
+    auto ld = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.rows(), ranks2d.rows()));
+    return offset_v_tag + 2 * (i + ld * j) + (is_bottom ? 1 : 0);
+  };
+  auto end_v_tag = [offset_v_tag, tiles_v = mat_v.nrTiles(), ranks2d = grid.size()]() {
+    auto i = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.rows(), ranks2d.rows()));
+    auto j = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.cols(), ranks2d.cols()));
+    return offset_v_tag + 2 * i * j;
   };
 
   // The offset is set to the first unused tag by compute_v_tag.
-  const comm::IndexT_MPI offset_col_tag = compute_v_tag(n, false);
+  const comm::IndexT_MPI offset_col_tag = end_v_tag();
 
   auto compute_col_tag = [offset_col_tag, ranks](SizeType id_block, bool last_col) {
     // By construction the communication from block j+1 to block j are dependent, therefore a tag per
@@ -1411,7 +1418,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 }
                 else {
                   ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
-                                                        compute_v_tag(index_v.row(), bottom),
+                                                        compute_v_tag(index_v, bottom),
                                                         std::move(tile_v_panel)));
                 }
               };
@@ -1438,7 +1445,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
               ex::start_detached(comm::scheduleRecv(
-                  ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v.row(), bottom),
+                  ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v, bottom),
                   matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
                                                                            std::move(dep)))));
             }

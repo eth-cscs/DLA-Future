@@ -653,7 +653,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
   // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag
-  // which act on the i-th column of the band matrix (copy tridiag on previous nb colums as well).
+  // which act on the i-th column of the band matrix (copy tridiag on previous nb columns as well).
   // Then the sweep is continued using run_sweep.
   // Dependencies are tracked with counting semaphores.
   // In the next schema above each sweep the acquisitions of the semaphore are depicted with an a.
@@ -970,34 +970,37 @@ private:
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
-  // TODO rewrite
-  // Note on the algorithm, data distribution and dependency tracking:
-  // The band matrix is redistribuited in 1D block cyclic. The new block size is a multiple of the
-  // block_size of mat_a. As sweeps are performed the matrix is shifted one column to the left (The
-  // computed diagonal and off diagonal elements of the resulting tridiagonal matrix are copied into the
-  // result such that the column of the buffer can be reused.)
-  //
+  // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
-  // The i-th sweep is initialized by init_sweep which act on the i-th column of the band matrix.
-  // Then the sweep continues applying steps.
-  // The j-th step acts on the columns [i+1 + j * b, i+1 + (j+1) * b)
-  // The steps in the same sweep has to be executed in order and the dependencies are managed by the
-  // worker pipelines. The deps vector is used to set the dependencies among two different sweeps.
+  // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag
+  // which act on the i-th column of the band matrix (copy tridiag on previous nb columns as well).
+  // Then the sweep is continued using run_sweep.
+  // Dependencies are tracked with counting semaphores.
+  // In the next schema above each sweep the acquisitions of the semaphore are depicted with an a.
+  // Below the sweep the releases are denoted with r.
   //
-  // assuming b = 4 and nb = 8 (i.e each task applies two steps) distributed with block 2 * nb (i.e.
-  // tiles_per_block = 2):
-  //               RANK 0                                                 RANK 1
-  // Copy of band: A A A A B B B B C C C C D D D D                        E E E E F F F F G ...
-  //                 deps[0][0]   |  deps[0][1]   | deps[0][2]      <-col-  deps[0][0]   |  ...
-  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3        -worker->       4 4 4 4 5 5 5 5
-  //                |  deps[0][0]   |  deps[0][1]   | deps[0][2]    <-col-    deps[0][0]   |  ...
-  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3      -worker->         4 4 4 4 5 5 5 5 ...
-  //                  |  deps[0][0]   |  deps[0][1]   | deps[0][2]  <-col-      deps[0][0]   |  ...
-  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3    -worker->           4 4 4 4 5 5 5 5 ...
+  // assuming b = 4, nb = 8, nb_band = 16:
+  // Copy of band: A A A A B B B B C C C C D D D D           E E E E F F F
+  //                            2r|             2r|         |         2r+r|
+  // Copy col                                      r <------ a
+  //               a|a      |a      |a      |a      |         |a      |a  |
+  // Sweep 0       I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 -worker-> 4 4 4 4 5 5
+  //                |      r|      r|      r|      r|         |      r|r+r|
+  // Copy col                                        r <------ a
+  //                 a|a      |a      |a      |a      |         |a      |
+  // Sweep 1         I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 -worker-> 4 4 4 4 *
+  //                  |      r|      r|      r|      r|         |    r+r|
+  // Copy col                                          r <------ a
+  //                   a|a      |a      |a      |a      |         |a      |
+  // Sweep 2           I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 -worker-> 4 4 4 4
+  //                    |      r|      r|      r|      r|         |    r+r|
+  // Copy col                                            r <------ a
+  //                     a|a      |a      |a      |a      |         |a    |
+  // Sweep 3             I 0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3 -worker-> 4 4 4
+  //                      |      r|      r|      r|      r|         |  r+r|
   //                    ...
-  // Note: j-th task (in this case 2*j-th and 2*j+1-th steps) depends explicitly only on deps[*][j+1],
-  //       as the pipeline dependency on j-1-th task (or sweep_init for j=0) implies a dependency on
-  //       deps[*][j] as well.
+  // Note: The last step has an extra release (+r) to ensure that the last step of the next sweep
+  //       can execute. E.g. see sweep 3 step 4.
   using common::iterate_range2d;
   using common::Pipeline;
   using common::RoundRobin;

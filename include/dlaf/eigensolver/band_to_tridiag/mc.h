@@ -1064,16 +1064,17 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // The offset is set to the first unused tag by compute_copy_tag.
   const comm::IndexT_MPI offset_v_tag = compute_copy_tag(n, false);
 
-  auto compute_v_tag = [offset_v_tag, tiles_v = mat_v.nrTiles(),
-                        ranks2d = grid.size()](GlobalTileIndex ij, bool is_bottom) {
+  auto compute_v_tag = [nb, b, offset_v_tag, tiles_v = mat_v.nrTiles(),
+                        ranks2d = grid.size()](GlobalTileIndex ij, SizeType j_origin, bool is_bottom) {
     auto i = static_cast<comm::IndexT_MPI>(ij.row() / ranks2d.rows());
-    auto j = static_cast<comm::IndexT_MPI>(ij.col() / ranks2d.cols());
+    auto j = static_cast<comm::IndexT_MPI>(ij.col() / ranks2d.cols() * (nb / b) + j_origin / b);
     auto ld = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.rows(), ranks2d.rows()));
     return offset_v_tag + 2 * (i + ld * j) + (is_bottom ? 1 : 0);
   };
-  auto end_v_tag = [offset_v_tag, tiles_v = mat_v.nrTiles(), ranks2d = grid.size()]() {
+  auto end_v_tag = [nb, b, offset_v_tag, tiles_v = mat_v.nrTiles(), ranks2d = grid.size()]() {
     auto i = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.rows(), ranks2d.rows()));
-    auto j = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.cols(), ranks2d.cols()));
+    auto j = static_cast<comm::IndexT_MPI>(util::ceilDiv<SizeType>(tiles_v.cols(), ranks2d.cols()) *
+                                           (nb / b));
     return offset_v_tag + 2 * i * j;
   };
 
@@ -1404,24 +1405,25 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           const auto id_panel_local = dist_panel.localTileIndex(id_panel);
           tiles_v[id_panel_local.row()] = ex::any_sender<TilePtr>{};
 
-          auto copy_or_send =
-              [&comm, rank, &panel_v, &mat_v,
-               &compute_v_tag](const LocalTileIndex index_panel,
-                               const TileElementIndex spec_panel_origin, const TileElementSize spec_size,
-                               const comm::IndexT_MPI rank_v, const GlobalTileIndex index_v,
-                               const TileElementIndex spec_v_origin, const bool bottom) {
-                auto tile_v_panel = splitTile(panel_v.read(index_panel), {spec_panel_origin, spec_size});
-                if (rank == rank_v) {
-                  auto tile_v = splitTile(mat_v.readwrite(index_v), {spec_v_origin, spec_size});
-                  ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
-                                     copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
-                }
-                else {
-                  ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
-                                                        compute_v_tag(index_v, bottom),
-                                                        std::move(tile_v_panel)));
-                }
-              };
+          auto copy_or_send = [&comm, rank, &panel_v, &mat_v,
+                               &compute_v_tag](const LocalTileIndex index_panel,
+                                               const TileElementIndex spec_panel_origin,
+                                               const TileElementSize spec_size,
+                                               const comm::IndexT_MPI rank_v,
+                                               const GlobalTileIndex index_v,
+                                               const TileElementIndex spec_v_origin, const bool bottom) {
+            auto tile_v_panel = splitTile(panel_v.read(index_panel), {spec_panel_origin, spec_size});
+            if (rank == rank_v) {
+              auto tile_v = splitTile(mat_v.readwrite(index_v), {spec_v_origin, spec_size});
+              ex::start_detached(ex::when_all(std::move(tile_v_panel), std::move(tile_v)) |
+                                 copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
+            }
+            else {
+              ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
+                                                    compute_v_tag(index_v, spec_v_origin.col(), bottom),
+                                                    std::move(tile_v_panel)));
+            }
+          };
 
           for (SizeType i = 0; i < helper.nr_tiles(); ++i) {
             copy_or_send(id_panel_local, helper.spec_panel_origin(i), helper.spec_size(i),
@@ -1445,7 +1447,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
               ex::start_detached(comm::scheduleRecv(
-                  ex::make_unique_any_sender(comm), rank_panel, compute_v_tag(index_v, bottom),
+                  ex::make_unique_any_sender(comm), rank_panel,
+                  compute_v_tag(index_v, spec_v_origin.col(), bottom),
                   matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
                                                                            std::move(dep)))));
             }

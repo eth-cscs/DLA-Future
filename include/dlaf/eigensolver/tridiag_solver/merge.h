@@ -295,7 +295,7 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
         }
         out_ptr[j] = out_ptr[j - 1];
       }
-      // and put the current one in the first place found where all greater values have been moved right
+      // and insert the current index in the empty place, such that eigenvalues are sorted.
       out_ptr[j] = ii;
       ++i2;
     }

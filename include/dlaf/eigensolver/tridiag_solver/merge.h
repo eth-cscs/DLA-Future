@@ -287,7 +287,7 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
       const T a = evals_ptr[ii];
 
       SizeType j = i2;
-      // shift all greater values to the end of the currently sorted array (shift just indices)
+      // shift to right all greater values (shift just indices)
       for (; j > k; --j) {
         const T b = evals_ptr[out_ptr[j - 1]];
         if (a > b) {

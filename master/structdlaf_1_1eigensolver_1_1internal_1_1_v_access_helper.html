@@ -67,7 +67,6 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
-<a href="#pub-static-methods">Static Public Member Functions</a> &#124;
 <a href="structdlaf_1_1eigensolver_1_1internal_1_1_v_access_helper-members.html">List of all members</a>  </div>
   <div class="headertitle">
 <div class="title">dlaf::eigensolver::internal::VAccessHelper Struct Reference</div>  </div>
@@ -76,51 +75,33 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ab95ae7457e9ccdaa7443052813f2414e"><td class="memItemLeft" align="right" valign="top"><a id="ab95ae7457e9ccdaa7443052813f2414e"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>VAccessHelper</b> (const <a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, const SizeType band, const SizeType sweeps, const SizeType sweep0, const SizeType step0, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_band, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_panel, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_v) noexcept</td></tr>
-<tr class="separator:ab95ae7457e9ccdaa7443052813f2414e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8d3c4045b2cf0f14a361e3e29ab231b"><td class="memItemLeft" align="right" valign="top"><a id="ad8d3c4045b2cf0f14a361e3e29ab231b"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>copyIsSplitted</b> () const noexcept</td></tr>
-<tr class="separator:ad8d3c4045b2cf0f14a361e3e29ab231b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2445d4a8e1ecffa99e6b72a802ff8b79"><td class="memItemLeft" align="right" valign="top"><a id="a2445d4a8e1ecffa99e6b72a802ff8b79"></a>
-<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>indexPanel</b> () const noexcept</td></tr>
-<tr class="separator:a2445d4a8e1ecffa99e6b72a802ff8b79"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae89a233c970ddca95b7186f68579e2e3"><td class="memItemLeft" align="right" valign="top"><a id="ae89a233c970ddca95b7186f68579e2e3"></a>
-<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rankPanel</b> () const noexcept</td></tr>
-<tr class="separator:ae89a233c970ddca95b7186f68579e2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abf6a7410d473c6c7844c6aee2d1ec5ab"><td class="memItemLeft" align="right" valign="top"><a id="abf6a7410d473c6c7844c6aee2d1ec5ab"></a>
-<a class="el" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">matrix::SubTileSpec</a>&#160;</td><td class="memItemRight" valign="bottom"><b>specPanelTop</b> () const noexcept</td></tr>
-<tr class="separator:abf6a7410d473c6c7844c6aee2d1ec5ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad5de945eaea46299ec880f48654965b1"><td class="memItemLeft" align="right" valign="top"><a id="ad5de945eaea46299ec880f48654965b1"></a>
-<a class="el" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">matrix::SubTileSpec</a>&#160;</td><td class="memItemRight" valign="bottom"><b>specPanelBottom</b> () const noexcept</td></tr>
-<tr class="separator:ad5de945eaea46299ec880f48654965b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a825cacd314e641ee8e30b5f96b506442"><td class="memItemLeft" align="right" valign="top"><a id="a825cacd314e641ee8e30b5f96b506442"></a>
-<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>indexVTop</b> () const noexcept</td></tr>
-<tr class="separator:a825cacd314e641ee8e30b5f96b506442"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0c606aee8b3194a7666b947899740bf0"><td class="memItemLeft" align="right" valign="top"><a id="a0c606aee8b3194a7666b947899740bf0"></a>
-<a class="el" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">matrix::SubTileSpec</a>&#160;</td><td class="memItemRight" valign="bottom"><b>specVTop</b> () const noexcept</td></tr>
-<tr class="separator:a0c606aee8b3194a7666b947899740bf0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a975f376f0b6e123124ee0fd0f7b19623"><td class="memItemLeft" align="right" valign="top"><a id="a975f376f0b6e123124ee0fd0f7b19623"></a>
-<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rankVTop</b> () const noexcept</td></tr>
-<tr class="separator:a975f376f0b6e123124ee0fd0f7b19623"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0dceeb7c8443091c9a6679d550c6e16d"><td class="memItemLeft" align="right" valign="top"><a id="a0dceeb7c8443091c9a6679d550c6e16d"></a>
-<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>indexVBottom</b> () const noexcept</td></tr>
-<tr class="separator:a0dceeb7c8443091c9a6679d550c6e16d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad0d623ee206af327e001adae7e3e7fa5"><td class="memItemLeft" align="right" valign="top"><a id="ad0d623ee206af327e001adae7e3e7fa5"></a>
-<a class="el" href="structdlaf_1_1matrix_1_1_sub_tile_spec.html">matrix::SubTileSpec</a>&#160;</td><td class="memItemRight" valign="bottom"><b>specVBottom</b> () const noexcept</td></tr>
-<tr class="separator:ad0d623ee206af327e001adae7e3e7fa5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afe68b682abb25e4cec58d5002f8524e4"><td class="memItemLeft" align="right" valign="top"><a id="afe68b682abb25e4cec58d5002f8524e4"></a>
-<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rankVBottom</b> () const noexcept</td></tr>
-<tr class="separator:afe68b682abb25e4cec58d5002f8524e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
-Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a53e6e717dec135cbad235368d2e0baa9"><td class="memItemLeft" align="right" valign="top"><a id="a53e6e717dec135cbad235368d2e0baa9"></a>
-static <a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rankPanel</b> (const SizeType band, const SizeType step, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_band) noexcept</td></tr>
-<tr class="separator:a53e6e717dec135cbad235368d2e0baa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a99b38d3591421d68082934f4902771"><td class="memItemLeft" align="right" valign="top"><a id="a4a99b38d3591421d68082934f4902771"></a>
-static <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>indexPanel</b> (const SizeType band, const SizeType step, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_band, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_panel) noexcept</td></tr>
-<tr class="separator:a4a99b38d3591421d68082934f4902771"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3abb3bfc4c7f0eb424d1e8981dc6b348"><td class="memItemLeft" align="right" valign="top"><a id="a3abb3bfc4c7f0eb424d1e8981dc6b348"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>VAccessHelper</b> (const <a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;grid, const SizeType sweeps, const SizeType sweep0, const SizeType step0, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_panel, const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;dist_v) noexcept</td></tr>
+<tr class="separator:a3abb3bfc4c7f0eb424d1e8981dc6b348"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8a91255ed7b77fa9c157defd99db9c25"><td class="memItemLeft" align="right" valign="top"><a id="a8a91255ed7b77fa9c157defd99db9c25"></a>
+<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>index_panel</b> () const noexcept</td></tr>
+<tr class="separator:a8a91255ed7b77fa9c157defd99db9c25"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afd6a74654ae8f460db4692252162a17f"><td class="memItemLeft" align="right" valign="top"><a id="afd6a74654ae8f460db4692252162a17f"></a>
+<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rank_panel</b> () const noexcept</td></tr>
+<tr class="separator:afd6a74654ae8f460db4692252162a17f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa61fc3312d9c63a1c622b405d295aaf9"><td class="memItemLeft" align="right" valign="top"><a id="aa61fc3312d9c63a1c622b405d295aaf9"></a>
+SizeType&#160;</td><td class="memItemRight" valign="bottom"><b>nr_tiles</b> () const noexcept</td></tr>
+<tr class="separator:aa61fc3312d9c63a1c622b405d295aaf9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7e3660993b265174ac425cc5666ec8e4"><td class="memItemLeft" align="right" valign="top"><a id="a7e3660993b265174ac425cc5666ec8e4"></a>
+<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>spec_panel_origin</b> (SizeType i) const noexcept</td></tr>
+<tr class="separator:a7e3660993b265174ac425cc5666ec8e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a53d24ff7b602973f484e37e7cfb99093"><td class="memItemLeft" align="right" valign="top"><a id="a53d24ff7b602973f484e37e7cfb99093"></a>
+<a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>&#160;</td><td class="memItemRight" valign="bottom"><b>spec_size</b> (SizeType i) const noexcept</td></tr>
+<tr class="separator:a53d24ff7b602973f484e37e7cfb99093"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0997f3302bc34ece10a193e46c314b6"><td class="memItemLeft" align="right" valign="top"><a id="af0997f3302bc34ece10a193e46c314b6"></a>
+<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>index_v</b> (SizeType i) const noexcept</td></tr>
+<tr class="separator:af0997f3302bc34ece10a193e46c314b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d85a085c9a8883a63b4e007ef57b041"><td class="memItemLeft" align="right" valign="top"><a id="a6d85a085c9a8883a63b4e007ef57b041"></a>
+<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rank_v</b> (SizeType i) const noexcept</td></tr>
+<tr class="separator:a6d85a085c9a8883a63b4e007ef57b041"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aadfee23805902df62873f02bde9b20ee"><td class="memItemLeft" align="right" valign="top"><a id="aadfee23805902df62873f02bde9b20ee"></a>
+<a class="el" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>&#160;</td><td class="memItemRight" valign="bottom"><b>spec_v_origin</b> (SizeType i) const noexcept</td></tr>
+<tr class="separator:aadfee23805902df62873f02bde9b20ee"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this struct was generated from the following file:<ul>
 <li>/home/runner/work/DLA-Future/DLA-Future/include/dlaf/eigensolver/band_to_tridiag/<a class="el" href="eigensolver_2band__to__tridiag_2mc_8h_source.html">mc.h</a></li>

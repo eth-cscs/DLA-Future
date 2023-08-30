@@ -976,8 +976,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // which act on the i-th column of the band matrix (copy tridiag on previous nb columns as well).
   // Then the sweep is continued using run_sweep.
   // Dependencies are tracked with counting semaphores.
-  // In the next schema above each sweep the acquisitions of the semaphore are depicted with an a.
-  // Below the sweep the releases are denoted with r.
+  // In the next schema:
+  // - above each sweep the acquisitions of the semaphore are depicted with an a.
+  // - below the sweep the releases are denoted with r.
   //
   // assuming b = 4, nb = 8, nb_band = 16:
   // Copy of band: A A A A B B B B C C C C D D D D           E E E E F F F
@@ -1335,7 +1336,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         const SizeType next_j = sweep + (init_step + steps_per_block) * b;
         if (next_j < size) {
           // Sweep 0:
-          //   As copy are independent we need to make sure all that the band matrix copy is finished
+          //   As copies are independent we need to make sure that all the band matrix copies are finished
           //   before releasing the semaphore.
           // Sweeps 1, 2, ...:
           //   The dependency on the operation of the previous sweep is real as the Worker cannot be sent

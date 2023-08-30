@@ -22,13 +22,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("shared", default=True, description="Build shared libraries.")
 
-    variant("hdf5", default=False, description="HDF5 support for dealing with matrices on disk.")
+    variant("hdf5", default=False, when="@0.2.0:", description="HDF5 support for dealing with matrices on disk.")
 
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("scalapack", default=False, description="Build C API compatible with ScaLAPACK")
+    variant("scalapack", default=False, when="@0.2.0:", description="Build C API compatible with ScaLAPACK")
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -44,7 +44,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+rocm~shared", when="+rocm")
     depends_on("umpire@4.1.0:")
 
-    depends_on("pika@0.16:")
+    depends_on("pika@0.15.1:", when="@0.1.0")
+    depends_on("pika@0.16:", when="@0.2.0:")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")

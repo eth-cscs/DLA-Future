@@ -1336,8 +1336,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         const SizeType next_j = sweep + (init_step + steps_per_block) * b;
         if (next_j < size) {
           // Sweep 0:
-          //   As copies are independent we need to make sure that all the band matrix copies are finished
-          //   before releasing the semaphore.
+          //   As copies are independent we need to make sure that all the band matrix copies are
+          //   finished before releasing the semaphore.
           // Sweeps 1, 2, ...:
           //   The dependency on the operation of the previous sweep is real as the Worker cannot be sent
           //   before dep_block gets ready, and the Worker is needed in the next rank to update the

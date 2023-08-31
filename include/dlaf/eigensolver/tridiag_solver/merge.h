@@ -10,8 +10,10 @@
 #pragma once
 
 #include <algorithm>
+#include <array>
 #include <functional>
 #include <numeric>
+#include <tuple>
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
@@ -254,6 +256,23 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
          ex::ensure_started();
 }
 
+// Note:
+// This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
+// shape that allows to reduce the number of following operations (i.e. gemm)
+std::size_t coltype_index(const ColType coltype) {
+  switch (coltype) {
+    case ColType::UpperHalf:
+      return 0;
+    case ColType::Dense:
+      return 1;
+    case ColType::LowerHalf:
+      return 2;
+    case ColType::Deflated:
+      return 3;
+  }
+  return DLAF_UNREACHABLE(std::size_t);
+}
+
 // This function returns number of non-deflated eigenvectors, together with a permutation @p out_ptr
 // that represent mapping (sorted non-deflated | sorted deflated) -> initial.
 //
@@ -314,8 +333,9 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   return k;
 }
 
-// This function returns number of non-deflated eigenvectors, together with two permutations
-// - @p index_sorted          (sort(non-deflated)|sort(deflated)) -> initial.
+// This function returns number of non-deflated eigenvectors and a tuple with number of upper, dense
+// and lower non-deflated eigenvectors, together with two permutations:
+// - @p index_sorted          (sort(non-deflated)|sorted(deflated) -> initial.
 // - @p index_sorted_coltype  (upper|dense|lower|sort(deflated)) -> initial
 //
 // The permutations will allow to keep the mapping between sorted eigenvalues and unsorted eigenvectors,
@@ -330,10 +350,11 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
 // @param index_sorted_coltype  array[n] (upper|dense|lower|sort(deflated)) -> initial
 //
 // @return k                    number of non-deflated eigenvectors
+// @return n_udl                tuple with number of upper, dense and lower eigenvectors
 template <class T>
-SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* types, const T* evals,
-                                                const SizeType* perm_sorted, SizeType* index_sorted,
-                                                SizeType* index_sorted_coltype) {
+auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* types, const T* evals,
+                                            const SizeType* perm_sorted, SizeType* index_sorted,
+                                            SizeType* index_sorted_coltype) {
   // Note:
   // (in)  types
   //    column type of the initial indexing
@@ -344,28 +365,16 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   // (out) index_sorted_coltype
   //    initial <-- (upper | dense | lower | sort(deflated))
 
-  // Note:
-  // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrix
-  // shape that allows to reduce the number of following operations (i.e. gemm)
-  auto coltype_index = [](const ColType coltype) -> std::size_t {
-    switch (coltype) {
-      case ColType::UpperHalf:
-        return 0;
-      case ColType::Dense:
-        return 1;
-      case ColType::LowerHalf:
-        return 2;
-      case ColType::Deflated:
-        return 3;
-    }
-    return DLAF_UNREACHABLE(std::size_t);
-  };
-
   std::array<std::size_t, 4> offsets{0, 0, 0, 0};
-  std::for_each(types, types + n, [&offsets, &coltype_index](const auto& coltype) {
+  std::for_each(types, types + n, [&offsets](const auto& coltype) {
     if (coltype != ColType::Deflated)
       offsets[1 + coltype_index(coltype)]++;
   });
+
+  std::array<std::size_t, 3> n_udl{offsets[1 + coltype_index(ColType::UpperHalf)],
+                                   offsets[1 + coltype_index(ColType::Dense)],
+                                   offsets[1 + coltype_index(ColType::LowerHalf)]};
+
   std::partial_sum(offsets.cbegin(), offsets.cend(), offsets.begin());
 
   const SizeType k = to_SizeType(offsets[coltype_index(ColType::Deflated)]);
@@ -420,7 +429,7 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   }
   std::copy(index_sorted + k, index_sorted + n, index_sorted_coltype + k);
 
-  return k;
+  return std::tuple(k, std::move(n_udl));
 }
 
 template <class T>
@@ -815,8 +824,12 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   const LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
   const LocalTileSize sz_tiles_vec(nrtiles, 1);
 
-  // Calculate the size of the upper subproblem
-  const SizeType n1 = problemSize(i_begin, i_split, ws.e0.distribution());
+  const auto& dist = ws.e0.distribution();
+
+  // Calculate the size of the upper, lower and full problem
+  const SizeType n = problemSize(i_begin, i_end, dist);
+  const SizeType n_upper = problemSize(i_begin, i_split, dist);
+  const SizeType n_lower = problemSize(i_split, i_end, dist);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
   assembleZVec(i_begin, i_split, i_end, rho, ws.e0, ws.z0);
@@ -840,7 +853,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   }
 
   // Update indices of second sub-problem
-  addIndex(i_split, i_end, n1, ws_h.i1);
+  addIndex(i_split, i_end, n_upper, ws_h.i1);
 
   // Step #1
   //
@@ -850,7 +863,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // - deflate `d`, `z` and `c`
   // - apply Givens rotations to `Q` - `evecs`
   //
-  sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);
+  sortIndex(i_begin, i_end, ex::just(n_upper), ws_h.d0, ws_h.i1, ws_hm.i2);
 
   auto rots =
       applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);
@@ -879,9 +892,10 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //  |   |   | D | D | L | L | DF | DF |  DF: Deflated
   //  |   |   | D | D | L | L | DF | DF |
   //
-  auto k =
+  auto [k_unique, n_udl] =
       stablePartitionIndexForDeflation(i_begin, i_end, ws_h.c, ws_h.d0, ws_hm.i2, ws_h.i3, ws_hm.i5) |
-      ex::split();
+      ex::split_tuple();
+  auto k = ex::split(std::move(k_unique));
 
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);
   dlaf::permutations::permute<B, D, T, Coord::Col>(i_begin, i_end, ws.i5, ws.e0, ws.e1);
@@ -916,22 +930,36 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  const SizeType sub_offset =
-      ws.e0.distribution().template globalTileElementDistance<Coord::Row>(0, i_begin);
-  const SizeType n = problemSize(i_begin, i_end, ws.e0.distribution());
+  const SizeType sub_offset = dist.template globalTileElementDistance<Coord::Row>(0, i_begin);
 
   ex::start_detached(
-      ex::when_all(k) | ex::then([sub_offset, n, e0 = ws.e0.subPipeline(), e1 = ws.e1.subPipelineConst(),
-                                  e2 = ws.e2.subPipelineConst()](const SizeType k) mutable {
+      ex::when_all(k, n_udl) | ex::then([sub_offset, n, n_upper, n_lower, e0 = ws.e0.subPipeline(),
+                                         e1 = ws.e1.subPipelineConst(), e2 = ws.e2.subPipelineConst()](
+                                            const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
 
-        // TODO it has to be further improved by splitting gemm in two blocks
-        MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n, k}});
-        MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {k, k}});
-        MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n, k}});
+        const SizeType n_uh = to_SizeType(n_udl[coltype_index(ColType::UpperHalf)]);
+        const SizeType n_de = to_SizeType(n_udl[coltype_index(ColType::Dense)]);
+        const SizeType n_lh = to_SizeType(n_udl[coltype_index(ColType::LowerHalf)]);
 
-        dlaf::multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans,
-                                                                    T(1), e1_sub, e2_sub, T(0), e0_sub);
+        const SizeType a = n_uh + n_de;
+        const SizeType b = n_de + n_lh;
+
+        using GEMM = dlaf::multiplication::internal::GeneralSub<B, D, T>;
+        {
+          MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n_upper, a}});
+          MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {a, k}});
+          MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n_upper, k}});
+          GEMM::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1), e1_sub, e2_sub, T(0), e0_sub);
+        }
+
+        {
+          MatrixRef<const T, D> e1_sub(e1, {{sub_offset + n_upper, sub_offset + n_uh}, {n_lower, b}});
+          MatrixRef<const T, D> e2_sub(e2, {{sub_offset + n_uh, sub_offset}, {b, k}});
+          MatrixRef<T, D> e0_sub(e0, {{sub_offset + n_upper, sub_offset}, {n_lower, k}});
+
+          GEMM::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1), e1_sub, e2_sub, T(0), e0_sub);
+        }
       }));
 
   // copy deflated from e1 to e0

@@ -171,8 +171,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             if "+scalapack" in spec:
                 args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
 
-        if "+scalapack" in spec:
-            args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
+        args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

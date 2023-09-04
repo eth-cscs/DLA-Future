@@ -391,7 +391,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   // Mirror workspace on host memory for CPU-only kernels
   DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2),
                                       initMirrorMatrix(ws.d1), initMirrorMatrix(ws.z0),
-                                      initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2)};
+                                      initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2),
+                                      initMirrorMatrix(ws.i5)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(thread_priority::normal, ws.e0);

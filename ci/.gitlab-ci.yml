@@ -17,7 +17,7 @@ stages:
   timeout: 6 hours
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: 4752d1cde3f93ee0c4e442efb2e96bce9b7a9340
+    SPACK_SHA: 29aa7117f42f758bc537e03e4bedf66ced0accfa
     SPACK_DLAF_REPO: ./spack
   before_script:
     - !reference [.fetch-registry-tokens, script]

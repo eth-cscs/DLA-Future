@@ -338,7 +338,7 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   //    initial <-- sorted by ascending eigenvalue in four groups (upper | dense | lower | deflated)
 
   // Note:
-  // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
+  // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrix
   // shape that allows to reduce the number of following operations (i.e. gemm)
   auto coltype_index = [](const ColType coltype) -> std::size_t {
     switch (coltype) {

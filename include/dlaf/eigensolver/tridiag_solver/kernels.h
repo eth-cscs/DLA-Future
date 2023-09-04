@@ -275,11 +275,6 @@ void initIndexTileAsync(SizeType tile_row, TileSender&& tile) {
 
 #ifdef DLAF_WITH_GPU
 
-// Returns the number of non-deflated entries
-void stablePartitionIndexOnDevice(SizeType n, const ColType* c_ptr, const SizeType* in_ptr,
-                                  SizeType* out_ptr, SizeType* host_k_ptr, SizeType* device_k_ptr,
-                                  whip::stream_t stream);
-
 template <class T>
 void mergeIndicesOnDevice(const SizeType* begin_ptr, const SizeType* split_ptr, const SizeType* end_ptr,
                           SizeType* out_ptr, const T* v_ptr, whip::stream_t stream);

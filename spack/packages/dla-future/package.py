@@ -16,18 +16,29 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/eth-cscs/DLA-Future.git"
     maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
+    version("0.2.0", sha256="da73cbd1b88287c86d84b1045a05406b742be924e65c52588bbff200abd81a10")
     version("0.1.0", sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1")
     version("master", branch="master")
 
     variant("shared", default=True, description="Build shared libraries.")
 
-    variant("hdf5", default=False, description="HDF5 support for dealing with matrices on disk.")
+    variant(
+        "hdf5",
+        default=False,
+        when="@0.2.0:",
+        description="HDF5 support for dealing with matrices on disk.",
+    )
 
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
 
-    variant("scalapack", default=False, description="Build C API compatible with ScaLAPACK")
+    variant(
+        "scalapack",
+        default=False,
+        when="@0.2.0:",
+        description="Build C API compatible with ScaLAPACK",
+    )
 
     depends_on("cmake@3.22:", type="build")
     depends_on("doxygen", type="build", when="+doc")
@@ -43,7 +54,9 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire+rocm~shared", when="+rocm")
     depends_on("umpire@4.1.0:")
 
-    depends_on("pika@0.17:")
+    depends_on("pika@0.15.1:", when="@0.1")
+    depends_on("pika@0.16:", when="@0.2.0:")
+    depends_on("pika@main", when="@main")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
@@ -159,8 +172,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             if "+scalapack" in spec:
                 args.append(self.define("SCALAPACK_LIBRARY", spec["scalapack"].libs.ld_flags))
 
-        if "+scalapack" in spec:
-            args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
+        args.append(self.define_from_variant("DLAF_WITH_SCALAPACK", "scalapack"))
 
         # CUDA/HIP
         args.append(self.define_from_variant("DLAF_WITH_CUDA", "cuda"))

@@ -308,8 +308,8 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
 }
 
 // This function returns number of non-deflated eigenvectors, together with two permutations
-// - @p index_sorted          (sorted non-deflated | sorted deflated) -> initial.
-// - @p index_sorted_coltype  (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+// - @p index_sorted          (sort(non-deflated)|sort(deflated)) -> initial.
+// - @p index_sorted_coltype  (upper|dense|lower|sort(deflated)) -> initial
 //
 // The permutations will allow to keep the mapping between sorted eigenvalues and unsorted eigenvectors,
 // which is useful since eigenvectors are more expensive to permuted, so we can keep them in their
@@ -319,8 +319,8 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
 // @param types                 array[n] column type of each eigenvector after deflation (initial order)
 // @param evals                 array[n] of eigenvalues sorted as perm_sorted
 // @param perm_sorted           array[n] current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
-// @param index_sorted          array[n] (sorted non-deflated | sorted deflated) -> initial
-// @param index_sorted_coltype  array[n] (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+// @param index_sorted          array[n] (sort(non-deflated)|sort(deflated)) -> initial
+// @param index_sorted_coltype  array[n] (upper|dense|lower|sort(deflated)) -> initial
 //
 // @return k                    number of non-deflated eigenvectors
 template <class T>
@@ -333,9 +333,9 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   // (in)  perm_sorted
   //    initial <-- sorted by ascending eigenvalue
   // (out) index_sorted
-  //    initial <-- sorted by ascending eigenvalue in two groups (non-deflated | deflated)
+  //    initial <-- (sort(non-deflated) | sort(deflated))
   // (out) index_sorted_coltype
-  //    initial <-- sorted by ascending eigenvalue in four groups (upper | dense | lower | deflated)
+  //    initial <-- (upper | dense | lower | sort(deflated))
 
   // Note:
   // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrix
@@ -397,7 +397,12 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
     }
   }
 
-  // Create the permutation (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+  // Create the permutation (upper|dense|lower|sort(deflated)) -> initial
+  // Note:
+  // non-deflated part is created starting from the initial order, because we are not interested
+  // in having them sorted.
+  // on the other hand, deflated part has to be sorted, so we copy the work from the index_sorted,
+  // where they have been already sorted (post-deflation).
   for (SizeType j = 0; j < n; ++j) {
     const ColType& coltype = types[to_sizet(j)];
     if (coltype != ColType::Deflated) {

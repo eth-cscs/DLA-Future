@@ -1,0 +1,26 @@
+#
+# Distributed Linear Algebra with Future (DLAF)
+#
+# Copyright (c) 2018-2023, ETH Zurich
+# All rights reserved.
+#
+# Please, refer to the LICENSE file in the root directory.
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+spack:
+  include:
+  - common.yaml
+
+  view: false
+  concretizer:
+    unify:
+      true
+
+  specs:
+    - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich ^pika+stdexec ^stdexec@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main
+
+  packages:
+    all:
+      variants:
+        - 'build_type=Debug'

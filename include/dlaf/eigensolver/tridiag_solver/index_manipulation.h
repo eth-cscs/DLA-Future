@@ -114,37 +114,28 @@ void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix
 }
 
 // Applies `index` to `in` to get `out`
-template <class T, Device D>
-void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& index,
-                Matrix<const T, D>& in, Matrix<T, D>& out) {
+template <class T>
+void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
+                Matrix<const T, Device::CPU>& in, Matrix<T, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   const SizeType n = problemSize(i_begin, i_end, index.distribution());
-  auto applyIndex_fn = [n](const auto& index_futs, const auto& in_futs, const auto& out,
-                           [[maybe_unused]] auto&&... ts) {
+  auto applyIndex_fn = [n](const auto& index_futs, const auto& in_futs, const auto& out) {
     const TileElementIndex zero_idx(0, 0);
     const SizeType* i_ptr = index_futs[0].get().ptr(zero_idx);
     const T* in_ptr = in_futs[0].get().ptr(zero_idx);
     T* out_ptr = out[0].ptr(zero_idx);
 
-    if constexpr (D == Device::CPU) {
-      for (SizeType i = 0; i < n; ++i) {
-        out_ptr[i] = in_ptr[i_ptr[i]];
-      }
-    }
-    else {
-#ifdef DLAF_WITH_GPU
-      applyIndexOnDevice(n, i_ptr, in_ptr, out_ptr, ts...);
-#endif
-    }
+    for (SizeType i = 0; i < n; ++i)
+      out_ptr[i] = in_ptr[i_ptr[i]];
   };
 
   TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
-  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(applyIndex_fn),
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(applyIndex_fn),
                                    std::move(sender)));
 }
 

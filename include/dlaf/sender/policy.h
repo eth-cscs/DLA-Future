@@ -24,10 +24,12 @@ template <Backend B>
 class Policy {
 private:
   const pika::execution::thread_priority priority_ = pika::execution::thread_priority::normal;
+  const char* annotation_ = nullptr;
 
 public:
   Policy() = default;
-  explicit Policy(pika::execution::thread_priority priority) : priority_(priority) {}
+  explicit Policy(pika::execution::thread_priority priority, const char* annotation = nullptr)
+      : priority_(priority), annotation_(annotation) {}
   Policy(Policy&&) = default;
   Policy(const Policy&) = default;
   Policy& operator=(Policy&&) = default;
@@ -35,6 +37,9 @@ public:
 
   pika::execution::thread_priority priority() const noexcept {
     return priority_;
+  }
+  const char* annotation() const noexcept {
+    return annotation_;
   }
 };
 }

@@ -203,15 +203,16 @@ auto scaleRho(RhoSender&& rho) {
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
 //
-template <class T, Device D>
-auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& vec) {
+template <class T>
+auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, Device::CPU>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin));
   for (SizeType i = i_begin; i < i_end; ++i) {
-    tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read(LocalTileIndex(i, 0))));
+    tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read(LocalTileIndex(i, 0))) |
+                        di::transform(di::Policy<Backend::MC>(), tile::internal::lange_o));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -225,9 +226,9 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
-template <class T, Device D>
-auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& d,
-                   Matrix<const T, D>& z) {
+template <class T>
+auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, Device::CPU>& d,
+                   Matrix<const T, Device::CPU>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -471,12 +472,20 @@ auto stablePartitionIndexForDeflation(
          di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
 }
 
-template <Device D>
-void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
-                  Matrix<ColType, D>& coltypes) {
+inline void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                         Matrix<ColType, Device::CPU>& coltypes) {
+  namespace di = dlaf::internal;
+
   for (SizeType i = i_begin; i < i_end; ++i) {
-    ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    setColTypeTileAsync<D>(val, coltypes.readwrite(LocalTileIndex(i, 0)));
+    const ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
+    di::transformDetach(
+        di::Policy<Backend::MC>(),
+        [](const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
+          for (SizeType i = 0; i < tile.size().rows(); ++i) {
+            tile(TileElementIndex(i, 0)) = ct;
+          }
+        },
+        di::whenAllLift(val, coltypes.readwrite(LocalTileIndex(i, 0))));
   }
 }
 

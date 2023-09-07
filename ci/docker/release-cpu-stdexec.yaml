@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich ^pika@main +stdexec ^stdexec@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main
+    - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich ^pika +stdexec ^stdexec@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main
 
   packages:
     all:

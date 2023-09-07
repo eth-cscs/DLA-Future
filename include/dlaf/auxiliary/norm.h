@@ -27,9 +27,9 @@ namespace dlaf::auxiliary {
 ///
 /// @note @p uplo == blas::uplo::Upper not yet implemented
 ///
-/// @pre `A.blockSize().rows() == A.blockSize().cols()`,
-/// @pre @p A is distributed according to @p grid,
-/// @pre @p A has equal tile and block sizes,
+/// @pre @p A is distributed according to @p grid
+/// @pre @p A has blocksize (NB x NB)
+/// @pre @p A has tilesize (NB x NB)
 /// @return the max norm of the Matrix @p A or 0 if `A.size().isEmpty()`
 template <Backend backend, Device device, class T>
 dlaf::BaseType<T> max_norm(comm::CommunicatorGrid grid, comm::Index2D rank, blas::Uplo uplo,

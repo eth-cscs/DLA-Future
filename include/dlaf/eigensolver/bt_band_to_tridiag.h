@@ -42,17 +42,19 @@ namespace dlaf::eigensolver::internal {
 /// identified by the letter T.
 ///
 /// @param mat_hh matrix containing reflectors together with taus (compact form see representation above)
+/// @pre @p mat_hh is not distributed
+/// @pre @p mat_hh has size (N x N)
+/// @pre @p mat_hh has blocksize (NB x NB)
+/// @pre @p mat_hh has tilesize (NB x NB)
+///
 /// @param mat_e matrix to which the inverse transformation is applied to
+/// @pre @p mat_e is not distributed
+/// @pre @p mat_e has size (N x M)
+/// @pre @p mat_e has blocksize (NB x MB)
+/// @pre @p mat_e has tilesize (NB x MB)
+///
 /// @param band_size size of the reflectors (normal one, not constrained by any matrix size limit)
-/// @pre mat_hh has a square size
-/// @pre mat_hh has a square block size
-/// @pre mat_e and mat_hh share the same number of rows
-/// @pre mat_e block size and mat_hh block size share the same number of rows
-/// @pre band_size is a divisor of mat_hh.blockSize().cols()
-/// @pre mat_e is not distributed
-/// @pre mat_hh is not distributed
-/// @pre mat_e has equal tile and block sizes
-/// @pre mat_hh has equal tile and block sizes
+/// @pre @p band_size is a divisor of `mat_hh.blockSize().cols()`
 template <Backend B, Device D, class T>
 void bt_band_to_tridiagonal(const SizeType band_size, matrix::Matrix<T, D>& mat_e,
                             matrix::Matrix<const T, Device::CPU>& mat_hh) {
@@ -97,17 +99,19 @@ void bt_band_to_tridiagonal(const SizeType band_size, matrix::Matrix<T, D>& mat_
 /// identified by the letter T.
 ///
 /// @param mat_hh matrix containing reflectors together with taus (compact form see representation above)
+/// @pre @p mat_hh is distributed according to @p grid
+/// @pre @p mat_hh has size (N x N)
+/// @pre @p mat_hh has blocksize (NB x NB)
+/// @pre @p mat_hh has tilesize (NB x NB)
+///
 /// @param mat_e matrix to which the inverse transformation is applied to
+/// @pre @p mat_e is distributed according to @p grid
+/// @pre @p mat_e has size (N x M)
+/// @pre @p mat_e has blocksize (NB x MB)
+/// @pre @p mat_e has tilesize (NB x MB)
+///
 /// @param band_size size of the reflectors (normal one, not constrained by any matrix size limit)
-/// @pre mat_hh has a square size
-/// @pre mat_hh has a square block size
-/// @pre mat_e and mat_hh share the same number of rows
-/// @pre mat_e block size and mat_hh block size share the same number of rows
-/// @pre band_size is a divisor of mat_hh.blockSize().cols()
-/// @pre mat_e is distributed according to grid
-/// @pre mat_hh is distributed according to grid
-/// @pre mat_e has equal tile and block sizes
-/// @pre mat_hh has equal tile and block sizes
+/// @pre @p band_size is a divisor of `mat_hh.blockSize().cols()`
 template <Backend B, Device D, class T>
 void bt_band_to_tridiagonal(comm::CommunicatorGrid grid, const SizeType band_size,
                             matrix::Matrix<T, D>& mat_e, matrix::Matrix<const T, Device::CPU>& mat_hh) {

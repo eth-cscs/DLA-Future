@@ -29,16 +29,21 @@ namespace dlaf {
 /// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
 /// \a ConjTrans,
 /// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit),
+///
 /// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
 /// elements are not modified),
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
+///
 /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a and mat_b have equal tile and block sizes,
-/// @pre mat_a and mat_b are not distributed,
-/// @pre mat_a and mat_b are multipliable.
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (N x N)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void triangular_multiplication(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha,
                                Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
@@ -103,16 +108,21 @@ void triangular_multiplication(blas::Side side, blas::Uplo uplo, blas::Op op, bl
 /// @param op specifies the form of op(A) to be used in the matrix multiplication: \a NoTrans, \a Trans,
 /// \a ConjTrans,
 /// @param diag specifies if the matrix A is assumed to be unit triangular (\a Unit) or not (\a NonUnit),
+///
 /// @param mat_a contains the triangular matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the
 /// elements are not modified),
+/// @pre @p mat_a is distributed according to @p grid
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
+///
 /// @param mat_b on entry it contains the matrix B, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a and mat_b have equal tile and block sizes,
-/// @pre mat_a and mat_b are distributed according to the grid,
-/// @pre mat_a and mat_b are multipliable.
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (N x N)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void triangular_multiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
                                blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,

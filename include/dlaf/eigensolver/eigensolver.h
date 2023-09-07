@@ -34,22 +34,22 @@ namespace dlaf {
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 ///
 /// @param[in,out] mat contains the Hermitian matrix A
-/// @pre mat is not distributed
-/// @pre mat has size (N x N)
-/// @pre mat has blocksize (NB x NB)
-/// @pre mat has tilesize (NB x NB)
+/// @pre @p mat is not distributed
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 ///
 /// @param[out] eigenvalues contains the eigenvalues
-/// @pre eigenvalues is not distributed
-/// @pre eigenvalues has size (N x 1)
-/// @pre eigenvalues has blocksize (NB x 1)
-/// @pre eigenvalues has tilesize (NB x 1)
+/// @pre @p eigenvalues is not distributed
+/// @pre @p eigenvalues has size (N x 1)
+/// @pre @p eigenvalues has blocksize (NB x 1)
+/// @pre @p eigenvalues has tilesize (NB x 1)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
-/// @pre eigenvectors is not distributed
-/// @pre eigenvectors has size (N x N)
-/// @pre eigenvectors has blocksize (NB x NB)
-/// @pre eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors is not distributed
+/// @pre @p eigenvectors has size (N x N)
+/// @pre @p eigenvectors has blocksize (NB x NB)
+/// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                            Matrix<T, D>& eigenvectors) {
@@ -86,10 +86,10 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 ///
 /// @param[in,out] mat contains the Hermitian matrix A
-/// @pre mat is not distributed
-/// @pre mat has size (N x N)
-/// @pre mat has blocksize (NB x NB)
-/// @pre mat has tilesize (NB x NB)
+/// @pre @p mat is not distributed
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
@@ -112,27 +112,26 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
 /// Implementation on distributed memory.
 ///
 /// @param grid is the communicator grid on which the matrix @p mat has been distributed
-/// @pre grid is an (NG x MG) grid
 ///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 ///
 /// @param[in,out] mat contains the Hermitian matrix A
-/// @pre mat is distributed according to @p grid
-/// @pre mat has size (N x N)
-/// @pre mat has blocksize (NB x NB)
-/// @pre mat has tilesize (NB x NB)
+/// @pre @p mat is distributed according to @p grid
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 ///
 /// @param[out] eigenvalues contains the eigenvalues
-/// @pre eigenvalues is stored on all ranks
-/// @pre eigenvalues has size (N x 1)
-/// @pre eigenvalues has blocksize (NB x 1)
-/// @pre eigenvalues has tilesize (NB x 1)
+/// @pre @p eigenvalues is stored on all ranks
+/// @pre @p eigenvalues has size (N x 1)
+/// @pre @p eigenvalues has blocksize (NB x 1)
+/// @pre @p eigenvalues has tilesize (NB x 1)
 ///
 /// @param[out] eigenvectors contains the eigenvectors
-/// @pre eigenvectors is distributed according to @p grid
-/// @pre eigenvectors has size (N x N)
-/// @pre eigenvectors has blocksize (NB x NB)
-/// @pre eigenvectors has tilesize (NB x NB)
+/// @pre @p eigenvectors is distributed according to @p grid
+/// @pre @p eigenvectors has size (N x N)
+/// @pre @p eigenvectors has blocksize (NB x NB)
+/// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
                            Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -171,10 +170,10 @@ void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
 ///
 /// @param[in,out] mat contains the Hermitian matrix A
-/// @pre mat is distributed according to @p grid
-/// @pre mat has size (N x N)
-/// @pre mat has blocksize (NB x NB)
-/// @pre mat has tilesize (NB x NB)
+/// @pre @p mat is distributed according to @p grid
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                               Matrix<T, D>& mat) {

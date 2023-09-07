@@ -112,18 +112,18 @@ struct EigensolverMiniapp {
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
     ConstHostMatrixType matrix_ref = [comm_grid, &opts]() {
+      TileElementSize block_size(opts.mb, opts.mb);
 #ifdef DLAF_WITH_HDF5
       if (opts.input_file) {
         if (opts.local)
-          return opts.input_file->read<T>("/a", {opts.mb, opts.mb});
+          return opts.input_file->read<T>("/a", block_size);
         else
-          return opts.input_file->read<T>("/a", {opts.mb, opts.mb}, comm_grid, {0, 0});
+          return opts.input_file->read<T>("/a", block_size, comm_grid, {0, 0});
       }
 #endif
       using dlaf::matrix::util::set_random_hermitian;
 
-      HostMatrixType hermitian(GlobalElementSize(opts.m, opts.m), TileElementSize(opts.mb, opts.mb),
-                               comm_grid);
+      HostMatrixType hermitian(GlobalElementSize(opts.m, opts.m), block_size, comm_grid);
       set_random_hermitian(hermitian);
 
       return hermitian;

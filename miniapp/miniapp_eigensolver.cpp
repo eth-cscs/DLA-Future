@@ -217,7 +217,7 @@ int main(int argc, char** argv) {
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
 #ifdef DLAF_WITH_HDF5
     ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
-    ("output-file",  value<std::string>()                     , "Save eigenvector and eigenvalue to given HDF5 file")
+    ("output-file",  value<std::string>()                     , "Save eigenvectors and eigenvalues to given HDF5 file")
 #endif
   ;
   // clang-format on

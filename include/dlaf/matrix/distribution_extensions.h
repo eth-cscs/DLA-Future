@@ -134,7 +134,7 @@ SizeType local_element_distance_from_local_tile(const Distribution& dist, SizeTy
     return 0;
 
   SizeType i_el_begin = distribution.local_element_fromlocal_tile_and_tile_element(i_loc_begin, 0);
-  SizeType i_el_end = util::matrix::elementFromTileAndTileElement(
+  SizeType i_el_end = distribution.local_element_fromlocal_tile_and_tile_element(
                           i_loc_last, tileSize<rc>(globalTileFromLocalTile<rc>(i_loc_last)) - 1) +
                       1;
   return i_el_end - i_el_begin;

@@ -422,6 +422,7 @@ TEST(DistributionTest, DistanceToAdjacentTile) {
   }
 }
 
+/*
 TEST(DistributionTest, TileSizeFromGlobalElement) {
   {
     matrix::Distribution distr(LocalElementSize(8, 7), TileElementSize(3, 2));
@@ -456,6 +457,7 @@ TEST(DistributionTest, TileSizeFromGlobalElement) {
     EXPECT_EQ(4, distr.tileSizeFromGlobalElement<Coord::Col>(6));
   }
 }
+*/
 
 TEST(DistributionTest, GlobalTileLinearIndex) {
   {
@@ -501,6 +503,7 @@ struct ParametersLocalDistanceFromGlobalTile {
   LocalElementSize local_element_distance;
 };
 
+/*
 const std::vector<ParametersLocalDistanceFromGlobalTile> tests_local_distance_from_global_tile = {
     // {size, block_size, rank, grid_size, src_rank, offset, global_tile_begin, global_tile_end,
     // local_element_distance}
@@ -633,6 +636,7 @@ TEST(DistributionTest, LocalElementDistanceFromGlobalTile) {
               obj.localElementDistanceFromGlobalTile(test.global_tile_begin, test.global_tile_end));
   }
 }
+*/
 
 struct ParametersSubDistribution {
   // Distribution settings

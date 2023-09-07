@@ -27,10 +27,10 @@ Distribution::Distribution(const LocalElementSize& size, const TileElementSize& 
   DLAF_ASSERT(local_size_.isValid(), local_size_);
   DLAF_ASSERT(!block_size_.isEmpty(), block_size_);
 
-  normalizeSourceRankAndOffset();
-  computeLocalNrTiles();
-  computeGlobalSizeForNonDistr();
-  computeGlobalNrTiles();
+  normalize_source_rank_and_offset();
+  compute_local_nr_tiles();
+  compute_global_size_for_non_distr();
+  compute_global_nr_tiles();
 }
 
 Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
@@ -64,7 +64,7 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
   DLAF_ASSERT(rank_index.isIn(grid_size_), rank_index, grid_size_);
   DLAF_ASSERT(source_rank_index.isIn(grid_size_), source_rank_index, grid_size_);
 
-  computeGlobalAndLocalNrTilesAndLocalSize();
+  compute_global_and_local_nr_tiles_and_local_size();
 }
 
 Distribution::Distribution(const GlobalElementSize& size, const TileElementSize& block_size,
@@ -77,14 +77,14 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
 
 Distribution::Distribution(Distribution&& rhs) noexcept : Distribution(rhs) {
   // use the copy constructor and set default sizes.
-  rhs.setDefaultSizes();
+  rhs.set_default_sizes();
 }
 
 Distribution& Distribution::operator=(Distribution&& rhs) noexcept {
   // use the copy assignment and set default sizes.
   *this = rhs;
 
-  rhs.setDefaultSizes();
+  rhs.set_default_sizes();
   return *this;
 }
 
@@ -98,34 +98,34 @@ Distribution::Distribution(Distribution rhs, const SubDistributionSpec& spec)
   offset_ = offset_ + sizeFromOrigin(spec.origin);
   size_ = spec.size;
 
-  computeGlobalAndLocalNrTilesAndLocalSize();
+  compute_global_and_local_nr_tiles_and_local_size();
 }
 
-void Distribution::computeGlobalSizeForNonDistr() noexcept {
+void Distribution::compute_global_size_for_non_distr() noexcept {
   size_ = GlobalElementSize(local_size_.rows(), local_size_.cols());
 }
 
-void Distribution::computeGlobalNrTiles() noexcept {
+void Distribution::compute_global_nr_tiles() noexcept {
   global_nr_tiles_ = {size_.rows() > 0
-                          ? util::ceilDiv(size_.rows() + globalTileElementOffset<Coord::Row>(),
+                          ? util::ceilDiv(size_.rows() + global_tile_element_offset<Coord::Row>(),
                                           tile_size_.rows())
                           : 0,
                       size_.cols() > 0
-                          ? util::ceilDiv(size_.cols() + globalTileElementOffset<Coord::Col>(),
+                          ? util::ceilDiv(size_.cols() + global_tile_element_offset<Coord::Col>(),
                                           tile_size_.cols())
                           : 0};
 }
 
-void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
-  using util::matrix::rankGlobalTile;
+void Distribution::compute_global_and_local_nr_tiles_and_local_size() noexcept {
+  using util::matrix::rank_global_tile;
 
-  normalizeSourceRankAndOffset();
+  normalize_source_rank_and_offset();
 
   // Set global_nr_tiles_.
-  computeGlobalNrTiles();
+  compute_global_nr_tiles();
 
-  const auto tile_row = nextLocalTileFromGlobalTile<Coord::Row>(global_nr_tiles_.rows());
-  const auto tile_col = nextLocalTileFromGlobalTile<Coord::Col>(global_nr_tiles_.cols());
+  const auto tile_row = next_local_tile_from_global_tile<Coord::Row>(global_nr_tiles_.rows());
+  const auto tile_col = next_local_tile_from_global_tile<Coord::Col>(global_nr_tiles_.cols());
 
   // Set local_nr_tiles_.
   local_nr_tiles_ = {tile_row, tile_col};
@@ -140,9 +140,10 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
   // temporarily assume the first block is complete:
   //   local_size = local_size - offset
   SizeType row = 0;
+  // TODO Fix 0 argument
   if (size_.rows() > 0) {
-    if (rank_index_.row() == rankGlobalTile(global_nr_tiles_.rows() - 1, tilesPerBlock<Coord::Row>(),
-                                            grid_size_.rows(), source_rank_index_.row())) {
+    if (rank_index_.row() == rank_global_tile(global_nr_tiles_.rows() - 1, tiles_per_block<Coord::Row>(),
+                                              grid_size_.rows(), source_rank_index_.row(), 0)) {
       const auto last_tile_rows = (size_.rows() + offset_.row() - 1) % tile_size_.rows() + 1;
       row = (tile_row - 1) * tile_size_.rows() + last_tile_rows;
     }
@@ -150,15 +151,15 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
       row = tile_row * tile_size_.rows();
     }
     if (tile_row > 0 && rank_index_.row() == source_rank_index_.row()) {
-      DLAF_ASSERT(row >= globalTileElementOffset<Coord::Row>(), row,
-                  globalTileElementOffset<Coord::Row>());
-      row -= globalTileElementOffset<Coord::Row>();
+      DLAF_ASSERT(row >= global_tile_element_offset<Coord::Row>(), row,
+                  global_tile_element_offset<Coord::Row>());
+      row -= global_tile_element_offset<Coord::Row>();
     }
   }
   SizeType col = 0;
   if (size_.cols() > 0) {
-    if (rank_index_.col() == rankGlobalTile(global_nr_tiles_.cols() - 1, tilesPerBlock<Coord::Col>(),
-                                            grid_size_.cols(), source_rank_index_.col())) {
+    if (rank_index_.col() == rank_global_tile(global_nr_tiles_.cols() - 1, tiles_per_block<Coord::Col>(),
+                                              grid_size_.cols(), source_rank_index_.col(), 0)) {
       const auto last_tile_cols = (size_.cols() + offset_.col() - 1) % tile_size_.cols() + 1;
       col = (tile_col - 1) * tile_size_.cols() + last_tile_cols;
     }
@@ -166,9 +167,9 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
       col = tile_col * tile_size_.cols();
     }
     if (tile_col > 0 && rank_index_.col() == source_rank_index_.col()) {
-      DLAF_ASSERT(col >= globalTileElementOffset<Coord::Col>(), col,
-                  globalTileElementOffset<Coord::Col>());
-      col -= globalTileElementOffset<Coord::Col>();
+      DLAF_ASSERT(col >= global_tile_element_offset<Coord::Col>(), col,
+                  global_tile_element_offset<Coord::Col>());
+      col -= global_tile_element_offset<Coord::Col>();
     }
   }
 
@@ -176,7 +177,7 @@ void Distribution::computeGlobalAndLocalNrTilesAndLocalSize() noexcept {
   local_size_ = LocalElementSize(row, col);
 }
 
-void Distribution::normalizeSourceRankAndOffset() noexcept {
+void Distribution::normalize_source_rank_and_offset() noexcept {
   auto div_row = std::div(offset_.row(), block_size_.rows());
   auto div_col = std::div(offset_.col(), block_size_.cols());
 
@@ -188,12 +189,13 @@ void Distribution::normalizeSourceRankAndOffset() noexcept {
   DLAF_ASSERT(offset_.col() < block_size_.cols(), offset_, block_size_);
 }
 
-void Distribution::computeLocalNrTiles() noexcept {
+void Distribution::compute_local_nr_tiles() noexcept {
+  // TODO Fix
   local_nr_tiles_ = {util::ceilDiv(local_size_.rows(), tile_size_.rows()),
                      util::ceilDiv(local_size_.cols(), tile_size_.cols())};
 }
 
-void Distribution::setDefaultSizes() noexcept {
+void Distribution::set_default_sizes() noexcept {
   offset_ = {0, 0};
   size_ = {0, 0};
   local_size_ = {0, 0};

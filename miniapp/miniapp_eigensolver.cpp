@@ -66,8 +66,8 @@ struct Options
   SizeType mb;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
-  std::optional<dlaf::matrix::internal::FileHDF5> input_file;
-  std::optional<dlaf::matrix::internal::FileHDF5> output_file;
+  std::optional<FileHDF5> input_file;
+  std::optional<std::string> output_file;
 #endif
 
   Options(const pika::program_options::variables_map& vm)
@@ -87,7 +87,7 @@ struct Options
       }
     }
     if (vm.count("output-file") == 1) {
-      output_file = FileHDF5(vm["output-file"].as<std::string>(), FileHDF5::FileMode::readwrite);
+      output_file = vm["output-file"].as<std::string>();
     }
 #endif
   }
@@ -114,8 +114,10 @@ struct EigensolverMiniapp {
     ConstHostMatrixType matrix_ref = [comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
       if (opts.input_file) {
-        Matrix<T, Device::CPU> input = opts.input_file->read<T>("/a", {opts.mb, opts.mb});
-        return input;
+        if (opts.local)
+          return opts.input_file->read<T>("/a", {opts.mb, opts.mb});
+        else
+          return opts.input_file->read<T>("/a", {opts.mb, opts.mb}, comm_grid, {0, 0});
       }
 #endif
       using dlaf::matrix::util::set_random_hermitian;
@@ -160,8 +162,14 @@ struct EigensolverMiniapp {
 #ifdef DLAF_WITH_HDF5
       if (run_index == opts.nruns - 1) {
         if (opts.output_file) {
-          opts.output_file->write<BaseType<T>>(eigenvalues, "/evals");
-          opts.output_file->write<T>(eigenvectors, "/evecs");
+          auto outfile = [&]() {
+            if (opts.local)
+              return FileHDF5(*opts.output_file, FileHDF5::FileMode::readwrite);
+            else
+              return FileHDF5(world, *opts.output_file);
+          }();
+          outfile.write(eigenvalues, "/evals");
+          outfile.write(eigenvectors, "/evecs");
         }
       }
 #endif

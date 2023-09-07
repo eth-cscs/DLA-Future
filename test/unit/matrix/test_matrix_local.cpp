@@ -11,6 +11,7 @@
 #include <sstream>
 #include <vector>
 
+#include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/util_math.h>
 
@@ -41,13 +42,14 @@ T value_preset(const GlobalElementIndex& index) {
 struct TestSizes {
   GlobalElementSize size;
   TileElementSize block_size;
+  TileElementSize tile_size;
 };
 
 const std::vector<TestSizes> sizes_tests({
-    {{15, 18}, {5, 9}},
-    {{6, 6}, {2, 2}},
-    {{3, 4}, {24, 15}},
-    {{16, 24}, {3, 5}},
+    {{15, 18}, {5, 9}, {5, 3}},
+    {{6, 6}, {2, 2}, {2, 2}},
+    {{3, 4}, {24, 15}, {8, 15}},
+    {{16, 24}, {3, 5}, {3, 5}},
 });
 
 template <typename Type>
@@ -57,14 +59,14 @@ TYPED_TEST_SUITE(MatrixLocalTest, MatrixElementTypes);
 
 TYPED_TEST(MatrixLocalTest, ConstructorAndShape) {
   for (const auto& test : sizes_tests) {
-    const MatrixLocal<const TypeParam> mat(test.size, test.block_size);
+    const MatrixLocal<const TypeParam> mat(test.size, test.tile_size);
 
     EXPECT_EQ(test.size, mat.size());
-    EXPECT_EQ(test.block_size, mat.blockSize());
+    EXPECT_EQ(test.tile_size, mat.blockSize());
 
     const GlobalTileSize nrTiles{
-        dlaf::util::ceilDiv(test.size.rows(), test.block_size.rows()),
-        dlaf::util::ceilDiv(test.size.cols(), test.block_size.cols()),
+        dlaf::util::ceilDiv(test.size.rows(), test.tile_size.rows()),
+        dlaf::util::ceilDiv(test.size.cols(), test.tile_size.cols()),
     };
     EXPECT_EQ(nrTiles, mat.nrTiles());
 
@@ -76,7 +78,7 @@ TYPED_TEST(MatrixLocalTest, Set) {
   constexpr auto error = TypeUtilities<TypeParam>::error;
 
   for (const auto& test : sizes_tests) {
-    MatrixLocal<TypeParam> mat(test.size, test.block_size);
+    MatrixLocal<TypeParam> mat(test.size, test.tile_size);
 
     set(mat, value_preset<TypeParam>);
 
@@ -89,12 +91,12 @@ TYPED_TEST(MatrixLocalTest, Copy) {
 
   for (const auto& config : sizes_tests) {
     MatrixLocal<const TypeParam> source = [&config]() {
-      MatrixLocal<TypeParam> source(config.size, config.block_size);
+      MatrixLocal<TypeParam> source(config.size, config.tile_size);
       set(source, value_preset<TypeParam>);
       return source;
     }();
 
-    MatrixLocal<TypeParam> dest(config.size, config.block_size);
+    MatrixLocal<TypeParam> dest(config.size, config.tile_size);
 
     copy(source, dest);
 
@@ -195,8 +197,8 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
       const GlobalElementSize size = globalTestSize(config.size, comm_grid.size());
       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
                                    std::min(1, comm_grid.size().cols() - 1));
-      Distribution distribution(size, config.block_size, comm_grid.size(), comm_grid.rank(),
-                                src_rank_index);
+      Distribution distribution(size, config.block_size, config.tile_size, comm_grid.size(),
+                                comm_grid.rank(), src_rank_index);
 
       Matrix<TypeParam, Device::CPU> source(std::move(distribution));
 

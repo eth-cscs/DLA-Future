@@ -38,7 +38,6 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
-  using pika::unwrapping;
 
   using dlaf::tile::internal::lange;
   using dlaf::tile::internal::lantr;
@@ -102,7 +101,6 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGri
 
   using dlaf::common::make_data;
   using dlaf::common::internal::vector;
-  using pika::unwrapping;
 
   using dlaf::tile::internal::lange;
   using dlaf::tile::internal::lantr;

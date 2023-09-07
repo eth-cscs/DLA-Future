@@ -31,9 +31,7 @@
 #include <dlaf/solver/triangular/api.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace solver {
-namespace internal {
+namespace dlaf::solver::internal {
 namespace triangular_lln {
 template <Backend backend, class T, typename InSender, typename OutSender>
 void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, T alpha,
@@ -1153,7 +1151,5 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     b_panel.reset();
     a_panel.reset();
   }
-}
-}
 }
 }

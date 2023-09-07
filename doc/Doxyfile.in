@@ -2149,6 +2149,7 @@ PREDEFINED             += DLAF_ASSERT_ENABLE
 PREDEFINED             += DLAF_ASSERT_MODERATE_ENABLE
 PREDEFINED             += DLAF_ASSERT_HEAVY_ENABLE
 PREDEFINED             += DLAF_WITH_GPU
+PREDEFINED             += DLAF_WITH_SCALAPACK
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The

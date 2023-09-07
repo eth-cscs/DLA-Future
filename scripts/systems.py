@@ -123,7 +123,7 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+# NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
 #       modify "Run command" if it is not the case.
 cscs["hohgant-nvgpu"] = {
     "Cores": 64,
@@ -132,7 +132,7 @@ cscs["hohgant-nvgpu"] = {
     "Multiple rpn in same job": True,
     "GPU": True,
     # Based on nvidia-smi topo --matrix
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm_cuda",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -157,7 +157,7 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+# NOTE: Here is assumed that `gpu2ranks_slurm_hip` is in PATH!
 #       modify "Run command" if it is not the case.
 cscs["hohgant-amdgpu"] = {
     "Cores": 64,
@@ -165,11 +165,10 @@ cscs["hohgant-amdgpu"] = {
     "Allowed rpns": [8],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank} gpu2ranks_slurm",
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --showtoponuma
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm_hip",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -226,7 +225,7 @@ printenv > env_{bs_name}.txt
 """,
 }
 
-# NOTE: Here is assumed that `gpu2ranks_slurm` is in PATH!
+# NOTE: Here is assumed that `gpu2ranks_slurm_hip` is in PATH!
 #       modify "Run command" if it is not the case.
 csc["lumi-gpu"] = {
     "Cores": 64,
@@ -237,7 +236,7 @@ csc["lumi-gpu"] = {
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --show-topo
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,fe00000000000000fe,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm",
+    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:fe00000000000000fe000000000000,fe00000000000000fe00000000000000,fe00000000000000fe0000,fe00000000000000fe000000,fe00000000000000fe,fe00000000000000fe00,fe00000000000000fe00000000,fe00000000000000fe0000000000 gpu2ranks_slurm_hip",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}

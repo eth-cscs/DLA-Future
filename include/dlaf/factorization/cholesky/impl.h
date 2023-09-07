@@ -30,9 +30,7 @@
 #include <dlaf/sender/traits.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf {
-namespace factorization {
-namespace internal {
+namespace dlaf::factorization::internal {
 
 namespace cholesky_l {
 template <Backend backend, class MatrixTileSender>
@@ -412,7 +410,5 @@ void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
     panel.reset();
     panelT.reset();
   }
-}
-}
 }
 }

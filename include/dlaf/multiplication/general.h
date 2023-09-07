@@ -23,7 +23,7 @@
 #include <dlaf/multiplication/general/api.h>
 #include <dlaf/util_matrix.h>
 
-namespace dlaf::multiplication {
+namespace dlaf::multiplication::internal {
 
 /// General sub-matrix multiplication implementation on local memory, computing
 /// C[a:b][a:b] = alpha * opA(A[a:b][a:b]) * opB(B[a:b][a:b]) + beta * C[a:b][a:b]

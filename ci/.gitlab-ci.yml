@@ -223,6 +223,28 @@ cuda release build gcc11:
     THREADS_PER_NODE: 24
     USE_CODECOV: "false"
 
+cuda release build gcc11 scalapack:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
+    USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/release-cuda-scalapack.yaml
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+    USE_CODECOV: "false"
+
 cuda codecov build gcc11:
   extends: .build_spack_common
   variables:
@@ -238,6 +260,28 @@ cuda codecov build gcc11:
     USE_MKL: "OFF"
     USE_ROCBLAS: "OFF"
     SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+    USE_CODECOV: "true"
+
+cuda codecov build gcc11 scalapack:
+  extends: .build_spack_common
+  variables:
+    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
+    USE_MKL: "OFF"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
@@ -332,6 +376,15 @@ cuda release test gcc11:
       - artifact: pipeline.yml
         job: cuda release build gcc11
 
+cuda release test gcc11 scalapack:
+  extends: .run_common
+  needs:
+    - cuda release build gcc11 scalapack
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda release build gcc11 scalapack
+
 cuda codecov test gcc11:
   extends: .run_common
   needs:
@@ -341,3 +394,13 @@ cuda codecov test gcc11:
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11
+
+cuda codecov test gcc11 scalapack:
+  extends: .run_common
+  needs:
+    - cuda codecov build gcc11 scalapack
+  trigger:
+    strategy: depend
+    include:
+      - artifact: pipeline.yml
+        job: cuda codecov build gcc11 scalapack

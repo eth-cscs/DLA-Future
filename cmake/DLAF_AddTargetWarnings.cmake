@@ -21,10 +21,10 @@ macro(target_add_warnings target_name)
     ${target_name}
     PRIVATE -Wall
             -Wextra
-            -Wnon-virtual-dtor
+            $<$<COMPILE_LANGUAGE:CXX>:-Wnon-virtual-dtor>
             -Wunused
             -Wunused-local-typedefs
-            -Woverloaded-virtual
+            $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
             -Wdangling-else
             -Wswitch-enum
             # Conversions

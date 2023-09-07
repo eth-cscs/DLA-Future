@@ -32,6 +32,7 @@ jobs:
                    -o  -name '*.h.in'                                             \
                    -o  -name '*.tpp'                                              \
                    -o  -name '*.cu'                                               \
+                   -o  -name '*.c'                                                \
                    -o  -name 'CMakeLists.txt'                                     \
                    -o  -name '.*'                                                 \
                ')'                                                                \
@@ -54,6 +55,7 @@ jobs:
                    -o  -name '*.h.in'                                             \
                    -o  -name '*.tpp'                                              \
                    -o  -name '*.cu'                                               \
+                   -o  -name '*.c'                                                \
                ')'                                                                \
             | xargs -I{} sh -c                                                    \
                 ".github/check_license.sh misc/HEADER {} > /dev/null || echo {}"  \

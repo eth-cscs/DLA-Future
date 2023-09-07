@@ -142,12 +142,12 @@ struct triangularSolverMiniapp {
 
       dlaf::common::Timer<> timeit;
       if (opts.local)
-        dlaf::solver::triangular<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha,
-                                                                             a.get(), b.get());
+        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha,
+                                                                            a.get(), b.get());
       else
-        dlaf::solver::triangular<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
-                                                                             diag, alpha, a.get(),
-                                                                             b.get());
+        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
+                                                                            diag, alpha, a.get(),
+                                                                            b.get());
 
       sync_barrier();
 

@@ -119,7 +119,7 @@ std::vector<EagerVoidSender> getReadSendersUsingGlobalIndex(MatrixType<T, D>& ma
 ///
 /// @param invert if set to true it checks that all senders are ready except the first_n
 ///
-/// @pre 0 <= ready <= senders.size().
+/// @pre 0 <= first_n <= senders.size().
 inline bool checkSendersStep(size_t first_n, const std::vector<EagerVoidSender>& senders,
                              bool invert = false) {
   DLAF_ASSERT_HEAVY(first_n <= senders.size(), first_n, senders.size());

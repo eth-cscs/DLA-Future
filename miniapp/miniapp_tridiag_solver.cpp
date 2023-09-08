@@ -9,6 +9,7 @@
 //
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -59,7 +60,7 @@ struct Options
   SizeType m;
   SizeType mb;
 #ifdef DLAF_WITH_HDF5
-  std::optional<dlaf::matrix::internal::FileHDF5> input_file;
+  std::filesystem::path input_file;
 #endif
 
   Options(const pika::program_options::variables_map& vm)
@@ -69,7 +70,7 @@ struct Options
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
-      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::readonly);
+      input_file = vm["input-file"].as<std::filesystem::path>();
 
       if (!vm["matrix-size"].defaulted()) {
         std::cerr << "Warning! "
@@ -100,8 +101,9 @@ struct TridiagSolverMiniapp {
 
     Matrix<const T, Device::CPU> tridiag_ref = [&opts]() {
 #ifdef DLAF_WITH_HDF5
-      if (opts.input_file) {
-        Matrix<T, Device::CPU> tridiag = opts.input_file->read<T>("/tridiag", {opts.mb, 2});
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
+        Matrix<T, Device::CPU> tridiag = infile.read<T>("/tridiag", {opts.mb, 2});
         return tridiag;
       }
 #endif
@@ -196,7 +198,7 @@ int main(int argc, char** argv) {
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
 #ifdef DLAF_WITH_HDF5
-    ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
+    ("input-file",   value<std::filesystem::path>()           , "Load matrix from given HDF5 file")
 #endif
   ;
   // clang-format on

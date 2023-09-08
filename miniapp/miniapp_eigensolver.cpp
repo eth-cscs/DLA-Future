@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <filesystem>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
@@ -66,8 +67,8 @@ struct Options
   SizeType mb;
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
-  std::optional<FileHDF5> input_file;
-  std::optional<std::string> output_file;
+  std::filesystem::path input_file;
+  std::filesystem::path output_file;
 #endif
 
   Options(const pika::program_options::variables_map& vm)
@@ -78,7 +79,7 @@ struct Options
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
-      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::readonly);
+      input_file = vm["input-file"].as<std::filesystem::path>();
 
       if (!vm["matrix-size"].defaulted()) {
         std::cerr << "Warning! "
@@ -87,7 +88,7 @@ struct Options
       }
     }
     if (vm.count("output-file") == 1) {
-      output_file = vm["output-file"].as<std::string>();
+      output_file = vm["output-file"].as<std::filesystem::path>();
     }
 #endif
   }
@@ -114,11 +115,12 @@ struct EigensolverMiniapp {
     ConstHostMatrixType matrix_ref = [comm_grid, &opts]() {
       TileElementSize block_size(opts.mb, opts.mb);
 #ifdef DLAF_WITH_HDF5
-      if (opts.input_file) {
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
         if (opts.local)
-          return opts.input_file->read<T>("/a", block_size);
+          return infile.read<T>("/a", block_size);
         else
-          return opts.input_file->read<T>("/a", block_size, comm_grid, {0, 0});
+          return infile.read<T>("/a", block_size, comm_grid, {0, 0});
       }
 #endif
       using dlaf::matrix::util::set_random_hermitian;
@@ -161,12 +163,12 @@ struct EigensolverMiniapp {
 
 #ifdef DLAF_WITH_HDF5
       if (run_index == opts.nruns - 1) {
-        if (opts.output_file) {
+        if (!opts.output_file.empty()) {
           auto outfile = [&]() {
             if (opts.local)
-              return FileHDF5(*opts.output_file, FileHDF5::FileMode::readwrite);
+              return FileHDF5(opts.output_file, FileHDF5::FileMode::readwrite);
             else
-              return FileHDF5(world, *opts.output_file);
+              return FileHDF5(world, opts.output_file);
           }();
           outfile.write(eigenvalues, "/evals");
           outfile.write(eigenvectors, "/evecs");
@@ -224,8 +226,8 @@ int main(int argc, char** argv) {
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
 #ifdef DLAF_WITH_HDF5
-    ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
-    ("output-file",  value<std::string>()                     , "Save eigenvectors and eigenvalues to given HDF5 file")
+    ("input-file",   value<std::filesystem::path>()           , "Load matrix from given HDF5 file")
+    ("output-file",  value<std::filesystem::path>()           , "Save eigenvectors and eigenvalues to given HDF5 file")
 #endif
   ;
   // clang-format on

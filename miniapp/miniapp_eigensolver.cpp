@@ -9,9 +9,9 @@
 //
 
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <limits>
-#include <filesystem>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>

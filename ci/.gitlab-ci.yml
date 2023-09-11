@@ -384,7 +384,6 @@ cpu codecov test gcc11:
   needs:
     - cpu codecov build gcc11
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cpu codecov build gcc11
@@ -412,7 +411,6 @@ cuda codecov test gcc11:
   needs:
     - cuda codecov build gcc11
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11
@@ -422,7 +420,6 @@ cuda codecov test gcc11 scalapack:
   needs:
     - cuda codecov build gcc11 scalapack
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11 scalapack

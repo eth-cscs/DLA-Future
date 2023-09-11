@@ -149,12 +149,7 @@ DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-// TODO: What will be the upper bound?
-#if HIP_VERSION < 50000000 || 50700000 <= HIP_VERSION
-DLAF_MAKE_GPUBLAS_OP(Trmm, trmm);
-#else
 DLAF_MAKE_GPUBLAS_OP(Trmm, trmm_outofplace);
-#endif
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
@@ -449,10 +444,8 @@ void trmm(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, c
   gpublas::internal::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                                    blasToCublas(diag), to_int(s.m), to_int(s.n),
                                    blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
-#if defined(DLAF_WITH_CUDA) || (defined(DLAF_WITH_HIP) && HIP_VERSION >= 50000000)
-                                   blasToCublasCast(b.ptr()), to_int(b.ld()),
-#endif
-                                   blasToCublasCast(b.ptr()), to_int(b.ld()));
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(b.ptr()),
+                                   to_int(b.ld()));
 }
 
 template <class T>
@@ -464,19 +457,11 @@ void trmm3(cublasHandle_t handle, const blas::Side side, const blas::Uplo uplo, 
   auto s = tile::internal::getTrmm3Sizes(side, a, b, c);
   DLAF_ASSERT(b.ptr() == nullptr || b.ptr() != c.ptr(), b.ptr(), c.ptr());
 
-#if defined(DLAF_WITH_HIP) && HIP_VERSION < 50000000
-  whip::stream_t stream;
-  DLAF_GPUBLAS_CHECK_ERROR(cublasGetStream(handle, &stream));
-  matrix::internal::copy(b, c, stream);
-#endif
-
   gpublas::internal::Trmm<T>::call(handle, blasToCublas(side), blasToCublas(uplo), blasToCublas(op),
                                    blasToCublas(diag), to_int(s.m), to_int(s.n),
                                    blasToCublasCast(&alpha), blasToCublasCast(a.ptr()), to_int(a.ld()),
-#if defined(DLAF_WITH_CUDA) || (defined(DLAF_WITH_HIP) && HIP_VERSION >= 50000000)
-                                   blasToCublasCast(b.ptr()), to_int(b.ld()),
-#endif
-                                   blasToCublasCast(c.ptr()), to_int(c.ld()));
+                                   blasToCublasCast(b.ptr()), to_int(b.ld()), blasToCublasCast(c.ptr()),
+                                   to_int(c.ld()));
 }
 
 template <class T>

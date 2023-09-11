@@ -203,15 +203,16 @@ auto scaleRho(RhoSender&& rho) {
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
 //
-template <class T, Device D>
-auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& vec) {
+template <class T>
+auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, Device::CPU>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin));
   for (SizeType i = i_begin; i < i_end; ++i) {
-    tiles_max.push_back(maxElementInColumnTileAsync<T, D>(vec.read(LocalTileIndex(i, 0))));
+    tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read(LocalTileIndex(i, 0))) |
+                        di::transform(di::Policy<Backend::MC>(), tile::internal::lange_o));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -225,9 +226,9 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
 //
 // [1] LAPACK 3.10.0, file dlaed2.f, line 315, variable TOL
-template <class T, Device D>
-auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, D>& d,
-                   Matrix<const T, D>& z) {
+template <class T>
+auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T, Device::CPU>& d,
+                   Matrix<const T, Device::CPU>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -308,8 +309,8 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
 }
 
 // This function returns number of non-deflated eigenvectors, together with two permutations
-// - @p index_sorted          (sorted non-deflated | sorted deflated) -> initial.
-// - @p index_sorted_coltype  (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+// - @p index_sorted          (sort(non-deflated)|sort(deflated)) -> initial.
+// - @p index_sorted_coltype  (upper|dense|lower|sort(deflated)) -> initial
 //
 // The permutations will allow to keep the mapping between sorted eigenvalues and unsorted eigenvectors,
 // which is useful since eigenvectors are more expensive to permuted, so we can keep them in their
@@ -319,8 +320,8 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
 // @param types                 array[n] column type of each eigenvector after deflation (initial order)
 // @param evals                 array[n] of eigenvalues sorted as perm_sorted
 // @param perm_sorted           array[n] current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
-// @param index_sorted          array[n] (sorted non-deflated | sorted deflated) -> initial
-// @param index_sorted_coltype  array[n] (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+// @param index_sorted          array[n] (sort(non-deflated)|sort(deflated)) -> initial
+// @param index_sorted_coltype  array[n] (upper|dense|lower|sort(deflated)) -> initial
 //
 // @return k                    number of non-deflated eigenvectors
 template <class T>
@@ -333,9 +334,9 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
   // (in)  perm_sorted
   //    initial <-- sorted by ascending eigenvalue
   // (out) index_sorted
-  //    initial <-- sorted by ascending eigenvalue in two groups (non-deflated | deflated)
+  //    initial <-- (sort(non-deflated) | sort(deflated))
   // (out) index_sorted_coltype
-  //    initial <-- sorted by ascending eigenvalue in four groups (upper | dense | lower | deflated)
+  //    initial <-- (upper | dense | lower | sort(deflated))
 
   // Note:
   // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrix
@@ -397,7 +398,12 @@ SizeType stablePartitionIndexForDeflationArrays(const SizeType n, const ColType*
     }
   }
 
-  // Create the permutation (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
+  // Create the permutation (upper|dense|lower|sort(deflated)) -> initial
+  // Note:
+  // non-deflated part is created starting from the initial order, because we are not interested
+  // in having them sorted.
+  // on the other hand, deflated part has to be sorted, so we copy the work from the index_sorted,
+  // where they have been already sorted (post-deflation).
   for (SizeType j = 0; j < n; ++j) {
     const ColType& coltype = types[to_sizet(j)];
     if (coltype != ColType::Deflated) {
@@ -466,12 +472,20 @@ auto stablePartitionIndexForDeflation(
          di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
 }
 
-template <Device D>
-void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
-                  Matrix<ColType, D>& coltypes) {
+inline void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                         Matrix<ColType, Device::CPU>& coltypes) {
+  namespace di = dlaf::internal;
+
   for (SizeType i = i_begin; i < i_end; ++i) {
-    ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
-    setColTypeTileAsync<D>(val, coltypes.readwrite(LocalTileIndex(i, 0)));
+    const ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
+    di::transformDetach(
+        di::Policy<Backend::MC>(),
+        [](const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
+          for (SizeType i = 0; i < tile.size().rows(); ++i) {
+            tile(TileElementIndex(i, 0)) = ct;
+          }
+        },
+        di::whenAllLift(val, coltypes.readwrite(LocalTileIndex(i, 0))));
   }
 }
 

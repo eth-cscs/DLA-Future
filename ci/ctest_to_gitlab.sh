@@ -14,10 +14,12 @@ IMAGE="$1"
 USE_CODECOV="$2"
 THREADS_PER_NODE="$3"
 SLURM_CONSTRAINT="$4"
+BASE_CONFIG="$5"
 
 if [ "$USE_CODECOV" = true ]; then
 BASE_TEMPLATE="
 include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
 
 image: $IMAGE
@@ -37,7 +39,7 @@ variables:
 
 upload_reports:
   stage: upload
-  extends: .daint
+  extends: .$BASE_CONFIG
   variables:
     PULL_IMAGE: 'NO'
     SLURM_NTASKS: 1
@@ -49,7 +51,7 @@ JOB_TEMPLATE="
 
 {{LABEL}}:
   stage: test
-  extends: .daint
+  extends: .$BASE_CONFIG
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}
@@ -64,6 +66,7 @@ JOB_TEMPLATE="
 else
 BASE_TEMPLATE="
 include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
   - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.cscs.yml'
 
 image: $IMAGE
@@ -84,7 +87,7 @@ variables:
 JOB_TEMPLATE="
 {{LABEL}}:
   stage: test
-  extends: .daint
+  extends: .$BASE_CONFIG
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
     SLURM_NTASKS: {{NTASKS}}

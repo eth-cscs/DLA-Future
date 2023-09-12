@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
@@ -68,6 +69,7 @@ struct Options
   blas::Uplo uplo;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
+  std::string input_dataset;
   std::filesystem::path output_file;
 #endif
 
@@ -87,6 +89,7 @@ struct Options
                   << std::endl;
       }
     }
+    input_dataset = vm["input-dataset"].as<std::string>();
     if (vm.count("output-file") == 1) {
       output_file = vm["output-file"].as<std::filesystem::path>();
     }
@@ -118,9 +121,9 @@ struct EigensolverMiniapp {
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
         if (opts.local)
-          return infile.read<T>("/a", block_size);
+          return infile.read<T>(opts.input_dataset, block_size);
         else
-          return infile.read<T>("/a", block_size, comm_grid, {0, 0});
+          return infile.read<T>(opts.input_dataset, block_size, comm_grid, {0, 0});
       }
 #endif
       using dlaf::matrix::util::set_random_hermitian;
@@ -170,6 +173,7 @@ struct EigensolverMiniapp {
             else
               return FileHDF5(world, opts.output_file);
           }();
+          outfile.write(matrix_ref, opts.input_dataset);
           outfile.write(eigenvalues, "/evals");
           outfile.write(eigenvectors, "/evecs");
         }
@@ -223,11 +227,12 @@ int main(int argc, char** argv) {
 
   // clang-format off
   desc_commandline.add_options()
-    ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
-    ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
+    ("matrix-size",   value<SizeType>()   ->default_value(4096), "Matrix size")
+    ("block-size",    value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
 #ifdef DLAF_WITH_HDF5
-    ("input-file",   value<std::filesystem::path>()           , "Load matrix from given HDF5 file")
-    ("output-file",  value<std::filesystem::path>()           , "Save eigenvectors and eigenvalues to given HDF5 file")
+    ("input-file",    value<std::filesystem::path>()                            , "Load matrix from given HDF5 file")
+    ("input-dataset", value<std::string>()           -> default_value("/input") , "Name of HDF5 dataset to load as matrix")
+    ("output-file",   value<std::filesystem::path>()                            , "Save eigenvectors and eigenvalues to given HDF5 file")
 #endif
   ;
   // clang-format on

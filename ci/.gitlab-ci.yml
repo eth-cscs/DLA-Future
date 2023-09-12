@@ -69,235 +69,235 @@ stages:
       - pipeline.yml
 
 # Builds a Docker image for the current commit
-cpu release build gcc11:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cpu release build gcc11:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cpu release build gcc11 stdexec:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 20
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cpu-stdexec.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cpu release build gcc11 stdexec:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 20
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cpu-stdexec.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cpu release build gcc12 cxx20:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@12.1.0
-    CXXSTD: 20
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc12/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc12/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cpu release build gcc12 cxx20:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@12.1.0
+#     CXXSTD: 20
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc12/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc12/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cpu release build clang12:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: "clang-12 libomp-12-dev"
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: clang@12.0.1
-    CXXSTD: 17
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cpu release build clang12:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: "clang-12 libomp-12-dev"
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: clang@12.0.1
+#     CXXSTD: 17
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cpu release build clang13 cxx20:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: "clang-13 libomp-13-dev"
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: clang@13.0.1
-    CXXSTD: 20
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cpu release build clang13 cxx20:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: "clang-13 libomp-13-dev"
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: clang@13.0.1
+#     CXXSTD: 20
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cpu codecov build gcc11:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: docker.io/ubuntu:22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "OFF"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: mc
-    THREADS_PER_NODE: 72
-    USE_CODECOV: "true"
-    BASE_CONFIG: "daint"
+# cpu codecov build gcc11:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+#     BASE_IMAGE: docker.io/ubuntu:22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "OFF"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cpu-gcc11/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: mc
+#     THREADS_PER_NODE: 72
+#     USE_CODECOV: "true"
+#     BASE_CONFIG: "daint"
 
-cuda release build gcc11:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: gpu
-    THREADS_PER_NODE: 24
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cuda release build gcc11:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: gpu
+#     THREADS_PER_NODE: 24
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cuda release build gcc11 scalapack:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "ON"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/release-cuda-scalapack.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: gpu
-    THREADS_PER_NODE: 24
-    USE_CODECOV: "false"
-    BASE_CONFIG: "daint"
+# cuda release build gcc11 scalapack:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
+#     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "ON"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/release-cuda-scalapack.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: gpu
+#     THREADS_PER_NODE: 24
+#     USE_CODECOV: "false"
+#     BASE_CONFIG: "daint"
 
-cuda codecov build gcc11:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "OFF"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: gpu
-    THREADS_PER_NODE: 24
-    USE_CODECOV: "true"
-    BASE_CONFIG: "daint"
+# cuda codecov build gcc11:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+#     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "OFF"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: gpu
+#     THREADS_PER_NODE: 24
+#     USE_CODECOV: "true"
+#     BASE_CONFIG: "daint"
 
-cuda codecov build gcc11 scalapack:
-  extends: .build_spack_common
-  variables:
-    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-    DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
-    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET: ""
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
-    COMPILER: gcc@11.2.0
-    CXXSTD: 17
-    USE_MKL: "OFF"
-    USE_ROCBLAS: "OFF"
-    SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
-    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
-    SLURM_CONSTRAINT: gpu
-    THREADS_PER_NODE: 24
-    USE_CODECOV: "true"
-    BASE_CONFIG: "daint"
+# cuda codecov build gcc11 scalapack:
+#   extends: .build_spack_common
+#   variables:
+#     BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
+#     DEPLOY_DOCKER_FILE: ci/docker/codecov.Dockerfile
+#     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+#     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+#     EXTRA_APTGET: ""
+#     EXTRA_APTGET_DEPLOY: "glibc-tools"
+#     # glibc-tools is needed for libSegFault on ubuntu:22.04
+#     COMPILER: gcc@11.2.0
+#     CXXSTD: 17
+#     USE_MKL: "OFF"
+#     USE_ROCBLAS: "OFF"
+#     SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
+#     COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+#     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+#     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+#     SLURM_CONSTRAINT: gpu
+#     THREADS_PER_NODE: 24
+#     USE_CODECOV: "true"
+#     BASE_CONFIG: "daint"
 
 rocm release build clang14+rocm-5.3.3:
   extends: .build_spack_common
@@ -332,89 +332,89 @@ rocm release build clang14+rocm-5.3.3:
   trigger:
     strategy: depend
 
-cpu release test gcc11:
-  extends: .run_common
-  needs:
-    - cpu release build gcc11
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu release build gcc11
+# cpu release test gcc11:
+#   extends: .run_common
+#   needs:
+#     - cpu release build gcc11
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu release build gcc11
 
-cpu release test gcc12 cxx20:
-  extends: .run_common
-  needs:
-    - cpu release build gcc12 cxx20
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu release build gcc12 cxx20
+# cpu release test gcc12 cxx20:
+#   extends: .run_common
+#   needs:
+#     - cpu release build gcc12 cxx20
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu release build gcc12 cxx20
 
-cpu release test clang12:
-  extends: .run_common
-  needs:
-    - cpu release build clang12
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu release build clang12
+# cpu release test clang12:
+#   extends: .run_common
+#   needs:
+#     - cpu release build clang12
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu release build clang12
 
-cpu release test clang13 cxx20:
-  extends: .run_common
-  needs:
-    - cpu release build clang13 cxx20
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cpu release build clang13 cxx20
+# cpu release test clang13 cxx20:
+#   extends: .run_common
+#   needs:
+#     - cpu release build clang13 cxx20
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu release build clang13 cxx20
 
-cpu codecov test gcc11:
-  extends: .run_common
-  needs:
-    - cpu codecov build gcc11
-  trigger:
-    strategy: depend
-    include:
-      - artifact: pipeline.yml
-        job: cpu codecov build gcc11
+# cpu codecov test gcc11:
+#   extends: .run_common
+#   needs:
+#     - cpu codecov build gcc11
+#   trigger:
+#     strategy: depend
+#     include:
+#       - artifact: pipeline.yml
+#         job: cpu codecov build gcc11
 
-cuda release test gcc11:
-  extends: .run_common
-  needs:
-    - cuda release build gcc11
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cuda release build gcc11
+# cuda release test gcc11:
+#   extends: .run_common
+#   needs:
+#     - cuda release build gcc11
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda release build gcc11
 
-cuda release test gcc11 scalapack:
-  extends: .run_common
-  needs:
-    - cuda release build gcc11 scalapack
-  trigger:
-    include:
-      - artifact: pipeline.yml
-        job: cuda release build gcc11 scalapack
+# cuda release test gcc11 scalapack:
+#   extends: .run_common
+#   needs:
+#     - cuda release build gcc11 scalapack
+#   trigger:
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda release build gcc11 scalapack
 
-cuda codecov test gcc11:
-  extends: .run_common
-  needs:
-    - cuda codecov build gcc11
-  trigger:
-    strategy: depend
-    include:
-      - artifact: pipeline.yml
-        job: cuda codecov build gcc11
+# cuda codecov test gcc11:
+#   extends: .run_common
+#   needs:
+#     - cuda codecov build gcc11
+#   trigger:
+#     strategy: depend
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda codecov build gcc11
 
-cuda codecov test gcc11 scalapack:
-  extends: .run_common
-  needs:
-    - cuda codecov build gcc11 scalapack
-  trigger:
-    strategy: depend
-    include:
-      - artifact: pipeline.yml
-        job: cuda codecov build gcc11 scalapack
+# cuda codecov test gcc11 scalapack:
+#   extends: .run_common
+#   needs:
+#     - cuda codecov build gcc11 scalapack
+#   trigger:
+#     strategy: depend
+#     include:
+#       - artifact: pipeline.yml
+#         job: cuda codecov build gcc11 scalapack
 
 rocm release test clang14+rocm-5.3.3:
   extends: .run_common

@@ -502,6 +502,7 @@ void testReductionToBandMatrix(comm::CommunicatorGrid grid, const TileElementSiz
 TYPED_TEST(ReductionToBandTestMCSingle, Issue974) {
   for (auto&& comm_grid : this->commGrids()) {
     testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {32, 32}, 32);
+    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, 46);
   }
 }
 #endif

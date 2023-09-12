@@ -12,7 +12,6 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
-#include <optional>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>

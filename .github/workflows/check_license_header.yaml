@@ -36,6 +36,7 @@ jobs:
                    -o  -name 'CMakeLists.txt'                                     \
                    -o  -name '.*'                                                 \
                    -o  -name '*.h5'                                               \
+                   -o  -name '*.md'                                               \
                ')'                                                                \
             > result-extension.check
           # Generate an error message for each file with an unkown extension

@@ -32,6 +32,8 @@
 #include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
 
+#include "config.h"  // Path to test data
+
 #include <gtest/gtest.h>
 
 #include <dlaf_test/comm_grids/grids_6_ranks.h>
@@ -40,8 +42,6 @@
 #include <dlaf_test/matrix/util_matrix_local.h>
 #include <dlaf_test/matrix/util_tile.h>
 #include <dlaf_test/util_types.h>
-
-#include "config.h" // Path to test data
 
 using namespace dlaf;
 using namespace dlaf::test;

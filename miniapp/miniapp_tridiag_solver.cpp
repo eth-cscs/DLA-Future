@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <iostream>
 #include <limits>
+#include <string>
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
@@ -60,6 +61,7 @@ struct Options
   SizeType mb;
 #ifdef DLAF_WITH_HDF5
   std::filesystem::path input_file;
+  std::string input_dataset;
 #endif
 
   Options(const pika::program_options::variables_map& vm)
@@ -77,6 +79,7 @@ struct Options
                   << std::endl;
       }
     }
+    input_dataset = vm["input-dataset"].as<std::string>();
 #endif
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
@@ -102,7 +105,7 @@ struct TridiagSolverMiniapp {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
-        Matrix<T, Device::CPU> tridiag = infile.read<T>("/tridiag", {opts.mb, 2});
+        Matrix<T, Device::CPU> tridiag = infile.read<T>(opts.input_dataset, {opts.mb, 2});
         return tridiag;
       }
 #endif
@@ -197,7 +200,8 @@ int main(int argc, char** argv) {
     ("matrix-size",  value<SizeType>()   ->default_value(4096), "Matrix size")
     ("block-size",   value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
 #ifdef DLAF_WITH_HDF5
-    ("input-file",   value<std::filesystem::path>()           , "Load matrix from given HDF5 file")
+    ("input-file",    value<std::filesystem::path>()                             , "Load matrix from given HDF5 file")
+    ("input-dataset", value<std::string>()           ->default_value("/tridiag") , "Name of HDF5 dataset to load as matrix")
 #endif
   ;
   // clang-format on

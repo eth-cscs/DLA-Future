@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include <filesystem>
 #include <iterator>
 
 const char* pika_argv[] = {

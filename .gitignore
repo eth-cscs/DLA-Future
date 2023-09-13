@@ -3,7 +3,6 @@
 *.swp
 *.orig
 /build*
-/miniapp/build*
 .ptp-sync-folder
 .vscode/
 !build.sh

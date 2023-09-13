@@ -207,11 +207,9 @@ function(DLAF_addTest test_target_name)
     endif()
 
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
+    configure_file(${PROJECT_SOURCE_DIR}/test/include/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
   endif()
-
-  set("TEST_DATA_PATH" "${PROJECT_SOURCE_DIR}/test/data/")
-  configure_file(${PROJECT_SOURCE_DIR}/test/include/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})

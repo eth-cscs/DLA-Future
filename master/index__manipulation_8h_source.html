@@ -80,102 +80,102 @@ $(function() {
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="comment">//</span></div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;pika/algorithm.hpp&gt;</span></div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/kernels.h&gt;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/tile_collector.h&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/policy.h&gt;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160; </div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="comment">// Calculates the problem size in the tile range [i_begin, i_end)</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">inline</span> SizeType problemSize(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end,</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;                            <span class="keyword">const</span> matrix::Distribution&amp; distr) {</div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;  <span class="keyword">const</span> SizeType nb = distr.blockSize().rows();</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keyword">const</span> SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keywordflow">return</span> (i_end - i_begin - 1) * nb + nbr;</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;}</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160; </div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="comment">// The index starts at `0` for tiles in the range [i_begin, i_end)</span></div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keywordtype">void</span> initIndex(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end, Matrix&lt;SizeType, D&gt;&amp; index) {</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  <span class="keyword">const</span> SizeType nb = index.distribution().blockSize().rows();</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keywordflow">for</span> (SizeType i = i_begin; i &lt; i_end; ++i) {</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    <span class="keyword">const</span> GlobalTileIndex tile_idx(i, 0);</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">const</span> SizeType tile_row = (i - i_begin) * nb;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keyword">auto</span> sender = di::whenAllLift(tile_row, index.readwrite(tile_idx));</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    di::transformDetach(</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;        di::Policy&lt;Backend::MC&gt;(),</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        [](SizeType offset, <span class="keyword">const</span> matrix::Tile&lt;SizeType, Device::CPU&gt;&amp; tile) {</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;          <span class="keywordflow">for</span> (SizeType i = 0; i &lt; tile.size().rows(); ++i) {</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;            tile(TileElementIndex(i, 0)) = offset + i;</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;          }</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;        },</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;        std::move(sender));</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  }</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;}</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="comment">// Add val to the indices of `index`.</span></div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="comment">//</span></div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="keyword">inline</span> <span class="keywordtype">void</span> addIndex(SizeType i_begin, SizeType i_end, SizeType val,</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;                     Matrix&lt;SizeType, Device::CPU&gt;&amp; index) {</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  SizeType n = problemSize(i_begin, i_end, index.distribution());</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="keyword">auto</span> add_fn = [val, n](<span class="keyword">const</span> <span class="keyword">auto</span>&amp; index) {</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    TileElementIndex zero_idx(0, 0);</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    SizeType* index_ptr = index[0].ptr(zero_idx);</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    <span class="keyword">auto</span> begin_it = index_ptr;</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keyword">auto</span> end_it = index_ptr + n;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    std::for_each(begin_it, end_it, [val](SizeType&amp; i) { i += val; });</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  };</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  TileCollector tc{i_begin, i_end};</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; </div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  <span class="keyword">auto</span> sender = ex::when_all_vector(tc.readwrite&lt;SizeType, Device::CPU&gt;(index));</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160; </div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  ex::start_detached(di::transform(di::Policy&lt;DefaultBackend_v&lt;Device::CPU&gt;&gt;(), std::move(add_fn),</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;                                   std::move(sender)));</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;}</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="comment">// Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index</span></div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="comment">// `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that</span></div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="comment">// are merged, the first is [0, k) and the second is [k, n).</span></div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="comment">//</span></div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> KSender&gt;</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="keywordtype">void</span> sortIndex(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end, KSender&amp;&amp; k,</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;               Matrix&lt;const T, Device::CPU&gt;&amp; vec, Matrix&lt;const SizeType, Device::CPU&gt;&amp; in_index,</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;               Matrix&lt;SizeType, Device::CPU&gt;&amp; out_index) {</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  <span class="keyword">const</span> SizeType n = problemSize(i_begin, i_end, vec.distribution());</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;  <span class="keyword">auto</span> sort_fn = [n](<span class="keyword">const</span> <span class="keyword">auto</span>&amp; k, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; vec_futs, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; in_index_futs,</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;                     <span class="keyword">const</span> <span class="keyword">auto</span>&amp; out_index, [[maybe_unused]] <span class="keyword">auto</span>&amp;&amp;... ts) {</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;    DLAF_ASSERT(k &lt;= n, k, n);</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;    <span class="keyword">const</span> TileElementIndex zero_idx(0, 0);</div>
-<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    <span class="keyword">const</span> T* v_ptr = vec_futs[0].get().ptr(zero_idx);</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;    <span class="keyword">const</span> SizeType* in_index_ptr = in_index_futs[0].get().ptr(zero_idx);</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;    SizeType* out_index_ptr = out_index[0].ptr(zero_idx);</div>
-<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;    <span class="keyword">auto</span> begin_it = in_index_ptr;</div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;    <span class="keyword">auto</span> split_it = in_index_ptr + k;</div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    <span class="keyword">auto</span> end_it = in_index_ptr + n;</div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;    <span class="keyword">auto</span> cmp = [v_ptr](<span class="keyword">const</span> SizeType i1, <span class="keyword">const</span> SizeType i2) { <span class="keywordflow">return</span> v_ptr[i1] &lt; v_ptr[i2]; };</div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,</div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;                std::move(cmp));</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;<span class="preprocessor">#include &lt;algorithm&gt;</span></div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/kernels.h&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/eigensolver/tridiag_solver/tile_collector.h&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/policy.h&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="util__matrix_8h.html">dlaf/util_matrix.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="comment">// Calculates the problem size in the tile range [i_begin, i_end)</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keyword">inline</span> SizeType problemSize(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end,</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;                            <span class="keyword">const</span> matrix::Distribution&amp; distr) {</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keyword">const</span> SizeType nb = distr.blockSize().rows();</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;  <span class="keyword">const</span> SizeType nbr = distr.tileSize(GlobalTileIndex(i_end - 1, 0)).rows();</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keywordflow">return</span> (i_end - i_begin - 1) * nb + nbr;</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;}</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="comment">// The index starts at `0` for tiles in the range [i_begin, i_end)</span></div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="keyword">template</span> &lt;Device D&gt;</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="keywordtype">void</span> initIndex(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end, Matrix&lt;SizeType, D&gt;&amp; index) {</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;  <span class="keyword">const</span> SizeType nb = index.distribution().blockSize().rows();</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;  <span class="keywordflow">for</span> (SizeType i = i_begin; i &lt; i_end; ++i) {</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;    <span class="keyword">const</span> GlobalTileIndex tile_idx(i, 0);</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keyword">const</span> SizeType tile_row = (i - i_begin) * nb;</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;    <span class="keyword">auto</span> sender = di::whenAllLift(tile_row, index.readwrite(tile_idx));</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    di::transformDetach(</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;        di::Policy&lt;Backend::MC&gt;(),</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;        [](SizeType offset, <span class="keyword">const</span> matrix::Tile&lt;SizeType, Device::CPU&gt;&amp; tile) {</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;          <span class="keywordflow">for</span> (SizeType i = 0; i &lt; tile.size().rows(); ++i) {</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;            tile(TileElementIndex(i, 0)) = offset + i;</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;          }</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;        },</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;        std::move(sender));</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  }</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="comment">// Add val to the indices of `index`.</span></div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="comment">//</span></div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="keyword">inline</span> <span class="keywordtype">void</span> addIndex(SizeType i_begin, SizeType i_end, SizeType val,</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;                     Matrix&lt;SizeType, Device::CPU&gt;&amp; index) {</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  SizeType n = problemSize(i_begin, i_end, index.distribution());</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="keyword">auto</span> add_fn = [val, n](<span class="keyword">const</span> <span class="keyword">auto</span>&amp; index) {</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    TileElementIndex zero_idx(0, 0);</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    SizeType* index_ptr = index[0].ptr(zero_idx);</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keyword">auto</span> begin_it = index_ptr;</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;    <span class="keyword">auto</span> end_it = index_ptr + n;</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    std::for_each(begin_it, end_it, [val](SizeType&amp; i) { i += val; });</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;  };</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  TileCollector tc{i_begin, i_end};</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  <span class="keyword">auto</span> sender = ex::when_all_vector(tc.readwrite&lt;SizeType, Device::CPU&gt;(index));</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  ex::start_detached(di::transform(di::Policy&lt;DefaultBackend_v&lt;Device::CPU&gt;&gt;(), std::move(add_fn),</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;                                   std::move(sender)));</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;}</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="comment">// Sorts an index `in_index_tiles` based on values in `vals_tiles` in ascending order into the index</span></div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="comment">// `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that</span></div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="comment">// are merged, the first is [0, k) and the second is [k, n).</span></div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="comment">//</span></div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> KSender&gt;</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;<span class="keywordtype">void</span> sortIndex(<span class="keyword">const</span> SizeType i_begin, <span class="keyword">const</span> SizeType i_end, KSender&amp;&amp; k,</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;               Matrix&lt;const T, Device::CPU&gt;&amp; vec, Matrix&lt;const SizeType, Device::CPU&gt;&amp; in_index,</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;               Matrix&lt;SizeType, Device::CPU&gt;&amp; out_index) {</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  <span class="keyword">namespace </span>di = dlaf::internal;</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160; </div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;  <span class="keyword">const</span> SizeType n = problemSize(i_begin, i_end, vec.distribution());</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  <span class="keyword">auto</span> sort_fn = [n](<span class="keyword">const</span> <span class="keyword">auto</span>&amp; k, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; vec_futs, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; in_index_futs,</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;                     <span class="keyword">const</span> <span class="keyword">auto</span>&amp; out_index, [[maybe_unused]] <span class="keyword">auto</span>&amp;&amp;... ts) {</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;    DLAF_ASSERT(k &lt;= n, k, n);</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160; </div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;    <span class="keyword">const</span> TileElementIndex zero_idx(0, 0);</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;    <span class="keyword">const</span> T* v_ptr = vec_futs[0].get().ptr(zero_idx);</div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;    <span class="keyword">const</span> SizeType* in_index_ptr = in_index_futs[0].get().ptr(zero_idx);</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;    SizeType* out_index_ptr = out_index[0].ptr(zero_idx);</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;    <span class="keyword">auto</span> begin_it = in_index_ptr;</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;    <span class="keyword">auto</span> split_it = in_index_ptr + k;</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;    <span class="keyword">auto</span> end_it = in_index_ptr + n;</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;    <span class="keyword">auto</span> cmp = [v_ptr](<span class="keyword">const</span> SizeType i1, <span class="keyword">const</span> SizeType i2) { <span class="keywordflow">return</span> v_ptr[i1] &lt; v_ptr[i2]; };</div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;    std::merge(begin_it, split_it, split_it, end_it, out_index_ptr, std::move(cmp));</div>
 <div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;  };</div>
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160; </div>
 <div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;  TileCollector tc{i_begin, i_end};</div>

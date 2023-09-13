@@ -56,7 +56,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("pika@0.15.1:", when="@0.1")
     depends_on("pika@0.16:", when="@0.2.0:")
-    depends_on("pika@0.18:", when="@main")
+    depends_on("pika@0.18:", when="@master")
     depends_on("pika-algorithms@0.1:")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")

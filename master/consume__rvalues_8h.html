@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/common/unwrap.h File Reference</title>
+<title>DLAF: /home/runner/work/DLA-Future/DLA-Future/include/dlaf/common/consume_rvalues.h File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -69,39 +69,34 @@ $(function() {
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
-<div class="title">unwrap.h File Reference</div>  </div>
+<div class="title">consume_rvalues.h File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;functional&gt;</code><br />
+<div class="textblock"><code>#include &lt;tuple&gt;</code><br />
 <code>#include &lt;type_traits&gt;</code><br />
 <code>#include &lt;utility&gt;</code><br />
-<code>#include &lt;pika/async_rw_mutex.hpp&gt;</code><br />
-<code>#include &lt;pika/execution.hpp&gt;</code><br />
 </div>
-<p><a href="unwrap_8h_source.html">Go to the source code of this file.</a></p>
+<p><a href="consume__rvalues_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">dlaf::common::internal::Unwrapper&lt; T &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1common_1_1internal_1_1_unwrapper_3_01std_1_1reference__wrapper_3_01_t_01_4_01_4.html">dlaf::common::internal::Unwrapper&lt; std::reference_wrapper&lt; T &gt; &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1common_1_1internal_1_1_unwrapper_3_01pika_1_1execution_1_1experimental_1_1async__r5be7b0afcb71e6df73ebcc954d80821d.html">dlaf::common::internal::Unwrapper&lt; pika::execution::experimental::async_rw_mutex_access_wrapper&lt; T1, T2, at &gt; &gt;</a></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1common_1_1internal_1_1_unwrapping.html">dlaf::common::internal::Unwrapping&lt; F &gt;</a></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1common_1_1internal_1_1_consume_rvalues.html">dlaf::common::internal::ConsumeRvalues&lt; F &gt;</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a8da70a5535ac987a8f6ca7f8b195547d"><td class="memTemplParams" colspan="2"><a id="a8da70a5535ac987a8f6ca7f8b195547d"></a>
+<tr class="memitem:a0f7488909f3158adfb50c307ab77a075"><td class="memTemplParams" colspan="2"><a id="a0f7488909f3158adfb50c307ab77a075"></a>
 template&lt;typename T &gt; </td></tr>
-<tr class="memitem:a8da70a5535ac987a8f6ca7f8b195547d"><td class="memTemplItemLeft" align="right" valign="top">decltype(auto)&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="unwrap_8h.html#a8da70a5535ac987a8f6ca7f8b195547d">dlaf::common::internal::unwrap</a> (T &amp;&amp;t)</td></tr>
-<tr class="memdesc:a8da70a5535ac987a8f6ca7f8b195547d"><td class="mdescLeft">&#160;</td><td class="mdescRight">unwrap unwraps things in a way specified by <a class="el" href="structdlaf_1_1common_1_1internal_1_1_unwrapper.html">Unwrapper</a>. <br /></td></tr>
-<tr class="separator:a8da70a5535ac987a8f6ca7f8b195547d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afcde87d2421b47550a85f0feef86ae6c"><td class="memTemplParams" colspan="2"><a id="afcde87d2421b47550a85f0feef86ae6c"></a>
+<tr class="memitem:a0f7488909f3158adfb50c307ab77a075"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::common::internal::consume_rvalue</b> (T &amp;&amp;x)</td></tr>
+<tr class="separator:a0f7488909f3158adfb50c307ab77a075"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c93c276c3b12ac7a2447fba2ad2809f"><td class="memTemplParams" colspan="2"><a id="a6c93c276c3b12ac7a2447fba2ad2809f"></a>
+template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a6c93c276c3b12ac7a2447fba2ad2809f"><td class="memTemplItemLeft" align="right" valign="top">T &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::common::internal::consume_rvalue</b> (T &amp;x)</td></tr>
+<tr class="separator:a6c93c276c3b12ac7a2447fba2ad2809f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9681ac68cd2ed0377fb93cc3db9f515"><td class="memTemplParams" colspan="2"><a id="ac9681ac68cd2ed0377fb93cc3db9f515"></a>
 template&lt;typename F &gt; </td></tr>
-<tr class="memitem:afcde87d2421b47550a85f0feef86ae6c"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::common::internal::Unwrapping</b> (F &amp;&amp;) -&gt; Unwrapping&lt; std::decay_t&lt; F &gt;&gt;</td></tr>
-<tr class="separator:afcde87d2421b47550a85f0feef86ae6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac9681ac68cd2ed0377fb93cc3db9f515"><td class="memTemplItemLeft" align="right" valign="top">&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::common::internal::ConsumeRvalues</b> (F &amp;&amp;) -&gt; ConsumeRvalues&lt; std::decay_t&lt; F &gt;&gt;</td></tr>
+<tr class="separator:ac9681ac68cd2ed0377fb93cc3db9f515"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
 <!-- start footer part -->

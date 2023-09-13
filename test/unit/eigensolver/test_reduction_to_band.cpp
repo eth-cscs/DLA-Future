@@ -462,19 +462,12 @@ void testReductionToBandMatrix(comm::CommunicatorGrid grid, const LocalElementSi
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
     Matrix<T, Device::CPU> reference(distribution);
-    matrix::util::set_random_hermitian_banded(reference, band_size - 10);
+    matrix::util::set_random_hermitian_banded(reference, band_size);
     return reference;
   }();
 
   Matrix<T, Device::CPU> matrix_a_h(distribution);
   copy(reference, matrix_a_h);
-
-  auto rank = grid.fullCommunicator().rank();
-  std::stringstream s;
-  s << "mat_" << rank << ".py";
-  std::ofstream fmat(s.str());
-  dlaf::matrix::print(dlaf::format::numpy{}, "test", matrix_a_h, fmat);
-  fmat.close();
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);

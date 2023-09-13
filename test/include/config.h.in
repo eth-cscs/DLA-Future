@@ -27,5 +27,3 @@ const char* dlaf_argv[] = {"@test_target_name@"};
 
 const int pika_argc = std::size(pika_argv);
 const int dlaf_argc = std::size(dlaf_argv);
-
-std::filesystem::path datapath("@TEST_DATA_PATH@");

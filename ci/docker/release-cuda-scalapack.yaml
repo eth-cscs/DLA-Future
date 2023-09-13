@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +cuda +miniapps +scalapack +ci-test +hdf5 ^intel-mkl threads=openmp ^mpich
+    - dla-future@master +cuda +miniapps +scalapack +ci-test ^intel-mkl threads=openmp ^mpich
 
   packages:
     all:

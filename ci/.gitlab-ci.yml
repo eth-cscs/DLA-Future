@@ -352,6 +352,16 @@ cpu release test gcc11:
       - artifact: pipeline.yml
         job: cpu release build gcc11
 
+cpu release test gcc11 stdexec:
+  extends: .run_common
+  needs:
+    - cpu release build gcc11 stdexec
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build gcc11 stdexec
+
+
 cpu release test gcc12 cxx20:
   extends: .run_common
   needs:

@@ -98,6 +98,9 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matr
 template <Device D, class T>
 T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                          const SizeType j, std::array<T, 2> x0_and_squares) {
+  if (x0_and_squares[1] == T(0))
+    return T(0);
+
   const T norm = std::sqrt(x0_and_squares[1]);
   const T x0 = x0_and_squares[0];
   const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;

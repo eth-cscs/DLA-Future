@@ -127,14 +127,21 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>It solves the standard eigenvalue problem A * x = lambda * x.</p>
 <p>On exit, the lower triangle or the upper triangle (depending on <code>uplo</code>) of <code>mat_a</code>, including the diagonal, is destroyed.</p>
 <p>Implementation on local memory.</p>
-<dl class="section return"><dt>Returns</dt><dd>struct ReturnEigensolverType with eigenvalues, as a vector&lt;T&gt;, and eigenvectors as a Matrix </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced </td></tr>
-    <tr><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced</td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat</code> is not distributed </dd>
+<dd>
+<code>mat</code> has size (N x N) </dd>
+<dd>
+<code>mat</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -183,13 +190,44 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>Implementation on local memory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced </td></tr>
-    <tr><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
-    <tr><td class="paramname">eigenvalues</td><td>is a N x 1 matrix which on output contains the eigenvalues </td></tr>
-    <tr><td class="paramname">eigenvectors</td><td>is a N x N matrix which on output contains the eigenvectors </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced</td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat</code> is not distributed </dd>
+<dd>
+<code>mat</code> has size (N x N) </dd>
+<dd>
+<code>mat</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">eigenvalues</td><td>contains the eigenvalues </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>eigenvalues</code> is not distributed </dd>
+<dd>
+<code>eigenvalues</code> has size (N x 1) </dd>
+<dd>
+<code>eigenvalues</code> has blocksize (NB x 1) </dd>
+<dd>
+<code>eigenvalues</code> has tilesize (NB x 1)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">eigenvectors</td><td>contains the eigenvectors </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>eigenvectors</code> is not distributed </dd>
+<dd>
+<code>eigenvectors</code> has size (N x N) </dd>
+<dd>
+<code>eigenvectors</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>eigenvectors</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -230,15 +268,22 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>It solves the standard eigenvalue problem A * x = lambda * x.</p>
 <p>On exit, the lower triangle or the upper triangle (depending on <code>uplo</code>) of <code>mat_a</code>, including the diagonal, is destroyed.</p>
 <p>Implementation on distributed memory.</p>
-<dl class="section return"><dt>Returns</dt><dd>struct ReturnEigensolverType with eigenvalues, as a vector&lt;T&gt;, and eigenvectors as a Matrix </dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>struct ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix</dd></dl>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">grid</td><td>is the communicator grid on which the matrix <code>mat</code> has been distributed, </td></tr>
-    <tr><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced </td></tr>
-    <tr><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">grid</td><td>is the communicator grid on which the matrix <code>mat</code> has been distributed</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced</td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat</code> has size (N x N) </dd>
+<dd>
+<code>mat</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -293,14 +338,45 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>Implementation on distributed memory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">grid</td><td>is the communicator grid on which the matrix <code>mat</code> has been distributed, </td></tr>
-    <tr><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced </td></tr>
-    <tr><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
-    <tr><td class="paramname">eigenvalues</td><td>is a N x 1 matrix which on output contains the eigenvalues </td></tr>
-    <tr><td class="paramname">eigenvectors</td><td>is a N x N matrix which on output contains the eigenvectors </td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">grid</td><td>is the communicator grid on which the matrix <code>mat</code> has been distributed</td></tr>
+    <tr><td class="paramdir"></td><td class="paramname">uplo</td><td>specifies if upper or lower triangular part of <code>mat</code> will be referenced</td></tr>
+    <tr><td class="paramdir">[in,out]</td><td class="paramname">mat</td><td>contains the Hermitian matrix A </td></tr>
   </table>
   </dd>
 </dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat</code> has size (N x N) </dd>
+<dd>
+<code>mat</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">eigenvalues</td><td>contains the eigenvalues </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>eigenvalues</code> is stored on all ranks </dd>
+<dd>
+<code>eigenvalues</code> has size (N x 1) </dd>
+<dd>
+<code>eigenvalues</code> has blocksize (NB x 1) </dd>
+<dd>
+<code>eigenvalues</code> has tilesize (NB x 1)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">eigenvectors</td><td>contains the eigenvectors </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>eigenvectors</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>eigenvectors</code> has size (N x N) </dd>
+<dd>
+<code>eigenvectors</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>eigenvectors</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

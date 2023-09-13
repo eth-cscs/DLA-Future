@@ -92,61 +92,61 @@ $(function() {
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>dlaf::eigensolver::internal {</div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00074"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">   74</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">band_to_tridiagonal</a>(blas::Uplo uplo, SizeType band_size,</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;                                                  Matrix&lt;const T, D&gt;&amp; mat_a) {</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160; </div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  <span class="keywordflow">switch</span> (uplo) {</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag.html">BandToTridiag&lt;B, D, T&gt;::call_L</a>(band_size, mat_a);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::General:</div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;  }</div>
-<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;  <span class="keywordflow">return</span> DLAF_UNREACHABLE(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a>);</div>
-<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;}</div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160; </div>
-<div class="line"><a name="l00146"></a><span class="lineno">  146</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00147"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#aec7c92ceba0e074c2634b07f12a0f059">  147</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">band_to_tridiagonal</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo,</div>
-<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;                                                  SizeType band_size, Matrix&lt;const T, device&gt;&amp; mat_a) {</div>
-<div class="line"><a name="l00149"></a><span class="lineno">  149</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
-<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
-<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160; </div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  <span class="comment">// If the grid contains only one rank force local implementation.</span></div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;  <span class="keywordflow">if</span> (grid.<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a>() == <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">comm::Size2D</a>(1, 1))</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;    <span class="keywordflow">return</span> band_to_tridiagonal&lt;backend, device, T&gt;(uplo, band_size, mat_a);</div>
-<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160; </div>
-<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;  <span class="keywordflow">switch</span> (uplo) {</div>
-<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
-<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag.html">BandToTridiag&lt;backend, device, T&gt;::call_L</a>(grid, band_size, mat_a);</div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::General:</div>
-<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;      <span class="keywordflow">break</span>;</div>
-<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;  }</div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160; </div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  <span class="keywordflow">return</span> DLAF_UNREACHABLE(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a>);</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;}</div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160; </div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00075"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">   75</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">band_to_tridiagonal</a>(blas::Uplo uplo, SizeType band_size,</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;                                                  Matrix&lt;const T, D&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;  DLAF_ASSERT(mat_a.blockSize().rows() % band_size == 0, mat_a.blockSize().rows(), band_size);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;  DLAF_ASSERT(matrix::local_matrix(mat_a), mat_a);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  <span class="keywordflow">switch</span> (uplo) {</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag.html">BandToTridiag&lt;B, D, T&gt;::call_L</a>(band_size, mat_a);</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::General:</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  }</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;  <span class="keywordflow">return</span> DLAF_UNREACHABLE(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a>);</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;}</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
+<div class="line"><a name="l00148"></a><span class="lineno">  148</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00149"></a><span class="lineno"><a class="line" href="band__to__tridiag_8h.html#aec7c92ceba0e074c2634b07f12a0f059">  149</a></span>&#160;<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a> <a class="code" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">band_to_tridiagonal</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo,</div>
+<div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;                                                  SizeType band_size, Matrix&lt;const T, device&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  DLAF_ASSERT(band_size &gt;= 2, band_size);</div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160; </div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;  <span class="comment">// If the grid contains only one rank force local implementation.</span></div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;  <span class="keywordflow">if</span> (grid.<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a>() == <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">comm::Size2D</a>(1, 1))</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160;    <span class="keywordflow">return</span> band_to_tridiagonal&lt;backend, device, T&gt;(uplo, band_size, mat_a);</div>
+<div class="line"><a name="l00160"></a><span class="lineno">  160</span>&#160; </div>
+<div class="line"><a name="l00161"></a><span class="lineno">  161</span>&#160;  <span class="keywordflow">switch</span> (uplo) {</div>
+<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Lower:</div>
+<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_band_to_tridiag.html">BandToTridiag&lt;backend, device, T&gt;::call_L</a>(grid, band_size, mat_a);</div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::Upper:</div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;    <span class="keywordflow">case</span> blas::Uplo::General:</div>
+<div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;      DLAF_UNIMPLEMENTED(uplo);</div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;      <span class="keywordflow">break</span>;</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  }</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160; </div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;  <span class="keywordflow">return</span> DLAF_UNREACHABLE(<a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_tridiag_result.html">TridiagResult&lt;T, Device::CPU&gt;</a>);</div>
 <div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;}</div>
-<div class="ttc" id="aband__to__tridiag_8h_html_ac2f294844a92af6854e4ef81e41eb4fe"><div class="ttname"><a href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">dlaf::eigensolver::internal::band_to_tridiagonal</a></div><div class="ttdeci">TridiagResult&lt; T, Device::CPU &gt; band_to_tridiagonal(blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> band_to_tridiag.h:74</div></div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160; </div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;}</div>
+<div class="ttc" id="aband__to__tridiag_8h_html_ac2f294844a92af6854e4ef81e41eb4fe"><div class="ttname"><a href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">dlaf::eigensolver::internal::band_to_tridiagonal</a></div><div class="ttdeci">TridiagResult&lt; T, Device::CPU &gt; band_to_tridiagonal(blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> band_to_tridiag.h:75</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html_a9307e8d79bffad58211c317c92c7dc77"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">dlaf::comm::CommunicatorGrid::size</a></div><div class="ttdeci">Size2D size() const noexcept</div><div class="ttdoc">Return the number of rows in the grid.</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:68</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>

@@ -151,22 +151,44 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">side</td><td>specifies whether A appears on the <em>Left</em> or on the <em>Right</em> of matrix B, </td></tr>
-    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A to be referenced are the elements in the lower or upper triangular part, </td></tr>
+    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A to be referenced are the elements in the lower or upper triangular part,</td></tr>
     <tr><td class="paramname">mat_a</td><td>contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or the lower triangular part which represent the Hermitian matrix (depending on the value of uplo) are accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dd>
+<code>mat_b</code> has size (N x M) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the matrix B accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dd>
+<code>mat_b</code> has size (M x K) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_c</td><td>on entry it contains the matrix C, on exit the matrix elements are overwritten with the elements of the result. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_b</code> has size (N x K) </dd>
 <dd>
-mat_a mat_b and mat_c have equal tile and block size, </dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a mat_b and mat_c are not distributed, </dd>
-<dd>
-mat_a mat_b are multipliable and the result can be summed to mat_c. </dd></dl>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -237,22 +259,44 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">side</td><td>specifies whether A appears on the <em>Left</em> or on the <em>Right</em> of matrix B, </td></tr>
-    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A to be referenced are the elements in the lower or upper triangular part, </td></tr>
+    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A to be referenced are the elements in the lower or upper triangular part,</td></tr>
     <tr><td class="paramname">mat_a</td><td>contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or the lower triangular part which represent the Hermitian matrix (depending on the value of uplo) are accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_b</code> has size (N x M) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the matrix B accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_b</code> has size (M x K) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_c</td><td>on entry it contains the matrix C, on exit the matrix elements are overwritten with the elements of the result. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_b</code> has size (N x K) </dd>
 <dd>
-mat_a, mat_b and mat_c have equal tile and block size, </dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a, mat_b and mat_c are distributed according to the grid, </dd>
-<dd>
-mat_a mat_b are multipliable and the result can be summed to mat_c. </dd></dl>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

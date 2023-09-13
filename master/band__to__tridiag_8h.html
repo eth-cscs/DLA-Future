@@ -145,15 +145,15 @@ template&lt;Backend B, Device D, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_a</code> has size (N x N) </dd>
 <dd>
-band_size is a divisor of mat_a.blockSize().cols(), and band_size &gt;= 2 </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a is not distributed, </dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd>
 <dd>
-mat_a has equal tile and block sizes. </dd></dl>
+<code>band_size</code> is a divisor of <code>mat_a.blockSize().cols()</code>, and <code>band_size</code> &gt;= 2 </dd></dl>
 
 </div>
 </div>
@@ -217,15 +217,15 @@ template&lt;Backend backend, Device device, class T &gt; </div>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_a</code> has size (N x N) </dd>
 <dd>
-band_size is a divisor of mat_a.blockSize().cols() and band_size &gt;= 2, </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a is distributed according to grid, </dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd>
 <dd>
-mat_a has equal tile and block sizes. </dd></dl>
+<code>band_size</code> is a divisor of <code>mat_a.blockSize().cols()</code>, and <code>band_size</code> &gt;= 2 </dd></dl>
 
 </div>
 </div>

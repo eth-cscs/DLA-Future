@@ -131,11 +131,11 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 </div><div class="memdoc">
 <p>Compute the max norm of the distributed Matrix <code>A</code> (ge/sy/he)</p>
 <dl class="section note"><dt>Note</dt><dd><code>uplo</code> == blas::uplo::Upper not yet implemented</dd></dl>
-<dl class="section pre"><dt>Precondition</dt><dd><code>A.blockSize().rows() == A.blockSize().cols()</code>, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>A</code> is distributed according to <code>grid</code> </dd>
 <dd>
-<code>A</code> is distributed according to <code>grid</code>, </dd>
+<code>A</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>A</code> has equal tile and block sizes, </dd></dl>
+<code>A</code> has tilesize (NB x NB) </dd></dl>
 <dl class="section return"><dt>Returns</dt><dd>the max norm of the Matrix <code>A</code> or 0 if <code>A.size().isEmpty()</code> </dd></dl>
 
 </div>

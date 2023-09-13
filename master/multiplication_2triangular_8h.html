@@ -153,21 +153,31 @@ template&lt;Backend backend, Device device, class T &gt; </div>
     <tr><td class="paramname">side</td><td>specifies whether op(A) appears on the <em>Left</em> or on the <em>Right</em> of matrix B, </td></tr>
     <tr><td class="paramname">uplo</td><td>specifies whether the matrix A is a <em>Lower</em> or an <em>Upper</em> triangular matrix, </td></tr>
     <tr><td class="paramname">op</td><td>specifies the form of op(A) to be used in the matrix multiplication: <em>NoTrans</em>, <em>Trans</em>, <em>ConjTrans</em>, </td></tr>
-    <tr><td class="paramname">diag</td><td>specifies if the matrix A is assumed to be unit triangular (<em>Unit</em>) or not (<em>NonUnit</em>), </td></tr>
+    <tr><td class="paramname">diag</td><td>specifies if the matrix A is assumed to be unit triangular (<em>Unit</em>) or not (<em>NonUnit</em>),</td></tr>
     <tr><td class="paramname">mat_a</td><td>contains the triangular matrix A. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>on entry it contains the matrix B, on exit the matrix elements are overwritten with the elements of the result. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_b</code> has size (N x N) </dd>
 <dd>
-mat_a and mat_b have equal tile and block sizes, </dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a and mat_b are not distributed, </dd>
-<dd>
-mat_a and mat_b are multipliable. </dd></dl>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -240,21 +250,31 @@ template&lt;Backend backend, Device device, class T &gt; </div>
     <tr><td class="paramname">side</td><td>specifies whether op(A) appears on the <em>Left</em> or on the <em>Right</em> of matrix B, </td></tr>
     <tr><td class="paramname">uplo</td><td>specifies whether the matrix A is a <em>Lower</em> or an <em>Upper</em> triangular matrix, </td></tr>
     <tr><td class="paramname">op</td><td>specifies the form of op(A) to be used in the matrix multiplication: <em>NoTrans</em>, <em>Trans</em>, <em>ConjTrans</em>, </td></tr>
-    <tr><td class="paramname">diag</td><td>specifies if the matrix A is assumed to be unit triangular (<em>Unit</em>) or not (<em>NonUnit</em>), </td></tr>
+    <tr><td class="paramname">diag</td><td>specifies if the matrix A is assumed to be unit triangular (<em>Unit</em>) or not (<em>NonUnit</em>),</td></tr>
     <tr><td class="paramname">mat_a</td><td>contains the triangular matrix A. Only the tiles of the matrix which contain the upper or the lower triangular part (depending on the value of uplo) are accessed in read-only mode (the elements are not modified), </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>on entry it contains the matrix B, on exit the matrix elements are overwritten with the elements of the result. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
 <dd>
-mat_a has a square block size, </dd>
+<code>mat_b</code> has size (N x N) </dd>
 <dd>
-mat_a and mat_b have equal tile and block sizes, </dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a and mat_b are distributed according to the grid, </dd>
-<dd>
-mat_a and mat_b are multipliable. </dd></dl>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

@@ -176,20 +176,44 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_a</td><td>contains the input matrix A. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed in read-only mode (elements are not modified) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the input matrix B. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed in read-only mode (elements are not modified) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_b</code> has size (N x N) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_c</td><td>On entry it contains the input matrix C. On exit matrix tiles in the range will be overwritten with the result, while others are left untouched. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a, mat_b and mat_c are distributed in the same way, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is distributed according to <code>grid</code> </dd>
 <dd>
-mat_a, mat_b and mat_c have the same square block size, </dd>
+<code>mat_c</code> has size (N x N) </dd>
 <dd>
-mat_a, mat_b and mat_c have the same size, </dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a, mat_b and mat_c have equal tile and block sizes, </dd>
+<code>mat_c</code> has tilesize (NB x NB)</dd>
 <dd>
-a &lt;= b &lt;= mat_a.nrTiles().rows() </dd></dl>
+<code>a &lt;= b &lt;= mat_a.nrTiles().rows()</code> </dd></dl>
 
 </div>
 </div>
@@ -266,22 +290,46 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">opA</td><td>specifies the form of opA(A) to be used in the matrix multiplication: <em>NoTrans</em>, <em>Trans</em>, <em>ConjTrans</em>, </td></tr>
-    <tr><td class="paramname">opB</td><td>specifies the form of opB(B) to be used in the matrix multiplication: <em>NoTrans</em>, <em>Trans</em>, <em>ConjTrans</em>, </td></tr>
+    <tr><td class="paramname">opB</td><td>specifies the form of opB(B) to be used in the matrix multiplication: <em>NoTrans</em>, <em>Trans</em>, <em>ConjTrans</em>,</td></tr>
     <tr><td class="paramname">mat_a</td><td>contains the input matrix A. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed in read-only mode (elements are not modified) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_b</td><td>contains the input matrix B. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed in read-only mode (elements are not modified) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dd>
+<code>mat_b</code> has size (N x N) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_c</td><td>On entry it contains the input matrix C. On exit matrix tiles in the range will be overwritten with the result, while others are left untouched. Only tiles whose both row and col tile coords are in the closed range [a,b] are accessed. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a, mat_b and mat_c have the same square block size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is not distributed </dd>
 <dd>
-mat_a, mat_b and mat_c have the same size, </dd>
+<code>mat_c</code> has size (N x N) </dd>
 <dd>
-mat_a, mat_b and mat_c have equal tile and block sizes, </dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a, mat_b and mat_c are not distributed, </dd>
+<code>mat_c</code> has tilesize (NB x NB)</dd>
 <dd>
-a &lt;= b &lt;= mat_a.nrTiles().rows() </dd></dl>
+<code>a &lt;= b &lt;= mat_a.nrTiles().rows()</code> </dd></dl>
 
 </div>
 </div>

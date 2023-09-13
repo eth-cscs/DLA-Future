@@ -142,22 +142,26 @@ v v v * * ~
 v v v v * *
 </pre> <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">grid</td><td>is the CommunicatorGrid on which <code>mat_a</code> is distributed </td></tr>
+    <tr><td class="paramname">grid</td><td>is the CommunicatorGrid on which <code>mat_a</code> is distributed</td></tr>
     <tr><td class="paramname">mat_a</td><td>on entry it contains an Hermitian matrix, on exit it is overwritten with the band-diagonal result together with the elementary reflectors as described above. Just the tiles of the lower triangular part will be used. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the band of the resulting matrix (main diagonal + band_size sub-diagonals) </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the tau vector as needed by backtransformationReductionToBand</dd></dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size </dd>
-<dd>
-mat_a has a square block size </dd>
-<dd>
-mat_a has equal tile and block sizes </dd>
-<dd>
-mat_a is distributed according to <code>grid</code> </dd>
-<dd>
-mat_a.blockSize().rows() % band_size == 0 </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a.blockSize().rows() % band_size == 0</code></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the tau vector as needed by backtransformationReductionToBand </dd></dl>
 
 </div>
 </div>
@@ -192,20 +196,24 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>See the related distributed version for more details. </p><dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_a</td><td>on entry it contains an Hermitian matrix, on exit it is overwritten with the band-diagonal result together with the elementary reflectors. Just the tiles of the lower triangular part will be used. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
+<dd>
+<code>mat_a</code> has size (N x N) </dd>
+<dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">band_size</td><td>size of the band of the resulting matrix (main diagonal + band_size sub-diagonals) </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section return"><dt>Returns</dt><dd>the tau vector as needed by backtransformationReductionToBand</dd></dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a has a square size </dd>
-<dd>
-mat_a has a square block size </dd>
-<dd>
-mat_a has equal tile and block sizes </dd>
-<dd>
-mat_a is a local matrix </dd>
-<dd>
-mat_a.blockSize().rows() % band_size == 0 </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code><code>mat_a.blockSize()</code>.rows() % band_size == 0</code></dd></dl>
+<dl class="section return"><dt>Returns</dt><dd>the tau vector as needed by backtransformationReductionToBand </dd></dl>
 
 </div>
 </div>

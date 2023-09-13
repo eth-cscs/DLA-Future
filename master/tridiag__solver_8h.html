@@ -132,25 +132,43 @@ template&lt;Backend B, Device D, class T &gt; </div>
 <p>Finds the eigenvalues and eigenvectors of the symmetric tridiagonal matrix <code>tridiag</code> stored locally on each rank. The resulting eigenvalues <code>evals</code> are stored locally on each rank while the resulting eigenvectors <code>evecs</code> are distributed across ranks in 2D block-cyclic manner.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">tridiag</td><td>[in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric tridiagonal matrix in the first column and second columns respectively. The last entry of the second column is not used. </td></tr>
-    <tr><td class="paramname">evals</td><td>[out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal matrix </td></tr>
-    <tr><td class="paramname">evecs</td><td>[out] (n x n) distributed matrix holding the eigenvectors of the the symmetric tridiagonal matrix on exit.</td></tr>
+    <tr><td class="paramname">tridiag</td><td>matrix with the diagonal and off-diagonal of the symmetric tridiagonal matrix in the first column and second columns respectively. The last entry of the second column is not used. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>tridiag and <code>evals</code> are local matrices and are the same on all ranks </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>tridiag</code> is not distributed </dd>
 <dd>
-tridiag has 2 columns and column block size of 2 </dd>
+<code>tridiag</code> has size (N x 2) </dd>
 <dd>
-tridiag has equal tile and block sizes </dd>
+<code>tridiag</code> has blocksize (NB x 2) </dd>
 <dd>
-evecs is a square matrix with global number of rows equal to the number of rows of <code>tridiag</code> and <code>evals</code> </dd>
+<code>tridiag</code> has tilesize (NB x 2)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">evals</td><td>holds the eigenvalues of the symmetric tridiagonal matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>evals</code> is not distributed </dd>
 <dd>
-evecs has a square block size with number of block rows equal to the block rows of <code>tridiag</code> and <code>evals</code> </dd>
+<code>evals</code> has size (N x 1) </dd>
 <dd>
-evals has equal tile and block sizes </dd>
+<code>evals</code> has blocksize (NB x 1) </dd>
 <dd>
-evecs has equal tile and block sizes </dd></dl>
+<code>evals</code> has tilesize (NB x 1)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">evecs</td><td>holds the eigenvectors of the symmetric tridiagonal matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>evecs</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>evecs</code> has size (N x N) </dd>
+<dd>
+<code>evecs</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>evecs</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -190,25 +208,43 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <p>Finds the eigenvalues and eigenvectors of the local symmetric tridiagonal matrix <code>tridiag</code>.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">tridiag</td><td>[in/out] (n x 2) local matrix with the diagonal and off-diagonal of the symmetric tridiagonal matrix in the first column and second columns respectively. The last entry of the second column is not used. </td></tr>
-    <tr><td class="paramname">evals</td><td>[out] (n x 1) local matrix holding the eigenvalues of the the symmetric tridiagonal matrix </td></tr>
-    <tr><td class="paramname">evecs</td><td>[out] (n x n) local matrix holding the eigenvectors of the the symmetric tridiagonal matrix on exit.</td></tr>
+    <tr><td class="paramname">tridiag</td><td>local matrix with the diagonal and off-diagonal of the symmetric tridiagonal matrix in the first column and second columns respectively. The last entry of the second column is not used. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>tridiag and <code>evals</code> and <code>evecs</code> are local matrices </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>tridiag</code> is not distributed </dd>
 <dd>
-tridiag has 2 columns and column block size of 2 </dd>
+<code>tridiag</code> has size (N x 2) </dd>
 <dd>
-tridiag has equal tile and block sizes </dd>
+<code>tridiag</code> has blocksize (NB x 2) </dd>
 <dd>
-evecs is a square matrix with number of rows equal to the number of rows of <code>tridiag</code> and <code>evals</code> </dd>
+<code>tridiag</code> has tilesize (NB x 2)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">evals</td><td>contains the eigenvalues of the symmetric tridiagonal matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>evals</code> is not distributed </dd>
 <dd>
-evecs has a square block size with number of block rows equal to the block rows of <code>tridiag</code> and <code>evals</code> </dd>
+<code>evals</code> has size (N x 1) </dd>
 <dd>
-evals has equal tile and block sizes </dd>
+<code>evals</code> has blocksize (NB x 1) </dd>
 <dd>
-evecs has equal tile and block sizes </dd></dl>
+<code>evals</code> has tilesize (NB x 1)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[out]</td><td class="paramname">evecs</td><td>contains the eigenvectors of the symmetric tridiagonal matrix </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>evecs</code> is not distributed </dd>
+<dd>
+<code>evecs</code> has size (N x N) </dd>
+<dd>
+<code>evecs</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>evecs</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

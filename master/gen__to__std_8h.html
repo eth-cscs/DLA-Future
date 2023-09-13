@@ -127,19 +127,31 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <p>It computes inv(B)*A*inv(B**H) or inv(B**H)*A*inv(B), where B have been previously factorized using the Cholesky factorization. Implementation on local memory.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A and the triangular matrix B to be referenced are the elements in the lower or upper triangular part, </td></tr>
+    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A and the triangular matrix B to be referenced are the elements in the lower or upper triangular part,</td></tr>
     <tr><td class="paramname">mat_a</td><td>on entry it contains the Hermitian matrix A (if A is real, the matrix is symmetric), on exit the matrix elements are overwritten with the elements of the matrix B. Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. </td></tr>
-    <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a and mat_b have the same square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed </dd>
 <dd>
-mat_a and mat_b have the same square block size, </dd>
+<code>mat_a</code> has size (N x N) </dd>
 <dd>
-mat_a and mat_b have the same tile and block sizes, </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a and mat_b are not distributed. </dd></dl>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed </dd>
+<dd>
+<code>mat_b</code> has size (N x N) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>
@@ -187,19 +199,31 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">grid</td><td>is the communicator grid on which the matrix A has been distributed, </td></tr>
-    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A and the triangular matrix B to be referenced are the elements in the lower or upper triangular part, </td></tr>
+    <tr><td class="paramname">uplo</td><td>specifies if the elements of the Hermitian matrix A and the triangular matrix B to be referenced are the elements in the lower or upper triangular part,</td></tr>
     <tr><td class="paramname">mat_a</td><td>on entry it contains the Hermitian matrix A (if A is real, the matrix is symmetric), on exit the matrix elements are overwritten with the elements of the matrix B. Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. </td></tr>
-    <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_a and mat_b have the same square size, </dd>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is distributed according to <code>grid</code> </dd>
 <dd>
-mat_a and mat_b have the same square block size, </dd>
+<code>mat_a</code> has size (N x N) </dd>
 <dd>
-mat_a and mat_b have the same tile and block sizes, </dd>
+<code>mat_a</code> has blocksize (NB x NB) </dd>
 <dd>
-mat_a and mat_b are distributed according to the grid. </dd></dl>
+<code>mat_a</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mat_b</td><td>contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed. Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_b</code> has size (N x N) </dd>
+<dd>
+<code>mat_b</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_b</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

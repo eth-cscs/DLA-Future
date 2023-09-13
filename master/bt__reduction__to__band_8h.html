@@ -139,19 +139,32 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <p>It computes Q C, where Q = HH(1) HH(2) ... HH(m-mb) (HH(j) is the House-Holder transformation (I - v tau vH) defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.</p>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
-    <tr><td class="paramname">mat_c</td><td>contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C. </td></tr>
+    <tr><td class="paramname">mat_c</td><td>contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_c</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_v</td><td>is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors. The j-th HH reflector is v_j = (1, V(mb + j : n, j)). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_v</code> is distributed according to <code>grid</code> </dd>
+<dd>
+<code>mat_v</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_v</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_taus</td><td>is the tau vector as returned by reductionToBand. The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_c is distributed, </dd>
-<dd>
-mat_v is distributed according to grid, </dd>
-<dd>
-mat_c has equal tile and block sizes, </dd>
-<dd>
-mat_v has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>
@@ -199,18 +212,31 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">mat_c</td><td>contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is not distributed </dd>
+<dd>
+<code>mat_c</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_c</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_v</td><td>is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors. The j-th HH reflector is v_j = (1, V(mb + j : n, j)). </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_v</code> is not distributed </dd>
+<dd>
+<code>mat_v</code> has blocksize (NB x NB) </dd>
+<dd>
+<code>mat_v</code> has tilesize (NB x NB)</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
     <tr><td class="paramname">mat_taus</td><td>is the tau vector as returned by reductionToBand. The j-th element is the scaling factor for the j-th HH tranformation. </td></tr>
   </table>
   </dd>
 </dl>
-<dl class="section pre"><dt>Precondition</dt><dd>mat_c is not distributed, </dd>
-<dd>
-mat_v is not distributed, </dd>
-<dd>
-mat_c has equal tile and block sizes, </dd>
-<dd>
-mat_v has equal tile and block sizes. </dd></dl>
 
 </div>
 </div>

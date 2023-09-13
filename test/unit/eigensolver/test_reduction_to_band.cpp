@@ -462,7 +462,7 @@ void testReductionToBandMatrix(comm::CommunicatorGrid grid, const LocalElementSi
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
     Matrix<T, Device::CPU> reference(distribution);
-    matrix::util::set_random_hermitian_banded(reference, band_size);
+    matrix::util::set_random_hermitian_banded(reference, band_size - 1);
     return reference;
   }();
 

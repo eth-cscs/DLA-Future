@@ -32,9 +32,24 @@ namespace dlaf {
 /// Implementation on local memory.
 ///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-/// @param mat contains the Hermitian matrix A
-/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
-/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+///
+/// @param[in,out] mat contains the Hermitian matrix A
+/// @pre @p mat is not distributed
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
+///
+/// @param[out] eigenvalues contains the eigenvalues
+/// @pre @p eigenvalues is not distributed
+/// @pre @p eigenvalues has size (N x 1)
+/// @pre @p eigenvalues has blocksize (NB x 1)
+/// @pre @p eigenvalues has tilesize (NB x 1)
+///
+/// @param[out] eigenvectors contains the eigenvectors
+/// @pre @p eigenvectors is not distributed
+/// @pre @p eigenvectors has size (N x N)
+/// @pre @p eigenvectors has blocksize (NB x NB)
+/// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T>, D>& eigenvalues,
                            Matrix<T, D>& eigenvectors) {
@@ -66,9 +81,15 @@ void hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat, Matrix<BaseType<T
 ///
 /// Implementation on local memory.
 ///
-/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
+/// @return ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix
+///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-/// @param mat contains the Hermitian matrix A
+///
+/// @param[in,out] mat contains the Hermitian matrix A
+/// @pre @p mat is not distributed
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
@@ -90,11 +111,27 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
 ///
 /// Implementation on distributed memory.
 ///
-/// @param grid is the communicator grid on which the matrix @p mat has been distributed,
+/// @param grid is the communicator grid on which the matrix @p mat has been distributed
+///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-/// @param mat contains the Hermitian matrix A
-/// @param eigenvalues is a N x 1 matrix which on output contains the eigenvalues
-/// @param eigenvectors is a N x N matrix which on output contains the eigenvectors
+///
+/// @param[in,out] mat contains the Hermitian matrix A
+/// @pre @p mat is distributed according to @p grid
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
+///
+/// @param[out] eigenvalues contains the eigenvalues
+/// @pre @p eigenvalues is stored on all ranks
+/// @pre @p eigenvalues has size (N x 1)
+/// @pre @p eigenvalues has blocksize (NB x 1)
+/// @pre @p eigenvalues has tilesize (NB x 1)
+///
+/// @param[out] eigenvectors contains the eigenvectors
+/// @pre @p eigenvectors is distributed according to @p grid
+/// @pre @p eigenvectors has size (N x N)
+/// @pre @p eigenvectors has blocksize (NB x NB)
+/// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
                            Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
@@ -126,10 +163,17 @@ void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<
 ///
 /// Implementation on distributed memory.
 ///
-/// @return struct ReturnEigensolverType with eigenvalues, as a vector<T>, and eigenvectors as a Matrix
-/// @param grid is the communicator grid on which the matrix @p mat has been distributed,
+/// @return struct ReturnEigensolverType with eigenvalues and eigenvectors as a Matrix
+///
+/// @param grid is the communicator grid on which the matrix @p mat has been distributed
+///
 /// @param uplo specifies if upper or lower triangular part of @p mat will be referenced
-/// @param mat contains the Hermitian matrix A
+///
+/// @param[in,out] mat contains the Hermitian matrix A
+/// @pre @p mat is distributed according to @p grid
+/// @pre @p mat has size (N x N)
+/// @pre @p mat has blocksize (NB x NB)
+/// @pre @p mat has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
                                               Matrix<T, D>& mat) {

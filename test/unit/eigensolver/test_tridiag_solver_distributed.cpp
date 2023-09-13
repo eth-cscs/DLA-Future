@@ -8,7 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/tridiag_solver.h>
@@ -251,7 +251,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -260,7 +260,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Random) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -270,7 +270,7 @@ TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -279,7 +279,7 @@ TYPED_TEST(TridiagSolverDistTestGPU, Random) {
   for (const auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }

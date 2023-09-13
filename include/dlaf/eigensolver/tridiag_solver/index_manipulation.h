@@ -9,7 +9,8 @@
 //
 #pragma once
 
-#include <pika/algorithm.hpp>
+#include <algorithm>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>
@@ -35,11 +36,21 @@ inline SizeType problemSize(const SizeType i_begin, const SizeType i_end,
 // The index starts at `0` for tiles in the range [i_begin, i_end)
 template <Device D>
 void initIndex(const SizeType i_begin, const SizeType i_end, Matrix<SizeType, D>& index) {
+  namespace di = dlaf::internal;
+
   const SizeType nb = index.distribution().blockSize().rows();
   for (SizeType i = i_begin; i < i_end; ++i) {
     const GlobalTileIndex tile_idx(i, 0);
     const SizeType tile_row = (i - i_begin) * nb;
-    initIndexTileAsync<D>(tile_row, index.readwrite(tile_idx));
+    auto sender = di::whenAllLift(tile_row, index.readwrite(tile_idx));
+    di::transformDetach(
+        di::Policy<Backend::MC>(),
+        [](SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile) {
+          for (SizeType i = 0; i < tile.size().rows(); ++i) {
+            tile(TileElementIndex(i, 0)) = offset + i;
+          }
+        },
+        std::move(sender));
   }
 }
 
@@ -72,9 +83,10 @@ inline void addIndex(SizeType i_begin, SizeType i_end, SizeType val,
 // `out_index_tiles` where `vals_tiles` is composed of two pre-sorted ranges in ascending order that
 // are merged, the first is [0, k) and the second is [k, n).
 //
-template <class T, Device D, class KSender>
-void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix<const T, D>& vec,
-               Matrix<const SizeType, D>& in_index, Matrix<SizeType, D>& out_index) {
+template <class T, class KSender>
+void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k,
+               Matrix<const T, Device::CPU>& vec, Matrix<const SizeType, Device::CPU>& in_index,
+               Matrix<SizeType, Device::CPU>& out_index) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -91,66 +103,46 @@ void sortIndex(const SizeType i_begin, const SizeType i_end, KSender&& k, Matrix
     auto begin_it = in_index_ptr;
     auto split_it = in_index_ptr + k;
     auto end_it = in_index_ptr + n;
-    if constexpr (D == Device::CPU) {
-      auto cmp = [v_ptr](const SizeType i1, const SizeType i2) { return v_ptr[i1] < v_ptr[i2]; };
-      pika::merge(pika::execution::par, begin_it, split_it, split_it, end_it, out_index_ptr,
-                  std::move(cmp));
-    }
-    else {
-#ifdef DLAF_WITH_GPU
-      mergeIndicesOnDevice(begin_it, split_it, end_it, out_index_ptr, v_ptr, ts...);
-#endif
-    }
+    auto cmp = [v_ptr](const SizeType i1, const SizeType i2) { return v_ptr[i1] < v_ptr[i2]; };
+    std::merge(begin_it, split_it, split_it, end_it, out_index_ptr, std::move(cmp));
   };
 
   TileCollector tc{i_begin, i_end};
 
-  auto sender = ex::when_all(std::forward<KSender>(k), ex::when_all_vector(tc.read<T, D>(vec)),
-                             ex::when_all_vector(tc.read<SizeType, D>(in_index)),
-                             ex::when_all_vector(tc.readwrite<SizeType, D>(out_index)));
-
-  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(sort_fn),
-                                   std::move(sender)));
+  ex::start_detached(ex::when_all(std::forward<KSender>(k), ex::when_all_vector(tc.read(vec)),
+                                  ex::when_all_vector(tc.read(in_index)),
+                                  ex::when_all_vector(tc.readwrite(out_index))) |
+                     di::transform(di::Policy<Backend::MC>(), std::move(sort_fn)));
 }
 
 // Applies `index` to `in` to get `out`
-template <class T, Device D>
-void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& index,
-                Matrix<const T, D>& in, Matrix<T, D>& out) {
+template <class T>
+void applyIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, Device::CPU>& index,
+                Matrix<const T, Device::CPU>& in, Matrix<T, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
   const SizeType n = problemSize(i_begin, i_end, index.distribution());
-  auto applyIndex_fn = [n](const auto& index_futs, const auto& in_futs, const auto& out,
-                           [[maybe_unused]] auto&&... ts) {
+  auto applyIndex_fn = [n](const auto& index_futs, const auto& in_futs, const auto& out) {
     const TileElementIndex zero_idx(0, 0);
     const SizeType* i_ptr = index_futs[0].get().ptr(zero_idx);
     const T* in_ptr = in_futs[0].get().ptr(zero_idx);
     T* out_ptr = out[0].ptr(zero_idx);
 
-    if constexpr (D == Device::CPU) {
-      for (SizeType i = 0; i < n; ++i) {
-        out_ptr[i] = in_ptr[i_ptr[i]];
-      }
-    }
-    else {
-#ifdef DLAF_WITH_GPU
-      applyIndexOnDevice(n, i_ptr, in_ptr, out_ptr, ts...);
-#endif
-    }
+    for (SizeType i = 0; i < n; ++i)
+      out_ptr[i] = in_ptr[i_ptr[i]];
   };
 
   TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.read(in)),
                              ex::when_all_vector(tc.readwrite(out)));
-  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(applyIndex_fn),
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(applyIndex_fn),
                                    std::move(sender)));
 }
 
-template <Device D>
-void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& in,
-                 Matrix<SizeType, D>& out) {
+inline void invertIndex(const SizeType i_begin, const SizeType i_end,
+                        Matrix<const SizeType, Device::CPU>& in, Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -160,19 +152,13 @@ void invertIndex(const SizeType i_begin, const SizeType i_end, Matrix<const Size
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
     SizeType* out_ptr = out_tiles[0].ptr(zero);
 
-    if constexpr (D == Device::CPU) {
-      for (SizeType i = 0; i < n; ++i) {
-        out_ptr[in_ptr[i]] = i;
-      }
-    }
-    else {
-      invertIndexOnDevice(n, in_ptr, out_ptr, ts...);
+    for (SizeType i = 0; i < n; ++i) {
+      out_ptr[in_ptr[i]] = i;
     }
   };
 
   TileCollector tc{i_begin, i_end};
   auto sender = ex::when_all(ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)));
-  ex::start_detached(di::transform(di::Policy<DefaultBackend_v<D>>(), std::move(inv_fn),
-                                   std::move(sender)));
+  ex::start_detached(di::transform(di::Policy<Backend::MC>(), std::move(inv_fn), std::move(sender)));
 }
 }

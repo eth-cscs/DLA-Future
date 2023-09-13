@@ -11,7 +11,7 @@
 #include <cmath>
 
 #include <pika/execution.hpp>
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
@@ -405,7 +405,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   checkUpperPartUnchanged(reference, matrix_a_h);
 
   // Wait for all work to finish before doing blocking communication
-  pika::threads::get_thread_manager().wait();
+  pika::wait();
 
   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);

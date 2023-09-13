@@ -29,16 +29,22 @@ namespace dlaf::eigensolver::internal {
 ///
 /// @param uplo specifies if the elements of the Hermitian matrix A and the triangular matrix B
 /// to be referenced are the elements in the lower or upper triangular part,
+///
 /// @param mat_a on entry it contains the Hermitian matrix A (if A is real, the matrix is symmetric),
 /// on exit the matrix elements are overwritten with the elements of the matrix B.
 /// Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed.
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
+///
 /// @param mat_b contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
 /// the matrix which contain the lower triangular or the upper triangular part are accessed.
-/// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
-/// @pre mat_a and mat_b have the same square size,
-/// @pre mat_a and mat_b have the same square block size,
-/// @pre mat_a and mat_b have the same tile and block sizes,
-/// @pre mat_a and mat_b are not distributed.
+/// Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation.
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (N x N)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -74,16 +80,22 @@ void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T
 /// @param grid is the communicator grid on which the matrix A has been distributed,
 /// @param uplo specifies if the elements of the Hermitian matrix A and the triangular matrix B
 /// to be referenced are the elements in the lower or upper triangular part,
+///
 /// @param mat_a on entry it contains the Hermitian matrix A (if A is real, the matrix is symmetric),
 /// on exit the matrix elements are overwritten with the elements of the matrix B.
 /// Only the tiles of the matrix which contain the lower triangular or the upper triangular part are accessed.
+/// @pre @p mat_a is distributed according to @p grid
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
+///
 /// @param mat_b contains the triangular matrix. It can be lower (L) or upper (U). Only the tiles of
 /// the matrix which contain the lower triangular or the upper triangular part are accessed.
-/// Note: B should be modifiable as the diagonal tiles might be temporarly modified during the calculation.
-/// @pre mat_a and mat_b have the same square size,
-/// @pre mat_a and mat_b have the same square block size,
-/// @pre mat_a and mat_b have the same tile and block sizes,
-/// @pre mat_a and mat_b are distributed according to the grid.
+/// Note: B should be modifiable as the diagonal tiles might be temporarily modified during the calculation.
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (N x N)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void generalized_to_standard(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                              Matrix<T, device>& mat_b) {

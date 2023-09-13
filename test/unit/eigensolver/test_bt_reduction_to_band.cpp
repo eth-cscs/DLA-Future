@@ -14,7 +14,7 @@
 #include <tuple>
 #include <vector>
 
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
@@ -253,7 +253,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
     for (const auto& [m, n, mb, nb, b] : sizes) {
       testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, mb, nb,
                                                                                  b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -264,7 +264,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessDistr
     for (const auto& [m, n, mb, nb, b] : sizes) {
       testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, n, mb,
                                                                                   nb, b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }

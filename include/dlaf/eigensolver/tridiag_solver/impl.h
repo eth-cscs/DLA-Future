@@ -215,17 +215,19 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                      evals,                                          // d1
                      Matrix<T, D>(vec_size, vec_tile_size),          // z0
                      Matrix<T, D>(vec_size, vec_tile_size),          // z1
-                     Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i2
+                     Matrix<SizeType, D>(vec_size, vec_tile_size),   // i2
+                     Matrix<SizeType, D>(vec_size, vec_tile_size)};  // i5
 
   WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(vec_size, vec_tile_size),          // d0
                         Matrix<ColType, Device::CPU>(vec_size, vec_tile_size),    // c
                         Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),   // i1
-                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)};  // i3
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size),   // i3
+                        Matrix<SizeType, Device::CPU>(vec_size, vec_tile_size)};  // i4
 
   // Mirror workspace on host memory for CPU-only kernels
   WorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e2), initMirrorMatrix(ws.d1),
                                   initMirrorMatrix(ws.z0), initMirrorMatrix(ws.z1),
-                                  initMirrorMatrix(ws.i2)};
+                                  initMirrorMatrix(ws.i2), initMirrorMatrix(ws.i5)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
   matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, ws.e0);
@@ -370,12 +372,14 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
                      evals,                             // d1
                      Matrix<T, D>(dist_evals),          // z0
                      Matrix<T, D>(dist_evals),          // z1
-                     Matrix<SizeType, D>(dist_evals)};  // i2
+                     Matrix<SizeType, D>(dist_evals),   // i2
+                     Matrix<SizeType, D>(dist_evals)};  // i5
 
   WorkSpaceHost<T> ws_h{Matrix<T, Device::CPU>(dist_evals),          // d0
                         Matrix<ColType, Device::CPU>(dist_evals),    // c
                         Matrix<SizeType, Device::CPU>(dist_evals),   // i1
-                        Matrix<SizeType, Device::CPU>(dist_evals)};  // i3
+                        Matrix<SizeType, Device::CPU>(dist_evals),   // i3
+                        Matrix<SizeType, Device::CPU>(dist_evals)};  // i4
 
   // Mirror workspace on host memory for CPU-only kernels
   DistWorkSpaceHostMirror<T, D> ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2),

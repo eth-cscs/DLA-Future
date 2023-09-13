@@ -73,24 +73,4 @@ void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
 DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, float);
 DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(, double);
 
-template <class T>
-T maxElementInColumnTile(const matrix::Tile<const T, Device::CPU>& tile) {
-  return tile::internal::lange(lapack::Norm::Max, tile);
-}
-
-DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, float);
-DLAF_CPU_MAX_ELEMENT_IN_COLUMN_TILE_ETI(, double);
-
-void setColTypeTile(const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
-  for (SizeType i = 0; i < tile.size().rows(); ++i) {
-    tile(TileElementIndex(i, 0)) = ct;
-  }
-}
-
-void initIndexTile(SizeType offset, const matrix::Tile<SizeType, Device::CPU>& tile) {
-  for (SizeType i = 0; i < tile.size().rows(); ++i) {
-    tile(TileElementIndex(i, 0)) = offset + i;
-  }
-}
-
 }

@@ -464,10 +464,8 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
 
 TYPED_TEST(ReductionToBandTestGPU, Issue974) {
   for (auto&& comm_grid : this->commGrids()) {
-    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {32, 32}, 32,
-                                                                    true);
-    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {46, 46}, 46,
-                                                                    true);
+    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {32, 32}, 32, true);
+    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {46, 46}, 46, true);
   }
 }
 #endif

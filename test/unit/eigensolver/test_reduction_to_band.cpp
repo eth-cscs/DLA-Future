@@ -379,7 +379,8 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
 
 template <class T, Device D, Backend B>
 void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize size,
-                         const TileElementSize block_size, const SizeType band_size) {
+                         const TileElementSize block_size, const SizeType band_size,
+                         const bool banded = false) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
@@ -388,7 +389,11 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
     Matrix<T, Device::CPU> reference(distribution);
-    matrix::util::set_random_hermitian(reference);
+    if (banded)
+      // Matrix already in band form, with band smaller than band_size
+      matrix::util::set_random_hermitian_banded(reference, band_size - 1);
+    else
+      matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
@@ -433,6 +438,13 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
   }
 }
 
+TYPED_TEST(ReductionToBandTestMC, Issue974) {
+  for (auto&& comm_grid : this->commGrids()) {
+    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {32, 32}, 32, true);
+    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {46, 46}, 46, true);
+  }
+}
+
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
@@ -449,51 +461,12 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
     }
   }
 }
-#endif
 
-template <class T, Device D, Backend B>
-void testReductionToBandMatrix(comm::CommunicatorGrid grid, const LocalElementSize size,
-                               const TileElementSize block_size, const SizeType band_size) {
-  const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
-  DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
-
-  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
-
-  // setup the reference input matrix
-  Matrix<const T, Device::CPU> reference = [&]() {
-    Matrix<T, Device::CPU> reference(distribution);
-    matrix::util::set_random_hermitian_banded(reference, band_size - 1);
-    return reference;
-  }();
-
-  Matrix<T, Device::CPU> matrix_a_h(distribution);
-  copy(reference, matrix_a_h);
-
-  Matrix<T, Device::CPU> mat_local_taus = [&]() {
-    MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
-    return eigensolver::internal::reduction_to_band<B>(grid, matrix_a.get(), band_size);
-  }();
-
-  ASSERT_EQ(mat_local_taus.blockSize().rows(), block_size.rows());
-
-  checkUpperPartUnchanged(reference, matrix_a_h);
-
-  // Wait for all work to finish before doing blocking communication
-  pika::threads::get_thread_manager().wait();
-
-  auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
-  auto mat_b = makeLocal(matrix_a_h);
-  splitReflectorsAndBand(mat_v, mat_b, band_size);
-
-  auto taus = allGatherTaus(k_reflectors, mat_local_taus, grid);
-  ASSERT_EQ(taus.size(), k_reflectors);
-
-  checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
-}
-
-TYPED_TEST(ReductionToBandTestMC, Issue974) {
+TYPED_TEST(ReductionToBandTestGPU, Issue974) {
   for (auto&& comm_grid : this->commGrids()) {
-    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {32, 32}, 32);
-    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {46, 46}, 46);
+    testReductionToBandMatrix<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {32, 32}, 32, true);
+    testReductionToBandMatrix<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {46, 46}, 46, true);
   }
 }
+#endif
+

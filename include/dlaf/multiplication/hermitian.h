@@ -27,17 +27,27 @@ namespace dlaf {
 /// @param side specifies whether A appears on the \a Left or on the \a Right of matrix B,
 /// @param uplo specifies if the elements of the Hermitian matrix A to be referenced are the elements in
 /// the lower or upper triangular part,
+///
 /// @param mat_a contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part which represent the Hermitian matrix (depending on the value of uplo)
 /// are accessed in read-only mode (the elements are not modified),
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (N x M)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
+///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (M x K)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
+///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a mat_b and mat_c have equal tile and block size,
-/// @pre mat_a mat_b and mat_c are not distributed,
-/// @pre mat_a mat_b are multipliable and the result can be summed to mat_c.
+/// @pre @p mat_b is not distributed
+/// @pre @p mat_b has size (N x K)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, Matrix<const T, D>& mat_a,
                               Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
@@ -79,17 +89,27 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
 /// @param side specifies whether A appears on the \a Left or on the \a Right of matrix B,
 /// @param uplo specifies if the elements of the Hermitian matrix A to be referenced are the elements in
 /// the lower or upper triangular part,
+///
 /// @param mat_a contains the hermitian matrix A. Only the tiles of the matrix which contain the upper or
 /// the lower triangular part which represent the Hermitian matrix (depending on the value of uplo)
 /// are accessed in read-only mode (the elements are not modified),
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (N x M)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
+///
 /// @param mat_b contains the matrix B accessed in read-only mode (the elements are not modified),
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (M x K)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
+///
 /// @param mat_c on entry it contains the matrix C, on exit the matrix elements are overwritten with the
 /// elements of the result.
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a, mat_b and mat_c have equal tile and block size,
-/// @pre mat_a, mat_b and mat_c are distributed according to the grid,
-/// @pre mat_a mat_b are multipliable and the result can be summed to mat_c.
+/// @pre @p mat_b is distributed according to @p grid
+/// @pre @p mat_b has size (N x K)
+/// @pre @p mat_b has blocksize (NB x NB)
+/// @pre @p mat_b has tilesize (NB x NB)
 template <Backend B, Device D, class T>
 void hermitian_multiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
                               const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,

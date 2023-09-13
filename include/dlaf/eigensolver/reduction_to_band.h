@@ -27,14 +27,16 @@ namespace dlaf::eigensolver::internal {
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
 /// band-diagonal result together with the elementary reflectors. Just the tiles of the lower
 /// triangular part will be used.
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
+///
 /// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
+/// @pre @p `mat_a.blockSize().rows() % band_size == 0`
+///
 /// @return the tau vector as needed by backtransformationReductionToBand
 ///
-/// @pre mat_a has a square size
-/// @pre mat_a has a square block size
-/// @pre mat_a has equal tile and block sizes
-/// @pre mat_a is a local matrix
-/// @pre mat_a.blockSize().rows() % band_size == 0
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> reduction_to_band(Matrix<T, D>& mat_a, const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -91,17 +93,19 @@ v v v v * *
 @endverbatim
 */
 /// @param grid is the CommunicatorGrid on which @p mat_a is distributed
+///
 /// @param mat_a on entry it contains an Hermitian matrix, on exit it is overwritten with the
 /// band-diagonal result together with the elementary reflectors as described above. Just the tiles of
 /// the lower triangular part will be used.
-/// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
-/// @return the tau vector as needed by backtransformationReductionToBand
+/// @pre @p mat_a is distributed according to @p grid
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
 ///
-/// @pre mat_a has a square size
-/// @pre mat_a has a square block size
-/// @pre mat_a has equal tile and block sizes
-/// @pre mat_a is distributed according to @p grid
-/// @pre mat_a.blockSize().rows() % band_size == 0
+/// @param band_size size of the band of the resulting matrix (main diagonal + band_size sub-diagonals)
+/// @pre `mat_a.blockSize().rows() % band_size == 0`
+///
+/// @return the tau vector as needed by backtransformationReductionToBand
 template <Backend B, Device D, class T>
 Matrix<T, Device::CPU> reduction_to_band(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
                                          const SizeType band_size) {

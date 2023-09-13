@@ -165,12 +165,12 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
     common::internal::SingleThreadedBlasScope single;
 
     for (const GivensRotation<T>& rot : rots) {
-      // Get the index of the tile that has column `rot.i` and the the index of the column within the tile.
+      // Get the index of the tile that has column `rot.i` and the index of the column within the tile.
       const SizeType i_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.i));
       const SizeType i_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.i);
       T* x = tiles[to_sizet(i_tile)].ptr(TileElementIndex(0, i_el));
 
-      // Get the index of the tile that has column `rot.j` and the the index of the column within the tile.
+      // Get the index of the tile that has column `rot.j` and the index of the column within the tile.
       const SizeType j_tile = distr.globalTileLinearIndex(GlobalElementIndex(0, rot.j));
       const SizeType j_el = distr.tileElementFromGlobalElement<Coord::Col>(rot.j);
       T* y = tiles[to_sizet(j_tile)].ptr(TileElementIndex(0, j_el));

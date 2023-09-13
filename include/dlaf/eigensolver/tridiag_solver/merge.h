@@ -552,8 +552,8 @@ std::vector<GivensRotation<T>> applyDeflationToArrays(T rho, T tol, const SizeTy
     d2 = tmp;
 
     rots.push_back(GivensRotation<T>{i1s, i2s, c, s});
-    //  Set the the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if
-    //  one comes from Q1 and the other from Q2 or vice-versa)
+    //  Set the `i1` column as "Dense" if the `i2` column has opposite non-zero structure (i.e if one
+    //  comes from Q1 and the other from Q2 or vice-versa)
     if ((c1 == ColType::UpperHalf && c2 == ColType::LowerHalf) ||
         (c1 == ColType::LowerHalf && c2 == ColType::UpperHalf)) {
       c1 = ColType::Dense;

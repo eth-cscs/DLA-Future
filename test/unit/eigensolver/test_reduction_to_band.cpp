@@ -23,7 +23,6 @@
 #include <dlaf/eigensolver/reduction_to_band.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy.h>
-#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -31,8 +30,6 @@
 #include <dlaf/types.h>
 #include <dlaf/util_math.h>
 #include <dlaf/util_matrix.h>
-
-#include "config.h"  // Path to test data
 
 #include <gtest/gtest.h>
 
@@ -64,12 +61,6 @@ template <class T>
 using ReductionToBandTestMC = ReductionToBandTest<T>;
 
 TYPED_TEST_SUITE(ReductionToBandTestMC, MatrixElementTypes);
-
-#if DLAF_WITH_HDF5
-template <class T>
-using ReductionToBandTestMCSingle = ReductionToBandTest<T>;
-TYPED_TEST_SUITE(ReductionToBandTestMCSingle, ::testing::Types<float>);
-#endif
 
 #ifdef DLAF_WITH_GPU
 template <class T>
@@ -460,22 +451,30 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
 }
 #endif
 
-#if DLAF_WITH_HDF5
 template <class T, Device D, Backend B>
-void testReductionToBandMatrix(comm::CommunicatorGrid grid, const TileElementSize block_size,
-                               const SizeType band_size) {
-  using dlaf::matrix::internal::FileHDF5;
-  auto infile = FileHDF5(datapath / "issue-974.h5", FileHDF5::FileMode::readonly);
-  auto reference = infile.read<T>("/a", block_size, grid, {0, 0});
-
-  const auto size = reference.size();
-  auto distribution = reference.distribution();
-
+void testReductionToBandMatrix(comm::CommunicatorGrid grid, const LocalElementSize size,
+                               const TileElementSize block_size, const SizeType band_size) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
+  Distribution distribution({size.rows(), size.cols()}, block_size, grid.size(), grid.rank(), {0, 0});
+
+  // setup the reference input matrix
+  Matrix<const T, Device::CPU> reference = [&]() {
+    Matrix<T, Device::CPU> reference(distribution);
+    matrix::util::set_random_hermitian_banded(reference, band_size - 10);
+    return reference;
+  }();
+
   Matrix<T, Device::CPU> matrix_a_h(distribution);
   copy(reference, matrix_a_h);
+
+  auto rank = grid.fullCommunicator().rank();
+  std::stringstream s;
+  s << "mat_" << rank << ".py";
+  std::ofstream fmat(s.str());
+  dlaf::matrix::print(dlaf::format::numpy{}, "test", matrix_a_h, fmat);
+  fmat.close();
 
   Matrix<T, Device::CPU> mat_local_taus = [&]() {
     MatrixMirror<T, D, Device::CPU> matrix_a(matrix_a_h);
@@ -499,10 +498,9 @@ void testReductionToBandMatrix(comm::CommunicatorGrid grid, const TileElementSiz
   checkResult(k_reflectors, band_size, reference, mat_v, mat_b, taus);
 }
 
-TYPED_TEST(ReductionToBandTestMCSingle, Issue974) {
+TYPED_TEST(ReductionToBandTestMC, Issue974) {
   for (auto&& comm_grid : this->commGrids()) {
-    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {32, 32}, 32);
-    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, 46);
+    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {32, 32}, 32);
+    testReductionToBandMatrix<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {46, 46}, 46);
   }
 }
-#endif

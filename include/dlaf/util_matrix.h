@@ -281,7 +281,13 @@ void set_diagonal_tile(const Tile<T, Device::CPU>& tile, internal::getter_random
 
 template <class T>
 void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter_random<T>& random_value,
-                              TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global) {
+                              TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global,
+                              dlaf::matrix::Distribution dist,
+                              std::optional<SizeType> band_size = std::nullopt) {
+  auto is_off_band = [](GlobalElementIndex ij, std::optional<SizeType> band_size) {
+    return band_size ? ij.col() < ij.row() - *band_size || ij.col() > ij.row() + *band_size : false;
+  };
+
   // LOWER or UPPER (except DIAGONAL)
   // random values are requested in the same order for both original and transposed
   for (SizeType j = 0; j < full_tile_size.cols(); ++j) {
@@ -292,13 +298,23 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
       // transposed one
       if (tile_wrt_global.row() > tile_wrt_global.col()) {  // LOWER
         TileElementIndex index{i, j};
-        if (index.isIn(tile.size()))
-          tile(index) = value;
+        if (index.isIn(tile.size())) {
+          auto ij = dist.globalElementIndex(tile_wrt_global, index);
+          if (is_off_band(ij, band_size))
+            tile(index) = T(0);
+          else
+            tile(index) = value;
+        }
       }
       else {  // UPPER
         TileElementIndex index{j, i};
-        if (index.isIn(tile.size()))
-          tile(index) = dlaf::conj(value);
+        if (index.isIn(tile.size())) {
+          auto ij = dist.globalElementIndex(tile_wrt_global, index);
+          if (is_off_band(ij, band_size))
+            tile(index) = T(0);
+          else
+            tile(index) = dlaf::conj(value);
+        }
       }
     }
   }
@@ -321,7 +337,8 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
 /// @pre @param matrix is a square matrix,
 /// @pre @param matrix has a square blocksize.
 template <class T>
-void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value) {
+void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value,
+                                      std::optional<SizeType> band_size = std::nullopt) {
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
@@ -355,7 +372,8 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
       if (tile_wrt_global.row() == tile_wrt_global.col())
         internal::set_diagonal_tile(tile, random_value, offset_value);
       else
-        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global);
+        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global, dist,
+                                           band_size);
     };
 
     dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
@@ -381,6 +399,11 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
 template <class T>
 void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 0);
+}
+
+template <class T>
+void set_random_hermitian_banded(Matrix<T, Device::CPU>& matrix, const SizeType band_size) {
+  internal::set_random_hermitian_with_offset(matrix, 0, band_size);
 }
 
 /// Set a matrix with random values assuring it will be hermitian and positive definite.

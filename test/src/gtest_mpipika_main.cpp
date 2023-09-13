@@ -43,7 +43,6 @@
 
 #include <pika/init.hpp>
 #include <pika/program_options.hpp>
-#include <pika/runtime.hpp>
 
 #include <dlaf/init.h>
 
@@ -89,7 +88,7 @@ GTEST_API_ int main(int argc, char** argv) {
 
   protected:
     virtual void OnTestEnd(const ::testing::TestInfo& test_info) override {
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
       MPIListener::OnTestEnd(test_info);
     }
   };

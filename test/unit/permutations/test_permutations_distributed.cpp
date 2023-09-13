@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/common/assert.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -163,7 +163,7 @@ TYPED_TEST(PermutationsDistTestMC, Columns) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end, perms] : params) {
       testDistPermutations<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end, perms);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -172,7 +172,7 @@ TYPED_TEST(PermutationsDistTestMC, Rows) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end, perms] : params) {
       testDistPermutations<TypeParam, Device::CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end, perms);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }

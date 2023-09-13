@@ -15,6 +15,8 @@
 
 #include <blas.hh>
 
+#include <pika/init.hpp>
+
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/matrix.h>
@@ -42,7 +44,7 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   // calls that might lead to deadlocks.
   constexpr bool isDistributed = (sizeof...(grid) == 1);
   if constexpr (isDistributed)
-    pika::threads::get_thread_manager().wait();
+    pika::wait();
 
   const SizeType m = reference.size().rows();
 

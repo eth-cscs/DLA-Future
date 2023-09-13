@@ -11,6 +11,8 @@
 #include <functional>
 #include <tuple>
 
+#include <pika/init.hpp>
+
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/eigensolver/gen_eigensolver.h>
 #include <dlaf/matrix/copy.h>
@@ -73,7 +75,7 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   // calls that might lead to deadlocks.
   constexpr bool isDistributed = (sizeof...(grid) == 1);
   if constexpr (isDistributed)
-    pika::threads::get_thread_manager().wait();
+    pika::wait();
 
   const SizeType m = reference_a.size().rows();
 

@@ -15,6 +15,7 @@
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/assert.h>
@@ -1088,7 +1089,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // Note:
   // This is a temporary workaround.
   // See issue https://github.com/eth-cscs/DLA-Future/issues/729
-  pika::threads::get_thread_manager().wait();
+  pika::wait();
 
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());

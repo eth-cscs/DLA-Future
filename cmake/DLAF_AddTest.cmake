@@ -204,10 +204,13 @@ function(DLAF_addTest test_target_name)
       _set_element_to_fallback_value(
         _PIKA_EXTRA_ARGS_LIST_CAPI "--pika:threads" "--pika:threads=${_DLAF_PIKA_THREADS}"
       )
+
+      configure_file(
+        ${PROJECT_SOURCE_DIR}/test/include/dlaf_c_test/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h
+      )
     endif()
 
     string(REPLACE ";" "\", \"" PIKA_EXTRA_ARGS_LIST_CAPI "${_PIKA_EXTRA_ARGS_LIST_CAPI}")
-    configure_file(${PROJECT_SOURCE_DIR}/test/include/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
   endif()
 

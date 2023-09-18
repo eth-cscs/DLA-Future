@@ -401,6 +401,19 @@ void set_random_hermitian(Matrix<T, Device::CPU>& matrix) {
   internal::set_random_hermitian_with_offset(matrix, 0);
 }
 
+/// Set a banded matrix with random values assuring it will be hermitian
+///
+/// Values will be random numbers in:
+/// - real:     [-1, 1]
+/// - complex:  a circle of radius 1 centered at origin
+///
+/// Each tile creates its own random generator engine with a unique seed
+/// which is computed as a function of the tile global index.
+/// This means that the elements of a specific tile, no matter how the matrix is distributed,
+/// will be set with the same set of values.
+///
+/// @pre @param matrix is a square matrix,
+/// @pre @param matrix has a square blocksize.
 template <class T>
 void set_random_hermitian_banded(Matrix<T, Device::CPU>& matrix, const SizeType band_size) {
   internal::set_random_hermitian_with_offset(matrix, 0, band_size);

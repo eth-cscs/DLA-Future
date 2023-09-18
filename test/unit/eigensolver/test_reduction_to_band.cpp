@@ -308,16 +308,20 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
 
 template <class T, Backend B, Device D>
 void testReductionToBandLocal(const LocalElementSize size, const TileElementSize block_size,
-                              const SizeType band_size) {
+                              const SizeType band_size, const bool banded = false) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
   Distribution distribution({size.rows(), size.cols()}, block_size);
 
   // setup the reference input matrix
-  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size]() {
+  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size, band_size, banded]() {
     Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian(reference);
+    if (banded)
+      // Matrix already in band form, with band smaller than band_size
+      matrix::util::set_random_hermitian_banded(reference, band_size - 1);
+    else
+      matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
@@ -349,6 +353,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
 
     testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
   }
+
+  // Issue 974
+  testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>({46, 46}, {32, 32}, 32, true);
+  testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>({46, 46}, {46, 46}, 46, true);
 }
 
 TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
@@ -374,6 +382,10 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
 
     testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
   }
+
+  // Issue 974
+  testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>({46, 46}, {32, 32}, 32, true);
+  testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>({46, 46}, {46, 46}, 46, true);
 }
 #endif
 
@@ -427,6 +439,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
     for (const auto& [size, block_size, band_size] : configs) {
       testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
     }
+
+    // Issue 974
+    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {32, 32}, 32, true);
+    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {46, 46}, 46, true);
   }
 }
 
@@ -438,19 +454,16 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
   }
 }
 
-TYPED_TEST(ReductionToBandTestMC, Issue974) {
-  for (auto&& comm_grid : this->commGrids()) {
-    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {32, 32}, 32, true);
-    testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, {46, 46}, {46, 46}, 46, true);
-  }
-}
-
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs) {
       testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
     }
+
+    // Issue 974
+    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {32, 32}, 32, true);
+    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {46, 46}, 46, true);
   }
 }
 
@@ -459,13 +472,6 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
     for (const auto& [size, block_size, band_size] : configs_subband) {
       testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
     }
-  }
-}
-
-TYPED_TEST(ReductionToBandTestGPU, Issue974) {
-  for (auto&& comm_grid : this->commGrids()) {
-    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {32, 32}, 32, true);
-    testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, {46, 46}, {46, 46}, 46, true);
   }
 }
 #endif

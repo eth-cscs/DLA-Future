@@ -64,8 +64,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocsolver", when="+rocm")
     depends_on("rocthrust", when="+rocm")
 
-    depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
-
     conflicts("+cuda", when="+rocm")
 
     with when("+rocm"):
@@ -122,6 +120,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         when="@0.2.0:",
         description="HDF5 support for dealing with matrices on disk.",
     )
+    
+    depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
     ###
 
     def cmake_args(self):

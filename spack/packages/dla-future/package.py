@@ -113,14 +113,14 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
-     
+
     variant(
         "hdf5",
         default=False,
         when="@0.2.0:",
         description="HDF5 support for dealing with matrices on disk.",
     )
-    
+
     depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
     ###
 

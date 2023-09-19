@@ -22,13 +22,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("shared", default=True, description="Build shared libraries.")
 
-    variant(
-        "hdf5",
-        default=False,
-        when="@0.2.0:",
-        description="HDF5 support for dealing with matrices on disk.",
-    )
-
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -121,6 +114,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         "ci-check-threads",
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
+    )
+     
+    variant(
+        "hdf5",
+        default=False,
+        when="@0.2.0:",
+        description="HDF5 support for dealing with matrices on disk.",
     )
     ###
 

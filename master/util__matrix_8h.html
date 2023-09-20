@@ -177,16 +177,19 @@ template&lt;Backend backend, class T , Coord axis, Device D, StoreTransposed sto
 template&lt;class T &gt; </td></tr>
 <tr class="memitem:a70d2b3c0caedb58895f541243a1d308c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::util::internal::set_diagonal_tile</b> (const Tile&lt; T, Device::CPU &gt; &amp;tile, internal::getter_random&lt; T &gt; &amp;random_value, SizeType offset_value)</td></tr>
 <tr class="separator:a70d2b3c0caedb58895f541243a1d308c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afb5aedb65bfcd8950d3ae2c9bcb6a40c"><td class="memTemplParams" colspan="2"><a id="afb5aedb65bfcd8950d3ae2c9bcb6a40c"></a>
+<tr class="memitem:ae1a4fd565912020decc9f6dd4dd5f509"><td class="memTemplParams" colspan="2"><a id="ae1a4fd565912020decc9f6dd4dd5f509"></a>
 template&lt;class T &gt; </td></tr>
-<tr class="memitem:afb5aedb65bfcd8950d3ae2c9bcb6a40c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::util::internal::set_lower_and_upper_tile</b> (const Tile&lt; T, Device::CPU &gt; &amp;tile, internal::getter_random&lt; T &gt; &amp;random_value, TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global)</td></tr>
-<tr class="separator:afb5aedb65bfcd8950d3ae2c9bcb6a40c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2f1823d0004b53105c4d4b7373208133"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
-<tr class="memitem:a2f1823d0004b53105c4d4b7373208133"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a2f1823d0004b53105c4d4b7373208133">dlaf::matrix::util::internal::set_random_hermitian_with_offset</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType offset_value)</td></tr>
-<tr class="separator:a2f1823d0004b53105c4d4b7373208133"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae1a4fd565912020decc9f6dd4dd5f509"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::util::internal::set_lower_and_upper_tile</b> (const Tile&lt; T, Device::CPU &gt; &amp;tile, internal::getter_random&lt; T &gt; &amp;random_value, TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global, <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a> dist, std::optional&lt; SizeType &gt; band_size=std::nullopt)</td></tr>
+<tr class="separator:ae1a4fd565912020decc9f6dd4dd5f509"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5f65c6eb2c9e4c3e830a0e5dcf1ef287"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
+<tr class="memitem:a5f65c6eb2c9e4c3e830a0e5dcf1ef287"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">dlaf::matrix::util::internal::set_random_hermitian_with_offset</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType offset_value, std::optional&lt; SizeType &gt; band_size=std::nullopt)</td></tr>
+<tr class="separator:a5f65c6eb2c9e4c3e830a0e5dcf1ef287"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3f7866203ad62c615d11ca18af4d4476"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:a3f7866203ad62c615d11ca18af4d4476"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">dlaf::matrix::util::set_random_hermitian</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix)</td></tr>
 <tr class="separator:a3f7866203ad62c615d11ca18af4d4476"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a33e83c042118c6da34d15ee21202ce79"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
+<tr class="memitem:a33e83c042118c6da34d15ee21202ce79"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">dlaf::matrix::util::set_random_hermitian_banded</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType band_size)</td></tr>
+<tr class="separator:a33e83c042118c6da34d15ee21202ce79"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2afbf7cdec8225e544b7b71aa52ee58"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:ae2afbf7cdec8225e544b7b71aa52ee58"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">dlaf::matrix::util::set_random_hermitian_positive_definite</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix)</td></tr>
 <tr class="separator:ae2afbf7cdec8225e544b7b71aa52ee58"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -395,6 +398,56 @@ template&lt;class T &gt; </div>
 
 </div>
 </div>
+<a id="a33e83c042118c6da34d15ee21202ce79"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a33e83c042118c6da34d15ee21202ce79">&#9670;&nbsp;</a></span>set_random_hermitian_banded()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::matrix::util::set_random_hermitian_banded </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; T, Device::CPU &gt; &amp;&#160;</td>
+          <td class="paramname"><em>matrix</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const SizeType&#160;</td>
+          <td class="paramname"><em>band_size</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Set a banded matrix with random values assuring it will be hermitian</p>
+<p>Values will be random numbers in:</p><ul>
+<li>real: [-1, 1]</li>
+<li>complex: a circle of radius 1 centered at origin</li>
+</ul>
+<p>Each tile creates its own random generator engine with a unique seed which is computed as a function of the tile global index. This means that the elements of a specific tile, no matter how the matrix is distributed, will be set with the same set of values.</p>
+<dl class="section pre"><dt>Precondition</dt><dd></dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">matrix</td><td>is a square matrix, </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd></dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">matrix</td><td>has a square blocksize. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="ae2afbf7cdec8225e544b7b71aa52ee58"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ae2afbf7cdec8225e544b7b71aa52ee58">&#9670;&nbsp;</a></span>set_random_hermitian_positive_definite()</h2>
 
@@ -436,8 +489,8 @@ template&lt;class T &gt; </div>
 
 </div>
 </div>
-<a id="a2f1823d0004b53105c4d4b7373208133"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2f1823d0004b53105c4d4b7373208133">&#9670;&nbsp;</a></span>set_random_hermitian_with_offset()</h2>
+<a id="a5f65c6eb2c9e4c3e830a0e5dcf1ef287"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">&#9670;&nbsp;</a></span>set_random_hermitian_with_offset()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -454,7 +507,13 @@ template&lt;class T &gt; </div>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">const SizeType&#160;</td>
-          <td class="paramname"><em>offset_value</em>&#160;</td>
+          <td class="paramname"><em>offset_value</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::optional&lt; SizeType &gt;&#160;</td>
+          <td class="paramname"><em>band_size</em> = <code>std::nullopt</code>&#160;</td>
         </tr>
         <tr>
           <td></td>

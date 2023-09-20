@@ -343,7 +343,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<T, D>& evecs) {
-  common::Pipeline<comm::Communicator> full_task_chain(grid.fullCommunicator().clone());
+  auto full_task_chain = grid.fullCommunicatorPipeline();
 
   // Quick return for empty matrix
   if (evecs.size().isEmpty())
@@ -392,8 +392,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, Device:
   // Cuppen's decomposition
   auto offdiag_vals = cuppensDecomposition(tridiag);
 
-  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
+  auto row_task_chain = grid.rowCommunicatorPipeline();
+  auto col_task_chain = grid.colCommunicatorPipeline();
 
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)

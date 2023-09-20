@@ -35,12 +35,18 @@ public:
   using Wrapper = typename AsyncRwMutex::readwrite_access_type;
   using Sender = pika::execution::experimental::unique_any_sender<Wrapper>;
 
+  // TODO
+  Pipeline() {}
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
   Pipeline(Pipeline&&) = default;
   Pipeline& operator=(Pipeline&&) = default;
   Pipeline(const Pipeline&) = delete;
   Pipeline& operator=(const Pipeline&) = delete;
+
+  ~Pipeline() {
+    releaseParentPipeline();
+  }
 
   /// Enqueue for the resource.
   ///
@@ -49,6 +55,29 @@ public:
   Sender operator()() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();
+  }
+
+  Pipeline subPipeline() {
+    namespace ex = pika::execution::experimental;
+
+    // TODO: Requires default constructibility. Is it a must?
+    Pipeline sub_pipeline(T{});
+    // Move communicator from pipeline into sub pipeline
+    auto s = ex::when_all(sub_pipeline.pipeline->readwrite(), this->pipeline->readwrite()) |
+             ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
+               sub_comm_wrapper.get() = std::move(comm_wrapper.get());
+
+               auto sub_comm_wrapper_local = std::move(sub_comm_wrapper);
+               auto comm_wrapper_local = std::move(comm_wrapper);
+             });
+    ex::start_detached(std::move(s));
+
+    // Access pipeline again, we'll move the communicator from the sub pipeline back into the pipeline on
+    // destruction. This ensures that accesses to the parent pipeline happen only after the sub pipeline
+    // has been released.
+    sub_pipeline.nested_sender = this->pipeline->readwrite();
+
+    return sub_pipeline;
   }
 
   /// Check if the pipeline is valid.
@@ -62,10 +91,30 @@ public:
   ///
   /// @post !valid()
   void reset() noexcept {
+    releaseParentPipeline();
     pipeline.reset();
   }
 
 private:
+  void releaseParentPipeline() {
+    namespace ex = pika::execution::experimental;
+
+    if (nested_sender) {
+      DLAF_ASSERT(valid(), "");
+
+      auto s = ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
+               ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
+                 comm_wrapper.get() = std::move(sub_comm_wrapper.get());
+
+                 auto sub_comm_wrapper_local = std::move(sub_comm_wrapper);
+                 auto comm_wrapper_local = std::move(comm_wrapper);
+               });
+      ex::start_detached(std::move(s));
+      nested_sender.reset();
+    }
+  }
+
   std::optional<AsyncRwMutex> pipeline = std::nullopt;
+  std::optional<decltype(pipeline->readwrite())> nested_sender = std::nullopt;
 };
 }

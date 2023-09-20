@@ -15,6 +15,8 @@
 #include <array>
 
 #include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/common/round_robin.h>
 #include <dlaf/communication/communicator.h>
 
 namespace dlaf {
@@ -41,20 +43,37 @@ using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
 /// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
 public:
+  using Pipeline = dlaf::common::Pipeline<Communicator>;
+
   /// Create a communicator grid @p rows x @p cols with given @p ordering.
   /// @param comm must be valid during construction.
-  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering);
+  // TODO: Default ncommunicators from config?
+  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
+                   std::size_t ncommunicators = 3);
 
   /// Create a communicator grid with dimensions specified by @p size and given @p ordering.
   /// @param size with @p size[0] rows and @p size[1] columns,
   /// @param comm must be valid during construction.
-  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering)
-      : CommunicatorGrid(comm, size[0], size[1], ordering) {}
+  // TODO: Default ncommunicators from config?
+  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
+                   std::size_t ncommunicators = 3)
+      : CommunicatorGrid(comm, size[0], size[1], ordering, ncommunicators) {}
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
     return common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, index,
                                                   {grid_size_.rows(), grid_size_.cols()});
+  }
+
+  std::size_t numCommunicators() const noexcept {
+    DLAF_ASSERT(bool(full_pipeline_), "");
+    DLAF_ASSERT(bool(row_pipeline_), "");
+    DLAF_ASSERT(bool(col_pipeline_), "");
+    DLAF_ASSERT(full_pipeline_->size() == row_pipeline_->size(), full_pipeline_->size(),
+                row_pipeline_->size());
+    DLAF_ASSERT(full_pipeline_->size() == col_pipeline_->size(), full_pipeline_->size(),
+                col_pipeline_->size());
+    return full_pipeline_->size();
   }
 
   /// Return the rank of the current process in the CommunicatorGrid.
@@ -91,6 +110,23 @@ public:
       return col_;
   }
 
+  /// Return a pipeline to a Communicator grouping all ranks in the grid.
+  Pipeline fullCommunicatorPipeline() {
+    return full_pipeline_->nextResource().subPipeline();
+  }
+
+  /// Return a pipeline to a Communicator grouping all ranks in the row (that includes the current
+  /// process).
+  Pipeline rowCommunicatorPipeline() {
+    return row_pipeline_->nextResource().subPipeline();
+  }
+
+  /// Return a pipeline to a Communicator grouping all ranks in the col (that includes the current
+  /// process).
+  Pipeline colCommunicatorPipeline() {
+    return col_pipeline_->nextResource().subPipeline();
+  }
+
   /// Prints information about the CommunicationGrid.
   friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {
     return out << "position=" << grid.position_ << ", size=" << grid.grid_size_;
@@ -103,6 +139,14 @@ protected:
   Communicator full_;
   Communicator row_;
   Communicator col_;
+
+  // TODO: shared_ptr to make grid copyable (as Communicator is). Change functions to take grid by
+  // reference instead?
+  using RoundRobinPipeline = dlaf::common::RoundRobin<Pipeline>;
+
+  std::shared_ptr<RoundRobinPipeline> full_pipeline_ = nullptr;
+  std::shared_ptr<RoundRobinPipeline> row_pipeline_ = nullptr;
+  std::shared_ptr<RoundRobinPipeline> col_pipeline_ = nullptr;
 
   Index2D position_;
   Size2D grid_size_ = Size2D(0, 0);

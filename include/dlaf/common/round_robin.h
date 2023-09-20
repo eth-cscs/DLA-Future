@@ -17,13 +17,21 @@ namespace dlaf {
 namespace common {
 
 template <class T>
-struct RoundRobin {
+class RoundRobin {
+public:
+  RoundRobin() = default;
+
   template <class... Args>
-  RoundRobin(std::size_t n, Args... args) : curr_index_(0) {
+  RoundRobin(std::size_t n, Args... args) {
     pool_.reserve(n);
     for (std::size_t i = 0; i < n; ++i)
       pool_.emplace_back(args...);
   }
+
+  RoundRobin(RoundRobin&&) = default;
+  RoundRobin(const RoundRobin&) = delete;
+  RoundRobin& operator=(RoundRobin&&) = default;
+  RoundRobin& operator=(const RoundRobin&) = delete;
 
   T& currentResource() {
     return pool_[curr_index_];
@@ -34,7 +42,12 @@ struct RoundRobin {
     return pool_[curr_index_];
   }
 
-  std::size_t curr_index_;
+  std::size_t size() const noexcept {
+    return pool_.size();
+  }
+
+private:
+  std::size_t curr_index_ = 0;
   std::vector<T> pool_;
 };
 

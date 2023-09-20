@@ -1038,7 +1038,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   auto comm = ex::just(grid.fullCommunicator().clone());
   // Need a pipeline of comm for broadcasts.
-  common::Pipeline<comm::Communicator> comm_bcast(grid.fullCommunicator().clone());
+  auto comm_bcast = grid.fullCommunicatorPipeline();
 
   const auto rank = grid.rankFullCommunicator(grid.rank());
   const auto ranks = static_cast<comm::IndexT_MPI>(grid.size().linear_size());

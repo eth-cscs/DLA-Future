@@ -237,8 +237,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   auto np = pika::execution::thread_priority::normal;
 
   // Set up MPI
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
 
   auto dist_v = mat_v.distribution();
   auto dist_c = mat_c.distribution();

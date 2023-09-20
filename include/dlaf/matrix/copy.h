@@ -126,6 +126,7 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
   Matrix<T, Destination> dst_retiled = dst.retiledSubPipeline(scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
+  // TODO: ???
   auto comm_sender = ex::just(grid.fullCommunicator().clone());
 
   auto tag = [dist = src_retiled.distribution()](GlobalTileIndex ij) -> comm::IndexT_MPI {

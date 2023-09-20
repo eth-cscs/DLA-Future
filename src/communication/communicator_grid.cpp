@@ -8,13 +8,16 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/config.hpp>
+#include <pika/type_support/detail/with_result_of.hpp>
+
 #include <dlaf/communication/communicator_grid.h>
 
 namespace dlaf {
 namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
-                                   common::Ordering ordering) {
+                                   common::Ordering ordering, std::size_t ncommunicators) {
   DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows, ncols, comm.size());
 
   bool is_in_grid = comm.rank() < nrows * ncols;
@@ -45,6 +48,16 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   full_ = make_communicator_managed(mpi_full);
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
+
+  // TODO: Move to DLA-Future.
+  using pika::detail::with_result_of;
+
+  full_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
+                                                        with_result_of([&]() { return full_.clone(); }));
+  row_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
+                                                       with_result_of([&]() { return row_.clone(); }));
+  col_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
+                                                       with_result_of([&]() { return col_.clone(); }));
 }
 }
 }

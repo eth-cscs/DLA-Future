@@ -51,6 +51,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
   bt_reduction_to_band<B>(band_size, mat_e, mat_a, mat_taus);
 }
 
+// TODO: Take grid by reference or make pipelines inside CommunicatorGrid copyable?
 template <Backend B, Device D, class T>
 void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                 Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {

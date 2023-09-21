@@ -1,5 +1,5 @@
 include:
-  - local: 'common-ci.yml'
+  - local: 'ci/common-ci.yml'
 
 cpu gcc11 release stdexec deps:
   extends: .build_deps_common

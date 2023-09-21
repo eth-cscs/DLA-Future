@@ -1,5 +1,5 @@
 include:
-  - local: 'common-ci.yml'
+  - local: 'ci/common-ci.yml'
 
 # Builds a Docker image for the current commit
 cpu gcc11 release deps:

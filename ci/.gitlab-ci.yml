@@ -1,6 +1,6 @@
 include:
-  - local: 'cpu/gcc11_release.yml'
-  - local: 'cpu/gcc11_release_stdexec.yml'
+  - local: 'ci/cpu/gcc11_release.yml'
+  - local: 'ci/cpu/gcc11_release_stdexec.yml'
 
 #cpu debug build gcc11 stdexec:
 #  extends: .build_spack_common

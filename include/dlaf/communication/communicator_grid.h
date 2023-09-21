@@ -18,6 +18,7 @@
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/tune.h>
 
 namespace dlaf {
 namespace comm {
@@ -47,16 +48,16 @@ public:
 
   /// Create a communicator grid @p rows x @p cols with given @p ordering.
   /// @param comm must be valid during construction.
-  // TODO: Default ncommunicators from config?
-  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
-                   std::size_t ncommunicators = 3);
+  CommunicatorGrid(
+      Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
+      std::size_t ncommunicators = getTuneParameters().communicator_grid_num_communicators_default);
 
   /// Create a communicator grid with dimensions specified by @p size and given @p ordering.
   /// @param size with @p size[0] rows and @p size[1] columns,
   /// @param comm must be valid during construction.
-  // TODO: Default ncommunicators from config?
-  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
-                   std::size_t ncommunicators = 3)
+  CommunicatorGrid(
+      Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
+      std::size_t ncommunicators = getTuneParameters().communicator_grid_num_communicators_default)
       : CommunicatorGrid(comm, size[0], size[1], ordering, ncommunicators) {}
 
   /// Return rank in the grid with all ranks given the 2D index.

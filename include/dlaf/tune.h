@@ -51,6 +51,11 @@ namespace dlaf {
 ///     The application of the HH reflector is splitted in smaller applications of the group size
 ///     reflectors. Set with --dlaf:bt-band-to-tridiag-hh-apply-group-size or env variable
 ///     DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE.
+/// - communicator_grid_num_communicators_default:
+///     The default number of row, column, and full communicators to initialize in CommunicatorGrid. Must
+///     be at least 2. Set with --dlaf:communicator-grid-num-communicators-default or env variable
+///     DLAF_COMMUNICATOR_GRID_NUM_COMMUNICATORS_DEFAULT.
+///     TODO: Better description?
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by
 /// algorithms.
 ///
@@ -66,6 +71,8 @@ struct TuneParameters {
   SizeType eigensolver_min_band = 100;
   SizeType band_to_tridiag_1d_block_size_base = 8192;
   SizeType bt_band_to_tridiag_hh_apply_group_size = 64;
+
+  std::size_t communicator_grid_num_communicators_default = 3;
 };
 
 TuneParameters& getTuneParameters();

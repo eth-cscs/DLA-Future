@@ -1,0 +1,41 @@
+include:
+  - local: 'common-ci.yml'
+
+# Builds a Docker image for the current commit
+cpu gcc11 release deps:
+  extends: .build_deps_common
+  variables:
+    DOCKERFILE: ci/docker/build.Dockerfile
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
+    USE_MKL: "ON"
+    USE_ROCBLAS: "OFF"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
+    USE_CODECOV: "false"
+
+# Builds a Docker image for the current commit
+cpu gcc11 release build:
+  extends: .build_common
+  needs:
+    - cpu gcc11 release deps
+  variables:
+    DOCKERFILE: ci/docker/deploy.Dockerfile
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+
+cpu release test gcc11:
+  extends: .run_common
+  needs:
+    - cpu gcc11 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc11 release build

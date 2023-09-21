@@ -58,7 +58,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("pika@0.15.1:", when="@0.1")
     depends_on("pika@0.16:", when="@0.2.0")
     depends_on("pika@0.17:", when="@0.2.1:")
-    depends_on("pika-algorithms@0.1:")
+    depends_on("pika@0.18:", when="@master")
+    depends_on("pika-algorithms@0.1:", when="@:0.2")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
@@ -114,7 +115,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     for cxxstd in cxxstds:
         depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
+        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="@:0.2 cxxstd={0}".format(cxxstd))
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")

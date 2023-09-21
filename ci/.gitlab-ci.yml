@@ -16,7 +16,7 @@ stages:
   stage: build
   timeout: 6 hours
   variables:
-    SPACK_SHA: 566754440f9dfed9accd25db7f1a67b0cd074fcd
+    SPACK_SHA: 4429e17db053fcf7ec591ce3abe8ffc7733c0a25
     SPACK_DLAF_REPO: ./spack
   before_script:
     - !reference [.fetch-registry-tokens, script]

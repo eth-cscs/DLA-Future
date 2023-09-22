@@ -72,6 +72,9 @@ struct TuneParameters {
   SizeType band_to_tridiag_1d_block_size_base = 8192;
   SizeType bt_band_to_tridiag_hh_apply_group_size = 64;
 
+  // TODO: The default parameter of CommunicatorGrid triggers the construction of TuneParameters, which
+  // in turn triggers a call to pika::resource::get_thread_pool, which will fail if done before pika has
+  // been started.
   std::size_t communicator_grid_num_communicators_default = 3;
 };
 

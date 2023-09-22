@@ -28,6 +28,8 @@ using dlaf::common::Pipeline;
 namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
 
+// TODO: Test subPipeline and read-only access
+
 TEST(Pipeline, ResetValid) {
   // The pipeline is valid after construction
   dlaf::common::Pipeline<int> pipeline(42);

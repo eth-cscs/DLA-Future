@@ -78,8 +78,10 @@ public:
       if (world.size() == 1)
         return;
 
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor);
+      // TODO
+      const std::size_t ncommunicators = 5;
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor, ncommunicators);
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor, ncommunicators);
     }
   }
 };

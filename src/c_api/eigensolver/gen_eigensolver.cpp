@@ -12,7 +12,7 @@
 
 #include <complex>
 
-#include <dlaf_c/eigensolver/eigensolver.h>
+#include <dlaf_c/eigensolver/gen_eigensolver.h>
 #include <dlaf_c/init.h>
 #include <dlaf_c/utils.h>
 

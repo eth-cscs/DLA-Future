@@ -53,7 +53,7 @@ DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_c(
     const struct DLAF_descriptor dlaf_descz);
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_s
-DLAF_EXTERN_C int dlaf_hermitian_eigensolver_z(
+DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_z(
     const int dlaf_context, const char uplo, dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
     dlaf_complex_z* b, const struct DLAF_descriptor dlaf_descb, double* w, dlaf_complex_z* z,
     const struct DLAF_descriptor dlaf_descz);
@@ -111,7 +111,7 @@ DLAF_EXTERN_C void dlaf_pdsygex(const char uplo, const int n, double* a, const i
 
 /// @copydoc dlaf_pssygex
 DLAF_EXTERN_C void dlaf_pchegex(const char uplo, const int n, dlaf_complex_c* a, const int ia,
-                                const int ja, const int desca[9], dlaf_complex_c* a, const int ib,
+                                const int ja, const int desca[9], dlaf_complex_c* b, const int ib,
                                 const int jb, const int descb[9], float* w, dlaf_complex_c* z,
                                 const int iz, const int jz, const int descz[9], int* info);
 

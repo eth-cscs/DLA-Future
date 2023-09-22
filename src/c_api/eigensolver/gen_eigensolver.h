@@ -16,7 +16,7 @@
 #include <pika/init.hpp>
 
 #include <dlaf/common/assert.h>
-#include <dlaf/eigensolver/eigensolver.h>
+#include <dlaf/eigensolver/gen_eigensolver.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/types.h>
@@ -26,7 +26,6 @@
 #include "../blacs.h"
 #include "../grid.h"
 #include "../utils.h"
-#include "dlaf/eigensolver/gen_eigensolver.h"
 
 template <typename T>
 int hermitian_generalized_eigensolver(const int dlaf_context, const char uplo, T* a,

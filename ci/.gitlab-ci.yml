@@ -16,8 +16,7 @@ stages:
   stage: build
   timeout: 6 hours
   variables:
-    GIT_SUBMODULE_STRATEGY: recursive
-    SPACK_SHA: b313b28e64c15761be0d45a16c922c25b2786f76
+    SPACK_SHA: 4429e17db053fcf7ec591ce3abe8ffc7733c0a25
     SPACK_DLAF_REPO: ./spack
   before_script:
     - !reference [.fetch-registry-tokens, script]
@@ -352,6 +351,16 @@ cpu release test gcc11:
       - artifact: pipeline.yml
         job: cpu release build gcc11
 
+cpu release test gcc11 stdexec:
+  extends: .run_common
+  needs:
+    - cpu release build gcc11 stdexec
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu release build gcc11 stdexec
+
+
 cpu release test gcc12 cxx20:
   extends: .run_common
   needs:
@@ -384,7 +393,6 @@ cpu codecov test gcc11:
   needs:
     - cpu codecov build gcc11
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cpu codecov build gcc11
@@ -412,7 +420,6 @@ cuda codecov test gcc11:
   needs:
     - cuda codecov build gcc11
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11
@@ -422,7 +429,6 @@ cuda codecov test gcc11 scalapack:
   needs:
     - cuda codecov build gcc11 scalapack
   trigger:
-    strategy: depend
     include:
       - artifact: pipeline.yml
         job: cuda codecov build gcc11 scalapack

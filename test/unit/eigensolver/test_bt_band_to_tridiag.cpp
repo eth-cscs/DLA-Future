@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <pika/init.hpp>
+
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/band_to_tridiag.h>  // for nrSweeps/nrStepsForSweep
@@ -267,7 +269,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -285,7 +287,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -308,7 +310,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand)
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }
@@ -326,7 +328,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
-      pika::threads::get_thread_manager().wait();
+      pika::wait();
     }
   }
 }

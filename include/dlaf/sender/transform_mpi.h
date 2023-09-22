@@ -11,6 +11,7 @@
 
 #include <type_traits>
 
+#include <dlaf/common/consume_rvalues.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
@@ -34,7 +35,7 @@ void consumeCommunicatorWrapper(T&) {}
 ///
 /// Wrapper type around calls to MPI functions. Provides a call operator that
 /// creates an MPI request and passes it as the last argument to the provided
-/// callable. The wrapper then waits for the the request to complete with
+/// callable. The wrapper then waits for the request to complete with
 /// yield_while.
 ///
 /// This could in theory be a lambda inside transformMPI.  However, clang at
@@ -88,7 +89,7 @@ template <typename F, typename Sender,
   namespace ex = pika::execution::experimental;
 
   return ex::transfer(std::forward<Sender>(sender), dlaf::internal::getMPIScheduler()) |
-         ex::then(MPICallHelper{std::forward<F>(f)});
+         ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void.

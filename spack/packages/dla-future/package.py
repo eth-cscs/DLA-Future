@@ -16,6 +16,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/eth-cscs/DLA-Future.git"
     maintainers = ["rasolca", "albestro", "msimberg", "aurianer"]
 
+    version("0.2.1", sha256="4c2669d58f041304bd618a9d69d9879a42e6366612c2fc932df3894d0326b7fe")
     version("0.2.0", sha256="da73cbd1b88287c86d84b1045a05406b742be924e65c52588bbff200abd81a10")
     version("0.1.0", sha256="f7ffcde22edabb3dc24a624e2888f98829ee526da384cd752b2b271c731ca9b1")
     version("master", branch="master")
@@ -48,8 +49,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("umpire@4.1.0:")
 
     depends_on("pika@0.15.1:", when="@0.1")
-    depends_on("pika@0.16:", when="@0.2.0:")
-    depends_on("pika-algorithms@0.1:")
+    depends_on("pika@0.16:", when="@0.2.0")
+    depends_on("pika@0.17:", when="@0.2.1:")
+    depends_on("pika@0.18:", when="@master")
+    depends_on("pika-algorithms@0.1:", when="@:0.2")
     depends_on("pika +mpi")
     depends_on("pika +cuda", when="+cuda")
     depends_on("pika +rocm", when="+rocm")
@@ -103,7 +106,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     for cxxstd in cxxstds:
         depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
+        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="@:0.2 cxxstd={0}".format(cxxstd))
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")

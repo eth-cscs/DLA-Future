@@ -102,6 +102,7 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 
 - [Documentation of `v0.1.0`](https://eth-cscs.github.io/DLA-Future/v0.1.0/)
 - [Documentation of `v0.2.0`](https://eth-cscs.github.io/DLA-Future/v0.2.0/)
+- [Documentation of `v0.2.1`](https://eth-cscs.github.io/DLA-Future/v0.2.1/)
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
 
 #### How to generate the documentation

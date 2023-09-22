@@ -28,13 +28,14 @@ namespace dlaf {
 /// where L is a lower and U is an upper triangular matrix.
 /// @param uplo specifies if the elements of the Hermitian matrix to be referenced are the elements in
 /// the lower or upper triangular part,
+///
 /// @param mat_a on entry it contains the triangular matrix A, on exit the matrix elements
 /// are overwritten with the elements of the Cholesky factor. Only the tiles of the matrix
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a has equal tile and block sizes
-/// @pre mat_a is not distributed.
+/// @pre @p mat_a is not distributed
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void cholesky_factorization(blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
@@ -59,10 +60,10 @@ void cholesky_factorization(blas::Uplo uplo, Matrix<T, device>& mat_a) {
 /// @param mat_a on entry it contains the triangular matrix A, on exit the matrix elements
 /// are overwritten with the elements of the Cholesky factor. Only the tiles of the matrix
 /// which contain the upper or the lower triangular part (depending on the value of uplo),
-/// @pre mat_a has a square size,
-/// @pre mat_a has a square block size,
-/// @pre mat_a has equal tile and block sizes
-/// @pre mat_a is distributed according to grid.
+/// @pre @p mat_a is distributed according to @p grid
+/// @pre @p mat_a has size (N x N)
+/// @pre @p mat_a has blocksize (NB x NB)
+/// @pre @p mat_a has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
 void cholesky_factorization(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);

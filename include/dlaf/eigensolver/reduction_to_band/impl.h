@@ -15,6 +15,7 @@
 
 #include <pika/barrier.hpp>
 #include <pika/execution.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/assert.h>
@@ -98,6 +99,9 @@ std::array<T, 2> computeX0AndSquares(const bool has_head, const std::vector<matr
 template <Device D, class T>
 T computeReflectorAndTau(const bool has_head, const std::vector<matrix::Tile<T, D>>& panel,
                          const SizeType j, std::array<T, 2> x0_and_squares) {
+  if (x0_and_squares[1] == T(0))
+    return T(0);
+
   const T norm = std::sqrt(x0_and_squares[1]);
   const T x0 = x0_and_squares[0];
   const T y = std::signbit(std::real(x0_and_squares[0])) ? norm : -norm;
@@ -1088,7 +1092,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // Note:
   // This is a temporary workaround.
   // See issue https://github.com/eth-cscs/DLA-Future/issues/729
-  pika::threads::get_thread_manager().wait();
+  pika::wait();
 
   common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());

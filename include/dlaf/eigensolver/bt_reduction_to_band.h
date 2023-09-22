@@ -28,14 +28,18 @@ namespace dlaf::eigensolver::internal {
 /// defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.
 ///
 /// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
+/// @pre @p mat_c is not distributed
+/// @pre @p mat_c has blocksize (NB x NB)
+/// @pre @p mat_c has tilesize (NB x NB)
+///
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
+/// @pre @p mat_v is not distributed
+/// @pre @p mat_v has blocksize (NB x NB)
+/// @pre @p mat_v has tilesize (NB x NB)
+///
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
-/// @pre mat_c is not distributed,
-/// @pre mat_v is not distributed,
-/// @pre mat_c has equal tile and block sizes,
-/// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
 void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                           Matrix<const T, Device::CPU>& mat_taus) {
@@ -64,15 +68,19 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
 /// (HH(j) is the House-Holder transformation (I - v tau vH)
 /// defined by the j-th element of tau and the HH reflector stored in the j-th column of the matrix V.
 ///
-/// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C.
+/// @param mat_c contains the (m x n) matrix C (blocksize (mb x nb)), while on exit it contains Q C
+/// @pre @p mat_c is distributed according to @p grid
+/// @pre @p mat_c has blocksize (NB x NB)
+/// @pre @p mat_c has tilesize (NB x NB)
+///
 /// @param mat_v is (m x m) matrix with blocksize (mb x mb), which contains the Householder reflectors.
 /// The j-th HH reflector is v_j = (1, V(mb + j : n, j)).
+/// @pre @p mat_v is distributed according to @p grid
+/// @pre @p mat_v has blocksize (NB x NB)
+/// @pre @p mat_v has tilesize (NB x NB)
+///
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
-/// @pre mat_c is distributed,
-/// @pre mat_v is distributed according to grid,
-/// @pre mat_c has equal tile and block sizes,
-/// @pre mat_v has equal tile and block sizes.
 template <Backend backend, Device device, class T>
 void bt_reduction_to_band(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
                           Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {

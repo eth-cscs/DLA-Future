@@ -11,7 +11,7 @@
 #include <functional>
 #include <tuple>
 
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/blas/tile.h>
 #include <dlaf/communication/communicator_grid.h>
@@ -175,7 +175,7 @@ TYPED_TEST(HermitianMultiplicationTestMC, CorrectnessDistributed) {
 
           testHermitianMultiplication<TypeParam, Backend::MC, Device::CPU>(comm_grid, side, uplo, m, n,
                                                                            mb, nb, alpha, beta);
-          pika::threads::get_thread_manager().wait();
+          pika::wait();
         }
       }
     }
@@ -212,7 +212,7 @@ TYPED_TEST(HermitianMultiplicationTestGPU, CorrectnessDistributed) {
 
           testHermitianMultiplication<TypeParam, Backend::GPU, Device::GPU>(comm_grid, side, uplo, m, n,
                                                                             mb, nb, alpha, beta);
-          pika::threads::get_thread_manager().wait();
+          pika::wait();
         }
       }
     }

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <pika/execution.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
@@ -1892,7 +1893,7 @@ void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
 
   // Note: ensure that everything finishes before next call to Communicator::clone() that might block a
   // working thread (and if it is just one, it would deadlock)
-  pika::threads::get_thread_manager().wait();
+  pika::wait();
 }
 
 TYPED_TEST(MatrixTest, CopyReshuffling) {

@@ -11,7 +11,7 @@
 #include <cmath>
 
 #include <pika/execution.hpp>
-#include <pika/runtime.hpp>
+#include <pika/init.hpp>
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
@@ -74,6 +74,10 @@ struct config_t {
   TileElementSize block_size;
   SizeType band_size = block_size.rows();
 };
+
+// Structure of the input matrix
+// Banded input matrices will have a band smaller than the target band_size
+enum class InputMatrixStructure { full, banded };
 
 std::vector<config_t> configs{
     {{0, 0}, {3, 3}},
@@ -308,16 +312,22 @@ auto checkResult(const SizeType k, const SizeType band_size, Matrix<const T, Dev
 
 template <class T, Backend B, Device D>
 void testReductionToBandLocal(const LocalElementSize size, const TileElementSize block_size,
-                              const SizeType band_size) {
+                              const SizeType band_size,
+                              const InputMatrixStructure input_matrix_structure) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
   Distribution distribution({size.rows(), size.cols()}, block_size);
 
   // setup the reference input matrix
-  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size]() {
+  Matrix<const T, Device::CPU> reference = [size = size, block_size = block_size, band_size,
+                                            input_matrix_structure]() {
     Matrix<T, Device::CPU> reference(size, block_size);
-    matrix::util::set_random_hermitian(reference);
+    if (input_matrix_structure == InputMatrixStructure::banded)
+      // Matrix already in band form, with band smaller than band_size
+      matrix::util::set_random_hermitian_banded(reference, band_size - 1);
+    else
+      matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
@@ -347,7 +357,9 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocal) {
   for (const auto& config : configs) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
+    for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded})
+      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size,
+                                                                    input_matrix_structure);
   }
 }
 
@@ -355,7 +367,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessLocalSubBand) {
   for (const auto& config : configs_subband) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size);
+    for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+      testReductionToBandLocal<TypeParam, Backend::MC, Device::CPU>(size, block_size, band_size,
+                                                                    input_matrix_structure);
+    }
   }
 }
 
@@ -364,7 +379,10 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocal) {
   for (const auto& config : configs) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+    for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size,
+                                                                     input_matrix_structure);
+    }
   }
 }
 
@@ -372,14 +390,18 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
   for (const auto& config : configs_subband) {
     const auto& [size, block_size, band_size] = config;
 
-    testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size);
+    for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+      testReductionToBandLocal<TypeParam, Backend::GPU, Device::GPU>(size, block_size, band_size,
+                                                                     input_matrix_structure);
+    }
   }
 }
 #endif
 
 template <class T, Device D, Backend B>
 void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize size,
-                         const TileElementSize block_size, const SizeType band_size) {
+                         const TileElementSize block_size, const SizeType band_size,
+                         const InputMatrixStructure input_matrix_structure) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);
   DLAF_ASSERT(block_size.rows() % band_size == 0, block_size.rows(), band_size);
 
@@ -388,7 +410,11 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   // setup the reference input matrix
   Matrix<const T, Device::CPU> reference = [&]() {
     Matrix<T, Device::CPU> reference(distribution);
-    matrix::util::set_random_hermitian(reference);
+    if (input_matrix_structure == InputMatrixStructure::banded)
+      // Matrix already in band form, with band smaller than band_size
+      matrix::util::set_random_hermitian_banded(reference, band_size - 1);
+    else
+      matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
@@ -405,7 +431,7 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
   checkUpperPartUnchanged(reference, matrix_a_h);
 
   // Wait for all work to finish before doing blocking communication
-  pika::threads::get_thread_manager().wait();
+  pika::wait();
 
   auto mat_v = allGather(blas::Uplo::Lower, matrix_a_h, grid);
   auto mat_b = makeLocal(matrix_a_h);
@@ -420,7 +446,10 @@ void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize siz
 TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs) {
-      testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
+      for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size,
+                                                                 input_matrix_structure);
+      }
     }
   }
 }
@@ -428,7 +457,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributed) {
 TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs_subband) {
-      testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size);
+      for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+        testReductionToBand<TypeParam, Device::CPU, Backend::MC>(comm_grid, size, block_size, band_size,
+                                                                 input_matrix_structure);
+      }
     }
   }
 }
@@ -437,7 +469,10 @@ TYPED_TEST(ReductionToBandTestMC, CorrectnessDistributedSubBand) {
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs) {
-      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+      for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size,
+                                                                  input_matrix_structure);
+      }
     }
   }
 }
@@ -445,7 +480,10 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributed) {
 TYPED_TEST(ReductionToBandTestGPU, CorrectnessDistributedSubBand) {
   for (auto&& comm_grid : this->commGrids()) {
     for (const auto& [size, block_size, band_size] : configs_subband) {
-      testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size);
+      for (auto input_matrix_structure : {InputMatrixStructure::full, InputMatrixStructure::banded}) {
+        testReductionToBand<TypeParam, Device::GPU, Backend::GPU>(comm_grid, size, block_size, band_size,
+                                                                  input_matrix_structure);
+      }
     }
   }
 }

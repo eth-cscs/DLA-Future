@@ -19,6 +19,7 @@ TuneParameters& getTuneParameters() {
 }
 
 std::ostream& operator<<(std::ostream& os, const TuneParameters& params) {
+  os << "  red2band_panel_nworkers = " << params.red2band_panel_nworkers << std::endl;
   os << "  red2band_barrier_busy_wait_us = " << params.red2band_barrier_busy_wait_us << std::endl;
   os << "  tridiag_rank1_nworkers = " << params.tridiag_rank1_nworkers << std::endl;
   os << "  tridiag_rank1_barrier_busy_wait_us = " << params.tridiag_rank1_barrier_busy_wait_us

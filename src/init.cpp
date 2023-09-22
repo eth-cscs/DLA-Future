@@ -277,6 +277,8 @@ void initialize(const pika::program_options::variables_map& vm, const configurat
   if (vm.count("dlaf:print-config") > 0) {
     std::cout << "DLA-Future configuration options:" << std::endl;
     std::cout << cfg << std::endl;
+    std::cout << "DLA-Future tune parameters at startup:" << std::endl;
+    std::cout << getTuneParameters() << std::endl;
     std::cout << std::endl;
   }
 

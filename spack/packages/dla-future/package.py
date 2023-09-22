@@ -23,6 +23,13 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("shared", default=True, description="Build shared libraries.")
 
+    variant(
+        "hdf5",
+        default=False,
+        when="@0.2.0:",
+        description="HDF5 support for dealing with matrices on disk.",
+    )
+
     variant("doc", default=False, description="Build documentation.")
 
     variant("miniapps", default=False, description="Build miniapps.")
@@ -66,6 +73,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("rocprim", when="+rocm")
     depends_on("rocsolver", when="+rocm")
     depends_on("rocthrust", when="+rocm")
+
+    depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
 
     conflicts("+cuda", when="+rocm")
 
@@ -116,15 +125,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
         default=False,
         description="Check number of spawned threads in CI (Advanced usage).",
     )
-
-    variant(
-        "hdf5",
-        default=False,
-        when="@0.2.0:",
-        description="HDF5 support for dealing with matrices on disk.",
-    )
-
-    depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
     ###
 
     def cmake_args(self):

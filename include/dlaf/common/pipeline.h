@@ -32,8 +32,10 @@ class Pipeline {
   using AsyncRwMutex = pika::execution::experimental::async_rw_mutex<T>;
 
 public:
-  using Wrapper = typename AsyncRwMutex::readwrite_access_type;
-  using Sender = pika::execution::experimental::unique_any_sender<Wrapper>;
+  using ReadOnlyWrapper = typename AsyncRwMutex::read_access_type;
+  using ReadWriteWrapper = typename AsyncRwMutex::readwrite_access_type;
+  using ReadOnlySender = pika::execution::experimental::any_sender<ReadOnlyWrapper>;
+  using ReadWriteSender = pika::execution::experimental::unique_any_sender<ReadWriteWrapper>;
 
   // TODO
   Pipeline() {}
@@ -52,9 +54,18 @@ public:
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   /// @pre valid()
-  Sender operator()() {
+  ReadWriteSender operator()() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();
+  }
+
+  /// Enqueue for shared read-only access to the resource.
+  ///
+  /// @return a sender that will become ready as soon as the previous user releases the resource.
+  /// @pre valid()
+  ReadOnlySender read() {
+    DLAF_ASSERT(valid(), "");
+    return pipeline->read();
   }
 
   Pipeline subPipeline() {

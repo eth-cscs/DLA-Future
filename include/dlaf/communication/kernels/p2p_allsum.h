@@ -30,6 +30,26 @@
 
 namespace dlaf::comm {
 
+namespace internal {
+// TODO: Clean this up into something a bit more sustainable. We were forcing senders to be
+// unique_any_senders below in scheduleAllSumP2P. However, any_senders can stay any_senders (in some
+// situations). Revisit the explicit instantiations of scheduleSend/Recv as well.
+template <typename T>
+auto make_any_sender_helper(pika::execution::experimental::unique_any_sender<T> s) {
+  return s;
+}
+
+template <typename T>
+auto make_any_sender_helper(pika::execution::experimental::any_sender<T> s) {
+  return s;
+}
+
+template <typename S>
+auto make_any_sender_helper(S&& s) {
+  return pika::execution::experimental::make_unique_any_sender(std::forward<S>(s));
+}
+}
+
 /// Schedule a P2P AllReduce Sum operation between current rank and `rank_mate`.
 ///
 /// A P2P AllReduce Sum operation, i.e. an all-reduce involving just two ranks with MPI_SUM as op,
@@ -51,11 +71,11 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
   // Each rank in order to locally complete the operation just need to receive the other rank
   // data and then do the reduce operation. For this reason, the send operation is scheduled
   // independently from the rest of the allreduce operation.
-  ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_mate, tag, in));
+  ex::start_detached(comm::scheduleSend(internal::make_any_sender_helper(comm), rank_mate, tag, in));
 
   auto tile_out =
-      comm::scheduleRecv(ex::make_unique_any_sender(std::forward<CommSender>(comm)), rank_mate, tag,
-                         ex::make_unique_any_sender(std::forward<SenderOut>(out)));
+      comm::scheduleRecv(internal::make_any_sender_helper(std::forward<CommSender>(comm)), rank_mate,
+                         tag, internal::make_any_sender_helper(std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());
 }

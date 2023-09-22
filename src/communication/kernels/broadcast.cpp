@@ -60,22 +60,22 @@ template <class T, Device D, class Comm>
   return internal::scheduleSendBcast(std::move(pcomm), std::move(tile));
 }
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::CPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::CPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::GPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::GPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 #endif
 
 template <class T, Device D, class Comm>
@@ -112,21 +112,21 @@ template <class T, Device D, class Comm>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::CPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::CPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::GPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::GPU,
-                             common::Pipeline<Communicator>::Wrapper);
+                             common::Pipeline<Communicator>::ReadWriteWrapper);
 #endif
 }

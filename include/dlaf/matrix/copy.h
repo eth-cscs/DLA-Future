@@ -126,8 +126,7 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
   Matrix<T, Destination> dst_retiled = dst.retiledSubPipeline(scale_factor_dst);
 
   const comm::Index2D rank = grid.rank();
-  // TODO: ???
-  auto comm_sender = ex::just(grid.fullCommunicator().clone());
+  auto mpi_chain = grid.fullCommunicatorPipeline();
 
   auto tag = [dist = src_retiled.distribution()](GlobalTileIndex ij) -> comm::IndexT_MPI {
     // Note:
@@ -150,9 +149,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
     const bool dst_is_mine = rank == dst_rank;
 
     if (src_is_mine != dst_is_mine) {
-      ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm_sender),
-                                            grid.rankFullCommunicator(dst_rank), tag(ij),
-                                            src_retiled.read(ij_lc)));
+      ex::start_detached(comm::scheduleSend(mpi_chain.read(), grid.rankFullCommunicator(dst_rank),
+                                            tag(ij), src_retiled.read(ij_lc)));
     }
   }
 
@@ -170,9 +168,8 @@ void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::Commu
                          matrix::copy(policy));
     }
     else {
-      ex::start_detached(comm::scheduleRecv(ex::make_unique_any_sender(comm_sender),
-                                            grid.rankFullCommunicator(src_rank), tag(ij),
-                                            dst_retiled.readwrite(ij_lc)));
+      ex::start_detached(comm::scheduleRecv(mpi_chain.read(), grid.rankFullCommunicator(src_rank),
+                                            tag(ij), dst_retiled.readwrite(ij_lc)));
     }
   }
 }

@@ -796,7 +796,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   // enforced by relying solely on tags.
   auto mpi_chain_row = grid.rowCommunicatorPipeline();
   auto mpi_chain_col = grid.colCommunicatorPipeline();
-  const auto mpi_col_comm = ex::just(grid.colCommunicator().clone());
+  auto mpi_chain_col_shared = grid.colCommunicatorPipeline();
 
   const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
   const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
@@ -984,7 +984,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
             // Compute final W2 by adding the contribution from the partner rank
             ex::start_detached(  //
-                comm::scheduleAllSumP2P<B>(mpi_col_comm, rank_partner, tag,
+                comm::scheduleAllSumP2P<B>(mpi_chain_col_shared.read(), rank_partner, tag,
                                            splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
                                            splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
 

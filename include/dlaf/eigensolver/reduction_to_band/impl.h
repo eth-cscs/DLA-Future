@@ -1089,6 +1089,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // Note:
   // This is a temporary workaround.
   // See issue https://github.com/eth-cscs/DLA-Future/issues/729
+  // TODO: Remove?
   pika::wait();
 
   // This algorithm requires the grid to have at least 2 independent column communicators in the round
@@ -1097,12 +1098,9 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // pipelines this algorithm will deadlock (separate subpipelines means that all work on the previous
   // subpipeline has to complete before the next subpipeline can even start scheduling work).
   DLAF_ASSERT(grid.numCommunicators() >= 2, grid.numCommunicators());
-  common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
-  // common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
-  // common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
   auto mpi_row_chain = grid.rowCommunicatorPipeline();
   auto mpi_col_chain = grid.colCommunicatorPipeline();
-  // auto mpi_col_chain_panel = grid.colCommunicatorPipeline();
+  auto mpi_col_chain_panel = grid.colCommunicatorPipeline();
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();

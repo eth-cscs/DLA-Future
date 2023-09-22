@@ -20,10 +20,10 @@
 
 namespace dlaf::comm::internal {
 
-/// This helper "consumes" a Pipeline<Communicator>::Wrapper ensuring that after this call
+/// This helper "consumes" a Pipeline<Communicator>::ReadWriteWrapper ensuring that after this call
 /// the one passed as argument gets destroyed. All other types left as they are
 /// by the second overload.
-inline void consumeCommunicatorWrapper(common::Pipeline<Communicator>::Wrapper& comm_wrapper) {
+inline void consumeCommunicatorWrapper(common::Pipeline<Communicator>::ReadWriteWrapper& comm_wrapper) {
   [[maybe_unused]] auto comm_wrapper_local = std::move(comm_wrapper);
 }
 
@@ -58,8 +58,8 @@ struct MPICallHelper {
     // Callables passed to transformMPI have their arguments passed by reference, but doing so
     // with PromiseGuard would keep the guard alive until the completion of the MPI operation,
     // whereas we are only looking to guard the submission of the MPI operation. We therefore
-    // explicitly release Pipeline<Communicator>::Wrapper after submitting the MPI operation with
-    // consumeCommunicatorWrapper.
+    // explicitly release Pipeline<Communicator>::ReadWriteWrapper after submitting the MPI operation
+    // with consumeCommunicatorWrapper.
     //
     // We also use unwrap various types passed to the MPI operation, including PromiseGuards of
     // any type, to allow the MPI operation not to care whether a Communicator was wrapped in a

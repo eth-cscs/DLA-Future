@@ -12,6 +12,7 @@
 /// @file
 
 #include <cstdint>
+#include <iosfwd>
 
 #include <pika/runtime.hpp>
 
@@ -68,6 +69,7 @@ struct TuneParameters {
   SizeType bt_band_to_tridiag_hh_apply_group_size = 64;
 };
 
+std::ostream& operator<<(std::ostream& os, const TuneParameters& params);
 TuneParameters& getTuneParameters();
 
 }

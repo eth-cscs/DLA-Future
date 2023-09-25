@@ -1089,7 +1089,6 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // Note:
   // This is a temporary workaround.
   // See issue https://github.com/eth-cscs/DLA-Future/issues/729
-  // TODO: Remove?
   pika::wait();
 
   // This algorithm requires the grid to have at least 2 independent column communicators in the round

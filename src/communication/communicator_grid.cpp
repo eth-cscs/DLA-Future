@@ -9,8 +9,8 @@
 //
 
 #include <pika/config.hpp>
-#include <pika/type_support/detail/with_result_of.hpp>
 
+#include <dlaf/common/with_result_of.h>
 #include <dlaf/communication/communicator_grid.h>
 
 namespace dlaf {
@@ -49,8 +49,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
 
-  // TODO: Move to DLA-Future.
-  using pika::detail::with_result_of;
+  using dlaf::internal::with_result_of;
 
   full_pipeline_ =
       std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return full_.clone(); }));

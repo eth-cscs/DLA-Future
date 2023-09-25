@@ -44,12 +44,12 @@ TEST(GridTest, GridScaLAPACKOrdering) {
 
 TEST(GridTest, GridDLAFOrdering) {
   // TODO
-  const std::size_t ncommunicators = 5;
+  const std::size_t ncommunicator_pipelines = 5;
 
   for (const auto [key, value] : ordering) {
     dlaf::comm::Communicator world(MPI_COMM_WORLD);
 
-    dlaf::comm::CommunicatorGrid row_major(world, 2, 3, value, ncommunicators);
+    dlaf::comm::CommunicatorGrid row_major(world, 2, 3, value, ncommunicator_pipelines);
 
     char rm = grid_ordering(world, row_major.size().rows(), row_major.size().cols(),
                             row_major.rank().row(), row_major.rank().col());

@@ -21,7 +21,7 @@ using dlaf::common::Ordering;
 const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 // TODO: Update TuneParameters to not fail if pika isn't initialized? Allow getting only the number of
 // communicators without initializing everything?
-const std::size_t ncommunicators = 5;
+const std::size_t ncommunicator_pipelines = 5;
 
 std::array<int, 2> computeGridDims(int nranks) {
   std::array<int, 2> dimensions{0, 0};
@@ -106,7 +106,7 @@ TEST_P(CommunicatorGridTest, Copy) {
   int nrows = grid_dims[0];
   int ncols = grid_dims[1];
 
-  CommunicatorGrid grid(world, nrows, ncols, GetParam(), ncommunicators);
+  CommunicatorGrid grid(world, nrows, ncols, GetParam(), ncommunicator_pipelines);
 
   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
   EXPECT_EQ(nrows, grid.size().rows());
@@ -153,7 +153,7 @@ TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   int nrows = grid_dims[0];
   int ncols = grid_dims[1];
 
-  CommunicatorGrid grid(world, nrows, ncols, GetParam(), ncommunicators);
+  CommunicatorGrid grid(world, nrows, ncols, GetParam(), ncommunicator_pipelines);
 
   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
   EXPECT_EQ(nrows, grid.size().rows());
@@ -168,7 +168,7 @@ TEST_P(CommunicatorGridTest, ConstructorWithArray) {
   Communicator world(MPI_COMM_WORLD);
 
   const std::array<IndexT_MPI, 2>& grid_dims = computeGridDims(NUM_MPI_RANKS);
-  CommunicatorGrid grid(world, grid_dims, GetParam(), ncommunicators);
+  CommunicatorGrid grid(world, grid_dims, GetParam(), ncommunicator_pipelines);
 
   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
   EXPECT_EQ(grid_dims[0], grid.size().rows());
@@ -185,7 +185,7 @@ TEST_P(CommunicatorGridTest, ConstructorIncomplete) {
   std::array<int, 2> grid_dims{NUM_MPI_RANKS - 1, 1};
 
   Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid incomplete_grid(world, grid_dims, GetParam(), ncommunicators);
+  CommunicatorGrid incomplete_grid(world, grid_dims, GetParam(), ncommunicator_pipelines);
 
   if (world.rank() != NUM_MPI_RANKS - 1) {  // ranks in the grid
     auto coords = dlaf::common::computeCoords(GetParam(), world.rank(), Size2D(grid_dims));
@@ -236,7 +236,7 @@ TEST_P(CommunicatorGridTest, Rank) {
   ASSERT_EQ(NUM_MPI_RANKS, grid_area);
 
   Communicator world(MPI_COMM_WORLD);
-  CommunicatorGrid complete_grid(world, grid_dims, GetParam(), ncommunicators);
+  CommunicatorGrid complete_grid(world, grid_dims, GetParam(), ncommunicator_pipelines);
 
   EXPECT_EQ(grid_dims[0], complete_grid.size().rows());
   EXPECT_EQ(grid_dims[1], complete_grid.size().cols());

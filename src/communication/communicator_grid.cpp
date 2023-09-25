@@ -17,7 +17,7 @@ namespace dlaf {
 namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
-                                   common::Ordering ordering, std::size_t ncommunicators) {
+                                   common::Ordering ordering, std::size_t npipelines) {
   DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows, ncols, comm.size());
 
   bool is_in_grid = comm.rank() < nrows * ncols;
@@ -52,12 +52,12 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   // TODO: Move to DLA-Future.
   using pika::detail::with_result_of;
 
-  full_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
-                                                        with_result_of([&]() { return full_.clone(); }));
-  row_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
-                                                       with_result_of([&]() { return row_.clone(); }));
-  col_pipeline_ = std::make_shared<RoundRobinPipeline>(ncommunicators,
-                                                       with_result_of([&]() { return col_.clone(); }));
+  full_pipeline_ =
+      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return full_.clone(); }));
+  row_pipeline_ =
+      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return row_.clone(); }));
+  col_pipeline_ =
+      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return col_.clone(); }));
 }
 }
 }

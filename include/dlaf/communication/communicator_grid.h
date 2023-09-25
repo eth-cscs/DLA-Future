@@ -48,17 +48,15 @@ public:
 
   /// Create a communicator grid @p rows x @p cols with given @p ordering.
   /// @param comm must be valid during construction.
-  CommunicatorGrid(
-      Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
-      std::size_t ncommunicators = getTuneParameters().communicator_grid_num_communicators_default);
+  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
+                   std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines);
 
   /// Create a communicator grid with dimensions specified by @p size and given @p ordering.
   /// @param size with @p size[0] rows and @p size[1] columns,
   /// @param comm must be valid during construction.
-  CommunicatorGrid(
-      Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
-      std::size_t ncommunicators = getTuneParameters().communicator_grid_num_communicators_default)
-      : CommunicatorGrid(comm, size[0], size[1], ordering, ncommunicators) {}
+  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
+                   std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines)
+      : CommunicatorGrid(comm, size[0], size[1], ordering, npipelines) {}
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {

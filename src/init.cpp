@@ -213,9 +213,8 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
                            "DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
                            "bt-band-to-tridiag-hh-apply-group-size");
 
-  updateConfigurationValue(vm, param.communicator_grid_num_communicators_default,
-                           "COMMUNICATOR_GRID_NUM_COMMUNICATORS_DEFAULT",
-                           "communicator-grid-num-communicators-default");
+  updateConfigurationValue(vm, param.communicator_grid_num_pipelines, "COMMUNICATOR_GRID_NUM_PIPELINES",
+                           "communicator-grid-num-pipelines");
 }
 
 configuration& getConfiguration() {
@@ -264,8 +263,8 @@ pika::program_options::options_description getOptionsDescription() {
       "dlaf:bt-band-to-tridiag-hh-apply-group-size", pika::program_options::value<SizeType>(),
       "The application of the HH reflector is splitted in smaller applications of group size reflectors.");
   desc.add_options()(
-      "dlaf:communicator-grid-num-communicators-default", pika::program_options::value<std::size_t>(),
-      "TODO: Better description? The default number of row, column, and full communicators to initialize in CommunicatorGrid. Must be at least 2.");
+      "dlaf:communicator-grid-num-pipelines", pika::program_options::value<std::size_t>(),
+      "The default number of row, column, and full communicator pipelines to initialize in CommunicatorGrid.");
 
   return desc;
 }

@@ -79,9 +79,9 @@ public:
         return;
 
       // TODO
-      const std::size_t ncommunicators = 5;
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor, ncommunicators);
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor, ncommunicators);
+      const std::size_t ncommunicator_pipelines = 5;
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor, ncommunicator_pipelines);
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor, ncommunicator_pipelines);
     }
   }
 };

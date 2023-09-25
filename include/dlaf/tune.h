@@ -51,11 +51,10 @@ namespace dlaf {
 ///     The application of the HH reflector is splitted in smaller applications of the group size
 ///     reflectors. Set with --dlaf:bt-band-to-tridiag-hh-apply-group-size or env variable
 ///     DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE.
-/// - communicator_grid_num_communicators_default:
-///     The default number of row, column, and full communicators to initialize in CommunicatorGrid. Must
-///     be at least 2. Set with --dlaf:communicator-grid-num-communicators-default or env variable
-///     DLAF_COMMUNICATOR_GRID_NUM_COMMUNICATORS_DEFAULT.
-///     TODO: Better description?
+/// - communicator_grid_num_pipelines:
+///     The default number of row, column, and full communicator pipelins to initialize in
+///     CommunicatorGrid. Set with --dlaf:communicator-grid-num-communicators-default or env variable
+///     DLAF_COMMUNICATOR_GRID_NUM_PIPELINES.
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by
 /// algorithms.
 ///
@@ -75,7 +74,7 @@ struct TuneParameters {
   // TODO: The default parameter of CommunicatorGrid triggers the construction of TuneParameters, which
   // in turn triggers a call to pika::resource::get_thread_pool, which will fail if done before pika has
   // been started.
-  std::size_t communicator_grid_num_communicators_default = 3;
+  std::size_t communicator_grid_num_pipelines = 3;
 };
 
 TuneParameters& getTuneParameters();

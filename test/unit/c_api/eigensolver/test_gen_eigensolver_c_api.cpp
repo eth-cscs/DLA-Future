@@ -30,7 +30,6 @@
 using namespace dlaf;
 using namespace dlaf::comm;
 using namespace dlaf::matrix;
-using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 using namespace testing;
 
@@ -52,8 +51,6 @@ using GenEigensolverTestGPU = GenEigensolverTest<T>;
 TYPED_TEST_SUITE(GenEigensolverTestGPU, MatrixElementTypes);
 #endif
 
-enum class Allocation { do_allocation, use_preallocated };
-
 const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower});
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
@@ -66,9 +63,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D, API api>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        CommunicatorGrid grid) {
-  auto dlaf_context = c_api_test_inititialize<api>(grid);
-
+                        CommunicatorGrid grid, int dlaf_context) {
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
@@ -76,7 +71,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
   const TileElementSize block_size(mb, mb);
 
-  auto create_reference = [&]() -> auto{
+  auto create_reference = [&]() -> auto {
     return Matrix<T, Device::CPU>(GlobalElementSize(m, m), block_size, grid);
   };
 
@@ -94,8 +89,10 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
   Matrix<T, Device::CPU> mat_a_h(reference_a.distribution());
   copy(reference_a, mat_a_h);
+  mat_a_h.waitLocalTiles();
   Matrix<T, Device::CPU> mat_b_h(reference_b.distribution());
   copy(reference_b, mat_b_h);
+  mat_b_h.waitLocalTiles();
 
   EigensolverResult<T, D> ret = [&]() {
     MatrixMirror<T, D, Device::CPU> mat_a(mat_a_h);
@@ -198,28 +195,33 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
-
-  c_api_test_finalize<api>(dlaf_context);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
+  constexpr auto api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, api>(uplo, m, mb, grid, dlaf_context);
       }
     }
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
+  constexpr auto api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid,
+                                                                            dlaf_context);
       }
     }
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif
@@ -227,23 +229,31 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
+  constexpr auto api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid,
+                                                                                dlaf_context);
       }
     }
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
+  constexpr auto api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid,
+                                                                                 dlaf_context);
       }
     }
+    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif

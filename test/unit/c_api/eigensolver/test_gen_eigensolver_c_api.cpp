@@ -237,7 +237,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
+TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {

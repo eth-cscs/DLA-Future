@@ -46,30 +46,30 @@ int C_dlaf_hermitian_generalized_eigensolver_z(const int dlaf_context, const cha
 
 #ifdef DLAF_WITH_SCALAPACK
 
-void C_dlaf_pssygex(char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
+void C_dlaf_pssygvx(char uplo, const int m, float* a, const int ia, const int ja, const int desca[9],
                     float* b, const int ib, const int jb, const int descb[9], float* w, float* z,
                     const int iz, const int jz, const int descz[9], int* info) {
-  dlaf_pssygex(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
+  dlaf_pssygvx(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
 }
 
-void C_dlaf_pdsygex(const char uplo, const int m, double* a, const int ia, const int ja,
+void C_dlaf_pdsygvx(const char uplo, const int m, double* a, const int ia, const int ja,
                     const int desca[9], double* b, const int ib, const int jb, const int descb[9],
                     double* w, double* z, const int iz, const int jz, const int descz[9], int* info) {
-  dlaf_pdsygex(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
+  dlaf_pdsygvx(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
 }
 
-void C_dlaf_pchegex(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
+void C_dlaf_pchegvx(const char uplo, const int m, dlaf_complex_c* a, const int ia, const int ja,
                     const int desca[9], dlaf_complex_c* b, const int ib, const int jb,
                     const int descb[9], float* w, dlaf_complex_c* z, const int iz, const int jz,
                     const int descz[9], int* info) {
-  dlaf_pchegex(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
+  dlaf_pchegvx(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
 }
 
-void C_dlaf_pzhegex(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
+void C_dlaf_pzhegvx(const char uplo, const int m, dlaf_complex_z* a, const int ia, const int ja,
                     const int desca[9], dlaf_complex_z* b, const int ib, const int jb,
                     const int descb[9], double* w, dlaf_complex_z* z, const int iz, const int jz,
                     const int descz[9], int* info) {
-  dlaf_pzhegex(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
+  dlaf_pzhegvx(uplo, m, a, ia, ja, desca, b, ib, jb, descb, w, z, iz, jz, descz, info);
 }
 
 #endif

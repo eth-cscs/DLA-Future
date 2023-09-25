@@ -29,7 +29,7 @@ cpu gcc11 release stdexec build:
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
 
-cpu release stdexec test gcc11:
+cpu gcc11 release stdexec test:
   extends: .run_common
   needs:
     - cpu gcc11 release stdexec build

@@ -19,8 +19,7 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
-# Define cache director that is mounted at runtime
-ARG CACHE_FOLDER="/scratch/snx3000/jenkssl/gitlab-runner/cache/tT2LGsd8/${CI_PROJECT_PATH_SLUG}/${CI_PIPELINE_ID}"
+ARG CACHE_FOLDER
 
 ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it

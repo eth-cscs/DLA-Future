@@ -1463,9 +1463,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid& grid,
   //
   // Note: i_split is unique
   const comm::IndexT_MPI tag = to_int(i_split);
-  // TODO: No cloning of communicator! It probably should use the pipeline.
-  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),
-                                      ws.e0);
+  applyGivensRotationsToMatrixColumns(grid, row_task_chain, tag, i_begin, i_end, std::move(rots), ws.e0);
   // Placeholder for rearranging the eigenvectors: (local permutation)
   copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 

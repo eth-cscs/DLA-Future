@@ -99,7 +99,8 @@ void testApplyGivenRotations(comm::CommunicatorGrid& grid, const SizeType m, con
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, idx_begin, idx_end, ex::just(rots),
+    auto comm_row_chain = grid.row_communicator_pipeline();
+    applyGivensRotationsToMatrixColumns(grid, comm_row_chain, tag, idx_begin, idx_end, ex::just(rots),
                                         mat.get());
   }
 

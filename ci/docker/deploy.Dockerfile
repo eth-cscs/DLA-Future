@@ -19,6 +19,9 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
+# Define cache director that is mounted at runtime
+ARG CACHE_FOLDER="/scratch/snx3000/jenkssl/gitlab-runner/cache/tT2LGsd8/${CI_PROJECT_PATH_SLUG}/${CI_PIPELINE_ID}"
+
 ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
@@ -27,6 +30,7 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
+    spack -e ci config add "packages:dla-future:variants:test_output_dir=${CACHE_FOLDER}"
     spack -e ci --config "config:flags:keep_werror:all" install --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Test deployment with miniapps as independent project

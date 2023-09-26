@@ -63,6 +63,8 @@ public:
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   /// @pre valid()
+  // TODO: Name? Something specific for tagged communication (but not here in
+  // the generic Pipeline?)?
   ReadOnlySender read() {
     DLAF_ASSERT(valid(), "");
     return pipeline->read();

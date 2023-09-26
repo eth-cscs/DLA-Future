@@ -90,7 +90,7 @@ struct BandToTridiagMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);

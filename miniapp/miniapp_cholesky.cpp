@@ -70,7 +70,7 @@ using dlaf::matrix::MatrixMirror;
 /// Given a matrix A (Hermitian Positive Definite) and its Cholesky factorization in L,
 /// this function checks that A == L * L'
 template <typename T>
-void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid& comm_grid,
                     blas::Uplo uplo);
 
 struct Options
@@ -114,7 +114,7 @@ struct choleskyMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
       HostMatrixType hermitian_pos_def(matrix_size, block_size, comm_grid);
@@ -274,7 +274,7 @@ void setUpperToZeroForDiagonalTiles(Matrix<T, Device::CPU>& matrix) {
 /// It is used to get the difference matrix between the matrix computed starting from the
 /// cholesky factorization and the original one
 template <typename T>
-void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid) {
+void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid& comm_grid) {
   // TODO A and L must be different
 
   using dlaf::common::make_data;
@@ -403,7 +403,7 @@ void cholesky_diff(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, Communi
 /// "ERROR":   error is high, there is an error in the factorization
 /// "WARNING": error is slightly high, there can be an error in the factorization
 template <typename T>
-void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid comm_grid,
+void check_cholesky(Matrix<T, Device::CPU>& A, Matrix<T, Device::CPU>& L, CommunicatorGrid& comm_grid,
                     blas::Uplo uplo) {
   const Index2D rank_result{0, 0};
 

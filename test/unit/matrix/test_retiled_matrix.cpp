@@ -154,7 +154,7 @@ TYPED_TEST(RetiledMatrixTest, GlobalConstructor) {
     return TypeUtilities<Type>::element(2. * i + j / 1024., j / 3. - i / 18.);
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [size, tile_size, tiles_per_block] : global_sizes_tests) {
       const TileElementSize block_size(tile_size.rows() * tiles_per_block.rows(),
                                        tile_size.cols() * tiles_per_block.cols());

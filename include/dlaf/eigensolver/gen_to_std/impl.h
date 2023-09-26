@@ -257,7 +257,7 @@ void GenToStd<backend, device, T>::call_L(Matrix<T, device>& mat_a, Matrix<T, de
 }
 
 template <Backend backend, Device device, class T>
-void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
+void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_l) {
   using namespace gentostd_l;
   using pika::execution::thread_priority;
@@ -521,7 +521,7 @@ void GenToStd<backend, device, T>::call_U(Matrix<T, device>& mat_a, Matrix<T, de
 }
 
 template <Backend backend, Device device, class T>
-void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a,
+void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a,
                                           Matrix<T, device>& mat_u) {
   using namespace gentostd_u;
   using pika::execution::thread_priority;

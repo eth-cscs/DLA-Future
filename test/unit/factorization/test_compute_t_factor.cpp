@@ -324,7 +324,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 }
 
 template <class T, Backend B, Device D>
-void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const SizeType k,
+void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const SizeType k,
                         const SizeType mb, const SizeType nb, const GlobalElementIndex v_start) {
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
@@ -416,7 +416,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, k, mb, nb, v_start);
     }
@@ -431,7 +431,7 @@ TYPED_TEST(ComputeTFactorTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestGPU, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, k, mb, nb, v_start);
     }

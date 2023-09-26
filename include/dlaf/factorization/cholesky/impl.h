@@ -169,7 +169,7 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 }
 
 template <Backend backend, Device device, class T>
-void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
   using pika::execution::thread_priority;
 
@@ -309,7 +309,7 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 }
 
 template <Backend backend, Device device, class T>
-void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
   using pika::execution::thread_priority;
 

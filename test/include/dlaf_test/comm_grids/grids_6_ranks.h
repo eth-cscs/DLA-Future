@@ -87,7 +87,7 @@ public:
 };
 
 struct TestWithCommGrids : public ::testing::Test {
-  const std::vector<comm::CommunicatorGrid>& commGrids() {
+  std::vector<comm::CommunicatorGrid>& commGrids() {
     EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }

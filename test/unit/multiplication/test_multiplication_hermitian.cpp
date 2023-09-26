@@ -102,7 +102,7 @@ void testHermitianMultiplication(const blas::Side side, const blas::Uplo uplo, c
 }
 
 template <class T, Backend B, Device D>
-void testHermitianMultiplication(comm::CommunicatorGrid grid, const blas::Side side,
+void testHermitianMultiplication(comm::CommunicatorGrid& grid, const blas::Side side,
                                  const blas::Uplo uplo, const SizeType m, const SizeType n,
                                  const SizeType mb, const SizeType nb, const T alpha, const T beta) {
   const SizeType k = side == blas::Side::Left ? m : n;
@@ -163,7 +163,7 @@ TYPED_TEST(HermitianMultiplicationTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(HermitianMultiplicationTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         if (side != blas::Side::Left || uplo != blas::Uplo::Lower)
@@ -200,7 +200,7 @@ TYPED_TEST(HermitianMultiplicationTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(HermitianMultiplicationTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         if (side != blas::Side::Left || uplo != blas::Uplo::Lower)

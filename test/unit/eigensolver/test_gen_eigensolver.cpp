@@ -69,7 +69,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 template <class T, Device D, class... GridIfDistributed>
 void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
                                    Matrix<const T, Device::CPU>& reference_b,
-                                   EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
+                                   EigensolverResult<T, D>& ret, GridIfDistributed&... grid) {
   // Note:
   // Wait for the algorithm to finish all scheduled tasks, because verification has MPI blocking
   // calls that might lead to deadlocks.
@@ -130,7 +130,7 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
 
 template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        GridIfDistributed... grid) {
+                        GridIfDistributed&... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
 
   const TileElementSize block_size(mb, mb);
@@ -205,7 +205,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
@@ -231,7 +231,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributed) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;

@@ -100,7 +100,7 @@ MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source) 
 /// Optionally, it is possible to specify the type of the return MatrixLocal (useful for const correctness)
 template <class T>
 MatrixLocal<T> allGather(blas::Uplo uplo, Matrix<const T, Device::CPU>& source,
-                         comm::CommunicatorGrid comm_grid) {
+                         comm::CommunicatorGrid& comm_grid) {
   DLAF_ASSERT(matrix::equal_process_grid(source, comm_grid), source, comm_grid);
 
   MatrixLocal<std::remove_const_t<T>> dest(source.size(), source.baseTileSize());

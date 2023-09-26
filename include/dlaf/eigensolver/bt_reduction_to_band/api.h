@@ -19,7 +19,7 @@ struct BackTransformationReductionToBand {
   static void call(SizeType b, Matrix<T, device>& mat_c, Matrix<const T, device>& mat_v,
                    Matrix<const T, Device::CPU>& mat_taus);
 
-  static void call(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
+  static void call(comm::CommunicatorGrid& grid, const SizeType b, Matrix<T, device>& mat_c,
                    Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus);
 };
 

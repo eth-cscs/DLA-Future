@@ -48,7 +48,7 @@ TYPED_TEST(NormDistributedTest, MaxNorm_EmptyMatrix) {
   const std::vector<GlobalElementSize> sizes({{13, 0}, {0, 13}, {0, 0}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& size : sizes) {
       for (const auto& block_size : block_sizes) {
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
@@ -90,7 +90,7 @@ void modify_element(Matrix<T, Device::CPU>& matrix, GlobalElementIndex index, co
 // Change the specified value of the matrix, re-compute the norm with given parameters and check if the
 // result is the expected one
 template <class T>
-void set_and_test(CommunicatorGrid comm_grid, comm::Index2D rank, Matrix<T, Device::CPU>& matrix,
+void set_and_test(CommunicatorGrid& comm_grid, comm::Index2D rank, Matrix<T, Device::CPU>& matrix,
                   GlobalElementIndex index, const T new_value, const NormT<T> norm_expected,
                   lapack::Norm norm_type, blas::Uplo uplo) {
   if (index.isIn(matrix.size()))
@@ -114,7 +114,7 @@ TYPED_TEST(NormDistributedTest, MaxNorm_Correctness) {
   const std::vector<GlobalElementSize> sizes({{10, 10}});
   const std::vector<TileElementSize> block_sizes({{3, 3}, {5, 5}});
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& size : sizes) {
       for (const auto& block_size : block_sizes) {
         Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),

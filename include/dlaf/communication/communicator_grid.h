@@ -58,6 +58,13 @@ public:
                    std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines)
       : CommunicatorGrid(comm, size[0], size[1], ordering, npipelines) {}
 
+  CommunicatorGrid(CommunicatorGrid&&) = default;
+  CommunicatorGrid& operator=(CommunicatorGrid&&) = default;
+  [[deprecated("CommmunicatorGrid will become move-only")]] CommunicatorGrid(
+      const CommunicatorGrid&) = default;
+  [[deprecated("CommmunicatorGrid will become move-only")]] CommunicatorGrid& operator=(
+      const CommunicatorGrid&) = default;
+
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
     return common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, index,

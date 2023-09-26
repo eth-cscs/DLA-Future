@@ -69,7 +69,7 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
 // evals, evecs = eigh(trd)
 //
 template <Backend B, Device D, class T>
-void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
+void solveDistributedLaplace1D(comm::CommunicatorGrid& grid, SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
   constexpr RealParam complex_error = TypeUtilities<T>::error;
   constexpr RealParam real_error = TypeUtilities<RealParam>::error;
@@ -176,7 +176,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 }
 
 template <Backend B, Device D, class T>
-void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
+void solveRandomTridiagMatrix(comm::CommunicatorGrid& grid, SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
 
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
@@ -248,7 +248,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
 }
 
 TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -257,7 +257,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
 }
 
 TYPED_TEST(TridiagSolverDistTestMC, Random) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -267,7 +267,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Random) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -276,7 +276,7 @@ TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
 }
 
 TYPED_TEST(TridiagSolverDistTestGPU, Random) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
       pika::wait();

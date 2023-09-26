@@ -394,7 +394,7 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
   using pika::execution::thread_priority;
@@ -476,7 +476,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::execution::thread_priority;
@@ -557,7 +557,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::execution::thread_priority;
@@ -639,7 +639,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::execution::thread_priority;

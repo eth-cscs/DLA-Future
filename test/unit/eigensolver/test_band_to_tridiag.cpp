@@ -60,7 +60,7 @@ void testBandToTridiagOutputCorrectness(const blas::Uplo uplo, const SizeType ba
                                         const SizeType m, const SizeType mb,
                                         Matrix<const T, Device::CPU>& mat_a_h,
                                         Matrix<BaseType<T>, Device::CPU>& mat_trid,
-                                        Matrix<T, Device::CPU>& mat_v, GridIfDistributed... grid) {
+                                        Matrix<T, Device::CPU>& mat_v, GridIfDistributed&... grid) {
   auto mat_trid_local = matrix::test::allGather(blas::Uplo::General, mat_trid);
   MatrixLocal<T> mat_local(mat_a_h.size(), mat_a_h.blockSize());
   const auto ld = mat_local.ld();
@@ -137,7 +137,7 @@ void testBandToTridiag(const blas::Uplo uplo, const SizeType band_size, const Si
 }
 
 template <Device D, class T>
-void testBandToTridiag(CommunicatorGrid grid, blas::Uplo uplo, const SizeType band_size,
+void testBandToTridiag(CommunicatorGrid& grid, blas::Uplo uplo, const SizeType band_size,
                        const SizeType m, const SizeType mb) {
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
   Distribution distr({m, m}, {mb, mb}, grid.size(), grid.rank(), src_rank_index);
@@ -188,7 +188,7 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessLocalFromGPU) {
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, mb_1d, b] : sizes) {
       getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
       testBandToTridiag<Device::CPU, TypeParam>(comm_grid, uplo, b, m, mb);
@@ -200,7 +200,7 @@ TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributed) {
 TYPED_TEST(EigensolverBandToTridiagTest, CorrectnessDistributedFromGPU) {
   const blas::Uplo uplo = blas::Uplo::Lower;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, mb_1d, b] : sizes) {
       getTuneParameters().band_to_tridiag_1d_block_size_base = mb_1d;
       testBandToTridiag<Device::GPU, TypeParam>(comm_grid, uplo, b, m, mb);

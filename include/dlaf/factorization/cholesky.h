@@ -65,7 +65,7 @@ void cholesky_factorization(blas::Uplo uplo, Matrix<T, device>& mat_a) {
 /// @pre @p mat_a has blocksize (NB x NB)
 /// @pre @p mat_a has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
-void cholesky_factorization(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
+void cholesky_factorization(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);

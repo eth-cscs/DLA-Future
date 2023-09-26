@@ -69,7 +69,7 @@ void basicsTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, Basics) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       basicsTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -112,7 +112,7 @@ void getTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, Get) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       getTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -143,7 +143,7 @@ void getSourceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, GetSource) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       getSourceTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -212,7 +212,7 @@ void copyTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, Copy) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       copyTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -255,7 +255,7 @@ void copyConstTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, CopyConst) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       copyConstTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -290,7 +290,7 @@ void sameDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& test) {
 }
 
 TYPED_TEST(MatrixMirrorTest, SameDevicesSameMemory) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       sameDeviceTest<TypeParam, Device::CPU, Device::CPU>(comm_grid, test);
 #ifdef DLAF_WITH_GPU
@@ -324,7 +324,7 @@ void differentDeviceTest(const CommunicatorGrid& comm_grid, const TestSizes& tes
 }
 
 TYPED_TEST(MatrixMirrorTest, DifferentDevicesDifferentMemory) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       differentDeviceTest<TypeParam, Device::CPU, Device::GPU>(comm_grid, test);
       differentDeviceTest<TypeParam, Device::GPU, Device::CPU>(comm_grid, test);

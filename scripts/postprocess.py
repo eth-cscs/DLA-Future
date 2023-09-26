@@ -15,7 +15,9 @@ import math
 
 import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from cycler import cycler
 
 from parse import parse, with_pattern
 from pathlib import Path
@@ -23,6 +25,7 @@ from pathlib import Path
 miny0 = False
 outpath = Path(".")
 
+plt.rcParams["axes.prop_cycle"] = plt.cycler("color", plt.cm.tab20.colors)
 
 def _str_nnodes(x):
     if isinstance(x, float):
@@ -175,7 +178,7 @@ class NodePlotWriter:
 
     def __exit__(self, type, value, traceback):
         if self.plotted:
-            self.fig.savefig(f"{self.filename}.png", dpi=300)
+            self.fig.savefig(f"{self.filename}.png", dpi=300, bbox_inches="tight")
         plt.close(self.fig)
 
 
@@ -458,7 +461,9 @@ def add_basic_legend(fig, ax):
         return
 
     labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0]))
-    ax.legend(handles, labels, ncol=1, prop={"size": 10})
+    ax.legend(handles, labels, ncol=1, prop={"size": 10},
+              bbox_to_anchor=(1.05, 1.0), loc='upper left',
+              borderaxespad=0.)
 
 
 def _gen_plot(

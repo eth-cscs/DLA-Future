@@ -19,7 +19,7 @@ namespace dlaf::eigensolver::internal {
 template <Backend B, Device D, class T>
 struct BackTransformationT2B {
   static void call(const SizeType band_size, Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh);
-  static void call(comm::CommunicatorGrid grid, const SizeType band_size, Matrix<T, D>& mat_e,
+  static void call(comm::CommunicatorGrid& grid, const SizeType band_size, Matrix<T, D>& mat_e,
                    Matrix<const T, Device::CPU>& mat_hh);
 };
 

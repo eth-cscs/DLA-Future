@@ -144,7 +144,7 @@ TEST_P(MatrixViewTest, OffsetLocal) {
 
 TEST_P(MatrixViewTest, OffsetDistributed) {
   const auto& [size, blocksize, offset_e] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testMatrixOffset(dist, offset_e);
   }
@@ -158,7 +158,7 @@ TEST_P(MatrixViewTest, RangeLocal) {
 
 TEST_P(MatrixViewTest, RangeDistributed) {
   const auto& [size, blocksize, offset_e] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testMatrixRange(dist, offset_e);
   }
@@ -172,7 +172,7 @@ TEST_P(MatrixViewTest, SpecsLocal) {
 
 TEST_P(MatrixViewTest, SpecsDistributed) {
   const auto& [size, blocksize, offset_e] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testMatrixSpecs(dist, offset_e);
   }
@@ -281,7 +281,7 @@ TEST_P(PanelViewTest, OffsetLocal) {
 
 TEST_P(PanelViewTest, OffsetDistributed) {
   const auto& [size, blocksize, offset_e, width] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testPanelOffset(dist, offset_e, width);
   }
@@ -295,7 +295,7 @@ TEST_P(PanelViewTest, RangeLocal) {
 
 TEST_P(PanelViewTest, RangeDistributed) {
   const auto& [size, blocksize, offset_e, width] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testPanelRange(dist, offset_e, width);
   }
@@ -309,7 +309,7 @@ TEST_P(PanelViewTest, SpecsLocal) {
 
 TEST_P(PanelViewTest, SpecsDistributed) {
   const auto& [size, blocksize, offset_e, width] = GetParam();
-  for (const auto& comm_grid : comm_grids) {
+  for (auto& comm_grid : comm_grids) {
     const Distribution dist(globalSize(size), blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
     testPanelSpecs(dist, offset_e, width);
   }

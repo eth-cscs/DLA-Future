@@ -192,7 +192,7 @@ TYPED_TEST(MatrixLocalWithCommTest, AllGather) {
     return false;  // unreachable
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& config : sizes_tests) {
       const GlobalElementSize size = globalTestSize(config.size, comm_grid.size());
       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),

@@ -1077,7 +1077,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 
 // Distributed implementation of reduction to band
 template <Backend B, Device D, class T>
-Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
+Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
                                                       const SizeType band_size) {
   using namespace red2band::distributed;
 

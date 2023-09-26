@@ -85,7 +85,7 @@ TYPED_TEST(MatrixRefTest, Basic) {
   using Type = TypeParam;
   constexpr Device device = Device::CPU;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
       Matrix<Type, device> mat(test.size, test.block_size, comm_grid);
       Matrix<const Type, device>& mat_const = mat;
@@ -118,7 +118,7 @@ TYPED_TEST(MatrixRefTest, NonConstRefFromNonConstMatrix) {
   const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
   const auto f_el_border = [=](const GlobalElementIndex&) { return el_border; };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
       const SubMatrixSpec spec{test.sub_origin, test.sub_size};
       const auto f_el_full = [=](const GlobalElementIndex& index) {
@@ -153,7 +153,7 @@ TYPED_TEST(MatrixRefTest, ConstRefFromNonConstMatrix) {
 
   const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
       const SubMatrixSpec spec{test.sub_origin, test.sub_size};
       const auto f_el_full = [=](const GlobalElementIndex& index) {
@@ -181,7 +181,7 @@ TYPED_TEST(MatrixRefTest, ConstRefFromConstMatrix) {
 
   const auto f_el_submatrix = [=](const GlobalElementIndex&) { return el_submatrix; };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : tests_sub_matrix) {
       const SubMatrixSpec spec{test.sub_origin, test.sub_size};
       const auto f_el_full = [=](const GlobalElementIndex& index) {

@@ -146,7 +146,7 @@ TridiagResult<T, Device::CPU> band_to_tridiagonal(blas::Uplo uplo, SizeType band
 ///
 /// @pre @p band_size is a divisor of `mat_a.blockSize().cols()`, and @p band_size >= 2
 template <Backend backend, Device device, class T>
-TridiagResult<T, Device::CPU> band_to_tridiagonal(comm::CommunicatorGrid grid, blas::Uplo uplo,
+TridiagResult<T, Device::CPU> band_to_tridiagonal(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                   SizeType band_size, Matrix<const T, device>& mat_a) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

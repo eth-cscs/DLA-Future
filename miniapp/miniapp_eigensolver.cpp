@@ -59,7 +59,7 @@ using dlaf::matrix::internal::FileHDF5;
 
 /// Check results of the eigensolver
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                       Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E);
 
 struct Options
@@ -115,7 +115,7 @@ struct EigensolverMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    ConstHostMatrixType matrix_ref = [comm_grid, &opts]() {
+    ConstHostMatrixType matrix_ref = [&comm_grid, &opts]() {
       TileElementSize block_size(opts.mb, opts.mb);
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
@@ -261,7 +261,7 @@ using dlaf::matrix::Tile;
 /// "ERROR":   error is high, there is an error in the results
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
-void checkEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+void checkEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                       Matrix<const BaseType<T>, Device::CPU>& evalues, Matrix<const T, Device::CPU>& E) {
   const Index2D rank_result{0, 0};
 

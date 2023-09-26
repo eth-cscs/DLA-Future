@@ -64,7 +64,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 };
 
 template <class T, Backend B, Device D, API api>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid,
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid& grid,
                      int dlaf_context) {
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
@@ -181,7 +181,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
 
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -198,7 +198,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
   constexpr API api = API::scalapack;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -217,7 +217,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -236,7 +236,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
   constexpr API api = API::scalapack;
 
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 

@@ -56,7 +56,7 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 };
 
 template <class T, Backend B, Device D, API api>
-void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+void testCholesky(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb, int dlaf_context) {
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
@@ -146,7 +146,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -163,7 +163,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
   constexpr API api = API::scalapack;
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -181,7 +181,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
   constexpr API api = API::dlaf;
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -198,7 +198,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
   constexpr API api = API::scalapack;
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     // TODO: Move c_api_test* to test function when pika/#716 is released
     auto dlaf_context = c_api_test_inititialize<api>(grid);
 

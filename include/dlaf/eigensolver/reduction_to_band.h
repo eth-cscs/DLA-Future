@@ -107,7 +107,7 @@ v v v v * *
 ///
 /// @return the tau vector as needed by backtransformationReductionToBand
 template <Backend B, Device D, class T>
-Matrix<T, Device::CPU> reduction_to_band(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
+Matrix<T, Device::CPU> reduction_to_band(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
                                          const SizeType band_size) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

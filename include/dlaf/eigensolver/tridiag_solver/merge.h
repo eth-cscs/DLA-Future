@@ -923,9 +923,10 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
-                      const SizeType i_begin, const SizeType i_split, const SizeType i_end,
-                      RhoSender&& rho, Matrix<const T, D>& evecs, Matrix<T, D>& z) {
+void assembleDistZVec(comm::CommunicatorGrid& grid,
+                      common::Pipeline<comm::Communicator>& full_task_chain, const SizeType i_begin,
+                      const SizeType i_split, const SizeType i_end, RhoSender&& rho,
+                      Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& dist = evecs.distribution();
@@ -1401,7 +1402,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
 // Distributed version of the tridiagonal solver on CPUs
 template <Backend B, class T, Device D, class RhoSender>
-void mergeDistSubproblems(comm::CommunicatorGrid grid,
+void mergeDistSubproblems(comm::CommunicatorGrid& grid,
                           common::Pipeline<comm::Communicator>& full_task_chain,
                           common::Pipeline<comm::Communicator>& row_task_chain,
                           common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,

@@ -37,7 +37,7 @@ int cholesky_factorization(const int dlaf_context, const char uplo, T* a,
 
   pika::resume();
 
-  auto communicator_grid = dlaf_grids.at(dlaf_context);
+  auto& communicator_grid = dlaf_grids.at(dlaf_context);
 
   auto [distribution, layout] = distribution_and_layout(dlaf_desca, communicator_grid);
 

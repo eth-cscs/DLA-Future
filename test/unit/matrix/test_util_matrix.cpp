@@ -62,7 +62,7 @@ GlobalElementSize globalTestSize(const LocalElementSize& size, const comm::Size2
 }
 
 TYPED_TEST(MatrixUtilsTest, Set0) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -80,7 +80,7 @@ TYPED_TEST(MatrixUtilsTest, Set0) {
 }
 
 TYPED_TEST(MatrixUtilsTest, Set) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -103,7 +103,7 @@ TYPED_TEST(MatrixUtilsTest, Set) {
 TYPED_TEST(MatrixUtilsTest, SetRandom) {
   auto zero = [](const GlobalElementIndex&) { return TypeUtilities<TypeParam>::element(0, 0); };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -119,7 +119,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandom) {
 }
 
 template <class T>
-void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid comm_grid) {
+void check_is_hermitian(Matrix<const T, Device::CPU>& matrix, comm::CommunicatorGrid& comm_grid) {
   using dlaf::util::size_t::mul;
   const auto& distribution = matrix.distribution();
   const auto current_rank = distribution.rankIndex();
@@ -186,7 +186,7 @@ TYPED_TEST(MatrixUtilsTest, SetRandomHermitianPositiveDefinite) {
     return GlobalElementSize{size.rows() * k, size.cols() * k};
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : square_blocks_configs) {
       GlobalElementSize size = globalSquareTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});

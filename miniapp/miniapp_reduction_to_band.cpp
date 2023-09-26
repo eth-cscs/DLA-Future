@@ -85,7 +85,7 @@ struct reductionToBandMiniapp {
     const GlobalElementSize matrix_size(opts.m, opts.m);
     const TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstMatrixType matrix_ref = [matrix_size, block_size, comm_grid]() {
+    ConstMatrixType matrix_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);

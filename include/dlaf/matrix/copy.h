@@ -91,7 +91,7 @@ void copy(Matrix<const T, Source>& source, Matrix<T, Destination>& dest) {
 /// @pre src has equal tile and block sizes.
 /// @pre dst has equal tile and block sizes.
 template <class T, Device Source, Device Destination>
-void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::CommunicatorGrid grid) {
+void copy(Matrix<const T, Source>& src, Matrix<T, Destination>& dst, comm::CommunicatorGrid& grid) {
   namespace ex = pika::execution::experimental;
 
   DLAF_ASSERT_MODERATE(equal_size(src, dst), src.size(), dst.size());

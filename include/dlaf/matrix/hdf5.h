@@ -205,7 +205,7 @@ public:
   /// Read dataset @p dataset_name in the matrix distributed accordingly to given parameters.
   template <class T, Device D = Device::CPU>
   Matrix<T, D> read(const std::string& dataset_name, const TileElementSize blocksize,
-                    comm::CommunicatorGrid grid, const dlaf::comm::Index2D src_rank_index) const {
+                    comm::CommunicatorGrid& grid, const dlaf::comm::Index2D src_rank_index) const {
     const H5::DataSet dataset = openDataSet<T>(dataset_name);
 
     const GlobalElementSize size = FileHDF5::datasetToSize<GlobalElementSize>(dataset);

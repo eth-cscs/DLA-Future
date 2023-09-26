@@ -86,7 +86,7 @@ void testReadLocal(const FileHDF5& file, const std::string& dataset_name,
 // Read the part of dataset in a distributed matrix (i.e. just the part that belongs to current rank)
 template <class T, Device D, class Func>
 void testReadDistributed(const FileHDF5& file, const std::string& dataset_name,
-                         comm::CommunicatorGrid grid, const Matrix<const T, D>& mat_original,
+                         comm::CommunicatorGrid& grid, const Matrix<const T, D>& mat_original,
                          Func&& original_values) {
   const TileElementSize blocksize(26, 13);
   Matrix<const T, D> mat_dist = file.read<T, D>(dataset_name, blocksize, grid, {0, 0});
@@ -137,7 +137,7 @@ TYPED_TEST(MatrixHDF5Test, SingleWriteGPU) {
 #endif
 
 template <class T, Device D>
-void testHDF5Parallel(const bool isMasterRank, comm::CommunicatorGrid grid,
+void testHDF5Parallel(const bool isMasterRank, comm::CommunicatorGrid& grid,
                       const std::filesystem::path& filepath, matrix::Distribution dist) {
   const std::string dataset_name = "/matrix";
 

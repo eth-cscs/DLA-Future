@@ -135,7 +135,7 @@ TYPED_TEST(PanelStoreTransposedTest, StaticAPIConst) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testAssignToConstRef(const GlobalElementSize size, const TileElementSize blocksize,
-                          const comm::CommunicatorGrid& comm_grid) {
+                          comm::CommunicatorGrid& comm_grid) {
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   Panel<Axis, T, dlaf::Device::CPU, Storage> panel(dist);
@@ -188,7 +188,7 @@ TYPED_TEST(PanelStoreTransposedTest, AssignToConstRefRow) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testIterator(const GlobalElementSize size, const TileElementSize blocksize,
-                  const GlobalTileIndex offset, const comm::CommunicatorGrid& comm_grid) {
+                  const GlobalTileIndex offset, comm::CommunicatorGrid& comm_grid) {
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   Panel<Axis, T, dlaf::Device::CPU, Storage> panel(dist, offset);
@@ -233,7 +233,7 @@ TYPED_TEST(PanelStoreTransposedTest, IteratorRow) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testAccess(const GlobalElementSize size, const TileElementSize blocksize,
-                const GlobalTileIndex offset, const comm::CommunicatorGrid comm_grid) {
+                const GlobalTileIndex offset, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<T>;
 
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -294,7 +294,7 @@ TYPED_TEST(PanelStoreTransposedTest, AccessTileRow) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testExternalTile(const GlobalElementSize size, const TileElementSize blocksize,
-                      const GlobalTileIndex offset, const comm::CommunicatorGrid comm_grid) {
+                      const GlobalTileIndex offset, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<T>;
   using dlaf::internal::Policy;
   using dlaf::internal::transformDetach;
@@ -409,7 +409,7 @@ TYPED_TEST(PanelStoreTransposedTest, ExternalTilesRow) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testShrink(const GlobalElementSize size, const TileElementSize blocksize,
-                const GlobalTileIndex offset, const comm::CommunicatorGrid& comm_grid) {
+                const GlobalTileIndex offset, comm::CommunicatorGrid& comm_grid) {
   constexpr Coord coord = orthogonal(Axis);
 
   Matrix<T, dlaf::Device::CPU> matrix(size, blocksize, comm_grid);
@@ -578,7 +578,7 @@ void checkPanelTileSize(SizeType dim_mutable, Panel<Axis, T, D, Storage>& panel)
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testSetMutable(const GlobalElementSize size, const TileElementSize blocksize,
-                    const GlobalTileIndex offset, const comm::CommunicatorGrid& comm_grid) {
+                    const GlobalTileIndex offset, comm::CommunicatorGrid& comm_grid) {
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   constexpr Coord CoordFixed = StoreTransposed::No == Storage ? orthogonal(Axis) : Axis;
@@ -650,7 +650,7 @@ TYPED_TEST(PanelStoreTransposedTest, SetMutableDim) {
 
 template <Coord Axis, class T, StoreTransposed Storage>
 void testOffsetTileUnaligned(const GlobalElementSize size, const TileElementSize blocksize,
-                             const comm::CommunicatorGrid& comm_grid) {
+                             comm::CommunicatorGrid& comm_grid) {
   const Distribution dist(size, blocksize, comm_grid.size(), comm_grid.rank(), {0, 0});
 
   Panel<Axis, T, dlaf::Device::CPU, Storage> panel(dist);

@@ -969,7 +969,7 @@ private:
 
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
-    comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+    comm::CommunicatorGrid& grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
   // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag

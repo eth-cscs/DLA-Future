@@ -95,7 +95,7 @@ void tridiagonal_eigensolver(Matrix<BaseType<T>, Device::CPU>& tridiag,
 /// @pre @p evecs has blocksize (NB x NB)
 /// @pre @p evecs has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-void tridiagonal_eigensolver(comm::CommunicatorGrid grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
+void tridiagonal_eigensolver(comm::CommunicatorGrid& grid, Matrix<BaseType<T>, Device::CPU>& tridiag,
                              Matrix<BaseType<T>, D>& evals, Matrix<T, D>& evecs) {
   DLAF_ASSERT(matrix::local_matrix(tridiag), tridiag);
   DLAF_ASSERT(tridiag.distribution().size().cols() == 2, tridiag);

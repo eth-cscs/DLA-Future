@@ -131,7 +131,7 @@ TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
 #endif
 
 template <class T, Backend B, Device D>
-void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a, const SizeType b,
+void testGeneralSubMultiplication(comm::CommunicatorGrid& grid, const SizeType a, const SizeType b,
                                   const T alpha, const T beta, const SizeType m, const SizeType mb) {
   const comm::Index2D src_rank_index(std::max(0, grid.size().rows() - 1),
                                      std::min(1, grid.size().cols() - 1));
@@ -168,7 +168,7 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
 }
 
 TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b] : sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
@@ -181,7 +181,7 @@ TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b] : sizes) {
       const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
       const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);

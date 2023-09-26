@@ -124,7 +124,7 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 ///
 /// @pre `a <= b <= mat_a.nrTiles().rows()`
 template <Backend B, Device D, class T>
-void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
+void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid& grid,
                       common::Pipeline<comm::Communicator>& row_task_chain,
                       common::Pipeline<comm::Communicator>& col_task_chain, const SizeType a,
                       const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
@@ -162,7 +162,7 @@ void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
 }
 
 template <Backend B, Device D, class T>
-void generalSubMatrix(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
+void generalSubMatrix(comm::CommunicatorGrid& grid, const SizeType a, const SizeType b, const T alpha,
                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c) {
   auto row_task_chain = grid.row_communicator_pipeline();

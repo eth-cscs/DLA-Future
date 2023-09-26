@@ -227,7 +227,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType b,
+void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType b,
                                                       Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
                                                       Matrix<const T, Device::CPU>& mat_taus) {
   namespace ex = pika::execution::experimental;

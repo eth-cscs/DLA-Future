@@ -87,7 +87,7 @@ struct BacktransformBandToTridiagMiniapp {
     GlobalElementSize mat_e_size(opts.m, opts.n);
     TileElementSize mat_e_block_size(opts.mb, opts.nb);
 
-    ConstHostMatrixType mat_e_ref = [mat_e_size, mat_e_block_size, comm_grid]() {
+    ConstHostMatrixType mat_e_ref = [mat_e_size, mat_e_block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random;
 
       HostMatrixType random(mat_e_size, mat_e_block_size, comm_grid);
@@ -100,7 +100,7 @@ struct BacktransformBandToTridiagMiniapp {
     TileElementSize mat_hh_block_size(opts.mb, opts.mb);
 
     // Note: random HHRs are not correct, but do not influence the benchmark result.
-    ConstHostMatrixType mat_hh_ref = [mat_hh_size, mat_hh_block_size, comm_grid]() {
+    ConstHostMatrixType mat_hh_ref = [mat_hh_size, mat_hh_block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random;
 
       HostMatrixType random(mat_hh_size, mat_hh_block_size, comm_grid);

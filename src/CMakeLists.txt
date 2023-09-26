@@ -77,7 +77,6 @@ target_link_libraries(
     DLAF::LAPACK
     $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF::SCALAPACK>
     pika::pika
-    pika-algorithms::pika_algorithms
     lapackpp
     blaspp
     umpire

@@ -210,7 +210,7 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
                            "TRIDIAG_RANK1_BARRIER_BUSY_WAIT_US", "tridiag-rank1-barrier-busy-wait-us");
 
   updateConfigurationValue(vm, param.bt_band_to_tridiag_hh_apply_group_size,
-                           "DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
+                           "BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE",
                            "bt-band-to-tridiag-hh-apply-group-size");
 
   updateConfigurationValue(vm, param.communicator_grid_num_pipelines, "COMMUNICATOR_GRID_NUM_PIPELINES",

@@ -80,7 +80,6 @@ endif()
 
 # ----- pika
 find_dependency(pika PATHS @pika_DIR@)
-find_dependency(pika-algorithms PATHS @pika-algorithms_DIR@)
 
 # ----- BLASPP/LAPACKPP
 find_dependency(blaspp PATHS @blaspp_DIR@)

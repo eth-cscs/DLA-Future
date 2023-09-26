@@ -165,8 +165,8 @@ template <Backend B, Device D, class T>
 void generalSubMatrix(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c) {
-  auto row_task_chain = grid.rowCommunicatorPipeline();
-  auto col_task_chain = grid.colCommunicatorPipeline();
+  auto row_task_chain = grid.row_communicator_pipeline();
+  auto col_task_chain = grid.col_communicator_pipeline();
   generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta,
                             mat_c);
 }

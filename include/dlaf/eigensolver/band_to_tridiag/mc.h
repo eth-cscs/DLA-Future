@@ -1036,9 +1036,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     return {std::move(mat_trid), std::move(mat_v)};
   }
 
-  auto mpi_chain = grid.fullCommunicatorPipeline();
+  auto mpi_chain = grid.full_communicator_pipeline();
   // Need a pipeline of comm for broadcasts.
-  auto mpi_chain_bcast = grid.fullCommunicatorPipeline();
+  auto mpi_chain_bcast = grid.full_communicator_pipeline();
 
   const auto rank = grid.rankFullCommunicator(grid.rank());
   const auto ranks = static_cast<comm::IndexT_MPI>(grid.size().linear_size());

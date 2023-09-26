@@ -400,8 +400,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -482,8 +482,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -563,8 +563,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -645,8 +645,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 

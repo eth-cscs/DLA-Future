@@ -49,14 +49,14 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
 
-  using dlaf::internal::with_result_of;
+  using dlaf::internal::WithResultOf;
 
   full_pipelines_ =
-      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return full_.clone(); }));
+      std::make_shared<RoundRobinPipeline>(npipelines, WithResultOf([&]() { return full_.clone(); }));
   row_pipelines_ =
-      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return row_.clone(); }));
+      std::make_shared<RoundRobinPipeline>(npipelines, WithResultOf([&]() { return row_.clone(); }));
   col_pipelines_ =
-      std::make_shared<RoundRobinPipeline>(npipelines, with_result_of([&]() { return col_.clone(); }));
+      std::make_shared<RoundRobinPipeline>(npipelines, WithResultOf([&]() { return col_.clone(); }));
 }
 }
 }

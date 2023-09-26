@@ -45,7 +45,7 @@ public:
   Pipeline& operator=(const Pipeline&) = delete;
 
   ~Pipeline() {
-    releaseParentPipeline();
+    release_parent_pipeline();
   }
 
   /// Enqueue for the resource.
@@ -68,7 +68,7 @@ public:
 
   // TODO: Documentation.
   // TODO: Name?
-  Pipeline subPipeline() {
+  Pipeline sub_pipeline() {
     namespace ex = pika::execution::experimental;
 
     // Move value from pipeline into sub pipeline, then store a sender of the wrapper of the pipeline in
@@ -98,12 +98,13 @@ public:
   ///
   /// @post !valid()
   void reset() noexcept {
-    releaseParentPipeline();
+    release_parent_pipeline();
     pipeline.reset();
   }
 
 private:
-  void releaseParentPipeline() {
+        // TODO: rename to snake_case
+  void release_parent_pipeline() {
     namespace ex = pika::execution::experimental;
 
     if (nested_sender) {

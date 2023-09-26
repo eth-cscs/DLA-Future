@@ -64,7 +64,7 @@ public:
                                                   {grid_size_.rows(), grid_size_.cols()});
   }
 
-  std::size_t numPipelines() const noexcept {
+  std::size_t num_pipelines() const noexcept {
     DLAF_ASSERT(bool(full_pipelines_), "");
     DLAF_ASSERT(bool(row_pipelines_), "");
     DLAF_ASSERT(bool(col_pipelines_), "");
@@ -110,20 +110,20 @@ public:
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the grid.
-  Pipeline fullCommunicatorPipeline() {
-    return full_pipelines_->nextResource().subPipeline();
+  Pipeline full_communicator_pipeline() {
+    return full_pipelines_->nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the row (that includes the current
   /// process).
-  Pipeline rowCommunicatorPipeline() {
-    return row_pipelines_->nextResource().subPipeline();
+  Pipeline row_communicator_pipeline() {
+    return row_pipelines_->nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the col (that includes the current
   /// process).
-  Pipeline colCommunicatorPipeline() {
-    return col_pipelines_->nextResource().subPipeline();
+  Pipeline col_communicator_pipeline() {
+    return col_pipelines_->nextResource().sub_pipeline();
   }
 
   /// Prints information about the CommunicationGrid.

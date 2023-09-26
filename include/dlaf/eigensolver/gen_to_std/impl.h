@@ -264,8 +264,8 @@ void GenToStd<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T,
   namespace ex = pika::execution::experimental;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -527,8 +527,8 @@ void GenToStd<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T,
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 

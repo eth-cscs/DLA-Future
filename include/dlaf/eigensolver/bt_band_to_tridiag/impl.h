@@ -794,9 +794,9 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   // For this reason, communications of the phase 1 will be ordered with a pipeline. Instead, for the
   // second part, with the aim to not over constrain execution of the update, no order will be
   // enforced by relying solely on tags.
-  auto mpi_chain_row = grid.rowCommunicatorPipeline();
-  auto mpi_chain_col = grid.colCommunicatorPipeline();
-  auto mpi_chain_col_shared = grid.colCommunicatorPipeline();
+  auto mpi_chain_row = grid.row_communicator_pipeline();
+  auto mpi_chain_col = grid.col_communicator_pipeline();
+  auto mpi_chain_col_shared = grid.col_communicator_pipeline();
 
   const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
   const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);

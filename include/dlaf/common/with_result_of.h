@@ -21,17 +21,17 @@ namespace dlaf::internal {
 // type has reference semantics and regular copy construction is not what is
 // wanted.
 template <typename F>
-class with_result_of {
+class WithResultOf {
   F&& f;
 
 public:
-  using result_type = std::invoke_result_t<F&&>;
-  explicit with_result_of(F&& f) : f(std::forward<F>(f)) {}
-  operator result_type() {
+  using ResultType = std::invoke_result_t<F&&>;
+  explicit WithResultOf(F&& f) : f(std::forward<F>(f)) {}
+  operator ResultType() {
     return std::forward<F>(f)();
   }
 };
 
 template <typename F>
-with_result_of(F&&) -> with_result_of<F&&>;
+WithResultOf(F&&) -> WithResultOf<F&&>;
 }

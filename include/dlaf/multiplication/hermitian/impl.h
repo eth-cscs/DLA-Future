@@ -106,8 +106,8 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
   if (mat_b.size().isEmpty())
     return;
 
-  auto mpi_row_task_chain = grid.rowCommunicatorPipeline();
-  auto mpi_col_task_chain = grid.colCommunicatorPipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);

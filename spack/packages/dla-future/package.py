@@ -210,7 +210,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING_HEADER", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-            args.append(self.define_from_variat("DLAF_TEST_OUTPUT_PATH", "test_output_path"))
+            args.append(self.define_from_variant("DLAF_TEST_OUTPUT_PATH", "test_output_path"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))

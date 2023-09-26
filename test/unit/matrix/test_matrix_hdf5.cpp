@@ -38,6 +38,7 @@ protected:
   MatrixHDF5Test()
       : world(MPI_COMM_WORLD),
         filepath(test_output_path / std::filesystem::path("test_matrix_hdf5.h5")) {
+    std::cout << ">>>>> DEBUG <<<<<" << filepath << std::endl;
     if (exists(filepath) && isMasterRank())
       std::filesystem::remove(filepath);
   }

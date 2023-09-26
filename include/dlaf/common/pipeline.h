@@ -66,8 +66,10 @@ public:
     return pipeline->read();
   }
 
-  // TODO: Documentation.
-  // TODO: Name?
+  /// Create a sub pipeline to the value contained in the current Pipeline
+  ///
+  /// All accesses to the sub pipeline are sequenced after previous accesses and before later accesses to
+  /// the original pipeline, independently of when values are accessed in the sub pipeline.
   Pipeline sub_pipeline() {
     namespace ex = pika::execution::experimental;
 

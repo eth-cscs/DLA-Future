@@ -794,6 +794,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   // For this reason, communications of the phase 1 will be ordered with a pipeline. Instead, for the
   // second part, with the aim to not over constrain execution of the update, no order will be
   // enforced by relying solely on tags.
+  DLAF_ASSERT(grid.num_pipelines() >= 2, grid.num_pipelines());
   auto mpi_chain_row = grid.row_communicator_pipeline();
   auto mpi_chain_col = grid.col_communicator_pipeline();
   auto mpi_chain_col_shared = grid.col_communicator_pipeline();

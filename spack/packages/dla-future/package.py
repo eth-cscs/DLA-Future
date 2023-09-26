@@ -120,7 +120,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")
     
-    variant("test_output_path", default="", when="+ci-test +hdf5", description="Output path for tests")
+    variant("test_output_path", default="/tmp", when="+ci-test +hdf5", description="Output path for tests")
 
     variant(
         "ci-check-threads",

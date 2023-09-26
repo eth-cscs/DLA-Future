@@ -15,20 +15,23 @@
 #include <dlaf/types.h>
 
 namespace dlaf::matrix::internal::distribution {
-/*
-// TODO
+
+/// Returns the global index of the element
+/// which has index @p local_element in the given rank.
+///
+/// @pre 0 <= local_element < local_size().get<rc>(),
 template <Coord rc>
-SizeType global_element_from_local_element_and_rank(comm::IndexT_MPI rank,
-                                              const SizeType local_element) const noexcept {
-  const auto local_tile = local_element / tile_size_.get<rc>();
-  const auto el_tl = local_element % tile_size_.get<rc>();
+SizeType global_element_from_local_element_and_rank(const Distribution& dist, comm::IndexT_MPI rank,
+                                                    const SizeType local_element) noexcept {
+  const auto local_tile = dist.local_tile_from_local_element<rc>(local_element);
+  const auto tile_element = dist.tile_element_from_local_element<rc>(local_element);
+  const auto tiles_per_block = dist.block_size().get<rc>() / dist.tile_size().get<rc>();
   const SizeType global_tile =
-      util::matrix::global_tile_from_local_tile(local_tile, tiles_per_block<rc>(), grid_size_.get<rc>(),
-                                            rank, source_rank_index_.get<rc>(),
-                                            global_tile_offset<rc>());
-  return global_element_from_global_tile_and_tile_element<rc>(global_tile, el_tl);
+      util::matrix::global_tile_from_local_tile(local_tile, tiles_per_block, dist.grid_size().get<rc>(),
+                                                rank, dist.source_rank_index().get<rc>(),
+                                                dist.offset().get<rc>() / dist.tile_size().get<rc>());
+  return dist.global_element_from_global_tile_and_tile_element<rc>(global_tile, tile_element);
 }
-*/
 
 ///////////////////////////
 // helpers for submatrix //
@@ -61,9 +64,9 @@ inline bool is_compatible_sub_distribution(const Distribution& distribution,
 inline GlobalTileIndex global_tile_index_from_sub_distribution(
     const Distribution& distribution, const GlobalElementIndex& sub_offset,
     const Distribution& sub_distribution, const GlobalTileIndex& sub_index) noexcept {
-  DLAF_ASSERT(sub_index.isIn(sub_distribution.nrTiles()), sub_index, sub_distribution.nrTiles());
+  DLAF_ASSERT(sub_index.isIn(sub_distribution.nr_tiles()), sub_index, sub_distribution.nr_tiles());
   DLAF_ASSERT(is_compatible_sub_distribution(distribution, sub_offset, sub_distribution), "");
-  const GlobalTileIndex tile_offset = distribution.globalTileIndex(sub_offset);
+  const GlobalTileIndex tile_offset = distribution.global_tile_index(sub_offset);
   return tile_offset + common::sizeFromOrigin(sub_index);
 }
 
@@ -72,7 +75,7 @@ inline GlobalTileIndex global_tile_index_from_sub_distribution(
 inline TileElementIndex tile_element_offset_from_sub_distribution(
     const Distribution& distribution, const GlobalElementIndex& sub_offset,
     const Distribution& sub_distribution, const GlobalTileIndex& sub_index) noexcept {
-  DLAF_ASSERT(sub_index.isIn(sub_distribution.nrTiles()), sub_index, sub_distribution.nrTiles());
+  DLAF_ASSERT(sub_index.isIn(sub_distribution.nr_tiles()), sub_index, sub_distribution.nr_tiles());
   DLAF_ASSERT(is_compatible_sub_distribution(distribution, sub_offset, sub_distribution), "");
   return {
       sub_index.row() == 0 ? distribution.tile_element_from_global_element<Coord::Row>(sub_offset.row())
@@ -92,10 +95,10 @@ template <Coord rc>
 SizeType distance_to_adjacent_tile(const Distribution& dist, SizeType global_element) noexcept {
   const SizeType global_tile = dist.global_tile_from_global_element<rc>(global_element);
   const SizeType tile_element = dist.tile_element_from_global_element<rc>(global_element);
-  return dist.size_of_tile<rc>(global_tile) - tile_element;
+  return dist.tile_size_of<rc>(global_tile) - tile_element;
 }
 
-/// Returns a local linear column-major index of the tile that contains @p ij_local
+/// Returns a local linear column-major index of the tile @p ij_local
 inline SizeType local_tile_linear_index(const Distribution& dist, LocalTileIndex ij_local) noexcept {
   return ij_local.row() + ij_local.col() * dist.local_nr_tiles().rows();
 }
@@ -133,10 +136,11 @@ SizeType local_element_distance_from_local_tile(const Distribution& dist, SizeTy
   if (i_loc_begin > i_loc_last)
     return 0;
 
-  SizeType i_el_begin = distribution.local_element_fromlocal_tile_and_tile_element(i_loc_begin, 0);
-  SizeType i_el_end = distribution.local_element_fromlocal_tile_and_tile_element(
-                          i_loc_last, tileSize<rc>(globalTileFromLocalTile<rc>(i_loc_last)) - 1) +
-                      1;
+  SizeType i_el_begin = dist.local_element_from_local_tile_and_tile_element<rc>(i_loc_begin, 0);
+  SizeType i_el_end =
+      dist.local_element_from_local_tile_and_tile_element<rc>(
+          i_loc_last, dist.tile_size_of<rc>(dist.global_tile_from_local_tile<rc>(i_loc_last)) - 1) +
+      1;
   return i_el_end - i_el_begin;
 }
 

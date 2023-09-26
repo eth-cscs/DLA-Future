@@ -37,6 +37,13 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_distribution_extensions
+  SOURCES test_distribution_extensions.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PLAIN
+)
+
+DLAF_addTest(
   test_matrix
   SOURCES test_matrix.cpp
   LIBRARIES dlaf.core

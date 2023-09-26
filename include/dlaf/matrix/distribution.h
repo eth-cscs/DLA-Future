@@ -171,7 +171,8 @@ public:
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && tile_size_ == rhs.tile_size_ &&
            block_size_ == rhs.block_size_ && global_nr_tiles_ == rhs.global_nr_tiles_ &&
            local_nr_tiles_ == rhs.local_nr_tiles_ && rank_index_ == rhs.rank_index_ &&
-           grid_size_ == rhs.grid_size_ && source_rank_index_ == rhs.source_rank_index_;
+           grid_size_ == rhs.grid_size_ && source_rank_index_ == rhs.source_rank_index_ &&
+           offset_ == rhs.offset_;
   }
 
   bool operator!=(const Distribution& rhs) const noexcept {
@@ -216,6 +217,10 @@ public:
     return source_rank_index_;
   }
 
+  const GlobalElementIndex offset() const noexcept {
+    return offset_;
+  }
+
   /// Returns the global 2D index of the element.
   /// which has index @p tile_element in the tile with global index @p global_tile.
   ///
@@ -224,8 +229,8 @@ public:
   GlobalElementIndex global_element_index(const GlobalTileIndex& global_tile,
                                           const TileElementIndex& tile_element) const noexcept {
     DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
-    DLAF_ASSERT_HEAVY(tile_element.isIn(size_of_tile(global_tile)), tile_element,
-                      size_of_tile(global_tile));
+    DLAF_ASSERT_HEAVY(tile_element.isIn(tile_size_of(global_tile)), tile_element,
+                      tile_size_of(global_tile));
 
     return {global_element_from_global_tile_and_tile_element<Coord::Row>(global_tile.row(),
                                                                          tile_element.row()),
@@ -292,9 +297,9 @@ public:
   /// Returns the size of the Tile with global index @p index.
   ///
   /// @pre global_element.isIn(size()).
-  TileElementSize size_of_tile(const GlobalTileIndex& index) const noexcept {
+  TileElementSize tile_size_of(const GlobalTileIndex& index) const noexcept {
     DLAF_ASSERT_HEAVY(index.isIn(nr_tiles()), index, nr_tiles());
-    return {size_of_tile<Coord::Row>(index.row()), size_of_tile<Coord::Col>(index.col())};
+    return {tile_size_of<Coord::Row>(index.row()), tile_size_of<Coord::Col>(index.col())};
   }
 
   ///////////////////////////////////
@@ -345,15 +350,14 @@ public:
     return global_element_from_global_tile_and_tile_element<rc>(global_tile, tile_element);
   }
 
+  // TODO Doc
   template <Coord rc>
   SizeType local_element_from_global_element(const SizeType global_element) const noexcept {
-    const auto global_tile = global_tile_from_global_element<rc>(global_element);
-    const auto local_tile = local_tile_from_global_tile<rc>(global_tile);
+    const auto local_tile = local_tile_from_global_element<rc>(global_element);
+    if (local_tile < 0)
+      return -1;
     const auto tile_element = tile_element_from_global_element<rc>(global_element);
     return local_element_from_local_tile_and_tile_element<rc>(local_tile, tile_element);
-    // FIX: const auto tile = local_tile_from_global_element<rc>(global_element);
-    // const auto el_tl = tile_element_from_global_element<rc>(global_element);
-    // return tile * tile_size_.get<rc>() + el_tl;
   }
 
   /// Returns the local index of the element
@@ -519,7 +523,7 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  SizeType size_of_tile(SizeType global_tile) const noexcept {
+  SizeType tile_size_of(SizeType global_tile) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
@@ -529,8 +533,6 @@ public:
     }
     return std::min(nb, n + global_tile_element_offset<rc>() - global_tile * nb);
   }
-
-  /// Move to Extra
 
 private:
   /// @pre block_size_, and tile_size_ are already set correctly.
@@ -705,7 +707,7 @@ public:
   }
 
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
-    return size_of_tile(index);
+    return tile_size_of(index);
   }
 
   ///////////////////////////////////
@@ -824,9 +826,9 @@ public:
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
-  DLAF_DISTRIBUTION_DEPRECATED("Use size_of_tile method")
+  DLAF_DISTRIBUTION_DEPRECATED("Use tile_size_of method")
   SizeType tileSize(SizeType global_tile) const noexcept {
-    return size_of_tile<rc>(global_tile);
+    return tile_size_of<rc>(global_tile);
   }
 
   //////////////////////////////////////

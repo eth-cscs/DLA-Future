@@ -65,14 +65,14 @@ public:
   }
 
   std::size_t numPipelines() const noexcept {
-    DLAF_ASSERT(bool(full_pipeline_), "");
-    DLAF_ASSERT(bool(row_pipeline_), "");
-    DLAF_ASSERT(bool(col_pipeline_), "");
-    DLAF_ASSERT(full_pipeline_->size() == row_pipeline_->size(), full_pipeline_->size(),
-                row_pipeline_->size());
-    DLAF_ASSERT(full_pipeline_->size() == col_pipeline_->size(), full_pipeline_->size(),
-                col_pipeline_->size());
-    return full_pipeline_->size();
+    DLAF_ASSERT(bool(full_pipelines_), "");
+    DLAF_ASSERT(bool(row_pipelines_), "");
+    DLAF_ASSERT(bool(col_pipelines_), "");
+    DLAF_ASSERT(full_pipelines_->size() == row_pipelines_->size(), full_pipelines_->size(),
+                row_pipelines_->size());
+    DLAF_ASSERT(full_pipelines_->size() == col_pipelines_->size(), full_pipelines_->size(),
+                col_pipelines_->size());
+    return full_pipelines_->size();
   }
 
   /// Return the rank of the current process in the CommunicatorGrid.
@@ -111,19 +111,19 @@ public:
 
   /// Return a pipeline to a Communicator grouping all ranks in the grid.
   Pipeline fullCommunicatorPipeline() {
-    return full_pipeline_->nextResource().subPipeline();
+    return full_pipelines_->nextResource().subPipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the row (that includes the current
   /// process).
   Pipeline rowCommunicatorPipeline() {
-    return row_pipeline_->nextResource().subPipeline();
+    return row_pipelines_->nextResource().subPipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the col (that includes the current
   /// process).
   Pipeline colCommunicatorPipeline() {
-    return col_pipeline_->nextResource().subPipeline();
+    return col_pipelines_->nextResource().subPipeline();
   }
 
   /// Prints information about the CommunicationGrid.
@@ -143,9 +143,9 @@ protected:
   // reference instead?
   using RoundRobinPipeline = dlaf::common::RoundRobin<Pipeline>;
 
-  std::shared_ptr<RoundRobinPipeline> full_pipeline_ = nullptr;
-  std::shared_ptr<RoundRobinPipeline> row_pipeline_ = nullptr;
-  std::shared_ptr<RoundRobinPipeline> col_pipeline_ = nullptr;
+  std::shared_ptr<RoundRobinPipeline> full_pipelines_ = nullptr;
+  std::shared_ptr<RoundRobinPipeline> row_pipelines_ = nullptr;
+  std::shared_ptr<RoundRobinPipeline> col_pipelines_ = nullptr;
 
   Index2D position_;
   Size2D grid_size_ = Size2D(0, 0);

@@ -210,9 +210,9 @@ function(DLAF_addTest test_target_name)
 
   endif()
 
-    configure_file(
-      ${PROJECT_SOURCE_DIR}/test/include/test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h
-    )
+  configure_file(
+    ${PROJECT_SOURCE_DIR}/test/include/test_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/test_config.h
+  )
 
   ### Test executable target
   add_executable(${test_target_name} ${DLAF_AT_SOURCES})

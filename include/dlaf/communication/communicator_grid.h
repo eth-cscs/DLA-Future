@@ -64,7 +64,7 @@ public:
                                                   {grid_size_.rows(), grid_size_.cols()});
   }
 
-  std::size_t numCommunicators() const noexcept {
+  std::size_t numPipelines() const noexcept {
     DLAF_ASSERT(bool(full_pipeline_), "");
     DLAF_ASSERT(bool(row_pipeline_), "");
     DLAF_ASSERT(bool(col_pipeline_), "");

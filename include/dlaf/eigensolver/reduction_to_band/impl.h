@@ -1096,7 +1096,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // separate pipelines to the same communicator, but since communication is interleaved between the
   // pipelines this algorithm will deadlock (separate subpipelines means that all work on the previous
   // subpipeline has to complete before the next subpipeline can even start scheduling work).
-  DLAF_ASSERT(grid.numCommunicators() >= 2, grid.numCommunicators());
+  DLAF_ASSERT(grid.numPipelines() >= 2, grid.numPipelines());
   auto mpi_row_chain = grid.rowCommunicatorPipeline();
   auto mpi_col_chain = grid.colCommunicatorPipeline();
   auto mpi_col_chain_panel = grid.colCommunicatorPipeline();

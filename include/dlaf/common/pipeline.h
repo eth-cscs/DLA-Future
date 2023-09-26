@@ -61,8 +61,6 @@ public:
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   /// @pre valid()
-  // TODO: Name? Something specific for tagged communication (but not here in
-  // the generic Pipeline?)?
   ReadOnlySender read() {
     DLAF_ASSERT(valid(), "");
     return pipeline->read();
@@ -79,10 +77,10 @@ public:
     Pipeline sub_pipeline(T{});
     sub_pipeline.nested_sender =
         ex::when_all(sub_pipeline.pipeline->readwrite(), this->pipeline->readwrite()) |
-        ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
-          sub_comm_wrapper.get() = std::move(comm_wrapper.get());
+        ex::then([](auto sub_wrapper, auto wrapper) {
+          sub_wrapper.get() = std::move(wrapper.get());
 
-          return comm_wrapper;
+          return wrapper;
         }) |
         ex::ensure_started();
 
@@ -112,8 +110,8 @@ private:
       DLAF_ASSERT(valid(), "");
 
       auto s = ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
-               ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
-                 comm_wrapper.get() = std::move(sub_comm_wrapper.get());
+               ex::then([](auto sub_wrapper, auto wrapper) {
+                 wrapper.get() = std::move(sub_wrapper.get());
                });
       ex::start_detached(std::move(s));
       nested_sender.reset();

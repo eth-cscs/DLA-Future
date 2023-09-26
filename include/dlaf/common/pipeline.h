@@ -68,25 +68,23 @@ public:
     return pipeline->read();
   }
 
+  // TODO: Documentation.
+  // TODO: Name?
   Pipeline subPipeline() {
     namespace ex = pika::execution::experimental;
 
-    // TODO: Requires default constructibility. Is it a must?
+    // Move value from pipeline into sub pipeline, then store a sender of the wrapper of the pipeline in
+    // a sender which we will release when the sub pipeline is released. This ensures that all accesses
+    // to the sub pipeline happen after previous accesses and before later accesses to the pipeline.
     Pipeline sub_pipeline(T{});
-    // Move communicator from pipeline into sub pipeline
-    auto s = ex::when_all(sub_pipeline.pipeline->readwrite(), this->pipeline->readwrite()) |
-             ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
-               sub_comm_wrapper.get() = std::move(comm_wrapper.get());
+    sub_pipeline.nested_sender =
+        ex::when_all(sub_pipeline.pipeline->readwrite(), this->pipeline->readwrite()) |
+        ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
+          sub_comm_wrapper.get() = std::move(comm_wrapper.get());
 
-               auto sub_comm_wrapper_local = std::move(sub_comm_wrapper);
-               auto comm_wrapper_local = std::move(comm_wrapper);
-             });
-    ex::start_detached(std::move(s));
-
-    // Access pipeline again, we'll move the communicator from the sub pipeline back into the pipeline on
-    // destruction. This ensures that accesses to the parent pipeline happen only after the sub pipeline
-    // has been released.
-    sub_pipeline.nested_sender = this->pipeline->readwrite();
+          return comm_wrapper;
+        }) |
+        ex::ensure_started();
 
     return sub_pipeline;
   }
@@ -116,9 +114,6 @@ private:
       auto s = ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
                ex::then([](auto sub_comm_wrapper, auto comm_wrapper) {
                  comm_wrapper.get() = std::move(sub_comm_wrapper.get());
-
-                 auto sub_comm_wrapper_local = std::move(sub_comm_wrapper);
-                 auto comm_wrapper_local = std::move(comm_wrapper);
                });
       ex::start_detached(std::move(s));
       nested_sender.reset();
@@ -126,6 +121,7 @@ private:
   }
 
   std::optional<AsyncRwMutex> pipeline = std::nullopt;
-  std::optional<decltype(pipeline->readwrite())> nested_sender = std::nullopt;
+  std::optional<pika::execution::experimental::unique_any_sender<ReadWriteWrapper>> nested_sender =
+      std::nullopt;
 };
 }

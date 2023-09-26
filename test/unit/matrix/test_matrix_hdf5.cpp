@@ -22,6 +22,8 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
+#include "test_config.h"
+
 #include <gtest/gtest.h>
 
 #include <dlaf_test/matrix/util_matrix.h>
@@ -33,7 +35,9 @@ using dlaf::matrix::internal::FileHDF5;
 template <typename T>
 class MatrixHDF5Test : public ::testing::Test {
 protected:
-  MatrixHDF5Test() : world(MPI_COMM_WORLD), filepath("/tmp/test_matrix_hdf5.h5") {
+  MatrixHDF5Test()
+      : world(MPI_COMM_WORLD),
+        filepath(test_output_path / std::filesystem::path("test_matrix_hdf5.h5")) {
     if (exists(filepath) && isMasterRank())
       std::filesystem::remove(filepath);
   }

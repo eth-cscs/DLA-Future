@@ -47,6 +47,7 @@ option(DLAF_BUILD_TESTING_HEADER "Build header tests" OFF)
 option(DLAF_BUILD_DOC "Build documentation" OFF)
 option(DLAF_WITH_PRECOMPILED_HEADERS "Use precompiled headers." OFF)
 option(DLAF_WITH_SCALAPACK "Build ScaLAPACK-like C API (requires ScaLAPACK)" OFF)
+set(DLAF_TEST_OUTPUT_PATH "" CACHE PATH "Output path for fils written by tests")
 
 if(DLAF_WITH_MKL)
   # When using MKL there is no need to set the number of threads with

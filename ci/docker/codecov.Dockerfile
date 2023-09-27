@@ -30,7 +30,8 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    spack -e ci --config "config:flags:keep_werror:all" --config "packages:dla-future:variants:test-output-path=${CACHE_FOLDER}" install --jobs ${NUM_PROCS} --keep-stage --verbose
+    echo ${CACHE_FLDER} && \
+    spack -e ci --config "config:flags:keep_werror:all" --config "packages:dla-future:variants:test-output-path=${CACHE_FOLDER}" install -v --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Prune and bundle binaries
 RUN mkdir ${BUILD}-tmp && cd ${BUILD} && \

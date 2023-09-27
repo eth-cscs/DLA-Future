@@ -19,8 +19,6 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
-ARG CACHE_FOLDER
-
 ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \

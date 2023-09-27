@@ -205,7 +205,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// @pre mat is distributed along rows the same way as comm_row
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
-void applyGivensRotationsToMatrixColumns(comm::CommunicatorGrid& grid,
+void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid& grid,
                                          common::Pipeline<comm::Communicator>& comm_row_chain,
                                          const comm::IndexT_MPI tag, const SizeType i_begin,
                                          const SizeType i_end, GRSender&& rots_fut, Matrix<T, D>& mat) {

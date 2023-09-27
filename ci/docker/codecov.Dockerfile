@@ -24,6 +24,8 @@ COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
 
+RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
+
 # Inject the coverage option in the spack package
 RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
 
@@ -73,6 +75,8 @@ ARG BUILD
 ARG SOURCE
 ARG DEPLOY
 
+RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
+
 ARG EXTRA_APTGET_DEPLOY
 # python is needed for fastcov
 # pip is needed only to install fastcov (it is removed with
@@ -120,5 +124,8 @@ ENV ENABLE_COVERAGE="YES"
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
+
+RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
+
 
 WORKDIR ${BUILD}

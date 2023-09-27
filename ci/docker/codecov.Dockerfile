@@ -13,6 +13,7 @@ FROM $BUILD_IMAGE as builder
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
+ARG PROJECT_DIR
 
 # Build DLA-Future
 COPY . ${SOURCE}
@@ -22,13 +23,11 @@ SHELL ["/bin/bash", "-c"]
 # Inject the coverage option in the spack package
 RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
 
-ARG CACHE_FOLDER
 ARG NUM_PROCS
 # Note: we force spack to build in ${BUILD} creating a link to it
 RUN spack repo rm --scope site dlaf && \
     spack repo add ${SOURCE}/spack && \
     spack -e ci develop --no-clone -p ${SOURCE} dla-future@master && \
-    spack -e ci config add "packages:dla-future:variants:test-output-path=${CACHE_FOLDER}" && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
@@ -110,6 +109,8 @@ ENV PATH="${DEPLOY}/usr/bin:$PATH"
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=10.2"
+
+ENV DLAF_HDF5_TEST_OUTPUT_PATH ${PROJCT_DIR}
 
 # Used in our ctest wrapper to upload reports
 ENV ENABLE_COVERAGE="YES"

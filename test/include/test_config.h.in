@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include <filesystem>
 #include <iterator>
 
 const char* pika_argv[] = {
@@ -27,5 +26,3 @@ const char* dlaf_argv[] = {"@test_target_name@"};
 
 const int pika_argc = std::size(pika_argv);
 const int dlaf_argc = std::size(dlaf_argv);
-
-const std::filesystem::path test_output_path("@DLAF_TEST_OUTPUT_PATH@");

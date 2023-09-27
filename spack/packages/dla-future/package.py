@@ -120,8 +120,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")
     
-    variant("test-output-path", default="/tmp", when="+ci-test +hdf5", description="Output path for tests")
-
     variant(
         "ci-check-threads",
         default=False,
@@ -210,7 +208,6 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             args.append(self.define("DLAF_BUILD_TESTING", True))
             args.append(self.define("DLAF_BUILD_TESTING_HEADER", True))
             args.append(self.define("DLAF_CI_RUNNER_USES_MPIRUN", True))
-            args.append(self.define_from_variant("DLAF_TEST_OUTPUT_PATH", "test-output-path"))
         else:
             # TEST
             args.append(self.define("DLAF_BUILD_TESTING", self.run_tests))

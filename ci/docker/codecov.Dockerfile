@@ -31,7 +31,6 @@ RUN spack repo rm --scope site dlaf && \
     spack -e ci concretize -f && \
     mkdir ${BUILD} && \
     ln -s ${BUILD} `spack -e ci location -b dla-future` && \
-    echo ${CACHE_FLDER} && \
     spack -e ci --config "config:flags:keep_werror:all" install -v --jobs ${NUM_PROCS} --keep-stage --verbose
 
 # Prune and bundle binaries

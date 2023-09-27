@@ -17,7 +17,7 @@
 #include <dlaf/matrix/util_distribution.h>
 #include <dlaf/util_math.h>
 
-#define DLAF_DISTRIBUTION_ENABLE_DEPRECATED 1
+#define DLAF_DISTRIBUTION_ENABLE_DEPRECATED 0
 #if (DLAF_DISTRIBUTION_ENABLE_DEPRECATED)
 #define DLAF_DISTRIBUTION_DEPRECATED(x) [[deprecated(x)]]
 #else

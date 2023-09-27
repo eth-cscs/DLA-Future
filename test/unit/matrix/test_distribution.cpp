@@ -432,7 +432,7 @@ const std::vector<ParametersIndices> tests_indices = {
 };
 
 template <Coord rc>
-void test_index(const Distribution& obj, const ParametersIndices& test) {
+void test_indices(const Distribution& obj, const ParametersIndices& test) {
   SizeType local_element = rc == Coord::Row ? test.local_element[0] : test.local_element[1];
   SizeType local_tile = rc == Coord::Row ? test.local_tile[0] : test.local_tile[1];
 
@@ -478,8 +478,8 @@ TEST(DistributionTest, IndexConversions) {
     Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
                      test.src_rank, test.offset);
 
-    test_index<Coord::Row>(obj, test);
-    test_index<Coord::Col>(obj, test);
+    test_indices<Coord::Row>(obj, test);
+    test_indices<Coord::Col>(obj, test);
   }
 }
 
@@ -497,6 +497,86 @@ TEST(DistributionTest, Index2DConversions) {
       LocalTileIndex local_tile(test.local_tile);
       EXPECT_EQ(test.global_tile, obj.global_tile_index(local_tile));
       EXPECT_EQ(local_tile, obj.local_tile_index(test.global_tile));
+    }
+  }
+}
+
+struct ParametersSubDistribution {
+  // Distribution settings
+  GlobalElementSize size;
+  TileElementSize block_size;
+  comm::Index2D rank;
+  comm::Size2D grid_size;
+  comm::Index2D src_rank;
+  GlobalElementIndex offset;
+  // Sub-distribution settings
+  GlobalElementIndex sub_origin;
+  GlobalElementSize sub_size;
+  // Valid indices
+  GlobalElementIndex global_element;
+  GlobalTileIndex global_tile;
+  comm::Index2D rank_tile;
+  std::array<SizeType, 2> local_tile;  // can be an invalid LocalTileIndex
+};
+
+const std::vector<ParametersSubDistribution> tests_sub_distribution = {
+    // {size, block_size, rank, grid_size, src_rank, offset, sub_origin, sub_size,
+    // global_element, global_tile, rank_tile, local_tile}
+    // clang-format off
+    // Empty distribution
+    {{0, 0}, {2, 5}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{0, 0}, {2, 5}, {0, 0}, {1, 1}, {0, 0}, {4, 8}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+
+    // Empty sub-distribution
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {2, 3}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {4, 5}, {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+
+    // Sub-distribution == distribution
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {0, 0}, {3, 4}, {1, 3}, {0, 1}, {0, 0}, {0, 1}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {0, 0}, {5, 9}, {1, 3}, {0, 2}, {0, 0}, {-1, -1}},
+    {{123, 59}, {32, 16}, {3, 3}, {5, 7}, {3, 1}, {1, 1}, {0, 0}, {123, 59}, {30, 30}, {0, 1}, {3, 2}, {0, -1}},
+
+    // Other sub-distributions
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 2}, {2, 1}, {0, 0}, {0, 0}, {0, 0}, {0, 0}},
+    {{3, 4}, {2, 2}, {0, 0}, {1, 1}, {0, 0}, {0, 0}, {1, 2}, {2, 1}, {1, 0}, {1, 0}, {0, 0}, {1, 0}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {3, 4}, {2, 3}, {0, 0}, {0, 0}, {1, 0}, {0, -1}},
+    {{5, 9}, {3, 2}, {1, 1}, {2, 4}, {0, 2}, {1, 1}, {3, 4}, {2, 3}, {1, 2}, {0, 1}, {1, 1}, {0, 0}},
+    {{123, 59}, {32, 16}, {3, 3}, {5, 7}, {3, 1}, {1, 1}, {50, 17}, {40, 20}, {20, 10}, {1, 0}, {0, 2}, {-1, -1}},
+    // clang-format on
+};
+
+TEST(DistributionTest, SubDistribution) {
+  for (const auto& test : tests_sub_distribution) {
+    Distribution dist(test.size, test.block_size, test.grid_size, test.rank, test.src_rank, test.offset);
+    const SubDistributionSpec spec{test.sub_origin, test.sub_size};
+    Distribution sub_dist(dist, spec);
+
+    EXPECT_EQ(sub_dist.size(), test.sub_size);
+
+    EXPECT_EQ(sub_dist.block_size(), dist.block_size());
+    EXPECT_EQ(sub_dist.tile_size(), dist.tile_size());
+    EXPECT_EQ(sub_dist.rank_index(), dist.rank_index());
+    EXPECT_EQ(sub_dist.grid_size(), dist.grid_size());
+
+    EXPECT_LE(sub_dist.local_size().rows(), dist.local_size().rows());
+    EXPECT_LE(sub_dist.local_size().cols(), dist.local_size().cols());
+    EXPECT_LE(sub_dist.local_nr_tiles().rows(), dist.local_nr_tiles().rows());
+    EXPECT_LE(sub_dist.local_nr_tiles().cols(), dist.local_nr_tiles().cols());
+    EXPECT_LE(sub_dist.nr_tiles().rows(), dist.nr_tiles().rows());
+    EXPECT_LE(sub_dist.nr_tiles().cols(), dist.nr_tiles().cols());
+
+    if (!test.sub_size.isEmpty()) {
+      EXPECT_EQ(sub_dist.global_tile_index(test.global_element), test.global_tile);
+      EXPECT_EQ(sub_dist.rank_global_tile(sub_dist.global_tile_index(test.global_element)),
+                test.rank_tile);
+
+      EXPECT_EQ(
+          sub_dist.local_tile_from_global_element<Coord::Row>(test.global_element.get<Coord::Row>()),
+          test.local_tile[0]);
+      EXPECT_EQ(
+          sub_dist.local_tile_from_global_element<Coord::Col>(test.global_element.get<Coord::Col>()),
+          test.local_tile[1]);
     }
   }
 }

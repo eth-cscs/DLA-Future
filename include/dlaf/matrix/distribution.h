@@ -17,7 +17,7 @@
 #include <dlaf/matrix/util_distribution.h>
 #include <dlaf/util_math.h>
 
-#define DLAF_DISTRIBUTION_ENABLE_DEPRECATED 0
+#define DLAF_DISTRIBUTION_ENABLE_DEPRECATED 1
 #if (DLAF_DISTRIBUTION_ENABLE_DEPRECATED)
 #define DLAF_DISTRIBUTION_DEPRECATED(x) [[deprecated(x)]]
 #else
@@ -276,8 +276,8 @@ public:
   LocalTileIndex local_tile_index(const GlobalTileIndex& global_tile) const {
     DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
 
-    DLAF_ASSERT(rank_index_ == rank_global_tile(global_tile), rank_index_,
-                rank_global_tile(global_tile));
+    DLAF_ASSERT_HEAVY(rank_index_ == rank_global_tile(global_tile), rank_index_,
+                      rank_global_tile(global_tile));
     return {local_tile_from_global_tile<Coord::Row>(global_tile.row()),
             local_tile_from_global_tile<Coord::Col>(global_tile.col())};
   }
@@ -341,16 +341,16 @@ public:
   /// @pre 0 <= local_element < local_size().get<rc>(),
   template <Coord rc>
   SizeType global_element_from_local_element(const SizeType local_element) const noexcept {
-    // FIX:: const auto tile = local_element / tile_size_.get<rc>();
-    // const auto el_tl = local_element % tile_size_.get<rc>();
-    // return global_element_from_local_tile_and_tile_element<rc>(tile, el_tl);
     const auto local_tile = local_tile_from_local_element<rc>(local_element);
     const auto global_tile = global_tile_from_local_tile<rc>(local_tile);
     const auto tile_element = tile_element_from_local_element<rc>(local_element);
     return global_element_from_global_tile_and_tile_element<rc>(global_tile, tile_element);
   }
 
-  // TODO Doc
+  /// Returns the local index in the current rank of the element
+  /// which has global index @p global_element.
+  ///
+  /// @pre 0 <= global_element < size().get<rc>(),
   template <Coord rc>
   SizeType local_element_from_global_element(const SizeType global_element) const noexcept {
     const auto local_tile = local_tile_from_global_element<rc>(global_element);
@@ -433,9 +433,10 @@ public:
   /// @pre 0 <= global_element < size().get<rc>().
   template <Coord rc>
   SizeType local_tile_from_local_element(SizeType local_element) const noexcept {
+    DLAF_ASSERT_HEAVY(0 <= local_element && local_element < local_size_.get<rc>(), local_element,
+                      local_size_.get<rc>());
     return util::matrix::tile_from_element(local_element, tile_size_.get<rc>(),
                                            local_tile_element_offset<rc>());
-    // FIX: return local_element / tile_size_.get<rc>();
   }
 
   /// Returns the local index in current rank of the global tile
@@ -489,7 +490,6 @@ public:
                       local_size_.get<rc>());
     return util::matrix::tile_element_from_element(local_element, tile_size_.get<rc>(),
                                                    local_tile_element_offset<rc>());
-    // FIX: return local_element % tile_size_.get<rc>();
   }
 
   ////////////////////////////////

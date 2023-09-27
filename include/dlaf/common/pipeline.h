@@ -105,17 +105,15 @@ public:
   }
 
 private:
-        // TODO: rename to snake_case
   void release_parent_pipeline() {
     namespace ex = pika::execution::experimental;
 
     if (nested_sender) {
       DLAF_ASSERT(valid(), "");
 
-      auto s = ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
-               ex::then([](auto sub_wrapper, auto wrapper) {
-                 wrapper.get() = std::move(sub_wrapper.get());
-               });
+      auto s =
+          ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
+          ex::then([](auto sub_wrapper, auto wrapper) { wrapper.get() = std::move(sub_wrapper.get()); });
       ex::start_detached(std::move(s));
       nested_sender.reset();
     }

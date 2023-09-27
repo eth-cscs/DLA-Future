@@ -75,6 +75,15 @@ const std::vector<ParametersConstructor> tests_constructor = {
     {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {40, 56}},
     {{160, 192}, {32, 32}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
     {{160, 192}, {32, 32}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {1, 1}, {18, 235}, {0, 35}, {0, 551}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {448, 0}, {18, 235}, {0, 35}, {0, 550}},
+    {{71, 3750}, {64, 128}, {4, 16}, {1, 3}, {7, 6}, {3, 4}, {0, 768}, {18, 235}, {0, 35}, {0, 550}},
+    {{1020, 34}, {16, 32}, {4, 8}, {0, 0}, {1, 6}, {0, 0}, {8, 8}, {255, 5}, {255, 3}, {1020, 24}},
+    {{1024, 1024}, {32, 32}, {8, 32}, {3, 2}, {6, 4}, {1, 1}, {49, 48}, {129, 33}, {24, 9}, {192, 256}},
+    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {16, 16}, {6, 7}, {2, 4}, {48, 112}},
+    {{160, 192}, {64, 128}, {32, 32}, {0, 0}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 4}, {40, 120}},
+    {{160, 192}, {128, 64}, {32, 32}, {1, 1}, {4, 4}, {0, 0}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
+    {{160, 192}, {128, 64}, {32, 32}, {0, 0}, {4, 4}, {3, 3}, {24, 8}, {6, 7}, {2, 2}, {56, 64}},
 };
 
 void check_constructor(const Distribution& obj, GlobalElementSize size, TileElementSize block_size,
@@ -94,13 +103,8 @@ void check_constructor(const Distribution& obj, GlobalElementSize size, TileElem
                                                             grid_size.cols())};
   EXPECT_EQ(expected_source_rank_index, obj.source_rank_index());
 
-  if (!size.isEmpty()) {
-    TileElementSize expected_tile_00_size{std::min(size.rows(),
-                                                   tile_size.rows() - offset.row() % tile_size.rows()),
-                                          std::min(size.cols(),
-                                                   tile_size.cols() - offset.col() % tile_size.cols())};
-    EXPECT_EQ(expected_tile_00_size, obj.tileSize({0, 0}));
-  }
+  GlobalElementIndex expected_offset{offset.row() % block_size.rows(), offset.col() % block_size.cols()};
+  EXPECT_EQ(expected_offset, obj.offset());
 
   EXPECT_EQ(global_tiles, obj.nr_tiles());
   EXPECT_EQ(local_size, obj.local_size());
@@ -246,11 +250,31 @@ TEST(DistributionTest, ComparisonOperator) {
   for (const auto& test : tests_constructor) {
     Distribution obj(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
                      test.src_rank, test.offset);
-    Distribution obj_eq(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
-                        test.src_rank, test.offset);
+    std::vector<Distribution> objs_eq;
+    objs_eq.emplace_back(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                         test.src_rank, test.offset);
 
-    EXPECT_TRUE(obj == obj_eq);
-    EXPECT_FALSE(obj != obj_eq);
+    // If src_rank and offset are shifted accordingly, the resulted distribution is the same.
+    comm::Index2D src_rank2{(test.src_rank.row() + test.grid_size.rows() - 1) % test.grid_size.rows(),
+                            (test.src_rank.col() + test.grid_size.cols() - 3 % test.grid_size.cols()) %
+                                test.grid_size.cols()};
+
+    GlobalElementIndex offset2{test.offset.row() + test.block_size.rows(),
+                               test.offset.col() + 3 * test.block_size.cols()};
+
+    objs_eq.emplace_back(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                         src_rank2, offset2);
+
+    GlobalTileIndex tile_offset2{test.block_size.rows() / test.tile_size.rows(),
+                                 3 * test.block_size.cols() / test.tile_size.cols()};
+
+    objs_eq.emplace_back(test.size, test.block_size, test.tile_size, test.grid_size, test.rank,
+                         src_rank2, tile_offset2, test.offset);
+
+    for (const auto& obj_eq : objs_eq) {
+      EXPECT_TRUE(obj == obj_eq);
+      EXPECT_FALSE(obj != obj_eq);
+    }
 
     std::vector<Distribution> objs_ne;
     objs_ne.emplace_back(GlobalElementSize(test.size.rows() + 1, test.size.cols()), test.block_size,

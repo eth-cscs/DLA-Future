@@ -72,8 +72,8 @@ Distribution::Distribution(const GlobalElementSize& size, const TileElementSize&
                            const comm::Index2D& rank_index, const comm::Index2D& source_rank_index,
                            const GlobalTileIndex& tile_offset, const GlobalElementIndex& element_offset)
     : Distribution(size, block_size, tile_size, grid_size, rank_index, source_rank_index,
-                   GlobalElementIndex(tile_offset.row() * block_size.rows() + element_offset.row(),
-                                      tile_offset.col() * block_size.cols() + element_offset.col())) {}
+                   GlobalElementIndex(tile_offset.row() * tile_size.rows() + element_offset.row(),
+                                      tile_offset.col() * tile_size.cols() + element_offset.col())) {}
 
 Distribution::Distribution(Distribution&& rhs) noexcept : Distribution(rhs) {
   // use the copy constructor and set default sizes.

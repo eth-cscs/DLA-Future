@@ -119,7 +119,7 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")
-    
+
     variant(
         "ci-check-threads",
         default=False,

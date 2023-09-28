@@ -14,14 +14,11 @@ FROM $BUILD_IMAGE as builder
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG PROJECT_DIR
 
 # Build DLA-Future
 COPY . ${SOURCE}
 
 SHELL ["/bin/bash", "-c"]
-
-RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
 
 # Inject the coverage option in the spack package
 RUN gawk -i inplace '$0 ~ "return args" {print "        args.append(self.define(\"DLAF_WITH_COVERAGE\", True))"} {print $0}' ${SOURCE}/spack/packages/dla-future/package.py
@@ -71,10 +68,6 @@ ENV DEBIAN_FRONTEND noninteractive
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-ARG PROJECT_DIR
-
-ENV DLAF_HDF5_TEST_OUTPUT_PATH=${PROJECT_DIR}
-RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
 
 ARG EXTRA_APTGET_DEPLOY
 # python is needed for fastcov
@@ -92,7 +85,6 @@ RUN apt-get update -qq && \
     pip install fastcov && \
     apt-get autoremove -qq -y python3-pip && \
     apt-get clean
-
 
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}
@@ -123,7 +115,5 @@ ENV ENABLE_COVERAGE="YES"
 ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
-
-RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
 
 WORKDIR ${BUILD}

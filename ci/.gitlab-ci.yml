@@ -60,7 +60,6 @@ stages:
       --build-arg USE_MKL
       --build-arg USE_ROCBLAS
       --build-arg NUM_PROCS=$NUM_CORES_BUILD_DLAF
-      --build-arg PROJECT_DIR=$CI_CACHE_DIR
       -f $DEPLOY_DOCKER_FILE .'
     - podman push $DEPLOY_IMAGE
     - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml

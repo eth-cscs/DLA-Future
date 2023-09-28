@@ -36,7 +36,7 @@ using dlaf::matrix::internal::FileHDF5;
 constexpr auto env_hdf5_output_path = "DLAF_HDF5_TEST_OUTPUT_PATH";
 const std::filesystem::path filename = "test_matrix_hdf5.h5";
 
-// Get path from environment variable, otherwise return empty
+// Get path from environment variable if defned, otherwise return empty path
 auto path = [](){
   if (const auto p = std::getenv(env_hdf5_output_path)) {
     return std::filesystem::path(p);

@@ -473,7 +473,7 @@ public:
 
   /// Returns the local index of the tile which contains the element with local index @p local_element.
   ///
-  /// @pre 0 <= global_element < size().get<rc>().
+  /// @pre 0 <= local_element < local_size().get<rc>().
   template <Coord rc>
   SizeType local_tile_from_local_element(SizeType local_element) const noexcept {
     DLAF_ASSERT_HEAVY(0 <= local_element && local_element < local_size_.get<rc>(), local_element,

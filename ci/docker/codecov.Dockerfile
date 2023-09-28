@@ -7,7 +7,6 @@ ARG BUILD=/DLA-Future-build
 ARG SOURCE=/DLA-Future
 # Where a bunch of shared libs live
 ARG DEPLOY=/root/DLA-Future.bundle
-ARG PROJECT_DIR
 
 FROM $BUILD_IMAGE as builder
 

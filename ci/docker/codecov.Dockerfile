@@ -7,17 +7,14 @@ ARG BUILD=/DLA-Future-build
 ARG SOURCE=/DLA-Future
 # Where a bunch of shared libs live
 ARG DEPLOY=/root/DLA-Future.bundle
+ARG PROJECT_DIR
 
 FROM $BUILD_IMAGE as builder
 
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
-
 ARG PROJECT_DIR
-ENV DLAF_HDF5_TEST_OUTPUT_PATH=${PROJECT_DIR}
-RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
-RUN echo ${PROJECT_DIR}
 
 # Build DLA-Future
 COPY . ${SOURCE}
@@ -74,7 +71,9 @@ ENV DEBIAN_FRONTEND noninteractive
 ARG BUILD
 ARG SOURCE
 ARG DEPLOY
+ARG PROJECT_DIR
 
+ENV DLAF_HDF5_TEST_OUTPUT_PATH=${PROJECT_DIR}
 RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
 
 ARG EXTRA_APTGET_DEPLOY
@@ -126,6 +125,5 @@ ENV LD_PRELOAD=/lib/x86_64-linux-gnu/libSegFault.so
 RUN echo "${DEPLOY}/usr/lib/" > /etc/ld.so.conf.d/dlaf.conf && ldconfig
 
 RUN echo ${DLAF_HDF5_TEST_OUTPUT_PATH}
-
 
 WORKDIR ${BUILD}

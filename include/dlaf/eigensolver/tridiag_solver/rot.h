@@ -254,7 +254,7 @@ void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid
   const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  auto givens_rots_fn = [&comm_row_chain, tag, dist_sub,
+  auto givens_rots_fn = [comm_row_chain = comm_row_chain.sub_pipeline(), tag, dist_sub,
                          mb](std::vector<GivensRotation<T>> rots, std::vector<matrix::Tile<T, D>> tiles,
                              std::vector<matrix::Tile<T, D>> all_ws) mutable {
     // Note:
@@ -364,6 +364,8 @@ void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid
                       }
                     }));
     }
+
+    comm_row_chain.reset();
   };
 
   // Note:
@@ -377,6 +379,6 @@ void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid
 
   ex::when_all(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
                ex::when_all_vector(select(workspace, workspace.iteratorLocal()))) |
-      di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
+      di::transformDetach(di::Policy<Backend::MC>(), std::move(givens_rots_fn));
 }
 }

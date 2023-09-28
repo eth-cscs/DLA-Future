@@ -144,8 +144,8 @@ SizeType global_element_from_local_element_on_rank(const Distribution& dist, com
 /// @pre 0 <= global_tile < dist.nr_tiles().get<rc>().
 template <Coord rc>
 SizeType local_tile_from_global_tile_any_rank(const Distribution& dist, SizeType global_tile) noexcept {
-  DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < dist.global_nr_tiles().get<rc>(), global_tile,
-                    dist.global_nr_tiles().get<rc>());
+  DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < dist.nr_tiles().get<rc>(), global_tile,
+                    dist.nr_tiles().get<rc>());
   const SizeType tiles_per_block = dist.block_size().get<rc>() / dist.tile_size().get<rc>();
   return util::matrix::local_tile_from_global_tile(
       global_tile, tiles_per_block, dist.grid_size().get<rc>(), dist.rank_global_tile<rc>(global_tile),

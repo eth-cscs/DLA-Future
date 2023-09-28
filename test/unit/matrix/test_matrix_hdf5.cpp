@@ -37,7 +37,7 @@ constexpr auto env_hdf5_output_path = "DLAF_HDF5_TEST_OUTPUT_PATH";
 const std::filesystem::path filename = "test_matrix_hdf5.h5";
 
 // Get path from environment variable if defned, otherwise return empty path
-auto path = [](){
+auto path = []() {
   if (const auto p = std::getenv(env_hdf5_output_path)) {
     return std::filesystem::path(p);
   }
@@ -47,8 +47,7 @@ auto path = [](){
 template <typename T>
 class MatrixHDF5Test : public ::testing::Test {
 protected:
-  MatrixHDF5Test()
-      : world(MPI_COMM_WORLD), filepath(path() / filename) {
+  MatrixHDF5Test() : world(MPI_COMM_WORLD), filepath(path() / filename) {
     std::cout << ">>>>> DEBUG <<<<<" << filepath << std::endl;
     if (exists(filepath) && isMasterRank())
       std::filesystem::remove(filepath);

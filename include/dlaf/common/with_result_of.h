@@ -8,6 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#pragma once
+
+/// @file
+
 #include <type_traits>
 #include <utility>
 

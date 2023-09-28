@@ -21,7 +21,7 @@
 #include <dlaf_c/init.h>
 #include <dlaf_c_test/blacs.h>
 
-#include "test_config.h"
+#include "config.h"
 
 enum class API { dlaf, scalapack };
 

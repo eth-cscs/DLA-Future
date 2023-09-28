@@ -23,8 +23,6 @@
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
-#include "test_config.h"
-
 #include <gtest/gtest.h>
 
 #include <dlaf_test/matrix/util_matrix.h>

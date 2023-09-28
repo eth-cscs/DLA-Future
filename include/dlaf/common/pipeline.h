@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 
@@ -39,8 +41,20 @@ public:
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
-  Pipeline(Pipeline&&) = default;
-  Pipeline& operator=(Pipeline&&) = default;
+
+  Pipeline(Pipeline&& other)
+      : pipeline(std::exchange(other.pipeline, std::nullopt)),
+        nested_sender(std::exchange(other.nested_sender, std::nullopt)) {}
+
+  Pipeline& operator=(Pipeline&& other) {
+    if (this != &other) {
+      pipeline = std::exchange(other.pipeline, std::nullopt);
+      nested_sender = std::exchange(other.nested_sender, std::nullopt);
+    }
+
+    return *this;
+  };
+
   Pipeline(const Pipeline&) = delete;
   Pipeline& operator=(const Pipeline&) = delete;
 

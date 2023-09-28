@@ -145,10 +145,9 @@ SizeType local_tile_from_global_tile_any_rank(const Distribution& dist, SizeType
   DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                     global_nr_tiles_.get<rc>());
   const SizeType tiles_per_block = dist.block_size().get<rc>() / dist.tile_size().get<rc>();
-  return util::matrix::local_tile_from_global_tile(global_tile, tiles_per_block,
-                                                   dist.grid_size().get<rc>(), dist.rank_global_tile<rc>(global_tile),
-                                                   dist.source_rank_index().get<rc>(),
-                                                   global_tile_offset<rc>(dist));
+  return util::matrix::local_tile_from_global_tile(
+      global_tile, tiles_per_block, dist.grid_size().get<rc>(), dist.rank_global_tile<rc>(global_tile),
+      dist.source_rank_index().get<rc>(), global_tile_offset<rc>(dist));
 }
 
 ///////////////////////////

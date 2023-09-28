@@ -84,6 +84,7 @@ template <class T, Device D, class CommSender>
   return internal::scheduleSend(std::move(pcomm), dest, tag, std::move(tile));
 }
 
+// clang-format off
 DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
@@ -115,6 +116,7 @@ DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Re
 DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
 DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
 #endif
+// clang-format on
 
 template <class T, Device D, class CommSender>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
@@ -139,6 +141,7 @@ template <class T, Device D, class CommSender>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
+// clang-format off
 DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
@@ -170,4 +173,5 @@ DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Re
 DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
 DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
 #endif
+// clang-format on
 }

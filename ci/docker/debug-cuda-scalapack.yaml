@@ -25,6 +25,8 @@ spack:
       variants:
         - 'build_type=Release'
     pika:
+      version:
+        - main
       variants:
         - 'build_type=Debug'
         - 'malloc=system'

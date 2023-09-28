@@ -23,6 +23,7 @@ from pathlib import Path
 miny0 = False
 outpath = Path(".")
 
+
 def _str_nnodes(x):
     if isinstance(x, float):
         if x.is_integer():

@@ -13,7 +13,6 @@
 #include <limits>
 
 #include <pika/init.hpp>
-#include <pika/parallel/algorithms/nth_element.hpp>
 #include <pika/program_options.hpp>
 #include <pika/runtime.hpp>
 
@@ -48,8 +47,9 @@ struct Options
   SizeType mb;
   SizeType b;
 #ifdef DLAF_WITH_HDF5
-  std::optional<dlaf::matrix::internal::FileHDF5> input_file;
-  std::optional<std::string> output_file;
+  std::filesystem::path input_file;
+  std::string input_dataset;
+  std::filesystem::path output_file;
 #endif
 
   Options(const pika::program_options::variables_map& vm)
@@ -65,7 +65,7 @@ struct Options
 
 #ifdef DLAF_WITH_HDF5
     if (vm.count("input-file") == 1) {
-      input_file = FileHDF5(vm["input-file"].as<std::string>(), FileHDF5::FileMode::readonly);
+      input_file = vm["input-file"].as<std::filesystem::path>();
 
       if (!vm["matrix-size"].defaulted()) {
         std::cerr << "Warning! "
@@ -73,8 +73,9 @@ struct Options
                   << std::endl;
       }
     }
+    input_dataset = vm["input-dataset"].as<std::string>();
     if (vm.count("output-file") == 1) {
-      output_file = vm["output-file"].as<std::string>();
+      output_file = vm["output-file"].as<std::filesystem::path>();
     }
 #endif
 
@@ -108,11 +109,12 @@ struct reductionToBandMiniapp {
 
     ConstMatrixType matrix_ref = [comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
-      if (opts.input_file) {
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
         if (opts.local)
-          return opts.input_file->read<T>("/a", {opts.mb, opts.mb});
+          return infile.read<T>(opts.input_dataset, {opts.mb, opts.mb});
         else
-          return opts.input_file->read<T>("/a", {opts.mb, opts.mb}, comm_grid, {0, 0});
+          return infile.read<T>(opts.input_dataset, {opts.mb, opts.mb}, comm_grid, {0, 0});
       }
 #endif
       using dlaf::matrix::util::set_random_hermitian;
@@ -171,13 +173,14 @@ struct reductionToBandMiniapp {
 
 #ifdef DLAF_WITH_HDF5
       if (run_index == opts.nruns - 1) {
-        if (opts.output_file) {
+        if (!opts.output_file.empty()) {
           auto outfile = [&]() {
             if (opts.local)
-              return FileHDF5(*opts.output_file, FileHDF5::FileMode::readwrite);
+              return FileHDF5(opts.output_file, FileHDF5::FileMode::readwrite);
             else
-              return FileHDF5(world, *opts.output_file);
+              return FileHDF5(world, opts.output_file);
           }();
+          outfile.write(matrix_ref, opts.input_dataset);
           outfile.write(matrix_host, "/band");
         }
       }
@@ -244,8 +247,9 @@ int main(int argc, char** argv) {
     ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
     ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
 #ifdef DLAF_WITH_HDF5
-    ("input-file",   value<std::string>()                     , "Load matrix from given HDF5 file")
-    ("output-file",  value<std::string>()                     , "Save band matrix to given HDF5 file")
+    ("input-file",    value<std::filesystem::path>()                 , "Load matrix from given HDF5 file")
+    ("output-file",   value<std::filesystem::path>()                 , "Save band matrix to given HDF5 file")
+    ("input-dataset", value<std::string>() ->default_value("/input") , "Name of HDF5 dataset to load as matrix")
 #endif
   ;
   // clang-format on

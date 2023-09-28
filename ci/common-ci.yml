@@ -49,6 +49,16 @@ stages:
         "USE_MKL",
         "NUM_PROCS=$NUM_CORES_BUILD_DEPS"
       ]'
+    # default configuration variables
+    # can be overwritten in the configuration as needed
+    DOCKERFILE: ci/docker/build.Dockerfile
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
+    CXXSTD: 17
+    USE_MKL: "OFF"
+    USE_ROCBLAS: "OFF"
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    USE_CODECOV: "false"
 
 .build_common:
   extends: .container-builder
@@ -68,9 +78,20 @@ stages:
         "USE_ROCBLAS",
         "NUM_PROCS=$NUM_CORES_BUILD_DLAF"
       ]'
+    # default configuration variables
+    # can be overwritten in the configuration as needed
+    DOCKERFILE: ci/docker/deploy.Dockerfile
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
+    # glibc-tools is needed for libSegFault on ubuntu:22.04
   artifacts:
     paths:
       - pipeline.yml
+
+.build_for_daint-mc:
+  variables:
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
 
 .run_common:
   stage: test

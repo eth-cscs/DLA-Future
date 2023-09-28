@@ -1,0 +1,29 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+# Builds a Docker image for the current commit
+cpu gcc11 debug deps:
+  extends: .build_deps_common
+  variables:
+    COMPILER: gcc@11.2.0
+    SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-debug/build
+
+# Builds a Docker image for the current commit
+cpu gcc11 debug build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu gcc11 debug deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-debug/deploy:$CI_COMMIT_SHA
+
+cpu gcc11 debug test:
+  extends: .run_common
+  needs:
+    - cpu gcc11 debug build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc11 debug build

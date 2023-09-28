@@ -14,22 +14,24 @@
 #include <dlaf/matrix/util_distribution.h>
 #include <dlaf/types.h>
 
-/// @file
-///
-/// # Available helpers for index conversion:
-/// ## Legend
-/// - @p I input parameter
-/// - @p O output parameter
-/// - @p X temporary result
-///
-/// - @p TEI @p TileElementIndex
-/// - @p GEI @p GlobalElementIndex
-/// - @p LEI @p LocalElementIndex
-/// - @p GTI @p GlobalTileIndex
-/// - @p LTI @p LocalTileIndex
-///
-/// ## Available 1D index conversions for different ranks
-/** @verbatim
+// The following Doxygen comment has to be a single block comment
+// otherwise the generated documentation will be incomplete.
+
+/** @file
+# Available helpers for index conversion:
+## Legend
+- @p I input parameter
+- @p O output parameter
+- @p X temporary result
+
+- @p TEI @p TileElementIndex
+- @p GEI @p GlobalElementIndex
+- @p LEI @p LocalElementIndex
+- @p GTI @p GlobalTileIndex
+- @p LTI @p LocalTileIndex
+
+## Available 1D index conversions for different ranks
+@verbatim
                                                        (LEI)  TEI   GEI   GTI   LTI   LEI  (TEI)
 global_element_from_local_element_on_rank                   -> X --> O <-- X <-- X <-- I ->
 global_tile_from_local_tile_on_rank                                        O <-- I

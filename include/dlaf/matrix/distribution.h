@@ -62,7 +62,50 @@ struct SubDistributionSpec {
 
 /// Distribution contains the information about the size and distribution of a matrix.
 ///
-/// More details available in misc/matrix_distribution.md.
+/// More details are available in misc/matrix_distribution.md.
+///
+/// # Index conversion:
+/// ## Legend
+/// - @p I input parameter
+/// - @p O output parameter
+/// - @p X temporary result
+///
+/// - @p TEI @p TileElementIndex
+/// - @p GEI @p GlobalElementIndex
+/// - @p LEI @p LocalElementIndex
+/// - @p GTI @p GlobalTileIndex
+/// - @p LTI @p LocalTileIndex
+///
+/// ## Available 1D index conversions and "complexity"
+/** @verbatim
+                                                 (LEI)  TEI   GEI   GTI   LTI   LEI  (TEI)
+global_element_from_global_tile_and_tile_element         I --> O <-- I
+global_element_from_local_tile_and_tile_element          I --> O <-- X <-- I
+global_element_from_local_element                     -> X --> O <-- X <-- X <-- I ->
+local_element_from_global_element                     <- X <-- I --> X --> X --> O <-
+local_element_from_local_tile_and_tile_element        <- I                 I --> O <-
+global_tile_from_global_element                                I --> O
+global_tile_from_local_tile                                          O <-- I
+local_tile_from_global_element                                 I --> X --> O
+local_tile_from_global_tile                                          I --> O
+local_tile_from_local_element                                              O <-- I
+next_local_tile_from_global_element                            I --> X --> O
+next_local_tile_from_global_tile                                     I --> O
+tile_element_from_global_element                         O <-- I
+tile_element_from_local_element                       -> O                       I ->
+@endverbatim
+*/
+/// ## Available 2D index conversions
+/** @verbatim
+                        TEI   GEI   GTI   LTI
+global_element_index     I --> O <-- I
+global_tile_index              I --> O
+global_tile_index                    O <-- I
+local_tile_index                     I --> O
+tile_element_index       O <-- I
+@endverbatim
+*/
+
 class Distribution {
 public:
   /// Constructs a distribution for a non distributed matrix of size {0, 0} and block size {1, 1}.
@@ -310,7 +353,7 @@ public:
   /// which has index @p tile_element in the tile with global index @p global_tile.
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>(),
-  /// @pre 0 <= tile_element < tile_size.get<rc>().
+  /// @pre 0 <= tile_element < tile_size().get<rc>().
   template <Coord rc>
   SizeType global_element_from_global_tile_and_tile_element(SizeType global_tile,
                                                             SizeType tile_element) const noexcept {
@@ -327,7 +370,7 @@ public:
   /// which has index @p tile_element in the tile with local index @p local_tile in the current rank.
   ///
   /// @pre 0 <= local_tile < local_nr_tiles().get<rc>(),
-  /// @pre 0 <= tile_element < tile_size.get<rc>().
+  /// @pre 0 <= tile_element < tile_size().get<rc>().
   template <Coord rc>
   SizeType global_element_from_local_tile_and_tile_element(SizeType local_tile,
                                                            SizeType tile_element) const noexcept {
@@ -364,7 +407,7 @@ public:
   /// which has index @p tile_element in the tile with local index @p local_tile.
   ///
   /// @pre 0 <= local_tile < local_nr_tiles().get<rc>(),
-  /// @pre 0 <= tile_element < tile_size.get<rc>().
+  /// @pre 0 <= tile_element < tile_size().get<rc>().
   template <Coord rc>
   SizeType local_element_from_local_tile_and_tile_element(SizeType local_tile,
                                                           SizeType tile_element) const noexcept {
@@ -524,7 +567,7 @@ public:
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
   SizeType tile_size_of(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
                       global_nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();

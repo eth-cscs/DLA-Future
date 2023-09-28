@@ -86,6 +86,8 @@ void test_indices_with_rank(const Distribution& obj, const ParametersIndices& te
   SizeType local_tile = rc == Coord::Row ? test.local_tile[0] : test.local_tile[1];
 
   if (local_tile >= 0) {
+    EXPECT_EQ(local_tile, local_tile_from_global_tile_any_rank<rc>(obj, test.global_tile.get<rc>()));
+
     EXPECT_EQ(test.global_element.get<rc>(),
               global_element_from_local_element_on_rank<rc>(obj, test.rank.get<rc>(), local_element));
 

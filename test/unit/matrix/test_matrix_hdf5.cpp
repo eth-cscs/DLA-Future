@@ -48,7 +48,6 @@ template <typename T>
 class MatrixHDF5Test : public ::testing::Test {
 protected:
   MatrixHDF5Test() : world(MPI_COMM_WORLD), filepath(path() / filename) {
-    std::cout << ">>>>> DEBUG <<<<<" << filepath << std::endl;
     if (exists(filepath) && isMasterRank())
       std::filesystem::remove(filepath);
   }

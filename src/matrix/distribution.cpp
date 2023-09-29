@@ -121,37 +121,31 @@ void Distribution::compute_local_nr_tiles_and_local_size() noexcept {
   // Set local_nr_tiles_.
   local_nr_tiles_ = {tile_row, tile_col};
 
-  SizeType row = 0;
-  if (size_.rows() > 0) {
-    // Start from full tiles
-    row = tile_row * tile_size_.rows();
-
-    // Fix first tile size removing local offset
-    row -= local_tile_element_offset<Coord::Row>();
-
-    // Fix last tile size
-    if (rank_index_.row() == rank_global_tile<Coord::Row>(nr_tiles_.rows() - 1))
-      // remove the elements missing in the last tile
-      row -= nr_tiles_.rows() * tile_size_.rows() -
-             (size_.rows() + global_tile_element_offset<Coord::Row>());
-  }
-  SizeType col = 0;
-  if (size_.cols() > 0) {
-    // Start from full tiles
-    col = tile_col * tile_size_.cols();
-
-    // Fix first tile size removing local offset
-    col -= local_tile_element_offset<Coord::Col>();
-
-    // Fix last tile size
-    if (rank_index_.col() == rank_global_tile<Coord::Col>(nr_tiles_.cols() - 1))
-      // remove the elements missing in the last tile
-      col -= nr_tiles_.cols() * tile_size_.cols() -
-             (size_.cols() + global_tile_element_offset<Coord::Col>());
-  }
+  SizeType row = compute_local_size<Coord::Row>();
+  SizeType col = compute_local_size<Coord::Col>();
 
   // Set local_size_.
-  local_size_ = LocalElementSize(row, col);
+  local_size_ = {row, col};
+}
+
+template <Coord rc>
+SizeType Distribution::compute_local_size() noexcept {
+  if (local_nr_tiles_.get<rc>() == 0)
+    return 0;
+
+  // Start from full tiles
+  SizeType ret = local_nr_tiles_.get<rc>() * tile_size_.get<rc>();
+
+  // Fix first tile size removing local offset
+  ret -= local_tile_element_offset<rc>();
+
+  // Fix last tile size
+  if (rank_index_.get<rc>() == rank_global_tile<rc>(nr_tiles_.get<rc>() - 1))
+    // remove the elements missing in the last tile
+    ret -= nr_tiles_.get<rc>() * tile_size_.get<rc>() -
+           (size_.get<rc>() + global_tile_element_offset<rc>());
+
+  return ret;
 }
 
 void Distribution::normalize_source_rank_and_offset() noexcept {

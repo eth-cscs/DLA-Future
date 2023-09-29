@@ -111,11 +111,13 @@ inline SizeType local_tile_from_global_tile(SizeType global_tile, SizeType tiles
   DLAF_ASSERT_HEAVY(0 <= tile_offset && tile_offset < tiles_per_block, tile_offset, tiles_per_block);
 
   if (rank == rank_global_tile(global_tile, tiles_per_block, grid_size, src_rank, tile_offset)) {
-    // tile_offset only affects the source rank
-    bool may_have_partial_first_block = rank == src_rank;
     global_tile += tile_offset;
 
     SizeType local_block = global_tile / tiles_per_block / grid_size;
+
+    // tile_offset only affects the source rank
+    bool may_have_partial_first_block = rank == src_rank;
+
     return local_block * tiles_per_block + global_tile % tiles_per_block -
            (may_have_partial_first_block ? tile_offset : 0);
   }

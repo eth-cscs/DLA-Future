@@ -672,7 +672,6 @@ private:
   /// Computes and sets @p local_tiles_ and @p local_size_.
   ///
   /// @post local_nr_tiles_ and local_size_ are set.
-  /// @pre offset_ and src_rank_index_ are already normalized.
   // Note: safe to use in constructors if:
   // - size_, is already set correctly.
   // - nr_tiles_, is already set correctly.
@@ -683,6 +682,21 @@ private:
   // - offset_, is already set and normalized.
   // - src_rank_index_, is already set and normalized.
   void compute_local_nr_tiles_and_local_size() noexcept;
+
+  /// Computes and returns the rc coord of local_size.
+  ///
+  // Note: safe to use in constructors if:
+  // - size_, is already set correctly.
+  // - nr_tiles_, is already set correctly.
+  // - local_nr_tiles_, is already set correctly.
+  // - block_size_, is already set correctly.
+  // - tile_size_, is already set correctly.
+  // - grid_size_, is already set correctly.
+  // - rank_index_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
+  template <Coord rc>
+  SizeType compute_local_size() noexcept;
 
   /// Normalizes @p offset_ and @p source_rank_index_ into a canonical form.
   ///

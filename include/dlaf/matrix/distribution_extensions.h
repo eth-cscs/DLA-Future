@@ -85,42 +85,45 @@ SizeType local_tile_element_offset_on_rank(const Distribution& dist, comm::Index
 
 /// Returns the local index of the tile which contains the element with local index @p local_element.
 ///
-/// @pre 0 <= local_element < dist.local_size().get<rc>().
+/// @pre 0 <= local_element < local_size.get<rc>() on given rank.
 template <Coord rc>
 SizeType local_tile_from_local_element_on_rank(const Distribution& dist, comm::IndexT_MPI rank,
                                                SizeType local_element) noexcept {
-  DLAF_ASSERT_HEAVY(0 <= local_element && local_element < dist.local_size().get<rc>(), local_element,
-                    dist.local_size().get<rc>());
-  return util::matrix::tile_from_element(local_element, dist.tile_size().get<rc>(),
-                                         local_tile_element_offset_on_rank<rc>(dist, rank));
+  using util::matrix::tile_from_element;
+  // Assertion 0 <= local_element is performed by tile_from_element
+  return tile_from_element(local_element, dist.tile_size().get<rc>(),
+                           local_tile_element_offset_on_rank<rc>(dist, rank));
 }
 
 /// Returns the index within the tile of the local element with index @p local_element.
 ///
-/// @pre 0 <= local_element < dist.local_size().get<rc>().
+/// @pre 0 <= local_element < local_size.get<rc>() on given rank.
 template <Coord rc>
 SizeType tile_element_from_local_element_on_rank(const Distribution& dist, comm::IndexT_MPI rank,
                                                  SizeType local_element) noexcept {
-  DLAF_ASSERT_HEAVY(0 <= local_element && local_element < dist.local_size().get<rc>(), local_element,
-                    dist.local_size().get<rc>());
-  return util::matrix::tile_element_from_element(local_element, dist.tile_size().get<rc>(),
-                                                 local_tile_element_offset_on_rank<rc>(dist, rank));
+  using util::matrix::tile_element_from_element;
+  // Assertion 0 <= local_element is performed by tile_element_from_element
+  return tile_element_from_element(local_element, dist.tile_size().get<rc>(),
+                                   local_tile_element_offset_on_rank<rc>(dist, rank));
 }
 
 /// Returns the global index of the tile that has index @p local_tile
 /// in the current rank.
 ///
-/// @pre 0 <= local_tile < dist.local_nr_tiles().get<rc>().
+/// @pre 0 <= local_tile < local_nr_tiles.get<rc>() on given rank.
 template <Coord rc>
 SizeType global_tile_from_local_tile_on_rank(const Distribution& dist, comm::IndexT_MPI rank,
                                              SizeType local_tile) noexcept {
-  DLAF_ASSERT_HEAVY(0 <= local_tile && local_tile < dist.local_nr_tiles().get<rc>(), local_tile,
-                    dist.local_nr_tiles().get<rc>());
+  using util::matrix::global_tile_from_local_tile;
+  // Assertion 0 <= local_tile is performed by global_tile_from_local_tile
   const SizeType tiles_per_block = dist.block_size().get<rc>() / dist.tile_size().get<rc>();
-  return util::matrix::global_tile_from_local_tile(local_tile, tiles_per_block,
-                                                   dist.grid_size().get<rc>(), rank,
-                                                   dist.source_rank_index().get<rc>(),
-                                                   global_tile_offset<rc>(dist));
+  const SizeType global_tile =
+      global_tile_from_local_tile(local_tile, tiles_per_block, dist.grid_size().get<rc>(), rank,
+                                  dist.source_rank_index().get<rc>(), global_tile_offset<rc>(dist));
+  // Assert on the result to avoid to compute the local number of tiles on the given rank
+  DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < dist.nr_tiles().get<rc>(), global_tile,
+                    dist.nr_tiles().get<rc>());
+  return global_tile;
 }
 
 /// Returns the global index of the element

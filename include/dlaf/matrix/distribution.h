@@ -212,7 +212,7 @@ public:
 
   bool operator==(const Distribution& rhs) const noexcept {
     return size_ == rhs.size_ && local_size_ == rhs.local_size_ && tile_size_ == rhs.tile_size_ &&
-           block_size_ == rhs.block_size_ && global_nr_tiles_ == rhs.global_nr_tiles_ &&
+           block_size_ == rhs.block_size_ && nr_tiles_ == rhs.nr_tiles_ &&
            local_nr_tiles_ == rhs.local_nr_tiles_ && rank_index_ == rhs.rank_index_ &&
            grid_size_ == rhs.grid_size_ && source_rank_index_ == rhs.source_rank_index_ &&
            offset_ == rhs.offset_;
@@ -232,7 +232,7 @@ public:
 
   /// Returns the number of tiles of the global matrix (2D size).
   const GlobalTileSize& nr_tiles() const noexcept {
-    return global_nr_tiles_;
+    return nr_tiles_;
   }
 
   /// Returns the number of tiles stored locally (2D size).
@@ -271,7 +271,7 @@ public:
   /// @pre tile_element.isIn(block_size()).
   GlobalElementIndex global_element_index(const GlobalTileIndex& global_tile,
                                           const TileElementIndex& tile_element) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
+    DLAF_ASSERT_HEAVY(global_tile.isIn(nr_tiles_), global_tile, nr_tiles_);
     DLAF_ASSERT_HEAVY(tile_element.isIn(tile_size_of(global_tile)), tile_element,
                       tile_size_of(global_tile));
 
@@ -306,7 +306,7 @@ public:
   ///
   /// @pre global_tile.isIn(nr_tiles()).
   comm::Index2D rank_global_tile(const GlobalTileIndex& global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
+    DLAF_ASSERT_HEAVY(global_tile.isIn(nr_tiles_), global_tile, nr_tiles_);
 
     return {rank_global_tile<Coord::Row>(global_tile.row()),
             rank_global_tile<Coord::Col>(global_tile.col())};
@@ -317,7 +317,7 @@ public:
   /// @pre global_tile.isIn(nr_tiles()),
   /// @pre rank_index == rank_global_tile(global_tile).
   LocalTileIndex local_tile_index(const GlobalTileIndex& global_tile) const {
-    DLAF_ASSERT_HEAVY(global_tile.isIn(global_nr_tiles_), global_tile, global_nr_tiles_);
+    DLAF_ASSERT_HEAVY(global_tile.isIn(nr_tiles_), global_tile, nr_tiles_);
 
     DLAF_ASSERT_HEAVY(rank_index_ == rank_global_tile(global_tile), rank_index_,
                       rank_global_tile(global_tile));
@@ -357,8 +357,8 @@ public:
   template <Coord rc>
   SizeType global_element_from_global_tile_and_tile_element(SizeType global_tile,
                                                             SizeType tile_element) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
-                      global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
+                      nr_tiles_.get<rc>());
     DLAF_ASSERT_HEAVY(0 <= tile_element && tile_element < tile_size_.get<rc>(), tile_element,
                       tile_size_.get<rc>());
     return util::matrix::element_from_tile_and_tile_element(global_tile, tile_element,
@@ -463,8 +463,8 @@ public:
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
   SizeType local_tile_from_global_tile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
-                      global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
+                      nr_tiles_.get<rc>());
     return util::matrix::local_tile_from_global_tile(global_tile, tiles_per_block<rc>(),
                                                      grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                      source_rank_index_.get<rc>(),
@@ -499,10 +499,18 @@ public:
   /// index, the local tile grid size along @rc is returned.
   ///
   /// @pre 0 <= global_tile <= nr_tiles().get<rc>().
+  // Note: safe to use in constructors if:
+  // - nr_tiles_, is already set correctly.
+  // - block_size_, is already set correctly.
+  // - tile_size_, is already set correctly.
+  // - grid_size_, is already set correctly.
+  // - rank_index_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
   template <Coord rc>
   SizeType next_local_tile_from_global_tile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= global_nr_tiles_.get<rc>(), global_tile,
-                      global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile <= nr_tiles_.get<rc>(), global_tile,
+                      nr_tiles_.get<rc>());
     return util::matrix::next_local_tile_from_global_tile(global_tile, tiles_per_block<rc>(),
                                                           grid_size_.get<rc>(), rank_index_.get<rc>(),
                                                           source_rank_index_.get<rc>(),
@@ -550,10 +558,17 @@ public:
   /// Returns the rank index of the process that stores the tile with global index @p global_tile.
   ///
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
+  // Note: safe to use in constructors if:
+  // - nr_tiles_, is already set correctly.
+  // - block_size_, is already set correctly.
+  // - tile_size_, is already set correctly.
+  // - grid_size_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
   template <Coord rc>
   int rank_global_tile(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
-                      global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
+                      nr_tiles_.get<rc>());
     return util::matrix::rank_global_tile(global_tile, tiles_per_block<rc>(), grid_size_.get<rc>(),
                                           source_rank_index_.get<rc>(), global_tile_offset<rc>());
   }
@@ -567,8 +582,8 @@ public:
   /// @pre 0 <= global_tile < nr_tiles().get<rc>().
   template <Coord rc>
   SizeType tile_size_of(SizeType global_tile) const noexcept {
-    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < global_nr_tiles_.get<rc>(), global_tile,
-                      global_nr_tiles_.get<rc>());
+    DLAF_ASSERT_HEAVY(0 <= global_tile && global_tile < nr_tiles_.get<rc>(), global_tile,
+                      nr_tiles_.get<rc>());
     SizeType n = size_.get<rc>();
     SizeType nb = tile_size_.get<rc>();
     if (global_tile == 0) {
@@ -578,31 +593,47 @@ public:
   }
 
 private:
-  /// @pre block_size_, and tile_size_ are already set correctly.
+  // Note: safe to use in constructors if:
+  // - tile_size_, is already set correctly.
+  // - block_size_, is already set correctly.
   template <Coord rc>
   SizeType tiles_per_block() const noexcept {
     return block_size_.get<rc>() / tile_size_.get<rc>();
   }
 
   /// Returns true if the current rank is the source rank along the @p rc coordinate, otherwise false.
+  // Note: safe to use in constructors if:
+  // - rank_index_, is already set correctly.
+  // - src_rank_index_, is already set and normalized.
   template <Coord rc>
   bool is_source_rank() const noexcept {
     return rank_index_.get<rc>() == source_rank_index_.get<rc>();
   }
 
   /// Computes the offset inside the first global block in terms of tiles along the @p rc coordinate.
+  // Note: safe to use in constructors if:
+  // - tile_size_, is already set correctly.
+  // - offset_, is already set and normalized.
   template <Coord rc>
   SizeType global_tile_offset() const noexcept {
     return offset_.get<rc>() / tile_size_.get<rc>();
   }
 
   /// Computes the offset inside the first global tile in terms of elements along the @p rc coordinate.
+  // Note: safe to use in constructors if:
+  // - tile_size_, is already set correctly.
+  // - offset_, is already set and normalized.
   template <Coord rc>
   SizeType global_tile_element_offset() const noexcept {
     return offset_.get<rc>() % tile_size_.get<rc>();
   }
 
   /// Computes the offset inside the first local block in terms of tiles along the @p rc coordinate.
+  // Note: safe to use in constructors if:
+  // - tile_size_, is already set correctly.
+  // - rank_index_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
   template <Coord rc>
   SizeType local_tile_offset() const noexcept {
     if (is_source_rank<rc>()) {
@@ -614,6 +645,11 @@ private:
   }
 
   /// Computes the offset inside the first local tile in terms of elements along the @p rc coordinate.
+  // Note: safe to use in constructors if:
+  // - tile_size_, is already set correctly.
+  // - rank_index_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
   template <Coord rc>
   SizeType local_tile_element_offset() const noexcept {
     if (is_source_rank<rc>()) {
@@ -624,31 +660,36 @@ private:
     }
   }
 
-  /// Computes and sets @p size_.
+  /// Computes and sets @p global_tiles_.
   ///
-  /// @pre local_size_, is already set correctly.
-  /// @pre grid_size_ == {1,1}.
-  void compute_global_size_for_non_distr() noexcept;
-
-  /// computes and sets global_tiles_.
-  ///
-  /// @pre local_size_, and tile_size_ are already set correctly.
+  /// @post nr_tiles_ is set.
+  // Note: safe to use in constructors if:
+  // - size_, is already set correctly.
+  // - tile_size_, is already set correctly.
+  // - offset_, is already set and normalized.
   void compute_global_nr_tiles() noexcept;
 
-  /// Computes and sets @p global_tiles_, @p local_tiles_ and @p local_size_.
+  /// Computes and sets @p local_tiles_ and @p local_size_.
   ///
-  /// @pre size_, block_size_, tile_size_, grid_size_, rank_index and source_rank_index are already set correctly.
-  void compute_global_and_local_nr_tiles_and_local_size() noexcept;
-
-  /// computes and sets @p local_tiles_.
-  ///
-  /// @pre local_size_, and tile_size_ are already set correctly.
-  void compute_local_nr_tiles() noexcept;
+  /// @post local_nr_tiles_ and local_size_ are set.
+  /// @pre offset_ and src_rank_index_ are already normalized.
+  // Note: safe to use in constructors if:
+  // - size_, is already set correctly.
+  // - nr_tiles_, is already set correctly.
+  // - block_size_, is already set correctly.
+  // - tile_size_, is already set correctly.
+  // - grid_size_, is already set correctly.
+  // - rank_index_, is already set correctly.
+  // - offset_, is already set and normalized.
+  // - src_rank_index_, is already set and normalized.
+  void compute_local_nr_tiles_and_local_size() noexcept;
 
   /// Normalizes @p offset_ and @p source_rank_index_ into a canonical form.
   ///
-  /// @pre offset_ and source_rank_index_ are already set correctly.
   /// @post offset_.row() < block_size_.rows() && offset_.col() < block_size_.cols()
+  // Note: safe to use in constructors if:
+  // - offset_, is already set correctly.
+  // - src_rank_index_, is already set correctly.
   void normalize_source_rank_and_offset() noexcept;
 
   /// Sets default values.
@@ -656,19 +697,20 @@ private:
   /// offset_            = {0, 0}
   /// size_              = {0, 0}
   /// local_size_        = {0, 0}
-  /// global_nr_tiles_   = {0, 0}
+  /// nr_tiles_   = {0, 0}
   /// local_nr_tiles_    = {0, 0}
   /// block_size_        = {1, 1}
   /// tile_size_         = {1, 1}
   /// rank_index_        = {0, 0}
   /// grid_size_         = {1, 1}
   /// source_rank_index_ = {0, 0}
+  // Note: safe to use in constructors.
   void set_default_sizes() noexcept;
 
   GlobalElementIndex offset_;
   GlobalElementSize size_;
   LocalElementSize local_size_;
-  GlobalTileSize global_nr_tiles_;
+  GlobalTileSize nr_tiles_;
   LocalTileSize local_nr_tiles_;
   TileElementSize block_size_;
   TileElementSize tile_size_;

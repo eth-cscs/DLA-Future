@@ -19,6 +19,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/data.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/message.h>
@@ -40,18 +41,8 @@ template <class T, Device D>
       pika::execution::experimental::unique_any_sender<common::Pipeline<Communicator>::Wrapper> pcomm, \
       MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, extern);
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, std::complex<double>, Device::GPU);
-#endif
 
 /// Schedule a reduction send.
 ///
@@ -69,16 +60,6 @@ template <class T, Device D>
       comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                    \
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_SEND_ETI, extern);
 DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(extern, std::complex<double>, Device::GPU);
-#endif
 }

@@ -16,6 +16,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/callable_object.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/all_reduce.h>
@@ -115,6 +116,7 @@ template <class T, Device D>
                                      std::move(tile_out));
 }
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_ALL_REDUCE_ETI, );
 DLAF_SCHEDULE_ALL_REDUCE_ETI(, int, Device::CPU);
 
 template <class T, Device D>
@@ -150,18 +152,6 @@ template <class T, Device D>
                            RequireContiguous::Yes>(std::move(tile), std::move(all_reduce_in_place));
 }
 
-// TODO: This is only for a test (test_collective_async)
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI, );
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, int, Device::CPU);
-
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(, std::complex<double>, Device::GPU);
-#endif
 }

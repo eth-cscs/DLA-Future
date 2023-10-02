@@ -17,7 +17,7 @@ cpu gcc11 debug stdexec build:
   needs:
     - cpu gcc11 debug deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SH
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SHA
 
 cpu gcc11 debug stdexec test:
   extends: .run_common

@@ -57,6 +57,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
+    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}
   artifacts:
     paths:
@@ -92,6 +93,7 @@ JOB_TEMPLATE="
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
+    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}"
 fi
 

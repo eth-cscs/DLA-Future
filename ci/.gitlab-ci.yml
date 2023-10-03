@@ -9,6 +9,7 @@ include:
   - local: 'ci/cuda/gcc11_release.yml'
   - local: 'ci/cuda/gcc11_release_scalapack.yml'
   - local: 'ci/cuda/gcc11_codecov.yml'
+  - local: 'ci/rocm/clang14+rocm-5.3.3.yml'
 
 #cuda release build gcc11:
 #cuda release build gcc11 scalapack:
@@ -43,24 +44,8 @@ include:
 #rocm release build clang14+rocm-5.3.3:
 #  extends: .build_spack_common
 #  variables:
-#    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-#    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-#    BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
-#    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
-#    EXTRA_APTGET: "clang-14 libomp-14-dev rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
-#    EXTRA_APTGET_DEPLOY: "glibc-tools"
-#    # glibc-tools is needed for libSegFault on ubuntu:22.04
-#    COMPILER: clang@14.0.0
-#    CXXSTD: 17
-#    USE_MKL: "OFF"
-#    USE_ROCBLAS: "ON"
-#    SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
-#    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-#    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/build
-#    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA
 #    SLURM_CONSTRAINT: mc
 #    THREADS_PER_NODE: 64
-#    USE_CODECOV: "false"
 
 
 ##

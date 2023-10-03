@@ -15,7 +15,7 @@ cpu gcc12 release cxx20 build:
     - .build_common
     - .build_for_daint-mc
   needs:
-    - cpu gcc11 debug deps
+    - cpu gcc12 release cxx20 deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc12/deploy:$CI_COMMIT_SHA
 

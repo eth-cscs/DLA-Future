@@ -93,6 +93,11 @@ stages:
     SLURM_CONSTRAINT: mc
     THREADS_PER_NODE: 72
 
+.build_for_daint-gpu:
+  variables:
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+
 .run_common:
   stage: test
   trigger:

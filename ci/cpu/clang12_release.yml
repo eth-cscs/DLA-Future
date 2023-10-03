@@ -10,7 +10,6 @@ cpu clang12 release deps:
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
 
-# Builds a Docker image for the current commit
 cpu clang12 release build:
   extends:
     - .build_common

@@ -1,7 +1,6 @@
 include:
   - local: 'ci/common-ci.yml'
 
-# Builds a Docker image for the current commit
 cpu gcc11 release deps:
   extends: .build_deps_common
   variables:
@@ -10,7 +9,6 @@ cpu gcc11 release deps:
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
 
-# Builds a Docker image for the current commit
 cpu gcc11 release build:
   extends:
     - .build_common

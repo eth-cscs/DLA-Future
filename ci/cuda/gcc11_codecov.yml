@@ -1,0 +1,32 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc11 codecov deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+    COMPILER: gcc@11.2.0
+    CXXSTD: 17
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
+    USE_MKL: "ON"
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+    USE_CODECOV: "true"
+
+cuda gcc11 codecov build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cuda gcc11 codecov deps
+  variables:
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+
+cuda gcc11 codecov test:
+  extends: .run_common
+  needs:
+    - cuda gcc11 codecov build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc11 codecov build

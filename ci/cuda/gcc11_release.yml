@@ -29,4 +29,4 @@ cuda gcc11 release test:
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cuda gcc11 release  build
+        job: cuda gcc11 release build

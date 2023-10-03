@@ -5,32 +5,11 @@ include:
   - local: 'ci/cpu/gcc11_release_stdexec.yml'
   - local: 'ci/cpu/gcc11_debug_stdexec.yml'
   - local: 'ci/cpu/gcc12_release_cxx20.yml'
+  - local: 'ci/cpu/ci/cpu/clang13_release_cxx20.yml'
 
 #cpu release build gcc12 cxx20:
-#  variables:
-
 #cpu release build clang13 cxx20:
-#  extends: .build_spack_common
-#  variables:
-#    BUILD_DOCKER_FILE: ci/docker/build.Dockerfile
-#    DEPLOY_DOCKER_FILE: ci/docker/deploy.Dockerfile
-#    BASE_IMAGE: docker.io/ubuntu:22.04
-#    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-#    EXTRA_APTGET: "clang-13 libomp-13-dev"
-#    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-#    # glibc-tools is needed for libSegFault on ubuntu:22.04
-#    COMPILER: clang@13.0.1
-#    CXXSTD: 20
-#    USE_MKL: "ON"
-#    USE_ROCBLAS: "OFF"
-#    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-#    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-#    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
-#    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
-#    SLURM_CONSTRAINT: mc
-#    THREADS_PER_NODE: 72
-#    USE_CODECOV: "false"
-#
+
 #cuda release build gcc11:
 #  extends: .build_spack_common
 #  variables:

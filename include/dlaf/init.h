@@ -28,6 +28,11 @@ namespace dlaf {
 /// Holds configuration values that can be used to customize DLA-Future through
 /// dlaf::initialize.
 struct configuration {
+  // NOTE: Remember to update the following if you add or change parameters below:
+  // - The operator<< overload in init.cpp
+  // - updateConfiguration in init.cpp to update the value from command line options and environment
+  //   values
+  // - getOptionsDescription to add a corresponding command line option
   std::size_t num_np_gpu_streams_per_thread = 3;
   std::size_t num_hp_gpu_streams_per_thread = 3;
   std::size_t umpire_host_memory_pool_initial_bytes = 1 << 30;

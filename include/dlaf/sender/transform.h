@@ -143,7 +143,7 @@ public:
   PartialTransform& operator=(const PartialTransform&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransform pa) {
+  friend auto operator|(Sender&& sender, PartialTransform pa) {
     return transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
@@ -168,7 +168,7 @@ public:
   PartialTransformDetach& operator=(const PartialTransformDetach&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {
+  friend auto operator|(Sender&& sender, PartialTransformDetach pa) {
     return pika::execution::experimental::start_detached(
         transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
   }

@@ -4,6 +4,7 @@ include:
   - local: 'ci/cpu/gcc11_release.yml'
   - local: 'ci/cpu/gcc11_release_stdexec.yml'
   - local: 'ci/cpu/gcc11_debug_stdexec.yml'
+  - local: 'ci/cpu/gcc12_release_cxx20.yml'
 
 #cpu release build gcc12 cxx20:
 #  variables:

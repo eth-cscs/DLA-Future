@@ -22,8 +22,8 @@ cpu gcc12 release cxx20 build:
 cpu gcc12 release cxx20 test:
   extends: .run_common
   needs:
-    - cpu gcc12 release cxx20 build
+    - cpu release build gcc12 cxx20
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cpu gcc12 release cxx20 build
+        job: cpu release build gcc12 cxx20

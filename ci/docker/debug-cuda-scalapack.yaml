@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test ^openblas threads=openmp ^mpich+fortran
+    - dla-future@master build_type=Debug +cuda +miniapps +scalapack +ci-test +hdf5 ^openblas threads=openmp ^mpich+fortran
 
   packages:
     all:

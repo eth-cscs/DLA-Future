@@ -280,8 +280,9 @@ DLAF_addSublibrary(
 
 # Define DLAF's C API library
 DLAF_addSublibrary(
-  c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/factorization/cholesky.cpp c_api/grid.cpp
-                c_api/init.cpp c_api/utils.cpp LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
+  c_api SOURCES c_api/eigensolver/eigensolver.cpp c_api/eigensolver/gen_eigensolver.cpp
+                c_api/factorization/cholesky.cpp c_api/grid.cpp c_api/init.cpp c_api/utils.cpp
+  LIBRARIES dlaf.core dlaf.factorization dlaf.eigensolver
 )
 
 # Define DLAF's complete library

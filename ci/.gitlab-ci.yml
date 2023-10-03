@@ -15,6 +15,16 @@ include:
 #cuda release build gcc11 scalapack:
 #cuda codecov build gcc11:
 
+#--------------------------------------------------------------
+
+#TODO
+#errore nella build_steps di gcc11 codecov
+#fixare 3 errori dei 3 test dei 3 file presenti in cuda
+#implementare questo qua sotto (in cuda)
+
+#--------------------------------------------------------------
+
+
 # TODO codecov -> debug
 #cuda codecov build gcc11 scalapack:
 #  extends: .build_spack_common
@@ -47,6 +57,7 @@ include:
 #    SLURM_CONSTRAINT: mc
 #    THREADS_PER_NODE: 64
 
+#--------------------------------------------------------------
 
 ##
 ## RUNS

@@ -1,0 +1,23 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+rocm clang14+rocm-5.3.3 release deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    EXTRA_APTGET: "clang-14 libomp-14-dev rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
+    COMPILER: clang@14.0.0
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/build
+
+rocm clang14+rocm-5.3.3 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - rocm clang14+rocm-5.3.3 release deps
+  variables:
+    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA

@@ -8,7 +8,7 @@ include:
   - local: 'ci/cpu/clang13_release_cxx20.yml'
   - local: 'ci/cuda/gcc11_release.yml'
   - local: 'ci/cuda/gcc11_release_scalapack.yml'
-  - local: 'ci/cuda/codecov.yml'
+  - local: 'ci/cuda/gcc11_codecov.yml'
 
 #cuda release build gcc11:
 #cuda release build gcc11 scalapack:

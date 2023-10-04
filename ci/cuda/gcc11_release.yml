@@ -30,3 +30,4 @@ cuda gcc11 release test:
     include:
       - artifact: pipeline.yml
         job: cuda gcc11 release build
+        

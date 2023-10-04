@@ -14,6 +14,7 @@ include:
 #--------------------------------------------------------------
 
 #TODO
+#fixare "check format" con newLine
 #errore nella build_deps di gcc11 codecov
 #implementare questo qua sotto (in cuda)
 
@@ -57,34 +58,6 @@ include:
 ##
 ## RUNS
 ##
-
-#cuda release test gcc11:
-#  extends: .run_common
-#  needs:
-#    - cuda release build gcc11
-#  trigger:
-#    include:
-#      - artifact: pipeline.yml
-#        job: cuda release build gcc11
-#
-#cuda release test gcc11 scalapack:
-#  extends: .run_common
-#  needs:
-#    - cuda release build gcc11 scalapack
-#  trigger:
-#    include:
-#      - artifact: pipeline.yml
-#        job: cuda release build gcc11 scalapack
-#
-#cuda codecov test gcc11:
-#  extends: .run_common
-#  needs:
-#    - cuda codecov build gcc11
-#  trigger:
-#    include:
-#      - artifact: pipeline.yml
-#        job: cuda codecov build gcc11
-#
 #cuda codecov test gcc11 scalapack:
 #  extends: .run_common
 #  needs:

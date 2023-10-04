@@ -21,4 +21,4 @@ rocm clang14+rocm-5.3.3 release build:
     DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
     EXTRA_APTGET_DEPLOY: "glibc-tools"
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA
-    
+

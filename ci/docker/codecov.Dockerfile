@@ -85,7 +85,6 @@ RUN apt-get update -qq && \
     apt-get autoremove -qq -y python3-pip && \
     apt-get clean
 
-
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}
 COPY --from=builder ${DEPLOY} ${DEPLOY}

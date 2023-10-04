@@ -155,6 +155,9 @@ struct parseFromCommandLine {
 template <class T>
 void updateConfigurationValue(const pika::program_options::variables_map& vm, T& var,
                               const std::string& env_var, const std::string& cmdline_option) {
+  DLAF_ASSERT(env_var.find("DLAF") == std::string::npos, env_var);
+  DLAF_ASSERT(cmdline_option.find("dlaf") == std::string::npos, cmdline_option);
+
   const std::string dlaf_env_var = "DLAF_" + env_var;
   char* env_var_value = std::getenv(dlaf_env_var.c_str());
   if (env_var_value) {
@@ -188,6 +191,9 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
   cfg.mpi_pool = (pika::resource::pool_exists("mpi")) ? "mpi" : "default";
 
   // update tune parameters
+  //
+  // NOTE: Environment variables should omit the DLAF_ prefix and command line options the dlaf: prefix.
+  // These are added automatically by updateConfigurationValue.
   auto& param = getTuneParameters();
   updateConfigurationValue(vm, param.red2band_panel_nworkers, "RED2BAND_PANEL_NWORKERS",
                            "red2band-panel-nworkers");
@@ -283,6 +289,8 @@ void initialize(const pika::program_options::variables_map& vm, const configurat
   if (vm.count("dlaf:print-config") > 0) {
     std::cout << "DLA-Future configuration options:" << std::endl;
     std::cout << cfg << std::endl;
+    std::cout << "DLA-Future tune parameters at startup:" << std::endl;
+    std::cout << getTuneParameters() << std::endl;
     std::cout << std::endl;
   }
 

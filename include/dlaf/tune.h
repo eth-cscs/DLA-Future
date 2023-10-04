@@ -12,6 +12,7 @@
 /// @file
 
 #include <cstdint>
+#include <iosfwd>
 
 #include <pika/runtime.hpp>
 
@@ -60,6 +61,12 @@ namespace dlaf {
 ///
 /// Note: debug parameters should not be considered as part of the public API
 struct TuneParameters {
+  // NOTE: Remember to update the following if you add or change parameters below:
+  // - Documentation in the docstring above
+  // - The operator<< overload in tune.cpp
+  // - updateConfiguration in init.cpp to update the value from command line options and environment
+  //   values
+  // - getOptionsDescription to add a corresponding command line option
   bool debug_dump_trisolver_data = false;
   std::size_t red2band_panel_nworkers =
       std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
@@ -77,6 +84,7 @@ struct TuneParameters {
   std::size_t communicator_grid_num_pipelines = 3;
 };
 
+std::ostream& operator<<(std::ostream& os, const TuneParameters& params);
 TuneParameters& getTuneParameters();
 
 }

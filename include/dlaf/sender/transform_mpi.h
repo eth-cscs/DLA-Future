@@ -136,7 +136,7 @@ public:
   PartialTransformMPI& operator=(const PartialTransformMPI&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransformMPI pa) {
+  friend auto operator|(Sender&& sender, PartialTransformMPI pa) {
     return transformMPI(std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
@@ -158,7 +158,7 @@ public:
   PartialTransformMPIDetach& operator=(const PartialTransformMPIDetach&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransformMPIDetach pa) {
+  friend auto operator|(Sender&& sender, PartialTransformMPIDetach pa) {
     return pika::execution::experimental::start_detached(transformMPI(std::move(pa.f_),
                                                                       std::forward<Sender>(sender)));
   }

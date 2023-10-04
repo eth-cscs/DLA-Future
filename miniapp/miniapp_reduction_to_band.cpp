@@ -25,6 +25,7 @@
 #include <dlaf/eigensolver/reduction_to_band.h>
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/hdf5.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -36,11 +37,20 @@ namespace {
 using dlaf::Device;
 using dlaf::SizeType;
 
+#ifdef DLAF_WITH_HDF5
+using dlaf::matrix::internal::FileHDF5;
+#endif
+
 struct Options
     : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
   SizeType b;
+#ifdef DLAF_WITH_HDF5
+  std::filesystem::path input_file;
+  std::string input_dataset;
+  std::filesystem::path output_file;
+#endif
 
   Options(const pika::program_options::variables_map& vm)
       : MiniappOptions(vm), m(vm["matrix-size"].as<SizeType>()), mb(vm["block-size"].as<SizeType>()),
@@ -52,6 +62,22 @@ struct Options
       b = mb;
 
     DLAF_ASSERT(b > 0 && (mb % b == 0), b, mb);
+
+#ifdef DLAF_WITH_HDF5
+    if (vm.count("input-file") == 1) {
+      input_file = vm["input-file"].as<std::filesystem::path>();
+
+      if (!vm["matrix-size"].defaulted()) {
+        std::cerr << "Warning! "
+                     "Specified matrix size will be ignored because an input file has been specified."
+                  << std::endl;
+      }
+    }
+    input_dataset = vm["input-dataset"].as<std::string>();
+    if (vm.count("output-file") == 1) {
+      output_file = vm["output-file"].as<std::filesystem::path>();
+    }
+#endif
 
     if (do_check != dlaf::miniapp::CheckIterFreq::None) {
       std::cerr << "Warning! At the moment result checking it is not implemented." << std::endl;
@@ -81,18 +107,27 @@ struct reductionToBandMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
 
-    // Allocate memory for the matrix
-    const GlobalElementSize matrix_size(opts.m, opts.m);
-    const TileElementSize block_size(opts.mb, opts.mb);
-
-    ConstMatrixType matrix_ref = [matrix_size, block_size, &comm_grid]() {
+    ConstMatrixType matrix_ref = [&comm_grid, &opts]() {
+#ifdef DLAF_WITH_HDF5
+      if (!opts.input_file.empty()) {
+        auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
+        if (opts.local)
+          return infile.read<T>(opts.input_dataset, {opts.mb, opts.mb});
+        else
+          return infile.read<T>(opts.input_dataset, {opts.mb, opts.mb}, comm_grid, {0, 0});
+      }
+#endif
       using dlaf::matrix::util::set_random_hermitian;
 
-      HostMatrixType hermitian(matrix_size, block_size, comm_grid);
+      HostMatrixType hermitian(GlobalElementSize(opts.m, opts.m), TileElementSize(opts.mb, opts.mb),
+                               comm_grid);
       set_random_hermitian(hermitian);
 
       return hermitian;
     }();
+
+    auto matrix_size = matrix_ref.size();
+    auto block_size = matrix_ref.blockSize();
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -135,6 +170,21 @@ struct reductionToBandMiniapp {
         auto add_mul = 2. / 3. * n * n * n - n * n * b;
         gigaflops = dlaf::total_ops<T>(add_mul, add_mul) / elapsed_time / 1e9;
       }
+
+#ifdef DLAF_WITH_HDF5
+      if (run_index == opts.nruns - 1) {
+        if (!opts.output_file.empty()) {
+          auto outfile = [&]() {
+            if (opts.local)
+              return FileHDF5(opts.output_file, FileHDF5::FileMode::readwrite);
+            else
+              return FileHDF5(world, opts.output_file);
+          }();
+          outfile.write(matrix_ref, opts.input_dataset);
+          outfile.write(matrix_host, "/band");
+        }
+      }
+#endif
 
       // print benchmark results
       if (0 == world.rank() && run_index >= 0) {
@@ -196,6 +246,11 @@ int main(int argc, char** argv) {
     ("matrix-size", value<SizeType>()   ->default_value(4096), "Matrix rows")
     ("block-size",  value<SizeType>()   ->default_value( 256), "Block cyclic distribution size")
     ("band-size",   value<SizeType>()   ->default_value(  -1), "Band size (a negative value implies band-size=block-size")
+#ifdef DLAF_WITH_HDF5
+    ("input-file",    value<std::filesystem::path>()                 , "Load matrix from given HDF5 file")
+    ("output-file",   value<std::filesystem::path>()                 , "Save band matrix to given HDF5 file")
+    ("input-dataset", value<std::string>() ->default_value("/input") , "Name of HDF5 dataset to load as matrix")
+#endif
   ;
   // clang-format on
 

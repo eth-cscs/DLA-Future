@@ -6,7 +6,6 @@ cuda gcc11 codecov deps:
   variables:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11.2.0
-    CXXSTD: 17
     SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
     USE_MKL: "ON"
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
@@ -15,7 +14,7 @@ cuda gcc11 codecov deps:
 cuda gcc11 codecov build:
   extends:
     - .build_common
-    - .build_for_daint-gpu
+    - .build_for_daint-mc
   needs:
     - cuda gcc11 codecov deps
   variables:

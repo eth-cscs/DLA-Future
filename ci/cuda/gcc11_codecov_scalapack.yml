@@ -1,0 +1,29 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc11 codecov scalapack deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+    COMPILER: gcc@11.2.0
+    SPACK_ENVIRONMENT: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
+
+cuda gcc11 codecov scalapack build:
+  extends:
+    - .build_common
+    - .build_for_daint-gpu
+  needs:
+    - cuda gcc11 codecov scalapack deps
+  variables:
+    EXTRA_APTGET_DEPLOY: "glibc-tools"
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/deploy:$CI_COMMIT_SHA
+
+cuda gcc11 codecov scalapack test:
+  extends: .run_common
+  needs:
+    - cuda gcc11 codecov scalapack build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc11 codecov scalapack build

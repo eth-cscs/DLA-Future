@@ -14,7 +14,7 @@ rocm clang14+rocm-5.3.3 release deps:
 rocm clang14+rocm-5.3.3 release build:
   extends:
     - .build_common
-    - after script: null
+    - .build_for_daint-mc
   needs:
     - rocm clang14+rocm-5.3.3 release deps
   variables:

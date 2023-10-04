@@ -14,7 +14,7 @@ cuda gcc11 release scalapack deps:
 cuda gcc11 release scalapack build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_daint-gpu
   needs:
     - cuda gcc11 release deps
   variables:

@@ -14,7 +14,6 @@ include:
 #--------------------------------------------------------------
 
 #TODO
-#fixare "check format" con newLine
 #errore nella build_deps di gcc11 codecov
 #implementare questo qua sotto (in cuda)
 
@@ -38,8 +37,8 @@ include:
 #    USE_ROCBLAS: "OFF"
 #    SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
 #    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
-#    BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
-#    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+#    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/build
+#    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/deploy:$CI_COMMIT_SHA
 #    SLURM_CONSTRAINT: gpu
 #    THREADS_PER_NODE: 24
 #    USE_CODECOV: "false"

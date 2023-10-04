@@ -7,7 +7,6 @@ cuda gcc11 codecov deps:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11.2.0
     SPACK_ENVIRONMENT: ci/docker/debug-cuda.yaml
-    USE_MKL: "ON"
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/build
     USE_CODECOV: "true"
 

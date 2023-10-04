@@ -11,15 +11,10 @@ include:
   - local: 'ci/cuda/gcc11_codecov.yml'
   - local: 'ci/rocm/clang14+rocm-5.3.3_release.yml'
 
-#cuda release build gcc11:
-#cuda release build gcc11 scalapack:
-#cuda codecov build gcc11:
-
 #--------------------------------------------------------------
 
 #TODO
-#errore nella build_steps di gcc11 codecov
-#fixare 3 errori dei 3 test dei 3 file presenti in cuda
+#errore nella build_deps di gcc11 codecov
 #implementare questo qua sotto (in cuda)
 
 #--------------------------------------------------------------

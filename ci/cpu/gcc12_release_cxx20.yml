@@ -27,4 +27,3 @@ cpu gcc12 release cxx20 test:
     include:
       - artifact: pipeline.yml
         job: cpu gcc12 release cxx20 build
-        

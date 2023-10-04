@@ -29,4 +29,3 @@ cuda gcc11 release scalapack test:
     include:
       - artifact: pipeline.yml
         job: cuda gcc11 release scalapack build
-        

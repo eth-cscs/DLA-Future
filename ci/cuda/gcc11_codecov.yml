@@ -30,4 +30,3 @@ cuda gcc11 codecov test:
     include:
       - artifact: pipeline.yml
         job: cuda gcc11 codecov build
-        

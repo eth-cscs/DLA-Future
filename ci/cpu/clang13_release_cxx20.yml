@@ -28,4 +28,4 @@ cpu clang13 release cxx20 test:
     include:
       - artifact: pipeline.yml
         job: cpu clang13 release cxx20 build
-        
+   

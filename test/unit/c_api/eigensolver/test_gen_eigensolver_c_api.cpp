@@ -63,7 +63,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D, API api>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        CommunicatorGrid grid, int dlaf_context) {
+                        CommunicatorGrid& grid, int dlaf_context) {
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
@@ -199,7 +199,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
   constexpr auto api = API::dlaf;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -213,7 +213,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
   constexpr auto api = API::dlaf;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -230,7 +230,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
   constexpr auto api = API::scalapack;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
@@ -245,7 +245,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
   constexpr auto api = API::scalapack;
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {

@@ -9,7 +9,7 @@ rocm clang14+rocm-5.3.3 release deps:
     COMPILER: clang@14.0.0
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/build
 
 rocm clang14+rocm-5.3.3 release build:
   extends:
@@ -20,4 +20,4 @@ rocm clang14+rocm-5.3.3 release build:
   variables:
     DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-rocm-clang14/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/deploy:$CI_COMMIT_SHA

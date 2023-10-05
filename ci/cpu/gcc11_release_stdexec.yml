@@ -8,7 +8,7 @@ cpu gcc11 release stdexec deps:
     CXXSTD: 20
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu-stdexec.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/build
 
 cpu gcc11 release stdexec build:
   extends:
@@ -17,7 +17,7 @@ cpu gcc11 release stdexec build:
   needs:
     - cpu gcc11 release stdexec deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-release/deploy:$CI_COMMIT_SHA
 
 cpu gcc11 release stdexec test:
   extends: .run_common

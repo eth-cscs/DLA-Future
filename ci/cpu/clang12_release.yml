@@ -8,7 +8,7 @@ cpu clang12 release deps:
     COMPILER: clang@12.0.1
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang12-release/build
 
 cpu clang12 release build:
   extends:
@@ -17,7 +17,7 @@ cpu clang12 release build:
   needs:
     - cpu clang12 release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang12/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang12-release/deploy:$CI_COMMIT_SHA
 
 cpu clang12 release test:
   extends: .run_common

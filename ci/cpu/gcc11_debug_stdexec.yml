@@ -8,7 +8,7 @@ cpu gcc11 debug stdexec deps:
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/debug-cpu-stdexec.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-gcc11-stdexec/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-debug/build
 
 cpu gcc11 debug stdexec build:
   extends:
@@ -17,7 +17,7 @@ cpu gcc11 debug stdexec build:
   needs:
     - cpu gcc11 debug deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/debug-cpu-gcc11-stdexec/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-debug/deploy:$CI_COMMIT_SHA
 
 cpu gcc11 debug stdexec test:
   extends: .run_common

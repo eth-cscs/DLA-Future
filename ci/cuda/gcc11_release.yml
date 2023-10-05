@@ -10,7 +10,7 @@ cuda gcc11 release deps:
     CXXSTD: 17
     SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/build
 
 cuda gcc11 release build:
   extends:
@@ -20,7 +20,7 @@ cuda gcc11 release build:
     - cuda gcc11 release deps
   variables:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 release test:
   extends: .run_common

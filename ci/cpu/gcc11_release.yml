@@ -7,7 +7,7 @@ cpu gcc11 release deps:
     COMPILER: gcc@11.2.0
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-release/build
 
 cpu gcc11 release build:
   extends:
@@ -16,7 +16,7 @@ cpu gcc11 release build:
   needs:
     - cpu gcc11 release deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-gcc11/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-release/deploy:$CI_COMMIT_SHA
 
 cpu gcc11 release test:
   extends: .run_common

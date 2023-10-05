@@ -8,7 +8,7 @@ cuda gcc11 release scalapack deps:
     COMPILER: gcc@11.2.0
     SPACK_ENVIRONMENT: ci/docker/release-cuda-scalapack.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-release/build
 
 cuda gcc11 release scalapack build:
   extends:
@@ -18,7 +18,7 @@ cuda gcc11 release scalapack build:
     - cuda gcc11 release deps
   variables:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cuda-gcc11-scalapack/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-release/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 release scalapack test:
   extends: .run_common

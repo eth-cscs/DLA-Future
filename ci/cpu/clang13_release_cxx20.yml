@@ -9,7 +9,7 @@ cpu clang13 release cxx20 deps:
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     USE_MKL: "ON"
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang13-20-release/build
 
 cpu clang13 release cxx20 build:
   extends:
@@ -18,7 +18,7 @@ cpu clang13 release cxx20 build:
   needs:
     - cpu clang13 release cxx20 deps
   variables:
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/release-cpu-clang13-20/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang13-20-release/deploy:$CI_COMMIT_SHA
 
 cpu clang13 release cxx20 test:
   extends: .run_common

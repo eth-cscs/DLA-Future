@@ -13,7 +13,7 @@ cuda gcc11 codecov deps:
 cuda gcc11 codecov build:
   extends:
     - .build_common
-    - .build_for_daint-mc
+    - .build_for_daint-gpu
   needs:
     - cuda gcc11 codecov deps
   variables:

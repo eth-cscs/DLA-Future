@@ -6,7 +6,7 @@ cuda gcc11 debug scalapack deps:
   variables:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11.2.0
-    SPACK_ENVIRONMENT: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/build
+    SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/build
 
 cuda gcc11 debug scalapack build:

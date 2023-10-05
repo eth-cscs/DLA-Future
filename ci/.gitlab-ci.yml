@@ -16,21 +16,6 @@ include:
 
 #TODO
 #errore nella build_deps di gcc11 codecov
-#implementare questo qua sotto (in cuda)
-
-#--------------------------------------------------------------
-
-
-# TODO codecov -> debug
-#cuda codecov build gcc11 scalapack:
-
-#questa sotto non ha la parte di test nel file .yml, avrà solo il blocco deps e build
-
-#rocm release build clang14+rocm-5.3.3:
-#  extends: .build_spack_common
-#  variables:
-#    SLURM_CONSTRAINT: mc
-#    THREADS_PER_NODE: 64
 
 #--------------------------------------------------------------
 

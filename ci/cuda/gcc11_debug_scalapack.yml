@@ -7,7 +7,7 @@ cuda gcc11 debug scalapack deps:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
     COMPILER: gcc@11.2.0
     SPACK_ENVIRONMENT: ci/docker/debug-cuda-scalapack.yaml
-    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/build
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-debug/build
 
 cuda gcc11 debug scalapack build:
   extends:
@@ -17,7 +17,7 @@ cuda gcc11 debug scalapack build:
     - cuda gcc11 debug scalapack deps
   variables:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-debug/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-debug/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 debug scalapack test:
   extends: .run_common

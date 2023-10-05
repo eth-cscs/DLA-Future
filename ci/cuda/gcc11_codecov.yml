@@ -18,7 +18,7 @@ cuda gcc11 codecov build:
     - cuda gcc11 codecov deps
   variables:
     EXTRA_APTGET_DEPLOY: "glibc-tools"
-    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/codecov-cuda-gcc11/deploy:$CI_COMMIT_SHA
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/debug-cuda-gcc11/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 codecov test:
   extends: .run_common

@@ -18,3 +18,12 @@ cpu gcc11 stdexec debug build:
     - cpu gcc11 stdexec debug deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-debug/deploy:$CI_COMMIT_SHA
+
+cpu gcc11 stdexec debug test:
+  extends: .run_common
+  needs:
+    - cpu gcc11 stdexec debug build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc11 stdexec debug build

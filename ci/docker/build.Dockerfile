@@ -36,7 +36,7 @@ ARG USE_MKL=ON
 ARG MKL_VERSION=2020.4-912
 ARG MKL_SPEC=2020.4.304
 RUN if [ "$USE_MKL" = "ON" ]; then \
-      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
+      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null | apt-key add - && \
       apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
       apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
       rm -rf /var/lib/apt/lists/* && \

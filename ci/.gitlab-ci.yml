@@ -1,11 +1,11 @@
 include:
   - local: 'ci/cpu/clang12_release.yml'
-  - local: 'ci/cpu/gcc11_debug.yml'
+  - local: 'ci/cpu/clang13_release_cxx20.yml'
+  - local: 'ci/cpu/gcc11_codecov.yml'
   - local: 'ci/cpu/gcc11_release.yml'
   - local: 'ci/cpu/gcc11_release_stdexec.yml'
   - local: 'ci/cpu/gcc11_debug_stdexec.yml'
   - local: 'ci/cpu/gcc12_release_cxx20.yml'
-  - local: 'ci/cpu/clang13_release_cxx20.yml'
   - local: 'ci/cuda/gcc11_release.yml'
   - local: 'ci/cuda/gcc11_release_scalapack.yml'
   - local: 'ci/cuda/gcc11_codecov.yml'

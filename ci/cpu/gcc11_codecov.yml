@@ -1,0 +1,27 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu gcc11 coverage deps:
+  extends: .build_deps_common
+  variables:
+    COMPILER: gcc@11.2.0
+    SPACK_ENVIRONMENT: ci/docker/coverage-cpu.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-coverage/build
+
+cpu gcc11 coverage build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu gcc11 coverage deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-coverage/deploy:$CI_COMMIT_SHA
+
+cpu gcc11 coverage test:
+  extends: .run_common
+  needs:
+    - cpu gcc11 coverage build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc11 coverage build

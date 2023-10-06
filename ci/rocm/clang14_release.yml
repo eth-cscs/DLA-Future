@@ -1,7 +1,7 @@
 include:
   - local: 'ci/common-ci.yml'
 
-rocm clang14+rocm-5.3.3 release deps:
+rocm clang14 release deps:
   extends: .build_deps_common
   variables:
     BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
@@ -11,12 +11,12 @@ rocm clang14+rocm-5.3.3 release deps:
     SPACK_ENVIRONMENT: ci/docker/release-rocm533.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/build
 
-rocm clang14+rocm-5.3.3 release build:
+rocm clang14 release build:
   extends:
     - .build_common
   after_script: null
   needs:
-    - rocm clang14+rocm-5.3.3 release deps
+    - rocm clang14 release deps
   variables:
     DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-release/deploy:$CI_COMMIT_SHA

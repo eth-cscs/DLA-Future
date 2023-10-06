@@ -10,4 +10,4 @@ include:
   - local: 'ci/cuda/gcc11_release_scalapack.yml'
   - local: 'ci/cuda/gcc11_codecov.yml'
   - local: 'ci/cuda/gcc11_debug_scalapack.yml'
-  - local: 'ci/rocm/clang14+rocm-5.3.3_release.yml'
+  - local: 'ci/rocm/clang14_release.yml'

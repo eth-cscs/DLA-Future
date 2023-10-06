@@ -28,3 +28,5 @@ spack:
       variants:
         - 'build_type=Debug'
         - 'malloc=system'
+    umpire:
+      require: '@2022.03.1'

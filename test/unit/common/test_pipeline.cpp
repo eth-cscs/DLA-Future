@@ -159,3 +159,40 @@ TEST(PipelineDestructor, DestructionWithDependency) {
 
   tt::sync_wait(std::move(last_task));
 }
+
+TEST(SubPipeline, Basic) {
+  // A subpipeline behaves the same as a parent pipeline if the parent hasn't been used
+  Pipeline<int> pipeline(26);
+  Pipeline<int> sub_pipeline = pipeline.sub_pipeline();
+
+  std::atomic<bool> first_access_done{false};
+  std::atomic<bool> second_access_done{false};
+  std::atomic<bool> third_access_done{false};
+
+  auto checkpoint0 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+                       EXPECT_FALSE(first_access_done);
+                       EXPECT_FALSE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       first_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+  auto checkpoint1 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+                       EXPECT_TRUE(first_access_done);
+                       EXPECT_FALSE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       second_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+  auto checkpoint2 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+                       EXPECT_TRUE(first_access_done);
+                       EXPECT_TRUE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       third_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+
+  tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
+}

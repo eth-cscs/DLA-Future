@@ -1,7 +1,7 @@
 include:
   - local: 'ci/common-ci.yml'
 
-cpu gcc11 debug stdexec deps:
+cpu gcc11 stdexec debug deps:
   extends: .build_deps_common
   variables:
     COMPILER: gcc@11.2.0
@@ -10,20 +10,20 @@ cpu gcc11 debug stdexec deps:
     USE_MKL: "ON"
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-debug/build
 
-cpu gcc11 debug stdexec build:
+cpu gcc11 stdexec debug build:
   extends:
     - .build_common
     - .build_for_daint-mc
   needs:
-    - cpu gcc11 debug deps
+    - cpu gcc11 stdexec debug deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-stdexec-debug/deploy:$CI_COMMIT_SHA
 
-cpu gcc11 debug stdexec test:
+cpu gcc11 stdexec debug test:
   extends: .run_common
   needs:
-    - cpu gcc11 debug stdexec build
+    - cpu gcc11 stdexec debug build
   trigger:
     include:
       - artifact: pipeline.yml
-        job: cpu gcc11 debug stdexec build
+        job: cpu gcc11 stdexec debug build

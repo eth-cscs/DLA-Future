@@ -16,7 +16,6 @@ cuda gcc11 debug scalapack build:
   needs:
     - cuda gcc11 debug scalapack deps
   variables:
-    EXTRA_APTGET_DEPLOY: "glibc-tools"
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-debug/deploy:$CI_COMMIT_SHA
 
 cuda gcc11 debug scalapack test:

@@ -82,8 +82,7 @@ stages:
     # can be overwritten in the configuration as needed
     DOCKERFILE: ci/docker/deploy.Dockerfile
     DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
-    EXTRA_APTGET_DEPLOY: "glibc-tools jq strace"
-    # glibc-tools is needed for libSegFault on ubuntu:22.04
+    EXTRA_APTGET_DEPLOY: ""
   artifacts:
     paths:
       - pipeline.yml

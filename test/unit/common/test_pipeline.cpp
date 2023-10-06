@@ -143,7 +143,7 @@ auto try_waiting_guard = [](auto& guard) {
 TEST(PipelineDestructor, DestructionWithDependency) {
   ex::unique_any_sender<> last_task;
 
-  std::atomic<bool> is_exited_from_scope;
+  std::atomic<bool> is_exited_from_scope{false};
   {
     Pipeline<int> serial(26);
     last_task = dlaf::internal::transform(

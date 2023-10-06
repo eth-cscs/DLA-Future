@@ -91,102 +91,86 @@ $(function() {
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/common/assert.h&gt;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="callable__object_8h.html">dlaf/common/callable_object.h</a>&gt;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&gt;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&gt;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">namespace </span>internal {</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keywordtype">void</span> sendBcast(<span class="keyword">const</span> Communicator&amp; comm, <span class="keyword">const</span> matrix::Tile&lt;const T, D&gt;&amp; tile, MPI_Request* req) {</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">#if !defined(DLAF_WITH_CUDA_RDMA)</span></div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  static_assert(D == Device::CPU, <span class="stringliteral">&quot;DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.&quot;</span>);</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">auto</span> msg = comm::make_message(common::make_data(tile));</div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(<span class="keyword">const_cast&lt;</span>T*<span class="keyword">&gt;</span>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(),</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;                                  comm, req));</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;}</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160; </div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(sendBcast);</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="keywordtype">void</span> recvBcast(<span class="keyword">const</span> Communicator&amp; comm, comm::IndexT_MPI root_rank, <span class="keyword">const</span> matrix::Tile&lt;T, D&gt;&amp; tile,</div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;               MPI_Request* req) {</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="preprocessor">#if !defined(DLAF_WITH_CUDA_RDMA)</span></div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  static_assert(D == Device::CPU, <span class="stringliteral">&quot;DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.&quot;</span>);</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  <span class="keyword">auto</span> msg = comm::make_message(common::make_data(tile));</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;}</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(recvBcast);</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;}</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
-<div class="line"><a name="l00065"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">   65</a></span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>(</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    dlaf::matrix::ReadOnlyTileSender&lt;T, D&gt; tile);</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                        \</span></div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="preprocessor">  kword template pika::execution::experimental::unique_any_sender&lt;&gt; scheduleSendBcast( \</span></div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,                    \</span></div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</span></div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160; </div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU,</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU,</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU,</div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU,</div>
-<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
-<div class="line"><a name="l00098"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">   98</a></span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(</div>
-<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> root_rank,</div>
-<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;    dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; tile);</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="eti_8h.html">dlaf/common/eti.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160; </div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="keyword">namespace </span>internal {</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="keywordtype">void</span> sendBcast(<span class="keyword">const</span> Communicator&amp; comm, <span class="keyword">const</span> matrix::Tile&lt;const T, D&gt;&amp; tile, MPI_Request* req) {</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="preprocessor">#if !defined(DLAF_WITH_CUDA_RDMA)</span></div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;  static_assert(D == Device::CPU, <span class="stringliteral">&quot;DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.&quot;</span>);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;  <span class="keyword">auto</span> msg = comm::make_message(common::make_data(tile));</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(<span class="keyword">const_cast&lt;</span>T*<span class="keyword">&gt;</span>(msg.data()), msg.count(), msg.mpi_type(), comm.rank(),</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;                                  comm, req));</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;}</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(sendBcast);</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160; </div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="keywordtype">void</span> recvBcast(<span class="keyword">const</span> Communicator&amp; comm, comm::IndexT_MPI root_rank, <span class="keyword">const</span> matrix::Tile&lt;T, D&gt;&amp; tile,</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;               MPI_Request* req) {</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="preprocessor">#if !defined(DLAF_WITH_CUDA_RDMA)</span></div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;  static_assert(D == Device::CPU, <span class="stringliteral">&quot;DLAF_WITH_CUDA_RDMA=off, MPI accepts just CPU memory.&quot;</span>);</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160; </div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <span class="keyword">auto</span> msg = comm::make_message(common::make_data(tile));</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;  DLAF_MPI_CHECK_ERROR(MPI_Ibcast(msg.data(), msg.count(), msg.mpi_type(), root_rank, comm, req));</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(recvBcast);</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;}</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
+<div class="line"><a name="l00066"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">   66</a></span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">scheduleSendBcast</a>(</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,</div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;    dlaf::matrix::ReadOnlyTileSender&lt;T, D&gt; tile);</div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_SEND_BCAST_ETI(kword, Type, Device, Comm)                        \</span></div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="preprocessor">  kword template pika::execution::experimental::unique_any_sender&lt;&gt; scheduleSendBcast( \</span></div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm,                    \</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; </div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;<span class="comment">// clang-format off</span></div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, <span class="keyword">extern</span>, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;DLAF_SCHEDULE_SEND_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;<span class="comment">// clang-format on</span></div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D, <span class="keyword">class</span> Comm&gt;</div>
+<div class="line"><a name="l00090"></a><span class="lineno"><a class="line" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">   90</a></span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">scheduleRecvBcast</a>(</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;    pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> root_rank,</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; tile);</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                                 \</span></div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;<span class="preprocessor">  kword template dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleRecvBcast(             \</span></div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, comm::IndexT_MPI root_rank, \</span></div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</span></div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160; </div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160;<span class="comment">// clang-format off</span></div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, <span class="keyword">extern</span>, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
 <div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160; </div>
-<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_RECV_BCAST_ETI(kword, Type, Device, Comm)                                 \</span></div>
-<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;<span class="preprocessor">  kword template dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleRecvBcast(             \</span></div>
-<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;Comm&gt; pcomm, comm::IndexT_MPI root_rank, \</span></div>
-<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</span></div>
-<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
-<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00110"></a><span class="lineno">  110</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU,</div>
-<div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU,</div>
-<div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00114"></a><span class="lineno">  114</span>&#160; </div>
-<div class="line"><a name="l00115"></a><span class="lineno">  115</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00116"></a><span class="lineno">  116</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00117"></a><span class="lineno">  117</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00118"></a><span class="lineno">  118</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00119"></a><span class="lineno">  119</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU,</div>
-<div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU,</div>
-<div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;                             common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
-<div class="line"><a name="l00123"></a><span class="lineno">  123</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00124"></a><span class="lineno">  124</span>&#160;}</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::CPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160;DLAF_SCHEDULE_RECV_BCAST_ETI(<span class="keyword">extern</span>, SizeType, Device::GPU, common::Pipeline&lt;Communicator&gt;::Wrapper);</div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160;<span class="comment">// clang-format on</span></div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160;}</div>
 <div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
 <div class="ttc" id="acallable__object_8h_html_a5aafa5a9c65ad07da48410427f4825b2"><div class="ttname"><a href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a></div><div class="ttdeci">#define DLAF_MAKE_CALLABLE_OBJECT(fname)</div><div class="ttdef"><b>Definition:</b> callable_object.h:26</div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
 <div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:23</div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
+<div class="ttc" id="aeti_8h_html"><div class="ttname"><a href="eti_8h.html">eti.h</a></div></div>
 <div class="ttc" id="akernels_2broadcast_8h_html_a3645d0cfc3caad43c37c355896a7215f"><div class="ttname"><a href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">dlaf::comm::scheduleRecvBcast</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleRecvBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
 <div class="ttc" id="akernels_2broadcast_8h_html_a98b583f24caaccdf37f3db1f3b46b457"><div class="ttname"><a href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleSendBcast(pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>

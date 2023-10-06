@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ordering_1206',['Ordering',['../index2d_8h.html#a02419996f0ffc187079c310f0175ce76',1,'dlaf::common']]]
+  ['ordering_1208',['Ordering',['../index2d_8h.html#a02419996f0ffc187079c310f0175ce76',1,'dlaf::common']]]
 ];

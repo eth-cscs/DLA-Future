@@ -26,16 +26,16 @@ public:
   MatrixBase(Distribution distribution) : distribution_(std::move(distribution)) {}
 
   MatrixBase(const Distribution& distribution, const LocalTileSize& tiles_per_block)
-      : distribution_(distribution.size(), distribution.blockSize(),
-                      TileElementSize{distribution.blockSize().rows() / tiles_per_block.rows(),
-                                      distribution.blockSize().cols() / tiles_per_block.cols()},
-                      distribution.commGridSize(), distribution.rankIndex(),
-                      distribution.sourceRankIndex()) {
-    DLAF_ASSERT(distribution.blockSize() == distribution.baseTileSize(),
+      : distribution_(distribution.size(), distribution.block_size(),
+                      TileElementSize{distribution.block_size().rows() / tiles_per_block.rows(),
+                                      distribution.block_size().cols() / tiles_per_block.cols()},
+                      distribution.grid_size(), distribution.rank_index(),
+                      distribution.source_rank_index()) {
+    DLAF_ASSERT(distribution.block_size() == distribution.tile_size(),
                 "distribution should be the distribution of the original Matrix.",
-                distribution.blockSize(), distribution.baseTileSize());
-    DLAF_ASSERT(distribution.blockSize() == distribution_.blockSize(), distribution.blockSize(),
-                distribution_.blockSize());
+                distribution.block_size(), distribution.tile_size());
+    DLAF_ASSERT(distribution.block_size() == distribution_.block_size(), distribution.block_size(),
+                distribution_.block_size());
   }
 
   MatrixBase(const MatrixBase& rhs) = default;
@@ -46,41 +46,41 @@ public:
     return distribution_.size();
   }
 
-  /// Returns the block size of the matrix.
-  const TileElementSize& blockSize() const noexcept {
-    return distribution_.blockSize();
+  /// Returns the complete block size of the matrix.
+  const TileElementSize& block_size() const noexcept {
+    return distribution_.block_size();
   }
 
   /// Returns the complete tile size of the matrix.
-  const TileElementSize& baseTileSize() const noexcept {
-    return distribution_.baseTileSize();
+  const TileElementSize& tile_size() const noexcept {
+    return distribution_.tile_size();
   }
 
   /// Returns the number of tiles of the global matrix (2D size).
-  const GlobalTileSize& nrTiles() const noexcept {
-    return distribution_.nrTiles();
+  const GlobalTileSize& nr_tiles() const noexcept {
+    return distribution_.nr_tiles();
   }
 
   /// Returns the id associated to the matrix of this rank.
-  const comm::Index2D& rankIndex() const noexcept {
-    return distribution_.rankIndex();
-  }
-
-  ///
-  const comm::Index2D& sourceRankIndex() const noexcept {
-    return distribution_.sourceRankIndex();
+  const comm::Index2D& rank_index() const noexcept {
+    return distribution_.rank_index();
   }
 
   /// Returns the size of the communicator grid associated to the matrix.
-  const comm::Size2D& commGridSize() const noexcept {
-    return distribution_.commGridSize();
+  const comm::Size2D& grid_size() const noexcept {
+    return distribution_.grid_size();
   }
 
   /// Returns the 2D rank index of the process that stores the tile with global index @p global_tile.
   ///
   /// @pre global_tile.isIn(nrTiles()).
-  comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
-    return distribution_.rankGlobalTile(global_tile);
+  comm::Index2D rank_global_tile(const GlobalTileIndex& global_tile) const noexcept {
+    return distribution_.rank_global_tile(global_tile);
+  }
+
+  /// Returns the size of the Tile with global index @p index.
+  TileElementSize tile_size_of(const GlobalTileIndex& index) const noexcept {
+    return distribution_.tile_size_of(index);
   }
 
   /// Returns the distribution of the matrix.
@@ -88,7 +88,35 @@ public:
     return distribution_;
   }
 
-  /// Returns the size of the Tile with global index @p index.
+  // TODO remove deprecated
+  const TileElementSize& blockSize() const noexcept {
+    return distribution_.blockSize();
+  }
+
+  const TileElementSize& baseTileSize() const noexcept {
+    return distribution_.baseTileSize();
+  }
+
+  const GlobalTileSize& nrTiles() const noexcept {
+    return distribution_.nrTiles();
+  }
+
+  const comm::Index2D& rankIndex() const noexcept {
+    return distribution_.rankIndex();
+  }
+
+  const comm::Index2D& sourceRankIndex() const noexcept {
+    return distribution_.sourceRankIndex();
+  }
+
+  const comm::Size2D& commGridSize() const noexcept {
+    return distribution_.commGridSize();
+  }
+
+  comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
+    return distribution_.rankGlobalTile(global_tile);
+  }
+
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return distribution_.tileSize(index);
   }
@@ -105,19 +133,26 @@ protected:
   /// Returns the position in the vector of the index Tile.
   ///
   /// @pre index.isIn(localNrTiles()).
+  std::size_t tile_linear_index(const LocalTileIndex& index) const noexcept {
+    DLAF_ASSERT_MODERATE(index.isIn(distribution_.local_nr_tiles()), index,
+                         distribution_.local_nr_tiles());
+    return to_sizet(index.row() + distribution_.local_nr_tiles().rows() * index.col());
+  }
+
+  // TODO DEPRECATE
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
-    DLAF_ASSERT_MODERATE(index.isIn(distribution_.localNrTiles()), index, distribution_.localNrTiles());
-    return to_sizet(index.row() + distribution_.localNrTiles().rows() * index.col());
+    return tile_linear_index(index);
   }
 
   /// Prints information about the matrix.
   friend std::ostream& operator<<(std::ostream& out, const MatrixBase& matrix) {
     // clang-format off
     return out << "size="         << matrix.size()
-               << ", block_size=" << matrix.blockSize()
-               << ", tiles_grid=" << matrix.nrTiles()
-               << ", rank_index=" << matrix.rankIndex()
-               << ", comm_grid="  << matrix.commGridSize();
+               << ", block_size=" << matrix.block_size()
+               << ", tile_size="  << matrix.tile_size()
+               << ", tiles_grid=" << matrix.nr_tiles()
+               << ", rank_index=" << matrix.rank_index()
+               << ", comm_grid="  << matrix.grid_size();
     // clang-format on
   }
 

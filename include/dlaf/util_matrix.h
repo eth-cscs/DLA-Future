@@ -46,13 +46,13 @@ bool square_size(const MatrixLike& m) noexcept {
 /// Returns true if the matrix block size is square.
 template <class MatrixLike>
 bool square_blocksize(const MatrixLike& m) noexcept {
-  return m.blockSize().rows() == m.blockSize().cols();
+  return m.block_size().rows() == m.block_size().cols();
 }
 
 /// Returns true if the matrix has a single tile per block.
 template <class MatrixLike>
 bool single_tile_per_block(const MatrixLike& m) noexcept {
-  return m.blockSize() == m.baseTileSize();
+  return m.block_size() == m.tile_size();
 }
 
 /// Returns true if matrices have equal sizes.
@@ -64,7 +64,7 @@ bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {
 /// Returns true if matrices have equal blocksizes.
 template <class T, Device D1, Device D2>
 bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
-  return lhs.blockSize() == rhs.blockSize();
+  return lhs.block_size() == rhs.block_size();
 }
 
 /// Returns true if the matrix is local to a process.
@@ -102,7 +102,7 @@ template <class T, Device D>
 bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, const Matrix<const T, D>& c,
                   const blas::Op opA, const blas::Op opB) noexcept {
   return multipliable_sizes(a.size(), b.size(), c.size(), opA, opB) &&
-         multipliable_sizes(a.blockSize(), b.blockSize(), c.blockSize(), opA, opB);
+         multipliable_sizes(a.block_size(), b.block_size(), c.block_size(), opA, opB);
 }
 
 namespace util {
@@ -161,7 +161,7 @@ void set0(pika::execution::thread_priority priority, LocalTileIndex begin, Local
 ///
 template <Backend backend, class T, Device D>
 void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
-  set0<backend>(priority, LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix);
+  set0<backend>(priority, LocalTileIndex(0, 0), matrix.distribution().local_nr_tiles(), matrix);
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
@@ -183,9 +183,9 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>&
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
   const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_f = [tl_index, el_f = el_f](const TileType& tile) {
@@ -242,9 +242,9 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
   const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
@@ -350,12 +350,12 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
   DLAF_ASSERT(square_size(matrix), matrix);
   DLAF_ASSERT(square_blocksize(matrix), matrix);
 
-  auto full_tile_size = matrix.blockSize();
+  auto full_tile_size = matrix.block_size();
 
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
 
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
 
     // compute the same seed for original and "transposed" tiles, so transposed ones will know the
     // values of the original one without the need of accessing real values (nor communication in case

@@ -97,6 +97,10 @@ struct MatrixLocal<const T> {
     return GlobalElementSize{layout_.size().rows(), layout_.size().cols()};
   }
 
+  TileElementSize block_size() const noexcept {
+    return layout_.blockSize();
+  }
+
   TileElementSize blockSize() const noexcept {
     return layout_.blockSize();
   }

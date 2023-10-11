@@ -52,17 +52,16 @@ debug = args.debug
 
 
 def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
-
     if typ == "d":
-      m_szs = m_szs_d
-      mb_szs = mb_szs_d
-      run_dir += "/d"
+        m_szs = m_szs_d
+        mb_szs = mb_szs_d
+        run_dir += "/d"
     elif typ == "z":
-      m_szs = m_szs_z
-      mb_szs = mb_szs_z
-      run_dir += "/z"
+        m_szs = m_szs_z
+        mb_szs = mb_szs_z
+        run_dir += "/z"
     else:
-      raise RuntimeError(f"Invalid type specified {typ}")
+        raise RuntimeError(f"Invalid type specified {typ}")
 
     full_kwargs = kwargs.copy()
     full_kwargs["lib"] = "dlaf"
@@ -75,50 +74,50 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
     run.add(
         mp.chol,
-        params = {"rpn": rpn, "mb_sz": mb_szs},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.gen2std,
-        params = {"rpn": rpn, "mb_sz": mb_szs},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.red2band,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.band2trid,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.trid_evp,
-        params = {"rpn": rpn, "mb_sz": mb_szs},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.bt_band2trid,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.bt_red2band,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
     run.add(
         mp.trsm,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "n_sz": None},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "n_sz": None},
+        weak_params={"m_sz": m_szs},
         **full_kwargs,
     )
 
@@ -127,14 +126,14 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
     run.add(
         mp.evp,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+        weak_params={"m_sz": m_szs},
         **fullsolver_args,
     )
     run.add(
         mp.gevp,
-        params = {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
-        weak_params = {"m_sz": m_szs},
+        params={"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+        weak_params={"m_sz": m_szs},
         **fullsolver_args,
     )
 

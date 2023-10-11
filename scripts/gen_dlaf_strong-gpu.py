@@ -48,17 +48,16 @@ debug = args.debug
 
 
 def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
-
     if typ == "d":
-      m_szs = m_szs_d
-      mb_szs = mb_szs_d
-      run_dir += "/d"
+        m_szs = m_szs_d
+        mb_szs = mb_szs_d
+        run_dir += "/d"
     elif typ == "z":
-      m_szs = m_szs_z
-      mb_szs = mb_szs_z
-      run_dir += "/z"
+        m_szs = m_szs_z
+        mb_szs = mb_szs_z
+        run_dir += "/z"
     else:
-      raise RuntimeError(f"Invalid type specified {typ}")
+        raise RuntimeError(f"Invalid type specified {typ}")
 
     full_kwargs = kwargs.copy()
     full_kwargs["lib"] = "dlaf"
@@ -70,42 +69,42 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
     run.add(
         mp.chol,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
         **full_kwargs,
     )
     run.add(
         mp.gen2std,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
         **full_kwargs,
     )
     run.add(
         mp.red2band,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
         **full_kwargs,
     )
     run.add(
         mp.band2trid,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
         **full_kwargs,
     )
     run.add(
         mp.trid_evp,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
         **full_kwargs,
     )
     run.add(
         mp.bt_band2trid,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
         **full_kwargs,
     )
     run.add(
         mp.bt_red2band,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
         **full_kwargs,
     )
     run.add(
         mp.trsm,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
         **full_kwargs,
     )
 
@@ -114,12 +113,12 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
     run.add(
         mp.evp,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
     run.add(
         mp.gevp,
-        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
 
@@ -129,11 +128,14 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
     for m_sz in m_szs:
         trid_kwargs = full_kwargs.copy()
         trid_kwargs["suffix"] = "fromfile"
-        trid_kwargs["extra_flags"] = trid_kwargs.get("extra_flags", "") + f" --input-file=/scratch/e1000/rasolca/trid-ref-{m_sz}.h5"
+        trid_kwargs["extra_flags"] = (
+            trid_kwargs.get("extra_flags", "")
+            + f" --input-file=/scratch/e1000/rasolca/trid-ref-{m_sz}.h5"
+        )
 
         run.add(
             mp.trid_evp,
-            params = {"rpn": rpn, "m_sz": m_sz, "mb_sz": mb_szs},
+            params={"rpn": rpn, "m_sz": m_sz, "mb_sz": mb_szs},
             **trid_kwargs,
         )
     run.submit(run_dir, debug=debug)

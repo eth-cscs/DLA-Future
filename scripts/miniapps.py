@@ -152,17 +152,21 @@ def _checkBand(mb_sz, band):
     if mb_sz % band != 0:
         raise RuntimeError(f"Invalid band {band} for block size {mb_sz}")
 
+
 def _check_type(typ):
     if not typ in ["s", "c", "d", "z"]:
         raise RuntimeError(f"Invalid type specified {typ}")
+
 
 def _only_type_dz(typ):
     if not typ in ["d", "z"]:
         raise RuntimeError(f"Only type d or z are currently supported for this config (specified {typ})")
 
+
 def _only_type_d(typ):
     if typ != "d":
         raise RuntimeError(f"Only type d is currently for this config (specified {typ})")
+
 
 # lib: allowed libraries are dlaf|slate|dplasma|scalapack
 # rpn: ranks per node
@@ -578,9 +582,9 @@ def evp(
             env += f" env 'ELPA_DEFAULT_nvidia-gpu=1'"
         env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
         if typ == "d":
-          app = f"{build_dir}/miniapp_evp_elpa"
+            app = f"{build_dir}/miniapp_evp_elpa"
         elif typ == "z":
-          app = f"{build_dir}/miniapp_evp_elpa_z"
+            app = f"{build_dir}/miniapp_evp_elpa_z"
         opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} {stages}"
     else:
         raise ValueError(_err_msg(lib))
@@ -776,7 +780,7 @@ class WeakScaling:
         suffix="",
         extra_flags="",
         env="",
-        typ = "d",
+        typ="d",
     ):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")

@@ -125,6 +125,19 @@ def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
     run.submit(run_dir, debug=debug)
 
+    run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf-norandom", nodes_arr, time)
+    for m_sz in m_szs:
+        trid_kwargs = full_kwargs.copy()
+        trid_kwargs["suffix"] = "fromfile"
+        trid_kwargs["extra_flags"] = trid_kwargs.get("extra_flags", "") + f" --input-file=/scratch/e1000/rasolca/trid-ref-{m_sz}.h5"
+
+        run.add(
+            mp.trid_evp,
+            params = {"rpn": rpn, "m_sz": m_sz, "mb_sz": mb_szs},
+            **trid_kwargs,
+        )
+    run.submit(run_dir, debug=debug)
+
 
 # actual benchmark
 createAndSubmitRun(run_dir, nodes_arr, "d", extra_flags=extra_flags)

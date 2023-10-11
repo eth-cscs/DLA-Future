@@ -10,9 +10,14 @@
 
 #include "utils.h"
 
+#include <iostream>
+#include <stdexcept>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf_c/desc.h>
 #include <dlaf_c/utils.h>
+
+#include "grid.h"
 
 struct DLAF_descriptor make_dlaf_descriptor(const int m, const int n, const int i, const int j,
                                             const int desc[9]) {
@@ -42,4 +47,19 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
 dlaf::common::Ordering char2order(const char order) {
   return order == 'C' or order == 'c' ? dlaf::common::Ordering::ColumnMajor
                                       : dlaf::common::Ordering::RowMajor;
+}
+
+dlaf::comm::CommunicatorGrid grid_from_context(int dlaf_context) {
+  try {
+    return dlaf_grids.at(dlaf_context);
+  }
+  catch (const std::out_of_range& e) {
+    std::stringstream s;
+    s << "[Error] No DLA-Future grid for context " << dlaf_context << ".\n";
+    s << "[Info]  Make sure you called dlaf_create_grid() or dlaf_create_grid_from_blacs().\n";
+
+    std::cerr << s.str() << std::flush;
+
+    std::terminate();
+  }
 }

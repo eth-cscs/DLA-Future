@@ -24,7 +24,6 @@
 #include <dlaf_c/grid.h>
 
 #include "../blacs.h"
-#include "../grid.h"
 #include "../utils.h"
 
 template <typename T>
@@ -43,7 +42,7 @@ int hermitian_eigensolver(const int dlaf_context, const char uplo, T* a,
 
   pika::resume();
 
-  auto communicator_grid = dlaf_grids.at(dlaf_context);
+  auto communicator_grid = grid_from_context(dlaf_context);
 
   auto [distribution_a, layout_a] = distribution_and_layout(dlaf_desca, communicator_grid);
   auto [distribution_z, layout_z] = distribution_and_layout(dlaf_descz, communicator_grid);

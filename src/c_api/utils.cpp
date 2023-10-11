@@ -49,7 +49,7 @@ dlaf::common::Ordering char2order(const char order) {
                                       : dlaf::common::Ordering::RowMajor;
 }
 
-dlaf::comm::CommunicatorGrid grid_from_context(int dlaf_context) {
+dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context) {
   try {
     return dlaf_grids.at(dlaf_context);
   }

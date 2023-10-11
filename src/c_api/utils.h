@@ -19,4 +19,4 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
 
 dlaf::common::Ordering char2order(const char order);
 
-dlaf::comm::CommunicatorGrid grid_from_context(int dlaf_context);
+dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context);

@@ -26,11 +26,13 @@ run_dir = "~/ws/runs/strong"
 
 time = 400  # minutes
 nruns = 5
-
 nodes_arr = [0.5, 1, 2, 4, 8, 16]
+
 rpn = 2
-m_szs = [10240, 20480, 30097, 40960]
-mb_szs = 512
+m_szs_d = [10240, 20480, 30097, 40960]
+mb_szs_d = 512
+m_szs_z = [10240, 20480]
+mb_szs_z = 512
 
 extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=64"
 
@@ -45,91 +47,79 @@ args = parser.parse_args()
 debug = args.debug
 
 
-def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
+def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
+
+    if typ == "d":
+      m_szs = m_szs_d
+      mb_szs = mb_szs_d
+      run_dir += "/d"
+    elif typ == "z":
+      m_szs = m_szs_z
+      mb_szs = mb_szs_z
+      run_dir += "/z"
+    else:
+      raise RuntimeError(f"Invalid type specified {typ}")
+
+    full_kwargs = kwargs.copy()
+    full_kwargs["lib"] = "dlaf"
+    full_kwargs["build_dir"] = dlafpath
+    full_kwargs["nruns"] = nruns
+    full_kwargs["typ"] = typ
+
     run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
 
     run.add(
         mp.chol,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.gen2std,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.red2band,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        **full_kwargs,
     )
     run.add(
         mp.band2trid,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        **full_kwargs,
     )
     run.add(
         mp.trid_evp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.bt_band2trid,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        **full_kwargs,
     )
     run.add(
         mp.bt_red2band,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        **full_kwargs,
     )
     run.add(
         mp.trsm,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
-        nruns,
-        **kwargs,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
+        **full_kwargs,
     )
 
-    fullsolver_args = kwargs
-    fullsolver_args["extra_flags"] = kwargs.get("extra_flags", "") + " --check=last"
+    fullsolver_args = full_kwargs.copy()
+    fullsolver_args["extra_flags"] = fullsolver_args.get("extra_flags", "") + " --check=last"
 
     run.add(
         mp.evp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
     run.add(
         mp.gevp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns,
+        params = {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
 
@@ -137,7 +127,9 @@ def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
 
 
 # actual benchmark
-createAndSubmitRun(run_dir, nodes_arr, extra_flags=extra_flags)
+createAndSubmitRun(run_dir, nodes_arr, "d", extra_flags=extra_flags)
+createAndSubmitRun(run_dir, nodes_arr, "z", extra_flags=extra_flags)
 
 # additional benchmark collecting "local" implementation results in <run_dir>-local directory
-createAndSubmitRun(run_dir + "-local", [1 / rpn], extra_flags=extra_flags + " --local")
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "d", extra_flags=extra_flags + " --local")
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "z", extra_flags=extra_flags + " --local")

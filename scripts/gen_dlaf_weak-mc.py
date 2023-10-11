@@ -24,21 +24,21 @@ dlafpath = "<path_to_dlaf_build_dir>"
 
 run_dir = "~/ws/runs/weak"
 
-
-nodes_arr = [0.5, 1, 2, 4, 8, 16]
-rpn = 2
-m_szs = [10240, 20480, 30097, 40960]
-mb_szs = 512
-
-extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=64"
-
-nruns = 5
-approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
-
 # Note: job time is computed as time0 + sqrt(nodes) * time
 time0 = 120  # minutes
 time = 0  # minutes
+nruns = 5
+nodes_arr = [0.5, 1, 2, 4, 8, 16]
 
+rpn = 2
+m_szs_d = [10240, 20480, 30097, 40960]
+mb_szs_d = 512
+m_szs_z = [10240, 20480]
+mb_szs_z = 512
+
+extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=64"
+
+approx = 512  # the sizes used in weak scaling are chosen to be the nearest multiple of approx.
 
 parser = argparse.ArgumentParser(description="Run weak scaling benchmarks.")
 parser.add_argument(
@@ -51,107 +51,96 @@ args = parser.parse_args()
 debug = args.debug
 
 
-run = mp.WeakScaling(system, "DLAF_test_weak", "job_dlaf", nodes_arr, time0, time)
+def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
 
-run.add(
-    mp.chol,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.gen2std,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.red2band,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.band2trid,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.trid_evp,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.bt_band2trid,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.bt_red2band,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
-run.add(
-    mp.trsm,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "n_sz": None},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags,
-)
+    if typ == "d":
+      m_szs = m_szs_d
+      mb_szs = mb_szs_d
+      run_dir += "/d"
+    elif typ == "z":
+      m_szs = m_szs_z
+      mb_szs = mb_szs_z
+      run_dir += "/z"
+    else:
+      raise RuntimeError(f"Invalid type specified {typ}")
 
-run.add(
-    mp.evp,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags + " --check=last",
-)
-run.add(
-    mp.gevp,
-    "dlaf",
-    dlafpath,
-    {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
-    {"m_sz": m_szs},
-    approx,
-    nruns,
-    extra_flags=extra_flags + " --check=last",
-)
-run.submit(run_dir, debug=debug)
+    full_kwargs = kwargs.copy()
+    full_kwargs["lib"] = "dlaf"
+    full_kwargs["build_dir"] = dlafpath
+    full_kwargs["approx"] = approx
+    full_kwargs["nruns"] = nruns
+    full_kwargs["typ"] = typ
+
+    run = mp.WeakScaling(system, "DLAF_test_weak", "job_dlaf", nodes_arr, time0, time)
+
+    run.add(
+        mp.chol,
+        params = {"rpn": rpn, "mb_sz": mb_szs},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.gen2std,
+        params = {"rpn": rpn, "mb_sz": mb_szs},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.red2band,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.band2trid,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.trid_evp,
+        params = {"rpn": rpn, "mb_sz": mb_szs},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.bt_band2trid,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.bt_red2band,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+    run.add(
+        mp.trsm,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "n_sz": None},
+        weak_params = {"m_sz": m_szs},
+        **full_kwargs,
+    )
+
+    fullsolver_args = full_kwargs.copy()
+    fullsolver_args["extra_flags"] = fullsolver_args.get("extra_flags", "") + " --check=last"
+
+    run.add(
+        mp.evp,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+        weak_params = {"m_sz": m_szs},
+        **fullsolver_args,
+    )
+    run.add(
+        mp.gevp,
+        params = {"rpn": rpn, "mb_sz": mb_szs, "min_band": None},
+        weak_params = {"m_sz": m_szs},
+        **fullsolver_args,
+    )
+
+    run.submit(run_dir, debug=debug)
+
+
+# actual benchmark
+createAndSubmitRun(run_dir, nodes_arr, "d", extra_flags=extra_flags)
+createAndSubmitRun(run_dir, nodes_arr, "z", extra_flags=extra_flags)

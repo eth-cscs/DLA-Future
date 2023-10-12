@@ -17,6 +17,7 @@
 
 #include "grid.h"
 #include "utils.h"
+
 struct DLAF_descriptor make_dlaf_descriptor(const int m, const int n, const int i, const int j,
                                             const int desc[9]) {
   DLAF_ASSERT(i == 1, i);

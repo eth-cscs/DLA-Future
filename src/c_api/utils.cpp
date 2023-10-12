@@ -53,11 +53,11 @@ dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context) {
     return dlaf_grids.at(dlaf_context);
   }
   catch (const std::out_of_range& e) {
-    std::stringstream s;
-    s << "[Error] No DLA-Future grid for context " << dlaf_context << ".\n";
-    s << "[Info]  Make sure you called dlaf_create_grid() or dlaf_create_grid_from_blacs().\n";
+    std::stringstream ss;
+    ss << "[ERROR] No DLA-Future grid for context " << dlaf_context << ". ";
+    ss << "Did you forget to call dlaf_create_grid() or dlaf_create_grid_from_blacs()?\n";
 
-    std::cerr << s.str() << std::flush;
+    std::cerr << ss.str() << std::flush;
 
     std::terminate();
   }

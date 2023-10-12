@@ -33,6 +33,8 @@ def _check_ranks_per_node(system, lib, rpn):
         return
     if lib.startswith("elpa"):
         return
+    if lib.startswith("slate"):
+        return
     if not rpn in system["Allowed rpns"]:
         raise ValueError(f"Wrong value rpn = {rpn}!")
     if rpn != 1 and lib == "dplasma":
@@ -567,6 +569,13 @@ def evp(
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_eigensolver"
         opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+    elif lib == "slate":
+        _check_type(typ)
+        env += f" OMP_NUM_THREADS={cores_per_rank}"
+        app = f"{build_dir}/test/tester"
+        if system["GPU"]:
+            extra_flags += " --origin d --target d"
+        opts = f"--dim {m_sz} --nb {mb_sz} --grid {grid_rows}x{grid_cols} --repeat {nruns} --check n --ref n --type {typ} --jobz v --uplo l {extra_flags} heev"
     elif lib == "scalapack":
         _only_type_dz(typ)
         env += f" OMP_NUM_THREADS={cores_per_rank}"

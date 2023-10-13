@@ -162,7 +162,9 @@ def _check_type(dtype):
 
 def _only_type_dz(dtype):
     if not dtype in ["d", "z"]:
-        raise RuntimeError(f"Only type d or z are currently supported for this config (specified {dtype})")
+        raise RuntimeError(
+            f"Only type d or z are currently supported for this config (specified {dtype})"
+        )
 
 
 def _only_type_d(dtype):

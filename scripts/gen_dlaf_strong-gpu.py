@@ -130,8 +130,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
         trid_kwargs = full_kwargs.copy()
         trid_kwargs["suffix"] = "fromfile"
         trid_kwargs["extra_flags"] = (
-            trid_kwargs.get("extra_flags", "")
-            + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
+            trid_kwargs.get("extra_flags", "") + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
         )
 
         run.add(

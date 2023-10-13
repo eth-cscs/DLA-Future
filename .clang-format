@@ -123,7 +123,7 @@ IncludeCategories:
     Priority:        5
     SortPriority:    0
     CaseSensitive:   false
-IncludeIsMainRegex: '(test)?$'
+IncludeIsMainRegex: '_disabled$'
 IncludeIsMainSourceRegex: ''
 IndentAccessModifiers: false
 IndentCaseLabels: true

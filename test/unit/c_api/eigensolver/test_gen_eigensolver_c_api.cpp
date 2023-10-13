@@ -190,10 +190,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
+  if (!mat_a_h.size().isEmpty())
+    testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();

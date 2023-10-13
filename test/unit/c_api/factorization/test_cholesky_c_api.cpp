@@ -139,7 +139,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
   // Resume pika for the checks (suspended by the C API)
   pika::resume();
 
-  DLAF_MPI_CHECK_ERROR(MPI_Barrier(MPI_COMM_WORLD));
+  pika::wait();
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);

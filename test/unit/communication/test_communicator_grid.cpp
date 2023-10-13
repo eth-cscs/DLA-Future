@@ -8,9 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 //
-// TODO: Add a few round robin tests
 
 #include <mpi.h>
+
+#include <pika/execution.hpp>
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/error.h>
@@ -19,6 +20,7 @@
 
 using namespace dlaf::comm;
 using dlaf::common::Ordering;
+namespace tt = pika::this_thread::experimental;
 
 const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 
@@ -204,3 +206,49 @@ TEST_P(CommunicatorGridTest, Rank) {
 }
 
 INSTANTIATE_TEST_SUITE_P(Rank, CommunicatorGridTest, valid_orderings);
+
+TEST_P(CommunicatorGridTest, RoundRobin) {
+  Communicator world(MPI_COMM_WORLD);
+  auto grid_dims = computeGridDims(NUM_MPI_RANKS);
+  const std::vector<std::size_t> test_npipelines{1};  //, 3, 10};
+  for (const std::size_t npipelines : test_npipelines) {
+    CommunicatorGrid complete_grid(world, grid_dims, GetParam(), npipelines);
+
+    std::vector<Communicator> full_communicators;
+    std::vector<Communicator> row_communicators;
+    std::vector<Communicator> col_communicators;
+
+    full_communicators.reserve(npipelines);
+    row_communicators.reserve(npipelines);
+    col_communicators.reserve(npipelines);
+
+    // Access the pipelines once for communicator in the pipelines
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      full_communicators.push_back(tt::sync_wait(complete_grid.full_communicator_pipeline()()).get());
+      row_communicators.push_back(tt::sync_wait(complete_grid.row_communicator_pipeline()()).get());
+      col_communicators.push_back(tt::sync_wait(complete_grid.col_communicator_pipeline()()).get());
+    }
+
+    // Since we made one full npipelines round in the previous round, we should now get the same
+    // communicators
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      EXPECT_EQ(&(full_communicators[i]),
+                &tt::sync_wait(complete_grid.full_communicator_pipeline()()).get());
+      EXPECT_EQ(&(row_communicators[i]),
+                &tt::sync_wait(complete_grid.row_communicator_pipeline()()).get());
+      EXPECT_EQ(&(col_communicators[i]),
+                &tt::sync_wait(complete_grid.col_communicator_pipeline()()).get());
+    }
+
+    // We also expect all npipelines communicators to be distinct
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      for (std::size_t j = i + 1; i < npipelines; ++i) {
+        EXPECT_NE(&(full_communicators[i]), &(full_communicators[j]));
+        EXPECT_NE(&(row_communicators[i]), &(row_communicators[j]));
+        EXPECT_NE(&(col_communicators[i]), &(col_communicators[j]));
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(RoundRobin, CommunicatorGridTest, valid_orderings);

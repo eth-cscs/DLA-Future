@@ -28,11 +28,8 @@ using ReduceInPlaceSplitAPITest = dlaf::comm::test::SplittedCommunicatorsTest;
 
 using TypeParam = std::complex<double>;
 
-// TODO
-const std::size_t ncommunicator_pipelines = 5;
-
 TEST_F(ReduceTest, ValueOnSingleRank) {
-  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor, ncommunicator_pipelines);
+  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor);
 
   Communicator alone_world = alone_grid.rowCommunicator();
 
@@ -52,7 +49,7 @@ TEST_F(ReduceTest, ValueOnSingleRank) {
 }
 
 TEST_F(ReduceTest, CArrayOnSingleRank) {
-  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor, ncommunicator_pipelines);
+  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor);
 
   Communicator alone_world = alone_grid.rowCommunicator();
 
@@ -358,7 +355,7 @@ TEST_F(ReduceSplitAPITest, ContiguousToStrided) {
 }
 
 TEST_F(ReduceInPlaceTest, ValueOnSingleRank) {
-  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor, ncommunicator_pipelines);
+  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor);
 
   Communicator alone_world = alone_grid.rowCommunicator();
 
@@ -378,7 +375,7 @@ TEST_F(ReduceInPlaceTest, ValueOnSingleRank) {
 }
 
 TEST_F(ReduceInPlaceTest, CArrayOnSingleRank) {
-  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor, ncommunicator_pipelines);
+  CommunicatorGrid alone_grid(world, 1, 1, common::Ordering::RowMajor);
 
   Communicator alone_world = alone_grid.rowCommunicator();
 

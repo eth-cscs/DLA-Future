@@ -12,6 +12,6 @@ DLAF_addTest(
   test_grid_c_api
   SOURCES test_grid_c_api.cpp test_grid_c_api_wrapper.c
   LIBRARIES dlaf.c_api
-  USE_MAIN MPI
+  USE_MAIN MPIPIKA
   MPIRANKS 6
 )

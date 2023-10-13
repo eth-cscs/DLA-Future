@@ -67,20 +67,30 @@ struct TuneParameters {
   // - updateConfiguration in init.cpp to update the value from command line options and environment
   //   values
   // - getOptionsDescription to add a corresponding command line option
+
+  TuneParameters() {
+    // Some parameters require the pika runtime to be initialized since they depend on the number of
+    // threads used by the runtime. We initialize them separately in the constructor after checking that
+    // pika is initialized.
+
+    // TODO: Check upfront whether pika has been initialized to be able to give a better error message.
+    // If pika has not been initialized getting the default thread pool will either trigger an assertion
+    // or a segfault.
+    const auto default_pool_thread_count =
+        pika::resource::get_thread_pool("default").get_os_thread_count();
+    red2band_panel_nworkers = std::max<std::size_t>(1, default_pool_thread_count / 2);
+    tridiag_rank1_nworkers = default_pool_thread_count;
+  }
   bool debug_dump_trisolver_data = false;
-  std::size_t red2band_panel_nworkers =
-      std::max<std::size_t>(1, pika::resource::get_thread_pool("default").get_os_thread_count() / 2);
+  std::size_t red2band_panel_nworkers = 1;
   std::size_t red2band_barrier_busy_wait_us = 1000;
-  std::size_t tridiag_rank1_nworkers = pika::resource::get_thread_pool("default").get_os_thread_count();
+  std::size_t tridiag_rank1_nworkers = 1;
   std::size_t tridiag_rank1_barrier_busy_wait_us = 0;
 
   SizeType eigensolver_min_band = 100;
   SizeType band_to_tridiag_1d_block_size_base = 8192;
   SizeType bt_band_to_tridiag_hh_apply_group_size = 64;
 
-  // TODO: The default parameter of CommunicatorGrid triggers the construction of TuneParameters, which
-  // in turn triggers a call to pika::resource::get_thread_pool, which will fail if done before pika has
-  // been started.
   std::size_t communicator_grid_num_pipelines = 3;
 };
 

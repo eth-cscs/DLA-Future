@@ -16,3 +16,5 @@ std::tuple<dlaf::matrix::Distribution, dlaf::matrix::LayoutInfo> distribution_an
     const struct DLAF_descriptor dlaf_desc, dlaf::comm::CommunicatorGrid& grid);
 
 dlaf::common::Ordering char2order(const char order);
+
+dlaf::comm::CommunicatorGrid& grid_from_context(int dlaf_context);

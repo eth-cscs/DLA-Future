@@ -30,14 +30,45 @@ using namespace std::chrono_literals;
 
 using dlaf::common::Pipeline;
 
+using Generator = std::mt19937;
+
 namespace ex = pika::execution::experimental;
 namespace tt = pika::this_thread::experimental;
 
-// TODO: Test subPipeline and read-only access
+// A nullable int is "emptied" on move construction and assignment (i.e. reset to zero) so that we can
+// detect in the test if we're using a moved-from int at some point.
+class nullable_size_t {
+  // For testing purposes we cheat and make x mutable so that we can increment it through const
+  // references. Since we externally protect access to it we will not be concurrently modifying it even
+  // though the Pipeline itself gives concurrent (read-only) access.
+  mutable std::size_t x = 0;
+
+public:
+  nullable_size_t() = default;
+  nullable_size_t(std::size_t x) : x(x) {}
+
+  nullable_size_t(nullable_size_t&& other) : x(std::exchange(other.x, 0)) {}
+  nullable_size_t& operator=(nullable_size_t&& other) {
+    x = std::exchange(other.x, 0);
+    return *this;
+  }
+
+  nullable_size_t(const nullable_size_t& other) = default;
+  nullable_size_t& operator=(const nullable_size_t& other) = default;
+
+  std::size_t get() const noexcept {
+    return x;
+  }
+  std::size_t operator++() const noexcept {
+    return ++x;
+  }
+};
+
+using PipelineType = Pipeline<nullable_size_t>;
 
 TEST(Pipeline, ResetValid) {
   // The pipeline is valid after construction
-  dlaf::common::Pipeline<int> pipeline(42);
+  PipelineType pipeline(42);
   ASSERT_TRUE(pipeline.valid());
 
   // The pipeline can be reset and is invalid afterwards
@@ -51,35 +82,34 @@ TEST(Pipeline, ResetValid) {
 
 TEST(Pipeline, Basic) {
   {
-    Pipeline<int> serial(26);
+    PipelineType serial(26);
 
     std::atomic<bool> first_access_done{false};
     std::atomic<bool> second_access_done{false};
     std::atomic<bool> third_access_done{false};
 
-    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint0 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 26);
                          EXPECT_FALSE(first_access_done);
                          EXPECT_FALSE(second_access_done);
                          EXPECT_FALSE(third_access_done);
+                         ++wrapper.get();
                          first_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
-    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint1 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 27);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_FALSE(second_access_done);
                          EXPECT_FALSE(third_access_done);
+                         ++wrapper.get();
                          second_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
-    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint2 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 28);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_TRUE(second_access_done);
                          EXPECT_FALSE(third_access_done);
                          third_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
 
     tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
@@ -87,35 +117,35 @@ TEST(Pipeline, Basic) {
 
   // The order of access does not depend on how the senders are started by when_all
   {
-    Pipeline<int> serial(26);
+    PipelineType serial(26);
 
     std::atomic<bool> first_access_done{false};
     std::atomic<bool> second_access_done{false};
     std::atomic<bool> third_access_done{false};
 
-    auto checkpoint0 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint0 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 26);
                          EXPECT_FALSE(first_access_done);
                          EXPECT_FALSE(second_access_done);
                          EXPECT_FALSE(third_access_done);
+                         ++wrapper.get();
                          first_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
-    auto checkpoint1 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint1 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 27);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_FALSE(second_access_done);
                          EXPECT_FALSE(third_access_done);
+                         ++wrapper.get();
                          second_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
-    auto checkpoint2 = serial() | ex::then([&](auto&& wrapper) {
+    auto checkpoint2 = serial() | ex::then([&](auto wrapper) {
+                         EXPECT_EQ(wrapper.get().get(), 28);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_TRUE(second_access_done);
                          EXPECT_FALSE(third_access_done);
+                         ++wrapper.get();
                          third_access_done = true;
-                         auto local = std::move(wrapper);
-                         dlaf::internal::silenceUnusedWarningFor(local);
                        });
 
     tt::sync_wait(ex::when_all(std::move(checkpoint2), std::move(checkpoint1), std::move(checkpoint0)));
@@ -150,7 +180,7 @@ TEST(PipelineDestructor, DestructionWithDependency) {
 
   std::atomic<bool> is_exited_from_scope{false};
   {
-    Pipeline<int> serial(26);
+    PipelineType serial(26);
     last_task = dlaf::internal::transform(
                     dlaf::internal::Policy<dlaf::Backend::MC>(),
                     [&is_exited_from_scope](auto) {
@@ -167,36 +197,35 @@ TEST(PipelineDestructor, DestructionWithDependency) {
 
 TEST(SubPipeline, Basic) {
   // A subpipeline behaves the same as a parent pipeline if the parent hasn't been used
-  Pipeline<int> pipeline(26);
-  Pipeline<int> sub_pipeline = pipeline.sub_pipeline();
+  PipelineType pipeline(26);
+  PipelineType sub_pipeline = pipeline.sub_pipeline();
 
   std::atomic<bool> first_access_done{false};
   std::atomic<bool> second_access_done{false};
   std::atomic<bool> third_access_done{false};
 
-  auto checkpoint0 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint0 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 26);
                        EXPECT_FALSE(first_access_done);
                        EXPECT_FALSE(second_access_done);
                        EXPECT_FALSE(third_access_done);
+                       ++wrapper.get();
                        first_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpoint1 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint1 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 27);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_FALSE(second_access_done);
                        EXPECT_FALSE(third_access_done);
+                       ++wrapper.get();
                        second_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpoint2 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint2 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 28);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_TRUE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        third_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
 
   tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
@@ -204,10 +233,10 @@ TEST(SubPipeline, Basic) {
 
 TEST(SubPipeline, BasicParentAccess) {
   // A subpipeline will not start executing if the parent hasn't released its accesses
-  Pipeline<int> pipeline(26);
+  PipelineType pipeline(26);
 
   auto first_parent_sender = pipeline();
-  Pipeline<int> sub_pipeline = pipeline.sub_pipeline();
+  PipelineType sub_pipeline = pipeline.sub_pipeline();
   auto last_parent_sender = pipeline();
 
   std::atomic<bool> first_parent_access_done{false};
@@ -282,10 +311,10 @@ TEST(SubPipeline, BasicParentAccess) {
 
 TEST(SubPipeline, BasicReadonlyParentAccess) {
   // A subpipeline will not start executing if the parent hasn't released its accesses
-  Pipeline<int> pipeline(26);
+  PipelineType pipeline(26);
 
   auto first_parent_sender = pipeline.read();
-  Pipeline<int> sub_pipeline = pipeline.sub_pipeline();
+  PipelineType sub_pipeline = pipeline.sub_pipeline();
   auto last_parent_sender = pipeline.read();
 
   std::atomic<bool> first_parent_access_done{false};
@@ -294,62 +323,69 @@ TEST(SubPipeline, BasicReadonlyParentAccess) {
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
 
-  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto&& wrapper) {
+  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
+                                  EXPECT_EQ(wrapper.get().get(), 26);
                                   EXPECT_FALSE(first_parent_access_done);
                                   EXPECT_FALSE(first_access_done);
                                   EXPECT_FALSE(second_access_done);
                                   EXPECT_FALSE(third_access_done);
                                   EXPECT_FALSE(last_parent_access_done);
+                                  ++wrapper.get();
                                   first_parent_access_done = true;
-                                  auto local = std::move(wrapper);
-                                  dlaf::internal::silenceUnusedWarningFor(local);
                                 });
 
-  auto checkpoint0 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
+  // Read-only access can be concurrent so the order of the following tasks being executed is sensitive
+  // to when they're connected and started. Since they're not eagerly started they will be released in
+  // the order they are passed to when_all. Note that the order in which when_all starts senders may be
+  // implementation dependent.
+  //
+  // In this particular test the senders are passed to when_all in the order 1, 0, 2 and the checks
+  // within the tasks reflect that.
+  auto checkpoint0 = sub_pipeline.read() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 28);
+                       EXPECT_TRUE(first_parent_access_done);
+                       EXPECT_FALSE(first_access_done);
+                       EXPECT_TRUE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
+                       first_access_done = true;
+                     });
+  auto checkpoint1 = sub_pipeline.read() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 27);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_FALSE(first_access_done);
                        EXPECT_FALSE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        EXPECT_FALSE(last_parent_access_done);
-                       first_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
-                     });
-  auto checkpoint1 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
-                       EXPECT_TRUE(first_parent_access_done);
-                       EXPECT_TRUE(first_access_done);
-                       EXPECT_FALSE(second_access_done);
-                       EXPECT_FALSE(third_access_done);
-                       EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
                        second_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpoint2 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
+  auto checkpoint2 = sub_pipeline.read() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 29);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_TRUE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
                        third_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpointparent_last = std::move(last_parent_sender) | ex::then([&](auto&& wrapper) {
+  auto checkpointparent_last = std::move(last_parent_sender) | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 30);
                                  EXPECT_TRUE(first_parent_access_done);
                                  EXPECT_TRUE(first_access_done);
                                  EXPECT_TRUE(second_access_done);
                                  EXPECT_TRUE(third_access_done);
                                  EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
                                  last_parent_access_done = true;
-                                 auto local = std::move(wrapper);
-                                 dlaf::internal::silenceUnusedWarningFor(local);
                                });
 
   // The first parent access and all sub pipeline accesses should complete here. The last parent access
   // should not complete until the sub pipeline has been reset.
   auto checkpointparent_last_started = ex::ensure_started(std::move(checkpointparent_last));
-  tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2),
+  tt::sync_wait(ex::when_all(std::move(checkpoint1), std::move(checkpoint0), std::move(checkpoint2),
                              std::move(checkpointparent_first)));
   // Since the last parent access will be run as an inline continuation and the access was eagerly
   // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.
@@ -357,35 +393,6 @@ TEST(SubPipeline, BasicReadonlyParentAccess) {
   sub_pipeline.reset();
   EXPECT_TRUE(last_parent_access_done);
 }
-
-// A nullable int is "emptied" on move construction and assignment (i.e. reset to zero) so that we can
-// detect in the test if we're using a moved-from int at some point.
-class nullable_size_t {
-  // For testing purposes we cheat and make x mutable so that we can increment it through const
-  // references. Since we externally protect access to it we will not be concurrently modifying it even
-  // though the Pipeline itself gives concurrent (read-only) access.
-  mutable std::size_t x = 0;
-
-public:
-  nullable_size_t() = default;
-  nullable_size_t(std::size_t x) : x(x) {}
-
-  nullable_size_t(nullable_size_t&& other) : x(std::exchange(other.x, 0)) {}
-  nullable_size_t& operator=(nullable_size_t&& other) {
-    x = std::exchange(other.x, 0);
-    return *this;
-  }
-
-  nullable_size_t(const nullable_size_t& other) = default;
-  nullable_size_t& operator=(const nullable_size_t& other) = default;
-
-  std::size_t get() const noexcept {
-    return x;
-  }
-  std::size_t operator++() const noexcept {
-    return ++x;
-  }
-};
 
 enum class SubPipelineAccessType { inline_access, new_task };
 
@@ -445,10 +452,7 @@ struct PipelineTestState {
   pika::mutex count_mutex;
 };
 
-using PipelineInt = Pipeline<nullable_size_t>;
-using Generator = std::mt19937;
-
-void spawn_work_readwrite(PipelineInt& pipeline, PipelineTestState& state, Generator& gen,
+void spawn_work_readwrite(PipelineType& pipeline, PipelineTestState& state, Generator& gen,
                           const PipelineTestConfig& test) {
   std::uniform_int_distribution<std::size_t> dist(test.min_readwrite_accesses,
                                                   test.max_readwrite_accesses);
@@ -471,7 +475,7 @@ void spawn_work_readwrite(PipelineInt& pipeline, PipelineTestState& state, Gener
   }
 }
 
-void spawn_work_readonly(PipelineInt& pipeline, PipelineTestState& state, Generator& gen,
+void spawn_work_readonly(PipelineType& pipeline, PipelineTestState& state, Generator& gen,
                          const PipelineTestConfig& test) {
   std::uniform_int_distribution<std::size_t> dist(test.min_readonly_accesses,
                                                   test.max_readonly_accesses);
@@ -504,7 +508,7 @@ void spawn_work_readonly(PipelineInt& pipeline, PipelineTestState& state, Genera
   }
 }
 
-void spawn_work(PipelineInt& pipeline, PipelineTestState& state, Generator& gen,
+void spawn_work(PipelineType& pipeline, PipelineTestState& state, Generator& gen,
                 const PipelineTestConfig& test) {
   // Note that any of the blocks below may spawn zero accesses depending the test configuration
   spawn_work_readwrite(pipeline, state, gen, test);
@@ -512,7 +516,7 @@ void spawn_work(PipelineInt& pipeline, PipelineTestState& state, Generator& gen,
   spawn_work_readwrite(pipeline, state, gen, test);
 }
 
-void test_recurse_sub_pipeline(PipelineInt& pipeline, PipelineTestState& state, Generator& gen,
+void test_recurse_sub_pipeline(PipelineType& pipeline, PipelineTestState& state, Generator& gen,
                                const PipelineTestConfig& test, std::size_t remaining_depth) {
   if (remaining_depth == 0) {
     return;
@@ -552,7 +556,7 @@ TEST(SubPipeline, RandomAccess) {
       std::mt19937 gen(seed);
 
       PipelineTestState state{};
-      PipelineInt pipeline(0);
+      PipelineType pipeline(0);
 
       // Make the first access to the parent pipeline, but do not eagerly start it
       ++state.spawn_count;

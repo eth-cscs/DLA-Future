@@ -103,7 +103,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
-    EXPECT_EQ(0, err);
+    DLAF_ASSERT(err == 0, err);
   }
   else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -132,14 +132,12 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     else {
       DLAF_ASSERT(false, typeid(T).name());
     }
-    EXPECT_EQ(0, info);
+    DLAF_ASSERT(info == 0, info);
 #endif
   }
 
   // Resume pika for the checks (suspended by the C API)
   pika::resume();
-
-  pika::wait();
 
   CHECK_MATRIX_NEAR(res, mat_h, 4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error,
                     4 * (mat_h.size().rows() + 1) * TypeUtilities<T>::error);
@@ -154,7 +152,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
   for (const auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(grid, uplo, m, mb);
       }
     }
   }

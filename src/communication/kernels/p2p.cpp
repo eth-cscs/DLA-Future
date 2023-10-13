@@ -87,6 +87,7 @@ template <class T, Device D, class CommSender>
 
 // clang-format off
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , pika::execution::experimental::any_sender<Communicator>);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::ReadOnlySender);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::ReadWriteSender);
 // clang-format on
@@ -116,6 +117,7 @@ template <class T, Device D, class CommSender>
 
 // clang-format off
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , pika::execution::experimental::any_sender<Communicator>);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::ReadOnlySender);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::ReadWriteSender);
 // clang-format on

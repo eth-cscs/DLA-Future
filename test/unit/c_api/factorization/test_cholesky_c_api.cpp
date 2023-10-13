@@ -133,6 +133,8 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
       DLAF_ASSERT(false, typeid(T).name());
     }
     DLAF_ASSERT(info == 0, info);
+#else
+      DLAF_ASSERT(false, "DLA-Future compiled without ScaLAPACK support.");
 #endif
   }
 

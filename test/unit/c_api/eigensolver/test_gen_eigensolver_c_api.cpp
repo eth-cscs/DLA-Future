@@ -181,6 +181,8 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
         DLAF_ASSERT(false, typeid(T).name());
       }
       DLAF_ASSERT(info == 0, info);
+#else
+      DLAF_ASSERT(false, "DLA-Future compiled without ScaLAPACK support.");
 #endif
     }
 

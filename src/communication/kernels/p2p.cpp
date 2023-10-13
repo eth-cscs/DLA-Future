@@ -14,6 +14,7 @@
 #include <mpi.h>
 
 #include <dlaf/common/callable_object.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/p2p.h>
@@ -85,37 +86,9 @@ template <class T, Device D, class CommSender>
 }
 
 // clang-format off
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-#endif
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::ReadOnlySender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::ReadWriteSender);
 // clang-format on
 
 template <class T, Device D, class CommSender>
@@ -142,36 +115,8 @@ template <class T, Device D, class CommSender>
 }
 
 // clang-format off
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, pika::execution::experimental::unique_any_sender<Communicator>);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadOnlySender);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadWriteSender);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, pika::execution::experimental::unique_any_sender<Communicator>);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadOnlySender);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteSender);
-#endif
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::ReadOnlySender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::ReadWriteSender);
 // clang-format on
 }

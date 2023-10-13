@@ -18,6 +18,7 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/callable_object.h>
 #include <dlaf/common/data.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/message.h>
@@ -61,18 +62,11 @@ template <class T, Device D, class Comm>
 }
 
 // clang-format off
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, , common::Pipeline<Communicator>::ReadWriteWrapper);
 
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_SEND_BCAST_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 #endif
 // clang-format on
 
@@ -111,18 +105,11 @@ template <class T, Device D, class Comm>
 }
 
 // clang-format off
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, , common::Pipeline<Communicator>::ReadWriteWrapper);
 
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 #ifdef DLAF_WITH_GPU
 DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, float, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, double, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
-DLAF_SCHEDULE_RECV_BCAST_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
 #endif
 // clang-format on
 }

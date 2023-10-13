@@ -93,10 +93,13 @@ ARG BUILD
 ARG DEPLOY
 
 ARG EXTRA_APTGET_DEPLOY
+# glibc-tools is needed for libSegFault on ubuntu:22.04
+# jq, strace are needed for check-threads
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
       ${EXTRA_APTGET_DEPLOY} \
+      glibc-tools jq strace \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 

@@ -20,6 +20,7 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/data.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/reduce.h>
@@ -119,18 +120,8 @@ template <class T, Device D>
                            RequireContiguous::Yes>(std::move(tile), std::move(reduce_recv_in_place));
 }
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, );
 DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(, std::complex<double>, Device::GPU);
-#endif
 
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
@@ -140,16 +131,6 @@ template <class T, Device D>
   return internal::scheduleReduceSend(std::move(pcomm), rank_root, reduce_op, std::move(tile));
 }
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_SEND_ETI, );
 DLAF_SCHEDULE_REDUCE_SEND_ETI(, int, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, float, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, double, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_REDUCE_SEND_ETI(, std::complex<double>, Device::GPU);
-#endif
 }

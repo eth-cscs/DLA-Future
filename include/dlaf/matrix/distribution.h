@@ -805,6 +805,7 @@ public:
     return tile_element_index(global_element);
   }
 
+  DLAF_DISTRIBUTION_DEPRECATED("use tile_size_of method")
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return tile_size_of(index);
   }

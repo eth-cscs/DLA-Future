@@ -153,7 +153,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
-      EXPECT_EQ(0, err);
+      DLAF_ASSERT(err == 0, err);
     }
     else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -180,7 +180,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
-      EXPECT_EQ(0, info);
+      DLAF_ASSERT(info == 0, info);
 #endif
     }
 

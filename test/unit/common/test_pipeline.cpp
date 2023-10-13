@@ -514,17 +514,17 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
       ex::just() |
       dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                 [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
-                                    // In the general case we don't have guarantees that the following
-                                    // read-only accesses will complete in the order that they are
-                                    // spawned. For the test we are relying on the current pika
-                                    // implementation to spawn them in the given order. The test may need
-                                    // changes if the internals of pika change. Since we are not spawning
-                                    // new tasks for the accesses we can currently rely on the order
-                                    // being stable.
-                                    //
-                                    // Note also we can modify the value in the wrapper only because
-                                    // nullable_int specially allows modification on const objects for
-                                    // testing purposes.
+                                  // In the general case we don't have guarantees that the following
+                                  // read-only accesses will complete in the order that they are
+                                  // spawned. For the test we are relying on the current pika
+                                  // implementation to spawn them in the given order. The test may need
+                                  // changes if the internals of pika change. Since we are not spawning
+                                  // new tasks for the accesses we can currently rely on the order
+                                  // being stable.
+                                  //
+                                  // Note also we can modify the value in the wrapper only because
+                                  // nullable_int specially allows modification on const objects for
+                                  // testing purposes.
                                   ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
                                                        EXPECT_EQ(wrapper.get().get(), 27);
                                                        EXPECT_TRUE(first_parent_access_done);

@@ -13,6 +13,8 @@
 
 #include <vector>
 
+#include <dlaf/common/assert.h>
+
 namespace dlaf {
 namespace common {
 
@@ -34,11 +36,14 @@ public:
   RoundRobin& operator=(const RoundRobin&) = delete;
 
   T& currentResource() {
+    DLAF_ASSERT(curr_index_ < pool_.size(), curr_index_, pool_.size());
     return pool_[curr_index_];
   }
 
   T& nextResource() {
+    DLAF_ASSERT(!pool_.empty(), "");
     curr_index_ = (curr_index_ + 1) % pool_.size();
+    DLAF_ASSERT(curr_index_ < pool_.size(), curr_index_, pool_.size());
     return pool_[curr_index_];
   }
 

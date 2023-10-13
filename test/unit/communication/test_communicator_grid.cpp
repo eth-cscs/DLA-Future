@@ -99,54 +99,6 @@ void check_rank_full_communicator(const CommunicatorGrid& grid) {
 
 class CommunicatorGridTest : public ::testing::TestWithParam<Ordering> {};
 
-// TODO: Remove this test once CommunicatorGrid becomes move-only.
-// TEST_P(CommunicatorGridTest, Copy) {
-//   Communicator world(MPI_COMM_WORLD);
-
-//   auto grid_dims = computeGridDims(NUM_MPI_RANKS);
-//   int nrows = grid_dims[0];
-//   int ncols = grid_dims[1];
-
-//   CommunicatorGrid grid(world, nrows, ncols, GetParam(), ncommunicator_pipelines);
-
-//   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
-//   EXPECT_EQ(nrows, grid.size().rows());
-//   EXPECT_EQ(ncols, grid.size().cols());
-
-//   {
-//     CommunicatorGrid copy = grid;
-
-//     EXPECT_EQ(NUM_MPI_RANKS, copy.size().rows() * copy.size().cols());
-//     EXPECT_EQ(nrows, copy.size().rows());
-//     EXPECT_EQ(ncols, copy.size().cols());
-
-//     int result;
-//     DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.fullCommunicator(), grid.fullCommunicator(), &result));
-//     EXPECT_EQ(MPI_IDENT, result);
-//     EXPECT_NE(MPI_COMM_NULL, copy.fullCommunicator());
-
-//     DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.rowCommunicator(), grid.rowCommunicator(), &result));
-//     EXPECT_EQ(MPI_IDENT, result);
-//     EXPECT_NE(MPI_COMM_NULL, copy.rowCommunicator());
-
-//     DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.colCommunicator(), grid.colCommunicator(), &result));
-//     EXPECT_EQ(MPI_IDENT, result);
-//     EXPECT_NE(MPI_COMM_NULL, copy.colCommunicator());
-
-//     test_grid_communication(copy);
-//   }
-
-//   EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
-//   EXPECT_EQ(nrows, grid.size().rows());
-//   EXPECT_EQ(ncols, grid.size().cols());
-
-//   EXPECT_NE(MPI_COMM_NULL, grid.fullCommunicator());
-//   EXPECT_NE(MPI_COMM_NULL, grid.rowCommunicator());
-//   EXPECT_NE(MPI_COMM_NULL, grid.colCommunicator());
-
-//   test_grid_communication(grid);
-// }
-
 TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   Communicator world(MPI_COMM_WORLD);
 

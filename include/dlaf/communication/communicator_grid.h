@@ -60,10 +60,6 @@ public:
 
   CommunicatorGrid(CommunicatorGrid&&) = default;
   CommunicatorGrid& operator=(CommunicatorGrid&&) = default;
-  [[deprecated("CommmunicatorGrid will become move-only")]] CommunicatorGrid(
-      const CommunicatorGrid&) = default;
-  [[deprecated("CommmunicatorGrid will become move-only")]] CommunicatorGrid& operator=(
-      const CommunicatorGrid&) = default;
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
@@ -72,14 +68,11 @@ public:
   }
 
   std::size_t num_pipelines() const noexcept {
-    DLAF_ASSERT(bool(full_pipelines_), "");
-    DLAF_ASSERT(bool(row_pipelines_), "");
-    DLAF_ASSERT(bool(col_pipelines_), "");
-    DLAF_ASSERT(full_pipelines_->size() == row_pipelines_->size(), full_pipelines_->size(),
-                row_pipelines_->size());
-    DLAF_ASSERT(full_pipelines_->size() == col_pipelines_->size(), full_pipelines_->size(),
-                col_pipelines_->size());
-    return full_pipelines_->size();
+    DLAF_ASSERT(full_pipelines_.size() == row_pipelines_.size(), full_pipelines_.size(),
+                row_pipelines_.size());
+    DLAF_ASSERT(full_pipelines_.size() == col_pipelines_.size(), full_pipelines_.size(),
+                col_pipelines_.size());
+    return full_pipelines_.size();
   }
 
   /// Return the rank of the current process in the CommunicatorGrid.
@@ -118,19 +111,19 @@ public:
 
   /// Return a pipeline to a Communicator grouping all ranks in the grid.
   Pipeline full_communicator_pipeline() {
-    return full_pipelines_->nextResource().sub_pipeline();
+    return full_pipelines_.nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the row (that includes the current
   /// process).
   Pipeline row_communicator_pipeline() {
-    return row_pipelines_->nextResource().sub_pipeline();
+    return row_pipelines_.nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the col (that includes the current
   /// process).
   Pipeline col_communicator_pipeline() {
-    return col_pipelines_->nextResource().sub_pipeline();
+    return col_pipelines_.nextResource().sub_pipeline();
   }
 
   /// Prints information about the CommunicationGrid.
@@ -146,13 +139,11 @@ protected:
   Communicator row_;
   Communicator col_;
 
-  // TODO: shared_ptr to make grid copyable (as Communicator is). Change functions to take grid by
-  // reference instead?
   using RoundRobinPipeline = dlaf::common::RoundRobin<Pipeline>;
 
-  std::shared_ptr<RoundRobinPipeline> full_pipelines_ = nullptr;
-  std::shared_ptr<RoundRobinPipeline> row_pipelines_ = nullptr;
-  std::shared_ptr<RoundRobinPipeline> col_pipelines_ = nullptr;
+  RoundRobinPipeline full_pipelines_;
+  RoundRobinPipeline row_pipelines_;
+  RoundRobinPipeline col_pipelines_;
 
   Index2D position_;
   Size2D grid_size_ = Size2D(0, 0);

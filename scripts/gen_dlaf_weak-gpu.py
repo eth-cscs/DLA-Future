@@ -51,24 +51,24 @@ args = parser.parse_args()
 debug = args.debug
 
 
-def createAndSubmitRun(run_dir, nodes_arr, typ, **kwargs):
-    if typ == "d":
+def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
+    if dtype == "d":
         m_szs = m_szs_d
         mb_szs = mb_szs_d
         run_dir += "/d"
-    elif typ == "z":
+    elif dtype == "z":
         m_szs = m_szs_z
         mb_szs = mb_szs_z
         run_dir += "/z"
     else:
-        raise RuntimeError(f"Invalid type specified {typ}")
+        raise RuntimeError(f"Invalid type specified {dtype}")
 
     full_kwargs = kwargs.copy()
     full_kwargs["lib"] = "dlaf"
     full_kwargs["build_dir"] = dlafpath
     full_kwargs["approx"] = approx
     full_kwargs["nruns"] = nruns
-    full_kwargs["typ"] = typ
+    full_kwargs["dtype"] = dtype
 
     run = mp.WeakScaling(system, "DLAF_test_weak", "job_dlaf", nodes_arr, time0, time)
 

@@ -155,19 +155,19 @@ def _checkBand(mb_sz, band):
         raise RuntimeError(f"Invalid band {band} for block size {mb_sz}")
 
 
-def _check_type(typ):
-    if not typ in ["s", "c", "d", "z"]:
-        raise RuntimeError(f"Invalid type specified {typ}")
+def _check_type(dtype):
+    if not dtype in ["s", "c", "d", "z"]:
+        raise RuntimeError(f"Invalid type specified {dtype}")
 
 
-def _only_type_dz(typ):
-    if not typ in ["d", "z"]:
-        raise RuntimeError(f"Only type d or z are currently supported for this config (specified {typ})")
+def _only_type_dz(dtype):
+    if not dtype in ["d", "z"]:
+        raise RuntimeError(f"Only type d or z are currently supported for this config (specified {dtype})")
 
 
-def _only_type_d(typ):
-    if typ != "d":
-        raise RuntimeError(f"Only type d is currently for this config (specified {typ})")
+def _only_type_d(dtype):
+    if dtype != "d":
+        raise RuntimeError(f"Only type d is currently for this config (specified {dtype})")
 
 
 # lib: allowed libraries are dlaf|slate|dplasma|scalapack
@@ -185,33 +185,33 @@ def chol(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     _check_ranks_per_node(system, lib, rpn)
     [total_ranks, cores_per_rank, threads_per_rank] = _computeResourcesNeededList(system, nodes, rpn)
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_cholesky"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
         opts = f"--dim {m_sz}x{m_sz}x0 --nb {mb_sz} --p {grid_rows} --q {grid_cols} --repeat {nruns} --check n --ref n --type d {extra_flags} potrf"
     elif lib == "dplasma":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/tests/testing_dpotrf"
         if system["GPU"]:
             extra_flags += " -g 1"
         opts = f"-N {m_sz} --MB {mb_sz} --NB {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} -c {cores_per_rank} --nruns {nruns} -v {extra_flags}"
     elif lib == "scalapack":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/cholesky"
         opts = f"-N {m_sz} -b {mb_sz} --p_grid={grid_rows},{grid_cols} -r {nruns} {extra_flags}"
@@ -240,7 +240,7 @@ def trsm(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     if n_sz == None:
         n_sz = m_sz
@@ -250,19 +250,19 @@ def trsm(
     gr, gc = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_triangular_solver"
-        opts = f"--type {typ} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
         opts = f"--dim {m_sz}x{n_sz}x0 --nb {mb_sz} --p {gr} --q {gc} --repeat {nruns} --alpha 2 --check n --ref n --type d {extra_flags} trsm"
     elif lib == "dplasma":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/tests/testing_dtrsm"
         if system["GPU"]:
@@ -291,7 +291,7 @@ def gen2std(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -300,12 +300,12 @@ def gen2std(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_gen_to_std"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
-        _only_type_d(typ)
+        _only_type_d(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
         if system["GPU"]:
@@ -336,7 +336,7 @@ def red2band(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     if band == None:
         band = mb_sz
@@ -349,10 +349,10 @@ def red2band(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_reduction_to_band"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -378,7 +378,7 @@ def band2trid(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     if band == None:
         band = mb_sz
@@ -391,10 +391,10 @@ def band2trid(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_band_to_tridiag"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --band-size {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -418,7 +418,7 @@ def trid_evp(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -427,10 +427,10 @@ def trid_evp(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_tridiag_solver"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -458,7 +458,7 @@ def bt_band2trid(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     if band == None:
         band = mb_sz
@@ -474,10 +474,10 @@ def bt_band2trid(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_bt_band_to_tridiag"
-        opts = f"--type {typ} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -505,7 +505,7 @@ def bt_red2band(
     suffix="na",
     extra_flags="",
     env="",
-    typ="d",
+    dtype="d",
 ):
     if band == None:
         band = mb_sz
@@ -520,10 +520,10 @@ def bt_red2band(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_bt_reduction_to_band"
-        opts = f"--type {typ} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --b {band} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -549,7 +549,7 @@ def evp(
     extra_flags="",
     env="",
     min_band=None,
-    typ="d",
+    dtype="d",
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -558,7 +558,7 @@ def evp(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         # Valid min_band are >= 2 and None (use default).
         band_flag = ""
         if min_band != None and min_band >= 2:
@@ -568,31 +568,31 @@ def evp(
 
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_eigensolver"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     elif lib == "slate":
-        _check_type(typ)
+        _check_type(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
         app = f"{build_dir}/test/tester"
         if system["GPU"]:
             extra_flags += " --origin d --target d"
-        opts = f"--dim {m_sz} --nb {mb_sz} --grid {grid_rows}x{grid_cols} --repeat {nruns} --check n --ref n --type {typ} --jobz v --uplo l {extra_flags} heev"
+        opts = f"--dim {m_sz} --nb {mb_sz} --grid {grid_rows}x{grid_cols} --repeat {nruns} --check n --ref n --type {dtype} --jobz v --uplo l {extra_flags} heev"
     elif lib == "scalapack":
-        _only_type_dz(typ)
+        _only_type_dz(dtype)
         env += f" OMP_NUM_THREADS={cores_per_rank}"
-        if typ == "d":
+        if dtype == "d":
             app = f"{build_dir}/miniapp_evp_scalapack"
-        elif typ == "z":
+        elif dtype == "z":
             app = f"{build_dir}/miniapp_evp_scalapack_z"
         opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns}"
     elif lib == "elpa1" or lib == "elpa2":
-        _only_type_dz(typ)
+        _only_type_dz(dtype)
         stages = int(lib[4])
         if system["GPU"]:
             env += f" env 'ELPA_DEFAULT_nvidia-gpu=1'"
         env += f" ELPA_DEFAULT_omp_threads={cores_per_rank} OMP_NUM_THREADS={cores_per_rank}"
-        if typ == "d":
+        if dtype == "d":
             app = f"{build_dir}/miniapp_evp_elpa"
-        elif typ == "z":
+        elif dtype == "z":
             app = f"{build_dir}/miniapp_evp_elpa_z"
         opts = f"{m_sz} {mb_sz} {grid_rows} {grid_cols} {nruns} {stages}"
     else:
@@ -620,7 +620,7 @@ def gevp(
     extra_flags="",
     env="",
     min_band=None,
-    typ="d",
+    dtype="d",
 ):
     _check_ranks_per_node(system, lib, rpn)
 
@@ -629,7 +629,7 @@ def gevp(
     grid_cols, grid_rows = _sq_factor(total_ranks)
 
     if lib.startswith("dlaf"):
-        _check_type(typ)
+        _check_type(dtype)
         # Valid min_band are >= 2 and None (use default).
         band_flag = ""
         if min_band != None and min_band >= 2:
@@ -639,7 +639,7 @@ def gevp(
 
         env += " OMP_NUM_THREADS=1"
         app = f"{build_dir}/miniapp/miniapp_gen_eigensolver"
-        opts = f"--type {typ} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
+        opts = f"--type {dtype} --matrix-size {m_sz} --block-size {mb_sz} {band_flag} --grid-rows {grid_rows} --grid-cols {grid_cols} --nruns {nruns} {extra_flags}"
     else:
         raise ValueError(_err_msg(lib))
 
@@ -668,7 +668,7 @@ class StrongScaling:
         self.rpn_preamble = None
 
     # add one/multiple runs
-    def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env="", typ="d"):
+    def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env="", dtype="d"):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")
 
@@ -703,7 +703,7 @@ class StrongScaling:
                 "suffix": suffix,
                 "extra_flags": extra_flags,
                 "env": env,
-                "typ": typ,
+                "dtype": dtype,
             }
         )
 
@@ -732,7 +732,7 @@ class StrongScaling:
                     suffix=suffix,
                     extra_flags=run["extra_flags"],
                     env=run["env"],
-                    typ=run["typ"],
+                    dtype=run["dtype"],
                     **param,
                 )
         return job_text
@@ -789,7 +789,7 @@ class WeakScaling:
         suffix="",
         extra_flags="",
         env="",
-        typ="d",
+        dtype="d",
     ):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")
@@ -830,7 +830,7 @@ class WeakScaling:
                 "suffix": suffix,
                 "extra_flags": extra_flags,
                 "env": env,
-                "typ": typ,
+                "dtype": dtype,
             }
         )
 
@@ -871,7 +871,7 @@ class WeakScaling:
                         suffix=suffix,
                         extra_flags=run["extra_flags"],
                         env=run["env"],
-                        typ=run["typ"],
+                        dtype=run["dtype"],
                         **param,
                         **weak_param,
                     )

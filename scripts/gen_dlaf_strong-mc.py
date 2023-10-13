@@ -21,6 +21,7 @@ import systems
 system = systems.cscs["daint-mc"]
 
 dlafpath = "<path_to_dlaf_build_dir>"
+matrixrefpath = "<path_to_h5_refs>"
 
 run_dir = "~/ws/runs/strong"
 
@@ -130,7 +131,7 @@ def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
         trid_kwargs["suffix"] = "fromfile"
         trid_kwargs["extra_flags"] = (
             trid_kwargs.get("extra_flags", "")
-            + f" --input-file=/scratch/e1000/rasolca/trid-ref-{m_sz}.h5"
+            + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
         )
 
         run.add(

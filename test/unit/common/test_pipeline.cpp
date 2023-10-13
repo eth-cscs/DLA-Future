@@ -280,6 +280,84 @@ TEST(SubPipeline, BasicParentAccess) {
   EXPECT_TRUE(last_parent_access_done);
 }
 
+TEST(SubPipeline, BasicReadonlyParentAccess) {
+  // A subpipeline will not start executing if the parent hasn't released its accesses
+  Pipeline<int> pipeline(26);
+
+  auto first_parent_sender = pipeline.read();
+  Pipeline<int> sub_pipeline = pipeline.sub_pipeline();
+  auto last_parent_sender = pipeline.read();
+
+  std::atomic<bool> first_parent_access_done{false};
+  std::atomic<bool> first_access_done{false};
+  std::atomic<bool> second_access_done{false};
+  std::atomic<bool> third_access_done{false};
+  std::atomic<bool> last_parent_access_done{false};
+
+  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto&& wrapper) {
+                                  EXPECT_FALSE(first_parent_access_done);
+                                  EXPECT_FALSE(first_access_done);
+                                  EXPECT_FALSE(second_access_done);
+                                  EXPECT_FALSE(third_access_done);
+                                  EXPECT_FALSE(last_parent_access_done);
+                                  first_parent_access_done = true;
+                                  auto local = std::move(wrapper);
+                                  dlaf::internal::silenceUnusedWarningFor(local);
+                                });
+
+  auto checkpoint0 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
+                       EXPECT_TRUE(first_parent_access_done);
+                       EXPECT_FALSE(first_access_done);
+                       EXPECT_FALSE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       EXPECT_FALSE(last_parent_access_done);
+                       first_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+  auto checkpoint1 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
+                       EXPECT_TRUE(first_parent_access_done);
+                       EXPECT_TRUE(first_access_done);
+                       EXPECT_FALSE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       EXPECT_FALSE(last_parent_access_done);
+                       second_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+  auto checkpoint2 = sub_pipeline.read() | ex::then([&](auto&& wrapper) {
+                       EXPECT_TRUE(first_parent_access_done);
+                       EXPECT_TRUE(first_access_done);
+                       EXPECT_TRUE(second_access_done);
+                       EXPECT_FALSE(third_access_done);
+                       EXPECT_FALSE(last_parent_access_done);
+                       third_access_done = true;
+                       auto local = std::move(wrapper);
+                       dlaf::internal::silenceUnusedWarningFor(local);
+                     });
+  auto checkpointparent_last = std::move(last_parent_sender) | ex::then([&](auto&& wrapper) {
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_TRUE(first_access_done);
+                                 EXPECT_TRUE(second_access_done);
+                                 EXPECT_TRUE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 last_parent_access_done = true;
+                                 auto local = std::move(wrapper);
+                                 dlaf::internal::silenceUnusedWarningFor(local);
+                               });
+
+  // The first parent access and all sub pipeline accesses should complete here. The last parent access
+  // should not complete until the sub pipeline has been reset.
+  auto checkpointparent_last_started = ex::ensure_started(std::move(checkpointparent_last));
+  tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2),
+                             std::move(checkpointparent_first)));
+  // Since the last parent access will be run as an inline continuation and the access was eagerly
+  // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.
+  EXPECT_FALSE(last_parent_access_done);
+  sub_pipeline.reset();
+  EXPECT_TRUE(last_parent_access_done);
+}
+
 // A nullable int is "emptied" on move construction and assignment (i.e. reset to zero) so that we can
 // detect in the test if we're using a moved-from int at some point.
 class nullable_size_t {

@@ -245,56 +245,55 @@ TEST(SubPipeline, BasicParentAccess) {
   std::atomic<bool> third_access_done{false};
   std::atomic<bool> last_parent_access_done{false};
 
-  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto&& wrapper) {
+  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
+                                  EXPECT_EQ(wrapper.get().get(), 26);
                                   EXPECT_FALSE(first_parent_access_done);
                                   EXPECT_FALSE(first_access_done);
                                   EXPECT_FALSE(second_access_done);
                                   EXPECT_FALSE(third_access_done);
                                   EXPECT_FALSE(last_parent_access_done);
+                                  ++wrapper.get();
                                   first_parent_access_done = true;
-                                  auto local = std::move(wrapper);
-                                  dlaf::internal::silenceUnusedWarningFor(local);
                                 });
 
-  auto checkpoint0 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint0 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 27);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_FALSE(first_access_done);
                        EXPECT_FALSE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
                        first_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpoint1 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint1 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 28);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_FALSE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
                        second_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpoint2 = sub_pipeline() | ex::then([&](auto&& wrapper) {
+  auto checkpoint2 = sub_pipeline() | ex::then([&](auto wrapper) {
+                       EXPECT_EQ(wrapper.get().get(), 29);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_TRUE(second_access_done);
                        EXPECT_FALSE(third_access_done);
                        EXPECT_FALSE(last_parent_access_done);
+                       ++wrapper.get();
                        third_access_done = true;
-                       auto local = std::move(wrapper);
-                       dlaf::internal::silenceUnusedWarningFor(local);
                      });
-  auto checkpointparent_last = std::move(last_parent_sender) | ex::then([&](auto&& wrapper) {
+  auto checkpointparent_last = std::move(last_parent_sender) | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 30);
                                  EXPECT_TRUE(first_parent_access_done);
                                  EXPECT_TRUE(first_access_done);
                                  EXPECT_TRUE(second_access_done);
                                  EXPECT_TRUE(third_access_done);
                                  EXPECT_FALSE(last_parent_access_done);
                                  last_parent_access_done = true;
-                                 auto local = std::move(wrapper);
-                                 dlaf::internal::silenceUnusedWarningFor(local);
                                });
 
   // The first parent access and all sub pipeline accesses should complete here. The last parent access
@@ -391,6 +390,99 @@ TEST(SubPipeline, BasicReadonlyParentAccess) {
   // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.
   EXPECT_FALSE(last_parent_access_done);
   sub_pipeline.reset();
+  EXPECT_TRUE(last_parent_access_done);
+}
+
+TEST(SubPipeline, TaskParentAccess) {
+  // A subpipeline will not start executing if the parent hasn't released its accesses
+  PipelineType pipeline(26);
+
+  auto first_parent_sender = pipeline();
+  PipelineType sub_pipeline = pipeline.sub_pipeline();
+
+  std::atomic<bool> first_parent_access_done{false};
+  std::atomic<bool> first_access_done{false};
+  std::atomic<bool> second_access_done{false};
+  std::atomic<bool> third_access_done{false};
+  std::atomic<bool> last_parent_access_done{false};
+
+  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
+                                  EXPECT_EQ(wrapper.get().get(), 26);
+                                  EXPECT_FALSE(first_parent_access_done);
+                                  EXPECT_FALSE(first_access_done);
+                                  EXPECT_FALSE(second_access_done);
+                                  EXPECT_FALSE(third_access_done);
+                                  EXPECT_FALSE(last_parent_access_done);
+                                  ++wrapper.get();
+                                  first_parent_access_done = true;
+                                });
+
+  auto spawn_sub_pipeline =
+      ex::just() |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
+                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 27);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_FALSE(first_access_done);
+                                                       EXPECT_FALSE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       first_access_done = true;
+                                                     }));
+                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 28);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_TRUE(first_access_done);
+                                                       EXPECT_FALSE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       second_access_done = true;
+                                                     }));
+                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 29);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_TRUE(first_access_done);
+                                                       EXPECT_TRUE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       third_access_done = true;
+                                                     }));
+                                  return std::move(sub_pipeline);
+                                }) |
+      ex::ensure_started();
+
+  auto checkpointparent_last = pipeline() | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 30);
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_TRUE(first_access_done);
+                                 EXPECT_TRUE(second_access_done);
+                                 EXPECT_TRUE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
+                                 last_parent_access_done = true;
+                               });
+
+  // None of the sub pipeline accesses should have completed at this point even if they were spawned. We
+  // can start the last parent access without releasing previous accesses.
+  auto checkpointparent_last_started = ex::ensure_started(std::move(checkpointparent_last));
+  EXPECT_FALSE(first_access_done);
+  EXPECT_FALSE(second_access_done);
+  EXPECT_FALSE(third_access_done);
+
+  // Once the first access in the parent pipeline has completed the sub pipeline accesses may complete.
+  // This happens asynchronously as they were spawned in a different task.
+  tt::sync_wait(std::move(checkpointparent_first));
+
+  // The last parent access should not complete until the sub pipeline has been reset.
+  EXPECT_FALSE(last_parent_access_done);
+  auto sub_pipeline_from_sender = tt::sync_wait(std::move(spawn_sub_pipeline));
+  EXPECT_FALSE(last_parent_access_done);
+  sub_pipeline_from_sender.reset();
+  tt::sync_wait(std::move(checkpointparent_last_started));
   EXPECT_TRUE(last_parent_access_done);
 }
 

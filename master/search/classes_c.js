@@ -1,18 +1,18 @@
 var searchData=
 [
-  ['panel_726',['Panel',['../structdlaf_1_1matrix_1_1_panel.html',1,'dlaf::matrix']]],
-  ['panel_3c_20axis_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ano_20_3e_727',['Panel&lt; axis, const T, D, StoreTransposed::No &gt;',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html',1,'dlaf::matrix']]],
-  ['panel_3c_20axis_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ayes_20_3e_728',['Panel&lt; axis, const T, D, StoreTransposed::Yes &gt;',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_yes_01_4.html',1,'dlaf::matrix']]],
-  ['panel_3c_20orthogonal_28axis_29_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ano_20_3e_729',['Panel&lt; orthogonal(axis), const T, D, StoreTransposed::No &gt;',['../structdlaf_1_1matrix_1_1_panel.html',1,'dlaf::matrix']]],
-  ['partialtransform_730',['PartialTransform',['../classdlaf_1_1internal_1_1_partial_transform.html',1,'dlaf::internal']]],
-  ['partialtransformbase_731',['PartialTransformBase',['../structdlaf_1_1internal_1_1_partial_transform_base.html',1,'dlaf::internal']]],
-  ['partialtransformdetach_732',['PartialTransformDetach',['../classdlaf_1_1internal_1_1_partial_transform_detach.html',1,'dlaf::internal']]],
-  ['partialtransformmpi_733',['PartialTransformMPI',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html',1,'dlaf::comm::internal']]],
-  ['partialtransformmpibase_734',['PartialTransformMPIBase',['../structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html',1,'dlaf::comm::internal']]],
-  ['partialtransformmpidetach_735',['PartialTransformMPIDetach',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html',1,'dlaf::comm::internal']]],
-  ['permutations_736',['Permutations',['../structdlaf_1_1permutations_1_1internal_1_1_permutations.html',1,'dlaf::permutations::internal']]],
-  ['pipeline_737',['Pipeline',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
-  ['policy_738',['Policy',['../classdlaf_1_1internal_1_1_policy.html',1,'dlaf::internal']]],
-  ['prependpack_739',['PrependPack',['../structdlaf_1_1internal_1_1_prepend_pack.html',1,'dlaf::internal']]],
-  ['prependpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20t_20_3e_740',['PrependPack&lt; Pack&lt; Ts... &gt;, T &gt;',['../structdlaf_1_1internal_1_1_prepend_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_t_01_4.html',1,'dlaf::internal']]]
+  ['panel_744',['Panel',['../structdlaf_1_1matrix_1_1_panel.html',1,'dlaf::matrix']]],
+  ['panel_3c_20axis_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ano_20_3e_745',['Panel&lt; axis, const T, D, StoreTransposed::No &gt;',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html',1,'dlaf::matrix']]],
+  ['panel_3c_20axis_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ayes_20_3e_746',['Panel&lt; axis, const T, D, StoreTransposed::Yes &gt;',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_yes_01_4.html',1,'dlaf::matrix']]],
+  ['panel_3c_20orthogonal_28axis_29_2c_20const_20t_2c_20d_2c_20storetransposed_3a_3ano_20_3e_747',['Panel&lt; orthogonal(axis), const T, D, StoreTransposed::No &gt;',['../structdlaf_1_1matrix_1_1_panel.html',1,'dlaf::matrix']]],
+  ['partialtransform_748',['PartialTransform',['../classdlaf_1_1internal_1_1_partial_transform.html',1,'dlaf::internal']]],
+  ['partialtransformbase_749',['PartialTransformBase',['../structdlaf_1_1internal_1_1_partial_transform_base.html',1,'dlaf::internal']]],
+  ['partialtransformdetach_750',['PartialTransformDetach',['../classdlaf_1_1internal_1_1_partial_transform_detach.html',1,'dlaf::internal']]],
+  ['partialtransformmpi_751',['PartialTransformMPI',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html',1,'dlaf::comm::internal']]],
+  ['partialtransformmpibase_752',['PartialTransformMPIBase',['../structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html',1,'dlaf::comm::internal']]],
+  ['partialtransformmpidetach_753',['PartialTransformMPIDetach',['../classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html',1,'dlaf::comm::internal']]],
+  ['permutations_754',['Permutations',['../structdlaf_1_1permutations_1_1internal_1_1_permutations.html',1,'dlaf::permutations::internal']]],
+  ['pipeline_755',['Pipeline',['../classdlaf_1_1common_1_1_pipeline.html',1,'dlaf::common']]],
+  ['policy_756',['Policy',['../classdlaf_1_1internal_1_1_policy.html',1,'dlaf::internal']]],
+  ['prependpack_757',['PrependPack',['../structdlaf_1_1internal_1_1_prepend_pack.html',1,'dlaf::internal']]],
+  ['prependpack_3c_20pack_3c_20ts_2e_2e_2e_20_3e_2c_20t_20_3e_758',['PrependPack&lt; Pack&lt; Ts... &gt;, T &gt;',['../structdlaf_1_1internal_1_1_prepend_pack_3_01_pack_3_01_ts_8_8_8_01_4_00_01_t_01_4.html',1,'dlaf::internal']]]
 ];

@@ -57,7 +57,9 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D, API api>
 void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
-                  const SizeType mb, int dlaf_context) {
+                  const SizeType mb) {
+  auto dlaf_context = c_api_test_inititialize<api>(grid);
+
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
@@ -142,73 +144,51 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
+
+  c_api_test_finalize<api>(dlaf_context);
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
-  constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
-    // TODO: Move c_api_test* to test function when pika/#716 is released
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
-
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, api>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb);
       }
     }
-
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
-  constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
-    // TODO: Move c_api_test* to test function when pika/#716 is released
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
-
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::MC, Device::CPU, api>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb);
       }
     }
-
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
-  constexpr API api = API::dlaf;
   for (const auto& grid : this->commGrids()) {
-    // TODO: Move c_api_test* to test function when pika/#716 is released
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
-
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, api>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(grid, uplo, m, mb);
       }
     }
-
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
-  constexpr API api = API::scalapack;
   for (const auto& grid : this->commGrids()) {
-    // TODO: Move c_api_test* to test function when pika/#716 is released
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
-
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
-        testCholesky<TypeParam, Backend::GPU, Device::GPU, api>(grid, uplo, m, mb, dlaf_context);
+        testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(grid, uplo, m, mb);
       }
     }
-
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif

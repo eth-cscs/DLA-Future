@@ -486,6 +486,110 @@ TEST(SubPipeline, TaskParentAccess) {
   EXPECT_TRUE(last_parent_access_done);
 }
 
+TEST(SubPipeline, TaskReadonlyParentAccess) {
+  // A subpipeline will not start executing if the parent hasn't released its accesses
+  PipelineType pipeline(26);
+
+  auto first_parent_sender = pipeline.read();
+  PipelineType sub_pipeline = pipeline.sub_pipeline();
+
+  std::atomic<bool> first_parent_access_done{false};
+  std::atomic<bool> first_access_done{false};
+  std::atomic<bool> second_access_done{false};
+  std::atomic<bool> third_access_done{false};
+  std::atomic<bool> last_parent_access_done{false};
+
+  auto checkpointparent_first = std::move(first_parent_sender) | ex::then([&](auto wrapper) {
+                                  EXPECT_EQ(wrapper.get().get(), 26);
+                                  EXPECT_FALSE(first_parent_access_done);
+                                  EXPECT_FALSE(first_access_done);
+                                  EXPECT_FALSE(second_access_done);
+                                  EXPECT_FALSE(third_access_done);
+                                  EXPECT_FALSE(last_parent_access_done);
+                                  ++wrapper.get();
+                                  first_parent_access_done = true;
+                                });
+
+  auto spawn_sub_pipeline =
+      ex::just() |
+      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
+                                [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
+                                    // In the general case we don't have guarantees that the following
+                                    // read-only accesses will complete in the order that they are
+                                    // spawned. For the test we are relying on the current pika
+                                    // implementation to spawn them in the given order. The test may need
+                                    // changes if the internals of pika change. Since we are not spawning
+                                    // new tasks for the accesses we can currently rely on the order
+                                    // being stable.
+                                    //
+                                    // Note also we can modify the value in the wrapper only because
+                                    // nullable_int specially allows modification on const objects for
+                                    // testing purposes.
+                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 27);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_FALSE(first_access_done);
+                                                       EXPECT_FALSE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       first_access_done = true;
+                                                     }));
+                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 28);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_TRUE(first_access_done);
+                                                       EXPECT_FALSE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       second_access_done = true;
+                                                     }));
+                                  ex::start_detached(sub_pipeline.read() | ex::then([&](auto wrapper) {
+                                                       EXPECT_EQ(wrapper.get().get(), 29);
+                                                       EXPECT_TRUE(first_parent_access_done);
+                                                       EXPECT_TRUE(first_access_done);
+                                                       EXPECT_TRUE(second_access_done);
+                                                       EXPECT_FALSE(third_access_done);
+                                                       EXPECT_FALSE(last_parent_access_done);
+                                                       ++wrapper.get();
+                                                       third_access_done = true;
+                                                     }));
+                                  return std::move(sub_pipeline);
+                                }) |
+      ex::ensure_started();
+
+  auto checkpointparent_last = pipeline.read() | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 30);
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_TRUE(first_access_done);
+                                 EXPECT_TRUE(second_access_done);
+                                 EXPECT_TRUE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
+                                 last_parent_access_done = true;
+                               });
+
+  // None of the sub pipeline accesses should have completed at this point even if they were spawned. We
+  // can start the last parent access without releasing previous accesses.
+  auto checkpointparent_last_started = ex::ensure_started(std::move(checkpointparent_last));
+  EXPECT_FALSE(first_access_done);
+  EXPECT_FALSE(second_access_done);
+  EXPECT_FALSE(third_access_done);
+
+  // Once the first access in the parent pipeline has completed the sub pipeline accesses may complete.
+  // This happens asynchronously as they were spawned in a different task.
+  tt::sync_wait(std::move(checkpointparent_first));
+
+  // The last parent access should not complete until the sub pipeline has been reset.
+  EXPECT_FALSE(last_parent_access_done);
+  auto sub_pipeline_from_sender = tt::sync_wait(std::move(spawn_sub_pipeline));
+  EXPECT_FALSE(last_parent_access_done);
+  sub_pipeline_from_sender.reset();
+  tt::sync_wait(std::move(checkpointparent_last_started));
+  EXPECT_TRUE(last_parent_access_done);
+}
+
 enum class SubPipelineAccessType { inline_access, new_task };
 
 struct PipelineTestConfig {

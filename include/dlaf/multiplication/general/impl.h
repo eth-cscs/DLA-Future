@@ -49,13 +49,12 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 
 template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(const blas::Op opA, const blas::Op opB, const T alpha,
-                                 dlaf::matrix::internal::MatrixRef<const T, D>& mat_a,
-                                 dlaf::matrix::internal::MatrixRef<const T, D>& mat_b, const T beta,
-                                 dlaf::matrix::internal::MatrixRef<T, D>& mat_c) {
+                                 MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                                 const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  for (SizeType j = 0; j < mat_b.nrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < mat_a.nrTiles().rows(); ++i) {
+  for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {
       for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
         ex::start_detached(
             dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read(GlobalTileIndex(i, k)),

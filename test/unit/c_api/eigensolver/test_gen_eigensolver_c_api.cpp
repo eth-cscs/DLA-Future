@@ -63,7 +63,9 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D, API api>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        CommunicatorGrid grid, int dlaf_context) {
+                        CommunicatorGrid grid) {
+  auto dlaf_context = c_api_test_inititialize<api>(grid);
+
   // In normal use the runtime is resumed by the C API call
   // The pika runtime is suspended by dlaf_initialize
   // Here we need to resume it manually to build the matrices with DLA-Future
@@ -151,7 +153,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
-      EXPECT_EQ(0, err);
+      DLAF_ASSERT(err == 0, err);
     }
     else if constexpr (api == API::scalapack) {
 #ifdef DLAF_WITH_SCALAPACK
@@ -178,7 +180,9 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       else {
         DLAF_ASSERT(false, typeid(T).name());
       }
-      EXPECT_EQ(0, info);
+      DLAF_ASSERT(info == 0, info);
+#else
+      static_assert(api != API::scalapack, "DLA-Future compiled without ScaLAPACK support.");
 #endif
     }
 
@@ -188,40 +192,33 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
   // Resume pika runtime suspended by C API for correctness checks
   pika::resume();
 
-  if (mat_a_h.size().isEmpty())
-    return;
-
-  testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
+  if (!mat_a_h.size().isEmpty())
+    testGenEigensolverCorrectness(uplo, reference_a, reference_b, ret, grid);
 
   // Suspend pika to make sure dlaf_finalize resumes it
   pika::suspend();
+
+  c_api_test_finalize<api>(dlaf_context);
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
-  constexpr auto api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, api>(uplo, m, mb, grid, dlaf_context);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
       }
     }
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
-  constexpr auto api = API::dlaf;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid,
-                                                                            dlaf_context);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
       }
     }
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif
@@ -229,31 +226,23 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
-  constexpr auto api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid,
-                                                                                dlaf_context);
+        testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
       }
     }
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
-  constexpr auto api = API::scalapack;
   for (const comm::CommunicatorGrid& grid : this->commGrids()) {
-    auto dlaf_context = c_api_test_inititialize<api>(grid);
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
-        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid,
-                                                                                 dlaf_context);
+        testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);
       }
     }
-    c_api_test_finalize<api>(dlaf_context);
   }
 }
 #endif

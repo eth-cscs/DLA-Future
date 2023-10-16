@@ -670,7 +670,19 @@ class StrongScaling:
         self.rpn_preamble = None
 
     # add one/multiple runs
-    def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env="", dtype="d", srun_args=""):
+    def add(
+        self,
+        miniapp,
+        lib,
+        build_dir,
+        params,
+        nruns,
+        suffix="",
+        extra_flags="",
+        env="",
+        dtype="d",
+        srun_args="",
+    ):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")
 

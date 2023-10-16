@@ -134,7 +134,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
     }
     DLAF_ASSERT(info == 0, info);
 #else
-    DLAF_ASSERT(false, "DLA-Future compiled without ScaLAPACK support.");
+    static_assert(always_false<api>::value, "DLA-Future compiled without ScaLAPACK support.");
 #endif
   }
 

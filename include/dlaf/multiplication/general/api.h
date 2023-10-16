@@ -16,14 +16,19 @@
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
+#include "dlaf/matrix/matrix_ref.h"
+
 namespace dlaf::multiplication {
 namespace internal {
+using dlaf::matrix::internal::MatrixRef;
 
 template <Backend B, Device D, class T>
 struct GeneralSub {
   static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
                      const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
+  static void callNN(const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef<const T, D>& mat_a,
+                     MatrixRef<const T, D>& mat_b, const T beta, MatrixRef<T, D>& mat_c);
   static void callNN(common::Pipeline<comm::Communicator>& row_task_chain,
                      common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_tile_from,
                      const SizeType i_tile_to, const T alpha, Matrix<const T, D>& mat_a,

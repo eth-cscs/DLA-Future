@@ -35,6 +35,7 @@
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/distribution.h>
+#include <dlaf/matrix/distribution_extensions.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_ref.h>
@@ -495,7 +496,8 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
 
     const SizeType jjj_el_lc = to_SizeType(rank_offsets[sortOrder(coltype)]++);
     const SizeType jjj_el =
-        dist_sub.template globalElementFromLocalElementAndRank<Coord::Col>(rank, jjj_el_lc);
+        dlaf::matrix::internal::distribution::global_element_from_local_element_on_rank<Coord::Col>(
+            dist_sub, rank, jjj_el_lc);
 
     index_sorted_coltype[to_sizet(jjj_el)] = jj_el;
   }
@@ -1156,7 +1158,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
   const matrix::Distribution dist_sub(
       dist, {{i_begin * dist.blockSize().rows(), i_begin * dist.blockSize().cols()},
-             dist.globalTileElementDistance({i_begin, i_begin}, {i_end, i_end})});
+             {
+                 dist.globalTileElementDistance<Coord::Row>(i_begin, i_end),
+                 dist.globalTileElementDistance<Coord::Col>(i_begin, i_end),
+             }});
 
   auto bcast_evals = [i_begin, i_end,
                       dist](common::Pipeline<comm::Communicator>& row_comm_chain,
@@ -1438,7 +1443,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                            continue;
 
                          const SizeType ieg_el_lc =
-                             dist_sub.localElementFromLocalTileAndTileElement<Coord::Row>(i_lc, i_el_tl);
+                             dist_sub.local_element_from_local_tile_and_tile_element<Coord::Row>(
+                                 i_lc, i_el_tl);
                          const TileElementIndex ij_tl(i_el_tl, jeg_el_tl);
 
                          w[ieg_el_lc] *= q_tile(ij_tl) / (d_ptr[to_sizet(is_el)] - delta_j);
@@ -1509,7 +1515,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                            continue;
 
                          const SizeType ieg_el_lc =
-                             dist_sub.localElementFromLocalTileAndTileElement<Coord::Row>(i_lc, i_el_tl);
+                             dist_sub.local_element_from_local_tile_and_tile_element<Coord::Row>(
+                                 i_lc, i_el_tl);
                          const TileElementIndex ijeg_el_tl(i_el_tl, jeg_el_tl);
 
                          q_tile(ijeg_el_tl) = w[ieg_el_lc] / q_tile(ijeg_el_tl);
@@ -1578,7 +1585,11 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   const GlobalElementIndex sub_offset{i_begin * dist.blockSize().rows(),
                                       i_begin * dist.blockSize().cols()};
   const matrix::Distribution dist_sub(
-      dist, {sub_offset, dist.globalTileElementDistance({i_begin, i_begin}, {i_end, i_end})});
+      dist, {sub_offset,
+             {
+                 dist.template globalTileElementDistance<Coord::Row>(i_begin, i_end),
+                 dist.template globalTileElementDistance<Coord::Col>(i_begin, i_end),
+             }});
 
   // Calculate the size of the upper subproblem
   const SizeType n = dist.globalTileElementDistance<Coord::Row>(i_begin, i_end);

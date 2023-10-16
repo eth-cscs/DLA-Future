@@ -212,7 +212,8 @@ void permuteJustLocal(const SizeType i_begin, const SizeType i_end, Matrix<const
 
   const SubMatrixSpec sub_spec{
       distr.globalElementIndex({i_begin, i_begin}, {0, 0}),
-      distr.globalTileElementDistance({i_begin, i_begin}, {i_end, i_end}),
+      {distr.globalTileElementDistance<Coord::Row>(i_begin, i_end),
+       distr.globalTileElementDistance<Coord::Col>(i_begin, i_end)},
   };
   MatrixRef<const T, D> mat_sub_in(mat_in, sub_spec);
   MatrixRef<T, D> mat_sub_out(mat_out, sub_spec);

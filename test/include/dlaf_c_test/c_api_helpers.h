@@ -81,8 +81,3 @@ std::pair<T*, int> top_left_tile(dlaf::matrix::Matrix<T, D>& mat) {
 
   return std::make_pair(local_ptr, lld);
 }
-
-// Needed for static_assert in constexpr if
-// See https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2593r0.html
-template <API api>
-struct always_false : std::false_type {};

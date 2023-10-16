@@ -182,7 +182,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
       }
       DLAF_ASSERT(info == 0, info);
 #else
-      static_assert(always_false<api>::value, "DLA-Future compiled without ScaLAPACK support.");
+      static_assert(api != API::scalapack, "DLA-Future compiled without ScaLAPACK support.");
 #endif
     }
 

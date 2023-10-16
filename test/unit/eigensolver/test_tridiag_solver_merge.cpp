@@ -92,6 +92,7 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   Matrix<double, Device::CPU> vals(sz, bk);
   Matrix<SizeType, Device::CPU> in(sz, bk);
   Matrix<SizeType, Device::CPU> out(sz, bk);
+  Matrix<SizeType, Device::CPU> out_by_type(sz, bk);
 
   // Note:
   // UpperHalf  -> u
@@ -125,7 +126,8 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
 
   const SizeType i_begin = 0;
   const SizeType i_end = 4;
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, vals, in, out);
+  auto [k, n_udl] = stablePartitionIndexForDeflation(i_begin, i_end, c, vals, in, out, out_by_type) |
+                    ex::split_tuple();
 
   // | 0| 1| 2| 3| 4| 5| 6| 7| 8| 9| initial
   // | l| f|d1|d2| u| u| l| f|d3| l| c_arr

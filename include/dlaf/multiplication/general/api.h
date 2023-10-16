@@ -36,8 +36,10 @@ struct GeneralSub {
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 
   // Note: internal helper
-  static void callNN(const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef<const T, D>& mat_a,
-                     MatrixRef<const T, D>& mat_b, const T beta, MatrixRef<T, D>& mat_c);
+  static void callNN(common::Pipeline<comm::Communicator>& row_task_chain,
+                     common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
+                     MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
+                     MatrixRef<T, D>& mat_c);
 };
 
 // ETI

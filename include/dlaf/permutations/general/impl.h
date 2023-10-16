@@ -29,6 +29,7 @@
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/permutations/general/api.h>
 #include <dlaf/permutations/general/perms.h>
 #include <dlaf/schedulers.h>
@@ -190,6 +191,79 @@ void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end
                        dlaf::internal::transform(dlaf::internal::Policy<B>(), std::move(permute_fn)));
 #endif
   }
+}
+
+template <Backend B, Device D, class T, Coord C>
+void permuteJustLocal(const SizeType i_begin, const SizeType i_end, Matrix<const SizeType, D>& perms,
+                      Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
+  static_assert(C == Coord::Col, "Just column permutation");
+
+  namespace ut = matrix::util;
+  namespace ex = pika::execution::experimental;
+  namespace di = dlaf::internal;
+
+  using matrix::internal::MatrixRef;
+  using matrix::internal::SubMatrixSpec;
+
+  if (i_begin == i_end)
+    return;
+
+  const matrix::Distribution& distr = mat_in.distribution();
+
+  const SubMatrixSpec sub_spec{
+      distr.globalElementIndex({i_begin, i_begin}, {0, 0}),
+      distr.globalTileElementDistance({i_begin, i_begin}, {i_end, i_end}),
+  };
+  MatrixRef<const T, D> mat_sub_in(mat_in, sub_spec);
+  MatrixRef<T, D> mat_sub_out(mat_out, sub_spec);
+
+  const matrix::Distribution& dist_sub = mat_sub_in.distribution();
+
+  const SizeType ntiles = i_end - i_begin;
+  const auto perms_range = common::iterate_range2d(LocalTileIndex(i_begin, 0), LocalTileSize(ntiles, 1));
+  const auto mat_range = common::iterate_range2d(dist_sub.localNrTiles());
+  auto sender = ex::when_all(ex::when_all_vector(matrix::selectRead(perms, std::move(perms_range))),
+                             ex::when_all_vector(matrix::selectRead(mat_sub_in, mat_range)),
+                             ex::when_all_vector(matrix::select(mat_sub_out, mat_range)));
+
+  auto permute_fn = [dist_sub](const auto& perm_tiles_futs, const auto& mat_in_tiles,
+                               const auto& mat_out_tiles, auto&&...) {
+    const SizeType* perm_ptr = perm_tiles_futs[0].get().ptr();
+
+    const SizeType nperms_lc = dist_sub.localSize().cols();
+    if constexpr (D == Device::CPU) {
+      for (SizeType j_el_lc = 0; j_el_lc < nperms_lc; ++j_el_lc) {
+        const SizeType j_el = dist_sub.globalElementFromLocalElement<Coord::Col>(j_el_lc);
+        const SizeType jj_el = perm_ptr[to_sizet(j_el)];
+
+        const SizeType j_lc = dist_sub.localTileFromLocalElement<Coord::Col>(j_el_lc);
+        const SizeType j_el_tl = dist_sub.tileElementFromLocalElement<Coord::Col>(j_el_lc);
+
+        const SizeType jj_lc = dist_sub.localTileFromGlobalElement<Coord::Col>(jj_el);
+        const SizeType jj_el_tl = dist_sub.tileElementFromGlobalElement<Coord::Col>(jj_el);
+
+        for (SizeType i_lc = 0; i_lc < dist_sub.localNrTiles().rows(); ++i_lc) {
+          const std::size_t j_lc_linear = to_sizet(dist_sub.localTileLinearIndex({i_lc, j_lc}));
+          const std::size_t jj_lc_linear = to_sizet(dist_sub.localTileLinearIndex({i_lc, jj_lc}));
+
+          const auto& tile_in = mat_in_tiles[jj_lc_linear].get();
+          auto& tile_out = mat_out_tiles[j_lc_linear];
+
+          DLAF_ASSERT_HEAVY(tile_in.size().rows() == tile_out.size().rows(), tile_in.size(),
+                            tile_out.size());
+          const TileElementSize region(tile_in.size().rows(), 1);
+          const TileElementIndex sub_in(0, jj_el_tl);
+          const TileElementIndex sub_out(0, j_el_tl);
+
+          dlaf::tile::lacpy<T>(region, sub_in, tile_in, sub_out, tile_out);
+        }
+      }
+    }
+    else {
+      // TODO GPU
+    }
+  };
+  ex::start_detached(di::transform(di::Policy<B>(), std::move(permute_fn), std::move(sender)));
 }
 
 template <class T, Device D>

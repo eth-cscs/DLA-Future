@@ -56,7 +56,7 @@ using dlaf::matrix::internal::FileHDF5;
 #endif
 
 struct Options
-    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType mb;
 #ifdef DLAF_WITH_HDF5
@@ -98,19 +98,20 @@ struct Options
 struct TridiagSolverMiniapp {
   template <Backend backend, typename T>
   static void run(const Options& opts) {
+    using RealT = dlaf::BaseType<T>;
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, Ordering::ColumnMajor);
 
-    Matrix<const T, Device::CPU> tridiag_ref = [&opts]() {
+    Matrix<const RealT, Device::CPU> tridiag_ref = [&opts]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);
-        Matrix<T, Device::CPU> tridiag = infile.read<T>(opts.input_dataset, {opts.mb, 2});
+        Matrix<RealT, Device::CPU> tridiag = infile.read<RealT>(opts.input_dataset, {opts.mb, 2});
         return tridiag;
       }
 #endif
       const Distribution dist_trd(LocalElementSize(opts.m, 2), TileElementSize(opts.mb, 2));
-      Matrix<T, Device::CPU> tridiag(dist_trd);
+      Matrix<RealT, Device::CPU> tridiag(dist_trd);
       dlaf::matrix::util::set_random(tridiag);
       return tridiag;
     }();
@@ -121,8 +122,8 @@ struct TridiagSolverMiniapp {
         GlobalElementSize(tridiag_ref.size().rows(), tridiag_ref.size().rows()),
         TileElementSize(opts.mb, opts.mb), comm_grid.size(), comm_grid.rank(), {0, 0});
 
-    Matrix<T, Device::CPU> tridiag(tridiag_ref.distribution());
-    Matrix<T, Device::CPU> evals(dist_evals);
+    Matrix<RealT, Device::CPU> tridiag(tridiag_ref.distribution());
+    Matrix<RealT, Device::CPU> evals(dist_evals);
     Matrix<T, Device::CPU> evecs(dist_evecs);
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
@@ -133,7 +134,7 @@ struct TridiagSolverMiniapp {
 
       double elapsed_time;
       {
-        MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evals_mirror(evals);
+        MatrixMirror<RealT, DefaultDevice_v<backend>, Device::CPU> evals_mirror(evals);
         MatrixMirror<T, DefaultDevice_v<backend>, Device::CPU> evecs_mirror(evecs);
 
         // Wait for matrix to be copied to GPU (if necessary)

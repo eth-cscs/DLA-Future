@@ -50,7 +50,7 @@ using dlaf::comm::CommunicatorGrid;
 using dlaf::common::Ordering;
 
 struct Options
-    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::No> {
+    : dlaf::miniapp::MiniappOptions<dlaf::miniapp::SupportReal::Yes, dlaf::miniapp::SupportComplex::Yes> {
   SizeType m;
   SizeType n;
   SizeType mb;
@@ -245,7 +245,7 @@ namespace {
 ///
 /// The elements of op(A) (@p el_op_a) are chosen such that:
 ///   op(A)_ik = (i+1) / (k+.5) * exp(I*(2*i-k)) for the referenced elements
-///   op(A)_ik = -9.9 otherwise,
+///   op(A)_ik = -9.875 otherwise,
 /// where I = 0 for real types or I is the complex unit for complex types.
 ///
 /// The elements of X (@p el_x) are computed as
@@ -264,8 +264,8 @@ namespace {
 /// B_ij = kk * gamma / alpha, otherwise.
 template <typename T>
 linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m) {
-  static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
-                "it is valid just with floating point values");
+  //static_assert(std::is_arithmetic_v<T> && !std::is_integral_v<T>,
+  //              "it is valid just with floating point values");
 
   bool op_a_lower = (uplo == blas::Uplo::Lower && op == blas::Op::NoTrans) ||
                     (uplo == blas::Uplo::Upper && op != blas::Op::NoTrans);
@@ -273,19 +273,19 @@ linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T
   auto el_op_a = [op_a_lower, diag](const GlobalElementIndex& index) -> T {
     if ((op_a_lower && index.row() < index.col()) || (!op_a_lower && index.row() > index.col()) ||
         (diag == blas::Diag::Unit && index.row() == index.col()))
-      return static_cast<T>(-9.9);
+      return T{-9.875};
 
     const T i = index.row();
     const T k = index.col();
 
-    return (i + static_cast<T>(1)) / (k + static_cast<T>(.5));
+    return (i + T{1}) / (k + T{.5});
   };
 
   auto el_x = [](const GlobalElementIndex& index) -> T {
     const T k = index.row();
     const T j = index.col();
 
-    return (k + static_cast<T>(.5)) / (j + static_cast<T>(2));
+    return (k + T{.5}) / (j + T{2});
   };
 
   auto el_b = [m, alpha, diag, op_a_lower, el_x](const GlobalElementIndex& index) -> T {
@@ -293,7 +293,7 @@ linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T
 
     const T i = index.row();
     const T j = index.col();
-    const T gamma = (i + 1) / (j + 2);
+    const T gamma = (i + T{1}) / (j + T{2});
     if (diag == blas::Diag::Unit)
       return ((kk - 1) * gamma + el_x(index)) / alpha;
     else

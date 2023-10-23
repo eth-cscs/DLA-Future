@@ -33,7 +33,7 @@
 #include <dlaf/miniapp/dispatch.h>
 #include <dlaf/miniapp/options.h>
 //#include <dlaf/solver.h>
-#include <include/dlaf/multiplication/triangular.h>
+#include <dlaf/multiplication/triangular.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 

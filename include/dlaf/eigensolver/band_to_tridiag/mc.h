@@ -1288,7 +1288,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                        SemaphorePtr&& sem_next, SizeType nr_steps, bool last_step,
                        SweepWorkerDist<T>& worker, const TilePtr& tile_v, SizeType j_el_tl) {
     for (SizeType step = 0; step < nr_steps; ++step) {
-      worker.compact_copy_to_tile(*tile_v, TileElementIndex(step * b, j_el_tl));
+      // Only store HH reflectors if they belong to this column
+      if (tile_v)
+        worker.compact_copy_to_tile(*tile_v, TileElementIndex(step * b, j_el_tl));
       sem->acquire();
       worker.do_step(*a_bl);
       sem_next->release(1);
@@ -1347,7 +1349,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   for (SizeType sweep = 0; sweep < sweeps; ++sweep) {
     const SizeType steps = nrStepsForSweep(sweep, size, b);
 
-    auto& panel_v = sweep % b == 0 ? v_panels.nextResource() : v_panels.currentResource();
+    // HH reflectors are stored only if they end up in this column.
+    const bool store_HHR = grid.rank().col() == dist_v.rank_global_element<Coord::Col>(sweep);
+
+    auto& panel_v = (sweep % b == 0 && store_HHR ? v_panels.nextResource() : v_panels.currentResource());
 
     ex::any_sender<> send_col_dep;
     for (SizeType init_step = 0; init_step < steps; init_step += steps_per_block) {
@@ -1363,9 +1368,14 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         auto& tile_v = tiles_v[id_block_local];
 
         if (sweep % b == 0) {
-          tile_v = panel_v.readwrite(LocalTileIndex{id_block_local, 0}) |
-                   ex::then([](Tile&& tile) { return std::make_shared<Tile>(std::move(tile)); }) |
-                   ex::split();
+          if (store_HHR) {
+            tile_v = panel_v.readwrite(LocalTileIndex{id_block_local, 0}) |
+                     ex::then([](Tile&& tile) { return std::make_shared<Tile>(std::move(tile)); }) |
+                     ex::split();
+          }
+          else {
+            tile_v = ex::just(TilePtr{});
+          }
         }
 
         ex::unique_any_sender<SemaphorePtr> sem_sender;

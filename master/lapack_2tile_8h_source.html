@@ -541,51 +541,40 @@ $(function() {
 <div class="line"><a name="l00604"></a><span class="lineno">  604</span>&#160;  assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));</div>
 <div class="line"><a name="l00605"></a><span class="lineno">  605</span>&#160;}</div>
 <div class="line"><a name="l00606"></a><span class="lineno">  606</span>&#160; </div>
-<div class="line"><a name="l00607"></a><span class="lineno">  607</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160;<span class="keywordtype">void</span> <a class="code" href="lapack_2tile_8h.html#a68163899b7b15f447fdbb05e475d9cc6">stedc</a>(cusolverDnHandle_t handle, <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; tridiag,</div>
-<div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;           <span class="keyword">const</span> Tile&lt;T, Device::GPU&gt;&amp; evecs);</div>
-<div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160; </div>
-<div class="line"><a name="l00611"></a><span class="lineno">  611</span>&#160;<span class="preprocessor">#define DLAF_GPU_STEDC_ETI(kword, Type)                                                        \</span></div>
-<div class="line"><a name="l00612"></a><span class="lineno">  612</span>&#160;<span class="preprocessor">  kword template void stedc(cusolverDnHandle_t handle, const Tile&lt;Type, Device::GPU&gt;&amp; tridiag, \</span></div>
-<div class="line"><a name="l00613"></a><span class="lineno">  613</span>&#160;<span class="preprocessor">                            const Tile&lt;Type, Device::GPU&gt;&amp; evecs)</span></div>
-<div class="line"><a name="l00614"></a><span class="lineno">  614</span>&#160; </div>
-<div class="line"><a name="l00615"></a><span class="lineno">  615</span>&#160;DLAF_GPU_STEDC_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>);</div>
-<div class="line"><a name="l00616"></a><span class="lineno">  616</span>&#160;DLAF_GPU_STEDC_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>);</div>
-<div class="line"><a name="l00617"></a><span class="lineno">  617</span>&#160; </div>
-<div class="line"><a name="l00618"></a><span class="lineno">  618</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00607"></a><span class="lineno">  607</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00608"></a><span class="lineno">  608</span>&#160; </div>
+<div class="line"><a name="l00609"></a><span class="lineno">  609</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lange);</div>
+<div class="line"><a name="l00610"></a><span class="lineno">  610</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lantr);</div>
+<div class="line"><a name="l00611"></a><span class="lineno">  611</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(laset);</div>
+<div class="line"><a name="l00612"></a><span class="lineno">  612</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(set0);</div>
+<div class="line"><a name="l00613"></a><span class="lineno">  613</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(hegst);</div>
+<div class="line"><a name="l00614"></a><span class="lineno">  614</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrf);</div>
+<div class="line"><a name="l00615"></a><span class="lineno">  615</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrfInfo);</div>
+<div class="line"><a name="l00616"></a><span class="lineno">  616</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(stedc);</div>
+<div class="line"><a name="l00617"></a><span class="lineno">  617</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(scaleCol);</div>
+<div class="line"><a name="l00618"></a><span class="lineno">  618</span>&#160;}</div>
 <div class="line"><a name="l00619"></a><span class="lineno">  619</span>&#160; </div>
-<div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lange);</div>
-<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(lantr);</div>
-<div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(laset);</div>
-<div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(set0);</div>
-<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(hegst);</div>
-<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrf);</div>
-<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(potrfInfo);</div>
-<div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(stedc);</div>
-<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;<a class="code" href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a>(scaleCol);</div>
-<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;}</div>
-<div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160; </div>
-<div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lange,</div>
-<div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;                                     internal::lange_o)</div>
-<div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lantr,</div>
-<div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;                                     internal::lantr_o)</div>
-<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, laset,</div>
-<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;                                     internal::laset_o)</div>
-<div class="line"><a name="l00637"></a><span class="lineno">  637</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, set0,</div>
-<div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160;                                     internal::set0_o)</div>
-<div class="line"><a name="l00639"></a><span class="lineno">  639</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, hegst,</div>
-<div class="line"><a name="l00640"></a><span class="lineno">  640</span>&#160;                                     internal::hegst_o)</div>
-<div class="line"><a name="l00641"></a><span class="lineno">  641</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrf,</div>
-<div class="line"><a name="l00642"></a><span class="lineno">  642</span>&#160;                                     internal::potrf_o)</div>
-<div class="line"><a name="l00643"></a><span class="lineno">  643</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrfInfo,</div>
-<div class="line"><a name="l00644"></a><span class="lineno">  644</span>&#160;                                     internal::potrfInfo_o)</div>
-<div class="line"><a name="l00645"></a><span class="lineno">  645</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, stedc,</div>
-<div class="line"><a name="l00646"></a><span class="lineno">  646</span>&#160;                                     internal::stedc_o)</div>
-<div class="line"><a name="l00647"></a><span class="lineno">  647</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, scaleCol,</div>
-<div class="line"><a name="l00648"></a><span class="lineno">  648</span>&#160;                                     internal::scaleCol_o)</div>
-<div class="line"><a name="l00649"></a><span class="lineno">  649</span>&#160; </div>
-<div class="line"><a name="l00650"></a><span class="lineno">  650</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00651"></a><span class="lineno">  651</span>&#160;}</div>
+<div class="line"><a name="l00620"></a><span class="lineno">  620</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lange,</div>
+<div class="line"><a name="l00621"></a><span class="lineno">  621</span>&#160;                                     internal::lange_o)</div>
+<div class="line"><a name="l00622"></a><span class="lineno">  622</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, lantr,</div>
+<div class="line"><a name="l00623"></a><span class="lineno">  623</span>&#160;                                     internal::lantr_o)</div>
+<div class="line"><a name="l00624"></a><span class="lineno">  624</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, laset,</div>
+<div class="line"><a name="l00625"></a><span class="lineno">  625</span>&#160;                                     internal::laset_o)</div>
+<div class="line"><a name="l00626"></a><span class="lineno">  626</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Plain, set0,</div>
+<div class="line"><a name="l00627"></a><span class="lineno">  627</span>&#160;                                     internal::set0_o)</div>
+<div class="line"><a name="l00628"></a><span class="lineno">  628</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, hegst,</div>
+<div class="line"><a name="l00629"></a><span class="lineno">  629</span>&#160;                                     internal::hegst_o)</div>
+<div class="line"><a name="l00630"></a><span class="lineno">  630</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrf,</div>
+<div class="line"><a name="l00631"></a><span class="lineno">  631</span>&#160;                                     internal::potrf_o)</div>
+<div class="line"><a name="l00632"></a><span class="lineno">  632</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, potrfInfo,</div>
+<div class="line"><a name="l00633"></a><span class="lineno">  633</span>&#160;                                     internal::potrfInfo_o)</div>
+<div class="line"><a name="l00634"></a><span class="lineno">  634</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, stedc,</div>
+<div class="line"><a name="l00635"></a><span class="lineno">  635</span>&#160;                                     internal::stedc_o)</div>
+<div class="line"><a name="l00636"></a><span class="lineno">  636</span>&#160;DLAF_MAKE_SENDER_ALGORITHM_OVERLOADS(::dlaf::internal::TransformDispatchType::Lapack, scaleCol,</div>
+<div class="line"><a name="l00637"></a><span class="lineno">  637</span>&#160;                                     internal::scaleCol_o)</div>
+<div class="line"><a name="l00638"></a><span class="lineno">  638</span>&#160; </div>
+<div class="line"><a name="l00639"></a><span class="lineno">  639</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00640"></a><span class="lineno">  640</span>&#160;}</div>
 <div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
 <div class="ttc" id="acallable__object_8h_html_a5aafa5a9c65ad07da48410427f4825b2"><div class="ttname"><a href="callable__object_8h.html#a5aafa5a9c65ad07da48410427f4825b2">DLAF_MAKE_CALLABLE_OBJECT</a></div><div class="ttdeci">#define DLAF_MAKE_CALLABLE_OBJECT(fname)</div><div class="ttdef"><b>Definition:</b> callable_object.h:26</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>

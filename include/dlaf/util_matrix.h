@@ -74,8 +74,8 @@ bool local_matrix(const MatrixLike<const T, D>& m) noexcept {
 }
 
 /// Returns true if the matrix is distributed on the communication grid.
-template <class T, Device D>
-bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
+template <template <class, Device> class MatrixLike, class T, Device D>
+bool equal_process_grid(const MatrixLike<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 

@@ -25,6 +25,8 @@
 #include <dlaf/multiplication/general/api.h>
 #include <dlaf/sender/when_all_lift.h>
 
+#include "dlaf/util_matrix.h"
+
 namespace dlaf::multiplication {
 namespace internal {
 
@@ -52,6 +54,18 @@ void GeneralSub<B, D, T>::callNN(const blas::Op opA, const blas::Op opB, const T
                                  MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                                  const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
+
+  using matrix::multipliable_sizes;
+  DLAF_ASSERT(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB),
+              "Multiplication incompatible matrix sizes.", mat_a.size(), mat_b.size(), mat_c.size(), opA,
+              opB);
+  DLAF_ASSERT(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize(), opA, opB),
+              "Multiplication incompatible tile sizes.");
+  DLAF_ASSERT(
+      mat_c.size().isEmpty() || multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
+                                                   mat_b.distribution().tileSize({0, 0}),
+                                                   mat_c.distribution().tileSize({0, 0}), opA, opB),
+      "Multiplication incompatible tile sizes in first row/col. (Are you using a matrix with offset?)");
 
   for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {

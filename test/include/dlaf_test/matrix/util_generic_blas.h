@@ -26,6 +26,48 @@
 namespace dlaf::matrix::test {
 
 template <class T>
+auto getMatrixMatrixMultiplication(const SizeType k, const T alpha, const T beta, const blas::Op opA,
+                                   const blas::Op opB) {
+  using dlaf::test::TypeUtilities;
+
+  if (opA != blas::Op::NoTrans)
+    DLAF_UNIMPLEMENTED(opA);
+  if (opB != blas::Op::NoTrans)
+    DLAF_UNIMPLEMENTED(opB);
+
+  auto elA = [](const GlobalElementIndex ik) {
+    const double i = ik.row();
+    const double k = ik.col();
+
+    return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
+  };
+
+  auto elB = [](const GlobalElementIndex kj) {
+    const double k = kj.row();
+    const double j = kj.col();
+
+    return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
+  };
+
+  auto elC = [k](const GlobalElementIndex ij) {
+    const double i = ij.row();
+    const double j = ij.col();
+
+    return TypeUtilities<T>::polar((i + k + 1) / (j + 5), i + j + k);
+  };
+
+  auto elR = [k, alpha, beta](const GlobalElementIndex ij) {
+    const double i = ij.row();
+    const double j = ij.col();
+
+    return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * k, (2 * i) + j) +
+           beta * TypeUtilities<T>::polar((i + k + 1) / (j + 5), k + i + j);
+  };
+
+  return std::make_tuple<>(elA, elB, elC, elR);
+}
+
+template <class T>
 auto getSubMatrixMatrixMultiplication(const SizeType a, const SizeType b,
                                       [[maybe_unused]] const SizeType m,
                                       [[maybe_unused]] const SizeType n, const SizeType k, const T alpha,

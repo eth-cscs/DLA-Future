@@ -31,31 +31,111 @@ using namespace dlaf;
 using namespace dlaf::matrix;
 using namespace dlaf::test;
 
-template <class T>
-struct GeneralSubMultiplicationTestMC : public ::testing::Test {};
-
-TYPED_TEST_SUITE(GeneralSubMultiplicationTestMC, MatrixElementTypes);
-
-#ifdef DLAF_WITH_GPU
-template <class T>
-struct GeneralSubMultiplicationTestGPU : public ::testing::Test {};
-
-TYPED_TEST_SUITE(GeneralSubMultiplicationTestGPU, MatrixElementTypes);
-#endif
-
 ::testing::Environment* const comm_grids_env =
     ::testing::AddGlobalTestEnvironment(new CommunicatorGrid6RanksEnvironment);
 
 template <class T>
-struct GeneralSubMultiplicationDistTestMC : public TestWithCommGrids {};
+struct GeneralMultiplicationTestMC : public ::testing::Test {};
+TYPED_TEST_SUITE(GeneralMultiplicationTestMC, MatrixElementTypes);
 
+template <class T>
+struct GeneralSubMultiplicationTestMC : public ::testing::Test {};
+TYPED_TEST_SUITE(GeneralSubMultiplicationTestMC, MatrixElementTypes);
+
+template <class T>
+struct GeneralSubMultiplicationDistTestMC : public TestWithCommGrids {};
 TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-struct GeneralSubMultiplicationDistTestGPU : public TestWithCommGrids {};
+struct GeneralMultiplicationTestGPU : public ::testing::Test {};
+TYPED_TEST_SUITE(GeneralMultiplicationTestGPU, MatrixElementTypes);
 
+template <class T>
+struct GeneralSubMultiplicationTestGPU : public ::testing::Test {};
+TYPED_TEST_SUITE(GeneralSubMultiplicationTestGPU, MatrixElementTypes);
+
+template <class T>
+struct GeneralSubMultiplicationDistTestGPU : public TestWithCommGrids {};
 TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
+#endif
+
+struct GemmConfig {
+  const blas::Op opA;
+  const blas::Op opB;
+
+  const SizeType m;
+  const SizeType n;
+  const SizeType k;
+
+  const SizeType mb;
+  const SizeType nb;
+  const SizeType kb;
+};
+
+template <class T, Backend B, Device D>
+void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& config) {
+  using dlaf::matrix::internal::MatrixRef;
+
+  auto [refA, refB, refC, refResult] =
+      matrix::test::getMatrixMatrixMultiplication(config.k, alpha, beta, config.opA, config.opB);
+
+  auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
+    Matrix<T, Device::CPU> matrix(size, block_size);
+    dlaf::matrix::util::set(matrix, elSetter);
+    return matrix;
+  };
+
+  Matrix<const T, Device::CPU> mat_ah = setMatrix(refA, {config.m, config.k}, {config.mb, config.kb});
+  Matrix<const T, Device::CPU> mat_bh = setMatrix(refB, {config.k, config.n}, {config.kb, config.nb});
+  Matrix<T, Device::CPU> mat_ch = setMatrix(refC, {config.m, config.n}, {config.mb, config.nb});
+
+  {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
+    MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
+    MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
+
+    MatrixRef<const T, D> mat_sub_a(mat_a.get(), {{0, 0}, mat_ah.size()});
+    MatrixRef<const T, D> mat_sub_b(mat_b.get(), {{0, 0}, mat_bh.size()});
+    MatrixRef<T, D> mat_sub_c(mat_c.get(), {{0, 0}, mat_ch.size()});
+
+    multiplication::internal::General<B, D, T>::callNN(config.opA, config.opB, alpha, mat_sub_a,
+                                                       mat_sub_b, beta, mat_sub_c);
+  }
+
+  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
+                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
+}
+
+std::vector<GemmConfig> full_gemm_configs = {
+    // empty matrices
+    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 0, 0, 7, 3, 6, 2},
+    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 20, 0, 7, 3, 6, 2},
+    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 0, 20, 7, 3, 6, 2},
+
+    // full
+    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 21, 21, 21, 3, 3, 3},
+    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5},
+};
+
+TYPED_TEST(GeneralMultiplicationTestMC, MatrixRefCorrectnessLocalFull) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (const GemmConfig& test_config : full_gemm_configs) {
+    testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config);
+  }
+}
+
+#ifdef DLAF_WITH_GPU
+TYPED_TEST(GeneralMultiplicationTestGPU, MatrixRefCorrectnessLocalFull) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (const GemmConfig& test_config : full_gemm_configs) {
+    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config);
+  }
+}
 #endif
 
 const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
@@ -76,10 +156,6 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType>> sizes = {
     // full gemm, incomplete tiles
     {8, 3, 1, 3},
 };
-
-GlobalElementSize globalTestSize(const LocalElementSize& size) {
-  return {size.rows(), size.cols()};
-}
 
 template <class T, Backend B, Device D>
 void testGeneralSubMultiplication(const SizeType a, const SizeType b, const T alpha, const T beta,
@@ -191,73 +267,6 @@ TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
                                                                          mb);
       pika::wait();
     }
-  }
-}
-#endif
-
-template <class T, Backend B, Device D>
-void testGeneralSubMultiplication(dlaf::matrix::internal::SubMatrixSpec sub_spec, const T alpha,
-                                  const T beta, const SizeType m, const SizeType mb) {
-  using dlaf::matrix::internal::MatrixRef;
-
-  const SizeType a_el = sub_spec.origin.row();
-  const SizeType b_el = sub_spec.origin.row() + sub_spec.size.rows();
-
-  auto [refA, refB, refC, refResult] =
-      matrix::test::getSubMatrixMatrixMultiplication(a_el, b_el, m, m, m, alpha, beta, blas::Op::NoTrans,
-                                                     blas::Op::NoTrans);
-
-  auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
-    Matrix<T, Device::CPU> matrix(size, block_size);
-    dlaf::matrix::util::set(matrix, elSetter);
-    return matrix;
-  };
-
-  Matrix<const T, Device::CPU> mat_ah = setMatrix(refA, {m, m}, {mb, mb});
-  Matrix<const T, Device::CPU> mat_bh = setMatrix(refB, {m, m}, {mb, mb});
-  Matrix<T, Device::CPU> mat_ch = setMatrix(refC, {m, m}, {mb, mb});
-
-  {
-    MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
-    MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
-    MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
-
-    MatrixRef<const T, D> mat_sub_a(mat_a.get(), sub_spec);
-    MatrixRef<const T, D> mat_sub_b(mat_b.get(), sub_spec);
-    MatrixRef<T, D> mat_sub_c(mat_c.get(), sub_spec);
-
-    multiplication::internal::GeneralSub<B, D, T>::callNN(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                                          mat_sub_a, mat_sub_b, beta, mat_sub_c);
-  }
-
-  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
-                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
-}
-
-TYPED_TEST(GeneralSubMultiplicationTestMC, MatrixRefCorrectnessLocal) {
-  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
-  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-
-  for (const auto& [m, mb, a, b] : sizes) {
-    const SizeType a_el = a * mb;
-    const SizeType b_el = std::min(b * mb, m);
-    dlaf::matrix::internal::SubMatrixSpec spec{GlobalElementIndex{a_el, a_el},
-                                               GlobalElementSize{b_el - a_el, b_el - a_el}};
-    testGeneralSubMultiplication<TypeParam, Backend::MC, Device::CPU>(spec, alpha, beta, m, mb);
-  }
-}
-
-#ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralSubMultiplicationTestGPU, MatrixRefCorrectnessLocal) {
-  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
-  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-
-  for (const auto& [m, mb, a, b] : sizes) {
-    const SizeType a_el = a * mb;
-    const SizeType b_el = std::min(b * mb, m);
-    dlaf::matrix::internal::SubMatrixSpec spec{GlobalElementIndex{a_el, a_el},
-                                               GlobalElementSize{b_el - a_el, b_el - a_el}};
-    testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(spec, alpha, beta, m, mb);
   }
 }
 #endif

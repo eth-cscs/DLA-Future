@@ -22,6 +22,13 @@ namespace internal {
 using dlaf::matrix::internal::MatrixRef;
 
 template <Backend B, Device D, class T>
+struct General {
+  /// @pre mat.disrtribution().offset() % mat.distribution().tile_size() == 0 (where mat in {mat_a, mat_b, mat_c})
+  static void callNN(const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef<const T, D>& mat_a,
+                     MatrixRef<const T, D>& mat_b, const T beta, MatrixRef<T, D>& mat_c);
+};
+
+template <Backend B, Device D, class T>
 struct GeneralSub {
   static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
                      const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
@@ -30,14 +37,10 @@ struct GeneralSub {
                      common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_tile_from,
                      const SizeType i_tile_to, const T alpha, Matrix<const T, D>& mat_a,
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
-
-  // Note: internal helper
-  static void callNN(const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef<const T, D>& mat_a,
-                     MatrixRef<const T, D>& mat_b, const T beta, MatrixRef<T, D>& mat_c);
 };
 
-// ETI
 #define DLAF_MULTIPLICATION_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct General<BACKEND, DEVICE, DATATYPE>;               \
   KWORD template struct GeneralSub<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)

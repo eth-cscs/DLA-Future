@@ -123,11 +123,11 @@ TYPED_TEST(GeneralSubMultiplicationTestMC, CorrectnessLocal) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
+TYPED_TEST(GeneralSubMultiplicationTestGPU, CorrectnessLocal) {
   for (const auto& [m, mb, a, b] : sizes) {
     const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
     const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
-    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, alpha, beta, m, mb);
+    testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(a, b, alpha, beta, m, mb);
   }
 }
 #endif
@@ -235,10 +235,10 @@ void testGeneralSubMultiplication(dlaf::matrix::internal::SubMatrixSpec sub_spec
 }
 
 TYPED_TEST(GeneralSubMultiplicationTestMC, MatrixRefCorrectnessLocal) {
-  for (const auto& [m, mb, a, b] : sizes) {
-    const TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
-    const TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
+  for (const auto& [m, mb, a, b] : sizes) {
     const SizeType a_el = a * mb;
     const SizeType b_el = std::min(b * mb, m);
     dlaf::matrix::internal::SubMatrixSpec spec{GlobalElementIndex{a_el, a_el},
@@ -248,13 +248,16 @@ TYPED_TEST(GeneralSubMultiplicationTestMC, MatrixRefCorrectnessLocal) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralMultiplicationTestGPU, MatrixRefCorrectnessLocal) {
+TYPED_TEST(GeneralSubMultiplicationTestGPU, MatrixRefCorrectnessLocal) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
   for (const auto& [m, mb, a, b] : sizes) {
     const SizeType a_el = a * mb;
     const SizeType b_el = std::min(b * mb, m);
     dlaf::matrix::internal::SubMatrixSpec spec{GlobalElementIndex{a_el, a_el},
                                                GlobalElementSize{b_el - a_el, b_el - a_el}};
-    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(spec, alpha, beta, m, mb);
+    testGeneralSubMultiplication<TypeParam, Backend::GPU, Device::GPU>(spec, alpha, beta, m, mb);
   }
 }
 #endif

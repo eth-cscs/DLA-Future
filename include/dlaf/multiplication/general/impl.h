@@ -35,18 +35,22 @@ void General<B, D, T>::callNN(const blas::Op opA, const blas::Op opB, const T al
                               MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
+  if (opA != blas::Op::NoTrans || opB != blas::Op::NoTrans)
+    DLAF_UNIMPLEMENTED(opA, opB);
+
   using matrix::multipliable_sizes;
-  DLAF_ASSERT(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB),
-              "Multiplication incompatible matrix sizes.", mat_a.size(), mat_b.size(), mat_c.size(), opA,
-              opB);
-  DLAF_ASSERT(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize(), opA, opB),
-              "Multiplication incompatible tile sizes.");
-  DLAF_ASSERT(mat_c.size().isEmpty() ||
-                  multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
-                                     mat_b.distribution().tileSize({0, 0}),
-                                     mat_c.distribution().tileSize({0, 0}), opA, opB),
-              "Multiplication incompatible tile sizes in first row/col. "
-              "(Are you using a matrix with offset not aligned with tile?)");
+  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB),
+                    "Multiplication incompatible matrix sizes.", mat_a.size(), mat_b.size(),
+                    mat_c.size(), opA, opB);
+  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize(), opA,
+                                       opB),
+                    "Multiplication incompatible tile sizes.");
+  DLAF_ASSERT_HEAVY(mat_c.size().isEmpty() ||
+                        multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
+                                           mat_b.distribution().tileSize({0, 0}),
+                                           mat_c.distribution().tileSize({0, 0}), opA, opB),
+                    "Multiplication incompatible tile sizes in first row/col. "
+                    "(Are you using a matrix with offset not aligned with tile?)");
 
   for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {

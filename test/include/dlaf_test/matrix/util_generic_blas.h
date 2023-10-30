@@ -25,46 +25,72 @@
 
 namespace dlaf::matrix::test {
 
-template <class T>
-auto getMatrixMatrixMultiplication(const SizeType k, const T alpha, const T beta, const blas::Op opA,
-                                   const blas::Op opB) {
+namespace internal {
+template <class ElementGetter>
+auto opValFunc(ElementGetter&& val, const blas::Op op) {
+  std::function op_val = val;
+  switch (op) {
+    case blas::Op::NoTrans:
+      break;
+    case blas::Op::Trans: {
+      op_val = [&val](auto i) {
+        i.transpose();
+        return val(i);
+      };
+      break;
+    }
+    case blas::Op::ConjTrans: {
+      op_val = [&val](auto i) {
+        i.transpose();
+        return dlaf::conj(val(i));
+      };
+      break;
+    }
+  }
+  return op_val;
+}
+}
+
+template <class ElementIndex, class T>
+auto getMatrixMatrixMultiplication(const blas::Op opA, const blas::Op opB, const SizeType k,
+                                   const T alpha, const T beta) {
   using dlaf::test::TypeUtilities;
 
-  if (opA != blas::Op::NoTrans)
-    DLAF_UNIMPLEMENTED(opA);
-  if (opB != blas::Op::NoTrans)
-    DLAF_UNIMPLEMENTED(opB);
+  // Note: The tile elements are chosen such that:
+  // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
+  // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k+j)),
+  // - c_ij = 1.2 * i / (j+1) * exp(I*(-i+j)),
+  // where I = 0 for real types or I is the complex unit for complex types.
+  // Therefore the result should be:
+  // res_ij = beta * c_ij + Sum_k(alpha * op_a(a)_ik * op_b(b)_kj)
+  //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
+  // where gamma = .72 * k * alpha.
 
-  auto elA = [](const GlobalElementIndex ik) {
-    const double i = ik.row();
-    const double k = ik.col();
-
-    return TypeUtilities<T>::polar((i + 1) / (k + .5), 2 * i - k);
+  auto el_op_a = [](const ElementIndex& index) {
+    const double i = index.row();
+    const double k = index.col();
+    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
+  };
+  auto el_op_b = [](const ElementIndex& index) {
+    const double k = index.row();
+    const double j = index.col();
+    return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
+  };
+  auto el_c = [](const ElementIndex& index) {
+    const double i = index.row();
+    const double j = index.col();
+    return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
   };
 
-  auto elB = [](const GlobalElementIndex kj) {
-    const double k = kj.row();
-    const double j = kj.col();
-
-    return TypeUtilities<T>::polar((k + .5) / (j + 2), k + j);
+  const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
+  auto res_c = [beta, el_c, gamma](const ElementIndex& index) {
+    const double i = index.row();
+    const double j = index.col();
+    return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
   };
 
-  auto elC = [k](const GlobalElementIndex ij) {
-    const double i = ij.row();
-    const double j = ij.col();
-
-    return TypeUtilities<T>::polar((i + k + 1) / (j + 5), i + j + k);
-  };
-
-  auto elR = [k, alpha, beta](const GlobalElementIndex ij) {
-    const double i = ij.row();
-    const double j = ij.col();
-
-    return alpha * TypeUtilities<T>::polar((i + 1) / (j + 2) * k, (2 * i) + j) +
-           beta * TypeUtilities<T>::polar((i + k + 1) / (j + 5), k + i + j);
-  };
-
-  return std::make_tuple<>(elA, elB, elC, elR);
+  using internal::opValFunc;
+  return std::make_tuple<>(opValFunc(el_op_a, opA), opValFunc(el_op_b, opB), el_c, res_c);
 }
 
 template <class T>

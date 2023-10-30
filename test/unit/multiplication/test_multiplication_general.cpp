@@ -78,7 +78,8 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
   using dlaf::matrix::internal::MatrixRef;
 
   auto [refA, refB, refC, refResult] =
-      matrix::test::getMatrixMatrixMultiplication(config.k, alpha, beta, config.opA, config.opB);
+      matrix::test::getMatrixMatrixMultiplication<GlobalElementIndex, T>(config.opA, config.opB,
+                                                                         config.k, alpha, beta);
 
   auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
     Matrix<T, Device::CPU> matrix(size, block_size);

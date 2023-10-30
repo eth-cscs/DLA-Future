@@ -100,8 +100,10 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
     MatrixRef<const T, D> mat_sub_b(mat_b.get(), {{0, 0}, mat_bh.size()});
     MatrixRef<T, D> mat_sub_c(mat_c.get(), {{0, 0}, mat_ch.size()});
 
-    multiplication::internal::General<B, D, T>::callNN(config.opA, config.opB, alpha, mat_sub_a,
-                                                       mat_sub_b, beta, mat_sub_c);
+    // Note: currently it is implemented just the NoTrans/NoTrans case
+    ASSERT_EQ(config.opA, blas::Op::NoTrans);
+    ASSERT_EQ(config.opB, blas::Op::NoTrans);
+    multiplication::internal::General<B, D, T>::callNN(alpha, mat_sub_a, mat_sub_b, beta, mat_sub_c);
   }
 
   CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,

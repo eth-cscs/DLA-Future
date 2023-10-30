@@ -30,36 +30,34 @@ namespace dlaf::multiplication {
 namespace internal {
 
 template <Backend B, Device D, class T>
-void General<B, D, T>::callNN(const blas::Op opA, const blas::Op opB, const T alpha,
-                              MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
-                              MatrixRef<T, D>& mat_c) {
+void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                              const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  if (opA != blas::Op::NoTrans || opB != blas::Op::NoTrans)
-    DLAF_UNIMPLEMENTED(opA, opB);
-
   using matrix::multipliable_sizes;
-  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB),
+  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), blas::Op::NoTrans,
+                                       blas::Op::NoTrans),
                     "Multiplication incompatible matrix sizes.", mat_a.size(), mat_b.size(),
-                    mat_c.size(), opA, opB);
-  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize(), opA,
-                                       opB),
+                    mat_c.size(), blas::Op::NoTrans, blas::Op::NoTrans);
+  DLAF_ASSERT_HEAVY(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize(),
+                                       blas::Op::NoTrans, blas::Op::NoTrans),
                     "Multiplication incompatible tile sizes.");
-  DLAF_ASSERT_HEAVY(mat_c.size().isEmpty() ||
-                        multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
-                                           mat_b.distribution().tileSize({0, 0}),
-                                           mat_c.distribution().tileSize({0, 0}), opA, opB),
+  DLAF_ASSERT_HEAVY(mat_c.size().isEmpty() || multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
+                                                                 mat_b.distribution().tileSize({0, 0}),
+                                                                 mat_c.distribution().tileSize({0, 0}),
+                                                                 blas::Op::NoTrans, blas::Op::NoTrans),
                     "Multiplication incompatible tile sizes in first row/col. "
                     "(Are you using a matrix with offset not aligned with tile?)");
 
   for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {
       for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
-        ex::start_detached(
-            dlaf::internal::whenAllLift(opA, opB, alpha, mat_a.read(GlobalTileIndex(i, k)),
-                                        mat_b.read(GlobalTileIndex(k, j)), k == 0 ? beta : T(1),
-                                        mat_c.readwrite(GlobalTileIndex(i, j))) |
-            tile::gemm(dlaf::internal::Policy<B>()));
+        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                                       mat_a.read(GlobalTileIndex(i, k)),
+                                                       mat_b.read(GlobalTileIndex(k, j)),
+                                                       k == 0 ? beta : T(1),
+                                                       mat_c.readwrite(GlobalTileIndex(i, j))) |
+                           tile::gemm(dlaf::internal::Policy<B>()));
       }
     }
   }

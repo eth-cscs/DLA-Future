@@ -168,7 +168,9 @@ protected:
                << ", tile_size="  << matrix.tile_size()
                << ", tiles_grid=" << matrix.nr_tiles()
                << ", rank_index=" << matrix.rank_index()
-               << ", comm_grid="  << matrix.grid_size();
+               << ", comm_grid="  << matrix.grid_size()
+               << ", src_rank="   << matrix.distribution().source_rank_index()
+               << ", offset="     << matrix.distribution().offset();
     // clang-format on
   }
 

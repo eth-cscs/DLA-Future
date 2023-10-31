@@ -84,7 +84,7 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
   namespace ex = pika::execution::experimental;
 
   if constexpr (Source == Destination) {
-    if (src.ptr() == dst.ptr())
+    if (&src == &dst)
       return;
   }
 
@@ -94,10 +94,10 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
   DLAF_ASSERT(src.blockSize() == dst.blockSize(), src.blockSize(), dst.blockSize());
 
   const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>> policy;
-  for (SizeType j = 0; j < src.nrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < src.nrTiles().rows(); ++i) {
-      ex::start_detached(ex::when_all(src.read(GlobalTileIndex{i, j}),
-                                      dst.readwrite(GlobalTileIndex{i, j})) |
+  for (SizeType j = 0; j < src.distribution().localNrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < src.distribution().localNrTiles().rows(); ++i) {
+      ex::start_detached(ex::when_all(src.read(LocalTileIndex{i, j}),
+                                      dst.readwrite(LocalTileIndex{i, j})) |
                          matrix::copy(policy));
     }
   }

@@ -99,7 +99,7 @@ class JobText:
     # and env command are the strings returned by command_gen(system=self.system, nodes=self.nodes, **args)
     # Note: if rpn was None at initialization any value for rpn can be given
     #       otherwise rpn has to match with the valeu wgiven at initialization.
-    def addCommand(self, command_gen, **args):
+    def addCommand(self, command_gen, srun_args, **args):
         rpn = args["rpn"]
         if self.rpn != None and self.rpn != rpn:
             raise ValueError(
@@ -112,7 +112,7 @@ class JobText:
         if "Extra subs" in self.system:
             subs = self.system["Extra subs"](subs)
 
-        run_cmd = self.system["Run command"].format(**subs).strip()
+        run_cmd = self.system["Run command"].format(srun_args=srun_args, **subs).strip()
         [command, env] = command_gen(system=self.system, nodes=self.nodes, **args)
 
         self.job_text += "\n" + f"{env} {run_cmd} {command}".strip()
@@ -670,7 +670,19 @@ class StrongScaling:
         self.rpn_preamble = None
 
     # add one/multiple runs
-    def add(self, miniapp, lib, build_dir, params, nruns, suffix="", extra_flags="", env="", dtype="d"):
+    def add(
+        self,
+        miniapp,
+        lib,
+        build_dir,
+        params,
+        nruns,
+        suffix="",
+        extra_flags="",
+        env="",
+        dtype="d",
+        srun_args="",
+    ):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")
 
@@ -706,6 +718,7 @@ class StrongScaling:
                 "extra_flags": extra_flags,
                 "env": env,
                 "dtype": dtype,
+                "srun_args": srun_args,
             }
         )
 
@@ -735,6 +748,7 @@ class StrongScaling:
                     extra_flags=run["extra_flags"],
                     env=run["env"],
                     dtype=run["dtype"],
+                    srun_args=run["srun_args"],
                     **param,
                 )
         return job_text
@@ -792,6 +806,7 @@ class WeakScaling:
         extra_flags="",
         env="",
         dtype="d",
+        srun_args="",
     ):
         if "rpn" not in params:
             raise KeyError("params dictionary should contain the key 'rpn'")
@@ -833,6 +848,7 @@ class WeakScaling:
                 "extra_flags": extra_flags,
                 "env": env,
                 "dtype": dtype,
+                "srun_args": srun_args,
             }
         )
 
@@ -874,6 +890,7 @@ class WeakScaling:
                         extra_flags=run["extra_flags"],
                         env=run["env"],
                         dtype=run["dtype"],
+                        srun_args=run["srun_args"],
                         **param,
                         **weak_param,
                     )

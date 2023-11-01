@@ -210,7 +210,7 @@ INSTANTIATE_TEST_SUITE_P(Rank, CommunicatorGridTest, valid_orderings);
 TEST_P(CommunicatorGridTest, RoundRobin) {
   Communicator world(MPI_COMM_WORLD);
   auto grid_dims = computeGridDims(NUM_MPI_RANKS);
-  const std::vector<std::size_t> test_npipelines{1};  //, 3, 10};
+  const std::vector<std::size_t> test_npipelines{1, 3, 10};
   for (const std::size_t npipelines : test_npipelines) {
     CommunicatorGrid complete_grid(world, grid_dims, GetParam(), npipelines);
 
@@ -242,7 +242,7 @@ TEST_P(CommunicatorGridTest, RoundRobin) {
 
     // We also expect all npipelines communicators to be distinct
     for (std::size_t i = 0; i < npipelines; ++i) {
-      for (std::size_t j = i + 1; i < npipelines; ++i) {
+      for (std::size_t j = i + 1; j < npipelines; ++j) {
         EXPECT_NE(&(full_communicators[i]), &(full_communicators[j]));
         EXPECT_NE(&(row_communicators[i]), &(row_communicators[j]));
         EXPECT_NE(&(col_communicators[i]), &(col_communicators[j]));

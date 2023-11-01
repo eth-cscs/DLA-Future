@@ -73,11 +73,6 @@ public:
     if (comm_grids.empty()) {
       comm::Communicator world(MPI_COMM_WORLD);
 
-      // Leave comm_grids empty if invoked with only one rank.
-      // Useful to debug local algorithms that otherwise are executed independently on multiple ranks.
-      if (world.size() == 1)
-        return;
-
       // The C API tests initialize pika and DLA-Future after getting the communicator grid. We can't use
       // the default parameter of CommunicatorGrid for ncommunicator_pipelines without initializing pika
       // and DLA-Future, so we specify an explicit value for ncommunicator_pipelines to avoid

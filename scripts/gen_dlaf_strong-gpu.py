@@ -21,6 +21,7 @@ import systems
 system = systems.cscs["daint-gpu"]
 
 dlafpath = "<path_to_dlaf_build_dir>"
+matrixrefpath = "<path_to_h5_refs>"
 
 run_dir = "~/ws/runs/strong"
 
@@ -29,8 +30,10 @@ nruns = 5
 nodes_arr = [1, 2, 4, 8, 16]
 
 rpn = 1
-m_szs = [10240, 20480, 30097, 40960]
-mb_szs = 1024
+m_szs_d = [10240, 20480, 30097, 40960]
+mb_szs_d = 512
+m_szs_z = [10240, 20480]
+mb_szs_z = 512
 
 extra_flags = "--dlaf:bt-band-to-tridiag-hh-apply-group-size=128"
 
@@ -45,99 +48,103 @@ args = parser.parse_args()
 debug = args.debug
 
 
-def createAndSubmitRun(run_dir, nodes_arr, **kwargs):
+def createAndSubmitRun(run_dir, nodes_arr, dtype, **kwargs):
+    if dtype == "d":
+        m_szs = m_szs_d
+        mb_szs = mb_szs_d
+        run_dir += "/d"
+    elif dtype == "z":
+        m_szs = m_szs_z
+        mb_szs = mb_szs_z
+        run_dir += "/z"
+    else:
+        raise RuntimeError(f"Invalid type specified {dtype}")
+
+    full_kwargs = kwargs.copy()
+    full_kwargs["lib"] = "dlaf"
+    full_kwargs["build_dir"] = dlafpath
+    full_kwargs["nruns"] = nruns
+    full_kwargs["dtype"] = dtype
+
     run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf", nodes_arr, time)
 
     run.add(
         mp.chol,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.gen2std,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.red2band,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        **full_kwargs,
     )
     run.add(
         mp.band2trid,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128},
+        **full_kwargs,
     )
     run.add(
         mp.trid_evp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs},
+        **full_kwargs,
     )
     run.add(
         mp.bt_band2trid,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        **full_kwargs,
     )
     run.add(
         mp.bt_red2band,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "band": 128, "n_sz": None},
+        **full_kwargs,
     )
     run.add(
         mp.trsm,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
-        nruns,
-        **kwargs,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "n_sz": None},
+        **full_kwargs,
     )
 
-    fullsolver_args = kwargs
-    fullsolver_args["extra_flags"] = kwargs.get("extra_flags", "") + " --check=last"
+    fullsolver_args = full_kwargs.copy()
+    fullsolver_args["extra_flags"] = fullsolver_args.get("extra_flags", "") + " --check=last"
 
     run.add(
         mp.evp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
     run.add(
         mp.gevp,
-        "dlaf",
-        dlafpath,
-        {"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
-        nruns,
+        params={"rpn": rpn, "m_sz": m_szs, "mb_sz": mb_szs, "min_band": None},
         **fullsolver_args,
     )
 
     run.submit(run_dir, debug=debug)
 
+    run = mp.StrongScaling(system, "DLAF_test_strong", "job_dlaf-norandom", nodes_arr, time)
+    for m_sz in m_szs:
+        trid_kwargs = full_kwargs.copy()
+        trid_kwargs["suffix"] = "fromfile"
+        trid_kwargs["extra_flags"] = (
+            trid_kwargs.get("extra_flags", "") + f" --input-file={matrixrefpath}/trid-ref-{m_sz}.h5"
+        )
+
+        run.add(
+            mp.trid_evp,
+            params={"rpn": rpn, "m_sz": m_sz, "mb_sz": mb_szs},
+            **trid_kwargs,
+        )
+    run.submit(run_dir, debug=debug)
+
 
 # actual benchmark
-createAndSubmitRun(run_dir, nodes_arr, extra_flags=extra_flags)
+createAndSubmitRun(run_dir, nodes_arr, "d", extra_flags=extra_flags)
+createAndSubmitRun(run_dir, nodes_arr, "z", extra_flags=extra_flags)
 
 # additional benchmark collecting "local" implementation results in <run_dir>-local directory
-createAndSubmitRun(run_dir + "-local", [1 / rpn], extra_flags=extra_flags + " --local")
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "d", extra_flags=extra_flags + " --local")
+createAndSubmitRun(run_dir + "-local", [1 / rpn], "z", extra_flags=extra_flags + " --local")

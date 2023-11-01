@@ -128,7 +128,7 @@ inline LayoutInfo colMajorLayout(const LocalElementSize& size, const TileElement
 }
 /// Returns LayoutInfo for a distributed column major matrix.
 inline LayoutInfo colMajorLayout(const matrix::Distribution& distribution, SizeType ld) {
-  return colMajorLayout(distribution.localSize(), distribution.blockSize(), ld);
+  return colMajorLayout(distribution.local_size(), distribution.block_size(), ld);
 }
 
 /// Returns LayoutInfo for a local matrix which use the tile layout (Advanced interface).
@@ -143,7 +143,7 @@ inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize
 /// Returns LayoutInfo for a distributed matrix which use the tile layout (Advanced interface).
 inline LayoutInfo tileLayout(const matrix::Distribution& distribution, SizeType ld_tile,
                              SizeType tiles_per_col) {
-  return tileLayout(distribution.localSize(), distribution.blockSize(), ld_tile, tiles_per_col);
+  return tileLayout(distribution.local_size(), distribution.block_size(), ld_tile, tiles_per_col);
 }
 
 /// Returns LayoutInfo for a local matrix which use the tile layout (Basic interface).
@@ -155,7 +155,7 @@ inline LayoutInfo tileLayout(const LocalElementSize& size, const TileElementSize
 
 /// Returns LayoutInfo for a distributed matrix which use the tile layout (Basic interface).
 inline LayoutInfo tileLayout(const matrix::Distribution& distribution) {
-  return tileLayout(distribution.localSize(), distribution.blockSize());
+  return tileLayout(distribution.local_size(), distribution.block_size());
 }
 }
 }

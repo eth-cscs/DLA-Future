@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include <pika/config.hpp>
-
 #include <dlaf/common/with_result_of.h>
 #include <dlaf/communication/communicator_grid.h>
 

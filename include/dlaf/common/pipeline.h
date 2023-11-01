@@ -71,6 +71,10 @@ public:
     return pipeline->readwrite();
   }
 
+  [[deprecated("Use readwrite instead")]] ReadWriteSender operator()() {
+    return readwrite();
+  }
+
   /// Enqueue for shared read-only access to the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.

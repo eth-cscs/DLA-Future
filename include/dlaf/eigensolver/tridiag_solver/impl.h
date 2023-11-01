@@ -296,11 +296,11 @@ void solveDistLeaf(comm::CommunicatorGrid& grid, common::Pipeline<comm::Communic
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
       stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), tridiag.read(id_tr)));
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), tridiag.read(id_tr)));
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(), root_rank,
+      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }
   }
@@ -327,11 +327,11 @@ void solveDistLeaf(comm::CommunicatorGrid& grid, common::Pipeline<comm::Communic
       stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
       ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
                          copy(cp_policy));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), tridiag.read(id_tr)));
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), tridiag.read(id_tr)));
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(), root_rank,
+      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }
   }

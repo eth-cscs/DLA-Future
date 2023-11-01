@@ -882,10 +882,10 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(comm::scheduleSendBcast(
-              mpi_chain_row(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
+              mpi_chain_row.readwrite(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
-          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
+          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.readwrite(), rankHH.col(),
                                                      splitTile(panel_hh.readwrite(ij_hh_panel),
                                                                helper.specHHCompact(true))));
         }
@@ -905,10 +905,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                              : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, std::move(tile_hh)));
+          ex::start_detached(comm::scheduleSend(mpi_chain_col.readwrite(), rank_dst, 0,
+                                                std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
-          ex::start_detached(comm::scheduleRecv(mpi_chain_col(), rank_src, 0,
+          ex::start_detached(comm::scheduleRecv(mpi_chain_col.readwrite(), rank_src, 0,
                                                 panel_hh.readwrite(ij_hh_panel)));
         }
       }

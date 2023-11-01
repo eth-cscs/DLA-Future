@@ -946,11 +946,12 @@ void assembleDistZVec(comm::CommunicatorGrid& grid,
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), z.read(z_idx)));
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), z.read(z_idx)));
     }
     else {
       const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(), root_rank, z.readwrite(z_idx)));
+      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
+                                                 z.readwrite(z_idx)));
     }
   }
 }
@@ -1000,10 +1001,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
       auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
       if (evecs_tile_rank == this_rank.col())
-        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(std::cref(tile))) |
+        comms.emplace_back(ex::when_all(row_comm_chain.readwrite(), ex::just(std::cref(tile))) |
                            transformMPI(sendBcast_o));
       else
-        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(evecs_tile_rank, std::cref(tile))) |
+        comms.emplace_back(ex::when_all(row_comm_chain.readwrite(),
+                                        ex::just(evecs_tile_rank, std::cref(tile))) |
                            transformMPI(recvBcast_o));
     }
 
@@ -1283,7 +1285,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
             }
           }
 
-          tt::sync_wait(ex::when_all(row_comm_chain(),
+          tt::sync_wait(ex::when_all(row_comm_chain.readwrite(),
                                      ex::just(MPI_PROD, common::make_data(w, m_subm_el_lc))) |
                         transformMPI(all_reduce_in_place));
 
@@ -1491,8 +1493,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid& grid,
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
                                   ws_hm.e2);
-  solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
-                        k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
+  solveRank1ProblemDist(row_task_chain.readwrite(), col_task_chain.readwrite(), i_begin, i_end,
+                        idx_loc_begin, sz_loc_tiles, k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1,
+                        ws_h.d0, ws_hm.i2, ws_hm.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
   //

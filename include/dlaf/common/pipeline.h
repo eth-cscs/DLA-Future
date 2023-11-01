@@ -62,11 +62,11 @@ public:
     release_parent_pipeline();
   }
 
-  /// Enqueue for the resource.
+  /// Enqueue for exclusive read-write access to the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   /// @pre valid()
-  ReadWriteSender operator()() {
+  ReadWriteSender readwrite() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();
   }

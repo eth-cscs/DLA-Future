@@ -38,7 +38,7 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     sync_wait(mat.readwrite(index))({sz - 1, 0}) = 1.;
-    start_detached(when_all(ccomm(), mat.readwrite(index)) |
+    start_detached(when_all(ccomm.readwrite(), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
@@ -48,7 +48,7 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    start_detached(when_all(ccomm(), just(root), mat.readwrite(index)) |
+    start_detached(when_all(ccomm.readwrite(), just(root), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::recvBcast_o));
     EXPECT_EQ(1., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }
@@ -70,7 +70,7 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   dlaf::Matrix<double, Device::CPU> mat({sz, 1}, {sz, 1});
   if (comm.rank() == root) {
     sync_wait(mat.readwrite(index))({sz - 1, 0}) = 1.;
-    start_detached(when_all(ccomm(), mat.read(index)) |
+    start_detached(when_all(ccomm.readwrite(), mat.read(index)) |
                    comm::internal::transformMPI(comm::internal::sendBcast_o));
     mat.readwrite(index) |
         transformDetach(internal::Policy<Backend::MC>(), [sz](matrix::Tile<double, Device::CPU> tile) {
@@ -80,7 +80,7 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   }
   else {
     std::this_thread::sleep_for(50ms);
-    start_detached(when_all(ccomm(), just(root), mat.readwrite(index)) |
+    start_detached(when_all(ccomm.readwrite(), just(root), mat.readwrite(index)) |
                    comm::internal::transformMPI(comm::internal::recvBcast_o));
     EXPECT_EQ(1., sync_wait(mat.read(index)).get()({sz - 1, 0}));
   }

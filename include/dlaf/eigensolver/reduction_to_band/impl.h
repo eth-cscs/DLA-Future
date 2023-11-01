@@ -757,10 +757,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite({i, 0})));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.readwrite(), MPI_SUM,
+                                                         x.readwrite({i, 0})));
     }
     else {
-      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
+      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.readwrite(), rank_owner_row, MPI_SUM,
                                                   xt.read(index_xt)));
     }
   }
@@ -771,10 +772,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.readwrite(), MPI_SUM,
                                                          x.readwrite(index_x)));
     else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.readwrite(), reducer_col, MPI_SUM,
                                                   x.read(index_x)));
   }
 }
@@ -1182,8 +1183,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     if (is_panel_rank_col) {
-      compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(), mpi_col_chain_panel(), mat_a,
-                                mat_taus_retiled, j_sub, panel_view);
+      compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(), mpi_col_chain_panel.readwrite(),
+                                mat_a, mat_taus_retiled, j_sub, panel_view);
 
       // Note:
       // - has_reflector_head tells if this rank owns the first tile of the panel
@@ -1254,7 +1255,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.readwrite(), MPI_SUM,
                                                         w2.readwrite(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
@@ -1338,11 +1339,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain(), xt.read(at)));
+            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.readwrite(), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain(), owner, xt.readwrite(at)));
+            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.readwrite(), owner,
+                                                       xt.readwrite(at)));
         }
       }
 

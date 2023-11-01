@@ -797,14 +797,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
     ex::unique_any_sender<SemaphorePtr> sem_sender;
     if ((sweep + 1) % nb != 0) {
-      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline()) |
-                                      dlaf::internal::transform(policy_hp, init_sweep));
+      sem_sender =
+          ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline.readwrite()) |
+                             dlaf::internal::transform(policy_hp, init_sweep));
     }
     else {
       const auto tile_index = sweep / nb;
-      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline(),
-                                                   mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
-                                      dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
+      sem_sender =
+          ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline.readwrite(),
+                                          mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
+                             dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
     }
     if (sweep % nb == 0) {
       // The run_sweep tasks writes a single column of elements of mat_v.
@@ -820,7 +822,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           ex::split();
     }
 
-    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline(), tiles_v) |
+    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline.readwrite(), tiles_v) |
         dlaf::internal::transformDetach(policy_hp, run_sweep);
     sem = std::move(sem_next);
   }
@@ -1354,14 +1356,15 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         // Sweep initialization
         if (init_step == 0) {
           if ((sweep + 1) % nb != 0) {
-            sem_sender =
-                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep), w_pipeline()) |
-                                   dlaf::internal::transform(policy_hp, init_sweep));
+            sem_sender = ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep),
+                                                         w_pipeline.readwrite()) |
+                                            dlaf::internal::transform(policy_hp, init_sweep));
           }
           else {
             const auto tile_index = sweep / nb;
             sem_sender =
-                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep), w_pipeline(),
+                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep),
+                                                w_pipeline.readwrite(),
                                                 mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
                                    dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
           }
@@ -1369,7 +1372,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         else {
           ex::start_detached(schedule_recv_worker(sweep, init_step, mpi_chain.read(), prev_rank,
                                                   compute_worker_tag(sweep, id_block.col()),
-                                                  w_pipeline()));
+                                                  w_pipeline.readwrite()));
 
           // SendCol already acquired once the semaphore, so no need to acquire it here.
           sem_sender = ex::when_all(ex::just(std::move(sem)), std::move(send_col_dep));
@@ -1382,15 +1385,17 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         bool last_step = steps - init_step <= steps_per_block && next_j != size - 2;
         const SizeType block_steps = std::min(steps_per_block, steps - init_step);
 
-        dep_block = ex::ensure_started(ex::when_all(ex::just(a_block), std::move(sem_sender),
-                                                    ex::just(sem_next, block_steps, last_step),
-                                                    w_pipeline(), tile_v, ex::just(sweep % b)) |
-                                       dlaf::internal::transform(policy_hp, run_steps));
+        dep_block =
+            ex::ensure_started(ex::when_all(ex::just(a_block), std::move(sem_sender),
+                                            ex::just(sem_next, block_steps, last_step),
+                                            w_pipeline.readwrite(), tile_v, ex::just(sweep % b)) |
+                               dlaf::internal::transform(policy_hp, run_steps));
         sem = std::move(sem_next);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(schedule_send_worker(
-              mpi_chain.read(), next_rank, compute_worker_tag(sweep, id_block.col() + 1), w_pipeline()));
+          ex::start_detached(schedule_send_worker(mpi_chain.read(), next_rank,
+                                                  compute_worker_tag(sweep, id_block.col() + 1),
+                                                  w_pipeline.readwrite()));
         }
       }
     }
@@ -1494,9 +1499,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only Rank 0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast(), mat_trid.read(index)));
+      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.readwrite(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast(), 0, mat_trid.readwrite(index)));
+      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.readwrite(), 0,
+                                                 mat_trid.readwrite(index)));
   }
 
   return {std::move(mat_trid), std::move(mat_v)};

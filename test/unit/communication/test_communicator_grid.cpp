@@ -224,20 +224,23 @@ TEST_P(CommunicatorGridTest, RoundRobin) {
 
     // Access the pipelines once for each communicator in the pipelines
     for (std::size_t i = 0; i < npipelines; ++i) {
-      full_communicators.push_back(tt::sync_wait(complete_grid.full_communicator_pipeline()()).get());
-      row_communicators.push_back(tt::sync_wait(complete_grid.row_communicator_pipeline()()).get());
-      col_communicators.push_back(tt::sync_wait(complete_grid.col_communicator_pipeline()()).get());
+      full_communicators.push_back(
+          tt::sync_wait(complete_grid.full_communicator_pipeline().readwrite()).get());
+      row_communicators.push_back(
+          tt::sync_wait(complete_grid.row_communicator_pipeline().readwrite()).get());
+      col_communicators.push_back(
+          tt::sync_wait(complete_grid.col_communicator_pipeline().readwrite()).get());
     }
 
     // Since we made one full npipelines round in the previous round, we should now get the same
     // communicators
     for (std::size_t i = 0; i < npipelines; ++i) {
       EXPECT_EQ(&(full_communicators[i]),
-                &tt::sync_wait(complete_grid.full_communicator_pipeline()()).get());
+                &tt::sync_wait(complete_grid.full_communicator_pipeline().readwrite()).get());
       EXPECT_EQ(&(row_communicators[i]),
-                &tt::sync_wait(complete_grid.row_communicator_pipeline()()).get());
+                &tt::sync_wait(complete_grid.row_communicator_pipeline().readwrite()).get());
       EXPECT_EQ(&(col_communicators[i]),
-                &tt::sync_wait(complete_grid.col_communicator_pipeline()()).get());
+                &tt::sync_wait(complete_grid.col_communicator_pipeline().readwrite()).get());
     }
 
     // We also expect all npipelines communicators to be distinct

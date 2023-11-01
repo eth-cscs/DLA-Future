@@ -88,7 +88,7 @@ TEST(Pipeline, Basic) {
     std::atomic<bool> second_access_done{false};
     std::atomic<bool> third_access_done{false};
 
-    auto checkpoint0 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint0 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 26);
                          EXPECT_FALSE(first_access_done);
                          EXPECT_FALSE(second_access_done);
@@ -96,7 +96,7 @@ TEST(Pipeline, Basic) {
                          ++wrapper.get();
                          first_access_done = true;
                        });
-    auto checkpoint1 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint1 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 27);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_FALSE(second_access_done);
@@ -104,7 +104,7 @@ TEST(Pipeline, Basic) {
                          ++wrapper.get();
                          second_access_done = true;
                        });
-    auto checkpoint2 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint2 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 28);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_TRUE(second_access_done);
@@ -126,7 +126,7 @@ TEST(Pipeline, Basic) {
     std::atomic<bool> second_access_done{false};
     std::atomic<bool> third_access_done{false};
 
-    auto checkpoint0 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint0 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 26);
                          EXPECT_FALSE(first_access_done);
                          EXPECT_FALSE(second_access_done);
@@ -134,7 +134,7 @@ TEST(Pipeline, Basic) {
                          ++wrapper.get();
                          first_access_done = true;
                        });
-    auto checkpoint1 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint1 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 27);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_FALSE(second_access_done);
@@ -142,7 +142,7 @@ TEST(Pipeline, Basic) {
                          ++wrapper.get();
                          second_access_done = true;
                        });
-    auto checkpoint2 = serial() | ex::then([&](auto wrapper) {
+    auto checkpoint2 = serial.readwrite() | ex::then([&](auto wrapper) {
                          EXPECT_EQ(wrapper.get().get(), 28);
                          EXPECT_TRUE(first_access_done);
                          EXPECT_TRUE(second_access_done);
@@ -193,7 +193,7 @@ TEST(PipelineDestructor, DestructionWithDependency) {
                       try_waiting_guard(is_exited_from_scope);
                       EXPECT_TRUE(is_exited_from_scope);
                     },
-                    serial()) |
+                    serial.readwrite()) |
                 ex::ensure_started();
   }
   is_exited_from_scope = true;
@@ -210,7 +210,7 @@ TEST(SubPipeline, Basic) {
   std::atomic<bool> second_access_done{false};
   std::atomic<bool> third_access_done{false};
 
-  auto checkpoint0 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint0 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 26);
                        EXPECT_FALSE(first_access_done);
                        EXPECT_FALSE(second_access_done);
@@ -218,7 +218,7 @@ TEST(SubPipeline, Basic) {
                        ++wrapper.get();
                        first_access_done = true;
                      });
-  auto checkpoint1 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint1 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 27);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_FALSE(second_access_done);
@@ -226,7 +226,7 @@ TEST(SubPipeline, Basic) {
                        ++wrapper.get();
                        second_access_done = true;
                      });
-  auto checkpoint2 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint2 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 28);
                        EXPECT_TRUE(first_access_done);
                        EXPECT_TRUE(second_access_done);
@@ -244,9 +244,9 @@ TEST(SubPipeline, BasicParentAccess) {
   // A subpipeline will not start executing if the parent hasn't released its accesses
   PipelineType pipeline(26);
 
-  auto first_parent_sender = pipeline();
+  auto first_parent_sender = pipeline.readwrite();
   PipelineType sub_pipeline = pipeline.sub_pipeline();
-  auto last_parent_sender = pipeline();
+  auto last_parent_sender = pipeline.readwrite();
 
   std::atomic<bool> first_parent_access_done{false};
   std::atomic<bool> first_access_done{false};
@@ -265,7 +265,7 @@ TEST(SubPipeline, BasicParentAccess) {
                                   first_parent_access_done = true;
                                 });
 
-  auto checkpoint0 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint0 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 27);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_FALSE(first_access_done);
@@ -275,7 +275,7 @@ TEST(SubPipeline, BasicParentAccess) {
                        ++wrapper.get();
                        first_access_done = true;
                      });
-  auto checkpoint1 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint1 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 28);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_TRUE(first_access_done);
@@ -285,7 +285,7 @@ TEST(SubPipeline, BasicParentAccess) {
                        ++wrapper.get();
                        second_access_done = true;
                      });
-  auto checkpoint2 = sub_pipeline() | ex::then([&](auto wrapper) {
+  auto checkpoint2 = sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
                        EXPECT_EQ(wrapper.get().get(), 29);
                        EXPECT_TRUE(first_parent_access_done);
                        EXPECT_TRUE(first_access_done);
@@ -414,7 +414,7 @@ TEST(SubPipeline, TaskParentAccess) {
   // A subpipeline will not start executing if the parent hasn't released its accesses
   PipelineType pipeline(26);
 
-  auto first_parent_sender = pipeline();
+  auto first_parent_sender = pipeline.readwrite();
   PipelineType sub_pipeline = pipeline.sub_pipeline();
 
   std::atomic<bool> first_parent_access_done{false};
@@ -436,43 +436,44 @@ TEST(SubPipeline, TaskParentAccess) {
 
   auto spawn_sub_pipeline =
       ex::just() |
-      dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
-                                [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
-                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
-                                                       EXPECT_EQ(wrapper.get().get(), 27);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_FALSE(first_access_done);
-                                                       EXPECT_FALSE(second_access_done);
-                                                       EXPECT_FALSE(third_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       first_access_done = true;
-                                                     }));
-                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
-                                                       EXPECT_EQ(wrapper.get().get(), 28);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_TRUE(first_access_done);
-                                                       EXPECT_FALSE(second_access_done);
-                                                       EXPECT_FALSE(third_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       second_access_done = true;
-                                                     }));
-                                  ex::start_detached(sub_pipeline() | ex::then([&](auto wrapper) {
-                                                       EXPECT_EQ(wrapper.get().get(), 29);
-                                                       EXPECT_TRUE(first_parent_access_done);
-                                                       EXPECT_TRUE(first_access_done);
-                                                       EXPECT_TRUE(second_access_done);
-                                                       EXPECT_FALSE(third_access_done);
-                                                       EXPECT_FALSE(last_parent_access_done);
-                                                       ++wrapper.get();
-                                                       third_access_done = true;
-                                                     }));
-                                  return std::move(sub_pipeline);
-                                }) |
+      dlaf::internal::transform(
+          dlaf::internal::Policy<dlaf::Backend::MC>(),
+          [&, sub_pipeline = std::move(sub_pipeline)]() mutable {
+            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 27);
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_FALSE(first_access_done);
+                                 EXPECT_FALSE(second_access_done);
+                                 EXPECT_FALSE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
+                                 first_access_done = true;
+                               }));
+            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 28);
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_TRUE(first_access_done);
+                                 EXPECT_FALSE(second_access_done);
+                                 EXPECT_FALSE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
+                                 second_access_done = true;
+                               }));
+            ex::start_detached(sub_pipeline.readwrite() | ex::then([&](auto wrapper) {
+                                 EXPECT_EQ(wrapper.get().get(), 29);
+                                 EXPECT_TRUE(first_parent_access_done);
+                                 EXPECT_TRUE(first_access_done);
+                                 EXPECT_TRUE(second_access_done);
+                                 EXPECT_FALSE(third_access_done);
+                                 EXPECT_FALSE(last_parent_access_done);
+                                 ++wrapper.get();
+                                 third_access_done = true;
+                               }));
+            return std::move(sub_pipeline);
+          }) |
       ex::ensure_started();
 
-  auto checkpointparent_last = pipeline() | ex::then([&](auto wrapper) {
+  auto checkpointparent_last = pipeline.readwrite() | ex::then([&](auto wrapper) {
                                  EXPECT_EQ(wrapper.get().get(), 30);
                                  EXPECT_TRUE(first_parent_access_done);
                                  EXPECT_TRUE(first_access_done);
@@ -666,7 +667,7 @@ void spawn_work_readwrite(PipelineType& pipeline, PipelineTestState& state, Gene
 
   for (std::size_t i = 0; i < dist(gen); ++i) {
     ++state.spawn_count;
-    auto s = pipeline() |
+    auto s = pipeline.readwrite() |
              dlaf::internal::transform(dlaf::internal::Policy<dlaf::Backend::MC>(),
                                        [&state, spawn_count = state.spawn_count.load()](auto& count) {
                                          ++state.access_count;
@@ -767,7 +768,7 @@ TEST(SubPipeline, RandomAccess) {
 
       // Make the first access to the parent pipeline, but do not eagerly start it
       ++state.spawn_count;
-      auto first_access = pipeline() | ex::then([&state](auto wrapper) {
+      auto first_access = pipeline.readwrite() | ex::then([&state](auto wrapper) {
                             ++state.access_count;
                             ++wrapper.get();
 
@@ -802,7 +803,7 @@ TEST(SubPipeline, RandomAccess) {
       }
 
       // The count held by the pipeline should have been incremented spawn_count times by now
-      auto final_count = tt::sync_wait(pipeline()).get().get();
+      auto final_count = tt::sync_wait(pipeline.readwrite()).get().get();
       EXPECT_EQ(state.spawn_count, final_count);
     }
   }

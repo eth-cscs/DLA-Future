@@ -339,7 +339,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& gr
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
+      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.readwrite(), MPI_SUM,
                                                               panelW2.readwrite(kj_panel)));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);

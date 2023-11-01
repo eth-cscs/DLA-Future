@@ -589,12 +589,12 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid& grid, blas::Op 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.readwrite(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.readwrite(), rank_kk.row(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -766,12 +766,12 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid& grid, blas::Op 
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.readwrite(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.readwrite(), rank_kk.row(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -945,12 +945,12 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid& grid, blas::Op 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.readwrite(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.readwrite(), rank_kk.col(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -1125,12 +1125,12 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid& grid, blas::Op 
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.readwrite(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.readwrite(), rank_kk.col(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }

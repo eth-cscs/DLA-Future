@@ -113,6 +113,9 @@ TEST(Pipeline, Basic) {
                        });
 
     tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
+    EXPECT_TRUE(first_access_done);
+    EXPECT_TRUE(second_access_done);
+    EXPECT_TRUE(third_access_done);
   }
 
   // The order of access does not depend on how the senders are started by when_all
@@ -149,6 +152,9 @@ TEST(Pipeline, Basic) {
                        });
 
     tt::sync_wait(ex::when_all(std::move(checkpoint2), std::move(checkpoint1), std::move(checkpoint0)));
+    EXPECT_TRUE(first_access_done);
+    EXPECT_TRUE(second_access_done);
+    EXPECT_TRUE(third_access_done);
   }
 }
 
@@ -229,6 +235,9 @@ TEST(SubPipeline, Basic) {
                      });
 
   tt::sync_wait(ex::when_all(std::move(checkpoint0), std::move(checkpoint1), std::move(checkpoint2)));
+  EXPECT_TRUE(first_access_done);
+  EXPECT_TRUE(second_access_done);
+  EXPECT_TRUE(third_access_done);
 }
 
 TEST(SubPipeline, BasicParentAccess) {
@@ -303,6 +312,10 @@ TEST(SubPipeline, BasicParentAccess) {
                              std::move(checkpointparent_first)));
   // Since the last parent access will be run as an inline continuation and the access was eagerly
   // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.
+  EXPECT_TRUE(first_parent_access_done);
+  EXPECT_TRUE(first_access_done);
+  EXPECT_TRUE(second_access_done);
+  EXPECT_TRUE(third_access_done);
   EXPECT_FALSE(last_parent_access_done);
   sub_pipeline.reset();
   EXPECT_TRUE(last_parent_access_done);
@@ -388,6 +401,10 @@ TEST(SubPipeline, BasicReadonlyParentAccess) {
                              std::move(checkpointparent_first)));
   // Since the last parent access will be run as an inline continuation and the access was eagerly
   // started, it should be triggered by the reset of the sub pipeline even without a sync_wait.
+  EXPECT_TRUE(first_parent_access_done);
+  EXPECT_TRUE(first_access_done);
+  EXPECT_TRUE(second_access_done);
+  EXPECT_TRUE(third_access_done);
   EXPECT_FALSE(last_parent_access_done);
   sub_pipeline.reset();
   EXPECT_TRUE(last_parent_access_done);
@@ -480,6 +497,10 @@ TEST(SubPipeline, TaskParentAccess) {
   // The last parent access should not complete until the sub pipeline has been reset.
   EXPECT_FALSE(last_parent_access_done);
   auto sub_pipeline_from_sender = tt::sync_wait(std::move(spawn_sub_pipeline));
+  EXPECT_TRUE(first_parent_access_done);
+  EXPECT_TRUE(first_access_done);
+  EXPECT_TRUE(second_access_done);
+  EXPECT_TRUE(third_access_done);
   EXPECT_FALSE(last_parent_access_done);
   sub_pipeline_from_sender.reset();
   tt::sync_wait(std::move(checkpointparent_last_started));
@@ -573,6 +594,10 @@ TEST(SubPipeline, TaskReadonlyParentAccess) {
   EXPECT_FALSE(last_parent_access_done);
   sub_pipeline_from_sender.reset();
   tt::sync_wait(std::move(checkpointparent_last_started));
+  EXPECT_TRUE(first_parent_access_done);
+  EXPECT_TRUE(first_access_done);
+  EXPECT_TRUE(second_access_done);
+  EXPECT_TRUE(third_access_done);
   EXPECT_TRUE(last_parent_access_done);
 }
 

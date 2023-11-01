@@ -222,7 +222,7 @@ TEST_P(CommunicatorGridTest, RoundRobin) {
     row_communicators.reserve(npipelines);
     col_communicators.reserve(npipelines);
 
-    // Access the pipelines once for communicator in the pipelines
+    // Access the pipelines once for each communicator in the pipelines
     for (std::size_t i = 0; i < npipelines; ++i) {
       full_communicators.push_back(tt::sync_wait(complete_grid.full_communicator_pipeline()()).get());
       row_communicators.push_back(tt::sync_wait(complete_grid.row_communicator_pipeline()()).get());

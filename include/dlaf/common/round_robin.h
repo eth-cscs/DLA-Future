@@ -36,14 +36,14 @@ public:
   RoundRobin& operator=(const RoundRobin&) = delete;
 
   T& currentResource() {
-    DLAF_ASSERT(curr_index_ < pool_.size(), curr_index_, pool_.size());
+    DLAF_ASSERT_HEAVY(curr_index_ < pool_.size(), curr_index_, pool_.size());
     return pool_[curr_index_];
   }
 
   T& nextResource() {
-    DLAF_ASSERT(!pool_.empty(), "");
+    DLAF_ASSERT_HEAVY(!pool_.empty(), "");
     curr_index_ = (curr_index_ + 1) % pool_.size();
-    DLAF_ASSERT(curr_index_ < pool_.size(), curr_index_, pool_.size());
+    DLAF_ASSERT_HEAVY(curr_index_ < pool_.size(), curr_index_, pool_.size());
     return pool_[curr_index_];
   }
 

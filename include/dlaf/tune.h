@@ -54,7 +54,7 @@ namespace dlaf {
 ///     DLAF_BT_BAND_TO_TRIDIAG_HH_APPLY_GROUP_SIZE.
 /// - communicator_grid_num_pipelines:
 ///     The default number of row, column, and full communicator pipelins to initialize in
-///     CommunicatorGrid. Set with --dlaf:communicator-grid-num-communicators-default or env variable
+///     CommunicatorGrid. Set with --dlaf:communicator-grid-num-pipelines or env variable
 ///     DLAF_COMMUNICATOR_GRID_NUM_PIPELINES.
 /// Note to developers: Users can change these values, therefore consistency has to be ensured by
 /// algorithms.

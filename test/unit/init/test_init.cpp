@@ -144,7 +144,8 @@ int precedence_main(int, char*[]) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_gpu_streams_per_thread);
   }
 
-  return pika::finalize();
+  pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 TEST_P(InitTest, Precedence) {
@@ -212,7 +213,8 @@ int vm_no_command_line_option_main(pika::program_options::variables_map& vm) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_gpu_streams_per_thread);
   }
 
-  return pika::finalize();
+  pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 TEST_P(InitTest, VariablesMapNoCommandLineOption) {
@@ -239,7 +241,8 @@ int vm_command_line_option_main(pika::program_options::variables_map& vm) {
     EXPECT_EQ(command_line_option_val, cfg.num_hp_gpu_streams_per_thread);
   }
 
-  return pika::finalize();
+  pika::finalize();
+  return EXIT_SUCCESS;
 }
 
 TEST_P(InitTest, VariablesMapCommandLineOption) {

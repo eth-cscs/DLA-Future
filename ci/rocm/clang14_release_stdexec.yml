@@ -1,0 +1,22 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+rocm clang14 stdexec release deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    EXTRA_APTGET: "clang-14 libomp-14-dev rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
+    COMPILER: clang@14.0.0
+    USE_ROCBLAS: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-rocm533-stdexec.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/build
+
+rocm clang14 stdexec release build:
+  extends:
+    - .build_common
+  after_script: null
+  needs:
+    - rocm clang14 stdexec release deps
+  variables:
+    DEPLOY_BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/deploy:$CI_COMMIT_SHA

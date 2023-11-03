@@ -954,6 +954,23 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
   }
 }
 
+// It ensures that the internal sender, if set, will be waited for once this object will go out of scope.
+// It might be useful in situation where you want to ensure that a sender representing a "checkpoint" for
+// a computation is completed before leaving the scope (e.g. for related resource lifetime management)
+//
+// Currently it proved to be useful just in one place, and it was actually define nested where it was
+// needed. Unfortunately, due to a problem with clang@15, we had to move it outside as a workaround.
+//
+// See https://github.com/eth-cscs/DLA-Future/issues/1017
+struct ScopedSenderWait {
+  pika::execution::experimental::unique_any_sender<> sender_;
+
+  ~ScopedSenderWait() {
+    if (sender_)
+      pika::this_thread::experimental::sync_wait(std::move(sender_));
+  }
+};
+
 template <class T, class CommSender, class KSender, class RhoSender>
 void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const SizeType i_begin,
                            const SizeType i_end, const LocalTileIndex ij_begin_lc,
@@ -1168,15 +1185,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // STEP 2: Broadcast evals
 
         // Note: this ensures that evals broadcasting finishes before bulk releases resources
-        struct sync_wait_on_exit_t {
-          ex::unique_any_sender<> sender_;
-
-          ~sync_wait_on_exit_t() {
-            if (sender_)
-              tt::sync_wait(std::move(sender_));
-          }
-        } bcast_barrier;
-
+        ScopedSenderWait bcast_barrier;
         if (thread_idx == 0)
           bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);
 

@@ -110,32 +110,35 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
                     40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
 }
 
-std::vector<GemmConfig> full_gemm_configs = {
+std::vector<GemmConfig> gemm_configs = {
     // empty matrices
-    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 0, 0, 7, 3, 6, 2},
-    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 20, 0, 7, 3, 6, 2},
-    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 0, 20, 7, 3, 6, 2},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 0, 0, 7, 3, 6, 2},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 26, 0, 7, 3, 6, 2},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 0, 13, 7, 3, 6, 2},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 26, 13, 0, 3, 6, 2},
 
     // full
-    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 21, 21, 21, 3, 3, 3},
-    GemmConfig{blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 3, 3, 3, 3, 3, 3},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 21, 21, 21, 3, 4, 5},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 3, 3, 5},
 };
 
-TYPED_TEST(GeneralMultiplicationTestMC, MatrixRefCorrectnessLocalFull) {
+TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRef) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (const GemmConfig& test_config : full_gemm_configs) {
+  for (const GemmConfig& test_config : gemm_configs) {
     testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config);
   }
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralMultiplicationTestGPU, MatrixRefCorrectnessLocalFull) {
+TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRef) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (const GemmConfig& test_config : full_gemm_configs) {
+  for (const GemmConfig& test_config : gemm_configs) {
     testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config);
   }
 }

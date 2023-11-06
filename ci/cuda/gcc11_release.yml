@@ -5,7 +5,7 @@ cuda gcc11 release deps:
   extends: .build_deps_common
   variables:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    COMPILER: gcc@11.2.0
+    COMPILER: gcc@11.4.0
     CXXSTD: 17
     SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
     USE_MKL: "ON"

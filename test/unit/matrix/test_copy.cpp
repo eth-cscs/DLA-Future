@@ -179,11 +179,11 @@ auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
 }
 
 template <class OutsideElementGetter, class InsideElementGetter>
-auto mixValues(OutsideElementGetter&& outsideValues, InsideElementGetter&& insideValues,
-               const GlobalElementIndex& offset, const GlobalElementSize& sub_size) {
+auto mixValues(const GlobalElementIndex& offset, const GlobalElementSize& sub_size,
+               InsideElementGetter&& insideValues, OutsideElementGetter&& outsideValues) {
   return [outsideValues, insideValues, offset, sub_size](const GlobalElementIndex& ij) {
     if (isInSub(ij, offset, sub_size))
-      return insideValues(ij);
+      return insideValues(ij - common::sizeFromOrigin(offset));
     else
       return outsideValues(ij);
   };
@@ -194,65 +194,87 @@ const std::vector<SubMatrixCopyConfig> sub_configs{
     {{10, 10}, {10, 10}, {3, 3}, {0, 0}, {0, 0}, {10, 10}},
     // sub-matrix
     {{10, 10}, {10, 10}, {3, 3}, {3, 3}, {3, 3}, {6, 6}},
+    {{10, 10}, {10, 10}, {3, 3}, {3, 3}, {0, 0}, {6, 6}},
+    {{13, 26}, {26, 13}, {5, 5}, {7, 3}, {17, 8}, {4, 5}},
 };
+
+comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                const GlobalElementIndex& offset_out) {
+  const auto pos_mod = [](const auto& a, const auto& b) {
+    const auto mod = a % b;
+    return (mod >= 0) ? mod : (mod + b);
+  };
+
+  const comm::Size2D grid_size = dist_in.commGridSize();
+
+  const comm::Index2D sub_rank(dist_in.template rank_global_element<Coord::Row>(offset_in.row()),
+                               dist_in.template rank_global_element<Coord::Col>(offset_in.col()));
+  const GlobalTileIndex offset_tl(offset_out.row() / dist_in.blockSize().rows(),
+                                  offset_out.col() / dist_in.blockSize().cols());
+
+  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_tl.row()), grid_size.rows()),
+          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_tl.col()), grid_size.cols())};
+}
 
 TYPED_TEST(MatrixCopyTest, SubMatrixCPU) {
   using T = TypeParam;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sub_configs) {
-      const comm::Index2D src_rank_index(0, 0);
-      const comm::Index2D dst_rank_index(0, 0);  // TODO ensure that subs are distributed the same way
-
+      const comm::Index2D in_src_rank(0, 0);
       const Distribution dist_in(test.full_in, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                                 src_rank_index);
+                                 in_src_rank);
+
+      const comm::Index2D out_src_rank =
+          alignSubRankIndex(dist_in, test.sub_origin_in, test.sub_origin_out);
       const Distribution dist_out(test.full_out, test.tile_size, comm_grid.size(), comm_grid.rank(),
-                                  dst_rank_index);
+                                  out_src_rank);
+
+      EXPECT_EQ(dist_in.template rank_global_element<Coord::Row>(test.sub_origin_in.row()),
+                dist_out.template rank_global_element<Coord::Row>(test.sub_origin_out.row()));
+      EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
+                dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
       const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
       const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
 
-      memory::MemoryView<T, Device::CPU> mem_src(layout_in.minMemSize());
-      memory::MemoryView<T, Device::CPU> mem_dst(layout_out.minMemSize());
+      memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
+      memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
 
-      Matrix<T, Device::CPU> mat_src =
-          createMatrixFromTile<Device::CPU>(dist_in.size(), dist_in.block_size(), comm_grid, mem_src());
-      Matrix<T, Device::CPU> mat_dst =
-          createMatrixFromTile<Device::CPU>(dist_out.size(), dist_out.block_size(), comm_grid,
-                                            mem_dst());
+      Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
+      Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
 
       // Note: currently `subPipeline`-ing does not support sub-matrices
       if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
-        set(mat_src, inputValues<T>);
-        set(mat_dst, outputValues<T>);
+        set(mat_in, inputValues<T>);
+        set(mat_out, outputValues<T>);
 
         {
-          Matrix<const T, Device::CPU> mat_sub_src_const = mat_src.subPipelineConst();
-          Matrix<T, Device::CPU> mat_sub_dst = mat_dst.subPipeline();
+          Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
+          Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
 
           copy(mat_sub_src_const, mat_sub_dst);
         }
 
-        CHECK_MATRIX_NEAR(inputValues<T>, mat_dst, 0, TypeUtilities<T>::error);
+        CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<T>::error);
       }
 
       // MatrixRef
-      set(mat_src, inputValues<T>);
-      set(mat_dst, outputValues<T>);
+      set(mat_in, inputValues<T>);
+      set(mat_out, outputValues<T>);
 
       using matrix::internal::MatrixRef;
-      MatrixRef<const T, Device::CPU> mat_sub_src(mat_src, {test.sub_origin_in, test.sub_size});
-      MatrixRef<T, Device::CPU> mat_sub_dst(mat_dst, {test.sub_origin_out, test.sub_size});
+      MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
+      MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
 
       copy(mat_sub_src, mat_sub_dst);
 
       const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
       CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
 
-      // Matrix
       const auto fullMatrixWithSubMatrixValues =
-          mixValues(outputValues<T>, inputValues<T>, test.sub_origin_out, test.sub_size);
-      CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_dst, 0, TypeUtilities<T>::error);
+          mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+      CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
     }
   }
 }

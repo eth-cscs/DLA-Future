@@ -11,8 +11,8 @@
 #include <mpi.h>
 
 #include <dlaf/common/data.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
 #include <dlaf/matrix/distribution.h>
@@ -66,7 +66,7 @@ auto newBlockMatrixStrided() {
 
 template <class T, Device D>
 void testReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, std::string test_name) {
-  common::Pipeline<comm::Communicator> chain(world);
+  comm::CommunicatorPipeline chain(world);
 
   const auto root_rank = world.size() - 1;
   const LocalTileIndex idx(0, 0);
@@ -107,7 +107,7 @@ TEST_F(CollectiveTest, ReduceInPlace) {
 
 template <class T, Device D>
 void testAllReduceInPlace(comm::Communicator world, matrix::Matrix<T, D> matrix, std::string test_name) {
-  common::Pipeline<comm::Communicator> chain(world);
+  comm::CommunicatorPipeline chain(world);
 
   const LocalTileIndex idx(0, 0);
 
@@ -142,7 +142,7 @@ TEST_F(CollectiveTest, AllReduceInPlace) {
 template <class T, Device D>
 void testAllReduce(comm::Communicator world, matrix::Matrix<T, D> matA, matrix::Matrix<T, D> matB,
                    std::string test_name) {
-  common::Pipeline<comm::Communicator> chain(world);
+  comm::CommunicatorPipeline chain(world);
 
   const auto root_rank = world.size() - 1;
 

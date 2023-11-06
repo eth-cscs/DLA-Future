@@ -12,7 +12,7 @@
 
 #include <blas.hh>
 
-#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
@@ -24,8 +24,8 @@ struct GeneralSub {
   static void callNN(const SizeType i_tile_from, const SizeType i_tile_to, const blas::Op opA,
                      const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
-  static void callNN(common::Pipeline<comm::Communicator>& row_task_chain,
-                     common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_tile_from,
+  static void callNN(comm::CommunicatorPipeline& row_task_chain,
+                     comm::CommunicatorPipeline& col_task_chain, const SizeType i_tile_from,
                      const SizeType i_tile_to, const T alpha, Matrix<const T, D>& mat_a,
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };

@@ -54,7 +54,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
 
     namespace ex = pika::execution::experimental;
 
-    common::Pipeline<Communicator> chain(world);
+    CommunicatorPipeline chain(world);
 
     // Note:
     // `sent_guard` represents the status of completion of IRecv. It will be set true by a `then`

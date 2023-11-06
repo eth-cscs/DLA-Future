@@ -22,7 +22,7 @@
 #include <dlaf/common/callable_object.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/eti.h>
-#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/matrix/tile.h>
@@ -73,11 +73,11 @@ template <class T, Device D, class Comm>
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, extern, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, extern, CommunicatorPipeline::ReadWriteWrapper);
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipeline::ReadWriteWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipeline::ReadWriteWrapper);
 #endif
 // clang-format on
 
@@ -97,11 +97,11 @@ template <class T, Device D, class Comm>
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, extern, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, extern, CommunicatorPipeline::ReadWriteWrapper);
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipeline::ReadWriteWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, common::Pipeline<Communicator>::ReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipeline::ReadWriteWrapper);
 #endif
 // clang-format on
 }

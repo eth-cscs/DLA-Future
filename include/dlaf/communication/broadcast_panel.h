@@ -19,6 +19,7 @@
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/message.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
@@ -56,7 +57,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
-               common::Pipeline<comm::Communicator>& serial_comm) {
+               comm::CommunicatorPipeline& serial_comm) {
   constexpr auto comm_coord = axis;
 
   // do not schedule communication tasks if there is no reason to do so...
@@ -107,8 +108,8 @@ template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
-               common::Pipeline<comm::Communicator>& row_task_chain,
-               common::Pipeline<comm::Communicator>& col_task_chain) {
+               comm::CommunicatorPipeline& row_task_chain,
+               comm::CommunicatorPipeline& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
 
   constexpr Coord coord = std::decay_t<decltype(panel)>::coord;

@@ -11,6 +11,7 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/panel.h>
@@ -75,7 +76,7 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
 
   // test it!
   constexpr Coord comm_dir = orthogonal(panel_axis);
-  common::Pipeline<comm::Communicator> mpi_task_chain(comm_grid.subCommunicator(comm_dir));
+  comm::CommunicatorPipeline mpi_task_chain(comm_grid.subCommunicator(comm_dir));
 
   broadcast(root, panel, mpi_task_chain);
 
@@ -133,8 +134,8 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_gr
   }
 
   // test it!
-  common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
+  comm::CommunicatorPipeline row_task_chain(comm_grid.rowCommunicator());
+  comm::CommunicatorPipeline col_task_chain(comm_grid.colCommunicator());
 
   // select a "random" source rank which will be the source for the data
   const comm::IndexT_MPI owner = comm_grid.size().get(AxisSrc) / 2;

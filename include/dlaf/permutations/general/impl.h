@@ -19,8 +19,8 @@
 #include <dlaf/blas/tile.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
@@ -221,7 +221,7 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
 }
 
 template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
-void all2allData(common::Pipeline<comm::Communicator>& sub_task_chain, int nranks,
+void all2allData(comm::CommunicatorPipeline& sub_task_chain, int nranks,
                  LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
                  Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                  Matrix<T, D>& recv_mat) {
@@ -555,7 +555,7 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
 }
 
 template <class T, Coord C>
-void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin, SizeType i_end,
+void permuteOnCPU(comm::CommunicatorPipeline& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
                   Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
@@ -652,7 +652,7 @@ void permuteOnCPU(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType
 }
 
 template <Backend B, Device D, class T, Coord C>
-void Permutations<B, D, T, C>::call(common::Pipeline<comm::Communicator>& sub_task_chain,
+void Permutations<B, D, T, C>::call(comm::CommunicatorPipeline& sub_task_chain,
                                     SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                                     Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   if constexpr (D == Device::GPU) {

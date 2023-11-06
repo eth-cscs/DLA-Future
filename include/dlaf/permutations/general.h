@@ -16,6 +16,7 @@
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/permutations/general/api.h>
 #include <dlaf/util_matrix.h>
@@ -109,10 +110,10 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 /// @pre @p mat_out has blocksize (NB x NB)
 /// @pre @p mat_out has tilesize (NB x NB)
 ///
-/// Note: The Pipeline<> API allows to use permute() within other algorithms without having to clone communicators
-///       internally.
+/// Note: The CommunicatorPipeline API allows to use permute() within other algorithms without having to
+///       clone communicators internally.
 template <Backend B, Device D, class T, Coord coord>
-void permute(comm::CommunicatorGrid& grid, common::Pipeline<comm::Communicator>& sub_task_chain,
+void permute(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& sub_task_chain,
              SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
@@ -150,7 +151,7 @@ void permute(comm::CommunicatorGrid& grid, common::Pipeline<comm::Communicator>&
 template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid& grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
-  common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)).clone());
+  comm::CommunicatorPipeline sub_task_chain(grid.subCommunicator(orthogonal(coord)).clone());
   permute<B, D, T, coord>(grid, sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }
 }

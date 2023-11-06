@@ -14,12 +14,12 @@
 #endif
 
 #include <dlaf/common/assert.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/datatypes.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
@@ -206,7 +206,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
 void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid& grid,
-                                         common::Pipeline<comm::Communicator>& comm_row_chain,
+                                         comm::CommunicatorPipeline& comm_row_chain,
                                          const comm::IndexT_MPI tag, const SizeType i_begin,
                                          const SizeType i_end, GRSender&& rots_fut, Matrix<T, D>& mat) {
   // Note:

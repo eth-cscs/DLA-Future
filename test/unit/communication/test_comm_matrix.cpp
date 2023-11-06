@@ -12,6 +12,7 @@
 
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/sender/transform_mpi.h>
 
@@ -29,7 +30,7 @@ TEST(BcastMatrixTest, TransformMPIRW) {
 
   comm::Communicator comm(MPI_COMM_WORLD);
   comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> ccomm(comm);
+  comm::CommunicatorPipeline ccomm(comm);
 
   int root = 0;
   int sz = 10000;
@@ -61,7 +62,7 @@ TEST(BcastMatrixTest, TransformMPIRO) {
 
   comm::Communicator comm(MPI_COMM_WORLD);
   comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  common::Pipeline<comm::Communicator> ccomm(comm);
+  comm::CommunicatorPipeline ccomm(comm);
 
   int root = 0;
   int sz = 10000;

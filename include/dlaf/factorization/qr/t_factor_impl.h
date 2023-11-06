@@ -17,10 +17,10 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/index2d.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/kernels/all_reduce.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/matrix.h>
@@ -278,7 +278,7 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                                           matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                           matrix::ReadWriteTileSender<T, device> t,
-                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+                                          comm::CommunicatorPipeline& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;

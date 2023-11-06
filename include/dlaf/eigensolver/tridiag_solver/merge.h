@@ -17,10 +17,10 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
@@ -924,7 +924,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
 void assembleDistZVec(comm::CommunicatorGrid& grid,
-                      common::Pipeline<comm::Communicator>& full_task_chain, const SizeType i_begin,
+                      comm::CommunicatorPipeline& full_task_chain, const SizeType i_begin,
                       const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
@@ -986,7 +986,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   }();
 
   auto bcast_evals = [i_begin, i_end,
-                      dist](common::Pipeline<comm::Communicator>& row_comm_chain,
+                      dist](comm::CommunicatorPipeline& row_comm_chain,
                             const std::vector<matrix::Tile<T, Device::CPU>>& eval_tiles) {
     using dlaf::comm::internal::sendBcast_o;
     using dlaf::comm::internal::recvBcast_o;
@@ -1047,7 +1047,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                              auto& ws_row) {
         using dlaf::comm::internal::transformMPI;
 
-        common::Pipeline<comm::Communicator> row_comm_chain(row_comm_wrapper.get());
+        comm::CommunicatorPipeline row_comm_chain(row_comm_wrapper.get());
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
@@ -1405,9 +1405,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 // Distributed version of the tridiagonal solver on CPUs
 template <Backend B, class T, Device D, class RhoSender>
 void mergeDistSubproblems(comm::CommunicatorGrid& grid,
-                          common::Pipeline<comm::Communicator>& full_task_chain,
-                          common::Pipeline<comm::Communicator>& row_task_chain,
-                          common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
+                          comm::CommunicatorPipeline& full_task_chain,
+                          comm::CommunicatorPipeline& row_task_chain,
+                          comm::CommunicatorPipeline& col_task_chain, const SizeType i_begin,
                           const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                           WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                           DistWorkSpaceHostMirror<T, D>& ws_hm) {

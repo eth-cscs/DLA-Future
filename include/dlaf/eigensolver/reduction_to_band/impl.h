@@ -21,7 +21,6 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/index2d.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/common/single_threaded_blas.h>
@@ -29,6 +28,7 @@
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/functions_sync.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
@@ -672,8 +672,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   const matrix::SubMatrixView& view, matrix::Matrix<const T, D>& a,
                   matrix::Panel<Coord::Col, const T, D>& w,
                   matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& wt,
-                  common::Pipeline<comm::Communicator>& mpi_row_chain,
-                  common::Pipeline<comm::Communicator>& mpi_col_chain) {
+                  comm::CommunicatorPipeline& mpi_row_chain,
+                  comm::CommunicatorPipeline& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;

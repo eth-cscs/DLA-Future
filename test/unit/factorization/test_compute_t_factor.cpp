@@ -15,6 +15,7 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr.h>
 #include <dlaf/lapack/tile.h>  // workaround for importing lapack.hh
 #include <dlaf/matrix/copy.h>
@@ -363,7 +364,7 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
 
   is_orthogonal(h_expected);
 
-  common::Pipeline<comm::Communicator> serial_comm(grid.colCommunicator());
+  comm::CommunicatorPipeline serial_comm(grid.colCommunicator());
 
   Matrix<T, Device::CPU> t_output_h({k, k}, {k, k});
   const LocalTileIndex t_idx(0, 0);

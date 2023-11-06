@@ -2,6 +2,7 @@ include:
   - local: 'ci/cpu/clang12_release.yml'
   - local: 'ci/cpu/clang12_release_stdexec.yml'
   - local: 'ci/cpu/clang13_release_cxx20.yml'
+  - local: 'ci/cpu/clang15_release.yml'
   - local: 'ci/cpu/gcc11_codecov.yml'
   - local: 'ci/cpu/gcc11_release.yml'
   - local: 'ci/cpu/gcc11_release_stdexec.yml'

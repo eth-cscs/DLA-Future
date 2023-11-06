@@ -334,7 +334,26 @@ TYPED_TEST(MatrixCopyTest, SubMatrixGPU) {
         CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<TypeParam>::error);
       }
 
-      // TODO sub-matrix with matrix-ref
+      // MatrixRef
+      set(mat_in, inputValues<T>);
+      set(mat_out, outputValues<T>);
+
+      using matrix::internal::MatrixRef;
+      MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
+      MatrixRef<T, Device::GPU> mat_sub_gpu1(mat_in_gpu, {test.sub_origin_in, test.sub_size});
+      MatrixRef<T, Device::GPU> mat_sub_gpu2(mat_out_gpu, {test.sub_origin_out, test.sub_size});
+      MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
+
+      copy(mat_sub_src, mat_sub_gpu1);
+      copy(mat_sub_gpu1, mat_sub_gpu2);
+      copy(mat_sub_gpu2, mat_sub_dst);
+
+      const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+      CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
+
+      const auto fullMatrixWithSubMatrixValues =
+          mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+      CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
     }
   }
 }

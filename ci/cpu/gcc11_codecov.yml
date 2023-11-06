@@ -4,7 +4,7 @@ include:
 cpu gcc11 codecov deps:
   extends: .build_deps_common
   variables:
-    COMPILER: gcc@11.4.0
+    COMPILER: gcc@11
     SPACK_ENVIRONMENT: ci/docker/debug-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc11-codecov/build
     USE_CODECOV: "true"

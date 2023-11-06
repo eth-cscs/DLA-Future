@@ -4,7 +4,7 @@ include:
 cpu gcc11 stdexec release deps:
   extends: .build_deps_common
   variables:
-    COMPILER: gcc@11.4.0
+    COMPILER: gcc@11
     CXXSTD: 20
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu-stdexec.yaml

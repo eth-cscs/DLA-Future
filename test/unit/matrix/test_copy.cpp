@@ -281,58 +281,60 @@ TYPED_TEST(MatrixCopyTest, SubMatrixCPU) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixCopyTest, SubMatrixGPU) {
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
-  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
-  using GPUMemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::GPU>;
-  using GPUMatrixT = dlaf::Matrix<TypeParam, Device::GPU>;
+  using T = TypeParam;
 
   for (const auto& comm_grid : this->commGrids()) {
-    for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+    for (const auto& test : sub_configs) {
+      const comm::Index2D in_src_rank(0, 0);
+      const Distribution dist_in(test.full_in, test.tile_size, comm_grid.size(), comm_grid.rank(),
+                                 in_src_rank);
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      const comm::Index2D out_src_rank =
+          alignSubRankIndex(dist_in, test.sub_origin_in, test.sub_origin_out);
+      const Distribution dist_out(test.full_out, test.tile_size, comm_grid.size(), comm_grid.rank(),
+                                  out_src_rank);
 
-      auto input_matrix = [](const GlobalElementIndex& index) {
-        SizeType i = index.row();
-        SizeType j = index.col();
-        return TypeUtilities<TypeParam>::element(i + j / 1024., j - i / 128.);
-      };
+      EXPECT_EQ(dist_in.template rank_global_element<Coord::Row>(test.sub_origin_in.row()),
+                dist_out.template rank_global_element<Coord::Row>(test.sub_origin_out.row()));
+      EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
+                dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
-      MemoryViewT mem_src(layout.minMemSize());
-      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                          static_cast<TypeParam*>(mem_src()));
-      dlaf::matrix::util::set(mat_src, input_matrix);
+      const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
+      const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
 
-      MatrixConstT mat_src_const = std::move(mat_src);
+      // CPU
+      memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
+      memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
 
-      GPUMemoryViewT mem_gpu1(layout.minMemSize());
-      GPUMatrixT mat_gpu1 = createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid,
-                                                              static_cast<TypeParam*>(mem_gpu1()));
+      Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
+      Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
 
-      GPUMemoryViewT mem_gpu2(layout.minMemSize());
-      GPUMatrixT mat_gpu2 = createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid,
-                                                              static_cast<TypeParam*>(mem_gpu2()));
+      // GPU
+      memory::MemoryView<T, Device::GPU> mem_in_gpu(layout_in.minMemSize());
+      memory::MemoryView<T, Device::GPU> mem_out_gpu(layout_out.minMemSize());
 
-      MemoryViewT mem_dst(layout.minMemSize());
-      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid,
-                                                          static_cast<TypeParam*>(mem_dst()));
-      dlaf::matrix::util::set(mat_dst,
-                              [](const auto&) { return TypeUtilities<TypeParam>::element(13, 26); });
+      Matrix<T, Device::GPU> mat_in_gpu(dist_in, layout_in, mem_in_gpu());
+      Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
 
-      {
-        MatrixConstT mat_sub_src_const = mat_src_const.subPipelineConst();
-        GPUMatrixT mat_sub_gpu1 = mat_gpu1.subPipeline();
-        GPUMatrixT mat_sub_gpu2 = mat_gpu2.subPipeline();
-        MatrixT mat_sub_dst = mat_dst.subPipeline();
+      // Note: currently `subPipeline`-ing does not support sub-matrices
+      if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
+        set(mat_in, inputValues<T>);
+        set(mat_out, outputValues<T>);
 
-        copy(mat_sub_src_const, mat_sub_gpu1);
-        copy(mat_sub_gpu1, mat_sub_gpu2);
-        copy(mat_sub_gpu2, mat_sub_dst);
+        {
+          Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
+          Matrix<T, Device::GPU> mat_sub_gpu1 = mat_in_gpu.subPipeline();
+          Matrix<T, Device::GPU> mat_sub_gpu2 = mat_out_gpu.subPipeline();
+          Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
+
+          copy(mat_sub_src_const, mat_sub_gpu1);
+          copy(mat_sub_gpu1, mat_sub_gpu2);
+          copy(mat_sub_gpu2, mat_sub_dst);
+        }
+        CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<TypeParam>::error);
       }
 
-      CHECK_MATRIX_NEAR(input_matrix, mat_dst, 0, TypeUtilities<TypeParam>::error);
+      // TODO sub-matrix with matrix-ref
     }
   }
 }

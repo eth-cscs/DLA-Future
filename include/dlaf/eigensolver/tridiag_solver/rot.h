@@ -205,8 +205,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// @pre mat is distributed along rows the same way as comm_row
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
-void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid& grid,
-                                         comm::CommunicatorPipeline& comm_row_chain,
+void applyGivensRotationsToMatrixColumns(comm::CommunicatorPipeline& comm_row_chain,
                                          const comm::IndexT_MPI tag, const SizeType i_begin,
                                          const SizeType i_end, GRSender&& rots_fut, Matrix<T, D>& mat) {
   // Note:
@@ -217,10 +216,10 @@ void applyGivensRotationsToMatrixColumns([[maybe_unused]] comm::CommunicatorGrid
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
 
-  DLAF_ASSERT_HEAVY(grid.rowCommunicator().size() == mat.commGridSize().cols(),
-                    grid.rowCommunicator().size(), mat.commGridSize().cols());
-  DLAF_ASSERT_HEAVY(grid.rowCommunicator().rank() == mat.rankIndex().col(),
-                    grid.rowCommunicator().rank(), mat.rankIndex().col());
+  DLAF_ASSERT_HEAVY(comm_row_chain.size().cols() == mat.commGridSize().cols(),
+                    comm_row_chain.size().cols(), mat.commGridSize().cols());
+  DLAF_ASSERT_HEAVY(comm_row_chain.rank().col() == mat.rankIndex().col(),
+                    comm_row_chain.rank().col(), mat.rankIndex().col());
 
   const matrix::Distribution& dist = mat.distribution();
 

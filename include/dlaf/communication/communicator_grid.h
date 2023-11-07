@@ -61,7 +61,7 @@ public:
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D &index) const noexcept {
     return common::computeLinearIndex<IndexT_MPI>(
-        FULL_COMMUNICATOR_ORDER, index, {grid_size_.rows(), grid_size_.cols()});
+        internal::FULL_COMMUNICATOR_ORDER, index, {grid_size_.rows(), grid_size_.cols()});
   }
 
   std::size_t num_pipelines() const noexcept {
@@ -122,9 +122,6 @@ public:
   }
 
 protected:
-  static constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
-      dlaf::common::Ordering::RowMajor};
-
   Communicator full_;
   Communicator row_;
   Communicator col_;

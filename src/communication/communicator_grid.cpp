@@ -29,7 +29,7 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows,
   comm::Size2D grid_size{nrows, ncols};
   if (is_in_grid) {
     position_ = common::computeCoords(ordering, comm.rank(), grid_size);
-    key_full = common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER,
+    key_full = common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER,
                                                       position_, grid_size);
     index_row = position_.row();
     index_col = position_.col();

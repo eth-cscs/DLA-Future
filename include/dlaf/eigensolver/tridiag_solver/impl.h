@@ -283,7 +283,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 // @p evecs is a distributed matrix of size (n x n)
 //
 template <class T>
-void solveDistLeaf(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& full_task_chain,
+void solveDistLeaf(comm::CommunicatorPipeline& full_task_chain,
                    Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
@@ -299,7 +299,7 @@ void solveDistLeaf(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& ful
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), tridiag.read(id_tr)));
     }
     else {
-      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }
@@ -308,7 +308,7 @@ void solveDistLeaf(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& ful
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void solveDistLeaf(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& full_task_chain,
+void solveDistLeaf(comm::CommunicatorPipeline& full_task_chain,
                    Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
                    Matrix<T, Device::CPU>& h_evecs) {
   const matrix::Distribution& dist = evecs.distribution();
@@ -330,7 +330,7 @@ void solveDistLeaf(comm::CommunicatorGrid& grid, comm::CommunicatorPipeline& ful
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), tridiag.read(id_tr)));
     }
     else {
-      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }
@@ -352,11 +352,11 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // If the matrix is composed by a single tile simply call stedc.
   if (evecs.nrTiles().linear_size() == 1) {
     if constexpr (D == Device::CPU) {
-      solveDistLeaf(grid, full_task_chain, tridiag, evecs);
+      solveDistLeaf(full_task_chain, tridiag, evecs);
     }
     else {
       Matrix<T, Device::CPU> h_evecs{evecs.distribution()};
-      solveDistLeaf(grid, full_task_chain, tridiag, evecs, h_evecs);
+      solveDistLeaf(full_task_chain, tridiag, evecs, h_evecs);
     }
     offloadDiagonal(tridiag, evals);
     return;
@@ -398,10 +398,10 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of
   // `evecs` (nb x nb)
   if constexpr (D == Device::CPU) {
-    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0);
+    solveDistLeaf(full_task_chain, tridiag, ws.e0);
   }
   else {
-    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0, ws_hm.e0);
+    solveDistLeaf(full_task_chain, tridiag, ws.e0, ws_hm.e0);
   }
 
   // Offload the diagonal from `tridiag` to `evals`
@@ -410,7 +410,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems<B>(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
+    mergeDistSubproblems<B>(full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
                             i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm);
   }
 
@@ -422,7 +422,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   copy(ws_hm.d1, evals);
 
   // Note: ws_hm.e2 is the mirror of ws.e2 which is evecs
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(grid, row_task_chain, 0, n,
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n,
                                                                        ws_hm.i2, ws_hm.e0, ws_hm.e2);
   copy(ws_hm.e2, evecs);
 }

@@ -18,6 +18,11 @@
 #include <dlaf/communication/communicator.h>
 
 namespace dlaf::comm {
+namespace internal {
+static constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
+    dlaf::common::Ordering::RowMajor};
+}
+
 // TODO: Move this to separate header?
 /// TAG for strong-typing basic_coords.
 struct TAG_MPI;
@@ -56,6 +61,12 @@ public:
   /// Return the size of the grid.
   Size2D size() const noexcept { return size_; }
 
+  /// Return rank in the grid with all ranks given the 2D index.
+  IndexT_MPI rankFullCommunicator(const Index2D &index) const noexcept {
+    return common::computeLinearIndex<IndexT_MPI>(
+        internal::FULL_COMMUNICATOR_ORDER, index, {size_.rows(), size_.cols()});
+  }
+
   /// TODO: Update docs.
   /// Enqueue for exclusive read-write access to the resource.
   ///
@@ -83,7 +94,7 @@ public:
   /// All accesses to the sub pipeline are sequenced after previous accesses and
   /// before later accesses to the original pipeline, independently of when
   /// values are accessed in the sub pipeline.
-  CommunicatorPipeline sub_pipeline() { return {pipeline_.sub_pipeline()}; }
+  CommunicatorPipeline sub_pipeline() { return {pipeline_.sub_pipeline(), rank_, size_}; }
 
   /// Check if the pipeline is valid.
   ///
@@ -95,9 +106,15 @@ public:
   /// @post !valid()
   void reset() noexcept { pipeline_.reset(); }
 
+  /// Prints information about the CommunicationPipeline.
+  friend std::ostream &operator<<(std::ostream &out,
+                                  const CommunicatorPipeline &pipeline) {
+    return out << "rank=" << pipeline.rank_ << ", size=" << pipeline.size_;
+  }
+
 private:
-  CommunicatorPipeline(PipelineType &&pipeline)
-      : pipeline_(std::move(pipeline)) {}
+  CommunicatorPipeline(PipelineType &&pipeline, Index2D rank, Size2D size)
+      : pipeline_(std::move(pipeline)), rank_(std::move(rank)), size_(std::move(size)) {}
 
   PipelineType pipeline_;
   Index2D rank_{0, 0};

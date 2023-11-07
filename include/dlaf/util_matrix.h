@@ -79,6 +79,12 @@ bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGri
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 
+/// Returns true if the matrix is distributed on the communication grid.
+template <class T, Device D>
+bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorPipeline& p) noexcept {
+  return m.commGridSize() == p.size() && m.rankIndex() == p.rank();
+}
+
 /// Returns true if the matrices are distributed the same way.
 template <class T, Device D1, Device D2>
 bool equal_distributions(const Matrix<const T, D1>& lhs, const Matrix<const T, D2>& rhs) noexcept {

@@ -923,8 +923,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleDistZVec(comm::CommunicatorGrid& grid,
-                      comm::CommunicatorPipeline& full_task_chain, const SizeType i_begin,
+void assembleDistZVec(comm::CommunicatorPipeline& full_task_chain, const SizeType i_begin,
                       const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
@@ -949,7 +948,7 @@ void assembleDistZVec(comm::CommunicatorGrid& grid,
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.readwrite(), z.read(z_idx)));
     }
     else {
-      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(evecs_tile_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.readwrite(), root_rank,
                                                  z.readwrite(z_idx)));
     }
@@ -1404,8 +1403,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
 // Distributed version of the tridiagonal solver on CPUs
 template <Backend B, class T, Device D, class RhoSender>
-void mergeDistSubproblems(comm::CommunicatorGrid& grid,
-                          comm::CommunicatorPipeline& full_task_chain,
+void mergeDistSubproblems(comm::CommunicatorPipeline& full_task_chain,
                           comm::CommunicatorPipeline& row_task_chain,
                           comm::CommunicatorPipeline& col_task_chain, const SizeType i_begin,
                           const SizeType i_split, const SizeType i_end, RhoSender&& rho,
@@ -1429,7 +1427,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid& grid,
   const LocalTileSize sz_tiles_vec(i_end - i_begin, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);
+  assembleDistZVec(full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
@@ -1465,7 +1463,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid& grid,
   //
   // Note: i_split is unique
   const comm::IndexT_MPI tag = to_int(i_split);
-  applyGivensRotationsToMatrixColumns(grid, row_task_chain, tag, i_begin, i_end, std::move(rots), ws.e0);
+  applyGivensRotationsToMatrixColumns(row_task_chain, tag, i_begin, i_end, std::move(rots), ws.e0);
   // Placeholder for rearranging the eigenvectors: (local permutation)
   copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws.e1);
 
@@ -1502,7 +1500,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid& grid,
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain,
+  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(row_task_chain, col_task_chain,
                                                             i_begin, i_end, T(1), ws.e1, ws.e2, T(0),
                                                             ws.e0);
 

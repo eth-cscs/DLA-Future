@@ -115,6 +115,13 @@ public:
     return col_pipelines_.nextResource().sub_pipeline();
   }
 
+  CommunicatorPipeline communicator_pipeline(Coord cr) {
+    if (cr == Coord::Row)
+      return row_communicator_pipeline();
+    else
+      return col_communicator_pipeline();
+  }
+
   /// Prints information about the CommunicationGrid.
   friend std::ostream &operator<<(std::ostream &out,
                                   const CommunicatorGrid &grid) {

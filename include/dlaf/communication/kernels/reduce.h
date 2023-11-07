@@ -33,13 +33,13 @@ namespace dlaf::comm {
 /// The input tile is sent by the returned sender.
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleReduceRecvInPlace(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper>
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper>
         pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
 #define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)                                      \
   kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleReduceRecvInPlace(              \
-      pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper> \
+      pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> \
           pcomm,                                                                                         \
       MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
@@ -53,13 +53,13 @@ DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(extern, int, Device::CPU);
 /// sender is returned.
 template <class T, Device D>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleReduceSend(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper>
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper>
         pcomm,
     comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile);
 
 #define DLAF_SCHEDULE_REDUCE_SEND_ETI(kword, Type, Device)                                               \
   kword template pika::execution::experimental::unique_any_sender<> scheduleReduceSend(                  \
-      pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper> \
+      pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> \
           pcomm,                                                                                         \
       comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                      \
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)

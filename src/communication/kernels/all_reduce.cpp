@@ -44,7 +44,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduce);
 
 template <class TileInSender, class TileOutSender>
 [[nodiscard]] auto scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper>
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper>
         pcomm,
     MPI_Op reduce_op, TileInSender&& tile_in, TileOutSender&& tile_out) {
   using dlaf::comm::CommunicationDevice_v;
@@ -110,7 +110,7 @@ DLAF_MAKE_CALLABLE_OBJECT(allReduceInPlace);
 
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper>
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper>
         pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out) {
@@ -123,7 +123,7 @@ DLAF_SCHEDULE_ALL_REDUCE_ETI(, int, Device::CPU);
 
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipeline::ReadWriteWrapper>
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper>
         pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::CommunicationDevice_v;

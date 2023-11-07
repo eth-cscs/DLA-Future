@@ -24,7 +24,7 @@
 
 namespace dlaf {
 
-    // TODO: Combine with below? What to call this?
+// TODO: Combine with below? What to call this?
 enum class TODOCoord { Row, Col, Full };
 
 enum class Coord { Row, Col };

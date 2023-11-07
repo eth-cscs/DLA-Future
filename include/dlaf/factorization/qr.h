@@ -49,7 +49,7 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t,
-                    comm::CommunicatorPipeline& mpi_col_task_chain) {
+                    comm::CommunicatorPipeline<TODOCoord::Col>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);
 }
 

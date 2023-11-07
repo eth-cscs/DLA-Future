@@ -18,19 +18,19 @@
 
 namespace dlaf::permutations::internal {
 
-template <Backend B, Device D, class T, Coord coord>
+template <Backend B, Device D, class T, Coord coord, TODOCoord c2>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out);
-  static void call(comm::CommunicatorPipeline& sub_task_chain, SizeType i_begin,
+  static void call(comm::CommunicatorPipeline<c2>& sub_task_chain, SizeType i_begin,
                    SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                    Matrix<T, D>& mat_out);
 };
 
 // ETI
 #define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \
-  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col>; \
-  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row>;
+  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col, TODOCoord::Row>; \
+  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row, TODOCoord::Col>;
 
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)

@@ -32,7 +32,20 @@ using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
 /// 2D size strong-typed for MPI.
 using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
 
-class CommunicatorPipeline {
+namespace internal {
+using CommunicatorPipeline = dlaf::common::Pipeline<Communicator>;
+}
+
+using CommunicatorPipelineReadOnlyWrapper =
+    typename internal::CommunicatorPipeline::ReadOnlyWrapper;
+using CommunicatorPipelineReadWriteWrapper =
+    typename internal::CommunicatorPipeline::ReadWriteWrapper;
+using CommunicatorPipelineReadOnlySender =
+    typename internal::CommunicatorPipeline::ReadOnlySender;
+using CommunicatorPipelineReadWriteSender =
+    typename internal::CommunicatorPipeline::ReadWriteSender;
+
+template <TODOCoord Coord> class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
 public:
@@ -40,6 +53,8 @@ public:
   using ReadWriteWrapper = typename PipelineType::ReadWriteWrapper;
   using ReadOnlySender = typename PipelineType::ReadOnlySender;
   using ReadWriteSender = typename PipelineType::ReadWriteSender;
+
+  static constexpr TODOCoord coord = Coord;
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).
@@ -94,7 +109,9 @@ public:
   /// All accesses to the sub pipeline are sequenced after previous accesses and
   /// before later accesses to the original pipeline, independently of when
   /// values are accessed in the sub pipeline.
-  CommunicatorPipeline sub_pipeline() { return {pipeline_.sub_pipeline(), rank_, size_}; }
+  CommunicatorPipeline sub_pipeline() {
+    return {pipeline_.sub_pipeline(), rank_, size_};
+  }
 
   /// Check if the pipeline is valid.
   ///
@@ -114,7 +131,8 @@ public:
 
 private:
   CommunicatorPipeline(PipelineType &&pipeline, Index2D rank, Size2D size)
-      : pipeline_(std::move(pipeline)), rank_(std::move(rank)), size_(std::move(size)) {}
+      : pipeline_(std::move(pipeline)), rank_(std::move(rank)),
+        size_(std::move(size)) {}
 
   PipelineType pipeline_;
   Index2D rank_{0, 0};

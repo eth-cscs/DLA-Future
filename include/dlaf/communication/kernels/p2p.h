@@ -36,8 +36,8 @@ template <class T, Device D, class CommSender>
 // clang-format off
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, pika::execution::experimental::any_sender<Communicator>);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, CommunicatorPipeline::ReadOnlySender);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, CommunicatorPipeline::ReadWriteSender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, CommunicatorPipelineReadOnlySender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, extern, CommunicatorPipelineReadWriteSender);
 // clang-format on
 
 template <class T, Device D, class CommSender>
@@ -52,7 +52,7 @@ template <class T, Device D, class CommSender>
 // clang-format off
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, pika::execution::experimental::unique_any_sender<Communicator>);
 DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, pika::execution::experimental::any_sender<Communicator>);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, CommunicatorPipeline::ReadOnlySender);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, CommunicatorPipeline::ReadWriteSender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, CommunicatorPipelineReadOnlySender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, extern, CommunicatorPipelineReadWriteSender);
 // clang-format on
 }

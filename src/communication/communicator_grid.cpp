@@ -29,8 +29,8 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows,
   comm::Size2D grid_size{nrows, ncols};
   if (is_in_grid) {
     position_ = common::computeCoords(ordering, comm.rank(), grid_size);
-    key_full = common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER,
-                                                      position_, grid_size);
+    key_full = common::computeLinearIndex<IndexT_MPI>(
+        internal::FULL_COMMUNICATOR_ORDER, position_, grid_size);
     index_row = position_.row();
     index_col = position_.col();
   }
@@ -52,17 +52,20 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows,
 
   using dlaf::internal::WithResultOf;
 
-  full_pipelines_ = RoundRobinPipeline(
+  full_pipelines_ = RoundRobinPipeline<TODOCoord::Full>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline{full_.clone(), position_, grid_size_};
+        return CommunicatorPipeline<TODOCoord::Full>{full_.clone(), position_,
+                                                     grid_size_};
       }));
-  row_pipelines_ = RoundRobinPipeline(
+  row_pipelines_ = RoundRobinPipeline<TODOCoord::Row>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline{row_.clone(), position_, grid_size_};
+        return CommunicatorPipeline<TODOCoord::Row>{row_.clone(), position_,
+                                                    grid_size_};
       }));
-  col_pipelines_ = RoundRobinPipeline(
+  col_pipelines_ = RoundRobinPipeline<TODOCoord::Col>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline{col_.clone(), position_, grid_size_};
+        return CommunicatorPipeline<TODOCoord::Col>{col_.clone(), position_,
+                                                    grid_size_};
       }));
 }
 } // namespace comm

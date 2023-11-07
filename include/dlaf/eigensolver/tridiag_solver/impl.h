@@ -106,7 +106,7 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
   namespace ex = pika::execution::experimental;
   using matrix::copy;
   const auto cp_policy =
-      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{pika::execution::thread_stacksize::nostack};
 
   const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
@@ -315,7 +315,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
   namespace ex = pika::execution::experimental;
   using matrix::copy;
   const auto cp_policy =
-      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{pika::execution::thread_stacksize::nostack};
 
   const comm::Index2D this_rank = dist.rankIndex();
   const SizeType ntiles = dist.nrTiles().rows();

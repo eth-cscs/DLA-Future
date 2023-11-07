@@ -34,7 +34,7 @@ void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<DiagTileSenderIn>(in), std::forward<DiagTileSenderOut>(out));
-  ex::start_detached(tile::stedc(di::Policy<DefaultBackend_v<D>>(), std::move(sender)));
+  ex::start_detached(tile::stedc(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), std::move(sender)));
 }
 
 template <class T>
@@ -69,7 +69,7 @@ void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
   auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), castToComplex_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), castToComplex_o, std::move(sender));
 }
 
 // Cuppen's decomposition
@@ -98,7 +98,7 @@ auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
   constexpr auto backend = Backend::MC;
 
   return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
-         di::transform(di::Policy<backend>(), cuppensDecomp_o);
+         di::transform(di::Policy<backend>(pika::execution::thread_stacksize::nostack), cuppensDecomp_o);
 }
 
 template <class T>
@@ -138,7 +138,7 @@ void copyDiagonalFromCompactTridiagonalAsync(TridiagTile&& in, DiagTile&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<TridiagTile>(in), std::forward<DiagTile>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), copyDiagonalFromCompactTridiagonal_o,
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), copyDiagonalFromCompactTridiagonal_o,
                       std::move(sender));
 }
 
@@ -182,7 +182,7 @@ void assembleRank1UpdateVectorTileAsync(bool top_tile, RhoSender&& rho, EvecsTil
   auto sender =
       di::whenAllLift(top_tile, std::forward<RhoSender>(rho), std::forward<EvecsTileSender>(evecs),
                       std::forward<Rank1TileSender>(rank1));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), assembleRank1UpdateVectorTile_o,
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), assembleRank1UpdateVectorTile_o,
                       std::move(sender));
 }
 

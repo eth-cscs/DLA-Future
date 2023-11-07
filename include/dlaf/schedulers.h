@@ -23,8 +23,7 @@
 #include <dlaf/types.h>
 
 namespace dlaf::internal {
-template <Backend backend>
-auto getBackendScheduler() {
+template <Backend backend> auto getBackendScheduler() {
   if constexpr (backend == Backend::MC) {
     return pika::execution::experimental::thread_pool_scheduler{
         &pika::resource::get_thread_pool("default")};
@@ -38,11 +37,19 @@ auto getBackendScheduler() {
 
 template <Backend backend>
 auto getBackendScheduler(const pika::execution::thread_priority priority) {
-  return pika::execution::experimental::with_priority(getBackendScheduler<backend>(), priority);
+  return pika::execution::experimental::with_priority(
+      getBackendScheduler<backend>(), priority);
+}
+
+template <Backend backend>
+auto getBackendScheduler(const pika::execution::thread_priority priority,
+                         const pika::execution::thread_stacksize stacksize) {
+  return pika::experimental::prefer(pika::execution::experimental::with_stacksize,
+      getBackendScheduler<backend>(priority), stacksize);
 }
 
 inline auto getMPIScheduler() {
   return pika::execution::experimental::thread_pool_scheduler{
       &pika::resource::get_thread_pool(getConfiguration().mpi_pool)};
 }
-}
+} // namespace dlaf::internal

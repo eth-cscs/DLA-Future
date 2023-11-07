@@ -39,7 +39,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -49,7 +49,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T beta, A
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta,
                                   std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
                                   std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -60,7 +60,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, op, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -69,7 +69,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(op, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
                                   std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -80,7 +80,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -90,7 +90,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T beta, A
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta,
                                   std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
                                   std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -101,7 +101,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, op, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -110,7 +110,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(op, blas::Op::NoTrans, beta, std::forward<ASender>(a_tile),
                                   std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -121,7 +121,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::NoTrans, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -131,7 +131,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T beta, A
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta,
                                   std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
                                   std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -142,7 +142,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, op, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -151,7 +151,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, op, beta, std::forward<ASender>(a_tile),
                                   std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -162,7 +162,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Diag diag, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -172,7 +172,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, T beta, A
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, beta,
                                   std::forward<ASender>(a_tile), std::forward<BSender>(b_tile), T(1.0),
                                   std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -183,7 +183,7 @@ void trsmBPanelTile(pika::execution::thread_priority priority, blas::Op op, blas
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, op, diag, alpha,
                                   std::forward<InSender>(in_tile), std::forward<OutSender>(out_tile)) |
-      tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class T, typename ASender, typename BSender, typename CSender>
@@ -192,7 +192,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, blas::Op 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, op, beta, std::forward<ASender>(a_tile),
                                   std::forward<BSender>(b_tile), T(1.0), std::forward<CSender>(c_tile)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -606,7 +606,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(-1), b_panel.read(kj), mat_b.readwrite(kj)) |
-            tile::add(dlaf::internal::Policy<backend>(priority)));
+            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read(kk_offset), mat_b.readwrite(kj));
       }
@@ -783,7 +783,7 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(-1), b_panel.read(kj), mat_b.readwrite(kj)) |
-            tile::add(dlaf::internal::Policy<backend>(priority)));
+            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
                                 a_panel.read(LocalTileIndex{bt_offset.row(), kk_offset.col()}),
@@ -962,7 +962,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(1), b_panel.read(ik), mat_b.readwrite(ik)) |
-            tile::add(dlaf::internal::Policy<backend>(priority)));
+            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
                                 a_panel.read(LocalTileIndex{kk_offset.row(), bt_offset.col()}),
@@ -1142,7 +1142,7 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(1), b_panel.read(ik), mat_b.readwrite(ik)) |
-            tile::add(dlaf::internal::Policy<backend>(priority)));
+            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read(kk_offset), mat_b.readwrite(ik));
       }

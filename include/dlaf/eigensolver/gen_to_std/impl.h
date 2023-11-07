@@ -36,7 +36,7 @@ void hegstDiagTile(pika::execution::thread_priority priority, AKKSender&& a_kk, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(1, blas::Uplo::Lower, std::forward<AKKSender>(a_kk),
                                   std::forward<LKKSender>(l_kk)) |
-      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
@@ -47,7 +47,7 @@ void trsmPanelTile(pika::execution::thread_priority priority, LKKSender&& l_kk, 
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, blas::Op::ConjTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                                   std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
@@ -59,7 +59,7 @@ void hemmPanelTile(pika::execution::thread_priority priority, AKKSender&& a_kk, 
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Lower, ElementType(-0.5),
                                   std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                                   ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
@@ -71,7 +71,7 @@ void her2kTrailingDiagTile(pika::execution::thread_priority priority, AJKSender&
       dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, ElementType(-1.0),
                                   std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                                   BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
-      dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
@@ -83,7 +83,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, MatIKSend
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, ElementType(-1.0),
                                   std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                                   ElementType(1.0), std::forward<AIJSender>(a_ij)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
@@ -94,7 +94,7 @@ void trsmPanelUpdateTile(pika::execution::thread_priority priority, LJJSender&& 
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, blas::Op::NoTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                                   std::forward<AJKSender>(a_jk)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
@@ -106,7 +106,7 @@ void gemmPanelUpdateTile(pika::execution::thread_priority priority, LIJSender&& 
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
                                   std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                                   ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 
@@ -116,7 +116,7 @@ void hegstDiagTile(pika::execution::thread_priority priority, AKKSender&& a_kk, 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(1, blas::Uplo::Upper, std::forward<AKKSender>(a_kk),
                                   std::forward<LKKSender>(l_kk)) |
-      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::hegst(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LKKSender, class AIKSender>
@@ -127,7 +127,7 @@ void trsmPanelTile(pika::execution::thread_priority priority, LKKSender&& l_kk, 
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, blas::Op::ConjTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<LKKSender>(l_kk),
                                   std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class AKKSender, class LIKSender, class AIKSender>
@@ -139,7 +139,7 @@ void hemmPanelTile(pika::execution::thread_priority priority, AKKSender&& a_kk, 
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Upper, ElementType(-0.5),
                                   std::forward<AKKSender>(a_kk), std::forward<LIKSender>(l_ik),
                                   ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::hemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class AJKSender, class LJKSender, class AKKSender>
@@ -151,7 +151,7 @@ void her2kTrailingDiagTile(pika::execution::thread_priority priority, AJKSender&
       dlaf::internal::whenAllLift(blas::Uplo::Upper, blas::Op::ConjTrans, ElementType(-1.0),
                                   std::forward<AJKSender>(a_jk), std::forward<LJKSender>(l_jk),
                                   BaseType<ElementType>(1.0), std::forward<AKKSender>(a_kk)) |
-      dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::her2k(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class MatIKSender, class MatJKSender, class AIJSender>
@@ -163,7 +163,7 @@ void gemmTrailingMatrixTile(pika::execution::thread_priority priority, MatIKSend
       dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(-1.0),
                                   std::forward<MatIKSender>(mat_ik), std::forward<MatJKSender>(mat_jk),
                                   ElementType(1.0), std::forward<AIJSender>(a_ij)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LJJSender, class AJKSender>
@@ -174,7 +174,7 @@ void trsmPanelUpdateTile(pika::execution::thread_priority priority, LJJSender&& 
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::NoTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<LJJSender>(l_jj),
                                   std::forward<AJKSender>(a_jk)) |
-      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::trsm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class LIJSender, class AJKSender, class AIKSender>
@@ -186,7 +186,7 @@ void gemmPanelUpdateTile(pika::execution::thread_priority priority, LIJSender&& 
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
                                   std::forward<LIJSender>(l_ij), std::forward<AJKSender>(a_jk),
                                   ElementType(1.0), std::forward<AIKSender>(a_ik)) |
-      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      dlaf::tile::gemm(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
 }
 }
 

@@ -12,11 +12,21 @@
 
 #pragma once
 
+#include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/communication/communicator.h>
 
 namespace dlaf::comm {
+// TODO: Move this to separate header?
+/// TAG for strong-typing basic_coords.
+struct TAG_MPI;
+
+/// 2D index strong-typed for MPI.
+using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
+/// 2D size strong-typed for MPI.
+using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
+
 class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
@@ -28,12 +38,23 @@ public:
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).
-  explicit CommunicatorPipeline(Communicator comm)
-      : pipeline(std::move(comm)) {}
+  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {0, 0},
+                                Size2D size = {0, 0})
+      : pipeline_(std::move(comm)), rank_(std::move(rank)),
+        size_(std::move(size)) {}
   CommunicatorPipeline(CommunicatorPipeline &&other) = default;
   CommunicatorPipeline &operator=(CommunicatorPipeline &&other) = default;
   CommunicatorPipeline(const CommunicatorPipeline &) = delete;
   CommunicatorPipeline &operator=(const CommunicatorPipeline &) = delete;
+
+  /// Return the rank of the current process in the CommunicatorPipeline.
+  ///
+  /// @return the 2D coordinate representing the position in the grid that this
+  /// pipeline belongs to
+  Index2D rank() const noexcept { return rank_; }
+
+  /// Return the size of the grid.
+  Size2D size() const noexcept { return size_; }
 
   /// TODO: Update docs.
   /// Enqueue for exclusive read-write access to the resource.
@@ -42,10 +63,10 @@ public:
   /// releases the resource.
   /// @pre valid()
   /// TODO: Rename?
-  ReadWriteSender readwrite() { return pipeline.readwrite(); }
+  ReadWriteSender readwrite() { return pipeline_.readwrite(); }
 
   [[deprecated("Use readwrite instead")]] ReadWriteSender operator()() {
-    return pipeline.readwrite();
+    return pipeline_.readwrite();
   }
 
   /// Enqueue for shared read-only access to the resource.
@@ -54,7 +75,7 @@ public:
   /// releases the resource.
   /// @pre valid()
   /// TODO: Rename?
-  ReadOnlySender read() { return pipeline.read(); }
+  ReadOnlySender read() { return pipeline_.read(); }
 
   /// Create a sub pipeline to the value contained in the current
   /// CommunicatorPipeline
@@ -62,22 +83,24 @@ public:
   /// All accesses to the sub pipeline are sequenced after previous accesses and
   /// before later accesses to the original pipeline, independently of when
   /// values are accessed in the sub pipeline.
-  CommunicatorPipeline sub_pipeline() { return {pipeline.sub_pipeline()}; }
+  CommunicatorPipeline sub_pipeline() { return {pipeline_.sub_pipeline()}; }
 
   /// Check if the pipeline is valid.
   ///
   /// @return true if the pipeline hasn't been reset, otherwise false.
-  bool valid() const noexcept { return pipeline.valid(); }
+  bool valid() const noexcept { return pipeline_.valid(); }
 
   /// Reset the pipeline.
   ///
   /// @post !valid()
-  void reset() noexcept { pipeline.reset(); }
+  void reset() noexcept { pipeline_.reset(); }
 
 private:
   CommunicatorPipeline(PipelineType &&pipeline)
-      : pipeline(std::move(pipeline)) {}
+      : pipeline_(std::move(pipeline)) {}
 
-  PipelineType pipeline;
+  PipelineType pipeline_;
+  Index2D rank_{0, 0};
+  Size2D size_{0, 0};
 };
 } // namespace dlaf::comm

@@ -14,8 +14,9 @@
 namespace dlaf {
 namespace comm {
 
-CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
-                                   common::Ordering ordering, std::size_t npipelines) {
+CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows,
+                                   IndexT_MPI ncols, common::Ordering ordering,
+                                   std::size_t npipelines) {
   DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows, ncols, comm.size());
 
   bool is_in_grid = comm.rank() < nrows * ncols;
@@ -28,13 +29,15 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   comm::Size2D grid_size{nrows, ncols};
   if (is_in_grid) {
     position_ = common::computeCoords(ordering, comm.rank(), grid_size);
-    key_full = common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, position_, grid_size);
+    key_full = common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER,
+                                                      position_, grid_size);
     index_row = position_.row();
     index_col = position_.col();
   }
 
   MPI_Comm mpi_full, mpi_col, mpi_row;
-  DLAF_MPI_CHECK_ERROR(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED, key_full, &mpi_full));
+  DLAF_MPI_CHECK_ERROR(MPI_Comm_split(comm, is_in_grid ? 0 : MPI_UNDEFINED,
+                                      key_full, &mpi_full));
   DLAF_MPI_CHECK_ERROR(MPI_Comm_split(comm, index_row, key, &mpi_row));
   DLAF_MPI_CHECK_ERROR(MPI_Comm_split(comm, index_col, key, &mpi_col));
 
@@ -49,9 +52,18 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
 
   using dlaf::internal::WithResultOf;
 
-  full_pipelines_ = RoundRobinPipeline(npipelines, WithResultOf([&]() { return full_.clone(); }));
-  row_pipelines_ = RoundRobinPipeline(npipelines, WithResultOf([&]() { return row_.clone(); }));
-  col_pipelines_ = RoundRobinPipeline(npipelines, WithResultOf([&]() { return col_.clone(); }));
+  full_pipelines_ = RoundRobinPipeline(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline{full_.clone(), position_, grid_size_};
+      }));
+  row_pipelines_ = RoundRobinPipeline(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline{row_.clone(), position_, grid_size_};
+      }));
+  col_pipelines_ = RoundRobinPipeline(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline{col_.clone(), position_, grid_size_};
+      }));
 }
-}
-}
+} // namespace comm
+} // namespace dlaf

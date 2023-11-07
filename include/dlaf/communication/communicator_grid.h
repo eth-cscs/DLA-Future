@@ -22,14 +22,6 @@
 namespace dlaf {
 namespace comm {
 
-/// TAG for strong-typing basic_coords.
-struct TAG_MPI;
-
-/// 2D index strong-typed for MPI.
-using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
-/// 2D size strong-typed for MPI.
-using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
-
 /// Create a communicator with a 2D Grid structure.
 ///
 /// Given a communicator, it creates communicators for rows and columns,

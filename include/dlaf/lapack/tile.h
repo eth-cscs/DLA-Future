@@ -604,17 +604,6 @@ void potrf(cusolverDnHandle_t handle, const blas::Uplo uplo, const matrix::Tile<
   assertExtendInfo(dlaf::gpulapack::internal::assertInfoPotrf, handle, std::move(info));
 }
 
-template <class T>
-void stedc(cusolverDnHandle_t handle, const Tile<T, Device::GPU>& tridiag,
-           const Tile<T, Device::GPU>& evecs);
-
-#define DLAF_GPU_STEDC_ETI(kword, Type)                                                        \
-  kword template void stedc(cusolverDnHandle_t handle, const Tile<Type, Device::GPU>& tridiag, \
-                            const Tile<Type, Device::GPU>& evecs)
-
-DLAF_GPU_STEDC_ETI(extern, float);
-DLAF_GPU_STEDC_ETI(extern, double);
-
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(lange);

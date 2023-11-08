@@ -56,6 +56,16 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
                                 Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 
+#ifdef DLAF_WITH_HDF5
+  static size_t num_eigensolver_calls = 0;
+
+  auto fname = [](std::string name){
+    std::stringstream fn;
+    fn << name << num_eigensolver_calls << ".h5";
+    return fn.str();
+  };
+#endif
+
   // need uplo check as reduction to band doesn't have the uplo argument yet.
   if (uplo != blas::Uplo::Lower)
     DLAF_UNIMPLEMENTED(uplo);
@@ -64,14 +74,14 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
   std::optional<matrix::internal::FileHDF5> file_eigensolver;
 
   if (getTuneParameters().debug_dump_eigensolver_data) {
-    file_eigensolver = matrix::internal::FileHDF5(grid.fullCommunicator(), "eigensolver.h5");
+    file_eigensolver = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("eigensolver"));
     file_eigensolver->write(mat_a, "/input");
   }
 
   std::optional<matrix::internal::FileHDF5> file_reduction_to_band;
 
   if (getTuneParameters().debug_dump_reduction_to_band_data) {
-    file_reduction_to_band = matrix::internal::FileHDF5(grid.fullCommunicator(), "red_to_band.h5");
+    file_reduction_to_band = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("red_to_band"));
     file_reduction_to_band->write(mat_a, "/input");
   }
 #endif
@@ -86,7 +96,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
   std::optional<matrix::internal::FileHDF5> file_band_to_tridiagonal;
 
   if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
-    file_band_to_tridiagonal = matrix::internal::FileHDF5(grid.fullCommunicator(), "band_to_tridiag.h5");
+    file_band_to_tridiagonal = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("band_to_tridiag"));
     file_band_to_tridiagonal->write(mat_a, "/band");
   }
 #endif
@@ -101,7 +111,7 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
   std::optional<matrix::internal::FileHDF5> file_tridiag;
 
   if (getTuneParameters().debug_dump_trisolver_data) {
-    file_tridiag = matrix::internal::FileHDF5(grid.fullCommunicator(), "tridiag.h5");
+    file_tridiag = matrix::internal::FileHDF5(grid.fullCommunicator(), fname("tridiag"));
     file_tridiag->write(ret.tridiagonal, "/tridiag");
   }
 #endif
@@ -123,6 +133,8 @@ void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, M
     file_eigensolver->write(evals, "/evals");
     file_eigensolver->write(mat_e, "/evecs");
   }
+
+  num_eigensolver_calls++;
 #endif
 }
 }

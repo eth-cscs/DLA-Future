@@ -68,7 +68,7 @@ public:
   ///
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
-  Matrix(const LocalElementSize& size, const TileElementSize& tile_size) noexcept
+  Matrix(const LocalElementSize& size, const TileElementSize& tile_size)
       : Matrix<T, D>(Distribution(size, tile_size)) {}
 
   /// Create a distributed matrix of size @p size block size @p tile_size and tile size @p tile_size
@@ -77,11 +77,11 @@ public:
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
   Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
-         const comm::CommunicatorGrid& comm) noexcept
+         const comm::CommunicatorGrid& comm)
       : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0})) {}
 
   /// Create a matrix distributed according to the distribution @p distribution.
-  Matrix(Distribution distribution) noexcept : Matrix<const T, D>(std::move(distribution)) {
+  Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {
     const SizeType alignment = 64;
     const SizeType ld = std::max<SizeType>(
         1, util::ceilDiv(this->distribution().local_size().rows(), alignment) * alignment);
@@ -101,7 +101,7 @@ public:
   ///            of the local part of the matrix will be stored in memory,
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize().
-  Matrix(Distribution distribution, const LayoutInfo& layout) noexcept
+  Matrix(Distribution distribution, const LayoutInfo& layout)
       : Matrix<const T, D>(std::move(distribution)) {
     DLAF_ASSERT(this->distribution().local_size() == layout.size(),
                 "Size of distribution does not match layout size!", distribution.local_size(),

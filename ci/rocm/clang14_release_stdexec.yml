@@ -6,7 +6,7 @@ rocm clang14 stdexec release deps:
   variables:
     BASE_IMAGE: $CSCS_REGISTRY_PATH/rocm-patched:5.3.3
     EXTRA_APTGET: "clang-14 libomp-14-dev rocblas rocblas-dev rocsolver rocsolver-dev rocprim-dev rocthrust-dev llvm-amdgpu rocm-device-libs"
-    COMPILER: clang@14.0.0
+    COMPILER: clang@14
     USE_ROCBLAS: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-rocm533-stdexec.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/rocm-clang14-stdexec-release/build

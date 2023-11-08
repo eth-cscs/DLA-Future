@@ -17,6 +17,15 @@
 
 #include <dlaf/matrix/distribution.h>
 
+#ifndef DLAF_MATRIX_ENABLE_DEPRECATED
+#define DLAF_MATRIX_ENABLE_DEPRECATED 0
+#endif
+#if (DLAF_MATRIX_ENABLE_DEPRECATED)
+#define DLAF_MATRIX_DEPRECATED(x) [[deprecated(x)]]
+#else
+#define DLAF_MATRIX_DEPRECATED(x)
+#endif
+
 namespace dlaf {
 namespace matrix {
 namespace internal {
@@ -88,35 +97,42 @@ public:
     return distribution_;
   }
 
-  // TODO remove deprecated
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   const TileElementSize& blockSize() const noexcept {
     return distribution_.blockSize();
   }
 
+  DLAF_MATRIX_DEPRECATED("Use tile_size method")
   const TileElementSize& baseTileSize() const noexcept {
     return distribution_.baseTileSize();
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   const GlobalTileSize& nrTiles() const noexcept {
     return distribution_.nrTiles();
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   const comm::Index2D& rankIndex() const noexcept {
     return distribution_.rankIndex();
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   const comm::Index2D& sourceRankIndex() const noexcept {
     return distribution_.sourceRankIndex();
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   const comm::Size2D& commGridSize() const noexcept {
     return distribution_.commGridSize();
   }
 
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   comm::Index2D rankGlobalTile(const GlobalTileIndex& global_tile) const noexcept {
     return distribution_.rankGlobalTile(global_tile);
   }
 
+  DLAF_MATRIX_DEPRECATED("Use tile_size_of method")
   TileElementSize tileSize(const GlobalTileIndex& index) const noexcept {
     return distribution_.tileSize(index);
   }
@@ -139,7 +155,7 @@ protected:
     return to_sizet(index.row() + distribution_.local_nr_tiles().rows() * index.col());
   }
 
-  // TODO DEPRECATE
+  DLAF_MATRIX_DEPRECATED("method has been renamed in snake case")
   std::size_t tileLinearIndex(const LocalTileIndex& index) const noexcept {
     return tile_linear_index(index);
   }

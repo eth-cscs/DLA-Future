@@ -40,8 +40,6 @@ struct MatrixCopyTest : public TestWithCommGrids {};
 
 TYPED_TEST_SUITE(MatrixCopyTest, MatrixElementTypes);
 
-// TODO local test
-
 struct FullMatrixCopyConfig {
   LocalElementSize size;
   TileElementSize block_size;
@@ -160,6 +158,24 @@ struct SubMatrixCopyConfig {
   GlobalElementSize sub_size;
 };
 
+comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                const GlobalElementIndex& offset_out) {
+  const auto pos_mod = [](const auto& a, const auto& b) {
+    const auto mod = a % b;
+    return (mod >= 0) ? mod : (mod + b);
+  };
+
+  const comm::Size2D grid_size = dist_in.commGridSize();
+
+  const comm::Index2D sub_rank(dist_in.template rank_global_element<Coord::Row>(offset_in.row()),
+                               dist_in.template rank_global_element<Coord::Col>(offset_in.col()));
+  const GlobalTileIndex offset_tl(offset_out.row() / dist_in.blockSize().rows(),
+                                  offset_out.col() / dist_in.blockSize().cols());
+
+  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_tl.row()), grid_size.rows()),
+          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_tl.col()), grid_size.cols())};
+}
+
 bool isFullMatrix(const Distribution& dist_full, const GlobalElementIndex& sub_origin,
                   const GlobalElementSize& sub_size) noexcept {
   return sub_origin == GlobalElementIndex{0, 0} && sub_size == dist_full.size();
@@ -198,27 +214,61 @@ const std::vector<SubMatrixCopyConfig> sub_configs{
     {{13, 26}, {26, 13}, {5, 5}, {7, 3}, {17, 8}, {4, 5}},
 };
 
-comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
-                                const GlobalElementIndex& offset_out) {
-  const auto pos_mod = [](const auto& a, const auto& b) {
-    const auto mod = a % b;
-    return (mod >= 0) ? mod : (mod + b);
-  };
+template <class T>
+void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
+                   const matrix::Distribution& dist_out) {
+  const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
+  const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
 
-  const comm::Size2D grid_size = dist_in.commGridSize();
+  memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
+  memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
 
-  const comm::Index2D sub_rank(dist_in.template rank_global_element<Coord::Row>(offset_in.row()),
-                               dist_in.template rank_global_element<Coord::Col>(offset_in.col()));
-  const GlobalTileIndex offset_tl(offset_out.row() / dist_in.blockSize().rows(),
-                                  offset_out.col() / dist_in.blockSize().cols());
+  Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
+  Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
 
-  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_tl.row()), grid_size.rows()),
-          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_tl.col()), grid_size.cols())};
+  // Note: currently `subPipeline`-ing does not support sub-matrices
+  if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
+    set(mat_in, inputValues<T>);
+    set(mat_out, outputValues<T>);
+
+    {
+      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
+      Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
+
+      copy(mat_sub_src_const, mat_sub_dst);
+    }
+
+    CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<T>::error);
+  }
+
+  // MatrixRef
+  set(mat_in, inputValues<T>);
+  set(mat_out, outputValues<T>);
+
+  using matrix::internal::MatrixRef;
+  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
+  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
+
+  copy(mat_sub_src, mat_sub_dst);
+
+  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
+
+  const auto fullMatrixWithSubMatrixValues =
+      mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+  CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
 }
 
-TYPED_TEST(MatrixCopyTest, SubMatrixCPU) {
-  using T = TypeParam;
+TYPED_TEST(MatrixCopyTest, SubMatrixCPULocal) {
+  for (const auto& test : sub_configs) {
+    const Distribution dist_in({test.full_in.rows(), test.full_in.cols()}, test.tile_size);
+    const Distribution dist_out({test.full_out.rows(), test.full_out.cols()}, test.tile_size);
 
+    testSubMatrix<TypeParam>(test, dist_in, dist_out);
+  }
+}
+
+TYPED_TEST(MatrixCopyTest, SubMatrixCPUDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sub_configs) {
       const comm::Index2D in_src_rank(0, 0);
@@ -235,54 +285,82 @@ TYPED_TEST(MatrixCopyTest, SubMatrixCPU) {
       EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
                 dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
-      const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
-      const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
-
-      memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
-      memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
-
-      Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
-      Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
-
-      // Note: currently `subPipeline`-ing does not support sub-matrices
-      if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
-        set(mat_in, inputValues<T>);
-        set(mat_out, outputValues<T>);
-
-        {
-          Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
-          Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
-
-          copy(mat_sub_src_const, mat_sub_dst);
-        }
-
-        CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<T>::error);
-      }
-
-      // MatrixRef
-      set(mat_in, inputValues<T>);
-      set(mat_out, outputValues<T>);
-
-      using matrix::internal::MatrixRef;
-      MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
-      MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
-
-      copy(mat_sub_src, mat_sub_dst);
-
-      const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
-      CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
-
-      const auto fullMatrixWithSubMatrixValues =
-          mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
-      CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
+      testSubMatrix<TypeParam>(test, dist_in, dist_out);
     }
   }
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(MatrixCopyTest, SubMatrixGPU) {
-  using T = TypeParam;
+template <class T>
+void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
+                        const matrix::Distribution& dist_out) {
+  const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
+  const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
 
+  // CPU
+  memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
+  memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
+
+  Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
+  Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
+
+  // GPU
+  memory::MemoryView<T, Device::GPU> mem_in_gpu(layout_in.minMemSize());
+  memory::MemoryView<T, Device::GPU> mem_out_gpu(layout_out.minMemSize());
+
+  Matrix<T, Device::GPU> mat_in_gpu(dist_in, layout_in, mem_in_gpu());
+  Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
+
+  // Note: currently `subPipeline`-ing does not support sub-matrices
+  if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
+    set(mat_in, inputValues<T>);
+    set(mat_out, outputValues<T>);
+
+    {
+      Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
+      Matrix<T, Device::GPU> mat_sub_gpu1 = mat_in_gpu.subPipeline();
+      Matrix<T, Device::GPU> mat_sub_gpu2 = mat_out_gpu.subPipeline();
+      Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
+
+      copy(mat_sub_src_const, mat_sub_gpu1);
+      copy(mat_sub_gpu1, mat_sub_gpu2);
+      copy(mat_sub_gpu2, mat_sub_dst);
+    }
+    CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<T>::error);
+  }
+
+  // MatrixRef
+  set(mat_in, inputValues<T>);
+  set(mat_out, outputValues<T>);
+
+  using matrix::internal::MatrixRef;
+  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
+  MatrixRef<T, Device::GPU> mat_sub_gpu1(mat_in_gpu, {test.sub_origin_in, test.sub_size});
+  MatrixRef<T, Device::GPU> mat_sub_gpu2(mat_out_gpu, {test.sub_origin_out, test.sub_size});
+  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
+
+  copy(mat_sub_src, mat_sub_gpu1);
+  copy(mat_sub_gpu1, mat_sub_gpu2);
+  copy(mat_sub_gpu2, mat_sub_dst);
+
+  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
+
+  const auto fullMatrixWithSubMatrixValues =
+      mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+  CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
+}
+
+TYPED_TEST(MatrixCopyTest, SubMatrixGPULocal) {
+  for (const auto& test : sub_configs) {
+    const Distribution dist_in({test.full_in.rows(), test.full_in.cols()}, test.tile_size);
+    const Distribution dist_out({test.full_out.rows(), test.full_out.cols()}, test.tile_size);
+
+    testSubMatrixOnGPU<TypeParam>(test, dist_in, dist_out);
+  }
+}
+
+TYPED_TEST(MatrixCopyTest, SubMatrixGPUDistributed) {
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sub_configs) {
       const comm::Index2D in_src_rank(0, 0);
@@ -299,61 +377,7 @@ TYPED_TEST(MatrixCopyTest, SubMatrixGPU) {
       EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
                 dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
-      const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
-      const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
-
-      // CPU
-      memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
-      memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
-
-      Matrix<T, Device::CPU> mat_in(dist_in, layout_in, mem_in());
-      Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
-
-      // GPU
-      memory::MemoryView<T, Device::GPU> mem_in_gpu(layout_in.minMemSize());
-      memory::MemoryView<T, Device::GPU> mem_out_gpu(layout_out.minMemSize());
-
-      Matrix<T, Device::GPU> mat_in_gpu(dist_in, layout_in, mem_in_gpu());
-      Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
-
-      // Note: currently `subPipeline`-ing does not support sub-matrices
-      if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
-        set(mat_in, inputValues<T>);
-        set(mat_out, outputValues<T>);
-
-        {
-          Matrix<const T, Device::CPU> mat_sub_src_const = mat_in.subPipelineConst();
-          Matrix<T, Device::GPU> mat_sub_gpu1 = mat_in_gpu.subPipeline();
-          Matrix<T, Device::GPU> mat_sub_gpu2 = mat_out_gpu.subPipeline();
-          Matrix<T, Device::CPU> mat_sub_dst = mat_out.subPipeline();
-
-          copy(mat_sub_src_const, mat_sub_gpu1);
-          copy(mat_sub_gpu1, mat_sub_gpu2);
-          copy(mat_sub_gpu2, mat_sub_dst);
-        }
-        CHECK_MATRIX_NEAR(inputValues<T>, mat_out, 0, TypeUtilities<TypeParam>::error);
-      }
-
-      // MatrixRef
-      set(mat_in, inputValues<T>);
-      set(mat_out, outputValues<T>);
-
-      using matrix::internal::MatrixRef;
-      MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
-      MatrixRef<T, Device::GPU> mat_sub_gpu1(mat_in_gpu, {test.sub_origin_in, test.sub_size});
-      MatrixRef<T, Device::GPU> mat_sub_gpu2(mat_out_gpu, {test.sub_origin_out, test.sub_size});
-      MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
-
-      copy(mat_sub_src, mat_sub_gpu1);
-      copy(mat_sub_gpu1, mat_sub_gpu2);
-      copy(mat_sub_gpu2, mat_sub_dst);
-
-      const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
-      CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
-
-      const auto fullMatrixWithSubMatrixValues =
-          mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
-      CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
+      testSubMatrixOnGPU<TypeParam>(test, dist_in, dist_out);
     }
   }
 }

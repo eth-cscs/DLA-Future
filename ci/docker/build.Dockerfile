@@ -23,9 +23,6 @@ RUN apt-get -yqq update && \
     patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Install cmake
-RUN wget -qO- "https://cmake.org/files/v3.22/cmake-3.22.1-linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
-
 # Install libtree for packaging
 RUN mkdir -p /opt/libtree && \
     curl -Lfso /opt/libtree/libtree https://github.com/haampie/libtree/releases/download/v2.0.0/libtree_x86_64 && \
@@ -63,7 +60,6 @@ RUN spack external find \
     autoconf \
     automake \
     bzip2 \
-    cmake \
     cuda \
     diffutils \
     findutils \

@@ -57,7 +57,7 @@ RUN mkdir -p /opt/spack && \
 ARG COMPILER
 RUN spack compiler find && \
     gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
-    spack config add "packages:all:compiler:[${COMPILER}]"
+    spack config add "packages:all:require:[\"%${COMPILER}\"]"
 
 RUN spack external find \
     autoconf \

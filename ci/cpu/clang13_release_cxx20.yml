@@ -5,7 +5,7 @@ cpu clang13 cxx20 release deps:
   extends: .build_deps_common
   variables:
     EXTRA_APTGET: "clang-13 libomp-13-dev"
-    COMPILER: clang@13.0.1
+    COMPILER: clang@13
     CXXSTD: 20
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     USE_MKL: "ON"

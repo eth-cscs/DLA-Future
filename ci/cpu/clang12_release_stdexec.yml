@@ -4,6 +4,7 @@ include:
 cpu clang12 stdexec release deps:
   extends: .build_deps_common
   variables:
+    EXTRA_APTGET: "clang-12 libomp-12-dev"
     COMPILER: clang@12
     CXXSTD: 20
     USE_MKL: "ON"

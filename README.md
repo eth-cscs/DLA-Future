@@ -1,6 +1,6 @@
 [![pipeline status](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/-/commits/master) [![codecov](https://codecov.io/gh/eth-cscs/DLA-Future/branch/master/graph/badge.svg)](https://codecov.io/gh/eth-cscs/DLA-Future)
 
-# Distributed Linear Algebra for the Future.
+# Distributed Linear Algebra for the Future
 
 ## Getting started with DLAF
 
@@ -22,6 +22,7 @@ Otherwise you can download the [releases](https://github.com/eth-cscs/DLA-Future
 - [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
 - [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
 - Intel MKL or other LAPACK implementation
+- A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
 - [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
 - [cuda](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
 - [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)

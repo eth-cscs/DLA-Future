@@ -100,3 +100,6 @@ RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 4. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
+
+# make ctest executable available.
+RUN ln -s `spack -e ci location -i cmake`/bin/ctest /usr/bin/ctest

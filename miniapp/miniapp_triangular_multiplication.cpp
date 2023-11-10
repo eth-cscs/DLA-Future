@@ -29,12 +29,6 @@
 #include <dlaf/init.h>
 #include <dlaf/matrix/copy.h>
 #include <dlaf/matrix/index.h>
-#include <dlaf/matrix/matrix_mirror.h>
-#include <dlaf/miniapp/dispatch.h>
-#include <dlaf/miniapp/options.h>
-//#include <dlaf/solver.h>
-#include <dlaf/multiplication/triangular.h>
-#include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
 namespace {

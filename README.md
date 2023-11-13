@@ -1,6 +1,6 @@
 [![pipeline status](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/-/commits/master) [![codecov](https://codecov.io/gh/eth-cscs/DLA-Future/branch/master/graph/badge.svg)](https://codecov.io/gh/eth-cscs/DLA-Future)
 
-# Distributed Linear Algebra for the Future
+# Distributed Linear Algebra from the Future
 
 ## Getting started with DLAF
 

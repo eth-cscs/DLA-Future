@@ -121,6 +121,8 @@ public:
     return col_pipelines_.nextResource().sub_pipeline();
   }
 
+  /// Return a pipeline to a Communicator grouping all ranks in the row or column (that includes the
+  /// current process), depending on @tparam C.
   template <Coord C>
   CommunicatorPipeline<coord_to_communicator_type(C)> communicator_pipeline() {
     if constexpr (C == Coord::Row)

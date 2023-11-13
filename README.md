@@ -12,7 +12,7 @@ Otherwise, if you have `git` you can clone this repository with the command
 
 ```
 git clone https://github.com/eth-cscs/DLA-Future.git
-``` 
+```
 
 ### Dependencies
 

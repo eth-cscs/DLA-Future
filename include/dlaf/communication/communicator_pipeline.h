@@ -71,10 +71,19 @@ public:
   ///
   /// @return the 2D coordinate representing the position in the grid that this
   /// pipeline belongs to
-  Index2D rank() const noexcept { return rank_; }
+  IndexT_MPI rank() const noexcept { return rankFullCommunicator(rank_); }
 
   /// Return the size of the grid.
-  Size2D size() const noexcept { return size_; }
+  IndexT_MPI size() const noexcept { return size_.rows() * size_.cols(); }
+
+  /// Return the rank of the current process in the CommunicatorPipeline.
+  ///
+  /// @return the 2D coordinate representing the position in the grid that this
+  /// pipeline belongs to
+  Index2D rank_2d() const noexcept { return rank_; }
+
+  /// Return the size of the grid.
+  Size2D size_2d() const noexcept { return size_; }
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D &index) const noexcept {

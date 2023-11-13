@@ -217,10 +217,10 @@ void applyGivensRotationsToMatrixColumns(comm::CommunicatorPipeline<Communicator
   namespace tt = pika::this_thread::experimental;
   namespace di = dlaf::internal;
 
-  DLAF_ASSERT_HEAVY(comm_row_chain.size().cols() == mat.commGridSize().cols(),
-                    comm_row_chain.size().cols(), mat.commGridSize().cols());
-  DLAF_ASSERT_HEAVY(comm_row_chain.rank().col() == mat.rankIndex().col(),
-                    comm_row_chain.rank().col(), mat.rankIndex().col());
+  DLAF_ASSERT_HEAVY(comm_row_chain.size_2d().cols() == mat.commGridSize().cols(),
+                    comm_row_chain.size_2d().cols(), mat.commGridSize().cols());
+  DLAF_ASSERT_HEAVY(comm_row_chain.rank_2d().col() == mat.rankIndex().col(),
+                    comm_row_chain.rank_2d().col(), mat.rankIndex().col());
 
   const matrix::Distribution& dist = mat.distribution();
 

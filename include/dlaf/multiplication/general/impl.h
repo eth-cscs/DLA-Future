@@ -51,8 +51,8 @@ void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_en
 // SUMMA: Scalable universal matrix multiplication algorithm.
 // Concurrency: Practice and Experience 9.4 (1997): 255-274
 template <Backend B, Device D, class T>
-void GeneralSub<B, D, T>::callNN(comm::CommunicatorPipeline<CommunicatorType::Row>& row_task_chain,
-                                 comm::CommunicatorPipeline<CommunicatorType::Col>& col_task_chain,
+void GeneralSub<B, D, T>::callNN(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                                 comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
                                  const SizeType idx_begin, const SizeType idx_end, const T alpha,
                                  Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                                  Matrix<T, D>& mat_c) {

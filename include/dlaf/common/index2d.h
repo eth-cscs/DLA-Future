@@ -24,9 +24,6 @@
 
 namespace dlaf {
 
-// TODO: Combine with below? What to call this?
-enum class CommunicatorType { Row, Col, Full };
-
 enum class Coord { Row, Col };
 
 /// Given a Coord, returns its orthogonal
@@ -36,10 +33,6 @@ constexpr Coord orthogonal(const Coord rc) {
 
 constexpr auto coord2str(const Coord rc) {
   return rc == Coord::Row ? "ROW" : "COL";
-}
-
-constexpr CommunicatorType coord_to_communicator_type(const Coord rc) {
-  return rc == Coord::Row ? CommunicatorType::Row : CommunicatorType::Col;
 }
 
 namespace common {

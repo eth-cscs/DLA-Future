@@ -81,7 +81,7 @@ struct QR_Tfactor {
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
-                   comm::CommunicatorPipeline<CommunicatorType::Col>& mpi_col_task_chain);
+                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 
 // ETI

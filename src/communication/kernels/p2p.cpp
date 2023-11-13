@@ -18,6 +18,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/p2p.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/matrix/tile.h>

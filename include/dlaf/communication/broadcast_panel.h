@@ -18,6 +18,7 @@
 
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/copy_tile.h>
@@ -78,8 +79,8 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 // TODO: Move somewhere else?
 namespace internal {
 template <Coord C>
-auto &get_taskchain(comm::CommunicatorPipeline<CommunicatorType::Row> &row_task_chain,
-                    comm::CommunicatorPipeline<CommunicatorType::Col> &col_task_chain) {
+auto &get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row> &row_task_chain,
+                    comm::CommunicatorPipeline<comm::CommunicatorType::Col> &col_task_chain) {
   if constexpr (C == Coord::Row)
   {
       return row_task_chain;
@@ -123,8 +124,8 @@ template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
-               comm::CommunicatorPipeline<CommunicatorType::Row>& row_task_chain,
-               comm::CommunicatorPipeline<CommunicatorType::Col>& col_task_chain) {
+               comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+               comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
 
   constexpr Coord coord = std::decay_t<decltype(panel)>::coord;

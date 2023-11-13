@@ -24,6 +24,7 @@
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/reduce.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/sender/traits.h>

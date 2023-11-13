@@ -21,6 +21,7 @@
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
@@ -118,8 +119,8 @@ void applyPermutationOnCPU(
   }
 }
 
-template <Backend B, Device D, class T, Coord C, CommunicatorType C2>
-void Permutations<B, D, T, C, C2>::call(const SizeType i_begin, const SizeType i_end,
+template <Backend B, Device D, class T, Coord C>
+void Permutations<B, D, T, C>::call(const SizeType i_begin, const SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
   namespace ex = pika::execution::experimental;
@@ -220,8 +221,8 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
       matrix, common::iterate_range2d(LocalTileIndex(0, 0), matrix.distribution().localNrTiles())));
 }
 
-template <class T, Device D, Coord C, CommunicatorType C2, class SendCountsSender, class RecvCountsSender>
-void all2allData(comm::CommunicatorPipeline<C2>& sub_task_chain, int nranks,
+template <class T, Device D, Coord C, class SendCountsSender, class RecvCountsSender>
+void all2allData(comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(C))>& sub_task_chain, int nranks,
                  LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
                  Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
                  Matrix<T, D>& recv_mat) {
@@ -554,8 +555,8 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
                      ex::bulk(subm_dist.size().get<C>(), std::move(permutations_unpack_f)));
 }
 
-template <class T, Coord C, CommunicatorType C2>
-void permuteOnCPU(comm::CommunicatorPipeline<C2>& sub_task_chain, SizeType i_begin, SizeType i_end,
+template <class T, Coord C>
+void permuteOnCPU(comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(C))>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
                   Matrix<T, Device::CPU>& mat_out) {
   constexpr Device D = Device::CPU;
@@ -651,11 +652,10 @@ void permuteOnCPU(comm::CommunicatorPipeline<C2>& sub_task_chain, SizeType i_beg
                           whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
 
-template <Backend B, Device D, class T, Coord C, CommunicatorType C2>
-void Permutations<B, D, T, C, C2>::call(comm::CommunicatorPipeline<C2>& sub_task_chain,
+template <Backend B, Device D, class T, Coord C>
+void Permutations<B, D, T, C>::call(comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(C))>& sub_task_chain,
                                     SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                                     Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
-  // TODO: Assert relationship between C and C2
   if constexpr (D == Device::GPU) {
     // This is a temporary placeholder which avoids diverging GPU API:
     DLAF_UNIMPLEMENTED("GPU implementation not available yet");

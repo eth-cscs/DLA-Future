@@ -16,6 +16,7 @@
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_type.h>
 #include <dlaf/communication/index.h>
 
 namespace dlaf::comm {

@@ -30,7 +30,7 @@ TEST(BcastMatrixTest, TransformMPIRW) {
 
   comm::Communicator comm(MPI_COMM_WORLD);
   comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  comm::CommunicatorPipeline<CommunicatorType::Full> ccomm(comm);
+  comm::CommunicatorPipeline<comm::CommunicatorType::Full> ccomm(comm);
 
   int root = 0;
   int sz = 10000;
@@ -62,7 +62,7 @@ TEST(BcastMatrixTest, TransformMPIRO) {
 
   comm::Communicator comm(MPI_COMM_WORLD);
   comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
-  comm::CommunicatorPipeline<CommunicatorType::Full> ccomm(comm);
+  comm::CommunicatorPipeline<comm::CommunicatorType::Full> ccomm(comm);
 
   int root = 0;
   int sz = 10000;

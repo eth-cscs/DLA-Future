@@ -278,7 +278,7 @@ template <Backend backend, Device device, class T>
 void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                                           matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                                           matrix::ReadWriteTileSender<T, device> t,
-                                          comm::CommunicatorPipeline<CommunicatorType::Col>& mpi_col_task_chain) {
+                                          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;

@@ -32,6 +32,7 @@
 #include <dlaf/communication/functions_sync.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>
@@ -672,8 +673,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   const matrix::SubMatrixView& view, matrix::Matrix<const T, D>& a,
                   matrix::Panel<Coord::Col, const T, D>& w,
                   matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& wt,
-                  comm::CommunicatorPipeline<CommunicatorType::Row>& mpi_row_chain,
-                  comm::CommunicatorPipeline<CommunicatorType::Col>& mpi_col_chain) {
+                  comm::CommunicatorPipeline<comm::CommunicatorType::Row>& mpi_row_chain,
+                  comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;

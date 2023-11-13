@@ -124,8 +124,8 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 ///
 /// @pre `a <= b <= mat_a.nrTiles().rows()`
 template <Backend B, Device D, class T>
-void generalSubMatrix(comm::CommunicatorPipeline<CommunicatorType::Row>& row_task_chain,
-                      comm::CommunicatorPipeline<CommunicatorType::Col>& col_task_chain, const SizeType a,
+void generalSubMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain, const SizeType a,
                       const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);

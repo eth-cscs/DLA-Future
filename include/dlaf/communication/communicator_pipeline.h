@@ -51,9 +51,6 @@ public:
   CommunicatorPipeline& operator=(const CommunicatorPipeline&) = delete;
 
   /// Return the rank of the current process in the CommunicatorPipeline.
-  ///
-  /// @return the 2D coordinate representing the position in the grid that this
-  /// pipeline belongs to
   IndexT_MPI rank() const noexcept {
     return rankFullCommunicator(rank_);
   }
@@ -63,18 +60,13 @@ public:
     return size_.rows() * size_.cols();
   }
 
-  /// Return the rank of the current process in the CommunicatorPipeline.
-  ///
-  /// @return the 2D coordinate representing the position in the grid that this
-  /// pipeline belongs to
-  Index2D rank_2d() const noexcept {
-    return rank_;
-  }
+  /// Return the 2D rank of the current process in the grid that this pipeline
+  /// belongs to.
+  Index2D rank_2d() const noexcept { return rank_; }
 
-  /// Return the size of the grid.
-  Size2D size_2d() const noexcept {
-    return size_;
-  }
+  /// Return the 2D size of the current process in the grid that this pipeline
+  /// belongs to.
+  Size2D size_2d() const noexcept { return size_; }
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
@@ -82,33 +74,25 @@ public:
                                                   {size_.rows(), size_.cols()});
   }
 
-  /// TODO: Update docs.
-  /// Enqueue for exclusive read-write access to the resource.
+  /// Enqueue for exclusive read-write access to the Communicator.
   ///
-  /// @return a sender that will become ready as soon as the previous user
-  /// releases the resource.
+  /// @return a sender that gives exclusive access to the Communicator as soon as previous accesses are
+  /// released.
   /// @pre valid()
-  /// TODO: Rename?
   ReadWriteSender readwrite() {
     return pipeline_.readwrite();
   }
 
-  [[deprecated("Use readwrite instead")]] ReadWriteSender operator()() {
-    return pipeline_.readwrite();
-  }
-
-  /// Enqueue for shared read-only access to the resource.
+  /// Enqueue for shared read-only access to the Communicator.
   ///
-  /// @return a sender that will become ready as soon as the previous user
-  /// releases the resource.
+  /// @return a sender that gives shared access to the Communicator as soon as previous read-write
+  /// accesses are released.
   /// @pre valid()
-  /// TODO: Rename?
   ReadOnlySender read() {
     return pipeline_.read();
   }
 
-  /// Create a sub pipeline to the value contained in the current
-  /// CommunicatorPipeline
+  /// Create a sub pipeline to the value contained in the current CommunicatorPipeline
   ///
   /// All accesses to the sub pipeline are sequenced after previous accesses and
   /// before later accesses to the original pipeline, independently of when

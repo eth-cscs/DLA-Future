@@ -62,11 +62,15 @@ public:
 
   /// Return the 2D rank of the current process in the grid that this pipeline
   /// belongs to.
-  Index2D rank_2d() const noexcept { return rank_; }
+  Index2D rank_2d() const noexcept {
+    return rank_;
+  }
 
   /// Return the 2D size of the current process in the grid that this pipeline
   /// belongs to.
-  Size2D size_2d() const noexcept { return size_; }
+  Size2D size_2d() const noexcept {
+    return size_;
+  }
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {

@@ -17,6 +17,7 @@
 #include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/tune.h>
 
 namespace dlaf {

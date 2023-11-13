@@ -29,6 +29,7 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/communication/kernels/p2p_allsum.h>

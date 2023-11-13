@@ -21,6 +21,7 @@
 #include <dlaf/common/eti.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/matrix/tile.h>
 
 namespace dlaf::comm {

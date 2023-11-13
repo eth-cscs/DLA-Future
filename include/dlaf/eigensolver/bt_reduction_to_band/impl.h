@@ -23,6 +23,7 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>

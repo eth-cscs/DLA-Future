@@ -23,6 +23,7 @@
 #include "dlaf/common/range2d.h"
 #include "dlaf/communication/communicator.h"
 #include "dlaf/communication/communicator_grid.h"
+#include "dlaf/communication/index.h"
 #include "dlaf/matrix/index.h"
 #include "dlaf/matrix/matrix.h"
 #include "dlaf/matrix/matrix_mirror.h"

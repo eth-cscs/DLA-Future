@@ -22,6 +22,7 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>

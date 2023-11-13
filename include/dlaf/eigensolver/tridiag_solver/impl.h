@@ -20,6 +20,7 @@
 
 #include <dlaf/common/callable_object.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/eigensolver/tridiag_solver/api.h>
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>
 #include <dlaf/eigensolver/tridiag_solver/merge.h>

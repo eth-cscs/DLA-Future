@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <dlaf/communication/index.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/util_distribution.h>
 #include <dlaf/types.h>

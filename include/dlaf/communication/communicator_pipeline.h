@@ -22,14 +22,12 @@
 namespace dlaf::comm {
 namespace internal {
 constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{dlaf::common::Ordering::RowMajor};
-
-using CommunicatorPipeline = dlaf::common::Pipeline<Communicator>;
 }
 
-using CommunicatorPipelineReadOnlyWrapper = typename internal::CommunicatorPipeline::ReadOnlyWrapper;
-using CommunicatorPipelineReadWriteWrapper = typename internal::CommunicatorPipeline::ReadWriteWrapper;
-using CommunicatorPipelineReadOnlySender = typename internal::CommunicatorPipeline::ReadOnlySender;
-using CommunicatorPipelineReadWriteSender = typename internal::CommunicatorPipeline::ReadWriteSender;
+using CommunicatorPipelineReadOnlyWrapper = typename Pipeline<Communicator>::ReadOnlyWrapper;
+using CommunicatorPipelineReadWriteWrapper = typename Pipeline<Communicator>::ReadWriteWrapper;
+using CommunicatorPipelineReadOnlySender = typename Pipeline<Communicator>::ReadOnlySender;
+using CommunicatorPipelineReadWriteSender = typename Pipeline<Communicator>::ReadWriteSender;
 
 template <CommunicatorType Coord>
 class CommunicatorPipeline {

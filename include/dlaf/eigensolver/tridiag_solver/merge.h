@@ -930,12 +930,12 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
         const SizeType a = n_uh + n_de;
         const SizeType b = n_de + n_lh;
 
-        using GEMM = dlaf::multiplication::internal::GeneralSub<B, D, T>;
+        using GEMM = dlaf::multiplication::internal::General<B, D, T>;
         {
           MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n_upper, a}});
           MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {a, k}});
           MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n_upper, k}});
-          GEMM::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1), e1_sub, e2_sub, T(0), e0_sub);
+          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
         }
 
         {
@@ -943,7 +943,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
           MatrixRef<const T, D> e2_sub(e2, {{sub_offset + n_uh, sub_offset}, {b, k}});
           MatrixRef<T, D> e0_sub(e0, {{sub_offset + n_upper, sub_offset}, {n_lower, k}});
 
-          GEMM::callNN(blas::Op::NoTrans, blas::Op::NoTrans, T(1), e1_sub, e2_sub, T(0), e0_sub);
+          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
         }
 
         // copy deflated from e1 to e0

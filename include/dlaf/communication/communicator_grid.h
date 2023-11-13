@@ -122,7 +122,7 @@ public:
   }
 
   template <Coord C>
-  auto communicator_pipeline() {
+  CommunicatorPipeline<coord_to_communicator_type(C)> communicator_pipeline() {
     if constexpr (C == Coord::Row)
       return row_communicator_pipeline();
     else

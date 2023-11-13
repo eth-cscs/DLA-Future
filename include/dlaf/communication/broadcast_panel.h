@@ -76,7 +76,6 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   }
 }
 
-// TODO: Move somewhere else?
 namespace internal {
 template <Coord C>
 auto &get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row> &row_task_chain,

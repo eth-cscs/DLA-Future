@@ -141,8 +141,8 @@ protected:
   Communicator row_;
   Communicator col_;
 
-  template <CommunicatorType C>
-  using RoundRobinPipeline = dlaf::common::RoundRobin<CommunicatorPipeline<C>>;
+  template <CommunicatorType CT>
+  using RoundRobinPipeline = dlaf::common::RoundRobin<CommunicatorPipeline<CT>>;
 
   RoundRobinPipeline<CommunicatorType::Full> full_pipelines_;
   RoundRobinPipeline<CommunicatorType::Row> row_pipelines_;

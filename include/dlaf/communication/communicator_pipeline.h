@@ -24,12 +24,12 @@ namespace internal {
 constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{dlaf::common::Ordering::RowMajor};
 }
 
-using CommunicatorPipelineReadOnlyWrapper = typename Pipeline<Communicator>::ReadOnlyWrapper;
-using CommunicatorPipelineReadWriteWrapper = typename Pipeline<Communicator>::ReadWriteWrapper;
-using CommunicatorPipelineReadOnlySender = typename Pipeline<Communicator>::ReadOnlySender;
-using CommunicatorPipelineReadWriteSender = typename Pipeline<Communicator>::ReadWriteSender;
+using CommunicatorPipelineReadOnlyWrapper = typename common::Pipeline<Communicator>::ReadOnlyWrapper;
+using CommunicatorPipelineReadWriteWrapper = typename common::Pipeline<Communicator>::ReadWriteWrapper;
+using CommunicatorPipelineReadOnlySender = typename common::Pipeline<Communicator>::ReadOnlySender;
+using CommunicatorPipelineReadWriteSender = typename common::Pipeline<Communicator>::ReadWriteSender;
 
-template <CommunicatorType Coord>
+template <CommunicatorType CT>
 class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
@@ -39,7 +39,7 @@ public:
   using ReadOnlySender = typename PipelineType::ReadOnlySender;
   using ReadWriteSender = typename PipelineType::ReadWriteSender;
 
-  static constexpr CommunicatorType coord = Coord;
+  static constexpr CommunicatorType communicator_type = CT;
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).

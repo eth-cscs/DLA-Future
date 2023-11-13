@@ -12,9 +12,9 @@
 #include <type_traits>
 
 #include <dlaf/common/consume_rvalues.h>
-#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/sender/transform.h>
 #include <dlaf/sender/when_all_lift.h>
 

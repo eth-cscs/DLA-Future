@@ -923,9 +923,9 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& full_task_chain, const SizeType i_begin,
-                      const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                      Matrix<const T, D>& evecs, Matrix<T, D>& z) {
+void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& full_task_chain,
+                      const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                      RhoSender&& rho, Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
 
   const matrix::Distribution& dist = evecs.distribution();
@@ -1414,9 +1414,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 template <Backend B, class T, Device D, class RhoSender>
 void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& full_task_chain,
                           comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
-                          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain, const SizeType i_begin,
-                          const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                          WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+                          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                          const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                          RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                           DistWorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
 
@@ -1509,9 +1509,8 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
-  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(row_task_chain, col_task_chain,
-                                                            i_begin, i_end, T(1), ws.e1, ws.e2, T(0),
-                                                            ws.e0);
+  dlaf::multiplication::internal::generalSubMatrix<B, D, T>(row_task_chain, col_task_chain, i_begin,
+                                                            i_end, T(1), ws.e1, ws.e2, T(0), ws.e0);
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

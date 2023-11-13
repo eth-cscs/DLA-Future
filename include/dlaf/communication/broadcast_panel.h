@@ -17,10 +17,10 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/index2d.h>
-#include <dlaf/communication/kernels/broadcast.h>
-#include <dlaf/communication/index.h>
-#include <dlaf/communication/message.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
+#include <dlaf/communication/kernels/broadcast.h>
+#include <dlaf/communication/message.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
@@ -78,17 +78,16 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 
 namespace internal {
 template <Coord C>
-auto &get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row> &row_task_chain,
-                    comm::CommunicatorPipeline<comm::CommunicatorType::Col> &col_task_chain) {
-  if constexpr (C == Coord::Row)
-  {
-      return row_task_chain;
-  } else
-  {
-      return col_task_chain;
+auto& get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain) {
+  if constexpr (C == Coord::Row) {
+    return row_task_chain;
+  }
+  else {
+    return col_task_chain;
   }
 }
-} // namespace internal
+}  // namespace internal
 
 /// Broadcast
 ///

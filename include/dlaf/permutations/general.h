@@ -113,9 +113,10 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 /// Note: The CommunicatorPipeline API allows to use permute() within other algorithms without having to
 ///       clone communicators internally.
 template <Backend B, Device D, class T, Coord coord>
-void permute(comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,
-             SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-             Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
+void permute(
+    comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,
+    SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
+    Matrix<T, D>& mat_out) {
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
   DLAF_ASSERT(matrix::equal_process_grid(mat_in, sub_task_chain), mat_in, sub_task_chain);
   DLAF_ASSERT(matrix::equal_process_grid(mat_out, sub_task_chain), mat_out, sub_task_chain);
@@ -152,6 +153,7 @@ template <Backend B, Device D, class T, Coord coord>
 void permute(comm::CommunicatorGrid& grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
   auto sub_task_chain(grid.communicator_pipeline<orthogonal(coord)>());
-  permute<B, D, T, coord, decltype(sub_task_chain)::coord>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+  permute<B, D, T, coord, decltype(sub_task_chain)::coord>(sub_task_chain, i_begin, i_end, perms, mat_in,
+                                                           mat_out);
 }
 }

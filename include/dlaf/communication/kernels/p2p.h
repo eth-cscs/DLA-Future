@@ -19,8 +19,8 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/eti.h>
-#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/tile.h>
 
 namespace dlaf::comm {

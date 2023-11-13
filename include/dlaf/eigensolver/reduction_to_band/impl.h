@@ -30,9 +30,9 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/functions_sync.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
-#include <dlaf/communication/index.h>
 #include <dlaf/communication/rdma.h>
 #include <dlaf/eigensolver/internal/get_red2band_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_red2band_panel_nworkers.h>

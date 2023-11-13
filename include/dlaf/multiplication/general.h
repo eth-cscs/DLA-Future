@@ -125,8 +125,8 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 /// @pre `a <= b <= mat_a.nrTiles().rows()`
 template <Backend B, Device D, class T>
 void generalSubMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
-                      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain, const SizeType a,
-                      const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
+                      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                      const SizeType a, const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
   DLAF_ASSERT(equal_process_grid(mat_b, row_task_chain), mat_a, row_task_chain);
@@ -170,8 +170,7 @@ void generalSubMatrix(comm::CommunicatorGrid& grid, const SizeType a, const Size
                       Matrix<T, D>& mat_c) {
   auto row_task_chain = grid.row_communicator_pipeline();
   auto col_task_chain = grid.col_communicator_pipeline();
-  generalSubMatrix<B, D, T>(row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta,
-                            mat_c);
+  generalSubMatrix<B, D, T>(row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta, mat_c);
 }
 
 }

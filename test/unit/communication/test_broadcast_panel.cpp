@@ -11,8 +11,8 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>
-#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/panel.h>
 

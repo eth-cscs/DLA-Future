@@ -410,8 +410,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   // Each triad represents two subproblems to be merged
   SizeType nrtiles = dist_evecs.nrTiles().rows();
   for (auto [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {
-    mergeDistSubproblems<B>(full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,
-                            i_end, offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm);
+    mergeDistSubproblems<B>(full_task_chain, row_task_chain, col_task_chain, i_begin, i_split, i_end,
+                            offdiag_vals[to_sizet(i_split - 1)], ws, ws_h, ws_hm);
   }
 
   const SizeType n = evecs.nrTiles().rows();
@@ -422,8 +422,8 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
   copy(ws_hm.d1, evals);
 
   // Note: ws_hm.e2 is the mirror of ws.e2 which is evecs
-  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n,
-                                                                       ws_hm.i2, ws_hm.e0, ws_hm.e2);
+  dlaf::permutations::permute<Backend::MC, Device::CPU, T, Coord::Col>(row_task_chain, 0, n, ws_hm.i2,
+                                                                       ws_hm.e0, ws_hm.e2);
   copy(ws_hm.e2, evecs);
 }
 

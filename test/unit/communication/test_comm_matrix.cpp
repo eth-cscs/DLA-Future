@@ -11,8 +11,8 @@
 #include <mpi.h>
 
 #include <dlaf/communication/communicator.h>
-#include <dlaf/communication/kernels.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/kernels.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/sender/transform_mpi.h>
 

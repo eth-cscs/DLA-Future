@@ -10,8 +10,8 @@
 
 #include <pika/init.hpp>
 
-#include <dlaf/communication/kernels.h>
 #include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/matrix/matrix_mirror.h>
 
@@ -125,7 +125,8 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid& grid, SizeType n, SizeTyp
 
   // Clone communicator to make sure non-blocking broadcasts used below don't interleave with collective
   // communication inside the tridiagonal solver.
-  comm::CommunicatorPipeline<comm::CommunicatorType::Col> col_task_chain(grid.col_communicator_pipeline());
+  comm::CommunicatorPipeline<comm::CommunicatorType::Col> col_task_chain(
+      grid.col_communicator_pipeline());
   Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
   comm::Index2D this_rank = dist_evecs.rankIndex();
 

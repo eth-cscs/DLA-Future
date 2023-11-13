@@ -21,22 +21,18 @@
 
 namespace dlaf::comm {
 namespace internal {
-constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
-    dlaf::common::Ordering::RowMajor};
+constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{dlaf::common::Ordering::RowMajor};
 
 using CommunicatorPipeline = dlaf::common::Pipeline<Communicator>;
 }
 
-using CommunicatorPipelineReadOnlyWrapper =
-    typename internal::CommunicatorPipeline::ReadOnlyWrapper;
-using CommunicatorPipelineReadWriteWrapper =
-    typename internal::CommunicatorPipeline::ReadWriteWrapper;
-using CommunicatorPipelineReadOnlySender =
-    typename internal::CommunicatorPipeline::ReadOnlySender;
-using CommunicatorPipelineReadWriteSender =
-    typename internal::CommunicatorPipeline::ReadWriteSender;
+using CommunicatorPipelineReadOnlyWrapper = typename internal::CommunicatorPipeline::ReadOnlyWrapper;
+using CommunicatorPipelineReadWriteWrapper = typename internal::CommunicatorPipeline::ReadWriteWrapper;
+using CommunicatorPipelineReadOnlySender = typename internal::CommunicatorPipeline::ReadOnlySender;
+using CommunicatorPipelineReadWriteSender = typename internal::CommunicatorPipeline::ReadWriteSender;
 
-template <CommunicatorType Coord> class CommunicatorPipeline {
+template <CommunicatorType Coord>
+class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
 public:
@@ -49,37 +45,43 @@ public:
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).
-  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {0, 0},
-                                Size2D size = {0, 0})
-      : pipeline_(std::move(comm)), rank_(std::move(rank)),
-        size_(std::move(size)) {}
-  CommunicatorPipeline(CommunicatorPipeline &&other) = default;
-  CommunicatorPipeline &operator=(CommunicatorPipeline &&other) = default;
-  CommunicatorPipeline(const CommunicatorPipeline &) = delete;
-  CommunicatorPipeline &operator=(const CommunicatorPipeline &) = delete;
+  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {0, 0}, Size2D size = {0, 0})
+      : pipeline_(std::move(comm)), rank_(std::move(rank)), size_(std::move(size)) {}
+  CommunicatorPipeline(CommunicatorPipeline&& other) = default;
+  CommunicatorPipeline& operator=(CommunicatorPipeline&& other) = default;
+  CommunicatorPipeline(const CommunicatorPipeline&) = delete;
+  CommunicatorPipeline& operator=(const CommunicatorPipeline&) = delete;
 
   /// Return the rank of the current process in the CommunicatorPipeline.
   ///
   /// @return the 2D coordinate representing the position in the grid that this
   /// pipeline belongs to
-  IndexT_MPI rank() const noexcept { return rankFullCommunicator(rank_); }
+  IndexT_MPI rank() const noexcept {
+    return rankFullCommunicator(rank_);
+  }
 
   /// Return the size of the grid.
-  IndexT_MPI size() const noexcept { return size_.rows() * size_.cols(); }
+  IndexT_MPI size() const noexcept {
+    return size_.rows() * size_.cols();
+  }
 
   /// Return the rank of the current process in the CommunicatorPipeline.
   ///
   /// @return the 2D coordinate representing the position in the grid that this
   /// pipeline belongs to
-  Index2D rank_2d() const noexcept { return rank_; }
+  Index2D rank_2d() const noexcept {
+    return rank_;
+  }
 
   /// Return the size of the grid.
-  Size2D size_2d() const noexcept { return size_; }
+  Size2D size_2d() const noexcept {
+    return size_;
+  }
 
   /// Return rank in the grid with all ranks given the 2D index.
-  IndexT_MPI rankFullCommunicator(const Index2D &index) const noexcept {
-    return common::computeLinearIndex<IndexT_MPI>(
-        internal::FULL_COMMUNICATOR_ORDER, index, {size_.rows(), size_.cols()});
+  IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
+    return common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER, index,
+                                                  {size_.rows(), size_.cols()});
   }
 
   /// TODO: Update docs.
@@ -89,7 +91,9 @@ public:
   /// releases the resource.
   /// @pre valid()
   /// TODO: Rename?
-  ReadWriteSender readwrite() { return pipeline_.readwrite(); }
+  ReadWriteSender readwrite() {
+    return pipeline_.readwrite();
+  }
 
   [[deprecated("Use readwrite instead")]] ReadWriteSender operator()() {
     return pipeline_.readwrite();
@@ -101,7 +105,9 @@ public:
   /// releases the resource.
   /// @pre valid()
   /// TODO: Rename?
-  ReadOnlySender read() { return pipeline_.read(); }
+  ReadOnlySender read() {
+    return pipeline_.read();
+  }
 
   /// Create a sub pipeline to the value contained in the current
   /// CommunicatorPipeline
@@ -116,26 +122,28 @@ public:
   /// Check if the pipeline is valid.
   ///
   /// @return true if the pipeline hasn't been reset, otherwise false.
-  bool valid() const noexcept { return pipeline_.valid(); }
+  bool valid() const noexcept {
+    return pipeline_.valid();
+  }
 
   /// Reset the pipeline.
   ///
   /// @post !valid()
-  void reset() noexcept { pipeline_.reset(); }
+  void reset() noexcept {
+    pipeline_.reset();
+  }
 
   /// Prints information about the CommunicationPipeline.
-  friend std::ostream &operator<<(std::ostream &out,
-                                  const CommunicatorPipeline &pipeline) {
+  friend std::ostream& operator<<(std::ostream& out, const CommunicatorPipeline& pipeline) {
     return out << "rank=" << pipeline.rank_ << ", size=" << pipeline.size_;
   }
 
 private:
-  CommunicatorPipeline(PipelineType &&pipeline, Index2D rank, Size2D size)
-      : pipeline_(std::move(pipeline)), rank_(std::move(rank)),
-        size_(std::move(size)) {}
+  CommunicatorPipeline(PipelineType&& pipeline, Index2D rank, Size2D size)
+      : pipeline_(std::move(pipeline)), rank_(std::move(rank)), size_(std::move(size)) {}
 
   PipelineType pipeline_;
   Index2D rank_{0, 0};
   Size2D size_{0, 0};
 };
-} // namespace dlaf::comm
+}  // namespace dlaf::comm

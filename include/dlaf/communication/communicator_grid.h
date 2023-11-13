@@ -40,59 +40,64 @@ class CommunicatorGrid {
 public:
   /// Create a communicator grid @p rows x @p cols with given @p ordering.
   /// @param comm must be valid during construction.
-  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols,
-                   common::Ordering ordering,
-                   std::size_t npipelines =
-                       getTuneParameters().communicator_grid_num_pipelines);
+  CommunicatorGrid(Communicator comm, IndexT_MPI rows, IndexT_MPI cols, common::Ordering ordering,
+                   std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines);
 
   /// Create a communicator grid with dimensions specified by @p size and given
   /// @p ordering.
   /// @param size with @p size[0] rows and @p size[1] columns,
   /// @param comm must be valid during construction.
-  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2> &size,
-                   common::Ordering ordering,
-                   std::size_t npipelines =
-                       getTuneParameters().communicator_grid_num_pipelines)
+  CommunicatorGrid(Communicator comm, const std::array<IndexT_MPI, 2>& size, common::Ordering ordering,
+                   std::size_t npipelines = getTuneParameters().communicator_grid_num_pipelines)
       : CommunicatorGrid(comm, size[0], size[1], ordering, npipelines) {}
 
-  CommunicatorGrid(CommunicatorGrid &&) = default;
-  CommunicatorGrid &operator=(CommunicatorGrid &&) = default;
+  CommunicatorGrid(CommunicatorGrid&&) = default;
+  CommunicatorGrid& operator=(CommunicatorGrid&&) = default;
 
   /// Return rank in the grid with all ranks given the 2D index.
-  IndexT_MPI rankFullCommunicator(const Index2D &index) const noexcept {
-    return common::computeLinearIndex<IndexT_MPI>(
-        internal::FULL_COMMUNICATOR_ORDER, index,
-        {grid_size_.rows(), grid_size_.cols()});
+  IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
+    return common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER, index,
+                                                  {grid_size_.rows(), grid_size_.cols()});
   }
 
   std::size_t num_pipelines() const noexcept {
-    DLAF_ASSERT(full_pipelines_.size() == row_pipelines_.size(),
-                full_pipelines_.size(), row_pipelines_.size());
-    DLAF_ASSERT(full_pipelines_.size() == col_pipelines_.size(),
-                full_pipelines_.size(), col_pipelines_.size());
+    DLAF_ASSERT(full_pipelines_.size() == row_pipelines_.size(), full_pipelines_.size(),
+                row_pipelines_.size());
+    DLAF_ASSERT(full_pipelines_.size() == col_pipelines_.size(), full_pipelines_.size(),
+                col_pipelines_.size());
     return full_pipelines_.size();
   }
 
   /// Return the rank of the current process in the CommunicatorGrid.
   ///
   /// @return the 2D coordinate representing the position in the grid
-  Index2D rank() const noexcept { return position_; }
+  Index2D rank() const noexcept {
+    return position_;
+  }
 
   /// Return the number of rows in the grid.
-  Size2D size() const noexcept { return grid_size_; }
+  Size2D size() const noexcept {
+    return grid_size_;
+  }
 
   /// Return a Communicator grouping all ranks in the grid.
-  Communicator &fullCommunicator() noexcept { return full_; }
+  Communicator& fullCommunicator() noexcept {
+    return full_;
+  }
 
   /// Return a Communicator grouping all ranks in the row (that includes the
   /// current process).
-  Communicator &rowCommunicator() noexcept { return row_; }
+  Communicator& rowCommunicator() noexcept {
+    return row_;
+  }
 
   /// Return a Communicator grouping all ranks in the column (that includes the
   /// current process).
-  Communicator &colCommunicator() noexcept { return col_; }
+  Communicator& colCommunicator() noexcept {
+    return col_;
+  }
 
-  Communicator &subCommunicator(Coord cr) noexcept {
+  Communicator& subCommunicator(Coord cr) noexcept {
     if (cr == Coord::Row)
       return row_;
     else
@@ -116,7 +121,8 @@ public:
     return col_pipelines_.nextResource().sub_pipeline();
   }
 
-  template <Coord C> auto communicator_pipeline() {
+  template <Coord C>
+  auto communicator_pipeline() {
     if constexpr (C == Coord::Row)
       return row_communicator_pipeline();
     else
@@ -124,8 +130,7 @@ public:
   }
 
   /// Prints information about the CommunicationGrid.
-  friend std::ostream &operator<<(std::ostream &out,
-                                  const CommunicatorGrid &grid) {
+  friend std::ostream& operator<<(std::ostream& out, const CommunicatorGrid& grid) {
     return out << "position=" << grid.position_ << ", size=" << grid.grid_size_;
   }
 
@@ -145,5 +150,5 @@ protected:
   Size2D grid_size_ = Size2D(0, 0);
 };
 
-} // namespace comm
-} // namespace dlaf
+}  // namespace comm
+}  // namespace dlaf

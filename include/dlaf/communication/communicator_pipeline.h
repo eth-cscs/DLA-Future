@@ -16,23 +16,13 @@
 #include <dlaf/common/pipeline.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/index.h>
 
 namespace dlaf::comm {
 namespace internal {
-static constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
+constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{
     dlaf::common::Ordering::RowMajor};
-}
 
-// TODO: Move this to separate header?
-/// TAG for strong-typing basic_coords.
-struct TAG_MPI;
-
-/// 2D index strong-typed for MPI.
-using Index2D = common::Index2D<IndexT_MPI, TAG_MPI>;
-/// 2D size strong-typed for MPI.
-using Size2D = common::Size2D<IndexT_MPI, TAG_MPI>;
-
-namespace internal {
 using CommunicatorPipeline = dlaf::common::Pipeline<Communicator>;
 }
 

@@ -6,13 +6,13 @@
 
 ### Get DLA-Future
 
-If you have `git` you can clone this repository with the command
+You can download the [releases](https://github.com/eth-cscs/DLA-Future/releases).
+
+Otherwise, if you have `git` you can clone this repository with the command
 
 ```
 git clone https://github.com/eth-cscs/DLA-Future.git
-```
-
-Otherwise you can download the [releases](https://github.com/eth-cscs/DLA-Future/releases).
+``` 
 
 ### Dependencies
 

@@ -119,6 +119,9 @@ std::vector<GemmConfig> gemm_configs = {
 
     // full
     {blas::Op::NoTrans, blas::Op::NoTrans, 3, 3, 3, 3, 3, 3},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 10, 9, 13},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 3, 2, 4, 1, 1, 1},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 6, 9, 8, 2, 3, 4},
     {blas::Op::NoTrans, blas::Op::NoTrans, 21, 21, 21, 3, 4, 5},
     {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5},
     {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 3, 3, 5},

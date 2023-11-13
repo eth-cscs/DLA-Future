@@ -38,6 +38,10 @@ constexpr auto coord2str(const Coord rc) {
   return rc == Coord::Row ? "ROW" : "COL";
 }
 
+constexpr CommunicatorType coord_to_communicator_type(const Coord rc) {
+  return rc == Coord::Row ? CommunicatorType::Row : CommunicatorType::Col;
+}
+
 namespace common {
 
 /// A RowMajor ordering means that the row is the first direction to look for the next value.

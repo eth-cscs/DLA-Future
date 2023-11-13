@@ -54,11 +54,10 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 ///                     on other ranks it is the destination panel
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
-template <class T, Device D, Coord axis, CommunicatorType C2, matrix::StoreTransposed storage,
+template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
-               comm::CommunicatorPipeline<C2>& serial_comm) {
-  // TODO: Constrain axis vs C2?
+               comm::CommunicatorPipeline<coord_to_communicator_type(orthogonal(axis))>& serial_comm) {
   constexpr auto comm_coord = axis;
 
   // do not schedule communication tasks if there is no reason to do so...

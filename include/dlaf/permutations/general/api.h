@@ -18,7 +18,7 @@
 
 namespace dlaf::permutations::internal {
 
-template <Backend B, Device D, class T, Coord coord, TODOCoord c2>
+template <Backend B, Device D, class T, Coord coord, CommunicatorType c2>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out);
@@ -29,8 +29,8 @@ struct Permutations {
 
 // ETI
 #define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \
-  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col, TODOCoord::Row>; \
-  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row, TODOCoord::Col>;
+  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Col, CommunicatorType::Row>; \
+  KWORD template struct Permutations<BACKEND, DEVICE, DATATYPE, Coord::Row, CommunicatorType::Col>;
 
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)
 DLAF_PERMUTATIONS_GENERAL_ETI(extern, Backend::MC, Device::CPU, double)

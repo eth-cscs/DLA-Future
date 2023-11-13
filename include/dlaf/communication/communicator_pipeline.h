@@ -45,7 +45,7 @@ using CommunicatorPipelineReadOnlySender =
 using CommunicatorPipelineReadWriteSender =
     typename internal::CommunicatorPipeline::ReadWriteSender;
 
-template <TODOCoord Coord> class CommunicatorPipeline {
+template <CommunicatorType Coord> class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
 public:
@@ -54,7 +54,7 @@ public:
   using ReadOnlySender = typename PipelineType::ReadOnlySender;
   using ReadWriteSender = typename PipelineType::ReadWriteSender;
 
-  static constexpr TODOCoord coord = Coord;
+  static constexpr CommunicatorType coord = Coord;
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).

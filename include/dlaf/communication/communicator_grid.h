@@ -100,19 +100,19 @@ public:
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the grid.
-  CommunicatorPipeline<TODOCoord::Full> full_communicator_pipeline() {
+  CommunicatorPipeline<CommunicatorType::Full> full_communicator_pipeline() {
     return full_pipelines_.nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the row (that
   /// includes the current process).
-  CommunicatorPipeline<TODOCoord::Row> row_communicator_pipeline() {
+  CommunicatorPipeline<CommunicatorType::Row> row_communicator_pipeline() {
     return row_pipelines_.nextResource().sub_pipeline();
   }
 
   /// Return a pipeline to a Communicator grouping all ranks in the col (that
   /// includes the current process).
-  CommunicatorPipeline<TODOCoord::Col> col_communicator_pipeline() {
+  CommunicatorPipeline<CommunicatorType::Col> col_communicator_pipeline() {
     return col_pipelines_.nextResource().sub_pipeline();
   }
 
@@ -134,12 +134,12 @@ protected:
   Communicator row_;
   Communicator col_;
 
-  template <TODOCoord C>
+  template <CommunicatorType C>
   using RoundRobinPipeline = dlaf::common::RoundRobin<CommunicatorPipeline<C>>;
 
-  RoundRobinPipeline<TODOCoord::Full> full_pipelines_;
-  RoundRobinPipeline<TODOCoord::Row> row_pipelines_;
-  RoundRobinPipeline<TODOCoord::Col> col_pipelines_;
+  RoundRobinPipeline<CommunicatorType::Full> full_pipelines_;
+  RoundRobinPipeline<CommunicatorType::Row> row_pipelines_;
+  RoundRobinPipeline<CommunicatorType::Col> col_pipelines_;
 
   Index2D position_;
   Size2D grid_size_ = Size2D(0, 0);

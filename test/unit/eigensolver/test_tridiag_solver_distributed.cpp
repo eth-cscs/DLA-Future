@@ -125,7 +125,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid& grid, SizeType n, SizeTyp
 
   // Clone communicator to make sure non-blocking broadcasts used below don't interleave with collective
   // communication inside the tridiagonal solver.
-  comm::CommunicatorPipeline<TODOCoord::Col> col_task_chain(grid.col_communicator_pipeline());
+  comm::CommunicatorPipeline<CommunicatorType::Col> col_task_chain(grid.col_communicator_pipeline());
   Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
   comm::Index2D this_rank = dist_evecs.rankIndex();
 

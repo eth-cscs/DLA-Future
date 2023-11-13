@@ -672,8 +672,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   const matrix::SubMatrixView& view, matrix::Matrix<const T, D>& a,
                   matrix::Panel<Coord::Col, const T, D>& w,
                   matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& wt,
-                  comm::CommunicatorPipeline<TODOCoord::Row>& mpi_row_chain,
-                  comm::CommunicatorPipeline<TODOCoord::Col>& mpi_col_chain) {
+                  comm::CommunicatorPipeline<CommunicatorType::Row>& mpi_row_chain,
+                  comm::CommunicatorPipeline<CommunicatorType::Col>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;

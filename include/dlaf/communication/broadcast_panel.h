@@ -54,7 +54,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 ///                     on other ranks it is the destination panel
 /// @param serial_comm  where to pipeline the tasks for communications.
 /// @pre Communicator in @p serial_comm must be orthogonal to panel axis
-template <class T, Device D, Coord axis, TODOCoord C2, matrix::StoreTransposed storage,
+template <class T, Device D, Coord axis, CommunicatorType C2, matrix::StoreTransposed storage,
           class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                comm::CommunicatorPipeline<C2>& serial_comm) {
@@ -79,8 +79,8 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 // TODO: Move somewhere else?
 namespace internal {
 template <Coord C>
-auto &get_taskchain(comm::CommunicatorPipeline<TODOCoord::Row> &row_task_chain,
-                    comm::CommunicatorPipeline<TODOCoord::Col> &col_task_chain) {
+auto &get_taskchain(comm::CommunicatorPipeline<CommunicatorType::Row> &row_task_chain,
+                    comm::CommunicatorPipeline<CommunicatorType::Col> &col_task_chain) {
   if constexpr (C == Coord::Row)
   {
       return row_task_chain;
@@ -124,8 +124,8 @@ template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
-               comm::CommunicatorPipeline<TODOCoord::Row>& row_task_chain,
-               comm::CommunicatorPipeline<TODOCoord::Col>& col_task_chain) {
+               comm::CommunicatorPipeline<CommunicatorType::Row>& row_task_chain,
+               comm::CommunicatorPipeline<CommunicatorType::Col>& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
 
   constexpr Coord coord = std::decay_t<decltype(panel)>::coord;

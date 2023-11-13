@@ -118,7 +118,7 @@ void applyPermutationOnCPU(
   }
 }
 
-template <Backend B, Device D, class T, Coord C, TODOCoord C2>
+template <Backend B, Device D, class T, Coord C, CommunicatorType C2>
 void Permutations<B, D, T, C, C2>::call(const SizeType i_begin, const SizeType i_end,
                                     Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
                                     Matrix<T, D>& mat_out) {
@@ -220,7 +220,7 @@ auto whenAllReadOnlyTilesArray(Matrix<const T, D>& matrix) {
       matrix, common::iterate_range2d(LocalTileIndex(0, 0), matrix.distribution().localNrTiles())));
 }
 
-template <class T, Device D, Coord C, TODOCoord C2, class SendCountsSender, class RecvCountsSender>
+template <class T, Device D, Coord C, CommunicatorType C2, class SendCountsSender, class RecvCountsSender>
 void all2allData(comm::CommunicatorPipeline<C2>& sub_task_chain, int nranks,
                  LocalElementSize sz_loc, SendCountsSender&& send_counts_sender,
                  Matrix<const T, D>& send_mat, RecvCountsSender&& recv_counts_sender,
@@ -554,7 +554,7 @@ void unpackOthersOnCPU(const matrix::Distribution& subm_dist, const matrix::Dist
                      ex::bulk(subm_dist.size().get<C>(), std::move(permutations_unpack_f)));
 }
 
-template <class T, Coord C, TODOCoord C2>
+template <class T, Coord C, CommunicatorType C2>
 void permuteOnCPU(comm::CommunicatorPipeline<C2>& sub_task_chain, SizeType i_begin, SizeType i_end,
                   Matrix<const SizeType, Device::CPU>& perms, Matrix<const T, Device::CPU>& mat_in,
                   Matrix<T, Device::CPU>& mat_out) {
@@ -651,7 +651,7 @@ void permuteOnCPU(comm::CommunicatorPipeline<C2>& sub_task_chain, SizeType i_beg
                           whenAllReadWriteTilesArray(i_loc_begin, i_loc_end, mat_out));
 }
 
-template <Backend B, Device D, class T, Coord C, TODOCoord C2>
+template <Backend B, Device D, class T, Coord C, CommunicatorType C2>
 void Permutations<B, D, T, C, C2>::call(comm::CommunicatorPipeline<C2>& sub_task_chain,
                                     SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                                     Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {

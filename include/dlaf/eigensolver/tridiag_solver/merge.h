@@ -923,7 +923,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleDistZVec(comm::CommunicatorPipeline<TODOCoord::Full>& full_task_chain, const SizeType i_begin,
+void assembleDistZVec(comm::CommunicatorPipeline<CommunicatorType::Full>& full_task_chain, const SizeType i_begin,
                       const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                       Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
@@ -1002,7 +1002,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   }();
 
   auto bcast_evals = [i_begin, i_end,
-                      dist](comm::CommunicatorPipeline<TODOCoord::Row>& row_comm_chain,
+                      dist](comm::CommunicatorPipeline<CommunicatorType::Row>& row_comm_chain,
                             const std::vector<matrix::Tile<T, Device::CPU>>& eval_tiles) {
     using dlaf::comm::internal::sendBcast_o;
     using dlaf::comm::internal::recvBcast_o;
@@ -1063,7 +1063,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                              auto& ws_row) {
         using dlaf::comm::internal::transformMPI;
 
-        comm::CommunicatorPipeline<TODOCoord::Row> row_comm_chain(row_comm_wrapper.get());
+        comm::CommunicatorPipeline<CommunicatorType::Row> row_comm_chain(row_comm_wrapper.get());
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
@@ -1412,9 +1412,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
 // Distributed version of the tridiagonal solver on CPUs
 template <Backend B, class T, Device D, class RhoSender>
-void mergeDistSubproblems(comm::CommunicatorPipeline<TODOCoord::Full>& full_task_chain,
-                          comm::CommunicatorPipeline<TODOCoord::Row>& row_task_chain,
-                          comm::CommunicatorPipeline<TODOCoord::Col>& col_task_chain, const SizeType i_begin,
+void mergeDistSubproblems(comm::CommunicatorPipeline<CommunicatorType::Full>& full_task_chain,
+                          comm::CommunicatorPipeline<CommunicatorType::Row>& row_task_chain,
+                          comm::CommunicatorPipeline<CommunicatorType::Col>& col_task_chain, const SizeType i_begin,
                           const SizeType i_split, const SizeType i_end, RhoSender&& rho,
                           WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                           DistWorkSpaceHostMirror<T, D>& ws_hm) {

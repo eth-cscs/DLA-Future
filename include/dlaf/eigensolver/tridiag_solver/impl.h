@@ -283,7 +283,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
 // @p evecs is a distributed matrix of size (n x n)
 //
 template <class T>
-void solveDistLeaf(comm::CommunicatorPipeline<TODOCoord::Full>& full_task_chain,
+void solveDistLeaf(comm::CommunicatorPipeline<CommunicatorType::Full>& full_task_chain,
                    Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
@@ -308,7 +308,7 @@ void solveDistLeaf(comm::CommunicatorPipeline<TODOCoord::Full>& full_task_chain,
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-void solveDistLeaf(comm::CommunicatorPipeline<TODOCoord::Full>& full_task_chain,
+void solveDistLeaf(comm::CommunicatorPipeline<CommunicatorType::Full>& full_task_chain,
                    Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
                    Matrix<T, Device::CPU>& h_evecs) {
   const matrix::Distribution& dist = evecs.distribution();

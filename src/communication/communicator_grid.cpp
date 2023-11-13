@@ -52,19 +52,19 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows,
 
   using dlaf::internal::WithResultOf;
 
-  full_pipelines_ = RoundRobinPipeline<TODOCoord::Full>(
+  full_pipelines_ = RoundRobinPipeline<CommunicatorType::Full>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline<TODOCoord::Full>{full_.clone(), position_,
+        return CommunicatorPipeline<CommunicatorType::Full>{full_.clone(), position_,
                                                      grid_size_};
       }));
-  row_pipelines_ = RoundRobinPipeline<TODOCoord::Row>(
+  row_pipelines_ = RoundRobinPipeline<CommunicatorType::Row>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline<TODOCoord::Row>{row_.clone(), position_,
+        return CommunicatorPipeline<CommunicatorType::Row>{row_.clone(), position_,
                                                     grid_size_};
       }));
-  col_pipelines_ = RoundRobinPipeline<TODOCoord::Col>(
+  col_pipelines_ = RoundRobinPipeline<CommunicatorType::Col>(
       npipelines, WithResultOf([&]() {
-        return CommunicatorPipeline<TODOCoord::Col>{col_.clone(), position_,
+        return CommunicatorPipeline<CommunicatorType::Col>{col_.clone(), position_,
                                                     grid_size_};
       }));
 }

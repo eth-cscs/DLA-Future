@@ -75,12 +75,12 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
   DLAF_ASSERT(i_begin >= 0 && i_begin <= i_end, i_begin, i_end);
   DLAF_ASSERT(i_end <= perms.nrTiles().rows(), i_end, perms);
 
-  // TODO: Move the TODOCoord orthogonalization into the Permutations struct
+  // TODO: Move the CommunicatorType orthogonalization into the Permutations struct
   if constexpr (coord == Coord::Row) {
-    internal::Permutations<B, D, T, coord, TODOCoord::Col>::call(
+    internal::Permutations<B, D, T, coord, CommunicatorType::Col>::call(
         i_begin, i_end, perms, mat_in, mat_out);
   } else {
-    internal::Permutations<B, D, T, coord, TODOCoord::Row>::call(
+    internal::Permutations<B, D, T, coord, CommunicatorType::Row>::call(
         i_begin, i_end, perms, mat_in, mat_out);
   }
 }
@@ -119,7 +119,7 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 ///
 /// Note: The CommunicatorPipeline API allows to use permute() within other algorithms without having to
 ///       clone communicators internally.
-template <Backend B, Device D, class T, Coord coord, TODOCoord coord2>
+template <Backend B, Device D, class T, Coord coord, CommunicatorType coord2>
 void permute(comm::CommunicatorPipeline<coord2>& sub_task_chain,
              SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
              Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {

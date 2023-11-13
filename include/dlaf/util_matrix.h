@@ -80,7 +80,7 @@ bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGri
 }
 
 /// Returns true if the matrix is distributed on the communication grid.
-template <class T, Device D, TODOCoord C>
+template <class T, Device D, CommunicatorType C>
 bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorPipeline<C>& p) noexcept {
   return m.commGridSize() == p.size() && m.rankIndex() == p.rank();
 }

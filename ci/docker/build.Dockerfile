@@ -23,9 +23,6 @@ RUN apt-get -yqq update && \
     patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Install cmake
-RUN wget -qO- "https://cmake.org/files/v3.22/cmake-3.22.1-linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
-
 # Install libtree for packaging
 RUN mkdir -p /opt/libtree && \
     curl -Lfso /opt/libtree/libtree https://github.com/haampie/libtree/releases/download/v2.0.0/libtree_x86_64 && \
@@ -57,13 +54,12 @@ RUN mkdir -p /opt/spack && \
 ARG COMPILER
 RUN spack compiler find && \
     gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
-    spack config add "packages:all:compiler:[${COMPILER}]"
+    spack config add "packages:all:require:[\"%${COMPILER}\"]"
 
 RUN spack external find \
     autoconf \
     automake \
     bzip2 \
-    cmake \
     cuda \
     diffutils \
     findutils \
@@ -104,3 +100,6 @@ RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
 # 4. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
+
+# make ctest executable available.
+RUN ln -s `spack -e ci location -i cmake`/bin/ctest /usr/bin/ctest

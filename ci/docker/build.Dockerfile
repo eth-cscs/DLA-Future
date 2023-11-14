@@ -89,15 +89,12 @@ ARG COMMON_SPACK_ENVIRONMENT
 # Build dependencies
 # 1. Create a spack environment named `ci` from the input spack.yaml file
 COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
+COPY $COMMON_SPACK_ENVIRONMENT /spack_environment/
 RUN spack env create --without-view ci /spack_environment/spack.yaml
-# 2. Copy the common environment configuration into the environment directory
-# Note that the destination path is hardcoded because we cannot dynamically get
-# the destination path. This will fail if the environment path ever changes.
-COPY $COMMON_SPACK_ENVIRONMENT /opt/spack/var/spack/environments/ci
-# 3. Set the C++ standard
+# 2. Set the C++ standard
 ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
-# 4. Install only the dependencies of this (top level is our package)
+# 3. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
 

@@ -29,6 +29,12 @@ using CommunicatorPipelineReadWriteWrapper = typename common::Pipeline<Communica
 using CommunicatorPipelineReadOnlySender = typename common::Pipeline<Communicator>::ReadOnlySender;
 using CommunicatorPipelineReadWriteSender = typename common::Pipeline<Communicator>::ReadWriteSender;
 
+/// A CommunicatorPipeline provides pipelined access to a communicator, as well as metadata about the
+/// communicator.
+///
+/// A CommunicatorPipeline uses a Pipeline to provide shared or exclusive access through senders to the
+/// underlying communicator.  @tparam CT signals whether the contained communicator is a row, column, or
+/// full grid communicator.
 template <CommunicatorType CT>
 class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;

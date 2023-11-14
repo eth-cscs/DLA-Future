@@ -34,7 +34,7 @@ stages:
     reports:
       dotenv: build.env
   variables:
-    SPACK_SHA: 4429e17db053fcf7ec591ce3abe8ffc7733c0a25
+    SPACK_SHA: v0.21.0
     SPACK_DLAF_REPO: ./spack
     DOCKER_BUILD_ARGS: '[
         "BASE_IMAGE",

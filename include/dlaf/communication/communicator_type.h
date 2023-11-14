@@ -20,4 +20,4 @@ enum class CommunicatorType { Row, Col, Full };
 constexpr CommunicatorType coord_to_communicator_type(const Coord rc) {
   return rc == Coord::Row ? CommunicatorType::Row : CommunicatorType::Col;
 }
-} // namespace dlaf::comm
+}  // namespace dlaf::comm

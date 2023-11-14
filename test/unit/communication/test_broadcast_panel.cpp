@@ -76,7 +76,7 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
 
   // test it!
   constexpr Coord comm_dir = orthogonal(panel_axis);
-  comm::CommunicatorPipeline mpi_task_chain(comm_grid.subCommunicator(comm_dir));
+  auto mpi_task_chain(comm_grid.communicator_pipeline<comm_dir>());
 
   broadcast(root, panel, mpi_task_chain);
 
@@ -134,8 +134,8 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_gr
   }
 
   // test it!
-  comm::CommunicatorPipeline row_task_chain(comm_grid.rowCommunicator());
-  comm::CommunicatorPipeline col_task_chain(comm_grid.colCommunicator());
+  auto row_task_chain(comm_grid.row_communicator_pipeline());
+  auto col_task_chain(comm_grid.col_communicator_pipeline());
 
   // select a "random" source rank which will be the source for the data
   const comm::IndexT_MPI owner = comm_grid.size().get(AxisSrc) / 2;

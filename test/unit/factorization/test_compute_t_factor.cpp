@@ -364,7 +364,7 @@ void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const Si
 
   is_orthogonal(h_expected);
 
-  comm::CommunicatorPipeline serial_comm(grid.colCommunicator());
+  auto serial_comm(grid.col_communicator_pipeline());
 
   Matrix<T, Device::CPU> t_output_h({k, k}, {k, k});
   const LocalTileIndex t_idx(0, 0);

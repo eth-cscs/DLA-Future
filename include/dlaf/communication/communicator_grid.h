@@ -25,18 +25,14 @@ namespace comm {
 
 /// Create a communicator with a 2D Grid structure.
 ///
-/// Given a communicator, it creates communicators for rows and columns,
-/// completely independent from the original one. These new communicators
-/// lifetimes management is up to the CommunicatorGrid.
+/// Given a communicator, it creates communicators for rows and columns, completely independent from the
+/// original one. These new communicators lifetimes management is up to the CommunicatorGrid.
 ///
-/// If the grid size does not cover the entire set of ranks available in the
-/// original Communicator, there will be ranks that will be not part of the row
-/// and column communicators. On the opposite, if a grid size bigger that
-/// overfit the available number of ranks is specified, it will raise an
-/// exception.
+/// If the grid size does not cover the entire set of ranks available in the original Communicator, there
+/// will be ranks that will be not part of the row and column communicators. On the opposite, if a grid
+/// size bigger that overfit the available number of ranks is specified, it will raise an exception.
 ///
-/// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it
-/// releasing resources.
+/// CommunicatorGrid must be destroyed before calling MPI_Finalize, to allow it releasing resources.
 class CommunicatorGrid {
 public:
   /// Create a communicator grid @p rows x @p cols with given @p ordering.

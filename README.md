@@ -1,27 +1,31 @@
 [![pipeline status](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/badges/master/pipeline.svg)](https://gitlab.com/cscs-ci/ci-testing/webhook-ci/mirrors/4700071344751697/7514005670787789/-/commits/master) [![codecov](https://codecov.io/gh/eth-cscs/DLA-Future/branch/master/graph/badge.svg)](https://codecov.io/gh/eth-cscs/DLA-Future)
 
-# Distributed Linear Algebra with Futures.
+# Distributed Linear Algebra from the Future
 
 ## Getting started with DLAF
 
 ### Get DLA-Future
 
-If you have `git` you can clone this repository with the command
+You can download the [releases](https://github.com/eth-cscs/DLA-Future/releases).
+
+Otherwise, if you have `git` you can clone this repository with the command
 
 ```
 git clone https://github.com/eth-cscs/DLA-Future.git
 ```
 
-Otherwise you can download the archive of the latest `master` branch as a [zip](https://github.com/eth-cscs/DLA-Future/archive/master.zip) or [tar.gz](https://github.com/eth-cscs/DLA-Future/archive/master.tar.gz) archive.
-
 ### Dependencies
 
 - MPI
 - [pika](https://github.com/pika-org/pika)
+- [umpire](https://github.com/LLNL/Umpire)
 - [blaspp](https://bitbucket.org/icl/blaspp/src/default/)
 - [lapackpp](https://bitbucket.org/icl/lapackpp/src/default/)
 - Intel MKL or other LAPACK implementation
-- [cuBLAS](https://developer.nvidia.com/cublas) (optional)
+- A ScaLAPACK implementation (optional, ScaLAPACK-like C API only)
+- [whip](https://github.com/eth-cscs/whip) (optional, GPU only)
+- [cuda](https://developer.nvidia.com/cuda) (optional, NVidia GPUs only)
+- [HIP/ROCm](https://github.com/RadeonOpenCompute/ROCm) (optional, AMD GPUs only)
 - [GoogleTest](https://github.com/google/googletest) (optional; bundled) - unit testing
 - Doxygen (optional) - documentation
 
@@ -103,6 +107,7 @@ target_link_libraries(<your_target> PRIVATE DLAF::DLAF)
 - [Documentation of `v0.1.0`](https://eth-cscs.github.io/DLA-Future/v0.1.0/)
 - [Documentation of `v0.2.0`](https://eth-cscs.github.io/DLA-Future/v0.2.0/)
 - [Documentation of `v0.2.1`](https://eth-cscs.github.io/DLA-Future/v0.2.1/)
+- [Documentation of `v0.3.0`](https://eth-cscs.github.io/DLA-Future/v0.3.0/)
 - [Documentation of `master` branch](https://eth-cscs.github.io/DLA-Future/master/)
 
 #### How to generate the documentation

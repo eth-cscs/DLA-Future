@@ -103,38 +103,59 @@ Public Member Functions</h2></td></tr>
 const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">GlobalElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#adc5a25970dab7cdea07e2f98328df805">size</a> () const noexcept</td></tr>
 <tr class="memdesc:adc5a25970dab7cdea07e2f98328df805"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the global size in elements of the matrix. <br /></td></tr>
 <tr class="separator:adc5a25970dab7cdea07e2f98328df805"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5723388fbdc55785e44b341e9169891f"><td class="memItemLeft" align="right" valign="top"><a id="a5723388fbdc55785e44b341e9169891f"></a>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5723388fbdc55785e44b341e9169891f">block_size</a> () const noexcept</td></tr>
+<tr class="memdesc:a5723388fbdc55785e44b341e9169891f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the complete block size of the matrix. <br /></td></tr>
+<tr class="separator:a5723388fbdc55785e44b341e9169891f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4ce0b98f0a7f446dba1f21e0081a12b"><td class="memItemLeft" align="right" valign="top"><a id="ab4ce0b98f0a7f446dba1f21e0081a12b"></a>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#ab4ce0b98f0a7f446dba1f21e0081a12b">tile_size</a> () const noexcept</td></tr>
+<tr class="memdesc:ab4ce0b98f0a7f446dba1f21e0081a12b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the complete tile size of the matrix. <br /></td></tr>
+<tr class="separator:ab4ce0b98f0a7f446dba1f21e0081a12b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa16edb06a43adfa50ee162806a7dfe2b"><td class="memItemLeft" align="right" valign="top"><a id="aa16edb06a43adfa50ee162806a7dfe2b"></a>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">GlobalTileSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aa16edb06a43adfa50ee162806a7dfe2b">nr_tiles</a> () const noexcept</td></tr>
+<tr class="memdesc:aa16edb06a43adfa50ee162806a7dfe2b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of tiles of the global matrix (2D size). <br /></td></tr>
+<tr class="separator:aa16edb06a43adfa50ee162806a7dfe2b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a787ae5e1ead7dff823ce6ddd84215c1c"><td class="memItemLeft" align="right" valign="top"><a id="a787ae5e1ead7dff823ce6ddd84215c1c"></a>
+const <a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a787ae5e1ead7dff823ce6ddd84215c1c">rank_index</a> () const noexcept</td></tr>
+<tr class="memdesc:a787ae5e1ead7dff823ce6ddd84215c1c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the id associated to the matrix of this rank. <br /></td></tr>
+<tr class="separator:a787ae5e1ead7dff823ce6ddd84215c1c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acaff1bec10adabf77e6a0a9ad22a4f46"><td class="memItemLeft" align="right" valign="top"><a id="acaff1bec10adabf77e6a0a9ad22a4f46"></a>
+const <a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">comm::Size2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#acaff1bec10adabf77e6a0a9ad22a4f46">grid_size</a> () const noexcept</td></tr>
+<tr class="memdesc:acaff1bec10adabf77e6a0a9ad22a4f46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the communicator grid associated to the matrix. <br /></td></tr>
+<tr class="separator:acaff1bec10adabf77e6a0a9ad22a4f46"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac44e30d0c8f80c5b5176fac4e9c7bee7"><td class="memItemLeft" align="right" valign="top"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#ac44e30d0c8f80c5b5176fac4e9c7bee7">rank_global_tile</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;global_tile) const noexcept</td></tr>
+<tr class="separator:ac44e30d0c8f80c5b5176fac4e9c7bee7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6589a93848ed8376a94203ddac1d5fcb"><td class="memItemLeft" align="right" valign="top"><a id="a6589a93848ed8376a94203ddac1d5fcb"></a>
+<a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a6589a93848ed8376a94203ddac1d5fcb">tile_size_of</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index) const noexcept</td></tr>
+<tr class="memdesc:a6589a93848ed8376a94203ddac1d5fcb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with global index <code>index</code>. <br /></td></tr>
+<tr class="separator:a6589a93848ed8376a94203ddac1d5fcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28967ff509064a6e04cfc8b2d35af402"><td class="memItemLeft" align="right" valign="top"><a id="a28967ff509064a6e04cfc8b2d35af402"></a>
+const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a> () const noexcept</td></tr>
+<tr class="memdesc:a28967ff509064a6e04cfc8b2d35af402"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the distribution of the matrix. <br /></td></tr>
+<tr class="separator:a28967ff509064a6e04cfc8b2d35af402"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3f645fd23ce4c20591fdd2738b235f92"><td class="memItemLeft" align="right" valign="top"><a id="a3f645fd23ce4c20591fdd2738b235f92"></a>
-const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a3f645fd23ce4c20591fdd2738b235f92">blockSize</a> () const noexcept</td></tr>
-<tr class="memdesc:a3f645fd23ce4c20591fdd2738b235f92"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the block size of the matrix. <br /></td></tr>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>blockSize</b> () const noexcept</td></tr>
 <tr class="separator:a3f645fd23ce4c20591fdd2738b235f92"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:add48022e3fd9298035052a023fa6dbb0"><td class="memItemLeft" align="right" valign="top"><a id="add48022e3fd9298035052a023fa6dbb0"></a>
-const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#add48022e3fd9298035052a023fa6dbb0">baseTileSize</a> () const noexcept</td></tr>
-<tr class="memdesc:add48022e3fd9298035052a023fa6dbb0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the complete tile size of the matrix. <br /></td></tr>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>baseTileSize</b> () const noexcept</td></tr>
 <tr class="separator:add48022e3fd9298035052a023fa6dbb0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a068e58f7f6c2956f92e69fd7c8d8f68d"><td class="memItemLeft" align="right" valign="top"><a id="a068e58f7f6c2956f92e69fd7c8d8f68d"></a>
-const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">GlobalTileSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a068e58f7f6c2956f92e69fd7c8d8f68d">nrTiles</a> () const noexcept</td></tr>
-<tr class="memdesc:a068e58f7f6c2956f92e69fd7c8d8f68d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of tiles of the global matrix (2D size). <br /></td></tr>
+const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">GlobalTileSize</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>nrTiles</b> () const noexcept</td></tr>
 <tr class="separator:a068e58f7f6c2956f92e69fd7c8d8f68d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a685f321909fc853e023bff712c964c2d"><td class="memItemLeft" align="right" valign="top"><a id="a685f321909fc853e023bff712c964c2d"></a>
-const <a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a685f321909fc853e023bff712c964c2d">rankIndex</a> () const noexcept</td></tr>
-<tr class="memdesc:a685f321909fc853e023bff712c964c2d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the id associated to the matrix of this rank. <br /></td></tr>
+const <a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>rankIndex</b> () const noexcept</td></tr>
 <tr class="separator:a685f321909fc853e023bff712c964c2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a2542519489cf0234ec4cb42ec5322daa"><td class="memItemLeft" align="right" valign="top"><a id="a2542519489cf0234ec4cb42ec5322daa"></a>
 const <a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>sourceRankIndex</b> () const noexcept</td></tr>
 <tr class="separator:a2542519489cf0234ec4cb42ec5322daa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1f81375953df07b80ddb5cae672319bd"><td class="memItemLeft" align="right" valign="top"><a id="a1f81375953df07b80ddb5cae672319bd"></a>
-const <a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">comm::Size2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a1f81375953df07b80ddb5cae672319bd">commGridSize</a> () const noexcept</td></tr>
-<tr class="memdesc:a1f81375953df07b80ddb5cae672319bd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the communicator grid associated to the matrix. <br /></td></tr>
+const <a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">comm::Size2D</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>commGridSize</b> () const noexcept</td></tr>
 <tr class="separator:a1f81375953df07b80ddb5cae672319bd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a622f4764a792986112c89f282e04080f"><td class="memItemLeft" align="right" valign="top"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a622f4764a792986112c89f282e04080f">rankGlobalTile</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;global_tile) const noexcept</td></tr>
+<tr class="memitem:a622f4764a792986112c89f282e04080f"><td class="memItemLeft" align="right" valign="top"><a id="a622f4764a792986112c89f282e04080f"></a>
+<a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><b>rankGlobalTile</b> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;global_tile) const noexcept</td></tr>
 <tr class="separator:a622f4764a792986112c89f282e04080f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a28967ff509064a6e04cfc8b2d35af402"><td class="memItemLeft" align="right" valign="top"><a id="a28967ff509064a6e04cfc8b2d35af402"></a>
-const <a class="el" href="classdlaf_1_1matrix_1_1_distribution.html">matrix::Distribution</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a> () const noexcept</td></tr>
-<tr class="memdesc:a28967ff509064a6e04cfc8b2d35af402"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the distribution of the matrix. <br /></td></tr>
-<tr class="separator:a28967ff509064a6e04cfc8b2d35af402"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a891c1da69cefcfdfb73b3915ccc2cce5"><td class="memItemLeft" align="right" valign="top"><a id="a891c1da69cefcfdfb73b3915ccc2cce5"></a>
-<a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a891c1da69cefcfdfb73b3915ccc2cce5">tileSize</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index) const noexcept</td></tr>
-<tr class="memdesc:a891c1da69cefcfdfb73b3915ccc2cce5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the size of the <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">Tile</a> with global index <code>index</code>. <br /></td></tr>
+<a class="el" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a>&#160;</td><td class="memItemRight" valign="bottom"><b>tileSize</b> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;index) const noexcept</td></tr>
 <tr class="separator:a891c1da69cefcfdfb73b3915ccc2cce5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
@@ -145,7 +166,10 @@ Protected Member Functions</h2></td></tr>
 <tr class="memitem:a9d7a3cb3991fb98999b1523a250e0f84"><td class="memItemLeft" align="right" valign="top"><a id="a9d7a3cb3991fb98999b1523a250e0f84"></a>
 <a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">MatrixBase</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html">MatrixBase</a> &amp;&amp;rhs)=default</td></tr>
 <tr class="separator:a9d7a3cb3991fb98999b1523a250e0f84"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5cdaa0376724e6f624591a6a6bcf46d9"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a5cdaa0376724e6f624591a6a6bcf46d9">tileLinearIndex</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) const noexcept</td></tr>
+<tr class="memitem:aff812bf684cb1937f3ed6258eebf0192"><td class="memItemLeft" align="right" valign="top">std::size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aff812bf684cb1937f3ed6258eebf0192">tile_linear_index</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) const noexcept</td></tr>
+<tr class="separator:aff812bf684cb1937f3ed6258eebf0192"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cdaa0376724e6f624591a6a6bcf46d9"><td class="memItemLeft" align="right" valign="top"><a id="a5cdaa0376724e6f624591a6a6bcf46d9"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>tileLinearIndex</b> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;index) const noexcept</td></tr>
 <tr class="separator:a5cdaa0376724e6f624591a6a6bcf46d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
@@ -156,8 +180,8 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 <tr class="separator:a054e897882d7ab913c1b63af96e87fec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a622f4764a792986112c89f282e04080f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a622f4764a792986112c89f282e04080f">&#9670;&nbsp;</a></span>rankGlobalTile()</h2>
+<a id="ac44e30d0c8f80c5b5176fac4e9c7bee7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac44e30d0c8f80c5b5176fac4e9c7bee7">&#9670;&nbsp;</a></span>rank_global_tile()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -166,7 +190,7 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> dlaf::matrix::internal::MatrixBase::rankGlobalTile </td>
+          <td class="memname"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">comm::Index2D</a> dlaf::matrix::internal::MatrixBase::rank_global_tile </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> &amp;&#160;</td>
           <td class="paramname"><em>global_tile</em></td><td>)</td>
@@ -184,8 +208,8 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 
 </div>
 </div>
-<a id="a5cdaa0376724e6f624591a6a6bcf46d9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5cdaa0376724e6f624591a6a6bcf46d9">&#9670;&nbsp;</a></span>tileLinearIndex()</h2>
+<a id="aff812bf684cb1937f3ed6258eebf0192"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aff812bf684cb1937f3ed6258eebf0192">&#9670;&nbsp;</a></span>tile_linear_index()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -194,7 +218,7 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">std::size_t dlaf::matrix::internal::MatrixBase::tileLinearIndex </td>
+          <td class="memname">std::size_t dlaf::matrix::internal::MatrixBase::tile_linear_index </td>
           <td>(</td>
           <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> &amp;&#160;</td>
           <td class="paramname"><em>index</em></td><td>)</td>

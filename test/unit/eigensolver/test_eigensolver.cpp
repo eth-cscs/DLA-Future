@@ -66,8 +66,14 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
     {34, 8, 3},  {32, 6, 3}                                   // m > mb, sub-band
 };
 
+const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes_id = {
+    // {m, mb, eigensolver_min_band}
+    {8, 4, 4},
+    {34, 8, 4},
+};
+
 template <class T, Backend B, Device D, Allocation allocation, class... GridIfDistributed>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, bool identity,
                      GridIfDistributed... grid) {
   constexpr bool isDistributed = (sizeof...(grid) == 1);
   const LocalElementSize size(m, m);
@@ -81,7 +87,14 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
         return Matrix<T, Device::CPU>(LocalElementSize(m, m), block_size);
     }
     ();
-    matrix::util::set_random_hermitian(reference);
+    if (identity)
+      matrix::util::set(reference, [](const GlobalElementIndex& ij) {
+        if (ij.row() == ij.col())
+          return T{1};
+        return T{0};
+      });
+    else
+      matrix::util::set_random_hermitian(reference);
     return reference;
   }();
 
@@ -126,8 +139,14 @@ TYPED_TEST(EigensolverTestMC, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb);
-      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m, mb);
+      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                      false);
+      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m, mb,
+                                                                                         false);
+    }
+    for (auto [m, mb, b_min] : sizes_id) {
+      getTuneParameters().eigensolver_min_band = b_min;
+      testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb, true);
     }
   }
 }
@@ -138,9 +157,14 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
-                                                                                        grid);
+                                                                                        false, grid);
         testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::use_preallocated>(uplo, m, mb,
-                                                                                           grid);
+                                                                                           false, grid);
+      }
+      for (auto [m, mb, b_min] : sizes_id) {
+        getTuneParameters().eigensolver_min_band = b_min;
+        testEigensolver<TypeParam, Backend::MC, Device::CPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                        true, grid);
       }
     }
   }
@@ -151,8 +175,15 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessLocal) {
   for (auto uplo : blas_uplos) {
     for (auto [m, mb, b_min] : sizes) {
       getTuneParameters().eigensolver_min_band = b_min;
-      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb);
-      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m, mb);
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                       false);
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m, mb,
+                                                                                          false);
+    }
+    for (auto [m, mb, b_min] : sizes_id) {
+      getTuneParameters().eigensolver_min_band = b_min;
+      testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                       true);
     }
   }
 }
@@ -163,9 +194,14 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributed) {
       for (auto [m, mb, b_min] : sizes) {
         getTuneParameters().eigensolver_min_band = b_min;
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
-                                                                                         grid);
+                                                                                         false grid);
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::use_preallocated>(uplo, m, mb,
-                                                                                            grid);
+                                                                                            false grid);
+      }
+      for (auto [m, mb, b_min] : sizes_id) {
+        getTuneParameters().eigensolver_min_band = b_min;
+        testEigensolver<TypeParam, Backend::GPU, Device::GPU, Allocation::do_allocation>(uplo, m, mb,
+                                                                                         true, grid);
       }
     }
   }

@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "gen_eigensolver.h"
-
 #include <complex>
 
 #include <dlaf_c/eigensolver/gen_eigensolver.h>
@@ -17,6 +15,7 @@
 #include <dlaf_c/utils.h>
 
 #include "dlaf_c/desc.h"
+#include "gen_eigensolver.h"
 
 int dlaf_symmetric_generalized_eigensolver_s(const int dlaf_context, const char uplo, float* a,
                                              const struct DLAF_descriptor dlaf_desca, float* b,

@@ -8,10 +8,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "cholesky.h"
-
 #include <dlaf_c/factorization/cholesky.h>
 #include <dlaf_c/utils.h>
+
+#include "cholesky.h"
 
 int dlaf_cholesky_factorization_s(const int dlaf_context, const char uplo, float* a,
                                   const DLAF_descriptor dlaf_desca) noexcept {

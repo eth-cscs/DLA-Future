@@ -8,8 +8,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
-#include "grid.h"
-
 #include <limits>
 
 #include <mpi.h>
@@ -20,6 +18,7 @@
 
 #include "blacs.h"
 #include "dlaf/communication/error.h"
+#include "grid.h"
 #include "utils.h"
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;

@@ -17,6 +17,7 @@
 
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/copy.h>
+#include <dlaf/matrix/create_matrix.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>

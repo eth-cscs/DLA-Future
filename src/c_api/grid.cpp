@@ -24,7 +24,7 @@
 
 std::unordered_map<int, dlaf::comm::CommunicatorGrid> dlaf_grids;
 
-int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
+int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) noexcept {
   // dlaf_context starts from INT_MAX to reduce the likelihood of clashes with blacs contexts
   // blacs starts to number contexts from 0
   int dlaf_context = std::numeric_limits<int>::max() - static_cast<int>(std::size(dlaf_grids));
@@ -38,11 +38,11 @@ int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) {
   return dlaf_context;
 }
 
-void dlaf_free_grid(int ctxt) {
+void dlaf_free_grid(int ctxt) noexcept {
   dlaf_grids.erase(ctxt);
 }
 
-char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) {
+char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) noexcept {
   int rank;
   MPI_Comm_rank(comm, &rank);
 
@@ -69,7 +69,7 @@ char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) 
 
 #ifdef DLAF_WITH_SCALAPACK
 
-void dlaf_create_grid_from_blacs(int blacs_ctxt) {
+void dlaf_create_grid_from_blacs(int blacs_ctxt) noexcept {
   int system_ctxt;
   int get_blacs_contxt = 10;  // SGET_BLACSCONTXT == 10
   Cblacs_get(blacs_ctxt, get_blacs_contxt, &system_ctxt);

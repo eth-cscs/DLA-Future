@@ -13,9 +13,11 @@
 /// @file
 
 #ifdef __cplusplus
-#define DLAF_EXTERN_C extern "C"
+#define DLAF_EXTERN_C     extern "C"
+#define DLAF_NOEXCEPT_CPP noexcept
 #else
 #define DLAF_EXTERN_C
+#define DLAF_NOEXCEPT_CPP
 #endif
 
 #ifdef __cplusplus
@@ -39,4 +41,5 @@ typedef double complex dlaf_complex_z;  ///< Double precision complex number
 /// @param desc ScaLAPACK descriptor
 /// @return DLA-Future descriptor
 DLAF_EXTERN_C struct DLAF_descriptor make_dlaf_descriptor(const int m, const int n, const int i,
-                                                          const int j, const int desc[9]);
+                                                          const int j,
+                                                          const int desc[9]) DLAF_NOEXCEPT_CPP;

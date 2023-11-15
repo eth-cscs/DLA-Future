@@ -38,25 +38,25 @@
 DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_s(
     const int dlaf_context, const char uplo, float* a, const struct DLAF_descriptor dlaf_desca, float* b,
     const struct DLAF_descriptor dlaf_descb, float* w, float* z,
-    const struct DLAF_descriptor dlaf_descz);
+    const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_s
 DLAF_EXTERN_C int dlaf_symmetric_generalized_eigensolver_d(
     const int dlaf_context, const char uplo, double* a, const struct DLAF_descriptor dlaf_desca,
     double* b, const struct DLAF_descriptor dlaf_descb, double* w, double* z,
-    const struct DLAF_descriptor dlaf_descz);
+    const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_s
 DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_c(
     const int dlaf_context, const char uplo, dlaf_complex_c* a, const struct DLAF_descriptor dlaf_desca,
     dlaf_complex_c* b, const struct DLAF_descriptor dlaf_descb, float* w, dlaf_complex_c* z,
-    const struct DLAF_descriptor dlaf_descz);
+    const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_symmetric_generalized_eigensolver_s
 DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_z(
     const int dlaf_context, const char uplo, dlaf_complex_z* a, const struct DLAF_descriptor dlaf_desca,
     dlaf_complex_z* b, const struct DLAF_descriptor dlaf_descb, double* w, dlaf_complex_z* z,
-    const struct DLAF_descriptor dlaf_descz);
+    const struct DLAF_descriptor dlaf_descz) DLAF_NOEXCEPT_CPP;
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -101,24 +101,26 @@ DLAF_EXTERN_C int dlaf_hermitian_generalized_eigensolver_z(
 DLAF_EXTERN_C void dlaf_pssygvx(const char uplo, const int n, float* a, const int ia, const int ja,
                                 const int desca[9], float* b, const int ib, const int jb,
                                 const int descb[9], float* w, float* z, const int iz, const int jz,
-                                const int descz[9], int* info);
+                                const int descz[9], int* info) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_pssygvx
 DLAF_EXTERN_C void dlaf_pdsygvx(const char uplo, const int n, double* a, const int ia, const int ja,
                                 const int desca[9], double* b, const int ib, const int jb,
                                 const int descb[9], double* w, double* z, const int iz, const int jz,
-                                const int descz[9], int* info);
+                                const int descz[9], int* info) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_pssygvx
 DLAF_EXTERN_C void dlaf_pchegvx(const char uplo, const int n, dlaf_complex_c* a, const int ia,
                                 const int ja, const int desca[9], dlaf_complex_c* b, const int ib,
                                 const int jb, const int descb[9], float* w, dlaf_complex_c* z,
-                                const int iz, const int jz, const int descz[9], int* info);
+                                const int iz, const int jz, const int descz[9],
+                                int* info) DLAF_NOEXCEPT_CPP;
 
 /// @copydoc dlaf_pssygvx
 DLAF_EXTERN_C void dlaf_pzhegvx(const char uplo, const int n, dlaf_complex_z* a, const int ia,
                                 const int ja, const int desca[9], dlaf_complex_z* b, const int ib,
                                 const int jb, const int descb[9], double* w, dlaf_complex_z* z,
-                                const int iz, const int jz, const int descz[9], int* info);
+                                const int iz, const int jz, const int descz[9],
+                                int* info) DLAF_NOEXCEPT_CPP;
 
 #endif

@@ -61,6 +61,11 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
     return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
 
+  // eigenvalues are contiguous in the mat_local buffer
+  BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
+  BaseType<T>* evals_end = evals_start + m;
+  EXPECT_TRUE(std::is_sorted(evals_start, evals_end));
+
   MatrixLocal<T> mat_be_local({m, m}, reference_a.blockSize());
 
   dlaf::common::internal::SingleThreadedBlasScope single;

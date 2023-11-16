@@ -153,15 +153,14 @@ comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElement
     return (mod >= 0) ? mod : (mod + b);
   };
 
-  const comm::Size2D grid_size = dist_in.commGridSize();
-
+  const comm::Size2D grid_size = dist_in.grid_size();
   const comm::Index2D sub_rank(dist_in.rank_global_element<Coord::Row>(offset_in.row()),
                                dist_in.rank_global_element<Coord::Col>(offset_in.col()));
-  const GlobalTileIndex offset_tl(offset_out.row() / dist_in.blockSize().rows(),
-                                  offset_out.col() / dist_in.blockSize().cols());
+  const GlobalTileIndex offset_rank(offset_out.row() / dist_in.block_size().rows(),
+                                    offset_out.col() / dist_in.block_size().cols());
 
-  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_tl.row()), grid_size.rows()),
-          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_tl.col()), grid_size.cols())};
+  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_rank.row()), grid_size.rows()),
+          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_rank.col()), grid_size.cols())};
 }
 
 bool isFullMatrix(const Distribution& dist_full, const GlobalElementIndex& sub_origin,
@@ -199,8 +198,8 @@ const std::vector<SubMatrixCopyConfig> sub_configs{
 template <class T>
 void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                    const matrix::Distribution& dist_out) {
-  const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
-  const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
+  const LayoutInfo layout_in = tileLayout(dist_in.local_size(), dist_in.block_size());
+  const LayoutInfo layout_out = tileLayout(dist_out.local_size(), dist_out.block_size());
 
   memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());
   memory::MemoryView<T, Device::CPU> mem_out(layout_out.minMemSize());
@@ -276,8 +275,8 @@ TYPED_TEST(MatrixCopyTest, SubMatrixCPUDistributed) {
 template <class T>
 void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribution& dist_in,
                         const matrix::Distribution& dist_out) {
-  const LayoutInfo layout_in = tileLayout(dist_in.localSize(), dist_in.block_size());
-  const LayoutInfo layout_out = tileLayout(dist_out.localSize(), dist_out.block_size());
+  const LayoutInfo layout_in = tileLayout(dist_in.local_size(), dist_in.block_size());
+  const LayoutInfo layout_out = tileLayout(dist_out.local_size(), dist_out.block_size());
 
   // CPU
   memory::MemoryView<T, Device::CPU> mem_in(layout_in.minMemSize());

@@ -240,172 +240,177 @@ $(function() {
 <div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;           boundary.isValid();</div>
 <div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;  }</div>
 <div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160; </div>
-<div class="line"><a name="l00230"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">  230</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">operator==</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&amp; rhs) <span class="keyword">const</span> noexcept {</div>
-<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a95e16def9c322ee963d123635c2c875b">BaseT::operator==</a>(rhs);</div>
-<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;  }</div>
-<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160; </div>
-<div class="line"><a name="l00235"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">  235</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">operator!=</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&amp; rhs) <span class="keyword">const</span> noexcept {</div>
-<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#abf2886043fbe929f1e1f0eff5e20935d">BaseT::operator!=</a>(rhs);</div>
-<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;  }</div>
-<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;};</div>
-<div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160; </div>
-<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;<span class="keyword">namespace </span>internal {</div>
-<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160; </div>
-<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;<span class="comment">// Traits</span></div>
-<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;<span class="comment"></span><span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00245"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">  245</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a> : std::false_type {};</div>
-<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160; </div>
-<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00248"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord_3_01_index2_d_3_01_t_00_01_tag_01_4_01_4.html">  248</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a>&lt;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&lt;T, Tag&gt;&gt; : std::true_type {};</div>
-<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160; </div>
-<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00251"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord_3_01_size2_d_3_01_t_00_01_tag_01_4_01_4.html">  251</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a>&lt;<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D</a>&lt;T, Tag&gt;&gt; : std::true_type {};</div>
-<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160; </div>
-<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;<span class="keyword">inline</span> constexpr <span class="keywordtype">bool</span> is_coord_v = <a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord&lt;T&gt;::value</a>;</div>
-<div class="line"><a name="l00255"></a><span class="lineno">  255</span>&#160;}</div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160; </div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> Coords2DType, std::enable_if_t&lt;<span class="keywordtype">int</span>ernal::is_coord_v&lt;Coords2DType&gt;, <span class="keywordtype">int</span>&gt; = 0&gt;</div>
-<div class="line"><a name="l00259"></a><span class="lineno"><a class="line" href="index2d_8h.html#a352cdd70886a2a2ace1abd246951c538">  259</a></span>&#160;std::ostream&amp; operator&lt;&lt;(std::ostream&amp; out, <span class="keyword">const</span> Coords2DType&amp; index) {</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;  <span class="keyword">using</span> IndexT = <span class="keyword">typename</span> Coords2DType::IndexType;</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;  <span class="keywordflow">return</span> out &lt;&lt; static_cast&lt;internal::basic_coords&lt;IndexT&gt;&gt;(index);</div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;}</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160; </div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> Coords2DType, std::enable_if_t&lt;<span class="keywordtype">int</span>ernal::is_coord_v&lt;Coords2DType&gt;, <span class="keywordtype">int</span>&gt; = 0&gt;</div>
-<div class="line"><a name="l00266"></a><span class="lineno"><a class="line" href="index2d_8h.html#a024753ac73fbefa174548c575327862b">  266</a></span>&#160;Coords2DType <a class="code" href="index2d_8h.html#a024753ac73fbefa174548c575327862b">transposed</a>(Coords2DType coords) {</div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;  coords.transpose();</div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;  <span class="keywordflow">return</span> coords;</div>
-<div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160;}</div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160; </div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> TAG&gt;</div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;Index2D&lt;IndexT, TAG&gt; indexFromOrigin(<span class="keyword">const</span> Size2D&lt;IndexT, TAG&gt;&amp; size) noexcept {</div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;  <span class="keywordflow">return</span> {size.rows(), size.cols()};</div>
+<div class="line"><a name="l00237"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_index2_d.html#a3849d1f8e08889c7f1d7998874fa7be9">  237</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#a3849d1f8e08889c7f1d7998874fa7be9">isInSub</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&amp; origin, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; sub_boundary) <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;    <span class="keywordflow">return</span> row() &gt;= origin.row() &amp;&amp; col() &gt;= origin.col() &amp;&amp; <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">isIn</a>(sizeFromOrigin(origin + sub_boundary));</div>
+<div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160;  }</div>
+<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160; </div>
+<div class="line"><a name="l00242"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">  242</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">operator==</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&amp; rhs) <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a95e16def9c322ee963d123635c2c875b">BaseT::operator==</a>(rhs);</div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;  }</div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160; </div>
+<div class="line"><a name="l00247"></a><span class="lineno"><a class="line" href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">  247</a></span>&#160;  <span class="keywordtype">bool</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">operator!=</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&amp; rhs) <span class="keyword">const</span> noexcept {</div>
+<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;    <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#abf2886043fbe929f1e1f0eff5e20935d">BaseT::operator!=</a>(rhs);</div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160;  }</div>
+<div class="line"><a name="l00250"></a><span class="lineno">  250</span>&#160;};</div>
+<div class="line"><a name="l00251"></a><span class="lineno">  251</span>&#160; </div>
+<div class="line"><a name="l00252"></a><span class="lineno">  252</span>&#160;<span class="keyword">namespace </span>internal {</div>
+<div class="line"><a name="l00253"></a><span class="lineno">  253</span>&#160; </div>
+<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;<span class="comment">// Traits</span></div>
+<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;<span class="comment"></span><span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00257"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">  257</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a> : std::false_type {};</div>
+<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160; </div>
+<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00260"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord_3_01_index2_d_3_01_t_00_01_tag_01_4_01_4.html">  260</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a>&lt;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&lt;T, Tag&gt;&gt; : std::true_type {};</div>
+<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160; </div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00263"></a><span class="lineno"><a class="line" href="structdlaf_1_1common_1_1internal_1_1is__coord_3_01_size2_d_3_01_t_00_01_tag_01_4_01_4.html">  263</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord</a>&lt;<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D</a>&lt;T, Tag&gt;&gt; : std::true_type {};</div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160; </div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;<span class="keyword">inline</span> constexpr <span class="keywordtype">bool</span> is_coord_v = <a class="code" href="structdlaf_1_1common_1_1internal_1_1is__coord.html">is_coord&lt;T&gt;::value</a>;</div>
+<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;}</div>
+<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160; </div>
+<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> Coords2DType, std::enable_if_t&lt;<span class="keywordtype">int</span>ernal::is_coord_v&lt;Coords2DType&gt;, <span class="keywordtype">int</span>&gt; = 0&gt;</div>
+<div class="line"><a name="l00271"></a><span class="lineno"><a class="line" href="index2d_8h.html#a352cdd70886a2a2ace1abd246951c538">  271</a></span>&#160;std::ostream&amp; operator&lt;&lt;(std::ostream&amp; out, <span class="keyword">const</span> Coords2DType&amp; index) {</div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;  <span class="keyword">using</span> IndexT = <span class="keyword">typename</span> Coords2DType::IndexType;</div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;  <span class="keywordflow">return</span> out &lt;&lt; static_cast&lt;internal::basic_coords&lt;IndexT&gt;&gt;(index);</div>
 <div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;}</div>
 <div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160; </div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> TAG&gt;</div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;Size2D&lt;IndexT, TAG&gt; sizeFromOrigin(<span class="keyword">const</span> Index2D&lt;IndexT, TAG&gt;&amp; index) noexcept {</div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;  <span class="keywordflow">return</span> {index.row(), index.col()};</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;}</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160; </div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00288"></a><span class="lineno"><a class="line" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">  288</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">computeCoordsRowMajor</a>(SizeType linear_index,</div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;                                           <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160; </div>
-<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;  <span class="comment">// `linear_index` is wrapped with `std::to_string` because uint8_t or int8_t are interpreted as chars,</span></div>
-<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;  <span class="comment">// so the equivalent ASCII mapping is printed instead of the numeric value.</span></div>
-<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &gt;= 0, std::to_string(linear_index));</div>
-<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &lt; mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);</div>
-<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160; </div>
-<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;  SizeType leading_size = dims.cols();</div>
-<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;  <span class="keywordflow">return</span> {to_signed&lt;IndexT&gt;(linear_index / leading_size),</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;          to_signed&lt;IndexT&gt;(linear_index % leading_size)};</div>
-<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;}</div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160; </div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00309"></a><span class="lineno"><a class="line" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">  309</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">computeCoordsColMajor</a>(SizeType linear_index,</div>
-<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;                                           <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
-<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160; </div>
-<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &gt;= 0, linear_index);</div>
-<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &lt; mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);</div>
-<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160; </div>
-<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;  SizeType leading_size = dims.rows();</div>
-<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;  <span class="keywordflow">return</span> {to_signed&lt;IndexT&gt;(linear_index % leading_size),</div>
-<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;          to_signed&lt;IndexT&gt;(linear_index / leading_size)};</div>
-<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;}</div>
-<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160; </div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00332"></a><span class="lineno"><a class="line" href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">  332</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">computeCoords</a>(<a class="code" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">Ordering</a> ordering, SizeType index,</div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;                                   <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;  <span class="keywordflow">switch</span> (ordering) {</div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;    <span class="keywordflow">case</span> Ordering::RowMajor:</div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">computeCoordsRowMajor</a>(index, dims);</div>
-<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;    <span class="keywordflow">case</span> Ordering::ColumnMajor:</div>
-<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">computeCoordsColMajor</a>(index, dims);</div>
-<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;    <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;      <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;  }</div>
-<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;}</div>
-<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160; </div>
-<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00353"></a><span class="lineno"><a class="line" href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">  353</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">computeLinearIndexRowMajor</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;                                        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::sum;</div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160; </div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;  static_assert(std::is_integral_v&lt;LinearIndexT&gt;, <span class="stringliteral">&quot;LinearIndexT must be an integral type&quot;</span>);</div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160; </div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;  DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);</div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160; </div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;  SizeType linear_index = sum(mul(index.row(), dims.cols()), index.col());</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;  <span class="keywordflow">return</span> integral_cast&lt;LinearIndexT&gt;(linear_index);</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;}</div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160; </div>
-<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00375"></a><span class="lineno"><a class="line" href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">  375</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">computeLinearIndexColMajor</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
-<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;                                        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
-<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::sum;</div>
-<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160; </div>
-<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;  static_assert(std::is_integral_v&lt;LinearIndexT&gt;, <span class="stringliteral">&quot;LinearIndexT must be an integral type&quot;</span>);</div>
-<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160; </div>
-<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;  DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);</div>
-<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160; </div>
-<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;  SizeType linear_index = sum(mul(index.col(), dims.rows()), index.row());</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;  <span class="keywordflow">return</span> integral_cast&lt;LinearIndexT&gt;(linear_index);</div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;}</div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160; </div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00400"></a><span class="lineno"><a class="line" href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">  400</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">computeLinearIndex</a>(<a class="code" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">Ordering</a> ordering, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;                                <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;  <span class="keywordflow">switch</span> (ordering) {</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;    <span class="keywordflow">case</span> Ordering::RowMajor:</div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;      <span class="keywordflow">return</span> computeLinearIndexRowMajor&lt;LinearIndexT&gt;(index, dims);</div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;    <span class="keywordflow">case</span> Ordering::ColumnMajor:</div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;      <span class="keywordflow">return</span> computeLinearIndexColMajor&lt;LinearIndexT&gt;(index, dims);</div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;      <span class="keywordflow">return</span> {};</div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;  }</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;}</div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160; </div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160; </div>
-<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00419"></a><span class="lineno"><a class="line" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">  419</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">operator+</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; lhs,</div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;                               <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; rhs) noexcept {</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>(lhs.row() + rhs.rows(), lhs.col() + rhs.cols());</div>
+<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> Coords2DType, std::enable_if_t&lt;<span class="keywordtype">int</span>ernal::is_coord_v&lt;Coords2DType&gt;, <span class="keywordtype">int</span>&gt; = 0&gt;</div>
+<div class="line"><a name="l00278"></a><span class="lineno"><a class="line" href="index2d_8h.html#a024753ac73fbefa174548c575327862b">  278</a></span>&#160;Coords2DType <a class="code" href="index2d_8h.html#a024753ac73fbefa174548c575327862b">transposed</a>(Coords2DType coords) {</div>
+<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;  coords.transpose();</div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;  <span class="keywordflow">return</span> coords;</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;}</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160; </div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> TAG&gt;</div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;Index2D&lt;IndexT, TAG&gt; indexFromOrigin(<span class="keyword">const</span> Size2D&lt;IndexT, TAG&gt;&amp; size) noexcept {</div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;  <span class="keywordflow">return</span> {size.rows(), size.cols()};</div>
+<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;}</div>
+<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160; </div>
+<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> TAG&gt;</div>
+<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;Size2D&lt;IndexT, TAG&gt; sizeFromOrigin(<span class="keyword">const</span> Index2D&lt;IndexT, TAG&gt;&amp; index) noexcept {</div>
+<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;  <span class="keywordflow">return</span> {index.row(), index.col()};</div>
+<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;}</div>
+<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160; </div>
+<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00300"></a><span class="lineno"><a class="line" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">  300</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">computeCoordsRowMajor</a>(SizeType linear_index,</div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;                                           <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
+<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160; </div>
+<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;  <span class="comment">// `linear_index` is wrapped with `std::to_string` because uint8_t or int8_t are interpreted as chars,</span></div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;  <span class="comment">// so the equivalent ASCII mapping is printed instead of the numeric value.</span></div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &gt;= 0, std::to_string(linear_index));</div>
+<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &lt; mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);</div>
+<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160; </div>
+<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;  SizeType leading_size = dims.cols();</div>
+<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;  <span class="keywordflow">return</span> {to_signed&lt;IndexT&gt;(linear_index / leading_size),</div>
+<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;          to_signed&lt;IndexT&gt;(linear_index % leading_size)};</div>
+<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;}</div>
+<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160; </div>
+<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00321"></a><span class="lineno"><a class="line" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">  321</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">computeCoordsColMajor</a>(SizeType linear_index,</div>
+<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;                                           <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
+<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160; </div>
+<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &gt;= 0, linear_index);</div>
+<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;  DLAF_ASSERT_MODERATE(linear_index &lt; mul(dims.rows(), dims.cols()), std::to_string(linear_index), dims);</div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160; </div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;  SizeType leading_size = dims.rows();</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;  <span class="keywordflow">return</span> {to_signed&lt;IndexT&gt;(linear_index % leading_size),</div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;          to_signed&lt;IndexT&gt;(linear_index / leading_size)};</div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;}</div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160; </div>
+<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00344"></a><span class="lineno"><a class="line" href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">  344</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">computeCoords</a>(<a class="code" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">Ordering</a> ordering, SizeType index,</div>
+<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;                                   <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;  <span class="keywordflow">switch</span> (ordering) {</div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="keywordflow">case</span> Ordering::RowMajor:</div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">computeCoordsRowMajor</a>(index, dims);</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;    <span class="keywordflow">case</span> Ordering::ColumnMajor:</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;      <span class="keywordflow">return</span> <a class="code" href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">computeCoordsColMajor</a>(index, dims);</div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;    <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;      <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;  }</div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;}</div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160; </div>
+<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00365"></a><span class="lineno"><a class="line" href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">  365</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">computeLinearIndexRowMajor</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;                                        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::sum;</div>
+<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160; </div>
+<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;  static_assert(std::is_integral_v&lt;LinearIndexT&gt;, <span class="stringliteral">&quot;LinearIndexT must be an integral type&quot;</span>);</div>
+<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160; </div>
+<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;  DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);</div>
+<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160; </div>
+<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;  SizeType linear_index = sum(mul(index.row(), dims.cols()), index.col());</div>
+<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;  <span class="keywordflow">return</span> integral_cast&lt;LinearIndexT&gt;(linear_index);</div>
+<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;}</div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160; </div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00387"></a><span class="lineno"><a class="line" href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">  387</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">computeLinearIndexColMajor</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;                                        <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::mul;</div>
+<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;  <span class="keyword">using</span> dlaf::util::ptrdiff_t::sum;</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160; </div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;  static_assert(std::is_integral_v&lt;LinearIndexT&gt;, <span class="stringliteral">&quot;LinearIndexT must be an integral type&quot;</span>);</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160; </div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;  DLAF_ASSERT_MODERATE(index.isIn(dims), index, dims);</div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160; </div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;  SizeType linear_index = sum(mul(index.col(), dims.rows()), index.row());</div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;  <span class="keywordflow">return</span> integral_cast&lt;LinearIndexT&gt;(linear_index);</div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;}</div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160; </div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> LinearIndexT, <span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00412"></a><span class="lineno"><a class="line" href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">  412</a></span>&#160;LinearIndexT <a class="code" href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">computeLinearIndex</a>(<a class="code" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">Ordering</a> ordering, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; index,</div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;                                <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; dims) noexcept {</div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;  <span class="keywordflow">switch</span> (ordering) {</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;    <span class="keywordflow">case</span> Ordering::RowMajor:</div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;      <span class="keywordflow">return</span> computeLinearIndexRowMajor&lt;LinearIndexT&gt;(index, dims);</div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;    <span class="keywordflow">case</span> Ordering::ColumnMajor:</div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;      <span class="keywordflow">return</span> computeLinearIndexColMajor&lt;LinearIndexT&gt;(index, dims);</div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;    <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;      <span class="keywordflow">return</span> {};</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;  }</div>
 <div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;}</div>
 <div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160; </div>
-<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;Index2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; lhs,</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;                               <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
-<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;  <span class="keywordflow">return</span> Index2D&lt;IndexT, Tag&gt;(lhs.row() - rhs.rows(), lhs.col() - rhs.cols());</div>
-<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;}</div>
 <div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160; </div>
 <div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;Size2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; lhs,</div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;                              <span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
-<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.row() - rhs.row(), lhs.col() - rhs.col());</div>
+<div class="line"><a name="l00431"></a><span class="lineno"><a class="line" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">  431</a></span>&#160;<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a> <a class="code" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">operator+</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>&amp; lhs,</div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;                               <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">Size2D&lt;IndexT, Tag&gt;</a>&amp; rhs) noexcept {</div>
+<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">Index2D&lt;IndexT, Tag&gt;</a>(lhs.row() + rhs.rows(), lhs.col() + rhs.cols());</div>
 <div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;}</div>
 <div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160; </div>
 <div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;Size2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; lhs, <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
-<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.rows() - rhs.rows(), lhs.cols() - rhs.cols());</div>
-<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;}</div>
-<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160; </div>
-<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
-<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;Size2D&lt;IndexT, Tag&gt; <a class="code" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">operator+</a>(<span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; lhs, <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
-<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.rows() + rhs.rows(), lhs.cols() + rhs.cols());</div>
-<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;}</div>
-<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160; </div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;Index2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; lhs,</div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;                               <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;  <span class="keywordflow">return</span> Index2D&lt;IndexT, Tag&gt;(lhs.row() - rhs.rows(), lhs.col() - rhs.cols());</div>
+<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;}</div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160; </div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;Size2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; lhs,</div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;                              <span class="keyword">const</span> Index2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.row() - rhs.row(), lhs.col() - rhs.col());</div>
 <div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;}</div>
-<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;}</div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160; </div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;Size2D&lt;IndexT, Tag&gt; operator-(<span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; lhs, <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.rows() - rhs.rows(), lhs.cols() - rhs.cols());</div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;}</div>
+<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160; </div>
+<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> IndexT, <span class="keyword">class</span> Tag&gt;</div>
+<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;Size2D&lt;IndexT, Tag&gt; <a class="code" href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">operator+</a>(<span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; lhs, <span class="keyword">const</span> Size2D&lt;IndexT, Tag&gt;&amp; rhs) noexcept {</div>
+<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;  <span class="keywordflow">return</span> Size2D&lt;IndexT, Tag&gt;(lhs.rows() + rhs.rows(), lhs.cols() + rhs.cols());</div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;}</div>
+<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160; </div>
+<div class="line"><a name="l00458"></a><span class="lineno">  458</span>&#160;}</div>
+<div class="line"><a name="l00459"></a><span class="lineno">  459</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D</a></div><div class="ttdef"><b>Definition:</b> index2d.h:184</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a4724fdad093b5d189c5f5e0b1ac5e305"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">dlaf::common::Index2D::operator==</a></div><div class="ttdeci">bool operator==(const Index2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:230</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a3849d1f8e08889c7f1d7998874fa7be9"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a3849d1f8e08889c7f1d7998874fa7be9">dlaf::common::Index2D::isInSub</a></div><div class="ttdeci">bool isInSub(const Index2D &amp;origin, const Size2D&lt; IndexT, Tag &gt; &amp;sub_boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:237</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a4724fdad093b5d189c5f5e0b1ac5e305"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">dlaf::common::Index2D::operator==</a></div><div class="ttdeci">bool operator==(const Index2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:242</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a5f174cc234af20d79923b31d7fa90b19"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19">dlaf::common::Index2D::isIn</a></div><div class="ttdeci">bool isIn(const Size2D&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:213</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_a940432586f1b501b8dda46355999335d"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#a940432586f1b501b8dda46355999335d">dlaf::common::Index2D::Index2D</a></div><div class="ttdeci">Index2D() noexcept</div><div class="ttdoc">Create an invalid 2D coordinate.</div><div class="ttdef"><b>Definition:</b> index2d.h:191</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_ab230f7ada23f15ffd3b3d0a3921f1685"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#ab230f7ada23f15ffd3b3d0a3921f1685">dlaf::common::Index2D::isInOrOn</a></div><div class="ttdeci">bool isInOrOn(const Size2D&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:224</div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_ae2e28cf6eab4febd97d6c46d23c6096d"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">dlaf::common::Index2D::operator!=</a></div><div class="ttdeci">bool operator!=(const Index2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:235</div></div>
+<div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_ae2e28cf6eab4febd97d6c46d23c6096d"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">dlaf::common::Index2D::operator!=</a></div><div class="ttdeci">bool operator!=(const Index2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:247</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html_ae959b1b0c405d3480f9d4960946b5b2e"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html#ae959b1b0c405d3480f9d4960946b5b2e">dlaf::common::Index2D::Index2D</a></div><div class="ttdeci">Index2D(const std::array&lt; IndexT, 2 &gt; &amp;coords) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:197</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D</a></div><div class="ttdef"><b>Definition:</b> index2d.h:142</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html_a1a6822fefe13303612ce0ddf44f260ea"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html#a1a6822fefe13303612ce0ddf44f260ea">dlaf::common::Size2D::operator!=</a></div><div class="ttdeci">bool operator!=(const Size2D &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:170</div></div>
@@ -422,16 +427,16 @@ $(function() {
 <div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1basic__coords_html_abf2886043fbe929f1e1f0eff5e20935d"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#abf2886043fbe929f1e1f0eff5e20935d">dlaf::common::internal::basic_coords::operator!=</a></div><div class="ttdeci">bool operator!=(const basic_coords &amp;rhs) const noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:127</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1basic__coords_html_ac7a56bcf4ceaad4b19c02b12a9b7e5df"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#ac7a56bcf4ceaad4b19c02b12a9b7e5df">dlaf::common::internal::basic_coords::basic_coords</a></div><div class="ttdeci">basic_coords(const std::array&lt; IndexT, 2 &gt; &amp;coords) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:82</div></div>
 <div class="ttc" id="aindex2d_8h_html_a02419996f0ffc187079c310f0175ce76"><div class="ttname"><a href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">dlaf::common::Ordering</a></div><div class="ttdeci">Ordering</div><div class="ttdef"><b>Definition:</b> index2d.h:42</div></div>
-<div class="ttc" id="aindex2d_8h_html_a024753ac73fbefa174548c575327862b"><div class="ttname"><a href="index2d_8h.html#a024753ac73fbefa174548c575327862b">dlaf::common::transposed</a></div><div class="ttdeci">Coords2DType transposed(Coords2DType coords)</div><div class="ttdoc">Given a coordinate type, it returns its transpose.</div><div class="ttdef"><b>Definition:</b> index2d.h:266</div></div>
-<div class="ttc" id="aindex2d_8h_html_a15f2674deab8ea5e84471b18b8ffba94"><div class="ttname"><a href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">dlaf::common::computeLinearIndex</a></div><div class="ttdeci">LinearIndexT computeLinearIndex(Ordering ordering, const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:400</div></div>
-<div class="ttc" id="aindex2d_8h_html_a2ed7f0c019788f600bc067956646bf75"><div class="ttname"><a href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">dlaf::common::operator+</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; operator+(const Index2D&lt; IndexT, Tag &gt; &amp;lhs, const Size2D&lt; IndexT, Tag &gt; &amp;rhs) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:419</div></div>
-<div class="ttc" id="aindex2d_8h_html_a7e8f91611ddcaf36316ee316666e4d07"><div class="ttname"><a href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">dlaf::common::computeLinearIndexColMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexColMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:375</div></div>
+<div class="ttc" id="aindex2d_8h_html_a024753ac73fbefa174548c575327862b"><div class="ttname"><a href="index2d_8h.html#a024753ac73fbefa174548c575327862b">dlaf::common::transposed</a></div><div class="ttdeci">Coords2DType transposed(Coords2DType coords)</div><div class="ttdoc">Given a coordinate type, it returns its transpose.</div><div class="ttdef"><b>Definition:</b> index2d.h:278</div></div>
+<div class="ttc" id="aindex2d_8h_html_a15f2674deab8ea5e84471b18b8ffba94"><div class="ttname"><a href="index2d_8h.html#a15f2674deab8ea5e84471b18b8ffba94">dlaf::common::computeLinearIndex</a></div><div class="ttdeci">LinearIndexT computeLinearIndex(Ordering ordering, const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:412</div></div>
+<div class="ttc" id="aindex2d_8h_html_a2ed7f0c019788f600bc067956646bf75"><div class="ttname"><a href="index2d_8h.html#a2ed7f0c019788f600bc067956646bf75">dlaf::common::operator+</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; operator+(const Index2D&lt; IndexT, Tag &gt; &amp;lhs, const Size2D&lt; IndexT, Tag &gt; &amp;rhs) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:431</div></div>
+<div class="ttc" id="aindex2d_8h_html_a7e8f91611ddcaf36316ee316666e4d07"><div class="ttname"><a href="index2d_8h.html#a7e8f91611ddcaf36316ee316666e4d07">dlaf::common::computeLinearIndexColMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexColMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:387</div></div>
 <div class="ttc" id="aindex2d_8h_html_a9b3be798b052f32def2a280a80e2295c"><div class="ttname"><a href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">dlaf::orthogonal</a></div><div class="ttdeci">constexpr Coord orthogonal(const Coord rc)</div><div class="ttdoc">Given a Coord, returns its orthogonal.</div><div class="ttdef"><b>Definition:</b> index2d.h:30</div></div>
-<div class="ttc" id="aindex2d_8h_html_ab6f5ed39b526ad9ae94ed6394a35832b"><div class="ttname"><a href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">dlaf::common::computeCoords</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoords(Ordering ordering, SizeType index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:332</div></div>
-<div class="ttc" id="aindex2d_8h_html_ac9c99027fa12a875fa12d878393fefff"><div class="ttname"><a href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">dlaf::common::computeCoordsRowMajor</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoordsRowMajor(SizeType linear_index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:288</div></div>
-<div class="ttc" id="aindex2d_8h_html_ad3fcc947c550d2315d1afca1241b29b9"><div class="ttname"><a href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">dlaf::common::computeLinearIndexRowMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexRowMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:353</div></div>
-<div class="ttc" id="aindex2d_8h_html_afa922ad7c9bdb475884943a4cb233744"><div class="ttname"><a href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">dlaf::common::computeCoordsColMajor</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoordsColMajor(SizeType linear_index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:309</div></div>
-<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1is__coord_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1is__coord.html">dlaf::common::internal::is_coord</a></div><div class="ttdoc">This traits has a true value if T is an Index2D or a Size2D (with any index type and any tag)</div><div class="ttdef"><b>Definition:</b> index2d.h:245</div></div>
+<div class="ttc" id="aindex2d_8h_html_ab6f5ed39b526ad9ae94ed6394a35832b"><div class="ttname"><a href="index2d_8h.html#ab6f5ed39b526ad9ae94ed6394a35832b">dlaf::common::computeCoords</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoords(Ordering ordering, SizeType index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:344</div></div>
+<div class="ttc" id="aindex2d_8h_html_ac9c99027fa12a875fa12d878393fefff"><div class="ttname"><a href="index2d_8h.html#ac9c99027fa12a875fa12d878393fefff">dlaf::common::computeCoordsRowMajor</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoordsRowMajor(SizeType linear_index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:300</div></div>
+<div class="ttc" id="aindex2d_8h_html_ad3fcc947c550d2315d1afca1241b29b9"><div class="ttname"><a href="index2d_8h.html#ad3fcc947c550d2315d1afca1241b29b9">dlaf::common::computeLinearIndexRowMajor</a></div><div class="ttdeci">LinearIndexT computeLinearIndexRowMajor(const Index2D&lt; IndexT, Tag &gt; &amp;index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:365</div></div>
+<div class="ttc" id="aindex2d_8h_html_afa922ad7c9bdb475884943a4cb233744"><div class="ttname"><a href="index2d_8h.html#afa922ad7c9bdb475884943a4cb233744">dlaf::common::computeCoordsColMajor</a></div><div class="ttdeci">Index2D&lt; IndexT, Tag &gt; computeCoordsColMajor(SizeType linear_index, const Size2D&lt; IndexT, Tag &gt; &amp;dims) noexcept</div><div class="ttdef"><b>Definition:</b> index2d.h:321</div></div>
+<div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1is__coord_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1is__coord.html">dlaf::common::internal::is_coord</a></div><div class="ttdoc">This traits has a true value if T is an Index2D or a Size2D (with any index type and any tag)</div><div class="ttdef"><b>Definition:</b> index2d.h:257</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__math_8h_html"><div class="ttname"><a href="util__math_8h.html">util_math.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

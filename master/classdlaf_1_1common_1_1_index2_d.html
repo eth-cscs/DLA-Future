@@ -102,6 +102,8 @@ IndexT&#160;</td><td class="memItemRight" valign="bottom"><b>col</b> () const no
 <tr class="separator:a5f174cc234af20d79923b31d7fa90b19"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab230f7ada23f15ffd3b3d0a3921f1685"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html#ab230f7ada23f15ffd3b3d0a3921f1685">isInOrOn</a> (const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">Size2D</a>&lt; IndexT, Tag &gt; &amp;boundary) const noexcept</td></tr>
 <tr class="separator:ab230f7ada23f15ffd3b3d0a3921f1685"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3849d1f8e08889c7f1d7998874fa7be9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html#a3849d1f8e08889c7f1d7998874fa7be9">isInSub</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a> &amp;origin, const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">Size2D</a>&lt; IndexT, Tag &gt; &amp;sub_boundary) const noexcept</td></tr>
+<tr class="separator:a3849d1f8e08889c7f1d7998874fa7be9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4724fdad093b5d189c5f5e0b1ac5e305"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html#a4724fdad093b5d189c5f5e0b1ac5e305">operator==</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a> &amp;rhs) const noexcept</td></tr>
 <tr class="separator:a4724fdad093b5d189c5f5e0b1ac5e305"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae2e28cf6eab4febd97d6c46d23c6096d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1common_1_1_index2_d.html#ae2e28cf6eab4febd97d6c46d23c6096d">operator!=</a> (const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a> &amp;rhs) const noexcept</td></tr>
@@ -373,6 +375,58 @@ template&lt;typename IndexT , class Tag &gt; </div>
 <dl class="section pre"><dt>Precondition</dt><dd><a class="el" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9">Index2D.isValid</a>, </dd>
 <dd>
 boundary.isValid(). </dd></dl>
+
+</div>
+</div>
+<a id="a3849d1f8e08889c7f1d7998874fa7be9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3849d1f8e08889c7f1d7998874fa7be9">&#9670;&nbsp;</a></span>isInSub()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename IndexT , class Tag &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D</a>&lt; IndexT, Tag &gt;::isInSub </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_index2_d.html">Index2D</a>&lt; IndexT, Tag &gt; &amp;&#160;</td>
+          <td class="paramname"><em>origin</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1common_1_1_size2_d.html">Size2D</a>&lt; IndexT, Tag &gt; &amp;&#160;</td>
+          <td class="paramname"><em>sub_boundary</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Check if it is a valid position inside the sub-grid defined by <code>origin</code> and <code>sub_boundary</code>.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">origin</td><td>of the sub-grid </td></tr>
+    <tr><td class="paramname">sub_boundary</td><td>size of the sub-grid </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>true if the current index is in the sub-range [<code>origin</code>, <code>origin</code> + <code>sub_boundary</code>) </dd></dl>
+<dl class="section pre"><dt>Precondition</dt><dd><a class="el" href="classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9">Index2D.isValid</a>, </dd>
+<dd>
+origin.isValid(), </dd>
+<dd>
+sub_boundary.isValid(). </dd></dl>
 
 </div>
 </div>

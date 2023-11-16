@@ -80,6 +80,7 @@ $(function() {
 <code>#include &lt;<a class="el" href="copy__tile_8h_source.html">dlaf/matrix/copy_tile.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix__ref_8h_source.html">dlaf/matrix/matrix_ref.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__math_8h_source.html">dlaf/util_math.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
@@ -99,6 +100,10 @@ template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 <tr class="memitem:ad10d0589a12343c067f93822fbad6aed"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::copy</b> (Matrix&lt; const T, Source &gt; &amp;source, Matrix&lt; T, Destination &gt; &amp;dest)</td></tr>
 <tr class="separator:ad10d0589a12343c067f93822fbad6aed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affbbd583380737f78cd8fe5c5ec8697c"><td class="memTemplParams" colspan="2"><a id="affbbd583380737f78cd8fe5c5ec8697c"></a>
+template&lt;class T , Device Source, Device Destination&gt; </td></tr>
+<tr class="memitem:affbbd583380737f78cd8fe5c5ec8697c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::internal::copy</b> (MatrixRef&lt; const T, Source &gt; &amp;src, MatrixRef&lt; T, Destination &gt; &amp;dst)</td></tr>
+<tr class="separator:affbbd583380737f78cd8fe5c5ec8697c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplParams" colspan="2">template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 <tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="copy_8h.html#a4e9f34de930792a328db5561dc67a788">dlaf::matrix::copy</a> (Matrix&lt; const T, Source &gt; &amp;src, Matrix&lt; T, Destination &gt; &amp;dst, comm::CommunicatorGrid grid)</td></tr>
 <tr class="separator:a4e9f34de930792a328db5561dc67a788"><td class="memSeparator" colspan="2">&#160;</td></tr>

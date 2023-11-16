@@ -28,10 +28,11 @@ var searchData=
   ['isin_270',['isIn',['../classdlaf_1_1common_1_1_index2_d.html#a5f174cc234af20d79923b31d7fa90b19',1,'dlaf::common::Index2D']]],
   ['isindexinrange_271',['isIndexInRange',['../classdlaf_1_1common_1_1_iterable_range2_d.html#a833f81c7ed8c08d0e995d9c97e8aa935',1,'dlaf::common::IterableRange2D']]],
   ['isinoron_272',['isInOrOn',['../classdlaf_1_1common_1_1_index2_d.html#ab230f7ada23f15ffd3b3d0a3921f1685',1,'dlaf::common::Index2D']]],
-  ['isrc_273',['isrc',['../struct_d_l_a_f__descriptor.html#aaf3ffdca2bf377353f1248f2339d9249',1,'DLAF_descriptor']]],
-  ['isvalid_274',['isValid',['../classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9',1,'dlaf::common::internal::basic_coords']]],
-  ['iterablerange2d_275',['IterableRange2D',['../classdlaf_1_1common_1_1_iterable_range2_d.html',1,'dlaf::common']]],
-  ['iterate_5frange2d_276',['iterate_range2d',['../range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b',1,'dlaf::common']]],
-  ['iteratorlocal_277',['iteratorLocal',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#a79626e0d68d508aca69d1114cedc38a7',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;::iteratorLocal()'],['../structdlaf_1_1matrix_1_1internal_1_1_view.html#a7c25686d3fb7e47b627af360592168ad',1,'dlaf::matrix::internal::View::iteratorLocal()']]],
-  ['iteratorrange2d_278',['IteratorRange2D',['../structdlaf_1_1common_1_1_iterator_range2_d.html',1,'dlaf::common']]]
+  ['isinsub_273',['isInSub',['../classdlaf_1_1common_1_1_index2_d.html#a3849d1f8e08889c7f1d7998874fa7be9',1,'dlaf::common::Index2D']]],
+  ['isrc_274',['isrc',['../struct_d_l_a_f__descriptor.html#aaf3ffdca2bf377353f1248f2339d9249',1,'DLAF_descriptor']]],
+  ['isvalid_275',['isValid',['../classdlaf_1_1common_1_1internal_1_1basic__coords.html#a380f1ac07da35bc014bcbfff908eb0a9',1,'dlaf::common::internal::basic_coords']]],
+  ['iterablerange2d_276',['IterableRange2D',['../classdlaf_1_1common_1_1_iterable_range2_d.html',1,'dlaf::common']]],
+  ['iterate_5frange2d_277',['iterate_range2d',['../range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b',1,'dlaf::common']]],
+  ['iteratorlocal_278',['iteratorLocal',['../structdlaf_1_1matrix_1_1_panel_3_01axis_00_01const_01_t_00_01_d_00_01_store_transposed_1_1_no_01_4.html#a79626e0d68d508aca69d1114cedc38a7',1,'dlaf::matrix::Panel&lt; axis, const T, D, StoreTransposed::No &gt;::iteratorLocal()'],['../structdlaf_1_1matrix_1_1internal_1_1_view.html#a7c25686d3fb7e47b627af360592168ad',1,'dlaf::matrix::internal::View::iteratorLocal()']]],
+  ['iteratorrange2d_279',['IteratorRange2D',['../structdlaf_1_1common_1_1_iterator_range2_d.html',1,'dlaf::common']]]
 ];

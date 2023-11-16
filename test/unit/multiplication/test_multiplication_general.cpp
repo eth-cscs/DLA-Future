@@ -106,8 +106,8 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
     multiplication::internal::General<B, D, T>::callNN(alpha, mat_sub_a, mat_sub_b, beta, mat_sub_c);
   }
 
-  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
-                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(refResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
+                    2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
 std::vector<GemmConfig> gemm_configs = {
@@ -195,8 +195,8 @@ void testGeneralSubMultiplication(const SizeType a, const SizeType b, const T al
                                                   mat_a.get(), mat_b.get(), beta, mat_c.get());
   }
 
-  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
-                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(refResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
+                    2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(GeneralSubMultiplicationTestMC, CorrectnessLocal) {
@@ -250,8 +250,8 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
                                                   mat_c.get());
   }
 
-  CHECK_MATRIX_NEAR(refResult, mat_ch, 40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error,
-                    40 * (mat_ch.size().rows() + 1) * TypeUtilities<T>::error);
+  CHECK_MATRIX_NEAR(refResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
+                    2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
 TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {

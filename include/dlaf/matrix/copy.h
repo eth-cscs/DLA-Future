@@ -88,14 +88,14 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
       return;
   }
 
-  DLAF_ASSERT(src.distribution().tileSize({0, 0}) == dst.distribution().tileSize({0, 0}),
-              src.distribution().tileSize({0, 0}), dst.distribution().tileSize({0, 0}));
+  DLAF_ASSERT(src.distribution().tile_size_of({0, 0}) == dst.distribution().tile_size_of({0, 0}),
+              src.distribution().tile_size_of({0, 0}), dst.distribution().tile_size_of({0, 0}));
   DLAF_ASSERT(src.size() == dst.size(), src.size(), dst.size());
-  DLAF_ASSERT(src.blockSize() == dst.blockSize(), src.blockSize(), dst.blockSize());
+  DLAF_ASSERT(src.block_size() == dst.block_size(), src.block_size(), dst.block_size());
 
   const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>> policy;
-  for (SizeType j = 0; j < src.distribution().localNrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < src.distribution().localNrTiles().rows(); ++i) {
+  for (SizeType j = 0; j < src.distribution().local_nr_tiles().cols(); ++j) {
+    for (SizeType i = 0; i < src.distribution().local_nr_tiles().rows(); ++i) {
       ex::start_detached(ex::when_all(src.read(LocalTileIndex{i, j}),
                                       dst.readwrite(LocalTileIndex{i, j})) |
                          matrix::copy(policy));

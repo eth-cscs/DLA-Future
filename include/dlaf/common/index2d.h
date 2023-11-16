@@ -226,6 +226,18 @@ public:
            boundary.isValid();
   }
 
+  /// Check if it is a valid position inside the sub-grid defined by @p origin and @p sub_boundary.
+  ///
+  /// @param origin of the sub-grid
+  /// @param sub_boundary size of the sub-grid
+  /// @return true if the current index is in the sub-range [@p origin, @p origin + @p sub_boundary)
+  /// @pre Index2D.isValid,
+  /// @pre origin.isValid(),
+  /// @pre sub_boundary.isValid().
+  bool isInSub(const Index2D& origin, const Size2D<IndexT, Tag>& sub_boundary) const noexcept {
+    return row() >= origin.row() && col() >= origin.col() && isIn(sizeFromOrigin(origin + sub_boundary));
+  }
+
   /// @return true if `this` and `rhs` have the same row and column.
   bool operator==(const Index2D& rhs) const noexcept {
     return BaseT::operator==(rhs);

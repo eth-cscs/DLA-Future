@@ -115,6 +115,14 @@ DLAF_addTest(
   MPIRANKS 6
 )
 
+DLAF_addTest(
+  test_copy
+  SOURCES test_copy.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN MPIPIKA
+  MPIRANKS 6
+)
+
 if(DLAF_WITH_HDF5)
   DLAF_addTest(
     test_matrix_hdf5

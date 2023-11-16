@@ -39,10 +39,13 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
                     mat_a, mat_b, mat_c);
 
   if (mat_a.nrTiles().cols() == 0) {
-    for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j)
-      for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i)
-        ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(GlobalTileIndex(i, j))) |
-                           tile::scal(dlaf::internal::Policy<B>()));
+    // Note: if beta == 1, we optimize by not even scheduling anything
+    if (beta != T(1)) {
+      for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j)
+        for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i)
+          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(GlobalTileIndex(i, j))) |
+                             tile::scal(dlaf::internal::Policy<B>()));
+    }
     return;
   }
 

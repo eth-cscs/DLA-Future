@@ -12,6 +12,7 @@
 
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/common/assert.h>
+#include <dlaf/common/index2d.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
@@ -29,6 +30,7 @@
 
 using namespace dlaf;
 using namespace dlaf::matrix;
+using namespace dlaf::matrix::test;
 using namespace dlaf::test;
 
 ::testing::Environment* const comm_grids_env =
@@ -61,44 +63,66 @@ TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestGPU, MatrixElementTypes);
 #endif
 
 struct GemmConfig {
-  const blas::Op opA;
-  const blas::Op opB;
+  const blas::Op opA, opB;
+  const SizeType m, n, k;
+  const SizeType mb, nb, kb;
+  const struct {
+    const GlobalElementIndex tl = {0, 0};
+    const GlobalElementIndex br = {0, 0};
+  } margin_a = {}, margin_b = {}, margin_c = {};
 
-  const SizeType m;
-  const SizeType n;
-  const SizeType k;
+  matrix::internal::SubMatrixSpec sub_a() const noexcept {
+    return {margin_a.tl, {m, k}};
+  }
+  matrix::internal::SubMatrixSpec sub_b() const noexcept {
+    return {margin_b.tl, {k, n}};
+  }
+  matrix::internal::SubMatrixSpec sub_c() const noexcept {
+    return {margin_c.tl, {m, n}};
+  }
 
-  const SizeType mb;
-  const SizeType nb;
-  const SizeType kb;
+  GlobalElementSize full_a() const noexcept {
+    return sizeFromOrigin(margin_a.tl) + common::sizeFromOrigin(margin_a.br) + sub_a().size;
+  }
+  GlobalElementSize full_b() const noexcept {
+    return sizeFromOrigin(margin_b.tl) + common::sizeFromOrigin(margin_b.br) + sub_b().size;
+  }
+  GlobalElementSize full_c() const noexcept {
+    return sizeFromOrigin(margin_c.tl) + common::sizeFromOrigin(margin_c.br) + sub_c().size;
+  }
 };
 
 template <class T, Backend B, Device D>
 void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& config) {
   using dlaf::matrix::internal::MatrixRef;
 
-  auto [refA, refB, refC, refResult] =
-      matrix::test::getMatrixMatrixMultiplication<GlobalElementIndex, T>(config.opA, config.opB,
-                                                                         config.k, alpha, beta);
-
-  auto setMatrix = [&](auto elSetter, const LocalElementSize size, const TileElementSize block_size) {
-    Matrix<T, Device::CPU> matrix(size, block_size);
+  auto setMatrix = [&](auto&& elSetter, const GlobalElementSize& size,
+                       const TileElementSize& block_size) {
+    Matrix<T, Device::CPU> matrix({size.rows(), size.cols()}, block_size);
     dlaf::matrix::util::set(matrix, elSetter);
     return matrix;
   };
 
-  Matrix<const T, Device::CPU> mat_ah = setMatrix(refA, {config.m, config.k}, {config.mb, config.kb});
-  Matrix<const T, Device::CPU> mat_bh = setMatrix(refB, {config.k, config.n}, {config.kb, config.nb});
-  Matrix<T, Device::CPU> mat_ch = setMatrix(refC, {config.m, config.n}, {config.mb, config.nb});
+  auto [subValuesA, subValuesB, subValuesC, subValuesResult] =
+      matrix::test::getMatrixMatrixMultiplication<GlobalElementIndex, T>(config.opA, config.opB,
+                                                                         config.k, alpha, beta);
+
+  const auto fullValuesA = mixValues(config.sub_a(), subValuesA, [](auto) { return T(-99); });
+  const auto fullValuesB = mixValues(config.sub_b(), subValuesB, [](auto) { return T(-99); });
+  const auto fullValuesC = mixValues(config.sub_c(), subValuesC, [](auto) { return T(-99); });
+
+  Matrix<const T, Device::CPU> mat_ah = setMatrix(fullValuesA, config.full_a(), {config.mb, config.kb});
+  Matrix<const T, Device::CPU> mat_bh = setMatrix(fullValuesB, config.full_b(), {config.kb, config.nb});
+  Matrix<T, Device::CPU> mat_ch = setMatrix(fullValuesC, config.full_c(), {config.mb, config.nb});
 
   {
     MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
     MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
     MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
 
-    MatrixRef<const T, D> mat_sub_a(mat_a.get(), {{0, 0}, mat_ah.size()});
-    MatrixRef<const T, D> mat_sub_b(mat_b.get(), {{0, 0}, mat_bh.size()});
-    MatrixRef<T, D> mat_sub_c(mat_c.get(), {{0, 0}, mat_ch.size()});
+    MatrixRef<const T, D> mat_sub_a(mat_a.get(), config.sub_a());
+    MatrixRef<const T, D> mat_sub_b(mat_b.get(), config.sub_b());
+    MatrixRef<T, D> mat_sub_c(mat_c.get(), config.sub_c());
 
     // Note: currently it is implemented just the NoTrans/NoTrans case
     ASSERT_EQ(config.opA, blas::Op::NoTrans);
@@ -106,7 +130,8 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
     multiplication::internal::General<B, D, T>::callNN(alpha, mat_sub_a, mat_sub_b, beta, mat_sub_c);
   }
 
-  CHECK_MATRIX_NEAR(refResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
+  const auto fullValuesResult = mixValues(config.sub_c(), subValuesResult, fullValuesC);
+  CHECK_MATRIX_NEAR(fullValuesResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 

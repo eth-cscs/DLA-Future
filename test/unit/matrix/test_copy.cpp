@@ -169,12 +169,6 @@ bool isFullMatrix(const Distribution& dist_full, const GlobalElementIndex& sub_o
   return sub_origin == GlobalElementIndex{0, 0} && sub_size == dist_full.size();
 }
 
-bool isInSub(const GlobalElementIndex& ij, const GlobalElementIndex& origin,
-             const GlobalElementSize& sub_size) noexcept {
-  return ij.row() >= origin.row() && ij.col() >= origin.col() &&
-         ij.isIn(sizeFromOrigin(origin + sub_size));
-}
-
 template <class ElementGetter>
 auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
   return [fullValues, offset = sizeFromOrigin(offset)](const GlobalElementIndex& ij) {
@@ -186,7 +180,7 @@ template <class OutsideElementGetter, class InsideElementGetter>
 auto mixValues(const GlobalElementIndex& offset, const GlobalElementSize& sub_size,
                InsideElementGetter&& insideValues, OutsideElementGetter&& outsideValues) {
   return [outsideValues, insideValues, offset, sub_size](const GlobalElementIndex& ij) {
-    if (isInSub(ij, offset, sub_size))
+    if (ij.isInSub(offset, sub_size))
       return insideValues(ij - common::sizeFromOrigin(offset));
     else
       return outsideValues(ij);

@@ -229,6 +229,18 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
   set(matrix, el_op_f);
 }
 
+/// Set the elements of the matrix.
+///
+/// The diagonal elements are set to 1 and the other elements to 0.
+template <class T>
+void set_identity(Matrix<T, Device::CPU>& matrix) {
+  set(matrix, [](const GlobalElementIndex& ij) {
+    if (ij.row() == ij.col())
+      return T{1};
+    return T{0};
+  });
+}
+
 /// Set the matrix with random values whose absolute values are less than 1.
 ///
 /// Values will be random numbers in:

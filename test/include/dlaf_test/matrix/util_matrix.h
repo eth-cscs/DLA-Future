@@ -78,6 +78,24 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   }
 }
 
+template <class ElementGetter>
+auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
+  return [fullValues, offset = sizeFromOrigin(offset)](const GlobalElementIndex& ij) {
+    return fullValues(ij + offset);
+  };
+}
+
+template <class OutsideElementGetter, class InsideElementGetter>
+auto mixValues(const dlaf::matrix::internal::SubMatrixSpec& sub_spec, InsideElementGetter&& insideValues,
+               OutsideElementGetter&& outsideValues) {
+  return [outsideValues, insideValues, sub_spec](const GlobalElementIndex& ij) {
+    if (ij.isInSub(sub_spec.origin, sub_spec.size))
+      return insideValues(ij - common::sizeFromOrigin(sub_spec.origin));
+    else
+      return outsideValues(ij);
+  };
+}
+
 namespace internal {
 
 /// Checks the elements of the matrix.

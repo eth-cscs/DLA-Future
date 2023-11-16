@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['all_5freduce_2eh_827',['all_reduce.h',['../kernels_2all__reduce_8h.html',1,'(Global Namespace)'],['../sync_2all__reduce_8h.html',1,'(Global Namespace)']]],
-  ['auxiliary_2eh_828',['auxiliary.h',['../auxiliary_8h.html',1,'']]]
+  ['all_5freduce_2eh_828',['all_reduce.h',['../kernels_2all__reduce_8h.html',1,'(Global Namespace)'],['../sync_2all__reduce_8h.html',1,'(Global Namespace)']]],
+  ['auxiliary_2eh_829',['auxiliary.h',['../auxiliary_8h.html',1,'']]]
 ];

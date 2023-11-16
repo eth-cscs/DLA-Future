@@ -170,6 +170,9 @@ template&lt;Backend backend, class T , Coord axis, Device D, StoreTransposed sto
 <tr class="memitem:af07478cd4a633a1422e160863d3d8510"><td class="memTemplParams" colspan="2">template&lt;class T , class ElementGetter &gt; </td></tr>
 <tr class="memitem:af07478cd4a633a1422e160863d3d8510"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#af07478cd4a633a1422e160863d3d8510">dlaf::matrix::util::set</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix, ElementGetter el_f, const blas::Op op)</td></tr>
 <tr class="separator:af07478cd4a633a1422e160863d3d8510"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a34574d2e919da45abd357fd27bb663d8"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
+<tr class="memitem:a34574d2e919da45abd357fd27bb663d8"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">dlaf::matrix::util::set_identity</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix)</td></tr>
+<tr class="separator:a34574d2e919da45abd357fd27bb663d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8e8c0d0551fbda5968d6c84eb3c70fc0"><td class="memTemplParams" colspan="2">template&lt;class T &gt; </td></tr>
 <tr class="memitem:a8e8c0d0551fbda5968d6c84eb3c70fc0"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">dlaf::matrix::util::set_random</a> (Matrix&lt; T, Device::CPU &gt; &amp;matrix)</td></tr>
 <tr class="separator:a8e8c0d0551fbda5968d6c84eb3c70fc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -329,6 +332,28 @@ template&lt;Backend backend, class T , Device D&gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Sets to zero the subset of local tiles of <code>matrix</code> in the 2D range starting at <code>begin</code> with size <code>sz</code>. </p>
+
+</div>
+</div>
+<a id="a34574d2e919da45abd357fd27bb663d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a34574d2e919da45abd357fd27bb663d8">&#9670;&nbsp;</a></span>set_identity()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::matrix::util::set_identity </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&lt; T, Device::CPU &gt; &amp;&#160;</td>
+          <td class="paramname"><em>matrix</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Set the elements of the matrix.</p>
+<p>The diagonal elements are set to 1 and the other elements to 0. </p>
 
 </div>
 </div>

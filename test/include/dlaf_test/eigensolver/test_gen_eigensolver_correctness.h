@@ -63,9 +63,8 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
   }();
 
   // eigenvalues are contiguous in the mat_local buffer
-  BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
-  BaseType<T>* evals_end = evals_start + m;
-  EXPECT_TRUE(std::is_sorted(evals_start, evals_end));
+  const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
+  EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
 
   MatrixLocal<T> mat_be_local({m, m}, reference_a.blockSize());
 

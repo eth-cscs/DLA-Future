@@ -794,6 +794,53 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
       }));
 }
 
+template <Backend B, class T, Device D, class KSender, class UDLSenders>
+void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const SizeType n_upper,
+                          const SizeType n_lower, Matrix<T, D>& e0, Matrix<T, D>& e1, Matrix<T, D>& e2,
+                          KSender&& k, UDLSenders&& n_udl) {
+  namespace ex = pika::execution::experimental;
+
+  ex::start_detached(
+      ex::when_all(std::forward<KSender>(k), std::forward<UDLSenders>(n_udl)) |
+      ex::then([sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(), e1 = e1.subPipelineConst(),
+                e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
+        using dlaf::matrix::internal::MatrixRef;
+
+        const SizeType n_uh = to_SizeType(n_udl[coltype_index(ColType::UpperHalf)]);
+        const SizeType n_de = to_SizeType(n_udl[coltype_index(ColType::Dense)]);
+        const SizeType n_lh = to_SizeType(n_udl[coltype_index(ColType::LowerHalf)]);
+
+        const SizeType a = n_uh + n_de;
+        const SizeType b = n_de + n_lh;
+
+        using GEMM = dlaf::multiplication::internal::General<B, D, T>;
+        {
+          MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n_upper, a}});
+          MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {a, k}});
+          MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n_upper, k}});
+          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
+        }
+
+        {
+          MatrixRef<const T, D> e1_sub(e1, {{sub_offset + n_upper, sub_offset + n_uh}, {n_lower, b}});
+          MatrixRef<const T, D> e2_sub(e2, {{sub_offset + n_uh, sub_offset}, {b, k}});
+          MatrixRef<T, D> e0_sub(e0, {{sub_offset + n_upper, sub_offset}, {n_lower, k}});
+
+          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
+        }
+
+        // copy deflated from e1 to e0
+        {
+          const matrix::internal::SubMatrixSpec deflated_submat{{sub_offset, sub_offset + k},
+                                                                {n, n - k}};
+          MatrixRef<T, D> sub_e0(e0, deflated_submat);
+          MatrixRef<const T, D> sub_e1(e1, deflated_submat);
+
+          copy(sub_e1, sub_e0);
+        }
+      }));
+}
+
 template <Backend B, Device D, class T, class RhoSender>
 void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
                       RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
@@ -917,45 +964,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // prepared for the deflated system.
   const SizeType sub_offset = dist.template globalTileElementDistance<Coord::Row>(0, i_begin);
 
-  ex::start_detached(
-      ex::when_all(k, n_udl) | ex::then([sub_offset, n, n_upper, n_lower, e0 = ws.e0.subPipeline(),
-                                         e1 = ws.e1.subPipelineConst(), e2 = ws.e2.subPipelineConst()](
-                                            const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
-        using dlaf::matrix::internal::MatrixRef;
-
-        const SizeType n_uh = to_SizeType(n_udl[coltype_index(ColType::UpperHalf)]);
-        const SizeType n_de = to_SizeType(n_udl[coltype_index(ColType::Dense)]);
-        const SizeType n_lh = to_SizeType(n_udl[coltype_index(ColType::LowerHalf)]);
-
-        const SizeType a = n_uh + n_de;
-        const SizeType b = n_de + n_lh;
-
-        using GEMM = dlaf::multiplication::internal::General<B, D, T>;
-        {
-          MatrixRef<const T, D> e1_sub(e1, {{sub_offset, sub_offset}, {n_upper, a}});
-          MatrixRef<const T, D> e2_sub(e2, {{sub_offset, sub_offset}, {a, k}});
-          MatrixRef<T, D> e0_sub(e0, {{sub_offset, sub_offset}, {n_upper, k}});
-          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
-        }
-
-        {
-          MatrixRef<const T, D> e1_sub(e1, {{sub_offset + n_upper, sub_offset + n_uh}, {n_lower, b}});
-          MatrixRef<const T, D> e2_sub(e2, {{sub_offset + n_uh, sub_offset}, {b, k}});
-          MatrixRef<T, D> e0_sub(e0, {{sub_offset + n_upper, sub_offset}, {n_lower, k}});
-
-          GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
-        }
-
-        // copy deflated from e1 to e0
-        {
-          const matrix::internal::SubMatrixSpec deflated_submat{{sub_offset, sub_offset + k},
-                                                                {n, n - k}};
-          MatrixRef<T, D> sub_e0(e0, deflated_submat);
-          MatrixRef<const T, D> sub_e1(e1, deflated_submat);
-
-          copy(sub_e1, sub_e0);
-        }
-      }));
+  multiplyEigenvectors<B>(sub_offset, n, n_upper, n_lower, ws.e0, ws.e1, ws.e2, k, std::move(n_udl));
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

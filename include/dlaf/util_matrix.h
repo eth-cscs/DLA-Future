@@ -115,10 +115,9 @@ bool multipliable(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D
     return isSizeOk;
 
   const bool allSameGrid = same_process_grid(a, b) && same_process_grid(b, c);
-  const bool isTileSizeOk =
-      multipliable_sizes(a.tile_size(), b.tile_size(), c.tile_size(), opA, opB);
-  const bool isOffsetOk =
-      multipliable_sizes(a.tile_size_of({0, 0}), b.tile_size_of({0, 0}), c.tile_size_of({0, 0}), opA, opB);
+  const bool isTileSizeOk = multipliable_sizes(a.tile_size(), b.tile_size(), c.tile_size(), opA, opB);
+  const bool isOffsetOk = multipliable_sizes(a.tile_size_of({0, 0}), b.tile_size_of({0, 0}),
+                                             c.tile_size_of({0, 0}), opA, opB);
 
   if (local_matrix(c))
     return allSameGrid && isSizeOk && isTileSizeOk && isOffsetOk;

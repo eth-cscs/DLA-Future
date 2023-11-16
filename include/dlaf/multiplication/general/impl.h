@@ -56,6 +56,19 @@ void GeneralSub<B, D, T>::callNN(const blas::Op opA, const blas::Op opB, const T
                                  const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
+  if (mat_a.nrTiles().cols() == 0) {
+    if (beta == T{1})
+      return;
+    DLAF_ASSERT(beta == T{0}, beta);
+    for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
+      for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {
+        ex::start_detached(dlaf::internal::whenAllLift(mat_c.readwrite(GlobalTileIndex(i, j))) |
+                           tile::set0(dlaf::internal::Policy<B>()));
+      }
+    }
+    return;
+  }
+
   for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {
       for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
@@ -206,6 +219,19 @@ void GeneralSub<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_
 
   if (mat_c.size().isEmpty())
     return;
+
+  if (mat_a.nrTiles().cols() == 0) {
+    if (beta == T{1})
+      return;
+    DLAF_ASSERT(beta == T{0}, beta);
+    for (SizeType j = 0; j < mat_c.distribution().localNrTiles().cols(); ++j) {
+      for (SizeType i = 0; i < mat_c.distribution().localNrTiles().rows(); ++i) {
+        ex::start_detached(dlaf::internal::whenAllLift(mat_c.readwrite(LocalTileIndex(i, j))) |
+                           tile::set0(dlaf::internal::Policy<B>()));
+      }
+    }
+    return;
+  }
 
   const matrix::Distribution& dist_a = mat_a.distribution();
   const matrix::Distribution& dist_b = mat_b.distribution();

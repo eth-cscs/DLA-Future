@@ -167,8 +167,8 @@ comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElement
 
   const comm::Size2D grid_size = dist_in.commGridSize();
 
-  const comm::Index2D sub_rank(dist_in.template rank_global_element<Coord::Row>(offset_in.row()),
-                               dist_in.template rank_global_element<Coord::Col>(offset_in.col()));
+  const comm::Index2D sub_rank(dist_in.rank_global_element<Coord::Row>(offset_in.row()),
+                               dist_in.rank_global_element<Coord::Col>(offset_in.col()));
   const GlobalTileIndex offset_tl(offset_out.row() / dist_in.blockSize().rows(),
                                   offset_out.col() / dist_in.blockSize().cols());
 

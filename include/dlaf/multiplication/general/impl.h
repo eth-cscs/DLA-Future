@@ -11,6 +11,7 @@
 #pragma once
 
 #include <dlaf/blas/tile.h>
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
@@ -36,6 +37,14 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
 
   DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
                     mat_a, mat_b, mat_c);
+
+  if (mat_a.nrTiles().cols() == 0) {
+    for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j)
+      for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i)
+        ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(GlobalTileIndex(i, j))) |
+                           tile::scal(dlaf::internal::Policy<B>()));
+    return;
+  }
 
   for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
     for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {

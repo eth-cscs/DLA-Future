@@ -17,6 +17,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/blas/scal.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>

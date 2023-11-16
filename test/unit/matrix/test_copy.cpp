@@ -73,26 +73,22 @@ T outputValues(const GlobalElementIndex&) noexcept {
 };
 
 TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
-  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
+  using dlaf::matrix::util::set;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      using dlaf::matrix::util::set;
-
       const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
       const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      const LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      const LayoutInfo layout = tileLayout(distribution.local_size(), distribution.block_size());
 
-      MemoryViewT mem_src(layout.minMemSize());
-      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, mem_src());
+      memory::MemoryView<TypeParam, Device::CPU> mem_src(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, layout, mem_src());
       set(mat_src, inputValues<TypeParam>);
-      MatrixConstT mat_src_const = std::move(mat_src);
+      Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      MemoryViewT mem_dst(layout.minMemSize());
-      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, mem_dst());
+      memory::MemoryView<TypeParam, Device::CPU> mem_dst(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, layout, mem_dst());
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_dst);
@@ -104,36 +100,28 @@ TYPED_TEST(MatrixCopyTest, FullMatrixCPU) {
 
 #if DLAF_WITH_GPU
 TYPED_TEST(MatrixCopyTest, FullMatrixGPU) {
-  using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
-  using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
-  using MatrixConstT = dlaf::Matrix<const TypeParam, Device::CPU>;
-  using GPUMemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::GPU>;
-  using GPUMatrixT = dlaf::Matrix<TypeParam, Device::GPU>;
-
   using dlaf::matrix::util::set;
 
   for (const auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
-      GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
+      const GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
-      Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
-      LayoutInfo layout = tileLayout(distribution.localSize(), test.block_size);
+      const Distribution distribution(size, test.block_size, comm_grid.size(), comm_grid.rank(), {0, 0});
+      const LayoutInfo layout = tileLayout(distribution.local_size(), distribution.block_size());
 
-      MemoryViewT mem_src(layout.minMemSize());
-      MatrixT mat_src = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, mem_src());
+      memory::MemoryView<TypeParam, Device::CPU> mem_src(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> mat_src(distribution, layout, mem_src());
       set(mat_src, inputValues<TypeParam>);
-      MatrixConstT mat_src_const = std::move(mat_src);
+      Matrix<const TypeParam, Device::CPU> mat_src_const = std::move(mat_src);
 
-      GPUMemoryViewT mem_gpu1(layout.minMemSize());
-      GPUMatrixT mat_gpu1 =
-          createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid, mem_gpu1());
+      memory::MemoryView<TypeParam, Device::GPU> mem_gpu1(layout.minMemSize());
+      Matrix<TypeParam, Device::GPU> mat_gpu1(distribution, layout, mem_gpu1());
 
-      GPUMemoryViewT mem_gpu2(layout.minMemSize());
-      GPUMatrixT mat_gpu2 =
-          createMatrixFromTile<Device::GPU>(size, test.block_size, comm_grid, mem_gpu2());
+      memory::MemoryView<TypeParam, Device::GPU> mem_gpu2(layout.minMemSize());
+      Matrix<TypeParam, Device::GPU> mat_gpu2(distribution, layout, mem_gpu2());
 
-      MemoryViewT mem_dst(layout.minMemSize());
-      MatrixT mat_dst = createMatrixFromTile<Device::CPU>(size, test.block_size, comm_grid, mem_dst());
+      memory::MemoryView<TypeParam, Device::CPU> mem_dst(layout.minMemSize());
+      Matrix<TypeParam, Device::CPU> mat_dst(distribution, layout, mem_dst());
       set(mat_dst, outputValues<TypeParam>);
 
       copy(mat_src_const, mat_gpu1);

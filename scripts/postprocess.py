@@ -1,4 +1,4 @@
-#
+
 # Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2023, ETH Zurich
@@ -47,7 +47,7 @@ def _gen_nodes_plot(
     """
     Args:
         plt_type:       ppn | time
-        plt_routine:    chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | bt_red2band | trsm | evp | gevp It is used to filter data.
+        plt_routine:    chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | bt_red2band | trsm | trmm | evp | gevp It is used to filter data.
         title:          title of the plot
         df:             the pandas.DataFrame with the data for the plot
         combine_mb:     bool indicates if different mb has to be included in the same plot
@@ -238,7 +238,7 @@ def _parse_line_based(fout, bench_name, nodes):
         # fail.
         alg_name = bench_name[0 : bench_name.find("_dlaf")]
 
-        if alg_name in ["chol", "hegst", "trsm"]:
+        if alg_name in ["chol", "hegst", "trsm", "trmm"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
         if alg_name in ["red2band", "band2trid", "bt_band2trid", "bt_red2band"]:
             pstr_res = "[{run_index:d}] {time:g}s {perf:g}GFlop/s{matrix_type:optional_text} ({matrix_rows:d}, {matrix_cols:d}) ({block_rows:d}, {block_cols:d}) {band:d} ({grid_rows:d}, {grid_cols:d}) {:d}{backend:optional_text}"
@@ -418,6 +418,8 @@ def calc_chol_metrics(df):
 def calc_trsm_metrics(df):
     return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
+def calc_trmm_metrics(df):
+    return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
 def calc_gen2std_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
@@ -483,7 +485,7 @@ def _gen_plot(
     Args:
         scaling         strong | weak
         name:           name of the routine to be included in the title
-        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | evp | gevp
+        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | trsm | evp | gevp
         combine_mb:     bool indicates if different mb has to be included in the same plot
         size_type:      m | mn It indicates which sizes are relevant.
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -689,6 +691,7 @@ def gen_trsm_plots_strong(
     customize_time=add_basic_legend,
     **proxy_args,
 ):
+
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -746,6 +749,75 @@ def gen_trsm_plots_weak(
         weak_rt_approx=weak_rt_approx,
         **proxy_args,
     )
+
+def gen_trmm_plots_strong(
+    df,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="strong",
+        name="TRMM",
+        routine="trmm",
+        filename="trmm",
+        size_type="mn",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=True,
+        customize_ppn=customize_ppn,
+        time_plot=True,
+        customize_time=customize_time,
+        **proxy_args,
+    )
+
+
+def gen_trmm_plots_weak(
+    df,
+    weak_rt_approx,
+    logx=False,
+    combine_mb=False,
+    filename_suffix=None,
+    customize_ppn=add_basic_legend,
+    customize_time=add_basic_legend,
+    **proxy_args,
+):
+    """
+    Args:
+        customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
+        customize_time: function accepting the two arguments fig and ax for time plot customization
+        Default customization (ppn and time): add_basic_legend. They can be set to "None" to remove the legend.
+    """
+    _gen_plot(
+        scaling="weak",
+        name="TRMM",
+        routine="trmm",
+        filename="trmm",
+        size_type="mn",
+        df=df,
+        logx=logx,
+        combine_mb=combine_mb,
+        filename_suffix=filename_suffix,
+        ppn_plot=True,
+        customize_ppn=customize_ppn,
+        time_plot=True,
+        customize_time=customize_time,
+        weak_rt_approx=weak_rt_approx,
+        **proxy_args,
+    )
+
 
 
 def gen_gen2std_plots_strong(

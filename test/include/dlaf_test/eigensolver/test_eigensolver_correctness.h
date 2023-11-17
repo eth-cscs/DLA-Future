@@ -17,6 +17,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/blas/scal.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/matrix.h>
@@ -59,9 +60,8 @@ void testEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::C
   }();
 
   // eigenvalues are contiguous in the mat_local buffer
-  BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
-  BaseType<T>* evals_end = evals_start + m;
-  EXPECT_TRUE(std::is_sorted(evals_start, evals_end));
+  const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
+  EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
 
   MatrixLocal<T> workspace({m, m}, reference.blockSize());
 

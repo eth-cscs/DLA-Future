@@ -152,11 +152,33 @@ std::vector<GemmConfig> gemm_configs = {
     {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 3, 3, 5},
 };
 
+std::vector<GemmConfig> sub_gemm_configs = {
+    // empty matrices
+    {blas::Op::NoTrans, blas::Op::NoTrans, 0, 0, 7, 3, 6, 2, {{1, 2}}, {{2, 3}}, {{3, 4}}},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 26, 0, 7, 3, 6, 2, {{1, 2}}, {{2, 3}}, {{3, 4}}},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 0, 13, 7, 3, 6, 2, {{1, 2}}, {{2, 3}}, {{3, 4}}},
+    // k = 0
+    {blas::Op::NoTrans, blas::Op::NoTrans, 26, 13, 0, 3, 6, 2, {{1, 2}}, {{2, 3}}, {{3, 4}}},
+    // single-tile
+    {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 10, 9, 13, {{2, 1}}, {{1, 1}}, {{0, 0}}},
+    // multi-tile
+    {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{7, 1}}, {{11, 10}}, {{4, 2}}},
+};
+
 TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRef) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
   for (const GemmConfig& test_config : gemm_configs) {
+    testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config);
+  }
+}
+
+TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRefSub) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (const GemmConfig& test_config : sub_gemm_configs) {
     testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config);
   }
 }
@@ -167,6 +189,15 @@ TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRef) {
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
   for (const GemmConfig& test_config : gemm_configs) {
+    testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config);
+  }
+}
+
+TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRefSub) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (const GemmConfig& test_config : sub_gemm_configs) {
     testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config);
   }
 }

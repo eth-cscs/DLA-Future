@@ -281,7 +281,7 @@ void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribut
   Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
-  if (isFullMatrix(dist_in, test.sub_in()) {
+  if (isFullMatrix(dist_in, test.sub_in())) {
     set(mat_in, inputValues<T>);
     set(mat_out, outputValues<T>);
 

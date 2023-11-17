@@ -108,7 +108,6 @@ auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const com
   else if constexpr (D == Device::GPU) {
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
-    using pika::execution::thread_stacks;
 
     namespace ex = pika::execution::experimental;
 
@@ -121,8 +120,7 @@ auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const com
              return di::whenAllLift(std::move(recv), col_data, mem_view(), to_sizet(n) * sizeof(T),
                                     whip::memcpy_host_to_device) |
                     di::transform(
-                        di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high,
-                                                                            thread_stacksize::nostack},
+                        di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high},
                         whip::memcpy_async);
            });
   }

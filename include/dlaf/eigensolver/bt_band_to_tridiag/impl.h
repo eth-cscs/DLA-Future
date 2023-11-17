@@ -510,15 +510,15 @@ struct HHManager<Backend::MC, Device::CPU, T> {
   auto computeVW(const SizeType nb_apply, const LocalTileIndex ij, const TileAccessHelper& helper,
                  SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
                  matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), nb_apply,
                                        splitTile(mat_v.readwrite(ij), helper.specHH()),
                                        splitTile(mat_t.readwrite(ij), helper.specT()),
                                        splitTile(mat_w.readwrite(ij), helper.specHH())) |
-           dlaf::internal::transform(
-               dlaf::internal::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
-               bt_tridiag::computeVW<T>) |
+           dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                     bt_tridiag::computeVW<T>) |
            ex::split_tuple();
   }
 
@@ -540,6 +540,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
   auto computeVW(const SizeType hhr_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
                  SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
                  matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -552,9 +553,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
         dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), hhr_nb,
                                     splitTile(mat_v_h.readwrite(ij), helper.specHH()),
                                     splitTile(mat_t_h.readwrite(ij_t), t_spec)) |
-        dlaf::internal::transform(
-            dlaf::internal::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
-            computeVT<T>) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                  computeVT<T>) |
         ex::split_tuple();
 
     auto copyVTandComputeW =
@@ -589,8 +589,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
                         splitTile(mat_t.readwrite(ij_t), t_spec),
                         splitTile(mat_w.readwrite(ij), helper.specHH())) |
            dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-               dlaf::internal::Policy<Backend::GPU>(pika::execution::thread_stacksize::nostack),
-               copyVTandComputeW) |
+               dlaf::internal::Policy<Backend::GPU>(thread_stacksize::nostack), copyVTandComputeW) |
            ex::split_tuple();
   }
 

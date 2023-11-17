@@ -225,11 +225,13 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmDiag(pika::execution::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
               XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1),
                                   std::forward<ASender>(tile_a), std::forward<WSender>(tile_w), T(1),
                                   std::forward<XSender>(tile_x)) |
-      tile::hemm(dlaf::internal::Policy<B>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::hemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 // X += op(A) * W
@@ -237,21 +239,25 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmOffDiag(pika::execution::thread_priority priority, blas::Op op, ASender&& tile_a,
                  WSender&& tile_w, XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
                                   std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::gemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend B, typename VSender, typename XSender, typename ASender>
 void her2kDiag(pika::execution::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
                ASender&& tile_a) {
   using T = dlaf::internal::SenderElementType<VSender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
                                   std::forward<VSender>(tile_v), std::forward<XSender>(tile_x),
                                   BaseType<T>(1), std::forward<ASender>(tile_a)) |
-      tile::her2k(dlaf::internal::Policy<B>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::her2k(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 // C -= A . B*
@@ -259,11 +265,13 @@ template <Backend B, typename ASender, typename BSender, typename CSender>
 void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
                   CSender&& tile_c) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                                   std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
                                   std::forward<CSender>(tile_c)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::gemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 namespace local {
@@ -284,6 +292,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             const matrix::SubPanelView& panel_view) {
   static Device constexpr D = MatrixLikeA::device;
   using T = typename MatrixLikeA::ElementType;
+  using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -301,7 +310,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles))) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();

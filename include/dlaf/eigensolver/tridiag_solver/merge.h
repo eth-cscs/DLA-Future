@@ -198,7 +198,6 @@ auto scaleRho(RhoSender&& rho) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   return std::forward<RhoSender>(rho) |
-         // TODO: Or plain then?
          di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
                        [](auto rho) { return 2 * std::abs(rho); });
 }
@@ -244,7 +243,6 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
   };
 
   return ex::when_all(std::move(dmax), std::move(zmax)) |
-         // TODO: Or plain then?
          di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
                        std::move(tol_fn)) |
          // TODO: This releases the tiles that are kept in the operation state.

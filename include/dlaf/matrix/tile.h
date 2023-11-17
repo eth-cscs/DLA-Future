@@ -322,8 +322,8 @@ private:
       internal::TileAsyncRwMutexReadWriteWrapper<T, D>,
       // Disjoint read-write access
       std::shared_ptr<internal::TileAsyncRwMutexReadWriteWrapper<T, D>>>
-  // TODO: combined ro tiles: vector<ReadOnlyWrapper<T, D>>
-  // TODO: combined rw tiles: vector<ReadWriteWrapper<T, D>>
+      // TODO: combined ro tiles: vector<ReadOnlyWrapper<T, D>>
+      // TODO: combined rw tiles: vector<ReadWriteWrapper<T, D>>
       dep_tracker_{};
 };
 

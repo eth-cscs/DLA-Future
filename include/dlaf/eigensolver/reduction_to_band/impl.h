@@ -399,7 +399,8 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        subtiles used in the operation belong to different tiles.
     if (force_copy)
       ex::start_detached(ex::when_all(matrix::splitTile(mat_a.read(idx), spec), v.readwrite(idx)) |
-                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
+                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high,
+                                                                thread_stacksize::nostack)));
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -419,7 +420,8 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
   for (const auto& index_i : it) {
     ex::start_detached(dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
                                                    T(1), tile_t, v.read(index_i), w.readwrite(index_i)) |
-                       tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
+                       tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high,
+                                                             thread_stacksize::nostack)));
   }
 
   if (it.empty()) {
@@ -438,10 +440,10 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read(index_i),
-                                                   w2.read(LocalTileIndex(0, 0)), T(1),
-                                                   x.readwrite(index_i)) |
-                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read(index_i),
+                                    w2.read(LocalTileIndex(0, 0)), T(1), x.readwrite(index_i)) |
+        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
 }
 
 template <Backend B, Device D, class T>
@@ -512,15 +514,16 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
   ex::start_detached(w2.readwrite(LocalTileIndex(0, 0)) |
-                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
+                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high,
+                                                          thread_stacksize::nostack)));
 
   using namespace blas;
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read(index_tile),
-                                                   x.read(index_tile), T(1),
-                                                   w2.readwrite(LocalTileIndex(0, 0))) |
-                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read(index_tile),
+                                    x.read(index_tile), T(1), w2.readwrite(LocalTileIndex(0, 0))) |
+        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
 }
 
 template <Backend B, Device D, class T>
@@ -913,7 +916,8 @@ protected:
       auto tmp_tile = v.readwrite(i);
       ex::start_detached(
           ex::when_all(splitTile(mat_a.read(i), spec), splitTile(std::move(tmp_tile), spec)) |
-          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high, thread_stacksize::nostack)));
+          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                       thread_stacksize::nostack)));
     }
   }
 
@@ -929,9 +933,9 @@ protected:
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite(i);
-      ex::start_detached(
-          ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
-          matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high, thread_stacksize::nostack)));
+      ex::start_detached(ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
+                         matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                             thread_priority::high, thread_stacksize::nostack)));
     }
   }
 };

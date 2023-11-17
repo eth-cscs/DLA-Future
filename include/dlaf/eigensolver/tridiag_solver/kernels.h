@@ -34,7 +34,8 @@ void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<DiagTileSenderIn>(in), std::forward<DiagTileSenderOut>(out));
-  ex::start_detached(tile::stedc(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), std::move(sender)));
+  ex::start_detached(tile::stedc(
+      di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), std::move(sender)));
 }
 
 template <class T>
@@ -69,7 +70,8 @@ void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
   namespace di = dlaf::internal;
   namespace ex = pika::execution::experimental;
   auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), castToComplex_o, std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack),
+                      castToComplex_o, std::move(sender));
 }
 
 // Cuppen's decomposition
@@ -138,8 +140,8 @@ void copyDiagonalFromCompactTridiagonalAsync(TridiagTile&& in, DiagTile&& out) {
   namespace di = dlaf::internal;
 
   auto sender = ex::when_all(std::forward<TridiagTile>(in), std::forward<DiagTile>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), copyDiagonalFromCompactTridiagonal_o,
-                      std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack),
+                      copyDiagonalFromCompactTridiagonal_o, std::move(sender));
 }
 
 template <class T>
@@ -182,8 +184,8 @@ void assembleRank1UpdateVectorTileAsync(bool top_tile, RhoSender&& rho, EvecsTil
   auto sender =
       di::whenAllLift(top_tile, std::forward<RhoSender>(rho), std::forward<EvecsTileSender>(evecs),
                       std::forward<Rank1TileSender>(rank1));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), assembleRank1UpdateVectorTile_o,
-                      std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack),
+                      assembleRank1UpdateVectorTile_o, std::move(sender));
 }
 
 #ifdef DLAF_WITH_GPU

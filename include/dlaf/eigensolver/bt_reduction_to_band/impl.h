@@ -74,7 +74,8 @@ void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
   ex::start_detached(dlaf::internal::transform(
-      dlaf::internal::Policy<backend>(pika::execution::thread_priority::high, pika::execution::thread_stacksize::nostack),
+      dlaf::internal::Policy<backend>(pika::execution::thread_priority::high,
+                                      pika::execution::thread_stacksize::nostack),
       Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
       dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src), std::forward<DstSender>(dst))));
 }
@@ -88,7 +89,8 @@ void trmmPanel(pika::execution::thread_priority priority, TSender&& t, SourcePan
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<TSender>(t),
                                   std::forward<SourcePanelSender>(v), std::forward<PanelTileSender>(w)) |
-      tile::trmm3(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::trmm3(dlaf::internal::Policy<backend>(priority,
+                                                  pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender, class ColPanelSender>

@@ -235,7 +235,8 @@ public:
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high, pika::execution::thread_stacksize::nostack),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high,
+                                    pika::execution::thread_stacksize::nostack),
           [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -313,7 +314,8 @@ public:
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high, pika::execution::thread_stacksize::nostack),
+          dlaf::internal::Policy<B>(pika::execution::thread_priority::high,
+                                    pika::execution::thread_stacksize::nostack),
           [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -690,7 +692,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   namespace ex = pika::execution::experimental;
 
   const auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
-  const auto policy_hp_nostack = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high, pika::execution::thread_stacksize::nostack);
+  const auto policy_hp_nostack =
+      dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high,
+                                          pika::execution::thread_stacksize::nostack);
 
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
@@ -826,7 +830,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     sem = std::move(sem_next);
   }
 
-  auto copy_tridiag = [policy_hp_nostack, a_ws, size, nb, &mat_trid, copy_tridiag_task](SizeType i, auto&& dep) {
+  auto copy_tridiag = [policy_hp_nostack, a_ws, size, nb, &mat_trid, copy_tridiag_task](SizeType i,
+                                                                                        auto&& dep) {
     const auto tile_index = (i - 1) / nb;
     const auto start = tile_index * nb;
     ex::when_all(ex::just(start, std::min(nb, size - start), std::min(nb, size - 1 - start)),
@@ -1047,7 +1052,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   const auto next_rank = (rank + 1 == ranks ? 0 : rank + 1);
 
   auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
-  auto policy_hp_nostack = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high, pika::execution::thread_stacksize::nostack);
+  auto policy_hp_nostack =
+      dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high,
+                                          pika::execution::thread_stacksize::nostack);
 
   const SizeType nb_band = get1DBlockSize(nb);
   const SizeType tiles_per_block = nb_band / nb;
@@ -1196,10 +1203,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             nr_release = ceilDiv(size - k * nb, b) + 1;
           }
 
-          prev_dep =
-              ex::when_all(ex::just(nr_release, sems[k_block_local]), std::move(prev_dep),
-                           std::move(dep)) |
-              dlaf::internal::transform(policy_hp_nostack, [](SizeType nr, auto&& sem) { sem->release(nr); });
+          prev_dep = ex::when_all(ex::just(nr_release, sems[k_block_local]), std::move(prev_dep),
+                                  std::move(dep)) |
+                     dlaf::internal::transform(policy_hp_nostack,
+                                               [](SizeType nr, auto&& sem) { sem->release(nr); });
         }
         else {
           if (rank == rank_diag) {

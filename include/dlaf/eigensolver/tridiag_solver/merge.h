@@ -198,8 +198,9 @@ auto scaleRho(RhoSender&& rho) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   return std::forward<RhoSender>(rho) |
-      // TODO: Or plain then?
-         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), [](auto rho) { return 2 * std::abs(rho); });
+         // TODO: Or plain then?
+         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       [](auto rho) { return 2 * std::abs(rho); });
 }
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
@@ -213,7 +214,8 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
   tiles_max.reserve(to_sizet(i_end - i_begin));
   for (SizeType i = i_begin; i < i_end; ++i) {
     tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read(LocalTileIndex(i, 0))) |
-                        di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), tile::internal::lange_o));
+                        di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                                      tile::internal::lange_o));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -221,7 +223,8 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
   };
 
   return ex::when_all_vector(std::move(tiles_max)) |
-         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), std::move(tol_calc_fn));
+         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       std::move(tol_calc_fn));
 }
 
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
@@ -241,8 +244,9 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
   };
 
   return ex::when_all(std::move(dmax), std::move(zmax)) |
-      // TODO: Or plain then?
-         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), std::move(tol_fn)) |
+         // TODO: Or plain then?
+         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       std::move(tol_fn)) |
          // TODO: This releases the tiles that are kept in the operation state.
          // This is a temporary fix and needs to be replaced by a different
          // adaptor or different lifetime guarantees. This is tracked in
@@ -443,7 +447,8 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
   TileCollector tc{i_begin, i_end};
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
                       ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out))) |
-         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), std::move(part_fn));
+         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       std::move(part_fn));
 }
 
 template <class T>
@@ -471,7 +476,8 @@ auto stablePartitionIndexForDeflation(
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
                       ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)),
                       ex::when_all_vector(tc.readwrite(out_by_coltype))) |
-         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), std::move(part_fn));
+         di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       std::move(part_fn));
 }
 
 inline void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
@@ -591,7 +597,8 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
                              ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
                              ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
 
-  return di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack), std::move(deflate_fn), std::move(sender)) |
+  return di::transform(di::Policy<Backend::MC>(pika::execution::thread_stacksize::nostack),
+                       std::move(deflate_fn), std::move(sender)) |
          // TODO: This releases the tiles that are kept in the operation state.
          // This is a temporary fix and needs to be replaced by a different
          // adaptor or different lifetime guarantees. This is tracked in

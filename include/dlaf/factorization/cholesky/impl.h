@@ -37,7 +37,8 @@ template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::potrf(dlaf::internal::Policy<backend>(priority,
+                                                  pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>
@@ -84,7 +85,8 @@ template <Backend backend, class MatrixTileSender>
 void potrfDiagTile(pika::execution::thread_priority priority, MatrixTileSender&& matrix_tile) {
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Upper, std::forward<MatrixTileSender>(matrix_tile)) |
-      tile::potrf(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+      tile::potrf(dlaf::internal::Policy<backend>(priority,
+                                                  pika::execution::thread_stacksize::nostack)));
 }
 
 template <Backend backend, class KKTileSender, class MatrixTileSender>

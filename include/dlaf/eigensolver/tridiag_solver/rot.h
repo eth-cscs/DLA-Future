@@ -78,8 +78,11 @@ auto scheduleSendCol(CommSender&& comm, const comm::IndexT_MPI dest, const comm:
                           n](memory::MemoryView<T, Device::CPU>& mem_view) mutable {
              auto copy =
                  ex::just(mem_view(), col_data, to_sizet(n) * sizeof(T), whip::memcpy_device_to_host) |
-                 di::transform(di::Policy<CopyBackend_v<Device::GPU, Device::CPU>>{thread_priority::high, pika::execution::thread_stacksize::nostack},
-                               whip::memcpy_async);
+                 di::transform(
+                     di::Policy<CopyBackend_v<Device::GPU,
+                                              Device::CPU>>{thread_priority::high,
+                                                            pika::execution::thread_stacksize::nostack},
+                     whip::memcpy_async);
 
              return di::whenAllLift(std::move(copy), std::forward<CommSender>(comm), dest, tag,
                                     mem_view(), n) |
@@ -117,7 +120,9 @@ auto scheduleRecvCol(CommSender&& comm, const comm::IndexT_MPI source, const com
              return di::whenAllLift(std::move(recv), col_data, mem_view(), to_sizet(n) * sizeof(T),
                                     whip::memcpy_host_to_device) |
                     di::transform(
-                        di::Policy<CopyBackend_v<Device::CPU, Device::GPU>>{thread_priority::high, pika::execution::thread_stacksize::nostack},
+                        di::Policy<CopyBackend_v<
+                            Device::CPU, Device::GPU>>{thread_priority::high,
+                                                       pika::execution::thread_stacksize::nostack},
                         whip::memcpy_async);
            });
   }
@@ -188,7 +193,8 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
   TileCollector tc{i_begin, i_end};
 
   auto sender = ex::when_all(std::forward<RotsSender>(rots), ex::when_all_vector(tc.readwrite(mat)));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), std::move(givens_rots_fn), std::move(sender));
+  di::transformDetach(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack),
+                      std::move(givens_rots_fn), std::move(sender));
 }
 
 /// Apply GivenRotations to tiles of the distributed square sub-matrix identified by tile in range
@@ -342,25 +348,26 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
       // together beforehand, and with them, also temporary buffers for the GPU case. If this assumption
       // will drop, it is relevant to highlight that there is nothing that would stop to schedule and,
       // more importantly, allocate all of them together.
-      tt::sync_wait(ex::when_all_vector(std::move(comm_checkpoints)) |
-                    di::transform(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack), [rot, m, col_x,
-                                                                      col_y](auto&&... ts) {
-                      // Note:
-                      // each one computes his own, but just stores either x or y (or both if on the same rank)
-                      if constexpr (D == Device::CPU) {
-                        static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
-                        dlaf::common::internal::SingleThreadedBlasScope single;
-                        blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
-                      }
+      tt::sync_wait(
+          ex::when_all_vector(std::move(comm_checkpoints)) |
+          di::transform(di::Policy<DefaultBackend_v<D>>(pika::execution::thread_stacksize::nostack),
+                        [rot, m, col_x, col_y](auto&&... ts) {
+                          // Note:
+                          // each one computes his own, but just stores either x or y (or both if on the same rank)
+                          if constexpr (D == Device::CPU) {
+                            static_assert(sizeof...(ts) == 0, "Parameter pack should be empty for MC.");
+                            dlaf::common::internal::SingleThreadedBlasScope single;
+                            blas::rot(m, col_x, 1, col_y, 1, rot.c, rot.s);
+                          }
 #ifdef DLAF_WITH_GPU
-                      else if constexpr (D == Device::GPU) {
-                        givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
-                      }
+                          else if constexpr (D == Device::GPU) {
+                            givensRotationOnDevice(m, col_x, col_y, rot.c, rot.s, ts...);
+                          }
 #endif
-                      else {
-                        DLAF_STATIC_UNIMPLEMENTED(T);
-                      }
-                    }));
+                          else {
+                            DLAF_STATIC_UNIMPLEMENTED(T);
+                          }
+                        }));
     }
   };
 

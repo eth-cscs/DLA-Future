@@ -606,7 +606,8 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(-1), b_panel.read(kj), mat_b.readwrite(kj)) |
-            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+            tile::add(dlaf::internal::Policy<backend>(priority,
+                                                      pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read(kk_offset), mat_b.readwrite(kj));
       }
@@ -783,7 +784,8 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(-1), b_panel.read(kj), mat_b.readwrite(kj)) |
-            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+            tile::add(dlaf::internal::Policy<backend>(priority,
+                                                      pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
                                 a_panel.read(LocalTileIndex{bt_offset.row(), kk_offset.col()}),
@@ -962,7 +964,8 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(1), b_panel.read(ik), mat_b.readwrite(ik)) |
-            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+            tile::add(dlaf::internal::Policy<backend>(priority,
+                                                      pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha,
                                 a_panel.read(LocalTileIndex{kk_offset.row(), bt_offset.col()}),
@@ -1142,7 +1145,8 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
 
         pika::execution::experimental::start_detached(
             dlaf::internal::whenAllLift(T(1), b_panel.read(ik), mat_b.readwrite(ik)) |
-            tile::add(dlaf::internal::Policy<backend>(priority, pika::execution::thread_stacksize::nostack)));
+            tile::add(dlaf::internal::Policy<backend>(priority,
+                                                      pika::execution::thread_stacksize::nostack)));
 
         trsmBPanelTile<backend>(priority, op, diag, alpha, a_panel.read(kk_offset), mat_b.readwrite(ik));
       }

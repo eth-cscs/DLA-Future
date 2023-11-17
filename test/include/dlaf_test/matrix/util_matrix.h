@@ -78,6 +78,8 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
   }
 }
 
+/// Returns an ElementGetter that given @p fullValues, it returns values like if origin has been changed
+/// to sub-martix starting at @p offset.
 template <class ElementGetter>
 auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
   return [fullValues, offset = sizeFromOrigin(offset)](const GlobalElementIndex& ij) {
@@ -85,6 +87,9 @@ auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
   };
 }
 
+/// Returns an ElementGetter that returns values of a matrix like if:
+/// - sub-matrix defined by @p sub_spec is set with @p insideValues
+/// - the rest of the matrix is set with @p outsideValues
 template <class OutsideElementGetter, class InsideElementGetter>
 auto mixValues(const dlaf::matrix::internal::SubMatrixSpec& sub_spec, InsideElementGetter&& insideValues,
                OutsideElementGetter&& outsideValues) {

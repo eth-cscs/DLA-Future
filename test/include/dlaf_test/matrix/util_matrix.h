@@ -23,6 +23,7 @@
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/util_math.h>
 
 #include <gtest/gtest.h>

@@ -50,6 +50,8 @@ public:
 
   CommunicatorGrid(CommunicatorGrid&&) = default;
   CommunicatorGrid& operator=(CommunicatorGrid&&) = default;
+  CommunicatorGrid(const CommunicatorGrid&) = delete;
+  CommunicatorGrid& operator=(const CommunicatorGrid&) = delete;
 
   /// Return rank in the grid with all ranks given the 2D index.
   IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {

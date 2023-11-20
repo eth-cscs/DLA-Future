@@ -42,11 +42,11 @@ public:
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
 
-  Pipeline(Pipeline&& other)
+  Pipeline(Pipeline&& other) noexcept
       : pipeline(std::exchange(other.pipeline, std::nullopt)),
         nested_sender(std::exchange(other.nested_sender, std::nullopt)) {}
 
-  Pipeline& operator=(Pipeline&& other) {
+  Pipeline& operator=(Pipeline&& other) noexcept {
     if (this != &other) {
       pipeline = std::exchange(other.pipeline, std::nullopt);
       nested_sender = std::exchange(other.nested_sender, std::nullopt);

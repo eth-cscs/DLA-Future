@@ -49,7 +49,7 @@ public:
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).
-  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {0, 0}, Size2D size = {0, 0})
+  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {}, Size2D size = {})
       : pipeline_(std::move(comm)), rank_(std::move(rank)), size_(std::move(size)) {}
   CommunicatorPipeline(CommunicatorPipeline&& other) = default;
   CommunicatorPipeline& operator=(CommunicatorPipeline&& other) = default;
@@ -134,8 +134,8 @@ private:
   CommunicatorPipeline(PipelineType&& pipeline, Index2D rank, Size2D size)
       : pipeline_(std::move(pipeline)), rank_(std::move(rank)), size_(std::move(size)) {}
 
-  PipelineType pipeline_;
-  Index2D rank_{0, 0};
-  Size2D size_{0, 0};
+  PipelineType pipeline_{};
+  Index2D rank_{-1, -1};
+  Size2D size_{-1, -1};
 };
 }  // namespace dlaf::comm

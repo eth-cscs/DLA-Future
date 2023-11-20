@@ -63,7 +63,7 @@ public:
 
   /// Return the size of the grid.
   IndexT_MPI size() const noexcept {
-    return size_.rows() * size_.cols();
+    return size_.linear_size();
   }
 
   /// Return the 2D rank of the current process in the grid that this pipeline

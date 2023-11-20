@@ -81,6 +81,17 @@ void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_cha
 
   DLAF_ASSERT_HEAVY(mat_a.nrTiles().cols() == mat_b.nrTiles().rows(), mat_a.nrTiles(), mat_b.nrTiles());
 
+  if (mat_a.nrTiles().cols() == 0) {
+    // Note: if beta == 1, we optimize by not even scheduling anything
+    if (beta != T(1)) {
+      for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j)
+        for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i)
+          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(LocalTileIndex(i, j))) |
+                             tile::scal(dlaf::internal::Policy<B>()));
+    }
+    return;
+  }
+
   // This loops over the global indices for k, because every rank has to participate in communication
   for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
     auto& panelA = panelsA.nextResource();

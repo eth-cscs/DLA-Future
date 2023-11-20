@@ -324,7 +324,7 @@ void QR_Tfactor<backend, device, T>::call(
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
-  if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
+  if (mpi_col_task_chain.size_2d().rows() > 0)
     t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.readwrite(), MPI_SUM,
                                                    std::move(t_local));
 

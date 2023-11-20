@@ -28,7 +28,7 @@
 /// @param npcol Number of process columns in the communicator grid
 /// @param order Grid ordering
 /// @return DLA-Future context
-DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) DLAF_NOEXCEPT_CPP;
+DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char order) DLAF_NOEXCEPT;
 
 /// Free communicator grid for the given context
 ///
@@ -36,7 +36,7 @@ DLAF_EXTERN_C int dlaf_create_grid(MPI_Comm comm, int nprow, int npcol, char ord
 /// created a BLACS grid with blacs_gridinit you still need to call blacs_gridexit
 ///
 /// @param context BLACS or DLA-Future context associated to the grid being released
-DLAF_EXTERN_C void dlaf_free_grid(int context) DLAF_NOEXCEPT_CPP;
+DLAF_EXTERN_C void dlaf_free_grid(int context) DLAF_NOEXCEPT;
 
 /// Determine grid ordering
 ///
@@ -52,7 +52,7 @@ DLAF_EXTERN_C void dlaf_free_grid(int context) DLAF_NOEXCEPT_CPP;
 /// @param mypcol Process column of the calling process
 /// @return Grid order ("R" for row-major, "C" cor column-major)
 DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow,
-                                 int mypcol) DLAF_NOEXCEPT_CPP;
+                                 int mypcol) DLAF_NOEXCEPT;
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -68,6 +68,6 @@ DLAF_EXTERN_C char grid_ordering(MPI_Comm comm, int nprow, int npcol, int myprow
 /// blacs_gridinit). Grids created with blacs_gridmap are not supported.
 ///
 /// @param blacs_ctxt BLACS context
-DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt) DLAF_NOEXCEPT_CPP;
+DLAF_EXTERN_C void dlaf_create_grid_from_blacs(int blacs_ctxt) DLAF_NOEXCEPT;
 
 #endif

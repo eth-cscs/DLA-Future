@@ -107,9 +107,9 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
       matrix::test::getMatrixMatrixMultiplication<GlobalElementIndex, T>(config.opA, config.opB,
                                                                          config.k, alpha, beta);
 
-  const auto fullValuesA = mixValues(config.sub_a(), subValuesA, [](auto) { return T(-99); });
-  const auto fullValuesB = mixValues(config.sub_b(), subValuesB, [](auto) { return T(-99); });
-  const auto fullValuesC = mixValues(config.sub_c(), subValuesC, [](auto) { return T(-99); });
+  const auto fullValuesA = mix_values(config.sub_a(), subValuesA, [](auto) { return T(-99); });
+  const auto fullValuesB = mix_values(config.sub_b(), subValuesB, [](auto) { return T(-99); });
+  const auto fullValuesC = mix_values(config.sub_c(), subValuesC, [](auto) { return T(-99); });
 
   Matrix<const T, Device::CPU> mat_ah = setMatrix(fullValuesA, config.full_a(), {config.mb, config.kb});
   Matrix<const T, Device::CPU> mat_bh = setMatrix(fullValuesB, config.full_b(), {config.kb, config.nb});
@@ -130,7 +130,7 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
     multiplication::internal::General<B, D, T>::callNN(alpha, mat_sub_a, mat_sub_b, beta, mat_sub_c);
   }
 
-  const auto fullValuesResult = mixValues(config.sub_c(), subValuesResult, fullValuesC);
+  const auto fullValuesResult = mix_values(config.sub_c(), subValuesResult, fullValuesC);
   CHECK_MATRIX_NEAR(fullValuesResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }

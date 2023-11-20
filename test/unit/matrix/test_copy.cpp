@@ -221,10 +221,11 @@ void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& 
 
   copy(mat_sub_src, mat_sub_dst);
 
-  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  const auto subMatrixValues = sub_values(inputValues<T>, test.sub_origin_in);
   CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
 
-  const auto fullMatrixWithSubMatrixValues = mixValues(test.sub_out(), subMatrixValues, outputValues<T>);
+  const auto fullMatrixWithSubMatrixValues =
+      mix_values(test.sub_out(), subMatrixValues, outputValues<T>);
   CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
 }
 
@@ -312,10 +313,11 @@ void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribut
   copy(mat_sub_gpu1, mat_sub_gpu2);
   copy(mat_sub_gpu2, mat_sub_dst);
 
-  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  const auto subMatrixValues = sub_values(inputValues<T>, test.sub_origin_in);
   CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
 
-  const auto fullMatrixWithSubMatrixValues = mixValues(test.sub_out(), subMatrixValues, outputValues<T>);
+  const auto fullMatrixWithSubMatrixValues =
+      mix_values(test.sub_out(), subMatrixValues, outputValues<T>);
   CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
 }
 

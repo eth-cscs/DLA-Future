@@ -76,8 +76,8 @@ void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_cha
   const auto rank = dist_c.rankIndex();
 
   constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_c);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_c);
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_b);
 
   DLAF_ASSERT_HEAVY(mat_a.nrTiles().cols() == mat_b.nrTiles().rows(), mat_a.nrTiles(), mat_b.nrTiles());
 

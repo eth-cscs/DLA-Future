@@ -18,7 +18,8 @@
 
 static bool dlaf_initialized = false;
 
-void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const char** argv_dlaf) {
+void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
+                     const char** argv_dlaf) noexcept {
   if (!dlaf_initialized) {
     pika::program_options::options_description desc("");
     desc.add(dlaf::getOptionsDescription());
@@ -43,7 +44,7 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const
   }
 }
 
-void dlaf_finalize() {
+void dlaf_finalize() noexcept {
   if (dlaf_initialized) {
     pika::resume();
     pika::finalize();

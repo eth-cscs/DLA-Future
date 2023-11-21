@@ -73,15 +73,9 @@ void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_cha
   const matrix::Distribution& dist_a = mat_a.distribution();
   const matrix::Distribution& dist_b = mat_b.distribution();
   const matrix::Distribution& dist_c = mat_c.distribution();
-  const auto rank = dist_c.rankIndex();
+  const auto rank = dist_c.rank_index();
 
-  constexpr std::size_t n_workspaces = 2;
-  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_a);
-  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_b);
-
-  DLAF_ASSERT_HEAVY(mat_a.nrTiles().cols() == mat_b.nrTiles().rows(), mat_a.nrTiles(), mat_b.nrTiles());
-
-  if (mat_a.nrTiles().cols() == 0) {
+  if (mat_a.nr_tiles().cols() == 0) {
     // Note: if beta == 1, we optimize by not even scheduling anything
     if (beta != T(1)) {
       for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j)
@@ -92,33 +86,40 @@ void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_cha
     return;
   }
 
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_b);
+
+  DLAF_ASSERT_HEAVY(mat_a.nr_tiles().cols() == mat_b.nr_tiles().rows(), mat_a.nr_tiles(),
+                    mat_b.nr_tiles());
+
   // This loops over the global indices for k, because every rank has to participate in communication
-  for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
+  for (SizeType k = 0; k < mat_a.nr_tiles().cols(); ++k) {
     auto& panelA = panelsA.nextResource();
     auto& panelB = panelsB.nextResource();
 
-    if (k == 0 || k == mat_a.nrTiles().cols() - 1) {
-      DLAF_ASSERT_HEAVY(dist_a.tileSize<Coord::Col>(k) == dist_b.tileSize<Coord::Row>(k),
-                        dist_a.tileSize<Coord::Col>(k), dist_b.tileSize<Coord::Row>(k));
-      const SizeType kSize = dist_a.tileSize<Coord::Col>(k);
+    if (k == 0 || k == mat_a.nr_tiles().cols() - 1) {
+      DLAF_ASSERT_HEAVY(dist_a.tile_size_of<Coord::Col>(k) == dist_b.tile_size_of<Coord::Row>(k),
+                        dist_a.tile_size_of<Coord::Col>(k), dist_b.tile_size_of<Coord::Row>(k));
+      const SizeType kSize = dist_a.tile_size_of<Coord::Col>(k);
       panelA.setWidth(kSize);
       panelB.setHeight(kSize);
     }
 
     // Setup the column workspace for the root ranks, i.e. the ones in the current col
-    const auto rank_k_col = dist_a.rankGlobalTile<Coord::Col>(k);
+    const auto rank_k_col = dist_a.rank_global_tile<Coord::Col>(k);
     if (rank_k_col == rank.col()) {
-      const auto k_local = dist_a.template localTileFromGlobalTile<Coord::Col>(k);
-      for (SizeType i = 0; i < dist_c.localNrTiles().rows(); ++i) {
+      const auto k_local = dist_a.local_tile_from_global_tile<Coord::Col>(k);
+      for (SizeType i = 0; i < dist_c.local_nr_tiles().rows(); ++i) {
         const LocalTileIndex ik(i, k_local);
         panelA.setTile(ik, mat_a.read(ik));
       }
     }
     // Setup the row workspace for the root ranks, i.e. the ones in the current row
-    const auto rank_k_row = dist_b.rankGlobalTile<Coord::Row>(k);
+    const auto rank_k_row = dist_b.rank_global_tile<Coord::Row>(k);
     if (rank_k_row == rank.row()) {
-      const auto k_local = dist_b.template localTileFromGlobalTile<Coord::Row>(k);
-      for (SizeType j = 0; j < dist_c.localNrTiles().cols(); ++j) {
+      const auto k_local = dist_b.local_tile_from_global_tile<Coord::Row>(k);
+      for (SizeType j = 0; j < dist_c.local_nr_tiles().cols(); ++j) {
         const LocalTileIndex kj(k_local, j);
         panelB.setTile(kj, mat_b.read(kj));
       }
@@ -131,8 +132,8 @@ void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_cha
     // This is the core loop where the k step performs the update over the entire local matrix using
     // the col and row workspaces.
     // Everything needed for the update is available locally thanks to previous broadcasts.
-    for (SizeType i = 0; i < dist_c.localNrTiles().rows(); ++i) {
-      for (SizeType j = 0; j < dist_c.localNrTiles().cols(); ++j) {
+    for (SizeType i = 0; i < dist_c.local_nr_tiles().rows(); ++i) {
+      for (SizeType j = 0; j < dist_c.local_nr_tiles().cols(); ++j) {
         const LocalTileIndex ij(i, j);
 
         ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,

@@ -34,6 +34,6 @@ var searchData=
   ['global_5ftile_5flinear_5findex_220',['global_tile_linear_index',['../distribution_8h.html#a4dbe5cf03961dec5b6b381a4f8415314',1,'dlaf::matrix::internal::distribution']]],
   ['global_5ftile_5foffset_221',['global_tile_offset',['../distribution__extensions_8h.html#ae8c5ed233fad3336d331da897a56a8a9',1,'dlaf::matrix::internal::distribution']]],
   ['grid_2eh_222',['grid.h',['../grid_8h.html',1,'']]],
-  ['grid_5fordering_223',['grid_ordering',['../grid_8h.html#a07cc954483cec9ce0eba51887b999ddc',1,'grid.h']]],
+  ['grid_5fordering_223',['grid_ordering',['../grid_8h.html#a438a7328e8679dfd1bc4758e96688d6b',1,'grid.h']]],
   ['grid_5fsize_224',['grid_size',['../classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#acaff1bec10adabf77e6a0a9ad22a4f46',1,'dlaf::matrix::internal::MatrixBase']]]
 ];

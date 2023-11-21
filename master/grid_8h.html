@@ -78,18 +78,18 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a4bc5344e5093885a8432f2b171951735"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a4bc5344e5093885a8432f2b171951735">dlaf_create_grid</a> (MPI_Comm comm, int nprow, int npcol, char order)</td></tr>
-<tr class="separator:a4bc5344e5093885a8432f2b171951735"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a066da549032ab775a18ffb7da5a5ab"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a6a066da549032ab775a18ffb7da5a5ab">dlaf_free_grid</a> (int context)</td></tr>
-<tr class="separator:a6a066da549032ab775a18ffb7da5a5ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a07cc954483cec9ce0eba51887b999ddc"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a07cc954483cec9ce0eba51887b999ddc">grid_ordering</a> (MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol)</td></tr>
-<tr class="separator:a07cc954483cec9ce0eba51887b999ddc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a85b4aafd30f041281cc91cfdde47f15f"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a85b4aafd30f041281cc91cfdde47f15f">dlaf_create_grid_from_blacs</a> (int blacs_ctxt)</td></tr>
-<tr class="separator:a85b4aafd30f041281cc91cfdde47f15f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01cc28271811fe3c25029a5f8b351d06"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a01cc28271811fe3c25029a5f8b351d06">dlaf_create_grid</a> (MPI_Comm comm, int nprow, int npcol, char order) DLAF_NOEXCEPT</td></tr>
+<tr class="separator:a01cc28271811fe3c25029a5f8b351d06"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a564bb160865cb33f3f35a4438c41169c"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a564bb160865cb33f3f35a4438c41169c">dlaf_free_grid</a> (int context) DLAF_NOEXCEPT</td></tr>
+<tr class="separator:a564bb160865cb33f3f35a4438c41169c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a438a7328e8679dfd1bc4758e96688d6b"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C char&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#a438a7328e8679dfd1bc4758e96688d6b">grid_ordering</a> (MPI_Comm comm, int nprow, int npcol, int myprow, int mypcol) DLAF_NOEXCEPT</td></tr>
+<tr class="separator:a438a7328e8679dfd1bc4758e96688d6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae625da591acc6550b73ffee8ec52332f"><td class="memItemLeft" align="right" valign="top">DLAF_EXTERN_C void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="grid_8h.html#ae625da591acc6550b73ffee8ec52332f">dlaf_create_grid_from_blacs</a> (int blacs_ctxt) DLAF_NOEXCEPT</td></tr>
+<tr class="separator:ae625da591acc6550b73ffee8ec52332f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a4bc5344e5093885a8432f2b171951735"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4bc5344e5093885a8432f2b171951735">&#9670;&nbsp;</a></span>dlaf_create_grid()</h2>
+<a id="a01cc28271811fe3c25029a5f8b351d06"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a01cc28271811fe3c25029a5f8b351d06">&#9670;&nbsp;</a></span>dlaf_create_grid()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -141,8 +141,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a85b4aafd30f041281cc91cfdde47f15f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a85b4aafd30f041281cc91cfdde47f15f">&#9670;&nbsp;</a></span>dlaf_create_grid_from_blacs()</h2>
+<a id="ae625da591acc6550b73ffee8ec52332f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae625da591acc6550b73ffee8ec52332f">&#9670;&nbsp;</a></span>dlaf_create_grid_from_blacs()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -168,8 +168,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a6a066da549032ab775a18ffb7da5a5ab"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a066da549032ab775a18ffb7da5a5ab">&#9670;&nbsp;</a></span>dlaf_free_grid()</h2>
+<a id="a564bb160865cb33f3f35a4438c41169c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a564bb160865cb33f3f35a4438c41169c">&#9670;&nbsp;</a></span>dlaf_free_grid()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -194,8 +194,8 @@ Functions</h2></td></tr>
 
 </div>
 </div>
-<a id="a07cc954483cec9ce0eba51887b999ddc"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a07cc954483cec9ce0eba51887b999ddc">&#9670;&nbsp;</a></span>grid_ordering()</h2>
+<a id="a438a7328e8679dfd1bc4758e96688d6b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a438a7328e8679dfd1bc4758e96688d6b">&#9670;&nbsp;</a></span>grid_ordering()</h2>
 
 <div class="memitem">
 <div class="memproto">

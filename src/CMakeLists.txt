@@ -71,22 +71,21 @@ target_include_directories(
 )
 target_link_libraries(
   dlaf.prop
-  INTERFACE
-    MPI::MPI_CXX
-    $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
-    DLAF::LAPACK
-    $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF::SCALAPACK>
-    pika::pika
-    lapackpp
-    blaspp
-    umpire
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
-    $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
-    $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
-    $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared>
+  INTERFACE MPI::MPI_CXX
+            $<$<BOOL:${DLAF_WITH_OPENMP}>:OpenMP::OpenMP_CXX>
+            DLAF::LAPACK
+            $<$<BOOL:${DLAF_WITH_SCALAPACK}>:DLAF::SCALAPACK>
+            pika::pika
+            lapackpp
+            blaspp
+            umpire
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cublas>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cudart>
+            $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
+            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
+            $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
+            $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
+            $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared>
 )
 target_compile_definitions(
   dlaf.prop

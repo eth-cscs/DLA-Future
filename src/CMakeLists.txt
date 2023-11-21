@@ -85,8 +85,6 @@ target_link_libraries(
     $<$<BOOL:${DLAF_WITH_CUDA}>:CUDA::cusolver>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocblas>
     $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocsolver>
-    $<$<BOOL:${DLAF_WITH_HIP}>:roc::rocprim>
-    $<$<LINK_LANGUAGE:HIP>:roc::rocthrust> # hip adds offload-arch globally for the CXX language in hip-config
     $<$<BOOL:${DLAF_WITH_GPU}>:whip::whip>
     $<$<BOOL:${DLAF_WITH_HDF5}>:hdf5_cpp-shared>
 )
@@ -238,13 +236,6 @@ DLAF_addSublibrary(
   GPU_SOURCES eigensolver/tridiag_solver/gpu/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
-# Tmp! hip adds --offload-arch compile flag globally for the CXX language in
-# hip-config. We would like therefore to only link to rocthrust when compiling
-# with the HIP language. However COMPILE_LANGUAGE generator expression is not
-# accepted in a target_link_libraries call. The LINK_LANGUAGE generator
-# expression is therefore used but it doesn't add the include directories to the
-# target it's linked to. This is a workaround for that.
-target_include_directories(dlaf.tridiagonal_eigensolver_object SYSTEM PUBLIC ${rocthrust_INCLUDE_DIR})
 
 # Define DLAF's factorization library
 DLAF_addSublibrary(

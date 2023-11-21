@@ -24,6 +24,7 @@
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_base.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 
 namespace dlaf {
@@ -145,17 +146,9 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    start_ = start_idx.get(coord);
-    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start_);
-    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
+    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
 
-    end_ = end_idx.get(coord);
-    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(end_);
-
-    DLAF_ASSERT(rangeStart() <= rangeEnd(), rangeStart(), rangeEnd());
-    DLAF_ASSERT(rangeStartLocal() >= bias_, start_idx, bias_);
-    DLAF_ASSERT(rangeEnd() <= dist_matrix_.nrTiles().get(coord), end_idx,
-                dist_matrix_.nrTiles().get(coord));
+    initRange(std::move(start_idx), std::move(end_idx));
   }
 
   /// Change the start boundary of the range of tiles to which the panel allows access to
@@ -169,6 +162,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRangeStart(const GlobalTileIndex& start_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
+    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
+
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
     offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
@@ -179,6 +174,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 
   void setRangeStart(const GlobalElementIndex& start) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
+    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
 
     start_ = dist_matrix_.globalTileFromGlobalElement<coord>(start.get(coord));
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
@@ -203,6 +200,8 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   /// @pre end <= 1 past the panel last tile
   void setRangeEnd(GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
+
+    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
 
     end_ = end_idx.get(coord);
     end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(end_);
@@ -305,14 +304,32 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 protected:
   using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
 
+  bool isBoundToMatrixWithSubTileOffset() const noexcept {
+    return dist_matrix_.offset() != GlobalElementIndex{0, 0};
+  }
+
   bool isFirstGlobalTileFull() const {
-    return start_offset_ == 0;
+    return start_offset_ == 0 && !isBoundToMatrixWithSubTileOffset();
   }
 
   bool isFirstGlobalTile(const LocalTileIndex& index) const {
     const bool rank_has_first_global_tile =
         dist_matrix_.rankGlobalTile<coord>(start_) == dist_matrix_.rankIndex().get(coord);
     return rank_has_first_global_tile && (start_local_ == index.get(coord));
+  }
+
+  void initRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) {
+    start_ = start_idx.get(coord);
+    start_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start_);
+    offset_element_ = start_ * dist_matrix_.blockSize().template get<coord>();
+
+    end_ = end_idx.get(coord);
+    end_local_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(end_);
+
+    DLAF_ASSERT(rangeStart() <= rangeEnd(), rangeStart(), rangeEnd());
+    DLAF_ASSERT(rangeStartLocal() >= bias_, start_idx, bias_);
+    DLAF_ASSERT(rangeEnd() <= dist_matrix_.nrTiles().get(coord), end_idx,
+                dist_matrix_.nrTiles().get(coord));
   }
 
   TileElementSize tileSize(const LocalTileIndex& index) const {
@@ -349,10 +366,22 @@ protected:
   /// It allocates just the memory needed for the part of matrix used, so
   /// starting from @p start
   static Matrix<T, D> setupInternalMatrix(const Distribution& dist, const GlobalTileIndex start) {
+    DLAF_ASSERT((start == GlobalTileIndex{0, 0} || dist.offset() == GlobalElementIndex{0, 0}),
+                "not supported.", start, dist.offset());
+
     constexpr auto CT = coord;
 
     const LocalTileIndex start_loc(CT, dist.template nextLocalTileFromGlobalTile<CT>(start.get(CT)));
-    const auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
+
+    auto panel_size = computePanelSize(dist.localSize(), dist.blockSize(), start_loc);
+
+    // Note:
+    // Account for the offset during allocation, otherwise tiles would be "shifted" wrt to the
+    // matrix which this panel is "bound" to.
+    const bool isFirst = dist.source_rank_index().get<CT>() == dist.rank_index().get<CT>();
+    if (isFirst)
+      panel_size =
+          LocalElementSize(CT, panel_size.get<CT>() + dist.offset().get<CT>(), panel_size.get<axis>());
 
     Distribution dist_internal{panel_size, dist.blockSize()};
     auto layout = tileLayout(dist_internal);
@@ -375,9 +404,12 @@ protected:
       : dist_matrix_(dist_matrix), data_(setupInternalMatrix(dist_matrix, start)) {
     DLAF_ASSERT_HEAVY(data_.nrTiles().get(axis) == 1, data_.nrTiles());
 
+    DLAF_ASSERT(dist_matrix_.block_size() == dist_matrix_.tile_size(), "not supported",
+                dist_matrix_.block_size(), dist_matrix_.tile_size());
+
     bias_ = dist_matrix_.template nextLocalTileFromGlobalTile<coord>(start.get(coord));
 
-    setRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
+    initRange(start, indexFromOrigin(dist_matrix_.nrTiles()));
 
     external_.resize(data_.nrTiles().get(coord));
 

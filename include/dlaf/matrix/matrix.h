@@ -296,7 +296,10 @@ public:
   }
 
 protected:
-  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
+  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {
+    DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
+                distribution.offset());
+  }
   struct SubPipelineTag {};
   Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
     setUpSubPipelines(mat);

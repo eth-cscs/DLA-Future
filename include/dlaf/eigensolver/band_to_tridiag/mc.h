@@ -1045,6 +1045,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // mpi_chain_bcast, only having one pipeline may lead to deadlocks. In that case the algorithm should
   // require at least two independent pipelines from the communicator grid. For the same reason mpi_chain
   // has to be created before mpi_chain_bcast.
+  //
+  // Conversely, the algorithm would still work if we only defined one pipeline below and used that for
+  // both p2p communication and broadcasts. However, using two pipelines is beneficial since it allows
+  // the two different types of communications to be submitted concurrently.
   auto mpi_chain = grid.full_communicator_pipeline();
   // Need a pipeline of comm for broadcasts.
   auto mpi_chain_bcast = grid.full_communicator_pipeline();

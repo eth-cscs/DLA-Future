@@ -20,7 +20,7 @@
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
-#include <dlaf/eigensolver/tridiag_solver/kernels.cu.h>
+#include <dlaf/eigensolver/tridiag_solver/gpu/kernels.h>
 #include <dlaf/gpu/lapack/api.h>
 #endif
 

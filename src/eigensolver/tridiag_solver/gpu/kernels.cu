@@ -10,7 +10,7 @@
 
 #include <whip.hpp>
 
-#include <dlaf/eigensolver/tridiag_solver/kernels.cu.h>
+#include <dlaf/eigensolver/tridiag_solver/gpu/kernels.h>
 #include <dlaf/util_cuda.h>
 #include <dlaf/util_math.h>
 

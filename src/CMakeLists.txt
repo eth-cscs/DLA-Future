@@ -235,7 +235,7 @@ DLAF_addSublibrary(
   tridiagonal_eigensolver
   SOURCES eigensolver/tridiag_solver/mc.cpp
           $<$<BOOL:${DLAF_WITH_GPU}>:eigensolver/tridiag_solver/gpu.cpp>
-  GPU_SOURCES eigensolver/tridiag_solver/kernels.cu
+  GPU_SOURCES eigensolver/tridiag_solver/gpu/kernels.cu
   LIBRARIES dlaf.factorization dlaf.multiplication dlaf.permutations dlaf.core
 )
 # Tmp! hip adds --offload-arch compile flag globally for the CXX language in

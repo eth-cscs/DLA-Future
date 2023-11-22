@@ -21,7 +21,7 @@
 #include <dlaf/common/callable_object.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/tridiag_solver/api.h>
-#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver/kernels_async.h>
 #include <dlaf/eigensolver/tridiag_solver/merge.h>
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
@@ -94,8 +94,7 @@ template <class T>
 void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::CPU>& evecs) {
   const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
-    stedcAsync<Device::CPU>(tridiag.readwrite(LocalTileIndex(i, 0)),
-                            evecs.readwrite(LocalTileIndex(i, i)));
+    stedcAsync(tridiag.readwrite(LocalTileIndex(i, 0)), evecs.readwrite(LocalTileIndex(i, i)));
   }
 }
 
@@ -113,7 +112,7 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
     const auto id_tr = LocalTileIndex(i, 0);
     const auto id_ev = LocalTileIndex(i, i);
 
-    stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(id_ev));
+    stedcAsync(tridiag.readwrite(id_tr), h_evecs.readwrite(id_ev));
     ex::start_detached(ex::when_all(h_evecs.read(id_ev), evecs.readwrite(id_ev)) | copy(cp_policy));
   }
 }
@@ -295,7 +294,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
+      stedcAsync(tridiag.readwrite(id_tr), evecs.readwrite(ii_tile));
       ex::start_detached(comm::scheduleSendBcast(full_task_chain(), tridiag.read(id_tr)));
     }
     else {
@@ -324,7 +323,7 @@ void solveDistLeaf(comm::CommunicatorGrid grid, common::Pipeline<comm::Communica
     const comm::Index2D ii_rank = dist.rankGlobalTile(ii_tile);
     const GlobalTileIndex id_tr(i, 0);
     if (ii_rank == this_rank) {
-      stedcAsync<Device::CPU>(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
+      stedcAsync(tridiag.readwrite(id_tr), h_evecs.readwrite(ii_tile));
       ex::start_detached(ex::when_all(h_evecs.read(ii_tile), evecs.readwrite(ii_tile)) |
                          copy(cp_policy));
       ex::start_detached(comm::scheduleSendBcast(full_task_chain(), tridiag.read(id_tr)));

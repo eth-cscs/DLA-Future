@@ -163,9 +163,11 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
   const matrix::Distribution dist_c(config.full_c(), blocksize_c, grid.size(), grid.rank(), src_rank_c);
 
   const comm::IndexT_MPI rank_aligned_row =
-      alignSubRankIndex<Coord::Row>(dist_c, config.sub_c().origin, blocksize_a, config.sub_a().origin);
+      align_sub_rank_index<Coord::Row>(dist_c, config.sub_c().origin, blocksize_a,
+                                       config.sub_a().origin);
   const comm::IndexT_MPI rank_aligned_col =
-      alignSubRankIndex<Coord::Col>(dist_c, config.sub_c().origin, blocksize_b, config.sub_b().origin);
+      align_sub_rank_index<Coord::Col>(dist_c, config.sub_c().origin, blocksize_b,
+                                       config.sub_b().origin);
 
   // Note:
   // GEMM(NoTrans, NoTrans) requires:

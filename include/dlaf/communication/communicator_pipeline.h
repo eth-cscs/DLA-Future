@@ -80,7 +80,7 @@ public:
   }
 
   /// Return rank in the grid with all ranks given the 2D index.
-  IndexT_MPI rankFullCommunicator(const Index2D& index) const noexcept {
+  IndexT_MPI rank_full_communicator(const Index2D& index) const noexcept {
     return common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER, index,
                                                   {size_2d_.rows(), size_2d_.cols()});
   }

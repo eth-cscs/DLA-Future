@@ -949,7 +949,7 @@ void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& 
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
     }
     else {
-      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(evecs_tile_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(evecs_tile_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
                                                  z.readwrite(z_idx)));
     }

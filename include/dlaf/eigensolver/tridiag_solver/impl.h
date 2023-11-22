@@ -300,7 +300,7 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
     }
     else {
-      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }
@@ -331,7 +331,7 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
       ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), tridiag.read(id_tr)));
     }
     else {
-      const comm::IndexT_MPI root_rank = full_task_chain.rankFullCommunicator(ii_rank);
+      const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(ii_rank);
       ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
                                                  tridiag.readwrite(id_tr)));
     }

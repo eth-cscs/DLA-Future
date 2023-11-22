@@ -509,9 +509,9 @@ def _gen_plot(
     """
 
     if logx == None:
-      logx = default_logx
+        logx = default_logx
     if logy == None:
-      logy = default_logy
+        logy = default_logy
 
     if scaling == "weak":
         if weak_rt_approx == None:

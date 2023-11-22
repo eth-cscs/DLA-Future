@@ -402,7 +402,7 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
-TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedWithMatrixRef) {
+TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributed) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -415,7 +415,7 @@ TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedWithMatrixRef)
   }
 }
 
-TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedWithMatrixRefSub) {
+TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -441,7 +441,7 @@ TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedWithMatrixRef) {
+TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributed) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -454,7 +454,7 @@ TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedWithMatrixRef
   }
 }
 
-TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedWithMatrixRefSub) {
+TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 

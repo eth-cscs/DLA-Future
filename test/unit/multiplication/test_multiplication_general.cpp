@@ -146,21 +146,35 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
-comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
-                                const GlobalElementIndex& offset_out) {
+template <Coord coord>
+comm::IndexT_MPI alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                   const TileElementSize& blocksize_out,
+                                   const GlobalElementIndex& offset_out) {
+  const SizeType blocksize = blocksize_out.get<coord>();
+  DLAF_ASSERT(dist_in.block_size().get<coord>() == blocksize, dist_in.block_size().get<coord>(),
+              blocksize);
+
+  const SizeType grid_size = dist_in.grid_size().get<coord>();
+
+  if (!offset_in.isIn(dist_in.size()))
+    return grid_size / 2;
+
   const auto pos_mod = [](const auto& a, const auto& b) {
     const auto mod = a % b;
     return (mod >= 0) ? mod : (mod + b);
   };
 
-  const comm::Size2D grid_size = dist_in.grid_size();
-  const comm::Index2D sub_rank(dist_in.rank_global_element<Coord::Row>(offset_in.row()),
-                               dist_in.rank_global_element<Coord::Col>(offset_in.col()));
-  const GlobalTileIndex offset_rank(offset_out.row() / dist_in.block_size().rows(),
-                                    offset_out.col() / dist_in.block_size().cols());
+  const SizeType sub_rank = dist_in.rank_global_element<coord>(offset_in.get<coord>());
+  const SizeType offset_rank(offset_out.get<coord>() / blocksize);
 
-  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_rank.row()), grid_size.rows()),
-          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_rank.col()), grid_size.cols())};
+  return pos_mod(sub_rank - offset_rank, grid_size);
+}
+
+comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                const TileElementSize& blocksize_out,
+                                const GlobalElementIndex& offset_out) {
+  return {alignSubRankIndex<Coord::Row>(dist_in, offset_in, blocksize_out, offset_out),
+          alignSubRankIndex<Coord::Col>(dist_in, offset_in, blocksize_out, offset_out)};
 }
 
 template <class T, Backend B, Device D>
@@ -171,20 +185,28 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
   common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
   common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator());
 
+  const TileElementSize blocksize_a(config.mb, config.kb);
+  const TileElementSize blocksize_b(config.kb, config.nb);
+  const TileElementSize blocksize_c(config.mb, config.nb);
+
   const comm::Index2D src_rank_c(std::max(0, grid.size().rows() - 1),
                                  std::min(1, grid.size().cols() - 1));
-  const matrix::Distribution dist_c(config.full_c(), {config.mb, config.nb}, grid.size(), grid.rank(),
-                                    src_rank_c);
+  const matrix::Distribution dist_c(config.full_c(), blocksize_c, grid.size(), grid.rank(), src_rank_c);
 
-  const comm::Index2D src_rank_a =
-      alignSubRankIndex(dist_c, config.sub_c().origin, config.sub_a().origin);
-  const comm::Index2D src_rank_b =
-      alignSubRankIndex(dist_c, config.sub_c().origin, config.sub_b().origin);
+  const comm::IndexT_MPI rank_aligned_row =
+      alignSubRankIndex<Coord::Row>(dist_c, config.sub_c().origin, blocksize_a, config.sub_a().origin);
+  const comm::IndexT_MPI rank_aligned_col =
+      alignSubRankIndex<Coord::Col>(dist_c, config.sub_c().origin, blocksize_b, config.sub_b().origin);
 
-  const matrix::Distribution dist_a(config.full_a(), {config.mb, config.kb}, grid.size(), grid.rank(),
-                                    src_rank_a);
-  const matrix::Distribution dist_b(config.full_b(), {config.kb, config.nb}, grid.size(), grid.rank(),
-                                    src_rank_b);
+  // Note:
+  // GEMM(NoTrans, NoTrans) requires:
+  // - a is rank aligned with c for what concerns rows
+  // - b is rank aligned with c for what concerns cols
+  const comm::Index2D src_rank_a{rank_aligned_row, 0};
+  const comm::Index2D src_rank_b{0, rank_aligned_col};
+
+  const matrix::Distribution dist_a(config.full_a(), blocksize_a, grid.size(), grid.rank(), src_rank_a);
+  const matrix::Distribution dist_b(config.full_b(), blocksize_b, grid.size(), grid.rank(), src_rank_b);
 
   auto setMatrix = [&](auto&& elSetter, matrix::Distribution dist) {
     Matrix<T, Device::CPU> matrix(std::move(dist));

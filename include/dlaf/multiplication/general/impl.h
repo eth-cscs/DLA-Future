@@ -35,9 +35,6 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
                               const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
-                    mat_a, mat_b, mat_c);
-
   if (mat_a.nrTiles().cols() == 0) {
     // Note: if beta == 1, we optimize by not even scheduling anything
     if (beta != T(1)) {

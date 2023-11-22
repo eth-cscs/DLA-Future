@@ -23,7 +23,6 @@ using dlaf::matrix::internal::MatrixRef;
 
 template <Backend B, Device D, class T>
 struct General {
-  /// @pre mat.distribution().offset() % mat.distribution().tile_size() == 0 (where mat in {mat_a, mat_b, mat_c})
   static void callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                      const T beta, MatrixRef<T, D>& mat_c);
 };

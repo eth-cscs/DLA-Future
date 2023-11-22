@@ -127,7 +127,8 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
     // Note: currently it is implemented just the NoTrans/NoTrans case
     ASSERT_EQ(config.opA, blas::Op::NoTrans);
     ASSERT_EQ(config.opB, blas::Op::NoTrans);
-    multiplication::internal::General<B, D, T>::callNN(alpha, mat_sub_a, mat_sub_b, beta, mat_sub_c);
+    multiplication::internal::generalMatrix<B>(config.opA, config.opB, alpha, mat_sub_a, mat_sub_b, beta,
+                                               mat_sub_c);
   }
 
   const auto fullValuesResult = mix_values(config.sub_c(), subValuesResult, fullValuesC);

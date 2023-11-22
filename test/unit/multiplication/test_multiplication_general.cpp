@@ -146,37 +146,6 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
-template <Coord coord>
-comm::IndexT_MPI alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
-                                   const TileElementSize& blocksize_out,
-                                   const GlobalElementIndex& offset_out) {
-  const SizeType blocksize = blocksize_out.get<coord>();
-  DLAF_ASSERT(dist_in.block_size().get<coord>() == blocksize, dist_in.block_size().get<coord>(),
-              blocksize);
-
-  const SizeType grid_size = dist_in.grid_size().get<coord>();
-
-  if (!offset_in.isIn(dist_in.size()))
-    return grid_size / 2;
-
-  const auto pos_mod = [](const auto& a, const auto& b) {
-    const auto mod = a % b;
-    return (mod >= 0) ? mod : (mod + b);
-  };
-
-  const SizeType sub_rank = dist_in.rank_global_element<coord>(offset_in.get<coord>());
-  const SizeType offset_rank(offset_out.get<coord>() / blocksize);
-
-  return pos_mod(sub_rank - offset_rank, grid_size);
-}
-
-comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
-                                const TileElementSize& blocksize_out,
-                                const GlobalElementIndex& offset_out) {
-  return {alignSubRankIndex<Coord::Row>(dist_in, offset_in, blocksize_out, offset_out),
-          alignSubRankIndex<Coord::Col>(dist_in, offset_in, blocksize_out, offset_out)};
-}
-
 template <class T, Backend B, Device D>
 void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& config,
                                comm::CommunicatorGrid& grid) {

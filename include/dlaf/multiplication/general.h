@@ -67,23 +67,15 @@ void generalMatrix(const blas::Op opA, const blas::Op opB, const T alpha, Matrix
 template <Backend B, Device D, class T>
 void generalMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
                    common::Pipeline<comm::Communicator>& row_task_chain,
-                   common::Pipeline<comm::Communicator>& col_task_chain, const SizeType a,
-                   const SizeType b, const T alpha, MatrixRef<const T, D>& mat_a,
-                   MatrixRef<const T, D>& mat_b, const T beta, MatrixRef<T, D>& mat_c) {
-  DLAF_ASSERT(equal_process_grid(mat_a, grid), mat_a, grid);
-  DLAF_ASSERT(equal_process_grid(mat_b, grid), mat_a, grid);
-  DLAF_ASSERT(equal_process_grid(mat_c, grid), mat_a, grid);
+                   common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
+                   MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
+                   MatrixRef<T, D>& mat_c) {
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_a, grid);
 
-  using matrix::multipliable_sizes;
-  DLAF_ASSERT(multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size()),
-              "Multiplication incompatible matrix sizes.", mat_a.size(), mat_b.size(), mat_c.size());
-  DLAF_ASSERT(multipliable_sizes(mat_a.blockSize(), mat_b.blockSize(), mat_c.blockSize()),
-              "Multiplication incompatible tile sizes.");
-  DLAF_ASSERT(mat_c.size().isEmpty() || multipliable_sizes(mat_a.distribution().tileSize({0, 0}),
-                                                           mat_b.distribution().tileSize({0, 0}),
-                                                           mat_c.distribution().tileSize({0, 0})),
-              "Multiplication incompatible tile sizes in first row/col. "
-              "(Are you using a matrix with offset not aligned with tile?)");
+  DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
+                    mat_a, mat_b, mat_c);
 
   internal::General<B, D, T>::callNN(row_task_chain, col_task_chain, alpha, mat_a, mat_b, beta, mat_c);
 }

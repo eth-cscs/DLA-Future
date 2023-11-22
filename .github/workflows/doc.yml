@@ -25,13 +25,14 @@ jobs:
         run: |
           cd doc && make doc && cd ..
       - name: Push Docs master
-        if: "github.repository == 'eth-cscs/DLA-Future'"
+        if: "github.repository == 'eth-cscs/DLA-Future' && github.ref == 'refs/heads/master'"
         run: |
-          mv doc/html test
+          mv doc/html master
+          COMMIT_MSG=`git log -n 1 --pretty=format:%s`
           git config user.name "Doc CI Action" && git config user.email "rasolca@users.noreply.github.com"
           git fetch --no-tags --depth=1 origin +refs/heads/docs:refs/heads/docs
           git symbolic-ref HEAD refs/heads/docs && git reset
-          git add test && git commit --allow-empty -m "Doc: Test" && git push --set-upstream origin docs
+          git add master && git commit --allow-empty -m "Doc: $COMMIT_MSG" && git push --set-upstream origin docs
       - name: Push Docs release
         if: "github.repository == 'eth-cscs/DLA-Future' && startsWith(github.ref, 'refs/tags/v')"
         run: |

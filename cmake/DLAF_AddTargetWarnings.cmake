@@ -44,7 +44,7 @@ macro(target_add_warnings target_name)
             -Wshorten-64-to-32
             -Wsign-conversion
             -Wstring-conversion>
-            $<$<NOT:${IS_CUDA_NVCC}>:-pedantic-errors>
+            $<$<NOT:${IS_CUDA_NVCC}>:-pedantic>
             # googletest macro problem
             # must specify at least one argument for '...' parameter of variadic macro
             $<${IS_COMPILER_CLANG}:-Wno-gnu-zero-variadic-macro-arguments>

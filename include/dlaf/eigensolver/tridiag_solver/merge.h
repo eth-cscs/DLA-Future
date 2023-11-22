@@ -27,7 +27,7 @@
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
 #include <dlaf/eigensolver/tridiag_solver/coltype.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
-#include <dlaf/eigensolver/tridiag_solver/kernels.h>
+#include <dlaf/eigensolver/tridiag_solver/kernels_async.h>
 #include <dlaf/eigensolver/tridiag_solver/rot.h>
 #include <dlaf/eigensolver/tridiag_solver/tile_collector.h>
 #include <dlaf/lapack/tile.h>

@@ -1177,7 +1177,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
           else {
             auto& temp = temps.nextResource();
-            auto diag_tile = comm::scheduleRecv(mpi_chain.read(), rank_diag, tag_diag,
+            auto diag_tile = comm::scheduleRecv(mpi_chain.shared(), rank_diag, tag_diag,
                                                 splitTile(temp.readwrite(LocalTileIndex{0, 0}),
                                                           {{0, 0}, dist_a.tileSize(index_diag)}));
             dep = ex::ensure_started(copy_diag(a_ws[k_block_local], k * nb, std::move(diag_tile)));
@@ -1191,7 +1191,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             else {
               auto& temp = temps.nextResource();
               auto offdiag_tile =
-                  comm::scheduleRecv(mpi_chain.read(), rank_offdiag, tag_offdiag,
+                  comm::scheduleRecv(mpi_chain.shared(), rank_offdiag, tag_offdiag,
                                      splitTile(temp.readwrite(LocalTileIndex{0, 0}),
                                                {{0, 0}, dist_a.tileSize(index_offdiag)}));
               dep = ex::ensure_started(copy_offdiag(
@@ -1210,12 +1210,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         }
         else {
           if (rank == rank_diag) {
-            ex::start_detached(comm::scheduleSend(mpi_chain.read(), rank_block, tag_diag,
+            ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_diag,
                                                   mat_a.read(index_diag)));
           }
           if (k < n - 1) {
             if (rank == rank_offdiag) {
-              ex::start_detached(comm::scheduleSend(mpi_chain.read(), rank_block, tag_offdiag,
+              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_offdiag,
                                                     mat_a.read(index_offdiag)));
             }
           }
@@ -1320,7 +1320,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
               ex::just(sem) |
               dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) |
               ex::split();
-          ex::start_detached(schedule_send_col(mpi_chain.read(), prev_rank,
+          ex::start_detached(schedule_send_col(mpi_chain.shared(), prev_rank,
                                                compute_col_tag(id_block.col(), next_j == size - 1), b,
                                                a_block, next_j, send_col_dep));
         }
@@ -1354,7 +1354,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           // Therefore sem can be released without other dependencies
           ex::start_detached(
               ex::when_all(ex::just(sem),
-                           schedule_recv_col(mpi_chain.read(), next_rank,
+                           schedule_recv_col(mpi_chain.shared(), next_rank,
                                              compute_col_tag(id_block.col(), next_j == size - 1), b,
                                              a_block, next_j, std::move(dep_block))) |
               ex::then([](SemaphorePtr&& sem) { sem->release(1); }));
@@ -1377,7 +1377,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
         }
         else {
-          ex::start_detached(schedule_recv_worker(sweep, init_step, mpi_chain.read(), prev_rank,
+          ex::start_detached(schedule_recv_worker(sweep, init_step, mpi_chain.shared(), prev_rank,
                                                   compute_worker_tag(sweep, id_block.col()),
                                                   w_pipeline.readwrite()));
 
@@ -1400,7 +1400,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         sem = std::move(sem_next);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(schedule_send_worker(mpi_chain.read(), next_rank,
+          ex::start_detached(schedule_send_worker(mpi_chain.shared(), next_rank,
                                                   compute_worker_tag(sweep, id_block.col() + 1),
                                                   w_pipeline.readwrite()));
         }
@@ -1435,7 +1435,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                  copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
             }
             else {
-              ex::start_detached(comm::scheduleSend(mpi_chain.read(), rank_v,
+              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_v,
                                                     compute_v_tag(index_v, spec_v_origin.col(), bottom),
                                                     std::move(tile_v_panel)));
             }
@@ -1463,7 +1463,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
               ex::start_detached(comm::scheduleRecv(
-                  mpi_chain.read(), rank_panel, compute_v_tag(index_v, spec_v_origin.col(), bottom),
+                  mpi_chain.shared(), rank_panel, compute_v_tag(index_v, spec_v_origin.col(), bottom),
                   matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
                                                                            std::move(dep)))));
             }
@@ -1506,9 +1506,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only Rank 0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.readwrite(), mat_trid.read(index)));
+      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.exclusive(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.readwrite(), 0,
+      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.exclusive(), 0,
                                                  mat_trid.readwrite(index)));
   }
 

@@ -73,11 +73,11 @@ template <class T, Device D, class Comm>
       dlaf::matrix::ReadOnlyTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, extern, CommunicatorPipelineReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineReadWriteWrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 
@@ -97,11 +97,11 @@ template <class T, Device D, class Comm>
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, extern, CommunicatorPipelineReadWriteWrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineReadWriteWrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 }

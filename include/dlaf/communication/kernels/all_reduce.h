@@ -34,13 +34,13 @@ namespace dlaf::comm {
 /// output tile is sent by the returned sender.
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduce(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> pcomm,
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<T, D> tile_in,
     dlaf::matrix::ReadWriteTileSender<T, D> tile_out);
 
 #define DLAF_SCHEDULE_ALL_REDUCE_ETI(kword, Type, Device)                                           \
   kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleAllReduce(                 \
-      pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> pcomm, \
+      pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm, \
       MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in,                     \
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
 
@@ -54,12 +54,12 @@ DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, int, Device::CPU);
 /// written to it. The tile is sent by the returned sender.
 template <class T, Device D>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleAllReduceInPlace(
-    pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> pcomm,
+    pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm,
     MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<T, D> tile);
 
 #define DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(kword, Type, Device)                                  \
   kword template dlaf::matrix::ReadWriteTileSender<Type, Device> scheduleAllReduceInPlace(          \
-      pika::execution::experimental::unique_any_sender<CommunicatorPipelineReadWriteWrapper> pcomm, \
+      pika::execution::experimental::unique_any_sender<CommunicatorPipelineExclusiveWrapper> pcomm, \
       MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
 DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI, extern);

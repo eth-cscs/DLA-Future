@@ -325,7 +325,7 @@ void QR_Tfactor<backend, device, T>::call(
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
   if (mpi_col_task_chain.size_2d().rows() > 0)
-    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.readwrite(), MPI_SUM,
+    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
                                                    std::move(t_local));
 
   // 2nd step: compute the T factor, by performing the last step on each column

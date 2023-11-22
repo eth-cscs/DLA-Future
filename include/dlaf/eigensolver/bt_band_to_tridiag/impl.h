@@ -883,10 +883,10 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(comm::scheduleSendBcast(
-              mpi_chain_row.readwrite(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
+              mpi_chain_row.exclusive(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
-          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.readwrite(), rankHH.col(),
+          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.exclusive(), rankHH.col(),
                                                      splitTile(panel_hh.readwrite(ij_hh_panel),
                                                                helper.specHHCompact(true))));
         }
@@ -906,11 +906,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                              : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(mpi_chain_col.readwrite(), rank_dst, 0,
+          ex::start_detached(comm::scheduleSend(mpi_chain_col.exclusive(), rank_dst, 0,
                                                 std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
-          ex::start_detached(comm::scheduleRecv(mpi_chain_col.readwrite(), rank_src, 0,
+          ex::start_detached(comm::scheduleRecv(mpi_chain_col.exclusive(), rank_src, 0,
                                                 panel_hh.readwrite(ij_hh_panel)));
         }
       }
@@ -987,7 +987,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const Si
 
             // Compute final W2 by adding the contribution from the partner rank
             ex::start_detached(  //
-                comm::scheduleAllSumP2P<B>(mpi_chain_col_p2p.read(), rank_partner, tag,
+                comm::scheduleAllSumP2P<B>(mpi_chain_col_p2p.shared(), rank_partner, tag,
                                            splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
                                            splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
 

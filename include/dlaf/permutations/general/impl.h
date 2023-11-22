@@ -289,7 +289,7 @@ void all2allData(
         pika::this_thread::experimental::sync_wait(ex::when_all_vector(std::move(all_comms)));
       };
 
-  ex::when_all(sub_task_chain.readwrite(), std::forward<SendCountsSender>(send_counts_sender),
+  ex::when_all(sub_task_chain.exclusive(), std::forward<SendCountsSender>(send_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadOnlyTilesArray(send_mat),
                std::forward<RecvCountsSender>(recv_counts_sender),
                ex::just(std::vector<int>(to_sizet(nranks))), whenAllReadWriteTilesArray(recv_mat)) |

@@ -24,10 +24,10 @@ namespace internal {
 constexpr const dlaf::common::Ordering FULL_COMMUNICATOR_ORDER{dlaf::common::Ordering::RowMajor};
 }
 
-using CommunicatorPipelineReadOnlyWrapper = typename common::Pipeline<Communicator>::ReadOnlyWrapper;
-using CommunicatorPipelineReadWriteWrapper = typename common::Pipeline<Communicator>::ReadWriteWrapper;
-using CommunicatorPipelineReadOnlySender = typename common::Pipeline<Communicator>::ReadOnlySender;
-using CommunicatorPipelineReadWriteSender = typename common::Pipeline<Communicator>::ReadWriteSender;
+using CommunicatorPipelineSharedWrapper = typename common::Pipeline<Communicator>::ReadOnlyWrapper;
+using CommunicatorPipelineExclusiveWrapper = typename common::Pipeline<Communicator>::ReadWriteWrapper;
+using CommunicatorPipelineSharedSender = typename common::Pipeline<Communicator>::ReadOnlySender;
+using CommunicatorPipelineExclusiveSender = typename common::Pipeline<Communicator>::ReadWriteSender;
 
 /// A CommunicatorPipeline provides pipelined access to a communicator, as well as metadata about the
 /// communicator.
@@ -40,16 +40,16 @@ class CommunicatorPipeline {
   using PipelineType = dlaf::common::Pipeline<Communicator>;
 
 public:
-  using ReadOnlyWrapper = typename PipelineType::ReadOnlyWrapper;
-  using ReadWriteWrapper = typename PipelineType::ReadWriteWrapper;
-  using ReadOnlySender = typename PipelineType::ReadOnlySender;
-  using ReadWriteSender = typename PipelineType::ReadWriteSender;
+  using SharedWrapper = typename PipelineType::ReadOnlyWrapper;
+  using ExclusiveWrapper = typename PipelineType::ReadWriteWrapper;
+  using SharedSender = typename PipelineType::ReadOnlySender;
+  using ExclusiveSender = typename PipelineType::ReadWriteSender;
 
   static constexpr CommunicatorType communicator_type = CT;
 
   /// Create a CommunicatorPipeline by moving in the resource (it takes the
   /// ownership).
-  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {}, Size2D size = {})
+  explicit CommunicatorPipeline(Communicator comm, Index2D rank = {-1, -1}, Size2D size = {-1, -1})
       : pipeline_(std::move(comm)), rank_(std::move(rank)), size_(std::move(size)) {}
   CommunicatorPipeline(CommunicatorPipeline&& other) = default;
   CommunicatorPipeline& operator=(CommunicatorPipeline&& other) = default;
@@ -89,7 +89,7 @@ public:
   /// @return a sender that gives exclusive access to the Communicator as soon as previous accesses are
   /// released.
   /// @pre valid()
-  ReadWriteSender readwrite() {
+  ExclusiveSender exclusive() {
     return pipeline_.readwrite();
   }
 
@@ -98,7 +98,7 @@ public:
   /// @return a sender that gives shared access to the Communicator as soon as previous read-write
   /// accesses are released.
   /// @pre valid()
-  ReadOnlySender read() {
+  SharedSender shared() {
     return pipeline_.read();
   }
 

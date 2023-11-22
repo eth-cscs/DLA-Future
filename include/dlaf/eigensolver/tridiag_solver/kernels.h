@@ -15,62 +15,38 @@
 #include <dlaf/lapack/tile.h>
 #include <dlaf/matrix/copy_tile.h>
 #include <dlaf/matrix/tile.h>
-#include <dlaf/memory/memory_chunk.h>
-#include <dlaf/sender/traits.h>
-#include <dlaf/sender/transform.h>
 #include <dlaf/types.h>
 
 #ifdef DLAF_WITH_GPU
 #include <whip.hpp>
 
+#include <dlaf/eigensolver/tridiag_solver/gpu/kernels.h>
 #include <dlaf/gpu/lapack/api.h>
 #endif
 
 namespace dlaf::eigensolver::internal {
 
-template <Device D, class DiagTileSenderIn, class DiagTileSenderOut>
-void stedcAsync(DiagTileSenderIn&& in, DiagTileSenderOut&& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  auto sender = ex::when_all(std::forward<DiagTileSenderIn>(in), std::forward<DiagTileSenderOut>(out));
-  ex::start_detached(tile::stedc(di::Policy<DefaultBackend_v<D>>(), std::move(sender)));
-}
-
 template <class T>
 void castToComplex(const matrix::Tile<const T, Device::CPU>& in,
-                   const matrix::Tile<std::complex<T>, Device::CPU>& out);
-
-#define DLAF_CPU_CAST_TO_COMPLEX_ETI(kword, Type)                                    \
-  kword template void castToComplex(const matrix::Tile<const Type, Device::CPU>& in, \
-                                    const matrix::Tile<std::complex<Type>, Device::CPU>& out)
-
-DLAF_CPU_CAST_TO_COMPLEX_ETI(extern, float);
-DLAF_CPU_CAST_TO_COMPLEX_ETI(extern, double);
+                   const matrix::Tile<std::complex<T>, Device::CPU>& out) {
+  DLAF_ASSERT_HEAVY(in.size() == out.size(), in.size(), out.size());
+  for (auto el_idx : iterate_range2d(out.size())) {
+    out(el_idx) = std::complex<T>(in(el_idx), 0);
+  }
+}
 
 #ifdef DLAF_WITH_GPU
 template <class T>
 void castToComplex(const matrix::Tile<const T, Device::GPU>& in,
-                   const matrix::Tile<std::complex<T>, Device::GPU>& out, whip::stream_t stream);
-
-#define DLAF_GPU_CAST_TO_COMPLEX_ETI(kword, Type)                                             \
-  kword template void castToComplex(const matrix::Tile<const Type, Device::GPU>& in,          \
-                                    const matrix::Tile<std::complex<Type>, Device::GPU>& out, \
-                                    whip::stream_t stream)
-
-DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, float);
-DLAF_GPU_CAST_TO_COMPLEX_ETI(extern, double);
+                   const matrix::Tile<std::complex<T>, Device::GPU>& out, whip::stream_t stream) {
+  DLAF_ASSERT_HEAVY(in.size() == out.size(), in.size(), out.size());
+  const SizeType m = in.size().rows();
+  const SizeType n = in.size().cols();
+  gpu::castToComplex(m, n, in.ptr(), in.ld(), out.ptr(), out.ld(), stream);
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(castToComplex);
-
-template <Device D, class InTileSender, class OutTileSender>
-void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
-  namespace di = dlaf::internal;
-  namespace ex = pika::execution::experimental;
-  auto sender = ex::when_all(std::forward<InTileSender>(in), std::forward<OutTileSender>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), castToComplex_o, std::move(sender));
-}
 
 // Cuppen's decomposition
 //
@@ -79,81 +55,66 @@ void castToComplexAsync(InTileSender&& in, OutTileSender&& out) {
 // row of the bottom tile.
 //
 template <class T>
-T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, Device::CPU>& bottom);
+T cuppensDecomp(const matrix::Tile<T, Device::CPU>& top, const matrix::Tile<T, Device::CPU>& bottom) {
+  TileElementIndex offdiag_idx{top.size().rows() - 1, 1};
+  TileElementIndex top_idx{top.size().rows() - 1, 0};
+  TileElementIndex bottom_idx{0, 0};
+  const T offdiag_val = top(offdiag_idx);
 
-#define DLAF_CPU_CUPPENS_DECOMP_ETI(kword, Type)                                \
-  kword template Type cuppensDecomp(const matrix::Tile<Type, Device::CPU>& top, \
-                                    const matrix::Tile<Type, Device::CPU>& bottom)
-
-DLAF_CPU_CUPPENS_DECOMP_ETI(extern, float);
-DLAF_CPU_CUPPENS_DECOMP_ETI(extern, double);
+  // Refence: Lapack working notes: LAWN 69, Serial Cuppen algorithm, Chapter 3
+  //
+  top(top_idx) -= std::abs(offdiag_val);
+  bottom(bottom_idx) -= std::abs(offdiag_val);
+  return offdiag_val;
+}
 
 DLAF_MAKE_CALLABLE_OBJECT(cuppensDecomp);
 
-template <class T, class TopTileSender, class BottomTileSender>
-auto cuppensDecompAsync(TopTileSender&& top, BottomTileSender&& bottom) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  constexpr auto backend = Backend::MC;
-
-  return ex::when_all(std::forward<TopTileSender>(top), std::forward<BottomTileSender>(bottom)) |
-         di::transform(di::Policy<backend>(), cuppensDecomp_o);
-}
-
 template <class T>
 void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
-                                        const matrix::Tile<T, Device::CPU>& diag_tile);
-
-#define DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type) \
-  kword template void copyDiagonalFromCompactTridiagonal(                \
-      const matrix::Tile<const Type, Device::CPU>& tridiag_tile,         \
-      const matrix::Tile<Type, Device::CPU>& diag_tile)
-
-DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
-DLAF_CPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
+                                        const matrix::Tile<T, Device::CPU>& diag_tile) {
+  const SizeType m = tridiag_tile.size().rows();
+  DLAF_ASSERT_HEAVY(m == diag_tile.size().rows(), m, diag_tile.size().rows());
+  for (SizeType i = 0; i < m; ++i) {
+    diag_tile(TileElementIndex(i, 0)) = tridiag_tile(TileElementIndex(i, 0));
+  }
+}
 
 #ifdef DLAF_WITH_GPU
-
 template <class T>
 void copyDiagonalFromCompactTridiagonal(const matrix::Tile<const T, Device::CPU>& tridiag_tile,
                                         const matrix::Tile<T, Device::GPU>& diag_tile,
-                                        whip::stream_t stream);
+                                        whip::stream_t stream) {
+  const SizeType m = tridiag_tile.size().rows();
+  DLAF_ASSERT_HEAVY(m == diag_tile.size().rows(), m, diag_tile.size().rows());
 
-#define DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(kword, Type) \
-  kword template void copyDiagonalFromCompactTridiagonal(                \
-      const matrix::Tile<const Type, Device::CPU>& tridiag_tile,         \
-      const matrix::Tile<Type, Device::GPU>& diag_tile, whip::stream_t stream)
-
-DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, float);
-DLAF_GPU_COPY_DIAGONAL_FROM_COMPACT_TRIDIAGONAL_ETI(extern, double);
-
+  whip::memcpy_async(diag_tile.ptr(), tridiag_tile.ptr(), sizeof(T) * to_sizet(m), whip::memcpy_default,
+                     stream);
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(copyDiagonalFromCompactTridiagonal);
 
-template <Device D, class TridiagTile, class DiagTile>
-void copyDiagonalFromCompactTridiagonalAsync(TridiagTile&& in, DiagTile&& out) {
-  namespace ex = pika::execution::experimental;
-  namespace di = dlaf::internal;
-
-  auto sender = ex::when_all(std::forward<TridiagTile>(in), std::forward<DiagTile>(out));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), copyDiagonalFromCompactTridiagonal_o,
-                      std::move(sender));
-}
-
 template <class T>
 void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<const T, Device::CPU>& evecs_tile,
-                                   const matrix::Tile<T, Device::CPU>& rank1_tile);
+                                   const matrix::Tile<T, Device::CPU>& rank1_tile) {
+  const SizeType m = evecs_tile.size().rows();
+  const SizeType n = evecs_tile.size().cols();
+  DLAF_ASSERT_HEAVY(n == rank1_tile.size().rows(), n, rank1_tile.size().rows());
 
-#define DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                        \
-  kword template void assembleRank1UpdateVectorTile(                                       \
-      bool is_top_tile, Type rho, const matrix::Tile<const Type, Device::CPU>& evecs_tile, \
-      const matrix::Tile<Type, Device::CPU>& rank1_tile)
+  // Copy the bottom row of the top tile or the top row of the bottom tile
+  SizeType row = (is_top_tile) ? m - 1 : 0;
 
-DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
-DLAF_CPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
+  // Negate the last row of the top eigenvector subproblem matrix (Q1) if rho < 0
+  //
+  // lapack 3.10.0, dlaed2.f, line 280 and 281
+  int sign = (is_top_tile && rho < 0) ? -1 : 1;
+
+  for (SizeType i = 0; i < n; ++i) {
+    rank1_tile(TileElementIndex(i, 0)) = sign * evecs_tile(TileElementIndex(row, i)) / T(std::sqrt(2));
+  }
+}
 
 #ifdef DLAF_WITH_GPU
 
@@ -161,42 +122,19 @@ template <class T>
 void assembleRank1UpdateVectorTile(bool is_top_tile, T rho,
                                    const matrix::Tile<const T, Device::GPU>& evecs_tile,
                                    const matrix::Tile<T, Device::GPU>& rank1_tile,
-                                   whip::stream_t stream);
+                                   whip::stream_t stream) {
+  const SizeType m = evecs_tile.size().rows();
+  const SizeType n = evecs_tile.size().cols();
+  DLAF_ASSERT_HEAVY(n == rank1_tile.size().rows(), n, rank1_tile.size().rows());
 
-#define DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(kword, Type)                        \
-  kword template void assembleRank1UpdateVectorTile(                                       \
-      bool is_top_tile, Type rho, const matrix::Tile<const Type, Device::GPU>& evecs_tile, \
-      const matrix::Tile<Type, Device::GPU>& rank1_tile, whip::stream_t stream)
-
-DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, float);
-DLAF_GPU_ASSEMBLE_RANK1_UPDATE_VECTOR_TILE_ETI(extern, double);
-
+  gpu::assembleRank1UpdateVectorTile(is_top_tile, rho, m, n, evecs_tile.ptr(), evecs_tile.ld(),
+                                     rank1_tile.ptr(), stream);
+}
 #endif
 
 DLAF_MAKE_CALLABLE_OBJECT(assembleRank1UpdateVectorTile);
 
-template <class T, Device D, class RhoSender, class EvecsTileSender, class Rank1TileSender>
-void assembleRank1UpdateVectorTileAsync(bool top_tile, RhoSender&& rho, EvecsTileSender&& evecs,
-                                        Rank1TileSender&& rank1) {
-  namespace di = dlaf::internal;
-  auto sender =
-      di::whenAllLift(top_tile, std::forward<RhoSender>(rho), std::forward<EvecsTileSender>(evecs),
-                      std::forward<Rank1TileSender>(rank1));
-  di::transformDetach(di::Policy<DefaultBackend_v<D>>(), assembleRank1UpdateVectorTile_o,
-                      std::move(sender));
-}
-
 #ifdef DLAF_WITH_GPU
-
-template <class T>
-void givensRotationOnDevice(SizeType len, T* x, T* y, T c, T s, whip::stream_t stream);
-
-#define DLAF_GIVENS_ROT_ETI(kword, Type)                                                     \
-  kword template void givensRotationOnDevice(SizeType len, Type* x, Type* y, Type c, Type s, \
-                                             whip::stream_t stream)
-
-DLAF_GIVENS_ROT_ETI(extern, float);
-DLAF_GIVENS_ROT_ETI(extern, double);
-
+using gpu::givensRotationOnDevice;
 #endif
 }

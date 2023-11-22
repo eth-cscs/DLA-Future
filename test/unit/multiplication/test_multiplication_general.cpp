@@ -166,7 +166,7 @@ std::vector<GemmConfig> sub_gemm_configs = {
     {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{7, 1}}, {{11, 10}}, {{4, 2}}},
 };
 
-TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRef) {
+TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -175,7 +175,7 @@ TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRef) {
   }
 }
 
-TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRefSub) {
+TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -185,7 +185,7 @@ TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocalWithMatrixRefSub) {
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRef) {
+TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocal) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
@@ -194,7 +194,7 @@ TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRef) {
   }
 }
 
-TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalWithMatrixRefSub) {
+TYPED_TEST(GeneralMultiplicationTestGPU, CorrectnessLocalSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 

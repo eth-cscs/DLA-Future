@@ -35,25 +35,25 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
                               const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
-  if (mat_a.nrTiles().cols() == 0) {
+  if (mat_a.nr_tiles().cols() == 0) {
     // Note: if beta == 1, we optimize by not even scheduling anything
     if (beta != T(1)) {
-      for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j)
-        for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i)
-          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(GlobalTileIndex(i, j))) |
+      for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j)
+        for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i)
+          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(LocalTileIndex(i, j))) |
                              tile::scal(dlaf::internal::Policy<B>()));
     }
     return;
   }
 
-  for (SizeType j = 0; j < mat_c.nrTiles().cols(); ++j) {
-    for (SizeType i = 0; i < mat_c.nrTiles().rows(); ++i) {
-      for (SizeType k = 0; k < mat_a.nrTiles().cols(); ++k) {
+  for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j) {
+    for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i) {
+      for (SizeType k = 0; k < mat_a.distribution().local_nr_tiles().cols(); ++k) {
         ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
-                                                       mat_a.read(GlobalTileIndex(i, k)),
-                                                       mat_b.read(GlobalTileIndex(k, j)),
+                                                       mat_a.read(LocalTileIndex(i, k)),
+                                                       mat_b.read(LocalTileIndex(k, j)),
                                                        k == 0 ? beta : T(1),
-                                                       mat_c.readwrite(GlobalTileIndex(i, j))) |
+                                                       mat_c.readwrite(LocalTileIndex(i, j))) |
                            tile::gemm(dlaf::internal::Policy<B>()));
       }
     }

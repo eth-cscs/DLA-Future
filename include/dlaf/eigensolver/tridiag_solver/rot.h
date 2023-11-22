@@ -316,10 +316,10 @@ void applyGivensRotationsToMatrixColumns(
         // Note:
         // These communications use raw pointers, so correct lifetime management of related tiles
         // is up to the caller.
-        comm_checkpoints.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row_chain.shared(), rank_partner,
-                                                                     tag, col_send, m));
-        comm_checkpoints.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row_chain.shared(), rank_partner,
-                                                                     tag, col_recv, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row_chain.shared(),
+                                                                     rank_partner, tag, col_send, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row_chain.shared(),
+                                                                     rank_partner, tag, col_recv, m));
       }
 
       // Note:

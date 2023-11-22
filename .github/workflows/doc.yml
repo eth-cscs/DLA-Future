@@ -36,7 +36,7 @@ jobs:
       - name: Push Docs release
         if: "github.repository == 'eth-cscs/DLA-Future' && startsWith(github.ref, 'refs/tags/v')"
         run: |
-          TAG = ${{ github.ref_name }}
+          TAG=${{ github.ref_name }}
           mv doc/html $TAG
           git config user.name "Doc CI Action" && git config user.email "rasolca@users.noreply.github.com"
           git fetch --no-tags --depth=1 origin +refs/heads/docs:refs/heads/docs

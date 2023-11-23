@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 from parse import parse, with_pattern
 from pathlib import Path
 
+default_logx = False
+default_logy = False
 miny0 = False
 outpath = Path(".")
 
@@ -370,6 +372,8 @@ def parse_jobs(data_dirs, distinguish_dir=False):
 # exit is called if no results are found.
 def parse_jobs_cmdargs(description):
     global miny0
+    global default_logx
+    global default_logy
     global outpath
 
     parser = argparse.ArgumentParser(description=description)
@@ -389,6 +393,16 @@ def parse_jobs_cmdargs(description):
         help="Set min y limit to 0.",
     )
     parser.add_argument(
+        "--logx",
+        action="store_true",
+        help="Set logarithmic scale for x-axis.",
+    )
+    parser.add_argument(
+        "--logy",
+        action="store_true",
+        help="Set logarithmic scale for y-axis.",
+    )
+    parser.add_argument(
         "--out-path",
         default=".",
         help='Path to save the plots (default ".").',
@@ -396,6 +410,8 @@ def parse_jobs_cmdargs(description):
     args = parser.parse_args()
     paths = args.path
     miny0 = args.miny0
+    default_logx = args.logx
+    default_logy = args.logy
     outpath = Path(args.out_path)
 
     os.makedirs(outpath, exist_ok=True)
@@ -469,6 +485,7 @@ def _gen_plot(
     size_type,
     df,
     logx,
+    logy,
     combine_mb,
     filename_suffix,
     ppn_plot=False,
@@ -490,6 +507,12 @@ def _gen_plot(
         customize_time: function accepting the two arguments fig and ax for time plot customization
         has_band:       switch on/off band parameter in non combined plots
     """
+
+    if logx == None:
+        logx = default_logx
+    if logy == None:
+        logy = default_logy
+
     if scaling == "weak":
         if weak_rt_approx == None:
             raise ValueError(f"Invalid weakrt_approx: {weakrt_approx}")
@@ -608,13 +631,14 @@ def _gen_plot(
                     customize_time(fig, ax)
                 if logx:
                     ax.set_xscale("log", base=2)
-                if scaling == "weak":
+                if logy:
                     ax.set_yscale("log", base=10)
 
 
 def gen_chol_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -635,6 +659,7 @@ def gen_chol_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -648,7 +673,8 @@ def gen_chol_plots_strong(
 def gen_chol_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -669,6 +695,7 @@ def gen_chol_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -682,7 +709,8 @@ def gen_chol_plots_weak(
 
 def gen_trsm_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -703,6 +731,7 @@ def gen_trsm_plots_strong(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -716,7 +745,8 @@ def gen_trsm_plots_strong(
 def gen_trsm_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -737,6 +767,7 @@ def gen_trsm_plots_weak(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -750,7 +781,8 @@ def gen_trsm_plots_weak(
 
 def gen_gen2std_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -771,6 +803,7 @@ def gen_gen2std_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -784,7 +817,8 @@ def gen_gen2std_plots_strong(
 def gen_gen2std_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -805,6 +839,7 @@ def gen_gen2std_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -818,7 +853,8 @@ def gen_gen2std_plots_weak(
 
 def gen_red2band_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -839,6 +875,7 @@ def gen_red2band_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -853,7 +890,8 @@ def gen_red2band_plots_strong(
 def gen_red2band_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -874,6 +912,7 @@ def gen_red2band_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -888,7 +927,8 @@ def gen_red2band_plots_weak(
 
 def gen_band2trid_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -909,6 +949,7 @@ def gen_band2trid_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -923,7 +964,8 @@ def gen_band2trid_plots_strong(
 def gen_band2trid_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -944,6 +986,7 @@ def gen_band2trid_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -958,7 +1001,8 @@ def gen_band2trid_plots_weak(
 
 def gen_trid_evp_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -979,6 +1023,7 @@ def gen_trid_evp_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,
@@ -991,7 +1036,8 @@ def gen_trid_evp_plots_strong(
 def gen_trid_evp_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1012,6 +1058,7 @@ def gen_trid_evp_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,
@@ -1024,7 +1071,8 @@ def gen_trid_evp_plots_weak(
 
 def gen_bt_band2trid_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1045,6 +1093,7 @@ def gen_bt_band2trid_plots_strong(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -1059,7 +1108,8 @@ def gen_bt_band2trid_plots_strong(
 def gen_bt_band2trid_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1080,6 +1130,7 @@ def gen_bt_band2trid_plots_weak(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -1094,7 +1145,8 @@ def gen_bt_band2trid_plots_weak(
 
 def gen_bt_red2band_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1115,6 +1167,7 @@ def gen_bt_red2band_plots_strong(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -1129,7 +1182,8 @@ def gen_bt_red2band_plots_strong(
 def gen_bt_red2band_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1150,6 +1204,7 @@ def gen_bt_red2band_plots_weak(
         size_type="mn",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=True,
@@ -1164,7 +1219,8 @@ def gen_bt_red2band_plots_weak(
 
 def gen_evp_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1185,6 +1241,7 @@ def gen_evp_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,
@@ -1198,7 +1255,8 @@ def gen_evp_plots_strong(
 def gen_evp_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1219,6 +1277,7 @@ def gen_evp_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,
@@ -1232,7 +1291,8 @@ def gen_evp_plots_weak(
 
 def gen_gevp_plots_strong(
     df,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1253,6 +1313,7 @@ def gen_gevp_plots_strong(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,
@@ -1266,7 +1327,8 @@ def gen_gevp_plots_strong(
 def gen_gevp_plots_weak(
     df,
     weak_rt_approx,
-    logx=False,
+    logx=None,
+    logy=None,
     combine_mb=False,
     filename_suffix=None,
     customize_ppn=add_basic_legend,
@@ -1287,6 +1349,7 @@ def gen_gevp_plots_weak(
         size_type="m",
         df=df,
         logx=logx,
+        logy=logy,
         combine_mb=combine_mb,
         filename_suffix=filename_suffix,
         ppn_plot=False,

@@ -226,11 +226,13 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmDiag(pika::execution::thread_priority priority, ASender&& tile_a, WSender&& tile_w,
               XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Left, blas::Uplo::Lower, T(1),
                                   std::forward<ASender>(tile_a), std::forward<WSender>(tile_w), T(1),
                                   std::forward<XSender>(tile_x)) |
-      tile::hemm(dlaf::internal::Policy<B>(priority)));
+      tile::hemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 // X += op(A) * W
@@ -238,21 +240,25 @@ template <Backend B, typename ASender, typename WSender, typename XSender>
 void hemmOffDiag(pika::execution::thread_priority priority, blas::Op op, ASender&& tile_a,
                  WSender&& tile_w, XSender&& tile_x) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(op, blas::Op::NoTrans, T(1), std::forward<ASender>(tile_a),
                                   std::forward<WSender>(tile_w), T(1), std::forward<XSender>(tile_x)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority)));
+      tile::gemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend B, typename VSender, typename XSender, typename ASender>
 void her2kDiag(pika::execution::thread_priority priority, VSender&& tile_v, XSender&& tile_x,
                ASender&& tile_a) {
   using T = dlaf::internal::SenderElementType<VSender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Uplo::Lower, blas::Op::NoTrans, T(-1),
                                   std::forward<VSender>(tile_v), std::forward<XSender>(tile_x),
                                   BaseType<T>(1), std::forward<ASender>(tile_a)) |
-      tile::her2k(dlaf::internal::Policy<B>(priority)));
+      tile::her2k(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 // C -= A . B*
@@ -260,11 +266,13 @@ template <Backend B, typename ASender, typename BSender, typename CSender>
 void her2kOffDiag(pika::execution::thread_priority priority, ASender&& tile_a, BSender&& tile_b,
                   CSender&& tile_c) {
   using T = dlaf::internal::SenderElementType<ASender>;
+  using pika::execution::thread_stacksize;
+
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::ConjTrans, T(-1),
                                   std::forward<ASender>(tile_a), std::forward<BSender>(tile_b), T(1),
                                   std::forward<CSender>(tile_c)) |
-      tile::gemm(dlaf::internal::Policy<B>(priority)));
+      tile::gemm(dlaf::internal::Policy<B>(priority, thread_stacksize::nostack)));
 }
 
 namespace local {
@@ -285,6 +293,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             const matrix::SubPanelView& panel_view) {
   static Device constexpr D = MatrixLikeA::device;
   using T = typename MatrixLikeA::ElementType;
+  using pika::execution::thread_priority;
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
 
@@ -302,7 +311,7 @@ void computePanelReflectors(MatrixLikeA& mat_a, MatrixLikeTaus& mat_taus, const 
                             std::vector<common::internal::vector<T>>{}),  // w (internally required)
                    mat_taus.readwrite(LocalTileIndex(j_sub, 0)),
                    ex::when_all_vector(std::move(panel_tiles))) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, cols = panel_view.cols()](const std::size_t index, auto& barrier_ptr,
                                                               auto& w, auto& taus, auto& tiles) {
         const auto barrier_busy_wait = getReductionToBandBarrierBusyWait();
@@ -353,6 +362,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
 
   // Note:
   // Reflectors are stored in the lower triangular part of the A matrix leading to sharing memory
@@ -376,7 +386,7 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     // Note:
     // copy + laset is done in two independent tasks, but it could be theoretically merged to into a
     // single task doing both.
-    const auto p = dlaf::internal::Policy<B>(thread_priority::high);
+    const auto p = dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack);
     ex::start_detached(dlaf::internal::whenAllLift(splitTile(mat_a.read(i), spec), v.readwrite(i)) |
                        matrix::copy(p));
     ex::start_detached(dlaf::internal::whenAllLift(blas::Uplo::Upper, T(0), T(1), v.readwrite(i)) |
@@ -399,7 +409,8 @@ void setupReflectorPanelV(bool has_head, const matrix::SubPanelView& panel_view,
     //        subtiles used in the operation belong to different tiles.
     if (force_copy)
       ex::start_detached(ex::when_all(matrix::splitTile(mat_a.read(idx), spec), v.readwrite(idx)) |
-                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high)));
+                         matrix::copy(dlaf::internal::Policy<B>(thread_priority::high,
+                                                                thread_stacksize::nostack)));
     else
       v.setTile(idx, matrix::splitTile(mat_a.read(idx), spec));
   }
@@ -411,6 +422,7 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   using namespace blas;
 
   auto it = w.iteratorLocal();
@@ -418,7 +430,8 @@ void trmmComputeW(matrix::Panel<Coord::Col, T, D>& w, matrix::Panel<Coord::Col, 
   for (const auto& index_i : it) {
     ex::start_detached(dlaf::internal::whenAllLift(Side::Right, Uplo::Upper, Op::NoTrans, Diag::NonUnit,
                                                    T(1), tile_t, v.read(index_i), w.readwrite(index_i)) |
-                       tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high)));
+                       tile::trmm3(dlaf::internal::Policy<B>(thread_priority::high,
+                                                             thread_stacksize::nostack)));
   }
 
   if (it.empty()) {
@@ -432,14 +445,15 @@ void gemmUpdateX(matrix::Panel<Coord::Col, T, D>& x, matrix::Matrix<const T, D>&
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   using namespace blas;
 
   // GEMM X = X - 0.5 . V . W2
   for (const auto& index_i : v.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read(index_i),
-                                                   w2.read(LocalTileIndex(0, 0)), T(1),
-                                                   x.readwrite(index_i)) |
-                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(Op::NoTrans, Op::NoTrans, T(-0.5), v.read(index_i),
+                                    w2.read(LocalTileIndex(0, 0)), T(1), x.readwrite(index_i)) |
+        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
 }
 
 template <Backend B, Device D, class T>
@@ -501,6 +515,7 @@ template <Backend B, Device D, class T>
 void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, D>& w,
                    matrix::Panel<Coord::Col, const T, D>& x) {
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
 
   namespace ex = pika::execution::experimental;
 
@@ -509,15 +524,16 @@ void gemmComputeW2(matrix::Matrix<T, D>& w2, matrix::Panel<Coord::Col, const T, 
   // the column are going to participate to the reduce. For them, it is important to set the
   // partial result W2 to zero.
   ex::start_detached(w2.readwrite(LocalTileIndex(0, 0)) |
-                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high)));
+                     tile::set0(dlaf::internal::Policy<B>(thread_priority::high,
+                                                          thread_stacksize::nostack)));
 
   using namespace blas;
   // GEMM W2 = W* . X
   for (const auto& index_tile : w.iteratorLocal())
-    ex::start_detached(dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read(index_tile),
-                                                   x.read(index_tile), T(1),
-                                                   w2.readwrite(LocalTileIndex(0, 0))) |
-                       tile::gemm(dlaf::internal::Policy<B>(thread_priority::high)));
+    ex::start_detached(
+        dlaf::internal::whenAllLift(Op::ConjTrans, Op::NoTrans, T(1), w.read(index_tile),
+                                    x.read(index_tile), T(1), w2.readwrite(LocalTileIndex(0, 0))) |
+        tile::gemm(dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack)));
 }
 
 template <Backend B, Device D, class T>
@@ -904,13 +920,15 @@ protected:
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tmp_tile = v.readwrite(i);
       ex::start_detached(
           ex::when_all(splitTile(mat_a.read(i), spec), splitTile(std::move(tmp_tile), spec)) |
-          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high)));
+          matrix::copy(Policy<CopyBackend_v<Device::GPU, Device::CPU>>(thread_priority::high,
+                                                                       thread_stacksize::nostack)));
     }
   }
 
@@ -921,13 +939,14 @@ protected:
     using dlaf::internal::Policy;
     using dlaf::matrix::internal::CopyBackend_v;
     using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
 
     for (const auto& i : panel_view.iteratorLocal()) {
       auto spec = panel_view(i);
       auto tile_a = mat_a.readwrite(i);
-      ex::start_detached(
-          ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
-          matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(thread_priority::high)));
+      ex::start_detached(ex::when_all(splitTile(v.read(i), spec), splitTile(std::move(tile_a), spec)) |
+                         matrix::copy(Policy<CopyBackend_v<Device::CPU, Device::GPU>>(
+                             thread_priority::high, thread_stacksize::nostack)));
     }
   }
 };

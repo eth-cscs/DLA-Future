@@ -54,7 +54,7 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
 
-  auto scheduler = getBackendScheduler<B>(policy.priority());
+  auto scheduler = getBackendScheduler<B>(policy.priority(), policy.stacksize());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
 
   using dlaf::common::internal::ConsumeRvalues;

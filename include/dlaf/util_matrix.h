@@ -155,10 +155,12 @@ template <Backend backend, class T, Device D>
 void set0(pika::execution::thread_priority priority, LocalTileIndex begin, LocalTileSize sz,
           Matrix<T, D>& matrix) {
   using dlaf::internal::Policy;
+  using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(begin, sz))
-    start_detached(matrix.readwrite(idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(matrix.readwrite(idx) |
+                   tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 /// \overload set0
@@ -174,10 +176,12 @@ void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
 template <Backend backend, class T, Coord axis, Device D, StoreTransposed storage>
 void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>& panel) {
   using dlaf::internal::Policy;
+  using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    start_detached(panel.readwrite(tile_idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(panel.readwrite(tile_idx) |
+                   tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 /// Set the elements of the matrix.
@@ -188,6 +192,8 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>&
 /// @pre el_f return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
+  using pika::execution::thread_stacksize;
+
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
     GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
@@ -201,8 +207,8 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
       }
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(set_f), matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -259,6 +265,8 @@ void set_identity(Matrix<T, Device::CPU>& matrix) {
 /// will have the same set of values.
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
+  using pika::execution::thread_stacksize;
+
   const Distribution& dist = matrix.distribution();
   for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
     GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
@@ -273,8 +281,8 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
       }
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(rnd_f), matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -357,6 +365,8 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
 template <class T>
 void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value,
                                       std::optional<SizeType> band_size = std::nullopt) {
+  using pika::execution::thread_stacksize;
+
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
@@ -394,8 +404,8 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
                                            band_size);
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(set_hp_f), matrix.readwrite(tile_wrt_local));
   }
 }
 

@@ -106,8 +106,10 @@ void solveLeaf(Matrix<T, Device::CPU>& tridiag, Matrix<T, Device::GPU>& evecs,
                Matrix<T, Device::CPU>& h_evecs) {
   namespace ex = pika::execution::experimental;
   using matrix::copy;
+  using pika::execution::thread_stacksize;
   const auto cp_policy =
-      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{
+          thread_stacksize::nostack};
 
   const SizeType ntiles = tridiag.distribution().nrTiles().rows();
   for (SizeType i = 0; i < ntiles; ++i) {
@@ -189,6 +191,8 @@ void offloadDiagonal(Matrix<const T, Device::CPU>& tridiag, Matrix<T, D>& evals)
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>& evals,
                                   Matrix<T, D>& evecs) {
+  using pika::execution::thread_priority;
+
   // Quick return for empty matrix
   if (evecs.size().isEmpty())
     return;
@@ -231,7 +235,7 @@ void TridiagSolver<B, D, T>::call(Matrix<T, Device::CPU>& tridiag, Matrix<T, D>&
                                   initMirrorMatrix(ws.i2), initMirrorMatrix(ws.i5)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, ws.e0);
+  matrix::util::set0<B, T, D>(thread_priority::normal, ws.e0);
 
   // Cuppen's decomposition
   auto offdiag_vals = cuppensDecomposition(tridiag);
@@ -315,8 +319,10 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
   const matrix::Distribution& dist = evecs.distribution();
   namespace ex = pika::execution::experimental;
   using matrix::copy;
+  using pika::execution::thread_stacksize;
   const auto cp_policy =
-      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{};
+      dlaf::internal::Policy<matrix::internal::CopyBackend_v<Device::GPU, Device::CPU>>{
+          thread_stacksize::nostack};
 
   const comm::Index2D this_rank = dist.rankIndex();
   const SizeType ntiles = dist.nrTiles().rows();
@@ -344,6 +350,8 @@ void solveDistLeaf(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& ful
 template <Backend B, Device D, class T>
 void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
                                   Matrix<T, D>& evals, Matrix<T, D>& evecs) {
+  using pika::execution::thread_priority;
+
   auto full_task_chain = grid.full_communicator_pipeline();
 
   // Quick return for empty matrix
@@ -388,7 +396,7 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
                                       initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2)};
 
   // Set `ws.e0` to `zero` (needed for Given's rotation to make sure no random values are picked up)
-  matrix::util::set0<B, T, D>(pika::execution::thread_priority::normal, ws.e0);
+  matrix::util::set0<B, T, D>(thread_priority::normal, ws.e0);
 
   // Cuppen's decomposition
   auto offdiag_vals = cuppensDecomposition(tridiag);

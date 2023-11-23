@@ -29,7 +29,6 @@ TEST(BcastMatrixTest, TransformMPIRW) {
   using namespace std::literals;
 
   comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
   comm::CommunicatorPipeline<comm::CommunicatorType::Full> ccomm(comm);
 
   int root = 0;
@@ -61,7 +60,6 @@ TEST(BcastMatrixTest, TransformMPIRO) {
   using pika::execution::experimental::when_all;
 
   comm::Communicator comm(MPI_COMM_WORLD);
-  comm::CommunicatorGrid grid(comm, 1, 2, common::Ordering::ColumnMajor);
   comm::CommunicatorPipeline<comm::CommunicatorType::Full> ccomm(comm);
 
   int root = 0;

@@ -109,9 +109,6 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 /// @pre @p mat_out has size (N x N)
 /// @pre @p mat_out has blocksize (NB x NB)
 /// @pre @p mat_out has tilesize (NB x NB)
-///
-/// Note: The CommunicatorPipeline API allows to use permute() within other algorithms without having to
-///       clone communicators internally.
 template <Backend B, Device D, class T, Coord coord>
 void permute(
     comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,

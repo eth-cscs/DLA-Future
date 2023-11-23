@@ -17,6 +17,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/blas/scal.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/eigensolver/eigensolver.h>
@@ -60,6 +61,10 @@ void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device
     MatrixMirror<const T, Device::CPU, D> mat_e(ret.eigenvectors);
     return allGather(blas::Uplo::General, mat_e.get(), grid...);
   }();
+
+  // eigenvalues are contiguous in the mat_local buffer
+  const BaseType<T>* evals_start = mat_evalues_local.ptr({0, 0});
+  EXPECT_TRUE(std::is_sorted(evals_start, evals_start + m));
 
   MatrixLocal<T> mat_be_local({m, m}, reference_a.blockSize());
 

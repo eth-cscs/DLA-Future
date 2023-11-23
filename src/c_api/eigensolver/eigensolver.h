@@ -17,6 +17,7 @@
 
 #include <dlaf/common/assert.h>
 #include <dlaf/eigensolver/eigensolver.h>
+#include <dlaf/matrix/create_matrix.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/types.h>

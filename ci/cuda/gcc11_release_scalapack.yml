@@ -5,7 +5,7 @@ cuda gcc11 release scalapack deps:
   extends: .build_deps_common
   variables:
     BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
-    COMPILER: gcc@11.2.0
+    COMPILER: gcc@11
     SPACK_ENVIRONMENT: ci/docker/release-cuda-scalapack.yaml
     USE_MKL: "ON"
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-release/build

@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - common.yaml
+  - /spack_environment/common.yaml
 
   view: false
   concretizer:

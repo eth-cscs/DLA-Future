@@ -5,7 +5,7 @@ cpu clang12 release deps:
   extends: .build_deps_common
   variables:
     EXTRA_APTGET: "clang-12 libomp-12-dev"
-    COMPILER: clang@12.0.1
+    COMPILER: clang@12
     USE_MKL: "ON"
     SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
     BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang12-release/build

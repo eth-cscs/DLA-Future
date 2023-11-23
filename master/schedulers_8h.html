@@ -75,6 +75,7 @@ $(function() {
 <code>#include &lt;pika/runtime.hpp&gt;</code><br />
 <code>#include &lt;pika/thread.hpp&gt;</code><br />
 <code>#include &lt;pika/cuda.hpp&gt;</code><br />
+<code>#include &lt;dlaf/common/assert.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="dlaf_2init_8h_source.html">dlaf/init.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
 </div>
@@ -82,14 +83,10 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a3f1d6f1b2d82168d2947156ecabd08a1"><td class="memTemplParams" colspan="2"><a id="a3f1d6f1b2d82168d2947156ecabd08a1"></a>
+<tr class="memitem:aa8dba7aa66da2dc1abe955a8aaeac970"><td class="memTemplParams" colspan="2"><a id="aa8dba7aa66da2dc1abe955a8aaeac970"></a>
 template&lt;Backend backend&gt; </td></tr>
-<tr class="memitem:a3f1d6f1b2d82168d2947156ecabd08a1"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::internal::getBackendScheduler</b> ()</td></tr>
-<tr class="separator:a3f1d6f1b2d82168d2947156ecabd08a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a36532abbdf13ac603e16d8b1f4dee2b1"><td class="memTemplParams" colspan="2"><a id="a36532abbdf13ac603e16d8b1f4dee2b1"></a>
-template&lt;Backend backend&gt; </td></tr>
-<tr class="memitem:a36532abbdf13ac603e16d8b1f4dee2b1"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::internal::getBackendScheduler</b> (const pika::execution::thread_priority priority)</td></tr>
-<tr class="separator:a36532abbdf13ac603e16d8b1f4dee2b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8dba7aa66da2dc1abe955a8aaeac970"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::internal::getBackendScheduler</b> (const pika::execution::thread_priority priority=pika::execution::thread_priority::default_, const pika::execution::thread_stacksize stacksize=pika::execution::thread_stacksize::default_)</td></tr>
+<tr class="separator:aa8dba7aa66da2dc1abe955a8aaeac970"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a457c5f8044a2e99e029ef165f8a43d80"><td class="memItemLeft" align="right" valign="top"><a id="a457c5f8044a2e99e029ef165f8a43d80"></a>
 auto&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::internal::getMPIScheduler</b> ()</td></tr>
 <tr class="separator:a457c5f8044a2e99e029ef165f8a43d80"><td class="memSeparator" colspan="2">&#160;</td></tr>

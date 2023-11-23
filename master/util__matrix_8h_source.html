@@ -205,221 +205,231 @@ $(function() {
 <div class="line"><a name="l00149"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a6cdf6afc18a6456ed68b3fd1dffa9c39">  149</a></span>&#160;<span class="keywordtype">void</span> set0(pika::execution::thread_priority priority, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> begin, <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a> sz,</div>
 <div class="line"><a name="l00150"></a><span class="lineno">  150</span>&#160;          <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, D&gt;</a>&amp; matrix) {</div>
 <div class="line"><a name="l00151"></a><span class="lineno">  151</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>;</div>
-<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  <span class="keyword">using</span> pika::execution::experimental::start_detached;</div>
-<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160; </div>
-<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : iterate_range2d(begin, sz))</div>
-<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;    start_detached(matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(idx) | tile::set0(Policy&lt;backend&gt;(priority)));</div>
-<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;}</div>
-<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160; </div>
-<div class="line"><a name="l00162"></a><span class="lineno">  162</span>&#160;<span class="keyword">template</span> &lt;Backend backend, <span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00163"></a><span class="lineno">  163</span>&#160;<span class="keywordtype">void</span> set0(pika::execution::thread_priority priority, <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, D&gt;</a>&amp; matrix) {</div>
-<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;  set0&lt;backend&gt;(priority, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>(0, 0), matrix.distribution().local_nr_tiles(), matrix);</div>
-<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;}</div>
-<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160; </div>
-<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;<span class="keyword">template</span> &lt;Backend backend, <span class="keyword">class</span> T, Coord axis, Device D, StoreTransposed storage&gt;</div>
-<div class="line"><a name="l00169"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a79688b3669b67c143114cf2eef3ba69b">  169</a></span>&#160;<span class="keywordtype">void</span> set0(pika::execution::thread_priority priority, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">Panel&lt;axis, T, D, storage&gt;</a>&amp; panel) {</div>
-<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>;</div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;  <span class="keyword">using</span> pika::execution::experimental::start_detached;</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160; </div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; tile_idx : panel.iteratorLocal())</div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;    start_detached(panel.<a class="code" href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">readwrite</a>(tile_idx) | tile::set0(Policy&lt;backend&gt;(priority)));</div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;}</div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160; </div>
-<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> ElementGetter&gt;</div>
-<div class="line"><a name="l00184"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">  184</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, ElementGetter el_f) {</div>
-<div class="line"><a name="l00185"></a><span class="lineno">  185</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
-<div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
-<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
-<div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
-<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160; </div>
-<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
-<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;    <span class="keyword">auto</span> set_f = [tl_index, el_f = el_f](<span class="keyword">const</span> TileType&amp; tile) {</div>
-<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">auto</span> el_idx_l : iterate_range2d(tile.size())) {</div>
-<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;        <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());</div>
-<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;        tile(el_idx_l) = el_f(el_idx_g);</div>
-<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160;      }</div>
-<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;    };</div>
-<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160; </div>
-<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(), std::move(set_f),</div>
-<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;                                    matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
-<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;  }</div>
-<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;}</div>
-<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160; </div>
-<div class="line"><a name="l00212"></a><span class="lineno">  212</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> ElementGetter&gt;</div>
-<div class="line"><a name="l00213"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#af07478cd4a633a1422e160863d3d8510">  213</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, ElementGetter el_f, <span class="keyword">const</span> blas::Op op) {</div>
-<div class="line"><a name="l00214"></a><span class="lineno">  214</span>&#160;  <span class="keyword">auto</span> el_op_f = [op, el_f](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&amp; index) -&gt; T {</div>
-<div class="line"><a name="l00215"></a><span class="lineno">  215</span>&#160;    <span class="keyword">using</span> blas::Op;</div>
-<div class="line"><a name="l00216"></a><span class="lineno">  216</span>&#160;    <span class="keywordflow">switch</span> (op) {</div>
-<div class="line"><a name="l00217"></a><span class="lineno">  217</span>&#160;      <span class="keywordflow">case</span> Op::NoTrans:</div>
-<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;        <span class="keywordflow">return</span> el_f(index);</div>
-<div class="line"><a name="l00219"></a><span class="lineno">  219</span>&#160;      <span class="keywordflow">case</span> Op::Trans:</div>
-<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;        <span class="keywordflow">return</span> el_f(transposed(index));</div>
-<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;      <span class="keywordflow">case</span> Op::ConjTrans:</div>
-<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="types_8h.html#a669723b711f94043da9793d2b24d51d9">dlaf::conj</a>(el_f(transposed(index)));</div>
-<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;      <span class="keywordflow">default</span>:</div>
-<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        DLAF_UNIMPLEMENTED(op);</div>
-<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;        <span class="keywordflow">return</span> T{};</div>
-<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;    }</div>
-<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;  };</div>
-<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160; </div>
-<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;  <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(matrix, el_op_f);</div>
-<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;}</div>
-<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160; </div>
-<div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00236"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">  236</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">set_identity</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
-<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160;  <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(matrix, [](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&amp; ij) {</div>
-<div class="line"><a name="l00238"></a><span class="lineno">  238</span>&#160;    <span class="keywordflow">if</span> (ij.row() == ij.col())</div>
-<div class="line"><a name="l00239"></a><span class="lineno">  239</span>&#160;      <span class="keywordflow">return</span> T{1};</div>
-<div class="line"><a name="l00240"></a><span class="lineno">  240</span>&#160;    <span class="keywordflow">return</span> T{0};</div>
-<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;  });</div>
-<div class="line"><a name="l00242"></a><span class="lineno">  242</span>&#160;}</div>
-<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160; </div>
-<div class="line"><a name="l00254"></a><span class="lineno">  254</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00255"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">  255</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">set_random</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
-<div class="line"><a name="l00256"></a><span class="lineno">  256</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
-<div class="line"><a name="l00257"></a><span class="lineno">  257</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
-<div class="line"><a name="l00258"></a><span class="lineno">  258</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
-<div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
-<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;    <span class="keyword">auto</span> seed = tl_index.col() + tl_index.row() * matrix.size().cols();</div>
-<div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160; </div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;    <span class="keyword">auto</span> rnd_f = [seed](TileType&amp;&amp; tile) {</div>
-<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;      <a class="code" href="classdlaf_1_1matrix_1_1util_1_1internal_1_1getter__random.html">internal::getter_random&lt;T&gt;</a> random_value(seed);</div>
-<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">auto</span> el_idx : iterate_range2d(tile.size())) {</div>
-<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;        tile(el_idx) = random_value();</div>
-<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;      }</div>
-<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;    };</div>
+<div class="line"><a name="l00152"></a><span class="lineno">  152</span>&#160;  <span class="keyword">using</span> pika::execution::thread_stacksize;</div>
+<div class="line"><a name="l00153"></a><span class="lineno">  153</span>&#160;  <span class="keyword">using</span> pika::execution::experimental::start_detached;</div>
+<div class="line"><a name="l00154"></a><span class="lineno">  154</span>&#160; </div>
+<div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; idx : iterate_range2d(begin, sz))</div>
+<div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160;    start_detached(matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(idx) |</div>
+<div class="line"><a name="l00157"></a><span class="lineno">  157</span>&#160;                   tile::set0(Policy&lt;backend&gt;(priority, thread_stacksize::nostack)));</div>
+<div class="line"><a name="l00158"></a><span class="lineno">  158</span>&#160;}</div>
+<div class="line"><a name="l00159"></a><span class="lineno">  159</span>&#160; </div>
+<div class="line"><a name="l00164"></a><span class="lineno">  164</span>&#160;<span class="keyword">template</span> &lt;Backend backend, <span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00165"></a><span class="lineno">  165</span>&#160;<span class="keywordtype">void</span> set0(pika::execution::thread_priority priority, <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, D&gt;</a>&amp; matrix) {</div>
+<div class="line"><a name="l00166"></a><span class="lineno">  166</span>&#160;  set0&lt;backend&gt;(priority, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>(0, 0), matrix.distribution().local_nr_tiles(), matrix);</div>
+<div class="line"><a name="l00167"></a><span class="lineno">  167</span>&#160;}</div>
+<div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160; </div>
+<div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;<span class="keyword">template</span> &lt;Backend backend, <span class="keyword">class</span> T, Coord axis, Device D, StoreTransposed storage&gt;</div>
+<div class="line"><a name="l00171"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a79688b3669b67c143114cf2eef3ba69b">  171</a></span>&#160;<span class="keywordtype">void</span> set0(pika::execution::thread_priority priority, <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">Panel&lt;axis, T, D, storage&gt;</a>&amp; panel) {</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;  <span class="keyword">using</span> <a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>;</div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;  <span class="keyword">using</span> pika::execution::thread_stacksize;</div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;  <span class="keyword">using</span> pika::execution::experimental::start_detached;</div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160; </div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; tile_idx : panel.iteratorLocal())</div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;    start_detached(panel.<a class="code" href="structdlaf_1_1matrix_1_1_panel.html#aac41b4dfa833e4a24839fe1d470b835a">readwrite</a>(tile_idx) |</div>
+<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;                   tile::set0(Policy&lt;backend&gt;(priority, thread_stacksize::nostack)));</div>
+<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;}</div>
+<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160; </div>
+<div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> ElementGetter&gt;</div>
+<div class="line"><a name="l00188"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">  188</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, ElementGetter el_f) {</div>
+<div class="line"><a name="l00189"></a><span class="lineno">  189</span>&#160;  <span class="keyword">using</span> pika::execution::thread_stacksize;</div>
+<div class="line"><a name="l00190"></a><span class="lineno">  190</span>&#160; </div>
+<div class="line"><a name="l00191"></a><span class="lineno">  191</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
+<div class="line"><a name="l00192"></a><span class="lineno">  192</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
+<div class="line"><a name="l00193"></a><span class="lineno">  193</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
+<div class="line"><a name="l00194"></a><span class="lineno">  194</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
+<div class="line"><a name="l00195"></a><span class="lineno">  195</span>&#160; </div>
+<div class="line"><a name="l00196"></a><span class="lineno">  196</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
+<div class="line"><a name="l00197"></a><span class="lineno">  197</span>&#160;    <span class="keyword">auto</span> set_f = [tl_index, el_f = el_f](<span class="keyword">const</span> TileType&amp; tile) {</div>
+<div class="line"><a name="l00198"></a><span class="lineno">  198</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">auto</span> el_idx_l : iterate_range2d(tile.size())) {</div>
+<div class="line"><a name="l00199"></a><span class="lineno">  199</span>&#160;        <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a> el_idx_g(el_idx_l.row() + tl_index.row(), el_idx_l.col() + tl_index.col());</div>
+<div class="line"><a name="l00200"></a><span class="lineno">  200</span>&#160;        tile(el_idx_l) = el_f(el_idx_g);</div>
+<div class="line"><a name="l00201"></a><span class="lineno">  201</span>&#160;      }</div>
+<div class="line"><a name="l00202"></a><span class="lineno">  202</span>&#160;    };</div>
+<div class="line"><a name="l00203"></a><span class="lineno">  203</span>&#160; </div>
+<div class="line"><a name="l00204"></a><span class="lineno">  204</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(thread_stacksize::nostack),</div>
+<div class="line"><a name="l00205"></a><span class="lineno">  205</span>&#160;                                    std::move(set_f), matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
+<div class="line"><a name="l00206"></a><span class="lineno">  206</span>&#160;  }</div>
+<div class="line"><a name="l00207"></a><span class="lineno">  207</span>&#160;}</div>
+<div class="line"><a name="l00208"></a><span class="lineno">  208</span>&#160; </div>
+<div class="line"><a name="l00218"></a><span class="lineno">  218</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, <span class="keyword">class</span> ElementGetter&gt;</div>
+<div class="line"><a name="l00219"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#af07478cd4a633a1422e160863d3d8510">  219</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, ElementGetter el_f, <span class="keyword">const</span> blas::Op op) {</div>
+<div class="line"><a name="l00220"></a><span class="lineno">  220</span>&#160;  <span class="keyword">auto</span> el_op_f = [op, el_f](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&amp; index) -&gt; T {</div>
+<div class="line"><a name="l00221"></a><span class="lineno">  221</span>&#160;    <span class="keyword">using</span> blas::Op;</div>
+<div class="line"><a name="l00222"></a><span class="lineno">  222</span>&#160;    <span class="keywordflow">switch</span> (op) {</div>
+<div class="line"><a name="l00223"></a><span class="lineno">  223</span>&#160;      <span class="keywordflow">case</span> Op::NoTrans:</div>
+<div class="line"><a name="l00224"></a><span class="lineno">  224</span>&#160;        <span class="keywordflow">return</span> el_f(index);</div>
+<div class="line"><a name="l00225"></a><span class="lineno">  225</span>&#160;      <span class="keywordflow">case</span> Op::Trans:</div>
+<div class="line"><a name="l00226"></a><span class="lineno">  226</span>&#160;        <span class="keywordflow">return</span> el_f(transposed(index));</div>
+<div class="line"><a name="l00227"></a><span class="lineno">  227</span>&#160;      <span class="keywordflow">case</span> Op::ConjTrans:</div>
+<div class="line"><a name="l00228"></a><span class="lineno">  228</span>&#160;        <span class="keywordflow">return</span> <a class="code" href="types_8h.html#a669723b711f94043da9793d2b24d51d9">dlaf::conj</a>(el_f(transposed(index)));</div>
+<div class="line"><a name="l00229"></a><span class="lineno">  229</span>&#160;      <span class="keywordflow">default</span>:</div>
+<div class="line"><a name="l00230"></a><span class="lineno">  230</span>&#160;        DLAF_UNIMPLEMENTED(op);</div>
+<div class="line"><a name="l00231"></a><span class="lineno">  231</span>&#160;        <span class="keywordflow">return</span> T{};</div>
+<div class="line"><a name="l00232"></a><span class="lineno">  232</span>&#160;    }</div>
+<div class="line"><a name="l00233"></a><span class="lineno">  233</span>&#160;  };</div>
+<div class="line"><a name="l00234"></a><span class="lineno">  234</span>&#160; </div>
+<div class="line"><a name="l00235"></a><span class="lineno">  235</span>&#160;  <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(matrix, el_op_f);</div>
+<div class="line"><a name="l00236"></a><span class="lineno">  236</span>&#160;}</div>
+<div class="line"><a name="l00237"></a><span class="lineno">  237</span>&#160; </div>
+<div class="line"><a name="l00241"></a><span class="lineno">  241</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00242"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">  242</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">set_identity</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
+<div class="line"><a name="l00243"></a><span class="lineno">  243</span>&#160;  <a class="code" href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">set</a>(matrix, [](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>&amp; ij) {</div>
+<div class="line"><a name="l00244"></a><span class="lineno">  244</span>&#160;    <span class="keywordflow">if</span> (ij.row() == ij.col())</div>
+<div class="line"><a name="l00245"></a><span class="lineno">  245</span>&#160;      <span class="keywordflow">return</span> T{1};</div>
+<div class="line"><a name="l00246"></a><span class="lineno">  246</span>&#160;    <span class="keywordflow">return</span> T{0};</div>
+<div class="line"><a name="l00247"></a><span class="lineno">  247</span>&#160;  });</div>
+<div class="line"><a name="l00248"></a><span class="lineno">  248</span>&#160;}</div>
+<div class="line"><a name="l00249"></a><span class="lineno">  249</span>&#160; </div>
+<div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00261"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">  261</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">set_random</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;  <span class="keyword">using</span> pika::execution::thread_stacksize;</div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160; </div>
+<div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
+<div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
+<div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
+<div class="line"><a name="l00267"></a><span class="lineno">  267</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
+<div class="line"><a name="l00268"></a><span class="lineno">  268</span>&#160;    <span class="keyword">auto</span> seed = tl_index.col() + tl_index.row() * matrix.size().cols();</div>
 <div class="line"><a name="l00269"></a><span class="lineno">  269</span>&#160; </div>
-<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(), std::move(rnd_f),</div>
-<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;                                    matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
-<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;  }</div>
-<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;}</div>
-<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160; </div>
-<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;<span class="keyword">namespace </span>internal {</div>
-<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160; </div>
-<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;<span class="keywordtype">void</span> set_diagonal_tile(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, Device::CPU&gt;</a>&amp; tile, internal::getter_random&lt;T&gt;&amp; random_value,</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;                       SizeType offset_value) {</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;  <span class="comment">// DIAGONAL</span></div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;  <span class="comment">// for diagonal tiles get just lower matrix values and set value for both</span></div>
-<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;  <span class="comment">// straight and transposed indices</span></div>
-<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; tile.size().cols(); ++j) {</div>
-<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; j; ++i) {</div>
-<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;      <span class="keyword">auto</span> value = random_value();</div>
-<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160; </div>
-<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;      tile(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>{i, j}) = value;</div>
-<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;      tile(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>{j, i}) = dlaf::conj(value);</div>
-<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;    }</div>
-<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;    tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;</div>
-<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;  }</div>
-<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;}</div>
-<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160; </div>
-<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;<span class="keywordtype">void</span> set_lower_and_upper_tile(<span class="keyword">const</span> Tile&lt;T, Device::CPU&gt;&amp; tile, internal::getter_random&lt;T&gt;&amp; random_value,</div>
-<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;                              TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global,</div>
-<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;                              <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a> dist,</div>
-<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;                              std::optional&lt;SizeType&gt; band_size = std::nullopt) {</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;  <span class="keyword">auto</span> is_off_band = [](GlobalElementIndex ij, std::optional&lt;SizeType&gt; band_size) {</div>
-<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;    <span class="keywordflow">return</span> band_size ? ij.col() &lt; ij.row() - *band_size || ij.col() &gt; ij.row() + *band_size : <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;  };</div>
-<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160; </div>
-<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;  <span class="comment">// LOWER or UPPER (except DIAGONAL)</span></div>
-<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;  <span class="comment">// random values are requested in the same order for both original and transposed</span></div>
-<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; full_tile_size.cols(); ++j) {</div>
-<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; full_tile_size.rows(); ++i) {</div>
-<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;      <span class="keyword">auto</span> value = random_value();</div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160; </div>
-<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;      <span class="comment">// but they are set row-wise in the original tile and col-wise in the</span></div>
-<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;      <span class="comment">// transposed one</span></div>
-<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;      <span class="keywordflow">if</span> (tile_wrt_global.row() &gt; tile_wrt_global.col()) {  <span class="comment">// LOWER</span></div>
-<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;        TileElementIndex index{i, j};</div>
-<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;        <span class="keywordflow">if</span> (index.isIn(tile.size())) {</div>
-<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;          <span class="keyword">auto</span> ij = dist.globalElementIndex(tile_wrt_global, index);</div>
-<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;          <span class="keywordflow">if</span> (is_off_band(ij, band_size))</div>
-<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;            tile(index) = T(0);</div>
-<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;          <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;            tile(index) = value;</div>
-<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;        }</div>
-<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;      }</div>
-<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;      <span class="keywordflow">else</span> {  <span class="comment">// UPPER</span></div>
-<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;        TileElementIndex index{j, i};</div>
-<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;        <span class="keywordflow">if</span> (index.isIn(tile.size())) {</div>
-<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;          <span class="keyword">auto</span> ij = dist.globalElementIndex(tile_wrt_global, index);</div>
-<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;          <span class="keywordflow">if</span> (is_off_band(ij, band_size))</div>
-<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;            tile(index) = T(0);</div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;          <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;            tile(index) = <a class="code" href="types_8h.html#a669723b711f94043da9793d2b24d51d9">dlaf::conj</a>(value);</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;        }</div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;      }</div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;    }</div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;  }</div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;}</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160; </div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00352"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">  352</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">set_random_hermitian_with_offset</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, <span class="keyword">const</span> SizeType offset_value,</div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;                                      std::optional&lt;SizeType&gt; band_size = std::nullopt) {</div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;  <span class="comment">// note:</span></div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;  <span class="comment">// By assuming square blocksizes, it is easier to locate elements. In fact:</span></div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;  <span class="comment">// - Elements on the diagonal are stored in the diagonal of the diagonal tiles</span></div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;  <span class="comment">// - Tiles under the diagonal store elements of the lower triangular matrix</span></div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;  <span class="comment">// - Tiles over the diagonal store elements of the upper triangular matrix</span></div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160; </div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160; </div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;  DLAF_ASSERT(<a class="code" href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">square_size</a>(matrix), matrix);</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;  DLAF_ASSERT(<a class="code" href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">square_blocksize</a>(matrix), matrix);</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160; </div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;  <span class="keyword">auto</span> full_tile_size = matrix.block_size();</div>
-<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160; </div>
-<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
-<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
+<div class="line"><a name="l00270"></a><span class="lineno">  270</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
+<div class="line"><a name="l00271"></a><span class="lineno">  271</span>&#160;    <span class="keyword">auto</span> rnd_f = [seed](TileType&amp;&amp; tile) {</div>
+<div class="line"><a name="l00272"></a><span class="lineno">  272</span>&#160;      <a class="code" href="classdlaf_1_1matrix_1_1util_1_1internal_1_1getter__random.html">internal::getter_random&lt;T&gt;</a> random_value(seed);</div>
+<div class="line"><a name="l00273"></a><span class="lineno">  273</span>&#160;      <span class="keywordflow">for</span> (<span class="keyword">auto</span> el_idx : iterate_range2d(tile.size())) {</div>
+<div class="line"><a name="l00274"></a><span class="lineno">  274</span>&#160;        tile(el_idx) = random_value();</div>
+<div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;      }</div>
+<div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160;    };</div>
+<div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160; </div>
+<div class="line"><a name="l00278"></a><span class="lineno">  278</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(thread_stacksize::nostack),</div>
+<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;                                    std::move(rnd_f), matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;  }</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;}</div>
+<div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160; </div>
+<div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160;<span class="keyword">namespace </span>internal {</div>
+<div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160; </div>
+<div class="line"><a name="l00285"></a><span class="lineno">  285</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00286"></a><span class="lineno">  286</span>&#160;<span class="keywordtype">void</span> set_diagonal_tile(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_tile.html">Tile&lt;T, Device::CPU&gt;</a>&amp; tile, internal::getter_random&lt;T&gt;&amp; random_value,</div>
+<div class="line"><a name="l00287"></a><span class="lineno">  287</span>&#160;                       SizeType offset_value) {</div>
+<div class="line"><a name="l00288"></a><span class="lineno">  288</span>&#160;  <span class="comment">// DIAGONAL</span></div>
+<div class="line"><a name="l00289"></a><span class="lineno">  289</span>&#160;  <span class="comment">// for diagonal tiles get just lower matrix values and set value for both</span></div>
+<div class="line"><a name="l00290"></a><span class="lineno">  290</span>&#160;  <span class="comment">// straight and transposed indices</span></div>
+<div class="line"><a name="l00291"></a><span class="lineno">  291</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; tile.size().cols(); ++j) {</div>
+<div class="line"><a name="l00292"></a><span class="lineno">  292</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; j; ++i) {</div>
+<div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;      <span class="keyword">auto</span> value = random_value();</div>
+<div class="line"><a name="l00294"></a><span class="lineno">  294</span>&#160; </div>
+<div class="line"><a name="l00295"></a><span class="lineno">  295</span>&#160;      tile(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>{i, j}) = value;</div>
+<div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;      tile(<a class="code" href="classdlaf_1_1common_1_1_index2_d.html">TileElementIndex</a>{j, i}) = dlaf::conj(value);</div>
+<div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160;    }</div>
+<div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;    tile(TileElementIndex{j, j}) = std::real(random_value()) + offset_value;</div>
+<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;  }</div>
+<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;}</div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160; </div>
+<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;<span class="keywordtype">void</span> set_lower_and_upper_tile(<span class="keyword">const</span> Tile&lt;T, Device::CPU&gt;&amp; tile, internal::getter_random&lt;T&gt;&amp; random_value,</div>
+<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;                              TileElementSize full_tile_size, GlobalTileIndex tile_wrt_global,</div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;                              <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a> dist,</div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;                              std::optional&lt;SizeType&gt; band_size = std::nullopt) {</div>
+<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;  <span class="keyword">auto</span> is_off_band = [](GlobalElementIndex ij, std::optional&lt;SizeType&gt; band_size) {</div>
+<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;    <span class="keywordflow">return</span> band_size ? ij.col() &lt; ij.row() - *band_size || ij.col() &gt; ij.row() + *band_size : <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;  };</div>
+<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160; </div>
+<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;  <span class="comment">// LOWER or UPPER (except DIAGONAL)</span></div>
+<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;  <span class="comment">// random values are requested in the same order for both original and transposed</span></div>
+<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; full_tile_size.cols(); ++j) {</div>
+<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; full_tile_size.rows(); ++i) {</div>
+<div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160;      <span class="keyword">auto</span> value = random_value();</div>
+<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160; </div>
+<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;      <span class="comment">// but they are set row-wise in the original tile and col-wise in the</span></div>
+<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;      <span class="comment">// transposed one</span></div>
+<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;      <span class="keywordflow">if</span> (tile_wrt_global.row() &gt; tile_wrt_global.col()) {  <span class="comment">// LOWER</span></div>
+<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;        TileElementIndex index{i, j};</div>
+<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;        <span class="keywordflow">if</span> (index.isIn(tile.size())) {</div>
+<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;          <span class="keyword">auto</span> ij = dist.globalElementIndex(tile_wrt_global, index);</div>
+<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;          <span class="keywordflow">if</span> (is_off_band(ij, band_size))</div>
+<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;            tile(index) = T(0);</div>
+<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;          <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;            tile(index) = value;</div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;        }</div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;      }</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;      <span class="keywordflow">else</span> {  <span class="comment">// UPPER</span></div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;        TileElementIndex index{j, i};</div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;        <span class="keywordflow">if</span> (index.isIn(tile.size())) {</div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;          <span class="keyword">auto</span> ij = dist.globalElementIndex(tile_wrt_global, index);</div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;          <span class="keywordflow">if</span> (is_off_band(ij, band_size))</div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;            tile(index) = T(0);</div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;          <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;            tile(index) = <a class="code" href="types_8h.html#a669723b711f94043da9793d2b24d51d9">dlaf::conj</a>(value);</div>
+<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;        }</div>
+<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;      }</div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;    }</div>
+<div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160;  }</div>
+<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;}</div>
+<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160; </div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00360"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">  360</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">set_random_hermitian_with_offset</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, <span class="keyword">const</span> SizeType offset_value,</div>
+<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;                                      std::optional&lt;SizeType&gt; band_size = std::nullopt) {</div>
+<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;  <span class="keyword">using</span> pika::execution::thread_stacksize;</div>
+<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160; </div>
+<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;  <span class="comment">// note:</span></div>
+<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;  <span class="comment">// By assuming square blocksizes, it is easier to locate elements. In fact:</span></div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;  <span class="comment">// - Elements on the diagonal are stored in the diagonal of the diagonal tiles</span></div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;  <span class="comment">// - Tiles under the diagonal store elements of the lower triangular matrix</span></div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;  <span class="comment">// - Tiles over the diagonal store elements of the upper triangular matrix</span></div>
 <div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160; </div>
-<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
+<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;  <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a>&amp; dist = matrix.distribution();</div>
 <div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160; </div>
-<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;    <span class="comment">// compute the same seed for original and &quot;transposed&quot; tiles, so transposed ones will know the</span></div>
-<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;    <span class="comment">// values of the original one without the need of accessing real values (nor communication in case</span></div>
-<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;    <span class="comment">// of distributed matrices)</span></div>
-<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;    SizeType seed;</div>
-<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;    <span class="keywordflow">if</span> (tile_wrt_global.row() &gt;= tile_wrt_global.col())  <span class="comment">// LOWER or DIAGONAL</span></div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;      seed = tl_index.col() + tl_index.row() * matrix.size().cols();</div>
-<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;    <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160;      seed = tl_index.row() + tl_index.col() * matrix.size().rows();</div>
-<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160; </div>
-<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
-<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    <span class="keyword">auto</span> set_hp_f = [=](<span class="keyword">const</span> TileType&amp; tile) {</div>
-<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;      <a class="code" href="classdlaf_1_1matrix_1_1util_1_1internal_1_1getter__random.html">internal::getter_random&lt;T&gt;</a> random_value(seed);</div>
-<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;      <span class="keywordflow">if</span> (tile_wrt_global.row() == tile_wrt_global.col())</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;        internal::set_diagonal_tile(tile, random_value, offset_value);</div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;      <span class="keywordflow">else</span></div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global, dist,</div>
-<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;                                           band_size);</div>
-<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;    };</div>
+<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;  DLAF_ASSERT(<a class="code" href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">square_size</a>(matrix), matrix);</div>
+<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;  DLAF_ASSERT(<a class="code" href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">square_blocksize</a>(matrix), matrix);</div>
+<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160; </div>
+<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;  <span class="keyword">auto</span> full_tile_size = matrix.block_size();</div>
+<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160; </div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : iterate_range2d(dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac64b0fbbdd4c2487a528c8368ce41834">local_nr_tiles</a>())) {</div>
+<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;    <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalTileIndex</a> tile_wrt_global = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#ac95f338d40063bc76aacea918704ea43">global_tile_index</a>(tile_wrt_local);</div>
+<div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160; </div>
+<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;    <span class="keyword">auto</span> tl_index = dist.<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html#a3b9f48c94f7504bca3f575a65cf9ea60">global_element_index</a>(tile_wrt_global, {0, 0});</div>
+<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160; </div>
+<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;    <span class="comment">// compute the same seed for original and &quot;transposed&quot; tiles, so transposed ones will know the</span></div>
+<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    <span class="comment">// values of the original one without the need of accessing real values (nor communication in case</span></div>
+<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;    <span class="comment">// of distributed matrices)</span></div>
+<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;    SizeType seed;</div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;    <span class="keywordflow">if</span> (tile_wrt_global.row() &gt;= tile_wrt_global.col())  <span class="comment">// LOWER or DIAGONAL</span></div>
+<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;      seed = tl_index.col() + tl_index.row() * matrix.size().cols();</div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;    <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;      seed = tl_index.row() + tl_index.col() * matrix.size().rows();</div>
 <div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160; </div>
-<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(), std::move(set_hp_f),</div>
-<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;                                    matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
-<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;  }</div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;}</div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160; </div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;}</div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160; </div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00412"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">  412</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">set_random_hermitian</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 0);</div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;}</div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160; </div>
-<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00430"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">  430</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">set_random_hermitian_banded</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, <span class="keyword">const</span> SizeType band_size) {</div>
-<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 0, band_size);</div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;}</div>
-<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160; </div>
-<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00451"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">  451</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">set_random_hermitian_positive_definite</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
-<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 2 * matrix.size().rows());</div>
-<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;}</div>
-<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160; </div>
-<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;}</div>
-<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;}</div>
-<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160;}</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;    <span class="keyword">using</span> TileType = <span class="keyword">typename</span> std::decay_t&lt;decltype(matrix)&gt;::TileType;</div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;    <span class="keyword">auto</span> set_hp_f = [=](<span class="keyword">const</span> TileType&amp; tile) {</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;      <a class="code" href="classdlaf_1_1matrix_1_1util_1_1internal_1_1getter__random.html">internal::getter_random&lt;T&gt;</a> random_value(seed);</div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;      <span class="keywordflow">if</span> (tile_wrt_global.row() == tile_wrt_global.col())</div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;        internal::set_diagonal_tile(tile, random_value, offset_value);</div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;      <span class="keywordflow">else</span></div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;        internal::set_lower_and_upper_tile(tile, random_value, full_tile_size, tile_wrt_global, dist,</div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;                                           band_size);</div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;    };</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160; </div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;    dlaf::internal::transformDetach(<a class="code" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy&lt;Backend::MC&gt;</a>(thread_stacksize::nostack),</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;                                    std::move(set_hp_f), matrix.<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#ad11e9036fe317b6328ae71585b19c811">readwrite</a>(tile_wrt_local));</div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;  }</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;}</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160; </div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;}</div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160; </div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00422"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">  422</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">set_random_hermitian</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 0);</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;}</div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160; </div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00440"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">  440</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">set_random_hermitian_banded</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix, <span class="keyword">const</span> SizeType band_size) {</div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 0, band_size);</div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;}</div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160; </div>
+<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00461"></a><span class="lineno"><a class="line" href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">  461</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">set_random_hermitian_positive_definite</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;T, Device::CPU&gt;</a>&amp; matrix) {</div>
+<div class="line"><a name="l00462"></a><span class="lineno">  462</span>&#160;  internal::set_random_hermitian_with_offset(matrix, 2 * matrix.size().rows());</div>
+<div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160;}</div>
+<div class="line"><a name="l00464"></a><span class="lineno">  464</span>&#160; </div>
+<div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160;}</div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;}</div>
+<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160;}</div>
 <div class="ttc" id="ablas_2enum__output_8h_html"><div class="ttname"><a href="blas_2enum__output_8h.html">enum_output.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
@@ -445,21 +455,21 @@ $(function() {
 <div class="ttc" id="atypes_8h_html_a669723b711f94043da9793d2b24d51d9"><div class="ttname"><a href="types_8h.html#a669723b711f94043da9793d2b24d51d9">dlaf::conj</a></div><div class="ttdeci">std::complex&lt; T &gt; conj(const std::complex&lt; T &gt; number)</div><div class="ttdoc">Return complex conjugate of a complex number.</div><div class="ttdef"><b>Definition:</b> types.h:165</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a0bb54ace6dfcb245ec387c1af75e63fe"><div class="ttname"><a href="util__matrix_8h.html#a0bb54ace6dfcb245ec387c1af75e63fe">dlaf::matrix::equal_blocksize</a></div><div class="ttdeci">bool equal_blocksize(const Matrix&lt; const T, D1 &gt; &amp;lhs, Matrix&lt; const T, D2 &gt; &amp;rhs) noexcept</div><div class="ttdoc">Returns true if matrices have equal blocksizes.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:66</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a14086310f58c9ace5ceb41e040277c86"><div class="ttname"><a href="util__matrix_8h.html#a14086310f58c9ace5ceb41e040277c86">dlaf::matrix::multipliable</a></div><div class="ttdeci">bool multipliable(const Matrix&lt; const T, D &gt; &amp;a, const Matrix&lt; const T, D &gt; &amp;b, const Matrix&lt; const T, D &gt; &amp;c, const blas::Op opA, const blas::Op opB) noexcept</div><div class="ttdoc">Returns true if matrices a, b and c have matrix multipliable sizes and block sizes.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:102</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a1f796f1fd4dd705c90ac141d687843b2"><div class="ttname"><a href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">dlaf::matrix::util::set</a></div><div class="ttdeci">void set(Matrix&lt; T, Device::CPU &gt; &amp;matrix, ElementGetter el_f)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:184</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a33e83c042118c6da34d15ee21202ce79"><div class="ttname"><a href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">dlaf::matrix::util::set_random_hermitian_banded</a></div><div class="ttdeci">void set_random_hermitian_banded(Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:430</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a34574d2e919da45abd357fd27bb663d8"><div class="ttname"><a href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">dlaf::matrix::util::set_identity</a></div><div class="ttdeci">void set_identity(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:236</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a1f796f1fd4dd705c90ac141d687843b2"><div class="ttname"><a href="util__matrix_8h.html#a1f796f1fd4dd705c90ac141d687843b2">dlaf::matrix::util::set</a></div><div class="ttdeci">void set(Matrix&lt; T, Device::CPU &gt; &amp;matrix, ElementGetter el_f)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:188</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a33e83c042118c6da34d15ee21202ce79"><div class="ttname"><a href="util__matrix_8h.html#a33e83c042118c6da34d15ee21202ce79">dlaf::matrix::util::set_random_hermitian_banded</a></div><div class="ttdeci">void set_random_hermitian_banded(Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:440</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a34574d2e919da45abd357fd27bb663d8"><div class="ttname"><a href="util__matrix_8h.html#a34574d2e919da45abd357fd27bb663d8">dlaf::matrix::util::set_identity</a></div><div class="ttdeci">void set_identity(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:242</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a355682eaf279129f2aa06c8e96eaa61b"><div class="ttname"><a href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">dlaf::matrix::square_blocksize</a></div><div class="ttdeci">bool square_blocksize(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix block size is square.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:48</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a3f7866203ad62c615d11ca18af4d4476"><div class="ttname"><a href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">dlaf::matrix::util::set_random_hermitian</a></div><div class="ttdeci">void set_random_hermitian(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:412</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a3f7866203ad62c615d11ca18af4d4476"><div class="ttname"><a href="util__matrix_8h.html#a3f7866203ad62c615d11ca18af4d4476">dlaf::matrix::util::set_random_hermitian</a></div><div class="ttdeci">void set_random_hermitian(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:422</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a4e47364118c7bc9bb3d038ae4ec8a35c"><div class="ttname"><a href="util__matrix_8h.html#a4e47364118c7bc9bb3d038ae4ec8a35c">dlaf::matrix::single_tile_per_block</a></div><div class="ttdeci">bool single_tile_per_block(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix has a single tile per block.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:54</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a5f65c6eb2c9e4c3e830a0e5dcf1ef287"><div class="ttname"><a href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">dlaf::matrix::util::internal::set_random_hermitian_with_offset</a></div><div class="ttdeci">void set_random_hermitian_with_offset(Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType offset_value, std::optional&lt; SizeType &gt; band_size=std::nullopt)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:352</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a5f65c6eb2c9e4c3e830a0e5dcf1ef287"><div class="ttname"><a href="util__matrix_8h.html#a5f65c6eb2c9e4c3e830a0e5dcf1ef287">dlaf::matrix::util::internal::set_random_hermitian_with_offset</a></div><div class="ttdeci">void set_random_hermitian_with_offset(Matrix&lt; T, Device::CPU &gt; &amp;matrix, const SizeType offset_value, std::optional&lt; SizeType &gt; band_size=std::nullopt)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:360</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a7a41b22af7fe104052668cc02d5a624c"><div class="ttname"><a href="util__matrix_8h.html#a7a41b22af7fe104052668cc02d5a624c">dlaf::matrix::equal_process_grid</a></div><div class="ttdeci">bool equal_process_grid(const Matrix&lt; const T, D &gt; &amp;m, const comm::CommunicatorGrid &amp;g) noexcept</div><div class="ttdoc">Returns true if the matrix is distributed on the communication grid.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:78</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a801d4c1863ecd48a5758741b63781921"><div class="ttname"><a href="util__matrix_8h.html#a801d4c1863ecd48a5758741b63781921">dlaf::matrix::local_matrix</a></div><div class="ttdeci">bool local_matrix(const Matrix&lt; const T, D &gt; &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is local to a process.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:72</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a8af8a409c1af4f1c7cdbed9b4f6b24a2"><div class="ttname"><a href="util__matrix_8h.html#a8af8a409c1af4f1c7cdbed9b4f6b24a2">dlaf::matrix::equal_distributions</a></div><div class="ttdeci">bool equal_distributions(const Matrix&lt; const T, D1 &gt; &amp;lhs, const Matrix&lt; const T, D2 &gt; &amp;rhs) noexcept</div><div class="ttdoc">Returns true if the matrices are distributed the same way.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:84</div></div>
-<div class="ttc" id="autil__matrix_8h_html_a8e8c0d0551fbda5968d6c84eb3c70fc0"><div class="ttname"><a href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">dlaf::matrix::util::set_random</a></div><div class="ttdeci">void set_random(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:255</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a8e8c0d0551fbda5968d6c84eb3c70fc0"><div class="ttname"><a href="util__matrix_8h.html#a8e8c0d0551fbda5968d6c84eb3c70fc0">dlaf::matrix::util::set_random</a></div><div class="ttdeci">void set_random(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:261</div></div>
 <div class="ttc" id="autil__matrix_8h_html_a93b53e9c0e942a5caa96a24242864400"><div class="ttname"><a href="util__matrix_8h.html#a93b53e9c0e942a5caa96a24242864400">dlaf::matrix::multipliable_sizes</a></div><div class="ttdeci">bool multipliable_sizes(common::Size2D&lt; IndexT, Tag &gt; a, common::Size2D&lt; IndexT, Tag &gt; b, common::Size2D&lt; IndexT, Tag &gt; c, const blas::Op opA, const blas::Op opB) noexcept</div><div class="ttdoc">Returns true if the sizes are compatible for matrix multiplication.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:90</div></div>
 <div class="ttc" id="autil__matrix_8h_html_aae6464887dae32e01668a32e71397cb0"><div class="ttname"><a href="util__matrix_8h.html#aae6464887dae32e01668a32e71397cb0">dlaf::matrix::square_size</a></div><div class="ttdeci">bool square_size(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is square.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:42</div></div>
 <div class="ttc" id="autil__matrix_8h_html_ada06af4450b10ed70a5830c0d8db0302"><div class="ttname"><a href="util__matrix_8h.html#ada06af4450b10ed70a5830c0d8db0302">dlaf::matrix::equal_size</a></div><div class="ttdeci">bool equal_size(const MatrixLikeA &amp;lhs, const MatrixLikeB &amp;rhs) noexcept</div><div class="ttdoc">Returns true if matrices have equal sizes.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:60</div></div>
-<div class="ttc" id="autil__matrix_8h_html_ae2afbf7cdec8225e544b7b71aa52ee58"><div class="ttname"><a href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">dlaf::matrix::util::set_random_hermitian_positive_definite</a></div><div class="ttdeci">void set_random_hermitian_positive_definite(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:451</div></div>
+<div class="ttc" id="autil__matrix_8h_html_ae2afbf7cdec8225e544b7b71aa52ee58"><div class="ttname"><a href="util__matrix_8h.html#ae2afbf7cdec8225e544b7b71aa52ee58">dlaf::matrix::util::set_random_hermitian_positive_definite</a></div><div class="ttdeci">void set_random_hermitian_positive_definite(Matrix&lt; T, Device::CPU &gt; &amp;matrix)</div><div class="ttdef"><b>Definition:</b> util_matrix.h:461</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

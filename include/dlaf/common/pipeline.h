@@ -39,6 +39,9 @@ public:
   using ReadOnlySender = pika::execution::experimental::any_sender<ReadOnlyWrapper>;
   using ReadWriteSender = pika::execution::experimental::unique_any_sender<ReadWriteWrapper>;
 
+  /// Create an invalid Pipeline.
+  Pipeline() = default;
+
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
 

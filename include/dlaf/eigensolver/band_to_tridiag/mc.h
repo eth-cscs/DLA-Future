@@ -1049,16 +1049,12 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     return {std::move(mat_trid), std::move(mat_v)};
   }
 
-  // If the communicator grid only has one pipeline, the following pipelines may refer to the same
-  // underlying communicator. This is allowed in the current implementation because mpi_chain is used
-  // fully before mpi_chain_bcast. However, if communication is ever interleaved between mpi_chain and
-  // mpi_chain_bcast, only having one pipeline may lead to deadlocks. In that case the algorithm should
-  // require at least two independent pipelines from the communicator grid. For the same reason mpi_chain
-  // has to be created before mpi_chain_bcast.
-  //
-  // Conversely, the algorithm would still work if we only defined one pipeline below and used that for
-  // both p2p communication and broadcasts. However, using two pipelines is beneficial since it allows
-  // the two different types of communications to be submitted concurrently.
+  // The algorithm would still work if we only defined one pipeline below and used that for both p2p
+  // communication and broadcasts (since mpi_chain is used fully before mpi_chain_bcast, i.e. not
+  // interleaved). However, using two pipelines is beneficial since it allows the two different types of
+  // communications to be submitted concurrently. This is true in case there are actually two resources
+  // (pipelines.size() = 2), otherwise it will fallback to the "single" pipeline case anyway (ending up
+  // serialising the calls).
   auto mpi_chain = grid.full_communicator_pipeline();
   // Need a pipeline of comm for broadcasts.
   auto mpi_chain_bcast = grid.full_communicator_pipeline();

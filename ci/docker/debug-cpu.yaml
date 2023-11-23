@@ -18,15 +18,22 @@ spack:
       true
 
   specs:
-    - dla-future@master build_type=Debug +miniapps +ci-test +ci-check-threads ^openblas threads=openmp ^mpich
+    - dla-future@master build_type=Debug +miniapps +ci-test +ci-check-threads
 
   packages:
     all:
       variants:
         - 'build_type=Release'
+    blas:
+      require:: 'openblas'
+    lapack:
+      require:: 'openblas'
     pika:
-      variants:
+      require:
         - 'build_type=Debug'
         - 'malloc=system'
+    # For correct code coverage
+    # https://github.com/eth-cscs/DLA-Future/pull/1002
     umpire:
-      require: '@2022.03.1'
+      require:
+        - '@2022.03.1'

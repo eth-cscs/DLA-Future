@@ -11,14 +11,31 @@
 packages:
   all:
     target: [x86_64]
+  # Set intel MKL as default blas, lapack and scalapack provider.
+  # Can be overwritten in environments if needed.
+  blas:
+    require: 'intel-mkl'
+  lapack:
+    require: 'intel-mkl'
+  scalapack:
+    require: 'intel-mkl'
+  mpi:
+    require: 'mpich'
   blaspp:
     variants:
       - '~cuda'
       - '~openmp'
       - '~rocm'
+  intel-mkl:
+    variants:
+      - 'threads=openmp'
+  openblas:
+    variants:
+      - 'threads=openmp'
   mpich:
-    version:
-      - 3.4.2
+    # Requirement for ABI compatibility on the test system
+    require:
+      - '@3.4.2'
     variants:
       - '~fortran'
       - '~libxml2'

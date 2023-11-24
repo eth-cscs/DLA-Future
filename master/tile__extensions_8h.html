@@ -98,6 +98,15 @@ Functions</h2></td></tr>
 <tr class="memitem:ab6d1e869fabafc8c41981cb76e3bb543"><td class="memTemplParams" colspan="2">template&lt;Backend B&gt; </td></tr>
 <tr class="memitem:ab6d1e869fabafc8c41981cb76e3bb543"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tile__extensions_8h.html#ab6d1e869fabafc8c41981cb76e3bb543">dlaf::tile::add</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
 <tr class="separator:ab6d1e869fabafc8c41981cb76e3bb543"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9af5486873937fee38a10701216be48"><td class="memTemplParams" colspan="2">template&lt;Backend B, class T , Device D&gt; </td></tr>
+<tr class="memitem:ad9af5486873937fee38a10701216be48"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tile__extensions_8h.html#ad9af5486873937fee38a10701216be48">dlaf::tile::scal</a> (T beta, const matrix::Tile&lt; T, D &gt; &amp;tile)</td></tr>
+<tr class="separator:ad9af5486873937fee38a10701216be48"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4b89838d3f4dff6ba23a20e5f035453e"><td class="memTemplParams" colspan="2">template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt; </td></tr>
+<tr class="memitem:a4b89838d3f4dff6ba23a20e5f035453e"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tile__extensions_8h.html#a4b89838d3f4dff6ba23a20e5f035453e">dlaf::tile::scal</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p, Sender &amp;&amp;s)</td></tr>
+<tr class="separator:a4b89838d3f4dff6ba23a20e5f035453e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8db3ce17362217fe093962ccadea9990"><td class="memTemplParams" colspan="2">template&lt;Backend B&gt; </td></tr>
+<tr class="memitem:a8db3ce17362217fe093962ccadea9990"><td class="memTemplItemLeft" align="right" valign="top">auto&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="tile__extensions_8h.html#a8db3ce17362217fe093962ccadea9990">dlaf::tile::scal</a> (const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;p)</td></tr>
+<tr class="separator:a8db3ce17362217fe093962ccadea9990"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Provides <code>Tile</code> wrappers for extra basic linear algebra operations not covered by BLAS. </p>
@@ -188,6 +197,90 @@ template&lt;Backend B, class T , Device D&gt; </div>
       </table>
 </div><div class="memdoc">
 <p>Computes A += alpha * B</p>
+<p>This overload blocks until completion of the algorithm. </p>
+
+</div>
+</div>
+<a id="a8db3ce17362217fe093962ccadea9990"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8db3ce17362217fe093962ccadea9990">&#9670;&nbsp;</a></span>scal() <span class="overload">[1/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto dlaf::tile::scal </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;&#160;</td>
+          <td class="paramname"><em>p</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>This overload partially applies the algorithm with a policy for later use with operator| with a sender on the left-hand side. </p>
+
+</div>
+</div>
+<a id="a4b89838d3f4dff6ba23a20e5f035453e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4b89838d3f4dff6ba23a20e5f035453e">&#9670;&nbsp;</a></span>scal() <span class="overload">[2/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, typename Sender , typename  = std::enable_if_t&lt;pika::execution::experimental::is_sender_v&lt;Sender&gt;&gt;&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">auto dlaf::tile::scal </td>
+          <td>(</td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a>&lt; B &gt; &amp;&#160;</td>
+          <td class="paramname"><em>p</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">Sender &amp;&amp;&#160;</td>
+          <td class="paramname"><em>s</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>This overload takes a policy argument and a sender which must send all required arguments for the algorithm. Returns a sender which signals a connected receiver when the algorithm is done. </p>
+
+</div>
+</div>
+<a id="ad9af5486873937fee38a10701216be48"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9af5486873937fee38a10701216be48">&#9670;&nbsp;</a></span>scal() <span class="overload">[3/3]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, class T , Device D&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::tile::scal </td>
+          <td>(</td>
+          <td class="paramtype">T&#160;</td>
+          <td class="paramname"><em>beta</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classdlaf_1_1matrix_1_1_tile.html">matrix::Tile</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>tile</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Computes A = beta * A</p>
 <p>This overload blocks until completion of the algorithm. </p>
 
 </div>

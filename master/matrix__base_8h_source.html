@@ -223,17 +223,19 @@ $(function() {
 <div class="line"><a name="l00168"></a><span class="lineno">  168</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, tile_size=&quot;</span>  &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#ab4ce0b98f0a7f446dba1f21e0081a12b">tile_size</a>()</div>
 <div class="line"><a name="l00169"></a><span class="lineno">  169</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, tiles_grid=&quot;</span> &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#aa16edb06a43adfa50ee162806a7dfe2b">nr_tiles</a>()</div>
 <div class="line"><a name="l00170"></a><span class="lineno">  170</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, rank_index=&quot;</span> &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a787ae5e1ead7dff823ce6ddd84215c1c">rank_index</a>()</div>
-<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, comm_grid=&quot;</span>  &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#acaff1bec10adabf77e6a0a9ad22a4f46">grid_size</a>();</div>
-<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;    <span class="comment">// clang-format on</span></div>
-<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;  }</div>
-<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160; </div>
-<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;<span class="keyword">private</span>:</div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> distribution_;</div>
-<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;};</div>
-<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160; </div>
-<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;}</div>
-<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;}</div>
+<div class="line"><a name="l00171"></a><span class="lineno">  171</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, comm_grid=&quot;</span>  &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#acaff1bec10adabf77e6a0a9ad22a4f46">grid_size</a>()</div>
+<div class="line"><a name="l00172"></a><span class="lineno">  172</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, src_rank=&quot;</span>   &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().source_rank_index()</div>
+<div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;               &lt;&lt; <span class="stringliteral">&quot;, offset=&quot;</span>     &lt;&lt; matrix.<a class="code" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_base.html#a28967ff509064a6e04cfc8b2d35af402">distribution</a>().offset();</div>
+<div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;    <span class="comment">// clang-format on</span></div>
+<div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;  }</div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160; </div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;<span class="keyword">private</span>:</div>
+<div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> distribution_;</div>
+<div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;};</div>
+<div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160; </div>
 <div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;}</div>
+<div class="line"><a name="l00182"></a><span class="lineno">  182</span>&#160;}</div>
+<div class="line"><a name="l00183"></a><span class="lineno">  183</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:111</div></div>

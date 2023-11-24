@@ -127,16 +127,21 @@ template&lt;class T , Device D1, Device D2&gt; </td></tr>
 <tr class="memitem:a0bb54ace6dfcb245ec387c1af75e63fe"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a0bb54ace6dfcb245ec387c1af75e63fe">dlaf::matrix::equal_blocksize</a> (const Matrix&lt; const T, D1 &gt; &amp;lhs, Matrix&lt; const T, D2 &gt; &amp;rhs) noexcept</td></tr>
 <tr class="memdesc:a0bb54ace6dfcb245ec387c1af75e63fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if matrices have equal blocksizes. <br /></td></tr>
 <tr class="separator:a0bb54ace6dfcb245ec387c1af75e63fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a801d4c1863ecd48a5758741b63781921"><td class="memTemplParams" colspan="2"><a id="a801d4c1863ecd48a5758741b63781921"></a>
-template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:a801d4c1863ecd48a5758741b63781921"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a801d4c1863ecd48a5758741b63781921">dlaf::matrix::local_matrix</a> (const Matrix&lt; const T, D &gt; &amp;m) noexcept</td></tr>
-<tr class="memdesc:a801d4c1863ecd48a5758741b63781921"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is local to a process. <br /></td></tr>
-<tr class="separator:a801d4c1863ecd48a5758741b63781921"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ee2cf1dd04133dae245b795281c8156"><td class="memTemplParams" colspan="2"><a id="a8ee2cf1dd04133dae245b795281c8156"></a>
+template&lt;template&lt; class, Device &gt; class MatrixLike, class T , Device D&gt; </td></tr>
+<tr class="memitem:a8ee2cf1dd04133dae245b795281c8156"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a8ee2cf1dd04133dae245b795281c8156">dlaf::matrix::local_matrix</a> (const MatrixLike&lt; const T, D &gt; &amp;m) noexcept</td></tr>
+<tr class="memdesc:a8ee2cf1dd04133dae245b795281c8156"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is local to a process. <br /></td></tr>
+<tr class="separator:a8ee2cf1dd04133dae245b795281c8156"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7a41b22af7fe104052668cc02d5a624c"><td class="memTemplParams" colspan="2"><a id="a7a41b22af7fe104052668cc02d5a624c"></a>
 template&lt;class T , Device D&gt; </td></tr>
 <tr class="memitem:a7a41b22af7fe104052668cc02d5a624c"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a7a41b22af7fe104052668cc02d5a624c">dlaf::matrix::equal_process_grid</a> (const Matrix&lt; const T, D &gt; &amp;m, const comm::CommunicatorGrid &amp;g) noexcept</td></tr>
 <tr class="memdesc:a7a41b22af7fe104052668cc02d5a624c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is distributed on the communication grid. <br /></td></tr>
 <tr class="separator:a7a41b22af7fe104052668cc02d5a624c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a874e04bfafb669f9d5adeb514fde668e"><td class="memTemplParams" colspan="2"><a id="a874e04bfafb669f9d5adeb514fde668e"></a>
+template&lt;template&lt; class, Device &gt; class MatrixLikeA, template&lt; class, Device &gt; class MatrixLikeB, class T , Device D&gt; </td></tr>
+<tr class="memitem:a874e04bfafb669f9d5adeb514fde668e"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a874e04bfafb669f9d5adeb514fde668e">dlaf::matrix::same_process_grid</a> (const MatrixLikeA&lt; const T, D &gt; &amp;a, const MatrixLikeB&lt; const T, D &gt; &amp;b) noexcept</td></tr>
+<tr class="memdesc:a874e04bfafb669f9d5adeb514fde668e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the matrix is distributed on the communication grid. <br /></td></tr>
+<tr class="separator:a874e04bfafb669f9d5adeb514fde668e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8af8a409c1af4f1c7cdbed9b4f6b24a2"><td class="memTemplParams" colspan="2"><a id="a8af8a409c1af4f1c7cdbed9b4f6b24a2"></a>
 template&lt;class T , Device D1, Device D2&gt; </td></tr>
 <tr class="memitem:a8af8a409c1af4f1c7cdbed9b4f6b24a2"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a8af8a409c1af4f1c7cdbed9b4f6b24a2">dlaf::matrix::equal_distributions</a> (const Matrix&lt; const T, D1 &gt; &amp;lhs, const Matrix&lt; const T, D2 &gt; &amp;rhs) noexcept</td></tr>
@@ -147,11 +152,11 @@ template&lt;class IndexT , class Tag &gt; </td></tr>
 <tr class="memitem:a93b53e9c0e942a5caa96a24242864400"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a93b53e9c0e942a5caa96a24242864400">dlaf::matrix::multipliable_sizes</a> (common::Size2D&lt; IndexT, Tag &gt; a, common::Size2D&lt; IndexT, Tag &gt; b, common::Size2D&lt; IndexT, Tag &gt; c, const blas::Op opA, const blas::Op opB) noexcept</td></tr>
 <tr class="memdesc:a93b53e9c0e942a5caa96a24242864400"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if the sizes are compatible for matrix multiplication. <br /></td></tr>
 <tr class="separator:a93b53e9c0e942a5caa96a24242864400"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14086310f58c9ace5ceb41e040277c86"><td class="memTemplParams" colspan="2"><a id="a14086310f58c9ace5ceb41e040277c86"></a>
-template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:a14086310f58c9ace5ceb41e040277c86"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a14086310f58c9ace5ceb41e040277c86">dlaf::matrix::multipliable</a> (const Matrix&lt; const T, D &gt; &amp;a, const Matrix&lt; const T, D &gt; &amp;b, const Matrix&lt; const T, D &gt; &amp;c, const blas::Op opA, const blas::Op opB) noexcept</td></tr>
-<tr class="memdesc:a14086310f58c9ace5ceb41e040277c86"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if matrices <code>a</code>, <code>b</code> and <code>c</code> have matrix multipliable sizes and block sizes. <br /></td></tr>
-<tr class="separator:a14086310f58c9ace5ceb41e040277c86"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0797e7ddc847be5e4430a5a937263416"><td class="memTemplParams" colspan="2"><a id="a0797e7ddc847be5e4430a5a937263416"></a>
+template&lt;template&lt; class, Device &gt; class MatrixLikeA, template&lt; class, Device &gt; class MatrixLikeB, template&lt; class, Device &gt; class MatrixLikeC, class T , Device D&gt; </td></tr>
+<tr class="memitem:a0797e7ddc847be5e4430a5a937263416"><td class="memTemplItemLeft" align="right" valign="top">bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a0797e7ddc847be5e4430a5a937263416">dlaf::matrix::multipliable</a> (const MatrixLikeA&lt; const T, D &gt; &amp;a, const MatrixLikeB&lt; const T, D &gt; &amp;b, const MatrixLikeC&lt; const T, D &gt; &amp;c, const blas::Op opA, const blas::Op opB) noexcept</td></tr>
+<tr class="memdesc:a0797e7ddc847be5e4430a5a937263416"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns true if matrices <code>a</code>, <code>b</code> and <code>c</code> have matrix multipliable sizes and block sizes. <br /></td></tr>
+<tr class="separator:a0797e7ddc847be5e4430a5a937263416"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6cdf6afc18a6456ed68b3fd1dffa9c39"><td class="memTemplParams" colspan="2">template&lt;Backend backend, class T , Device D&gt; </td></tr>
 <tr class="memitem:a6cdf6afc18a6456ed68b3fd1dffa9c39"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="util__matrix_8h.html#a6cdf6afc18a6456ed68b3fd1dffa9c39">dlaf::matrix::util::set0</a> (pika::execution::thread_priority priority, LocalTileIndex begin, LocalTileSize sz, Matrix&lt; T, D &gt; &amp;matrix)</td></tr>
 <tr class="separator:a6cdf6afc18a6456ed68b3fd1dffa9c39"><td class="memSeparator" colspan="2">&#160;</td></tr>

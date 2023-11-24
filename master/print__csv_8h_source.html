@@ -109,7 +109,7 @@ $(function() {
 <div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
 <div class="line"><a name="l00044"></a><span class="lineno"><a class="line" href="print__csv_8h.html#ae6a4db345c18954cc7d83022a1a848d6">   44</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="print__csv_8h.html#ace48c87b6c1d3dc59bf005fb943c0629">print</a>(<a class="code" href="structdlaf_1_1format_1_1csv.html">format::csv</a>, std::string sym, <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, Device::CPU&gt;</a>&amp; mat,</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;           std::ostream&amp; os = std::cout) {</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordflow">if</span> (!<a class="code" href="util__matrix_8h.html#a801d4c1863ecd48a5758741b63781921">local_matrix</a>(mat)) {</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;  <span class="keywordflow">if</span> (!<a class="code" href="util__matrix_8h.html#a8ee2cf1dd04133dae245b795281c8156">local_matrix</a>(mat)) {</div>
 <div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    os &lt;&lt; mat &lt;&lt; std::endl;</div>
 <div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    <span class="keywordflow">return</span>;</div>
 <div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;  }</div>
@@ -150,7 +150,7 @@ $(function() {
 <div class="ttc" id="astructdlaf_1_1format_1_1csv_html"><div class="ttname"><a href="structdlaf_1_1format_1_1csv.html">dlaf::format::csv</a></div><div class="ttdef"><b>Definition:</b> print_csv.h:24</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
-<div class="ttc" id="autil__matrix_8h_html_a801d4c1863ecd48a5758741b63781921"><div class="ttname"><a href="util__matrix_8h.html#a801d4c1863ecd48a5758741b63781921">dlaf::matrix::local_matrix</a></div><div class="ttdeci">bool local_matrix(const Matrix&lt; const T, D &gt; &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is local to a process.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:72</div></div>
+<div class="ttc" id="autil__matrix_8h_html_a8ee2cf1dd04133dae245b795281c8156"><div class="ttname"><a href="util__matrix_8h.html#a8ee2cf1dd04133dae245b795281c8156">dlaf::matrix::local_matrix</a></div><div class="ttdeci">bool local_matrix(const MatrixLike&lt; const T, D &gt; &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix is local to a process.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:72</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

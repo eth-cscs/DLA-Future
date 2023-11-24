@@ -78,6 +78,7 @@ $(function() {
 <code>#include &lt;<a class="el" href="distribution_8h_source.html">dlaf/matrix/distribution.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix__ref_8h_source.html">dlaf/matrix/matrix_ref.h</a>&gt;</code><br />
 <code>#include &lt;dlaf/multiplication/general/api.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
 </div>
@@ -85,6 +86,9 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a834bc28949a9b0aa7000f8f52822e7a4">dlaf::multiplication::internal::generalMatrix</a> (const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef&lt; const T, D &gt; &amp;mat_a, MatrixRef&lt; const T, D &gt; &amp;mat_b, const T beta, MatrixRef&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a177b6617b7f042d3e9d316a6233261bb">dlaf::multiplication::internal::generalSubMatrix</a> (const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
 <tr class="separator:a177b6617b7f042d3e9d316a6233261bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -97,6 +101,96 @@ template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="separator:a60d09d7084585e0aebd34dd93e548f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a834bc28949a9b0aa7000f8f52822e7a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a834bc28949a9b0aa7000f8f52822e7a4">&#9670;&nbsp;</a></span>generalMatrix()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, Device D, class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::multiplication::internal::generalMatrix </td>
+          <td>(</td>
+          <td class="paramtype">const blas::Op&#160;</td>
+          <td class="paramname"><em>opA</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const blas::Op&#160;</td>
+          <td class="paramname"><em>opB</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const T&#160;</td>
+          <td class="paramname"><em>alpha</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; const T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_a</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; const T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_b</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const T&#160;</td>
+          <td class="paramname"><em>beta</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_c</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>General matrix multiplication implementation on local memory, computing C = alpha * opA(A) * opB(B) + beta * C</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">opA</td><td>specifies the form of opA(A) to be used in the matrix multiplication: <em>currently</em> only NoTrans, </td></tr>
+    <tr><td class="paramname">opB</td><td>specifies the form of opB(B) to be used in the matrix multiplication: <em>currently</em> only NoTrans,</td></tr>
+    <tr><td class="paramname">mat_a</td><td>contains the input matrix A. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code> is not distributed</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mat_b</td><td>contains the input matrix B. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_b</code> is not distributed</dd></dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mat_c</td><td>On entry it contains the input matrix C. On exit matrix will be overwritten with the result, while others are left untouched. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_c</code> is not distributed</dd>
+<dd>
+multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB) </dd>
+<dd>
+multipliable_sizes(mat_a.tile_size(), mat_b.tile_size(), mat_c.tile_size(), opA, opB) </dd>
+<dd>
+multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}), mat_c.tile_size_of({0, 0}), opA, opB) </dd></dl>
+
+</div>
+</div>
 <a id="af41fafb5c5852615a5c47b0f4986b56b"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#af41fafb5c5852615a5c47b0f4986b56b">&#9670;&nbsp;</a></span>generalSubMatrix() <span class="overload">[1/2]</span></h2>
 

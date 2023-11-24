@@ -15,7 +15,7 @@ cuda gcc11 release scalapack build:
     - .build_common
     - .build_for_daint-gpu
   needs:
-    - cuda gcc11 release deps
+    - cuda gcc11 release scalapack deps
   variables:
     DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-scalapack-release/deploy:$CI_COMMIT_SHA
 

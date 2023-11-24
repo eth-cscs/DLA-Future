@@ -68,8 +68,8 @@ bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) n
 }
 
 /// Returns true if the matrix is local to a process.
-template <class T, Device D>
-bool local_matrix(const Matrix<const T, D>& m) noexcept {
+template <template <class, Device> class MatrixLike, class T, Device D>
+bool local_matrix(const MatrixLike<const T, D>& m) noexcept {
   return m.commGridSize() == comm::Size2D(1, 1);
 }
 
@@ -77,6 +77,13 @@ bool local_matrix(const Matrix<const T, D>& m) noexcept {
 template <class T, Device D>
 bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
+}
+
+/// Returns true if the matrix is distributed on the communication grid.
+template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
+          class T, Device D>
+bool same_process_grid(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D>& b) noexcept {
+  return a.commGridSize() == b.commGridSize() && a.rankIndex() == b.rankIndex();
 }
 
 /// Returns true if the matrices are distributed the same way.
@@ -98,11 +105,25 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
 }
 
 /// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes.
-template <class T, Device D>
-bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, const Matrix<const T, D>& c,
-                  const blas::Op opA, const blas::Op opB) noexcept {
-  return multipliable_sizes(a.size(), b.size(), c.size(), opA, opB) &&
-         multipliable_sizes(a.block_size(), b.block_size(), c.block_size(), opA, opB);
+template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
+          template <class, Device> class MatrixLikeC, class T, Device D>
+bool multipliable(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D>& b,
+                  const MatrixLikeC<const T, D>& c, const blas::Op opA, const blas::Op opB) noexcept {
+  const bool isSizeOk = multipliable_sizes(a.size(), b.size(), c.size(), opA, opB);
+
+  if (a.size().isEmpty() || c.size().isEmpty())
+    return isSizeOk;
+
+  const bool allSameGrid = same_process_grid(a, b) && same_process_grid(b, c);
+  const bool isTileSizeOk = multipliable_sizes(a.tile_size(), b.tile_size(), c.tile_size(), opA, opB);
+  const bool isOffsetOk = multipliable_sizes(a.tile_size_of({0, 0}), b.tile_size_of({0, 0}),
+                                             c.tile_size_of({0, 0}), opA, opB);
+
+  if (local_matrix(c))
+    return allSameGrid && isSizeOk && isTileSizeOk && isOffsetOk;
+
+  // TODO distributed (fix offset)
+  return allSameGrid && isSizeOk && isTileSizeOk && isOffsetOk;
 }
 
 namespace util {

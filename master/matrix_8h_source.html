@@ -269,177 +269,183 @@ $(function() {
 <div class="line"><a name="l00296"></a><span class="lineno">  296</span>&#160;  }</div>
 <div class="line"><a name="l00297"></a><span class="lineno">  297</span>&#160; </div>
 <div class="line"><a name="l00298"></a><span class="lineno">  298</span>&#160;<span class="keyword">protected</span>:</div>
-<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> distribution) : internal::MatrixBase{std::move(distribution)} {}</div>
-<div class="line"><a name="l00300"></a><span class="lineno"><a class="line" href="structdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_1_1_sub_pipeline_tag.html">  300</a></span>&#160;  <span class="keyword">struct </span>SubPipelineTag {};</div>
-<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&amp; mat, <span class="keyword">const</span> SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {</div>
-<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;    setUpSubPipelines(mat);</div>
-<div class="line"><a name="l00303"></a><span class="lineno">  303</span>&#160;  }</div>
-<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&amp; mat, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block) noexcept</div>
-<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;      : MatrixBase(mat.distribution(), tiles_per_block) {</div>
-<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;    setUpRetiledSubPipelines(mat, tiles_per_block);</div>
-<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;  }</div>
-<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160; </div>
-<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;  <span class="keywordtype">void</span> setUpTiles(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;ElementType, D&gt;</a>&amp; mem, <span class="keyword">const</span> LayoutInfo&amp; layout) noexcept;</div>
-<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;  <span class="keywordtype">void</span> setUpSubPipelines(Matrix&lt;const T, D&gt;&amp;) noexcept;</div>
-<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160;  <span class="keywordtype">void</span> setUpRetiledSubPipelines(Matrix&lt;const T, D&gt;&amp;, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block) noexcept;</div>
-<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160; </div>
-<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;  std::vector&lt;internal::TilePipeline&lt;T, D&gt;&gt; tile_managers_;</div>
-<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;};</div>
+<div class="line"><a name="l00299"></a><span class="lineno">  299</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_distribution.html">Distribution</a> distribution) : internal::MatrixBase{std::move(distribution)} {</div>
+<div class="line"><a name="l00300"></a><span class="lineno">  300</span>&#160;    DLAF_ASSERT((distribution.offset() == <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">GlobalElementIndex</a>{0, 0}), <span class="stringliteral">&quot;not supported&quot;</span>,</div>
+<div class="line"><a name="l00301"></a><span class="lineno">  301</span>&#160;                distribution.offset());</div>
+<div class="line"><a name="l00302"></a><span class="lineno">  302</span>&#160;  }</div>
+<div class="line"><a name="l00303"></a><span class="lineno"><a class="line" href="structdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_1_1_sub_pipeline_tag.html">  303</a></span>&#160;  <span class="keyword">struct </span>SubPipelineTag {};</div>
+<div class="line"><a name="l00304"></a><span class="lineno">  304</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&amp; mat, <span class="keyword">const</span> SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {</div>
+<div class="line"><a name="l00305"></a><span class="lineno">  305</span>&#160;    setUpSubPipelines(mat);</div>
+<div class="line"><a name="l00306"></a><span class="lineno">  306</span>&#160;  }</div>
+<div class="line"><a name="l00307"></a><span class="lineno">  307</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html#a3fd2656c0cc54ae717fcb037093ffecb">Matrix</a>(<a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix</a>&amp; mat, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block) noexcept</div>
+<div class="line"><a name="l00308"></a><span class="lineno">  308</span>&#160;      : MatrixBase(mat.distribution(), tiles_per_block) {</div>
+<div class="line"><a name="l00309"></a><span class="lineno">  309</span>&#160;    setUpRetiledSubPipelines(mat, tiles_per_block);</div>
+<div class="line"><a name="l00310"></a><span class="lineno">  310</span>&#160;  }</div>
+<div class="line"><a name="l00311"></a><span class="lineno">  311</span>&#160; </div>
+<div class="line"><a name="l00312"></a><span class="lineno">  312</span>&#160;  <span class="keywordtype">void</span> setUpTiles(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;ElementType, D&gt;</a>&amp; mem, <span class="keyword">const</span> LayoutInfo&amp; layout) noexcept;</div>
+<div class="line"><a name="l00313"></a><span class="lineno">  313</span>&#160;  <span class="keywordtype">void</span> setUpSubPipelines(Matrix&lt;const T, D&gt;&amp;) noexcept;</div>
+<div class="line"><a name="l00314"></a><span class="lineno">  314</span>&#160;  <span class="keywordtype">void</span> setUpRetiledSubPipelines(Matrix&lt;const T, D&gt;&amp;, <span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalTileSize</a>&amp; tiles_per_block) noexcept;</div>
 <div class="line"><a name="l00315"></a><span class="lineno">  315</span>&#160; </div>
-<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00317"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#abffc73bf079f7f7c23af3fca4dec329f">  317</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, D&gt;::waitLocalTiles</a>() noexcept {</div>
-<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160;  <span class="comment">// Note:</span></div>
-<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;  <span class="comment">// Using a readwrite access to the tile ensures that the access is exclusive and not shared</span></div>
-<div class="line"><a name="l00320"></a><span class="lineno">  320</span>&#160;  <span class="comment">// among multiple tasks.</span></div>
-<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160; </div>
-<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> range_local = common::iterate_range2d(distribution().local_nr_tiles());</div>
-<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160; </div>
-<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160;  <span class="keyword">auto</span> s = pika::execution::experimental::when_all_vector(internal::selectGeneric(</div>
-<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;               [<span class="keyword">this</span>](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) {</div>
-<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;                 <span class="keywordflow">return</span> this-&gt;tile_managers_[tileLinearIndex(index)].readwrite();</div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;               },</div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;               range_local)) |</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;           pika::execution::experimental::drop_value();</div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;  pika::this_thread::experimental::sync_wait(std::move(s));</div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;}</div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160; </div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;<span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, D&gt;::setUpTiles</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;ElementType, D&gt;</a>&amp; mem,</div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;                                    <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_layout_info.html">LayoutInfo</a>&amp; layout) noexcept {</div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span>&amp; nr_tiles = layout.nrTiles();</div>
-<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160; </div>
-<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;  DLAF_ASSERT(tile_managers_.empty(), <span class="stringliteral">&quot;&quot;</span>);</div>
-<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;  tile_managers_.reserve(<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nr_tiles.linear_size()));</div>
+<div class="line"><a name="l00316"></a><span class="lineno">  316</span>&#160;  std::vector&lt;internal::TilePipeline&lt;T, D&gt;&gt; tile_managers_;</div>
+<div class="line"><a name="l00317"></a><span class="lineno">  317</span>&#160;};</div>
+<div class="line"><a name="l00318"></a><span class="lineno">  318</span>&#160; </div>
+<div class="line"><a name="l00319"></a><span class="lineno">  319</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00320"></a><span class="lineno"><a class="line" href="classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#abffc73bf079f7f7c23af3fca4dec329f">  320</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, D&gt;::waitLocalTiles</a>() noexcept {</div>
+<div class="line"><a name="l00321"></a><span class="lineno">  321</span>&#160;  <span class="comment">// Note:</span></div>
+<div class="line"><a name="l00322"></a><span class="lineno">  322</span>&#160;  <span class="comment">// Using a readwrite access to the tile ensures that the access is exclusive and not shared</span></div>
+<div class="line"><a name="l00323"></a><span class="lineno">  323</span>&#160;  <span class="comment">// among multiple tasks.</span></div>
+<div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160; </div>
+<div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> range_local = common::iterate_range2d(distribution().local_nr_tiles());</div>
+<div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160; </div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;  <span class="keyword">auto</span> s = pika::execution::experimental::when_all_vector(internal::selectGeneric(</div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;               [<span class="keyword">this</span>](<span class="keyword">const</span> <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a>&amp; index) {</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;                 <span class="keywordflow">return</span> this-&gt;tile_managers_[tileLinearIndex(index)].readwrite();</div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;               },</div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;               range_local)) |</div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;           pika::execution::experimental::drop_value();</div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;  pika::this_thread::experimental::sync_wait(std::move(s));</div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;}</div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160; </div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;<span class="keywordtype">void</span> <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, D&gt;::setUpTiles</a>(<span class="keyword">const</span> <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;ElementType, D&gt;</a>&amp; mem,</div>
+<div class="line"><a name="l00338"></a><span class="lineno">  338</span>&#160;                                    <span class="keyword">const</span> <a class="code" href="classdlaf_1_1matrix_1_1_layout_info.html">LayoutInfo</a>&amp; layout) noexcept {</div>
+<div class="line"><a name="l00339"></a><span class="lineno">  339</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span>&amp; nr_tiles = layout.nrTiles();</div>
 <div class="line"><a name="l00340"></a><span class="lineno">  340</span>&#160; </div>
-<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;  <span class="keyword">using</span> MemView = <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;T, D&gt;</a>;</div>
-<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160; </div>
-<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; nr_tiles.cols(); ++j) {</div>
-<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; nr_tiles.rows(); ++i) {</div>
-<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160;      <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> ind(i, j);</div>
-<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;      <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> tile_size = layout.tileSize(ind);</div>
-<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;      tile_managers_.emplace_back(</div>
-<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),</div>
-<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;                       layout.ldTile()));</div>
-<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;    }</div>
-<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;  }</div>
-<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;}</div>
-<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160; </div>
-<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;<span class="keywordtype">void</span> Matrix&lt;const T, D&gt;::setUpSubPipelines(Matrix&lt;const T, D&gt;&amp; mat) noexcept {</div>
-<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160; </div>
-<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;  <span class="comment">// TODO: Optimize read-after-read. This is currently forced to access the base</span></div>
-<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;  <span class="comment">// matrix in readwrite mode so that we can move the tile into the</span></div>
-<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160;  <span class="comment">// sub-pipeline. This is semantically not required and should eventually be</span></div>
-<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;  <span class="comment">// optimized.</span></div>
-<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;  tile_managers_.reserve(mat.tile_managers_.size());</div>
-<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; tm : mat.tile_managers_) {</div>
-<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;    tile_managers_.emplace_back(Tile&lt;T, D&gt;());</div>
-<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;    <span class="keyword">auto</span> s = ex::when_all(tile_managers_.back().readwrite_with_wrapper(), tm.readwrite()) |</div>
-<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;             ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
-<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;                         Tile&lt;T, D&gt; tile) { empty_tile_wrapper.get() = std::move(tile); });</div>
-<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    ex::start_detached(std::move(s));</div>
-<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;  }</div>
-<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;}</div>
-<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160; </div>
-<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;<span class="keywordtype">void</span> Matrix&lt;const T, D&gt;::setUpRetiledSubPipelines(Matrix&lt;const T, D&gt;&amp; mat,</div>
-<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160;                                                  <span class="keyword">const</span> LocalTileSize&amp; tiles_per_block) noexcept {</div>
-<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;  DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());</div>
-<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160; </div>
-<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;  <span class="keyword">using</span> common::internal::vector;</div>
-<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00341"></a><span class="lineno">  341</span>&#160;  DLAF_ASSERT(tile_managers_.empty(), <span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a name="l00342"></a><span class="lineno">  342</span>&#160;  tile_managers_.reserve(<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nr_tiles.linear_size()));</div>
+<div class="line"><a name="l00343"></a><span class="lineno">  343</span>&#160; </div>
+<div class="line"><a name="l00344"></a><span class="lineno">  344</span>&#160;  <span class="keyword">using</span> MemView = <a class="code" href="classdlaf_1_1memory_1_1_memory_view.html">memory::MemoryView&lt;T, D&gt;</a>;</div>
+<div class="line"><a name="l00345"></a><span class="lineno">  345</span>&#160; </div>
+<div class="line"><a name="l00346"></a><span class="lineno">  346</span>&#160;  <span class="keywordflow">for</span> (SizeType j = 0; j &lt; nr_tiles.cols(); ++j) {</div>
+<div class="line"><a name="l00347"></a><span class="lineno">  347</span>&#160;    <span class="keywordflow">for</span> (SizeType i = 0; i &lt; nr_tiles.rows(); ++i) {</div>
+<div class="line"><a name="l00348"></a><span class="lineno">  348</span>&#160;      <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">LocalTileIndex</a> ind(i, j);</div>
+<div class="line"><a name="l00349"></a><span class="lineno">  349</span>&#160;      <a class="code" href="classdlaf_1_1common_1_1_size2_d.html">TileElementSize</a> tile_size = layout.<a class="code" href="classdlaf_1_1matrix_1_1_layout_info.html#a62e3619b9016e9c827c120fce629d08e">tileSize</a>(ind);</div>
+<div class="line"><a name="l00350"></a><span class="lineno">  350</span>&#160;      tile_managers_.emplace_back(</div>
+<div class="line"><a name="l00351"></a><span class="lineno">  351</span>&#160;          TileDataType(tile_size, MemView(mem, layout.<a class="code" href="classdlaf_1_1matrix_1_1_layout_info.html#ad03e1291efd2ed416ace133a24a30ac4">tileOffset</a>(ind), layout.<a class="code" href="classdlaf_1_1matrix_1_1_layout_info.html#a90af3a4b4a456d3107dec3eb4c207c29">minTileMemSize</a>(tile_size)),</div>
+<div class="line"><a name="l00352"></a><span class="lineno">  352</span>&#160;                       layout.ldTile()));</div>
+<div class="line"><a name="l00353"></a><span class="lineno">  353</span>&#160;    }</div>
+<div class="line"><a name="l00354"></a><span class="lineno">  354</span>&#160;  }</div>
+<div class="line"><a name="l00355"></a><span class="lineno">  355</span>&#160;}</div>
+<div class="line"><a name="l00356"></a><span class="lineno">  356</span>&#160; </div>
+<div class="line"><a name="l00357"></a><span class="lineno">  357</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00358"></a><span class="lineno">  358</span>&#160;<span class="keywordtype">void</span> Matrix&lt;const T, D&gt;::setUpSubPipelines(Matrix&lt;const T, D&gt;&amp; mat) noexcept {</div>
+<div class="line"><a name="l00359"></a><span class="lineno">  359</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00360"></a><span class="lineno">  360</span>&#160; </div>
+<div class="line"><a name="l00361"></a><span class="lineno">  361</span>&#160;  <span class="comment">// TODO: Optimize read-after-read. This is currently forced to access the base</span></div>
+<div class="line"><a name="l00362"></a><span class="lineno">  362</span>&#160;  <span class="comment">// matrix in readwrite mode so that we can move the tile into the</span></div>
+<div class="line"><a name="l00363"></a><span class="lineno">  363</span>&#160;  <span class="comment">// sub-pipeline. This is semantically not required and should eventually be</span></div>
+<div class="line"><a name="l00364"></a><span class="lineno">  364</span>&#160;  <span class="comment">// optimized.</span></div>
+<div class="line"><a name="l00365"></a><span class="lineno">  365</span>&#160;  tile_managers_.reserve(mat.tile_managers_.size());</div>
+<div class="line"><a name="l00366"></a><span class="lineno">  366</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; tm : mat.tile_managers_) {</div>
+<div class="line"><a name="l00367"></a><span class="lineno">  367</span>&#160;    tile_managers_.emplace_back(Tile&lt;T, D&gt;());</div>
+<div class="line"><a name="l00368"></a><span class="lineno">  368</span>&#160;    <span class="keyword">auto</span> s = ex::when_all(tile_managers_.back().readwrite_with_wrapper(), tm.readwrite()) |</div>
+<div class="line"><a name="l00369"></a><span class="lineno">  369</span>&#160;             ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
+<div class="line"><a name="l00370"></a><span class="lineno">  370</span>&#160;                         Tile&lt;T, D&gt; tile) { empty_tile_wrapper.get() = std::move(tile); });</div>
+<div class="line"><a name="l00371"></a><span class="lineno">  371</span>&#160;    ex::start_detached(std::move(s));</div>
+<div class="line"><a name="l00372"></a><span class="lineno">  372</span>&#160;  }</div>
+<div class="line"><a name="l00373"></a><span class="lineno">  373</span>&#160;}</div>
+<div class="line"><a name="l00374"></a><span class="lineno">  374</span>&#160; </div>
+<div class="line"><a name="l00375"></a><span class="lineno">  375</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00376"></a><span class="lineno">  376</span>&#160;<span class="keywordtype">void</span> Matrix&lt;const T, D&gt;::setUpRetiledSubPipelines(Matrix&lt;const T, D&gt;&amp; mat,</div>
+<div class="line"><a name="l00377"></a><span class="lineno">  377</span>&#160;                                                  <span class="keyword">const</span> LocalTileSize&amp; tiles_per_block) noexcept {</div>
+<div class="line"><a name="l00378"></a><span class="lineno">  378</span>&#160;  DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());</div>
 <div class="line"><a name="l00379"></a><span class="lineno">  379</span>&#160; </div>
-<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> n = <a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(distribution().local_nr_tiles().linear_size());</div>
-<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;  tile_managers_.reserve(n);</div>
-<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160;  <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; n; ++i) {</div>
-<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;    tile_managers_.emplace_back(Tile&lt;T, D&gt;());</div>
-<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;  }</div>
-<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160; </div>
-<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> tile_size = distribution().tile_size();</div>
-<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;  vector&lt;SubTileSpec&gt; specs;</div>
-<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160;  vector&lt;LocalTileIndex&gt; indices;</div>
-<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;  specs.reserve(tiles_per_block.linear_size());</div>
-<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;  indices.reserve(tiles_per_block.linear_size());</div>
-<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160; </div>
-<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;  <span class="comment">// TODO: Optimize read-after-read. This is currently forced to access the base matrix in readwrite</span></div>
-<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;  <span class="comment">// mode so that we can move the tile into the sub-pipeline. This is semantically not required and</span></div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;  <span class="comment">// should eventually be optimized.</span></div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; orig_tile_index : common::iterate_range2d(mat.distribution().local_nr_tiles())) {</div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> original_tile_size = mat.tileSize(mat.distribution().global_tile_index(orig_tile_index));</div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160; </div>
-<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; original_tile_size.cols(); j += tile_size.cols())</div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;      <span class="keywordflow">for</span> (SizeType i = 0; i &lt; original_tile_size.rows(); i += tile_size.rows()) {</div>
-<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;        indices.emplace_back(</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;            LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),</div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;                           orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;        specs.emplace_back(SubTileSpec{{i, j},</div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;                                       tileSize(distribution().global_tile_index(indices.back()))});</div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;      }</div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160; </div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;    <span class="keyword">auto</span> sub_tiles =</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;        <a class="code" href="matrix_2tile_8h.html#a4c15e2e57d6336347e6e19d945bd650e">splitTileDisjoint</a>(mat.tile_managers_[mat.tileLinearIndex(orig_tile_index)].readwrite(), specs);</div>
+<div class="line"><a name="l00380"></a><span class="lineno">  380</span>&#160;  <span class="keyword">using</span> common::internal::vector;</div>
+<div class="line"><a name="l00381"></a><span class="lineno">  381</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l00382"></a><span class="lineno">  382</span>&#160; </div>
+<div class="line"><a name="l00383"></a><span class="lineno">  383</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> n = <a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(distribution().local_nr_tiles().linear_size());</div>
+<div class="line"><a name="l00384"></a><span class="lineno">  384</span>&#160;  tile_managers_.reserve(n);</div>
+<div class="line"><a name="l00385"></a><span class="lineno">  385</span>&#160;  <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; n; ++i) {</div>
+<div class="line"><a name="l00386"></a><span class="lineno">  386</span>&#160;    tile_managers_.emplace_back(Tile&lt;T, D&gt;());</div>
+<div class="line"><a name="l00387"></a><span class="lineno">  387</span>&#160;  }</div>
+<div class="line"><a name="l00388"></a><span class="lineno">  388</span>&#160; </div>
+<div class="line"><a name="l00389"></a><span class="lineno">  389</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> tile_size = distribution().tile_size();</div>
+<div class="line"><a name="l00390"></a><span class="lineno">  390</span>&#160;  vector&lt;SubTileSpec&gt; specs;</div>
+<div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;  vector&lt;LocalTileIndex&gt; indices;</div>
+<div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;  specs.reserve(tiles_per_block.linear_size());</div>
+<div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;  indices.reserve(tiles_per_block.linear_size());</div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160; </div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;  <span class="comment">// TODO: Optimize read-after-read. This is currently forced to access the base matrix in readwrite</span></div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;  <span class="comment">// mode so that we can move the tile into the sub-pipeline. This is semantically not required and</span></div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;  <span class="comment">// should eventually be optimized.</span></div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; orig_tile_index : common::iterate_range2d(mat.distribution().local_nr_tiles())) {</div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> original_tile_size = mat.tileSize(mat.distribution().global_tile_index(orig_tile_index));</div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160; </div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; original_tile_size.cols(); j += tile_size.cols())</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;      <span class="keywordflow">for</span> (SizeType i = 0; i &lt; original_tile_size.rows(); i += tile_size.rows()) {</div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;        indices.emplace_back(</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;            LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;                           orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});</div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;        specs.emplace_back(SubTileSpec{{i, j},</div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;                                       tileSize(distribution().global_tile_index(indices.back()))});</div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;      }</div>
 <div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160; </div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());</div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; specs.size(); ++j) {</div>
-<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span> i = tileLinearIndex(indices[j]);</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160; </div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;      <span class="comment">// Move subtile to be managed by the tile manager of RetiledMatrix. We</span></div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;      <span class="comment">// use readwrite_with_wrapper to get access to the original tile managed</span></div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;      <span class="comment">// by the underlying async_rw_mutex.</span></div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;      <span class="keyword">auto</span> s =</div>
-<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;          ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j)])) |</div>
-<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;          ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;                      Tile&lt;T, D&gt; sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;      ex::start_detached(std::move(s));</div>
-<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;    }</div>
-<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160; </div>
-<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;    specs.clear();</div>
-<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    indices.clear();</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;  }</div>
-<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;}</div>
-<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160; </div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> MatrixLike&gt;</div>
-<div class="line"><a name="l00433"></a><span class="lineno"><a class="line" href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">  433</a></span>&#160;<span class="keyword">auto</span> <a class="code" href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">selectRead</a>(MatrixLike&amp; matrix, <a class="code" href="classdlaf_1_1common_1_1_iterable_range2_d.html">common::IterableRange2D&lt;SizeType, LocalTile_TAG&gt;</a> range) {</div>
-<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;  <span class="keywordflow">return</span> internal::selectGeneric([&amp;](<span class="keyword">auto</span> index) { <span class="keywordflow">return</span> matrix.read(index); }, range);</div>
-<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;}</div>
-<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160; </div>
-<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> MatrixLike&gt;</div>
-<div class="line"><a name="l00441"></a><span class="lineno"><a class="line" href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">  441</a></span>&#160;<span class="keyword">auto</span> <a class="code" href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">select</a>(MatrixLike&amp; matrix, <a class="code" href="classdlaf_1_1common_1_1_iterable_range2_d.html">common::IterableRange2D&lt;SizeType, LocalTile_TAG&gt;</a> range) {</div>
-<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;  <span class="keywordflow">return</span> internal::selectGeneric([&amp;](<span class="keyword">auto</span> index) { <span class="keywordflow">return</span> matrix.readwrite(index); }, range);</div>
-<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;}</div>
-<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160; </div>
-<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;<span class="comment">// ETI</span></div>
-<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160; </div>
-<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;<span class="preprocessor">#define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \</span></div>
-<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;<span class="preprocessor">  KWORD template class Matrix&lt;DATATYPE, DEVICE&gt;; \</span></div>
-<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;<span class="preprocessor">  KWORD template class Matrix&lt;const DATATYPE, DEVICE&gt;;</span></div>
-<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160; </div>
-<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU)</div>
-<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU)</div>
-<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU)</div>
-<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU)</div>
-<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160; </div>
-<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU)</span></div>
-<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU)</div>
-<div class="line"><a name="l00458"></a><span class="lineno">  458</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU)</div>
-<div class="line"><a name="l00459"></a><span class="lineno">  459</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU)</div>
-<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU)</div>
-<div class="line"><a name="l00461"></a><span class="lineno">  461</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00462"></a><span class="lineno">  462</span>&#160;}</div>
-<div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160;<span class="preprocessor">#ifndef DLAF_DOXYGEN</span></div>
-<div class="line"><a name="l00464"></a><span class="lineno">  464</span>&#160;<span class="comment">// Note: Doxygen doesn&#39;t deal correctly with template specialized inheritance,</span></div>
-<div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160;<span class="comment">// and this line makes it run infinitely</span></div>
-<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160; </div>
-<div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;<span class="keyword">using</span> matrix::Matrix;</div>
-<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00470"></a><span class="lineno">  470</span>&#160;}</div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;    <span class="keyword">auto</span> sub_tiles =</div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;        <a class="code" href="matrix_2tile_8h.html#a4c15e2e57d6336347e6e19d945bd650e">splitTileDisjoint</a>(mat.tile_managers_[mat.tileLinearIndex(orig_tile_index)].readwrite(), specs);</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160; </div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;    DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());</div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;    <span class="keywordflow">for</span> (SizeType j = 0; j &lt; specs.size(); ++j) {</div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;      <span class="keyword">const</span> <span class="keyword">auto</span> i = tileLinearIndex(indices[j]);</div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160; </div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;      <span class="comment">// Move subtile to be managed by the tile manager of RetiledMatrix. We</span></div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;      <span class="comment">// use readwrite_with_wrapper to get access to the original tile managed</span></div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;      <span class="comment">// by the underlying async_rw_mutex.</span></div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;      <span class="keyword">auto</span> s =</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;          ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j)])) |</div>
+<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;          ex::then([](internal::TileAsyncRwMutexReadWriteWrapper&lt;T, D&gt; empty_tile_wrapper,</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;                      Tile&lt;T, D&gt; sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;      ex::start_detached(std::move(s));</div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;    }</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160; </div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;    specs.clear();</div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;    indices.clear();</div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;  }</div>
+<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;}</div>
+<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160; </div>
+<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> MatrixLike&gt;</div>
+<div class="line"><a name="l00436"></a><span class="lineno"><a class="line" href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">  436</a></span>&#160;<span class="keyword">auto</span> <a class="code" href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">selectRead</a>(MatrixLike&amp; matrix, <a class="code" href="classdlaf_1_1common_1_1_iterable_range2_d.html">common::IterableRange2D&lt;SizeType, LocalTile_TAG&gt;</a> range) {</div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;  <span class="keywordflow">return</span> internal::selectGeneric([&amp;](<span class="keyword">auto</span> index) { <span class="keywordflow">return</span> matrix.read(index); }, range);</div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;}</div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160; </div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> MatrixLike&gt;</div>
+<div class="line"><a name="l00444"></a><span class="lineno"><a class="line" href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">  444</a></span>&#160;<span class="keyword">auto</span> <a class="code" href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">select</a>(MatrixLike&amp; matrix, <a class="code" href="classdlaf_1_1common_1_1_iterable_range2_d.html">common::IterableRange2D&lt;SizeType, LocalTile_TAG&gt;</a> range) {</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;  <span class="keywordflow">return</span> internal::selectGeneric([&amp;](<span class="keyword">auto</span> index) { <span class="keywordflow">return</span> matrix.readwrite(index); }, range);</div>
+<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;}</div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160; </div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;<span class="comment">// ETI</span></div>
+<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160; </div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;<span class="preprocessor">#define DLAF_MATRIX_ETI(KWORD, DATATYPE, DEVICE) \</span></div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;<span class="preprocessor">  KWORD template class Matrix&lt;DATATYPE, DEVICE&gt;; \</span></div>
+<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160;<span class="preprocessor">  KWORD template class Matrix&lt;const DATATYPE, DEVICE&gt;;</span></div>
+<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160; </div>
+<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::CPU)</div>
+<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::CPU)</div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::CPU)</div>
+<div class="line"><a name="l00457"></a><span class="lineno">  457</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::CPU)</div>
+<div class="line"><a name="l00458"></a><span class="lineno">  458</span>&#160; </div>
+<div class="line"><a name="l00459"></a><span class="lineno">  459</span>&#160;<span class="preprocessor">#if defined(DLAF_WITH_GPU)</span></div>
+<div class="line"><a name="l00460"></a><span class="lineno">  460</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">float</span>, Device::GPU)</div>
+<div class="line"><a name="l00461"></a><span class="lineno">  461</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, <span class="keywordtype">double</span>, Device::GPU)</div>
+<div class="line"><a name="l00462"></a><span class="lineno">  462</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;float&gt;, Device::GPU)</div>
+<div class="line"><a name="l00463"></a><span class="lineno">  463</span>&#160;DLAF_MATRIX_ETI(<span class="keyword">extern</span>, std::complex&lt;double&gt;, Device::GPU)</div>
+<div class="line"><a name="l00464"></a><span class="lineno">  464</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00465"></a><span class="lineno">  465</span>&#160;}</div>
+<div class="line"><a name="l00466"></a><span class="lineno">  466</span>&#160;<span class="preprocessor">#ifndef DLAF_DOXYGEN</span></div>
+<div class="line"><a name="l00467"></a><span class="lineno">  467</span>&#160;<span class="comment">// Note: Doxygen doesn&#39;t deal correctly with template specialized inheritance,</span></div>
+<div class="line"><a name="l00468"></a><span class="lineno">  468</span>&#160;<span class="comment">// and this line makes it run infinitely</span></div>
+<div class="line"><a name="l00469"></a><span class="lineno">  469</span>&#160; </div>
+<div class="line"><a name="l00471"></a><span class="lineno">  471</span>&#160;<span class="keyword">using</span> matrix::Matrix;</div>
+<div class="line"><a name="l00472"></a><span class="lineno">  472</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00473"></a><span class="lineno">  473</span>&#160;}</div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::LocalTile_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_iterable_range2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_iterable_range2_d.html">dlaf::common::IterableRange2D</a></div><div class="ttdoc">An Iterable representing a 2D range.</div><div class="ttdef"><b>Definition:</b> range2d.h:170</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_distribution_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_distribution.html">dlaf::matrix::Distribution</a></div><div class="ttdef"><b>Definition:</b> distribution.h:111</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_layout_info_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_layout_info.html">dlaf::matrix::LayoutInfo</a></div><div class="ttdef"><b>Definition:</b> layout_info.h:26</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_layout_info_html_a62e3619b9016e9c827c120fce629d08e"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_layout_info.html#a62e3619b9016e9c827c120fce629d08e">dlaf::matrix::LayoutInfo::tileSize</a></div><div class="ttdeci">TileElementSize tileSize(const LocalTileIndex &amp;index) const noexcept</div><div class="ttdef"><b>Definition:</b> layout_info.h:75</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_layout_info_html_a90af3a4b4a456d3107dec3eb4c207c29"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_layout_info.html#a90af3a4b4a456d3107dec3eb4c207c29">dlaf::matrix::LayoutInfo::minTileMemSize</a></div><div class="ttdeci">SizeType minTileMemSize(const LocalTileIndex &amp;index) const noexcept</div><div class="ttdef"><b>Definition:</b> layout_info.h:87</div></div>
+<div class="ttc" id="aclassdlaf_1_1matrix_1_1_layout_info_html_ad03e1291efd2ed416ace133a24a30ac4"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_layout_info.html#ad03e1291efd2ed416ace133a24a30ac4">dlaf::matrix::LayoutInfo::tileOffset</a></div><div class="ttdeci">SizeType tileOffset(const LocalTileIndex &amp;index) const noexcept</div><div class="ttdef"><b>Definition:</b> layout_info.h:67</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_layout_info_html_ad51fa263d160dce4f4db2943720d2506"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_layout_info.html#ad51fa263d160dce4f4db2943720d2506">dlaf::matrix::LayoutInfo::minMemSize</a></div><div class="ttdeci">SizeType minMemSize() const noexcept</div><div class="ttdoc">Returns the minimum number of elements that are needed to fit a matrix with the given layout.</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html">dlaf::matrix::Matrix&lt; const T, D &gt;</a></div><div class="ttdef"><b>Definition:</b> matrix.h:197</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4_html_a8485d802a7f318a845de46e1b4e48118"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix_3_01const_01_t_00_01_d_01_4.html#a8485d802a7f318a845de46e1b4e48118">dlaf::matrix::Matrix&lt; const T, D &gt;::read</a></div><div class="ttdeci">ReadOnlySenderType read(const GlobalTileIndex &amp;index)</div><div class="ttdef"><b>Definition:</b> matrix.h:248</div></div>
@@ -468,8 +474,8 @@ $(function() {
 <div class="ttc" id="alayout__info_8h_html_adf298ab87e69a013e5f06856ab7e7902"><div class="ttname"><a href="layout__info_8h.html#adf298ab87e69a013e5f06856ab7e7902">dlaf::matrix::colMajorLayout</a></div><div class="ttdeci">LayoutInfo colMajorLayout(const LocalElementSize &amp;size, const TileElementSize &amp;block_size, SizeType ld)</div><div class="ttdoc">Returns LayoutInfo for a local column major matrix.</div><div class="ttdef"><b>Definition:</b> layout_info.h:125</div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html_a4c15e2e57d6336347e6e19d945bd650e"><div class="ttname"><a href="matrix_2tile_8h.html#a4c15e2e57d6336347e6e19d945bd650e">dlaf::matrix::splitTileDisjoint</a></div><div class="ttdeci">std::vector&lt; ReadWriteTileSender&lt; T, D &gt; &gt; splitTileDisjoint(ReadWriteTileSender&lt; T, D &gt; &amp;&amp;tile, const std::vector&lt; SubTileSpec &gt; &amp;specs)</div><div class="ttdef"><b>Definition:</b> tile.h:570</div></div>
-<div class="ttc" id="amatrix_8h_html_a02db5399b6bc7e53a162f5939ed7ca20"><div class="ttname"><a href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">dlaf::matrix::selectRead</a></div><div class="ttdeci">auto selectRead(MatrixLike &amp;matrix, common::IterableRange2D&lt; SizeType, LocalTile_TAG &gt; range)</div><div class="ttdef"><b>Definition:</b> matrix.h:433</div></div>
-<div class="ttc" id="amatrix_8h_html_a1abc47c06dc1c46c9bdc2425090a02ab"><div class="ttname"><a href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">dlaf::matrix::select</a></div><div class="ttdeci">auto select(MatrixLike &amp;matrix, common::IterableRange2D&lt; SizeType, LocalTile_TAG &gt; range)</div><div class="ttdef"><b>Definition:</b> matrix.h:441</div></div>
+<div class="ttc" id="amatrix_8h_html_a02db5399b6bc7e53a162f5939ed7ca20"><div class="ttname"><a href="matrix_8h.html#a02db5399b6bc7e53a162f5939ed7ca20">dlaf::matrix::selectRead</a></div><div class="ttdeci">auto selectRead(MatrixLike &amp;matrix, common::IterableRange2D&lt; SizeType, LocalTile_TAG &gt; range)</div><div class="ttdef"><b>Definition:</b> matrix.h:436</div></div>
+<div class="ttc" id="amatrix_8h_html_a1abc47c06dc1c46c9bdc2425090a02ab"><div class="ttname"><a href="matrix_8h.html#a1abc47c06dc1c46c9bdc2425090a02ab">dlaf::matrix::select</a></div><div class="ttdeci">auto select(MatrixLike &amp;matrix, common::IterableRange2D&lt; SizeType, LocalTile_TAG &gt; range)</div><div class="ttdef"><b>Definition:</b> matrix.h:444</div></div>
 <div class="ttc" id="amatrix_8h_html_ac3737882aaaf23b1f901da6396202ba1"><div class="ttname"><a href="matrix_8h.html#ac3737882aaaf23b1f901da6396202ba1">dlaf::matrix::internal::selectGeneric</a></div><div class="ttdeci">auto selectGeneric(Func &amp;&amp;f, common::IterableRange2D&lt; SizeType, LocalTile_TAG &gt; range)</div><div class="ttdef"><b>Definition:</b> matrix.h:39</div></div>
 <div class="ttc" id="amatrix__base_8h_html"><div class="ttname"><a href="matrix__base_8h.html">matrix_base.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>

@@ -803,28 +803,28 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
   //
   // where E1 is the matrix with eigenvectors and it looks like this
   //
-  //              ┌──────────┐ k
-  //              │    a     │ │
-  //                           ▼
-  //          ┌── ┌───┬──────┬─┬────┐
-  //          │   │UUU│DDDDDD│ │XXXX│
-  //          │   │UUU│DDDDDD│ │XXXX│
-  //  n_upper │   │UUU│DDDDDD│ │XXXX│
-  //          │   │UUU│DDDDDD│ │XXXX│
-  //          │   │UUU│DDDDDD│ │XXXX│
-  //          ├── ├───┼──────┼─┤XXXX│
-  //          │   │   │DDDDDD│L│XXXX│
-  //  n_lower │   │   │DDDDDD│L│XXXX│
-  //          │   │   │DDDDDD│L│XXXX│
-  //          └── └───┴──────┴─┴────┘
-  //                  │   b    │
-  //                  └────────┘
+  //               ┌──────────┐ k
+  //               │    a     │ │
+  //                            ▼
+  //          ┌──  ┌───┬──────┬─┬────┐
+  //          │    │UUU│DDDDDD│ │XXXX│
+  //          │    │UUU│DDDDDD│ │XXXX│
+  //  n_upper │    │UUU│DDDDDD│ │XXXX│
+  //          │    │UUU│DDDDDD│ │XXXX│
+  //          │    │UUU│DDDDDD│ │XXXX│
+  //          ├──  ├───┼──────┼─┤XXXX│
+  //          │    │   │DDDDDD│L│XXXX│
+  //  n_lower │    │   │DDDDDD│L│XXXX│
+  //          │    │   │DDDDDD│L│XXXX│
+  //          └──  └───┴──────┴─┴────┘
+  //                   │   b    │
+  //                   └────────┘
   //
   // The multiplication in two different steps in order to skip zero blocks of the matrix, created by
   // the grouping of eigenvectors of different lengths (UPPER, DENSE and LOWER).
   //
-  // 1. GEMM1 = TL * TOP
-  // 2. GEMM2 = BR * BOTTOM
+  // 1. GEMM1 = TL . TOP
+  // 2. GEMM2 = BR . BOTTOM
   // 3. copy DEFLATED
   //
   //                      ┌────────────┬────┐
@@ -884,7 +884,6 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
           GEMM::callNN(T(1), e1_sub, e2_sub, T(0), e0_sub);
         }
 
-        // copy deflated from e1 to e0
         {
           const matrix::internal::SubMatrixSpec deflated_submat{{sub_offset, sub_offset + k},
                                                                 {n, n - k}};

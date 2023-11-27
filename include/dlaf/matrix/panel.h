@@ -146,7 +146,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRange(GlobalTileIndex start_idx, GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
+    DLAF_ASSERT(!isBoundToMatrixWithOffset(), "not supported.");
 
     initRange(std::move(start_idx), std::move(end_idx));
   }
@@ -162,7 +162,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRangeStart(const GlobalTileIndex& start_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
+    DLAF_ASSERT(!isBoundToMatrixWithOffset(), "not supported.");
 
     start_ = start_idx.get(coord);
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
@@ -175,7 +175,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRangeStart(const GlobalElementIndex& start) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
+    DLAF_ASSERT(!isBoundToMatrixWithOffset(), "not supported.");
 
     start_ = dist_matrix_.globalTileFromGlobalElement<coord>(start.get(coord));
     start_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(start_);
@@ -201,7 +201,7 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
   void setRangeEnd(GlobalTileIndex end_idx) noexcept {
     DLAF_ASSERT_MODERATE(!hasBeenUsed(), hasBeenUsed());
 
-    DLAF_ASSERT(!isBoundToMatrixWithSubTileOffset(), "not supported.");
+    DLAF_ASSERT(!isBoundToMatrixWithOffset(), "not supported.");
 
     end_ = end_idx.get(coord);
     end_local_ = dist_matrix_.nextLocalTileFromGlobalTile<coord>(end_);
@@ -304,12 +304,12 @@ struct Panel<axis, const T, D, StoreTransposed::No> {
 protected:
   using ReadWriteSenderType = typename BaseT::ReadWriteSenderType;
 
-  bool isBoundToMatrixWithSubTileOffset() const noexcept {
+  bool isBoundToMatrixWithOffset() const noexcept {
     return dist_matrix_.offset() != GlobalElementIndex{0, 0};
   }
 
   bool isFirstGlobalTileFull() const {
-    return start_offset_ == 0 && !isBoundToMatrixWithSubTileOffset();
+    return start_offset_ == 0 && !isBoundToMatrixWithOffset();
   }
 
   bool isFirstGlobalTile(const LocalTileIndex& index) const {

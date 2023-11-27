@@ -11,6 +11,7 @@
 #pragma once
 
 #include <dlaf/blas/tile.h>
+#include <dlaf/blas/tile_extensions.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
 #include <dlaf/common/pipeline.h>
@@ -19,12 +20,45 @@
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
+#include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/multiplication/general/api.h>
 #include <dlaf/sender/when_all_lift.h>
+#include <dlaf/util_matrix.h>
 
 namespace dlaf::multiplication {
 namespace internal {
+
+template <Backend B, Device D, class T>
+void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                              const T beta, MatrixRef<T, D>& mat_c) {
+  namespace ex = pika::execution::experimental;
+
+  if (mat_a.nr_tiles().cols() == 0) {
+    // Note: if beta == 1, we optimize by not even scheduling anything
+    if (beta != T(1)) {
+      for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j)
+        for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i)
+          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(LocalTileIndex(i, j))) |
+                             tile::scal(dlaf::internal::Policy<B>()));
+    }
+    return;
+  }
+
+  for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j) {
+    for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i) {
+      for (SizeType k = 0; k < mat_a.distribution().local_nr_tiles().cols(); ++k) {
+        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                                       mat_a.read(LocalTileIndex(i, k)),
+                                                       mat_b.read(LocalTileIndex(k, j)),
+                                                       k == 0 ? beta : T(1),
+                                                       mat_c.readwrite(LocalTileIndex(i, j))) |
+                           tile::gemm(dlaf::internal::Policy<B>()));
+      }
+    }
+  }
+}
 
 template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,

@@ -27,11 +27,14 @@ spack:
       - cxxstd=17
       - amdgpu_target=gfx90a:xnack-
     blas:
-      require: openblas
+      require:: openblas
     lapack:
-      require: openblas
-    mpi:
-      require: mpich ~rocm device=ch3 netmod=tcp
+      require:: openblas
+    mpich:
+      require:
+        - '~rocm'
+        - 'device=ch3'
+        - 'netmod=tcp'
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.3.3 ~rocm-device-libs

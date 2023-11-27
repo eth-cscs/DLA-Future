@@ -27,15 +27,20 @@ spack:
       - cxxstd=17
       - amdgpu_target=gfx90a:xnack-
     pika:
-      require: '+stdexec'
+      require:
+        - '+stdexec'
     stdexec:
-      require: '@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main'
+      require:
+        - '@git.48c52df0f81c6151eecf4f39fa5eed2dc0216204=main'
     blas:
-      require: openblas
+      require:: openblas
     lapack:
-      require: openblas
-    mpi:
-      require: mpich ~rocm device=ch3 netmod=tcp
+      require:: openblas
+    mpich:
+      require:
+        - '~rocm'
+        - 'device=ch3'
+        - 'netmod=tcp'
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.3.3 ~rocm-device-libs

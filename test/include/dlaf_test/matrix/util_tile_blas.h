@@ -26,35 +26,6 @@ namespace dlaf {
 namespace matrix {
 namespace test {
 
-namespace internal {
-template <class ElementGetter>
-auto opValFunc(ElementGetter& val, const blas::Op op) {
-  std::function<decltype(val(std::declval<TileElementIndex>()))(TileElementIndex)> op_val;
-  switch (op) {
-    case blas::Op::NoTrans:
-      op_val = [&val](TileElementIndex i) { return val(i); };
-      break;
-
-    case blas::Op::Trans: {
-      op_val = [&val](TileElementIndex i) {
-        i.transpose();
-        return val(i);
-      };
-      break;
-    }
-
-    case blas::Op::ConjTrans: {
-      op_val = [&val](TileElementIndex i) {
-        i.transpose();
-        return dlaf::conj(val(i));
-      };
-      break;
-    }
-  }
-  return op_val;
-}
-}
-
 /// Sets the elements of the tile.
 ///
 /// The (i, j)-element of the tile is set to val({i, j}) if op == NoTrans,

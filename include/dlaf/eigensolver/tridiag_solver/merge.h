@@ -798,6 +798,61 @@ template <Backend B, class T, Device D, class KSender, class UDLSenders>
 void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const SizeType n_upper,
                           const SizeType n_lower, Matrix<T, D>& e0, Matrix<T, D>& e1, Matrix<T, D>& e2,
                           KSender&& k, UDLSenders&& n_udl) {
+  // Note:
+  // This function computes E0 = E1 . E2
+  //
+  // where E1 is the matrix with eigenvectors and it looks like this
+  //
+  //              ┌──────────┐ k
+  //              │    a     │ │
+  //                           ▼
+  //          ┌── ┌───┬──────┬─┬────┐
+  //          │   │UUU│DDDDDD│ │XXXX│
+  //          │   │UUU│DDDDDD│ │XXXX│
+  //  n_upper │   │UUU│DDDDDD│ │XXXX│
+  //          │   │UUU│DDDDDD│ │XXXX│
+  //          │   │UUU│DDDDDD│ │XXXX│
+  //          ├── ├───┼──────┼─┤XXXX│
+  //          │   │   │DDDDDD│L│XXXX│
+  //  n_lower │   │   │DDDDDD│L│XXXX│
+  //          │   │   │DDDDDD│L│XXXX│
+  //          └── └───┴──────┴─┴────┘
+  //                  │   b    │
+  //                  └────────┘
+  //
+  // The multiplication in two different steps in order to skip zero blocks of the matrix, created by
+  // the grouping of eigenvectors of different lengths (UPPER, DENSE and LOWER).
+  //
+  // 1. GEMM1 = TL * TOP
+  // 2. GEMM2 = BR * BOTTOM
+  // 3. copy DEFLATED
+  //
+  //                      ┌────────────┬────┐
+  //                      │            │    │
+  //                      │            │    │
+  //                      │   T O P    │    │
+  //                      │            │    │
+  //                      │            │    │
+  //                      ├────────────┤    │
+  //                      │            │    │
+  //                      │            │    │
+  //                      │B O T T O M │    │
+  //                      │            │    │
+  //                      └────────────┴────┘
+  //
+  // ┌──────────┬─┬────┐  ┌────────────┬────┐
+  // │          │0│    │  │            │    │
+  // │          │0│ D  │  │            │    │
+  // │   TL     │0│ E  │  │  GEMM 1    │ C  │
+  // │          │0│ F  │  │            │    │
+  // │          │0│ L  │  │            │ O  │
+  // ├───┬──────┴─┤ A  │  ├────────────┤    │
+  // │000│        │ T  │  │            │ P  │
+  // │000│        │ E  │  │            │    │
+  // │000│  BR    │ D  │  │  GEMM 2    │ Y  │
+  // │000│        │    │  │            │    │
+  // └───┴────────┴────┘  └────────────┴────┘
+
   namespace ex = pika::execution::experimental;
 
   ex::start_detached(

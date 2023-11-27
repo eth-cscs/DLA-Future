@@ -1,4 +1,3 @@
-#
 # Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2023, ETH Zurich
@@ -276,6 +275,7 @@ def trsm(
     _checkAppExec(app)
     cmd = f"{app} {opts}".strip() + f" >> trsm_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
+
 
 def trmm(
     system,

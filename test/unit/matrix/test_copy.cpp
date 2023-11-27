@@ -135,15 +135,23 @@ TYPED_TEST(MatrixCopyTest, FullMatrixGPU) {
 #endif
 
 struct SubMatrixCopyConfig {
-  GlobalElementSize full_in;
-  GlobalElementSize full_out;
+  const GlobalElementSize full_in;
+  const GlobalElementSize full_out;
 
-  TileElementSize tile_size;
+  const TileElementSize tile_size;
 
-  GlobalElementIndex sub_origin_in;
-  GlobalElementIndex sub_origin_out;
+  const GlobalElementIndex sub_origin_in;
+  const GlobalElementIndex sub_origin_out;
 
-  GlobalElementSize sub_size;
+  const GlobalElementSize sub_size;
+
+  matrix::internal::SubMatrixSpec sub_in() const noexcept {
+    return {sub_origin_in, sub_size};
+  }
+
+  matrix::internal::SubMatrixSpec sub_out() const noexcept {
+    return {sub_origin_out, sub_size};
+  }
 };
 
 comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
@@ -163,27 +171,8 @@ comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElement
           pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_rank.col()), grid_size.cols())};
 }
 
-bool isFullMatrix(const Distribution& dist_full, const GlobalElementIndex& sub_origin,
-                  const GlobalElementSize& sub_size) noexcept {
-  return sub_origin == GlobalElementIndex{0, 0} && sub_size == dist_full.size();
-}
-
-template <class ElementGetter>
-auto subValues(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
-  return [fullValues, offset = sizeFromOrigin(offset)](const GlobalElementIndex& ij) {
-    return fullValues(ij + offset);
-  };
-}
-
-template <class OutsideElementGetter, class InsideElementGetter>
-auto mixValues(const GlobalElementIndex& offset, const GlobalElementSize& sub_size,
-               InsideElementGetter&& insideValues, OutsideElementGetter&& outsideValues) {
-  return [outsideValues, insideValues, offset, sub_size](const GlobalElementIndex& ij) {
-    if (ij.isInSub(offset, sub_size))
-      return insideValues(ij - common::sizeFromOrigin(offset));
-    else
-      return outsideValues(ij);
-  };
+bool isFullMatrix(const Distribution& dist_full, const matrix::internal::SubMatrixSpec& sub) noexcept {
+  return sub.origin == GlobalElementIndex{0, 0} && sub.size == dist_full.size();
 }
 
 const std::vector<SubMatrixCopyConfig> sub_configs{
@@ -208,7 +197,7 @@ void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& 
   Matrix<T, Device::CPU> mat_out(dist_out, layout_out, mem_out());
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
-  if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
+  if (isFullMatrix(dist_in, test.sub_in())) {
     set(mat_in, inputValues<T>);
     set(mat_out, outputValues<T>);
 
@@ -227,16 +216,16 @@ void testSubMatrix(const SubMatrixCopyConfig& test, const matrix::Distribution& 
   set(mat_out, outputValues<T>);
 
   using matrix::internal::MatrixRef;
-  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
-  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
+  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, test.sub_in());
+  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, test.sub_out());
 
   copy(mat_sub_src, mat_sub_dst);
 
-  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  const auto subMatrixValues = sub_values(inputValues<T>, test.sub_origin_in);
   CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
 
   const auto fullMatrixWithSubMatrixValues =
-      mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+      mix_values(test.sub_out(), subMatrixValues, outputValues<T>);
   CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
 }
 
@@ -293,7 +282,7 @@ void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribut
   Matrix<T, Device::GPU> mat_out_gpu(dist_out, layout_out, mem_out_gpu());
 
   // Note: currently `subPipeline`-ing does not support sub-matrices
-  if (isFullMatrix(dist_in, test.sub_origin_in, test.sub_size)) {
+  if (isFullMatrix(dist_in, test.sub_in())) {
     set(mat_in, inputValues<T>);
     set(mat_out, outputValues<T>);
 
@@ -315,20 +304,20 @@ void testSubMatrixOnGPU(const SubMatrixCopyConfig& test, const matrix::Distribut
   set(mat_out, outputValues<T>);
 
   using matrix::internal::MatrixRef;
-  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, {test.sub_origin_in, test.sub_size});
-  MatrixRef<T, Device::GPU> mat_sub_gpu1(mat_in_gpu, {test.sub_origin_in, test.sub_size});
-  MatrixRef<T, Device::GPU> mat_sub_gpu2(mat_out_gpu, {test.sub_origin_out, test.sub_size});
-  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, {test.sub_origin_out, test.sub_size});
+  MatrixRef<const T, Device::CPU> mat_sub_src(mat_in, test.sub_in());
+  MatrixRef<T, Device::GPU> mat_sub_gpu1(mat_in_gpu, test.sub_in());
+  MatrixRef<T, Device::GPU> mat_sub_gpu2(mat_out_gpu, test.sub_out());
+  MatrixRef<T, Device::CPU> mat_sub_dst(mat_out, test.sub_out());
 
   copy(mat_sub_src, mat_sub_gpu1);
   copy(mat_sub_gpu1, mat_sub_gpu2);
   copy(mat_sub_gpu2, mat_sub_dst);
 
-  const auto subMatrixValues = subValues(inputValues<T>, test.sub_origin_in);
+  const auto subMatrixValues = sub_values(inputValues<T>, test.sub_origin_in);
   CHECK_MATRIX_NEAR(subMatrixValues, mat_sub_dst, 0, TypeUtilities<T>::error);
 
   const auto fullMatrixWithSubMatrixValues =
-      mixValues(test.sub_origin_out, test.sub_size, subMatrixValues, outputValues<T>);
+      mix_values(test.sub_out(), subMatrixValues, outputValues<T>);
   CHECK_MATRIX_NEAR(fullMatrixWithSubMatrixValues, mat_out, 0, TypeUtilities<T>::error);
 }
 

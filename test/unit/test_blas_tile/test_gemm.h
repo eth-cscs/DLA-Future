@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 
 #include <dlaf_test/blas/invoke.h>
+#include <dlaf_test/matrix/util_generic_blas.h>
 #include <dlaf_test/matrix/util_tile.h>
 #include <dlaf_test/matrix/util_tile_blas.h>
 #include <dlaf_test/util_types.h>
@@ -44,43 +45,14 @@ void testGemm(const blas::Op op_a, const blas::Op op_b, const SizeType m, const 
   const SizeType ldb = std::max<SizeType>(1, size_b.rows()) + extra_ldb;
   const SizeType ldc = std::max<SizeType>(1, size_c.rows()) + extra_ldc;
 
-  // Note: The tile elements are chosen such that:
-  // - op_a(a)_ik = .9 * (i+1) / (k+.5) * exp(I*(2*i-k)),
-  // - op_b(b)_kj = .8 * (k+.5) / (j+2) * exp(I*(k+j)),
-  // - c_ij = 1.2 * i / (j+1) * exp(I*(-i+j)),
-  // where I = 0 for real types or I is the complex unit for complex types.
-  // Therefore the result should be:
-  // res_ij = beta * c_ij + Sum_k(alpha * op_a(a)_ik * op_b(b)_kj)
-  //        = beta * c_ij + gamma * (i+1) / (j+2) * exp(I*(2*i+j)),
-  // where gamma = .72 * k * alpha.
-  auto el_op_a = [](const TileElementIndex& index) {
-    const double i = index.row();
-    const double k = index.col();
-    return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
-  };
-  auto el_op_b = [](const TileElementIndex& index) {
-    const double k = index.row();
-    const double j = index.col();
-    return TypeUtilities<T>::polar(.8 * (k + .5) / (j + 2), k + j);
-  };
-  auto el_c = [](const TileElementIndex& index) {
-    const double i = index.row();
-    const double j = index.col();
-    return TypeUtilities<T>::polar(1.2 * i / (j + 1), -i + j);
-  };
-
   const T alpha = TypeUtilities<T>::element(-1.2, .7);
   const T beta = TypeUtilities<T>::element(1.1, .4);
 
-  const T gamma = TypeUtilities<T>::element(.72 * k, 0) * alpha;
-  auto res_c = [beta, el_c, gamma](const TileElementIndex& index) {
-    const double i = index.row();
-    const double j = index.col();
-    return beta * el_c(index) + gamma * TypeUtilities<T>::polar((i + 1) / (j + 2), 2 * i + j);
-  };
+  auto [el_a, el_b, el_c, res_c] =
+      getMatrixMatrixMultiplication<TileElementIndex, T>(op_a, op_b, k, alpha, beta);
 
-  auto a = createTile<CT, D>(el_op_a, size_a, lda, op_a);
-  auto b = createTile<CT, D>(el_op_b, size_b, ldb, op_b);
+  auto a = createTile<CT, D>(el_a, size_a, lda);
+  auto b = createTile<CT, D>(el_b, size_b, ldb);
   auto c = createTile<T, D>(el_c, size_c, ldc);
 
   invokeBlas<D>(tile::internal::gemm_o, op_a, op_b, alpha, a, b, beta, c);

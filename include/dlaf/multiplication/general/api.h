@@ -14,10 +14,18 @@
 
 #include <dlaf/common/pipeline.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/types.h>
 
 namespace dlaf::multiplication {
 namespace internal {
+using dlaf::matrix::internal::MatrixRef;
+
+template <Backend B, Device D, class T>
+struct General {
+  static void callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                     const T beta, MatrixRef<T, D>& mat_c);
+};
 
 template <Backend B, Device D, class T>
 struct GeneralSub {
@@ -30,8 +38,8 @@ struct GeneralSub {
                      Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 
-// ETI
 #define DLAF_MULTIPLICATION_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE) \
+  KWORD template struct General<BACKEND, DEVICE, DATATYPE>;               \
   KWORD template struct GeneralSub<BACKEND, DEVICE, DATATYPE>;
 
 DLAF_MULTIPLICATION_GENERAL_ETI(extern, Backend::MC, Device::CPU, float)

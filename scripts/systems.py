@@ -125,39 +125,6 @@ printenv > env_{bs_name}.txt
 
 # NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
 #       modify "Run command" if it is not the case.
-cscs["hohgant-nvgpu"] = {
-    "Cores": 64,
-    "Threads per core": 2,
-    "Allowed rpns": [4],
-    "Multiple rpn in same job": True,
-    "GPU": True,
-    # Based on nvidia-smi topo --matrix
-    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm_cuda",
-    "Batch preamble": """
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --partition=nvgpu
-#SBATCH --hint=multithread
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
-
-# Env
-export MPICH_MAX_THREAD_SAFETY=multiple
-export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
-
-# Debug
-module list &> modules_{bs_name}.txt
-printenv > env_{bs_name}.txt
-
-# Commands
-""",
-}
-
-# NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
-#       modify "Run command" if it is not the case.
 cscs["clariden-nvgpu"] = {
     "Cores": 64,
     "Threads per core": 2,
@@ -172,38 +139,6 @@ cscs["clariden-nvgpu"] = {
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
 #SBATCH --partition=nvgpu
-#SBATCH --hint=multithread
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
-
-# Env
-export MPICH_MAX_THREAD_SAFETY=multiple
-export MIMALLOC_EAGER_COMMIT_DELAY=0
-export MIMALLOC_LARGE_OS_PAGES=1
-
-# Debug
-module list &> modules_{bs_name}.txt
-printenv > env_{bs_name}.txt
-
-# Commands
-""",
-}
-
-# NOTE: Here is assumed that `gpu2ranks_slurm_hip` is in PATH!
-#       modify "Run command" if it is not the case.
-cscs["hohgant-amdgpu"] = {
-    "Cores": 64,
-    "Threads per core": 2,
-    "Allowed rpns": [8],
-    "Multiple rpn in same job": True,
-    "GPU": True,
-    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm_hip",
-    "Batch preamble": """
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --partition=amdgpu
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt

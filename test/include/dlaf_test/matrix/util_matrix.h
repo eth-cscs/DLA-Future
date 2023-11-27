@@ -23,6 +23,7 @@
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/util_math.h>
 
 #include <gtest/gtest.h>
@@ -76,6 +77,29 @@ void set(MatrixType<T, Device::CPU>& mat, ElementGetter el) {
       set(pika::this_thread::experimental::sync_wait(mat.readwrite(tile_index)), el_tile);
     }
   }
+}
+
+/// Returns an ElementGetter that given @p fullValues, it returns values like if origin has been changed
+/// to sub-martix starting at @p offset.
+template <class ElementGetter>
+auto sub_values(ElementGetter&& fullValues, const GlobalElementIndex& offset) {
+  return [fullValues, offset = sizeFromOrigin(offset)](const GlobalElementIndex& ij) {
+    return fullValues(ij + offset);
+  };
+}
+
+/// Returns an ElementGetter that returns values of a matrix like if:
+/// - sub-matrix defined by @p sub_spec is set with @p insideValues
+/// - the rest of the matrix is set with @p outsideValues
+template <class OutsideElementGetter, class InsideElementGetter>
+auto mix_values(const dlaf::matrix::internal::SubMatrixSpec& sub_spec,
+                InsideElementGetter&& insideValues, OutsideElementGetter&& outsideValues) {
+  return [outsideValues, insideValues, sub_spec](const GlobalElementIndex& ij) {
+    if (ij.isInSub(sub_spec.origin, sub_spec.size))
+      return insideValues(ij - common::sizeFromOrigin(sub_spec.origin));
+    else
+      return outsideValues(ij);
+  };
 }
 
 namespace internal {

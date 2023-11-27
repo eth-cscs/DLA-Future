@@ -197,8 +197,9 @@ template <class RhoSender>
 auto scaleRho(RhoSender&& rho) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
-  return std::forward<RhoSender>(rho) |
-         di::transform(di::Policy<Backend::MC>(), [](auto rho) { return 2 * std::abs(rho); });
+  using pika::execution::thread_stacksize;
+  return std::forward<RhoSender>(rho) | di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack),
+                                                      [](auto rho) { return 2 * std::abs(rho); });
 }
 
 // Returns the maximum element of a portion of a column vector from tile indices `i_begin` to `i_end`
@@ -207,12 +208,14 @@ template <class T>
 auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const T, Device::CPU>& vec) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   std::vector<ex::unique_any_sender<T>> tiles_max;
   tiles_max.reserve(to_sizet(i_end - i_begin));
   for (SizeType i = i_begin; i < i_end; ++i) {
     tiles_max.push_back(di::whenAllLift(lapack::Norm::Max, vec.read(LocalTileIndex(i, 0))) |
-                        di::transform(di::Policy<Backend::MC>(), tile::internal::lange_o));
+                        di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack),
+                                      tile::internal::lange_o));
   }
 
   auto tol_calc_fn = [](const std::vector<T>& maxvals) {
@@ -220,7 +223,7 @@ auto maxVectorElement(const SizeType i_begin, const SizeType i_end, Matrix<const
   };
 
   return ex::when_all_vector(std::move(tiles_max)) |
-         di::transform(di::Policy<Backend::MC>(), std::move(tol_calc_fn));
+         di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(tol_calc_fn));
 }
 
 // The tolerance calculation is the same as the one used in LAPACK's stedc implementation [1].
@@ -231,6 +234,7 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
                    Matrix<const T, Device::CPU>& z) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   auto dmax = maxVectorElement(i_begin, i_end, d);
   auto zmax = maxVectorElement(i_begin, i_end, z);
@@ -240,7 +244,7 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
   };
 
   return ex::when_all(std::move(dmax), std::move(zmax)) |
-         di::transform(di::Policy<Backend::MC>(), std::move(tol_fn)) |
+         di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(tol_fn)) |
          // TODO: This releases the tiles that are kept in the operation state.
          // This is a temporary fix and needs to be replaced by a different
          // adaptor or different lifetime guarantees. This is tracked in
@@ -425,6 +429,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
                                       Matrix<SizeType, Device::CPU>& out) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
   auto part_fn = [n](const auto& c_tiles_futs, const auto& evals_tiles_fut, const auto& in_tiles_futs,
@@ -441,7 +446,7 @@ auto stablePartitionIndexForDeflation(const SizeType i_begin, const SizeType i_e
   TileCollector tc{i_begin, i_end};
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
                       ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out))) |
-         di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
+         di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(part_fn));
 }
 
 template <class T>
@@ -451,6 +456,7 @@ auto stablePartitionIndexForDeflation(
     Matrix<SizeType, Device::CPU>& out, Matrix<SizeType, Device::CPU>& out_by_coltype) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
   auto part_fn = [n](const auto& c_tiles_futs, const auto& evals_tiles_futs, const auto& in_tiles_futs,
@@ -469,17 +475,18 @@ auto stablePartitionIndexForDeflation(
   return ex::when_all(ex::when_all_vector(tc.read(c)), ex::when_all_vector(tc.read(evals)),
                       ex::when_all_vector(tc.read(in)), ex::when_all_vector(tc.readwrite(out)),
                       ex::when_all_vector(tc.readwrite(out_by_coltype))) |
-         di::transform(di::Policy<Backend::MC>(), std::move(part_fn));
+         di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(part_fn));
 }
 
 inline void initColTypes(const SizeType i_begin, const SizeType i_split, const SizeType i_end,
                          Matrix<ColType, Device::CPU>& coltypes) {
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   for (SizeType i = i_begin; i < i_end; ++i) {
     const ColType val = (i < i_split) ? ColType::UpperHalf : ColType::LowerHalf;
     di::transformDetach(
-        di::Policy<Backend::MC>(),
+        di::Policy<Backend::MC>(thread_stacksize::nostack),
         [](const ColType& ct, const matrix::Tile<ColType, Device::CPU>& tile) {
           for (SizeType i = 0; i < tile.size().rows(); ++i) {
             tile(TileElementIndex(i, 0)) = ct;
@@ -570,6 +577,7 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
                     Matrix<T, Device::CPU>& z, Matrix<ColType, Device::CPU>& c) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_stacksize;
 
   const SizeType n = problemSize(i_begin, i_end, index.distribution());
 
@@ -589,7 +597,8 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
                              ex::when_all_vector(tc.read(index)), ex::when_all_vector(tc.readwrite(d)),
                              ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(c)));
 
-  return di::transform(di::Policy<Backend::MC>(), std::move(deflate_fn), std::move(sender)) |
+  return di::transform(di::Policy<Backend::MC>(thread_stacksize::nostack), std::move(deflate_fn),
+                       std::move(sender)) |
          // TODO: This releases the tiles that are kept in the operation state.
          // This is a temporary fix and needs to be replaced by a different
          // adaptor or different lifetime guarantees. This is tracked in
@@ -605,6 +614,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                        Matrix<T, Device::CPU>& evecs) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_priority;
 
   const SizeType n = problemSize(i_begin, i_end, evals.distribution());
   const SizeType nb = evals.distribution().blockSize().rows();
@@ -625,7 +635,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                    ex::when_all_vector(tc.readwrite(z)), ex::when_all_vector(tc.readwrite(evals)),
                    ex::when_all_vector(tc.read(i2)), ex::when_all_vector(tc.readwrite(evecs)),
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
                                            auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
                                            const auto& i2_tile_arr, auto& evec_tiles, auto& ws_vecs) {
@@ -793,6 +803,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
                       WorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
+  using pika::execution::thread_priority;
 
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
   const LocalTileIndex idx_loc_begin(i_begin, i_begin);
@@ -895,8 +906,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
   // Note:
   // This is needed to set to zero elements of e2 outside of the k by k top-left part.
   // The input is not required to be zero for solveRank1Problem.
-  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
-                                  ws_hm.e2);
+  matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
   solveRank1Problem(i_begin, i_end, k, scaled_rho, ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
 
@@ -981,6 +991,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   namespace ex = pika::execution::experimental;
   namespace di = dlaf::internal;
   namespace tt = pika::this_thread::experimental;
+  using pika::execution::thread_priority;
 
   const matrix::Distribution& dist = evecs.distribution();
 
@@ -1051,7 +1062,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    // additional workspaces
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>()),
                    ex::just(memory::MemoryView<T, Device::CPU>())) |
-      ex::transfer(di::getBackendScheduler<Backend::MC>(pika::execution::thread_priority::high)) |
+      ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, n_subm_el_lc, m_subm_el_lc, i_begin, ij_begin_lc, sz_loc_tiles,
                           dist, bcast_evals, all_reduce_in_place](
                              const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
@@ -1418,6 +1429,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                           WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                           DistWorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
+  using pika::execution::thread_priority;
 
   const matrix::Distribution& dist_evecs = ws.e0.distribution();
 
@@ -1498,8 +1510,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
 
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
-  matrix::util::set0<Backend::MC>(pika::execution::thread_priority::normal, idx_loc_begin, sz_loc_tiles,
-                                  ws_hm.e2);
+  matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
   solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, idx_loc_begin, sz_loc_tiles,
                         k, std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_hm.i2, ws_hm.e2);
 

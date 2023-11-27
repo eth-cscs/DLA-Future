@@ -70,11 +70,13 @@ struct Helpers<Backend::GPU> {
 
 template <Backend backend, typename SrcSender, typename DstSender>
 void copyAndSetHHUpperTiles(SizeType j_diag, SrcSender&& src, DstSender&& dst) {
+  using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   namespace ex = pika::execution::experimental;
   using ElementType = dlaf::internal::SenderElementType<DstSender>;
 
   ex::start_detached(dlaf::internal::transform(
-      dlaf::internal::Policy<backend>(pika::execution::thread_priority::high),
+      dlaf::internal::Policy<backend>(thread_priority::high, thread_stacksize::nostack),
       Helpers<backend>::template copyAndSetHHUpperTiles<ElementType>,
       dlaf::internal::whenAllLift(j_diag, std::forward<SrcSender>(src), std::forward<DstSender>(dst))));
 }
@@ -83,36 +85,39 @@ template <Backend backend, class TSender, class SourcePanelSender, class PanelTi
 void trmmPanel(pika::execution::thread_priority priority, TSender&& t, SourcePanelSender&& v,
                PanelTileSender&& w) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+  using pika::execution::thread_stacksize;
 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Side::Right, blas::Uplo::Upper, blas::Op::ConjTrans,
                                   blas::Diag::NonUnit, ElementType(1.0), std::forward<TSender>(t),
                                   std::forward<SourcePanelSender>(v), std::forward<PanelTileSender>(w)) |
-      tile::trmm3(dlaf::internal::Policy<backend>(priority)));
+      tile::trmm3(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend backend, class PanelTileSender, class MatrixTileSender, class ColPanelSender>
 void gemmUpdateW2(pika::execution::thread_priority priority, PanelTileSender&& w, MatrixTileSender&& c,
                   ColPanelSender&& w2) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+  using pika::execution::thread_stacksize;
 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, ElementType(1.0),
                                   std::forward<PanelTileSender>(w), std::forward<MatrixTileSender>(c),
                                   ElementType(1.0), std::forward<ColPanelSender>(w2)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 template <Backend backend, class PanelTileSender, class ColPanelSender, class MatrixTileSender>
 void gemmTrailingMatrix(pika::execution::thread_priority priority, PanelTileSender&& v,
                         ColPanelSender&& w2, MatrixTileSender&& c) {
   using ElementType = dlaf::internal::SenderElementType<PanelTileSender>;
+  using pika::execution::thread_stacksize;
 
   pika::execution::experimental::start_detached(
       dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, ElementType(-1.0),
                                   std::forward<PanelTileSender>(v), std::forward<ColPanelSender>(w2),
                                   ElementType(1.0), std::forward<MatrixTileSender>(c)) |
-      tile::gemm(dlaf::internal::Policy<backend>(priority)));
+      tile::gemm(dlaf::internal::Policy<backend>(priority, thread_stacksize::nostack)));
 }
 }
 

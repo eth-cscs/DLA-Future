@@ -257,7 +257,7 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
 }
 
 // Note:
-// This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
+// This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrix
 // shape that allows to reduce the number of following operations (i.e. gemm)
 inline std::size_t ev_sort_order(const ColType coltype) {
   switch (coltype) {

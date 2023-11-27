@@ -245,8 +245,7 @@ std::vector<GemmConfig> sub_gemm_configs = {
     // single-tile
     {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 10, 9, 13, {{2, 1}}, {{1, 1}}, {{0, 0}}},
     // multi-tile
-    // TODO check this, I suspect a problem/limit with panel offset
-    // {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{7, 1}}, {{11, 10}}, {{4, 2}}},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{7, 1}}, {{11, 10}}, {{4, 2}}},
     {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{6, 10}}, {{5, 8}}, {{9, 12}}},
 };
 

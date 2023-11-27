@@ -259,7 +259,7 @@ auto calcTolerance(const SizeType i_begin, const SizeType i_end, Matrix<const T,
 // Note:
 // This is the order how we want the eigenvectors to be sorted, since it leads to a nicer matrx
 // shape that allows to reduce the number of following operations (i.e. gemm)
-inline std::size_t coltype_index(const ColType coltype) {
+inline std::size_t ev_sort_order(const ColType coltype) {
   switch (coltype) {
     case ColType::UpperHalf:
       return 0;
@@ -368,16 +368,16 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
   std::array<std::size_t, 4> offsets{0, 0, 0, 0};
   std::for_each(types, types + n, [&offsets](const auto& coltype) {
     if (coltype != ColType::Deflated)
-      offsets[1 + coltype_index(coltype)]++;
+      offsets[1 + ev_sort_order(coltype)]++;
   });
 
-  std::array<std::size_t, 3> n_udl{offsets[1 + coltype_index(ColType::UpperHalf)],
-                                   offsets[1 + coltype_index(ColType::Dense)],
-                                   offsets[1 + coltype_index(ColType::LowerHalf)]};
+  std::array<std::size_t, 3> n_udl{offsets[1 + ev_sort_order(ColType::UpperHalf)],
+                                   offsets[1 + ev_sort_order(ColType::Dense)],
+                                   offsets[1 + ev_sort_order(ColType::LowerHalf)]};
 
   std::partial_sum(offsets.cbegin(), offsets.cend(), offsets.begin());
 
-  const SizeType k = to_SizeType(offsets[coltype_index(ColType::Deflated)]);
+  const SizeType k = to_SizeType(offsets[ev_sort_order(ColType::Deflated)]);
 
   // Create the permutation (sorted non-deflated | sorted deflated) -> initial
   // Note:
@@ -422,7 +422,7 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
   for (SizeType j = 0; j < n; ++j) {
     const ColType& coltype = types[to_sizet(j)];
     if (coltype != ColType::Deflated) {
-      auto& index_for_coltype = offsets[coltype_index(coltype)];
+      auto& index_for_coltype = offsets[ev_sort_order(coltype)];
       index_sorted_coltype[index_for_coltype] = j;
       ++index_for_coltype;
     }
@@ -806,9 +806,9 @@ void multiplyEigenvectors(const SizeType sub_offset, const SizeType n, const Siz
                 e2 = e2.subPipelineConst()](const SizeType k, std::array<std::size_t, 3> n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
 
-        const SizeType n_uh = to_SizeType(n_udl[coltype_index(ColType::UpperHalf)]);
-        const SizeType n_de = to_SizeType(n_udl[coltype_index(ColType::Dense)]);
-        const SizeType n_lh = to_SizeType(n_udl[coltype_index(ColType::LowerHalf)]);
+        const SizeType n_uh = to_SizeType(n_udl[ev_sort_order(ColType::UpperHalf)]);
+        const SizeType n_de = to_SizeType(n_udl[ev_sort_order(ColType::Dense)]);
+        const SizeType n_lh = to_SizeType(n_udl[ev_sort_order(ColType::LowerHalf)]);
 
         const SizeType a = n_uh + n_de;
         const SizeType b = n_de + n_lh;

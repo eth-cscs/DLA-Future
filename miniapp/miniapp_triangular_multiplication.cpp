@@ -129,7 +129,7 @@ struct triangularMultiplicationMiniapp {
       // setup matrix A and b
       using dlaf::matrix::util::set;
       set(ah, ref_op_a, op);
-      set(bh, ref_b);
+      set(bh, ref_x);
       a.copySourceToTarget();
       b.copySourceToTarget();
 
@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
   // options
   using namespace pika::program_options;
   options_description desc_commandline(
-      "Benchmark computation of solution for A . X = 2 . B, "
+      "Benchmark computation of A . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
       "options\n"
       "Usage: miniapp_triangular_multiplication [options]");

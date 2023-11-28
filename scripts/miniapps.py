@@ -309,7 +309,7 @@ def trmm(
         raise ValueError(_err_msg(lib))
 
     _checkAppExec(app)
-    cmd = f"{app} {opts}".strip() + f" >> trsm_{lib}_{suffix}.out 2>&1"
+    cmd = f"{app} {opts}".strip() + f" >> trmm_{lib}_{suffix}.out 2>&1"
     return cmd, env.strip()
 
 

@@ -487,7 +487,7 @@ def _gen_plot(
     Args:
         scaling         strong | weak
         name:           name of the routine to be included in the title
-        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | trsm | evp | gevp
+        routine:        chol | hegst | red2band | band2trid | trid_evp | bt_band2trid | trsm | trmm | evp | gevp
         combine_mb:     bool indicates if different mb has to be included in the same plot
         size_type:      m | mn It indicates which sizes are relevant.
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization

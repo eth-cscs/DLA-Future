@@ -18,6 +18,7 @@
 
 #include <pika/execution.hpp>
 
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/matrix/matrix.h>
@@ -43,6 +44,7 @@ template <class T, Device D>
       MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender<Type, Device> tile_in,                        \
       dlaf::matrix::ReadWriteTileSender<Type, Device> tile_out)
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_ALL_REDUCE_ETI, extern);
 DLAF_SCHEDULE_ALL_REDUCE_ETI(extern, int, Device::CPU);
 
 /// Schedule an in-place all reduce.
@@ -60,16 +62,6 @@ template <class T, Device D>
       pika::execution::experimental::unique_any_sender<common::Pipeline<Communicator>::Wrapper> pcomm, \
       MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender<Type, Device> tile)
 
+DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI, extern);
 DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, int, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::CPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::CPU);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, float, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, double, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<float>, Device::GPU);
-DLAF_SCHEDULE_ALL_REDUCE_IN_PLACE_ETI(extern, std::complex<double>, Device::GPU);
-#endif
 }

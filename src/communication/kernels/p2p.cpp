@@ -14,6 +14,7 @@
 #include <mpi.h>
 
 #include <dlaf/common/callable_object.h>
+#include <dlaf/common/eti.h>
 #include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/kernels/p2p.h>
@@ -85,27 +86,8 @@ template <class T, Device D, class Comm>
   return internal::scheduleSend(std::move(pcomm), dest, tag, std::move(tile));
 }
 
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, Communicator);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, Communicator);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, Communicator);
-
-DLAF_SCHEDULE_SEND_ETI(, float, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_SEND_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-#endif
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , Communicator);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::Wrapper);
 
 template <class T, Device D, class Comm>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
@@ -131,25 +113,6 @@ template <class T, Device D, class Comm>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, Communicator);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::CPU, common::Pipeline<Communicator>::Wrapper);
-
-#ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, Communicator);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, Communicator);
-
-DLAF_SCHEDULE_RECV_ETI(, float, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, double, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<float>, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-DLAF_SCHEDULE_RECV_ETI(, std::complex<double>, Device::GPU, common::Pipeline<Communicator>::Wrapper);
-#endif
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , Communicator);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::Wrapper);
 }

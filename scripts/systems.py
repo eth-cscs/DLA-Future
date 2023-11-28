@@ -37,7 +37,7 @@ cscs["daint-mc"] = {
     "Allowed rpns": [1, 2],
     "Multiple rpn in same job": True,
     "GPU": False,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -68,7 +68,7 @@ cscs["daint-gpu"] = {
     "Allowed rpns": [1],
     "Multiple rpn in same job": True,
     "GPU": True,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -99,7 +99,7 @@ cscs["eiger"] = {
     "Allowed rpns": [1, 2, 4, 8],
     "Multiple rpn in same job": True,
     "GPU": False,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -125,21 +125,20 @@ printenv > env_{bs_name}.txt
 
 # NOTE: Here is assumed that `gpu2ranks_slurm_cuda` is in PATH!
 #       modify "Run command" if it is not the case.
-cscs["hohgant-nvgpu"] = {
+cscs["clariden-nvgpu"] = {
     "Cores": 64,
     "Threads per core": 2,
     "Allowed rpns": [4],
     "Multiple rpn in same job": True,
     "GPU": True,
     # Based on nvidia-smi topo --matrix
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm_cuda",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ffff000000000000ffff000000000000,ffff000000000000ffff00000000,ffff000000000000ffff0000,ffff000000000000ffff gpu2ranks_slurm_cuda",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
 #SBATCH --time={time_min}
 #SBATCH --nodes={nodes}
 #SBATCH --partition=nvgpu
-#SBATCH --exclude=nid[002024-002025,002028-002029]
 #SBATCH --hint=multithread
 #SBATCH --output=output.txt
 #SBATCH --error=error.txt
@@ -159,16 +158,13 @@ printenv > env_{bs_name}.txt
 
 # NOTE: Here is assumed that `gpu2ranks_slurm_hip` is in PATH!
 #       modify "Run command" if it is not the case.
-cscs["hohgant-amdgpu"] = {
+cscs["clariden-amdgpu"] = {
     "Cores": 64,
     "Threads per core": 2,
     "Allowed rpns": [8],
     "Multiple rpn in same job": True,
     "GPU": True,
-    # Based on
-    # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
-    # and rocm-smi --showtoponuma
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm_hip",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:ff00000000000000ff000000000000,ff00000000000000ff00000000000000,ff00000000000000ff0000,ff00000000000000ff000000,ff00000000000000ff,ff00000000000000ff00,ff00000000000000ff00000000,ff00000000000000ff0000000000 gpu2ranks_slurm_hip",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -200,7 +196,7 @@ csc["lumi-cpu"] = {
     "Allowed rpns": [1, 2, 4, 8],
     "Multiple rpn in same job": True,
     "GPU": False,
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=core -c {threads_per_rank}",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -236,7 +232,7 @@ csc["lumi-gpu"] = {
     # Based on
     # https://docs.lumi-supercomputer.eu/runjobs/scheduled-jobs/distribution-binding/#gpu-binding
     # and rocm-smi --show-topo
-    "Run command": "srun -u -n {total_ranks} --cpu-bind=mask_cpu:fe00000000000000fe000000000000,fe00000000000000fe00000000000000,fe00000000000000fe0000,fe00000000000000fe000000,fe00000000000000fe,fe00000000000000fe00,fe00000000000000fe00000000,fe00000000000000fe0000000000 gpu2ranks_slurm_hip",
+    "Run command": "srun -u {srun_args} -n {total_ranks} --cpu-bind=mask_cpu:fe00000000000000fe000000000000,fe00000000000000fe00000000000000,fe00000000000000fe0000,fe00000000000000fe000000,fe00000000000000fe,fe00000000000000fe00,fe00000000000000fe00000000,fe00000000000000fe0000000000 gpu2ranks_slurm_hip",
     "Batch preamble": """
 #!/bin/bash -l
 #SBATCH --job-name={run_name}_{nodes}
@@ -260,90 +256,4 @@ printenv > env_{bs_name}.txt
 
 # Commands
 """,
-}
-
-cineca = {}
-
-
-def extraSubsMarconi(params):
-    if params["nodes"] <= 16:
-        params["qos"] = "normal"
-    else:
-        params["qos"] = "m100_qos_bprod"
-
-    # This configuration was suggested by the user support and used for the benchmarks.
-    # It looks strange that the computation should be constrained to only half the cores in the node.
-    # Extra investigations are needed.
-    if "rpn" in params:
-        if params["rpn"] == 1:
-            params["socket_PE"] = 16
-        else:
-            params["socket_PE"] = 8
-    return params
-
-
-cineca["m100_cpu"] = {
-    "Cores": 32,
-    "Threads per core": 4,
-    "Allowed rpns": [2, 4],
-    "Multiple rpn in same job": False,
-    "GPU": False,
-    "sleep": 5,
-    "Run command": "mpirun --rank-by core --map-by socket:PE={socket_PE}",
-    "Batch preamble": """
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --ntasks-per-node={rpn}
-#SBATCH --cpus-per-task={threads_per_rank}
-#SBATCH --partition=m100_usr_prod
-#SBATCH --account=cin_staff
-#SBATCH --qos={qos}
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
-
-# Debug
-module list &> modules_{bs_name}.txt
-printenv > env_{bs_name}.txt
-
-# Commands
-""",
-    "Extra subs": extraSubsMarconi,
-}
-
-# NOTE: Here is assumed that `gpu2ranks_ompi` is in PATH!
-#       modify "Run command" if it is not the case.
-cineca["m100"] = {
-    "Cores": 32,
-    "Threads per core": 4,
-    "Allowed rpns": [2, 4],
-    "Multiple rpn in same job": False,
-    "GPU": True,
-    "sleep": 5,
-    "Run command": "mpirun --rank-by core --map-by socket:PE={socket_PE} gpu2ranks_ompi",
-    "Batch preamble": """
-#!/bin/bash -l
-#SBATCH --job-name={run_name}_{nodes}
-#SBATCH --time={time_min}
-#SBATCH --nodes={nodes}
-#SBATCH --ntasks-per-node={rpn}
-#SBATCH --cpus-per-task={threads_per_rank}
-#SBATCH --partition=m100_usr_prod
-#SBATCH --gres=gpu:{rpn}
-#SBATCH --account=cin_staff
-#SBATCH --qos={qos}
-#SBATCH --output=output.txt
-#SBATCH --error=error.txt
-
-# Debug
-module list &> modules_{bs_name}.txt
-printenv > env_{bs_name}.txt
-
-# NOTE: It is assumed that `gpu2ranks_ompi` is in PATH!
-#       modify "Run command" in `systems.py` if it is not the case.
-
-# Commands
-""",
-    "Extra subs": extraSubsMarconi,
 }

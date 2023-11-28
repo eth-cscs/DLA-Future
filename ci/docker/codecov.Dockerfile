@@ -73,6 +73,8 @@ ARG EXTRA_APTGET_DEPLOY
 # pip is needed only to install fastcov (it is removed with
 #     its dependencies after fastcov installation)
 # codecov upload needs curl + ca-certificates
+# glibc-tools is needed for libSegFault on ubuntu:22.04
+# jq, strace are needed for check-threads
 # tzdata is needed to print correct time
 RUN apt-get update -qq && \
     apt-get install -qq -y --no-install-recommends \
@@ -80,11 +82,11 @@ RUN apt-get update -qq && \
       python3 python3-pip \
       curl \
       ca-certificates \
+      glibc-tools jq strace \
       tzdata && \
     pip install fastcov && \
     apt-get autoremove -qq -y python3-pip && \
     apt-get clean
-
 
 # Copy the executables and the codecov gcno files
 COPY --from=builder ${BUILD} ${BUILD}

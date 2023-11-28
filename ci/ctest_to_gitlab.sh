@@ -52,11 +52,13 @@ JOB_TEMPLATE="
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
+    SLURM_UNBUFFEREDIO: 1
     SLURM_NTASKS: {{NTASKS}}
     SLURM_TIMELIMIT: '20:00'
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
+    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}
   artifacts:
     paths:
@@ -87,11 +89,13 @@ JOB_TEMPLATE="
   extends: .daint
   variables:
     SLURM_CPUS_PER_TASK: {{CPUS_PER_TASK}}
+    SLURM_UNBUFFEREDIO: 1
     SLURM_NTASKS: {{NTASKS}}
     SLURM_TIMELIMIT: '15:00'
     PULL_IMAGE: 'YES'
     USE_MPI: 'YES'
     DISABLE_AFTER_SCRIPT: 'YES'
+    DLAF_HDF5_TEST_OUTPUT_PATH: \$CI_PROJECT_DIR
   script: mpi-ctest -L {{LABEL}}"
 fi
 

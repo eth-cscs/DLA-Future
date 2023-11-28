@@ -30,21 +30,21 @@
 /// @param dlaf_desca DLA-Future descriptor of the global matrix \f$\mathbf{A}\f$
 /// @return 0 if the factorization completed normally
 DLAF_EXTERN_C int dlaf_cholesky_factorization_s(const int dlaf_context, const char uplo, float* a,
-                                                const struct DLAF_descriptor dlaf_desca);
+                                                const struct DLAF_descriptor dlaf_desca) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_cholesky_factorization_s
 DLAF_EXTERN_C int dlaf_cholesky_factorization_d(const int dlaf_context, const char uplo, double* a,
-                                                const struct DLAF_descriptor dlaf_desca);
+                                                const struct DLAF_descriptor dlaf_desca) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_cholesky_factorization_s
 DLAF_EXTERN_C int dlaf_cholesky_factorization_c(const int dlaf_context, const char uplo,
                                                 dlaf_complex_c* a,
-                                                const struct DLAF_descriptor dlaf_desca);
+                                                const struct DLAF_descriptor dlaf_desca) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_cholesky_factorization_s
 DLAF_EXTERN_C int dlaf_cholesky_factorization_z(const int dlaf_context, const char uplo,
                                                 dlaf_complex_z* a,
-                                                const struct DLAF_descriptor dlaf_desca);
+                                                const struct DLAF_descriptor dlaf_desca) DLAF_NOEXCEPT;
 
 #ifdef DLAF_WITH_SCALAPACK
 
@@ -72,18 +72,18 @@ DLAF_EXTERN_C int dlaf_cholesky_factorization_z(const int dlaf_context, const ch
 /// @param desca ScaLAPACK array descriptor of the global matrix \f$\mathbf{A}\f$
 /// @param[out] info 0 if the factorization completed normally
 DLAF_EXTERN_C void dlaf_pspotrf(const char uplo, const int n, float* a, const int ia, const int ja,
-                                const int desca[9], int* info);
+                                const int desca[9], int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pspotrf
 DLAF_EXTERN_C void dlaf_pdpotrf(const char uplo, const int n, double* a, const int ia, const int ja,
-                                const int desca[9], int* info);
+                                const int desca[9], int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pspotrf
 DLAF_EXTERN_C void dlaf_pcpotrf(const char uplo, const int n, dlaf_complex_c* a, const int ia,
-                                const int ja, const int desca[9], int* info);
+                                const int ja, const int desca[9], int* info) DLAF_NOEXCEPT;
 
 /// @copydoc dlaf_pspotrf
 DLAF_EXTERN_C void dlaf_pzpotrf(const char uplo, const int n, dlaf_complex_z* a, const int ia,
-                                const int ja, const int desca[9], int* info);
+                                const int ja, const int desca[9], int* info) DLAF_NOEXCEPT;
 
 #endif

@@ -23,9 +23,6 @@ RUN apt-get -yqq update && \
     patchelf unzip file gnupg2 libncurses-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Install cmake
-RUN wget -qO- "https://cmake.org/files/v3.22/cmake-3.22.1-linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
-
 # Install libtree for packaging
 RUN mkdir -p /opt/libtree && \
     curl -Lfso /opt/libtree/libtree https://github.com/haampie/libtree/releases/download/v2.0.0/libtree_x86_64 && \
@@ -36,7 +33,7 @@ ARG USE_MKL=ON
 ARG MKL_VERSION=2020.4-912
 ARG MKL_SPEC=2020.4.304
 RUN if [ "$USE_MKL" = "ON" ]; then \
-      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB 2>/dev/null | apt-key add - && \
+      wget -qO - https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB 2>/dev/null | apt-key add - && \
       apt-add-repository 'deb https://apt.repos.intel.com/mkl all main' && \
       apt-get install -y -qq --no-install-recommends intel-mkl-64bit-${MKL_VERSION} && \
       rm -rf /var/lib/apt/lists/* && \
@@ -57,13 +54,12 @@ RUN mkdir -p /opt/spack && \
 ARG COMPILER
 RUN spack compiler find && \
     gawk -i inplace '$0 ~ "compiler:" {flag=0} $0 ~ "spec:.*clang" {flag=1} flag == 1 && $1 ~ "^f[c7]" && $2 ~ "null" {gsub("null","/usr/bin/gfortran",$0)} {print $0}' /root/.spack/linux/compilers.yaml && \
-    spack config add "packages:all:compiler:[${COMPILER}]"
+    spack config add "packages:all:require:[\"%${COMPILER}\"]"
 
 RUN spack external find \
     autoconf \
     automake \
     bzip2 \
-    cmake \
     cuda \
     diffutils \
     findutils \
@@ -93,14 +89,14 @@ ARG COMMON_SPACK_ENVIRONMENT
 # Build dependencies
 # 1. Create a spack environment named `ci` from the input spack.yaml file
 COPY $SPACK_ENVIRONMENT /spack_environment/spack.yaml
+COPY $COMMON_SPACK_ENVIRONMENT /spack_environment/
 RUN spack env create --without-view ci /spack_environment/spack.yaml
-# 2. Copy the common environment configuration into the environment directory
-# Note that the destination path is hardcoded because we cannot dynamically get
-# the destination path. This will fail if the environment path ever changes.
-COPY $COMMON_SPACK_ENVIRONMENT /opt/spack/var/spack/environments/ci
-# 3. Set the C++ standard
+# 2. Set the C++ standard
 ARG CXXSTD=17
 RUN spack -e ci config add "packages:dla-future:variants:cxxstd=${CXXSTD}"
-# 4. Install only the dependencies of this (top level is our package)
+# 3. Install only the dependencies of this (top level is our package)
 ARG NUM_PROCS
 RUN spack -e ci install --jobs ${NUM_PROCS} --fail-fast --only=dependencies
+
+# make ctest executable available.
+RUN ln -s `spack -e ci location -i cmake`/bin/ctest /usr/bin/ctest

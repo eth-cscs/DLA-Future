@@ -18,7 +18,8 @@
 
 static bool dlaf_initialized = false;
 
-void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const char** argv_dlaf) {
+void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf,
+                     const char** argv_dlaf) noexcept {
   if (!dlaf_initialized) {
     pika::program_options::options_description desc("");
     desc.add(dlaf::getOptionsDescription());
@@ -27,8 +28,13 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const
     pika::init_params params;
     params.rp_callback = dlaf::initResourcePartitionerHandler;
     params.desc_cmdline = desc;
+    // After pika 0.21.0 pika::start reports errors only by exception and returns void
+#if PIKA_VERSION_FULL >= 0x001500
+    pika::start(argc_pika, argv_pika, params);
+#else
     auto pika_started = pika::start(nullptr, argc_pika, argv_pika, params);
     DLAF_ASSERT(pika_started, pika_started);
+#endif
 
     // DLA-Future initialization
     dlaf::initialize(argc_dlaf, argv_dlaf);
@@ -38,7 +44,7 @@ void dlaf_initialize(int argc_pika, const char** argv_pika, int argc_dlaf, const
   }
 }
 
-void dlaf_finalize() {
+void dlaf_finalize() noexcept {
   if (dlaf_initialized) {
     pika::resume();
     pika::finalize();

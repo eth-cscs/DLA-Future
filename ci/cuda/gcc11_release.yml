@@ -1,0 +1,30 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cuda gcc11 release deps:
+  extends: .build_deps_common
+  variables:
+    BASE_IMAGE: docker.io/nvidia/cuda:11.7.1-devel-ubuntu22.04
+    COMPILER: gcc@11
+    CXXSTD: 17
+    SPACK_ENVIRONMENT: ci/docker/release-cuda.yaml
+    USE_MKL: "ON"
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/build
+
+cuda gcc11 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-gpu
+  needs:
+    - cuda gcc11 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cuda-gcc11-release/deploy:$CI_COMMIT_SHA
+
+cuda gcc11 release test:
+  extends: .run_common
+  needs:
+    - cuda gcc11 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cuda gcc11 release build

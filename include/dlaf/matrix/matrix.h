@@ -68,18 +68,31 @@ public:
   ///
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
-  Matrix(const LocalElementSize& size, const TileElementSize& block_size);
+  Matrix(const LocalElementSize& size, const TileElementSize& tile_size)
+      : Matrix<T, D>(Distribution(size, tile_size)) {}
 
-  /// Create a distributed matrix of size @p size and block size @p block_size on the given 2D
-  /// communicator grid @p comm.
+  /// Create a distributed matrix of size @p size block size @p tile_size and tile size @p tile_size
+  /// on the given 2D communicator grid @p comm.
   ///
   /// @pre size.isValid(),
   /// @pre !blockSize.isEmpty().
-  Matrix(const GlobalElementSize& size, const TileElementSize& block_size,
-         const comm::CommunicatorGrid& comm);
+  Matrix(const GlobalElementSize& size, const TileElementSize& tile_size,
+         const comm::CommunicatorGrid& comm)
+      : Matrix<T, D>(Distribution(size, tile_size, comm.size(), comm.rank(), {0, 0})) {}
 
   /// Create a matrix distributed according to the distribution @p distribution.
-  Matrix(Distribution distribution);
+  Matrix(Distribution distribution) : Matrix<const T, D>(std::move(distribution)) {
+    const SizeType alignment = 64;
+    const SizeType ld = std::max<SizeType>(
+        1, util::ceilDiv(this->distribution().local_size().rows(), alignment) * alignment);
+
+    auto layout = colMajorLayout(this->distribution().local_size(), this->tile_size(), ld);
+
+    SizeType memory_size = layout.minMemSize();
+    memory::MemoryView<ElementType, D> mem(memory_size);
+
+    setUpTiles(mem, layout);
+  }
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// specifying the layout.
@@ -88,7 +101,18 @@ public:
   ///            of the local part of the matrix will be stored in memory,
   /// @pre distribution.localSize() == layout.size(),
   /// @pre distribution.blockSize() == layout.blockSize().
-  Matrix(Distribution distribution, const LayoutInfo& layout) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout)
+      : Matrix<const T, D>(std::move(distribution)) {
+    DLAF_ASSERT(this->distribution().local_size() == layout.size(),
+                "Size of distribution does not match layout size!", distribution.local_size(),
+                layout.size());
+    DLAF_ASSERT(this->distribution().tile_size() == layout.blockSize(), distribution.tile_size(),
+                layout.blockSize());
+
+    memory::MemoryView<ElementType, D> mem(layout.minMemSize());
+
+    setUpTiles(mem, layout);
+  }
 
   /// Create a non distributed matrix,
   /// which references elements that are already allocated in the memory.
@@ -97,7 +121,7 @@ public:
   ///            of the local part of the matrix are stored in memory,
   /// @param[in] ptr is the pointer to the first element of the local part of the matrix,
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(const LayoutInfo& layout, ElementType* ptr);
+  Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept : Matrix<const T, D>(layout, ptr) {}
 
   /// Create a matrix distributed according to the distribution @p distribution,
   /// which references elements that are already allocated in the memory.
@@ -108,7 +132,8 @@ public:
   /// @pre @p distribution.localSize() == @p layout.size(),
   /// @pre @p distribution.blockSize() == @p layout.blockSize(),
   /// @pre @p ptr refers to an allocated memory region of at least @c layout.minMemSize() elements.
-  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
+      : Matrix<const T, D>(std::move(distribution), layout, ptr) {}
 
   Matrix(const Matrix& rhs) = delete;
   Matrix(Matrix&& rhs) = default;
@@ -118,7 +143,7 @@ public:
 
   /// Returns a sender of the Tile with local index @p index.
   ///
-  /// @pre index.isIn(distribution().localNrTiles()).
+  /// @pre index.isIn(distribution().local_nr_tiles()).
   ReadWriteSenderType readwrite(const LocalTileIndex& index) noexcept {
     return tile_managers_[tileLinearIndex(index)].readwrite();
   }
@@ -128,7 +153,7 @@ public:
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadWriteSenderType readwrite(const GlobalTileIndex& index) noexcept {
-    return readwrite(this->distribution().localTileIndex(index));
+    return readwrite(this->distribution().local_tile_index(index));
   }
 
 public:
@@ -138,7 +163,7 @@ public:
   /// All accesses to the sub-pipelined matrix are sequenced after previous accesses and before later
   /// accesses to the original matrix, independently of when tiles are accessed in the sub-pipelined
   /// matrix.
-  Matrix subPipeline() {
+  Matrix subPipeline() noexcept {
     return Matrix(*this, SubPipelineTag{});
   }
 
@@ -150,8 +175,8 @@ public:
   /// matrix.
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
-  /// @pre blockSize() == baseTileSize()
-  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) {
+  /// @pre blockSize() == tile_size()
+  Matrix retiledSubPipeline(const LocalTileSize& tiles_per_block) noexcept {
     return Matrix(*this, tiles_per_block);
   }
 
@@ -160,8 +185,9 @@ protected:
 
 private:
   using typename Matrix<const T, D>::SubPipelineTag;
-  Matrix(Matrix& mat, const SubPipelineTag);
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block);
+  Matrix(Matrix& mat, const SubPipelineTag tag) noexcept : Matrix<const T, D>(mat, tag) {}
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
+      : Matrix<const T, D>(mat, tiles_per_block) {}
 
   using Matrix<const T, D>::setUpTiles;
   using Matrix<const T, D>::tile_managers_;
@@ -179,14 +205,27 @@ public:
   using ReadOnlySenderType = ReadOnlyTileSender<T, D>;
   friend Matrix<ElementType, D>;
 
-  Matrix(const LayoutInfo& layout, ElementType* ptr);
+  Matrix(const LayoutInfo& layout, ElementType* ptr) noexcept
+      : MatrixBase({layout.size(), layout.blockSize()}) {
+    memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
+    setUpTiles(mem, layout);
+  }
 
-  Matrix(const LayoutInfo& layout, const ElementType* ptr)
+  Matrix(const LayoutInfo& layout, const ElementType* ptr) noexcept
       : Matrix(layout, const_cast<ElementType*>(ptr)) {}
 
-  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept;
+  Matrix(Distribution distribution, const LayoutInfo& layout, ElementType* ptr) noexcept
+      : MatrixBase(std::move(distribution)) {
+    DLAF_ASSERT(this->distribution().local_size() == layout.size(), distribution.local_size(),
+                layout.size());
+    DLAF_ASSERT(this->distribution().tile_size() == layout.blockSize(), distribution.tile_size(),
+                layout.blockSize());
 
-  Matrix(Distribution distribution, const LayoutInfo& layout, const ElementType* ptr)
+    memory::MemoryView<ElementType, D> mem(ptr, layout.minMemSize());
+    setUpTiles(mem, layout);
+  }
+
+  Matrix(Distribution distribution, const LayoutInfo& layout, const ElementType* ptr) noexcept
       : Matrix(std::move(distribution), layout, const_cast<ElementType*>(ptr)) {}
 
   Matrix(const Matrix& rhs) = delete;
@@ -197,7 +236,7 @@ public:
 
   /// Returns a read-only sender of the Tile with local index @p index.
   ///
-  /// @pre index.isIn(distribution().localNrTiles()).
+  /// @pre index.isIn(distribution().local_nr_tiles()).
   ReadOnlySenderType read(const LocalTileIndex& index) noexcept {
     return tile_managers_[tileLinearIndex(index)].read();
   }
@@ -207,7 +246,7 @@ public:
   /// @pre the global tile is stored in the current process,
   /// @pre index.isIn(globalNrTiles()).
   ReadOnlySenderType read(const GlobalTileIndex& index) {
-    return read(distribution().localTileIndex(index));
+    return read(distribution().local_tile_index(index));
   }
 
   /// Synchronization barrier for all local tiles in the matrix
@@ -234,7 +273,7 @@ public:
   /// matrix.
   ///
   /// @pre blockSize() is divisible by @p tiles_per_block
-  /// @pre blockSize() == baseTileSize()
+  /// @pre blockSize() == tile_size()
   Matrix retiledSubPipelineConst(const LocalTileSize& tiles_per_block) {
     return Matrix(*this, tiles_per_block);
   }
@@ -253,14 +292,22 @@ public:
   /// Marking a tile as done means it can no longer be accessed.  Marking a tile as done also disallows
   /// creation of sub pipelines from the full matrix.
   void done(const GlobalTileIndex& index) noexcept {
-    done(distribution().localTileIndex(index));
+    done(distribution().local_tile_index(index));
   }
 
 protected:
-  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {}
+  Matrix(Distribution distribution) : internal::MatrixBase{std::move(distribution)} {
+    DLAF_ASSERT((distribution.offset() == GlobalElementIndex{0, 0}), "not supported",
+                distribution.offset());
+  }
   struct SubPipelineTag {};
-  Matrix(Matrix& mat, const SubPipelineTag);
-  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block);
+  Matrix(Matrix& mat, const SubPipelineTag) noexcept : MatrixBase(mat.distribution()) {
+    setUpSubPipelines(mat);
+  }
+  Matrix(Matrix& mat, const LocalTileSize& tiles_per_block) noexcept
+      : MatrixBase(mat.distribution(), tiles_per_block) {
+    setUpRetiledSubPipelines(mat, tiles_per_block);
+  }
 
   void setUpTiles(const memory::MemoryView<ElementType, D>& mem, const LayoutInfo& layout) noexcept;
   void setUpSubPipelines(Matrix<const T, D>&) noexcept;
@@ -269,169 +316,117 @@ protected:
   std::vector<internal::TilePipeline<T, D>> tile_managers_;
 };
 
-// Note: the templates of the following helper functions are inverted w.r.t. the Matrix templates
-// to allow the user to only specify the device and let the compiler deduce the type T.
+template <class T, Device D>
+void Matrix<const T, D>::waitLocalTiles() noexcept {
+  // Note:
+  // Using a readwrite access to the tile ensures that the access is exclusive and not shared
+  // among multiple tasks.
 
-// Local versions
+  const auto range_local = common::iterate_range2d(distribution().local_nr_tiles());
 
-/// Create a non distributed matrix of size @p size and block size @p block_size
-/// which references elements
-/// that are already allocated in the memory with a column major layout.
-///
-/// @param[in] ld the leading dimension of the matrix,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre ld >= max(1, size.row()),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromColMajor(const LocalElementSize& size, const TileElementSize& block_size,
-                                      SizeType ld, T* ptr) {
-  return Matrix<T, D>(colMajorLayout(size, block_size, ld), ptr);
+  auto s = pika::execution::experimental::when_all_vector(internal::selectGeneric(
+               [this](const LocalTileIndex& index) {
+                 return this->tile_managers_[tileLinearIndex(index)].readwrite();
+               },
+               range_local)) |
+           pika::execution::experimental::drop_value();
+  pika::this_thread::experimental::sync_wait(std::move(s));
 }
 
-/// Create a non distributed matrix of size @p size and block size @p block_size
-/// which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
-                                  T* ptr) {
-  return Matrix<T, D>(tileLayout(size, block_size), ptr);
+template <class T, Device D>
+void Matrix<const T, D>::setUpTiles(const memory::MemoryView<ElementType, D>& mem,
+                                    const LayoutInfo& layout) noexcept {
+  const auto& nr_tiles = layout.nrTiles();
+
+  DLAF_ASSERT(tile_managers_.empty(), "");
+  tile_managers_.reserve(to_sizet(nr_tiles.linear_size()));
+
+  using MemView = memory::MemoryView<T, D>;
+
+  for (SizeType j = 0; j < nr_tiles.cols(); ++j) {
+    for (SizeType i = 0; i < nr_tiles.rows(); ++i) {
+      LocalTileIndex ind(i, j);
+      TileElementSize tile_size = layout.tileSize(ind);
+      tile_managers_.emplace_back(
+          TileDataType(tile_size, MemView(mem, layout.tileOffset(ind), layout.minTileMemSize(tile_size)),
+                       layout.ldTile()));
+    }
+  }
 }
 
-/// Create a non distributed matrix of size @p size and block size @p block_size
-/// which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// @param[in] ld_tile the leading dimension of the tiles,
-/// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row())),
-/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const LocalElementSize& size, const TileElementSize& block_size,
-                                  SizeType ld_tile, SizeType tiles_per_col, T* ptr) {
-  return Matrix<T, D>(tileLayout(size, block_size, ld_tile, tiles_per_col), ptr);
+template <class T, Device D>
+void Matrix<const T, D>::setUpSubPipelines(Matrix<const T, D>& mat) noexcept {
+  namespace ex = pika::execution::experimental;
+
+  // TODO: Optimize read-after-read. This is currently forced to access the base
+  // matrix in readwrite mode so that we can move the tile into the
+  // sub-pipeline. This is semantically not required and should eventually be
+  // optimized.
+  tile_managers_.reserve(mat.tile_managers_.size());
+  for (auto& tm : mat.tile_managers_) {
+    tile_managers_.emplace_back(Tile<T, D>());
+    auto s = ex::when_all(tile_managers_.back().readwrite_with_wrapper(), tm.readwrite()) |
+             ex::then([](internal::TileAsyncRwMutexReadWriteWrapper<T, D> empty_tile_wrapper,
+                         Tile<T, D> tile) { empty_tile_wrapper.get() = std::move(tile); });
+    ex::start_detached(std::move(s));
+  }
 }
 
-// Distributed versions
+template <class T, Device D>
+void Matrix<const T, D>::setUpRetiledSubPipelines(Matrix<const T, D>& mat,
+                                                  const LocalTileSize& tiles_per_block) noexcept {
+  DLAF_ASSERT(mat.blockSize() == mat.tile_size(), mat.blockSize(), mat.tile_size());
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a column major layout.
-///
-/// @param[in] ld the leading dimension of the matrix,
-/// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ld >= max(1, size.row()),
-/// @pre @p source_rank_index.isIn(grid_size),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromColMajor(const GlobalElementSize& size, const TileElementSize& block_size,
-                                      SizeType ld, const comm::CommunicatorGrid& comm,
-                                      const comm::Index2D& source_rank_index, T* ptr) {
-  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = colMajorLayout(distribution.localSize(), block_size, ld);
+  using common::internal::vector;
+  namespace ex = pika::execution::experimental;
 
-  return Matrix<T, D>(std::move(distribution), layout, ptr);
-}
+  const auto n = to_sizet(distribution().local_nr_tiles().linear_size());
+  tile_managers_.reserve(n);
+  for (std::size_t i = 0; i < n; ++i) {
+    tile_managers_.emplace_back(Tile<T, D>());
+  }
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a column major layout.
-///
-/// This method assumes @p source_rank_index to be {0,0}.
-/// @param[in] ld the leading dimension of the matrix,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ld >= max(1, size.row()),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromColMajor(const GlobalElementSize& size, const TileElementSize& block_size,
-                                      SizeType ld, const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromColMajor<D>(size, block_size, ld, comm, {0, 0}, ptr);
-}
+  const auto tile_size = distribution().tile_size();
+  vector<SubTileSpec> specs;
+  vector<LocalTileIndex> indices;
+  specs.reserve(tiles_per_block.linear_size());
+  indices.reserve(tiles_per_block.linear_size());
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p source_rank_index.isIn(grid_size),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                  const comm::CommunicatorGrid& comm,
-                                  const comm::Index2D& source_rank_index, T* ptr) {
-  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = tileLayout(distribution.localSize(), block_size);
+  // TODO: Optimize read-after-read. This is currently forced to access the base matrix in readwrite
+  // mode so that we can move the tile into the sub-pipeline. This is semantically not required and
+  // should eventually be optimized.
+  for (const auto& orig_tile_index : common::iterate_range2d(mat.distribution().local_nr_tiles())) {
+    const auto original_tile_size = mat.tileSize(mat.distribution().global_tile_index(orig_tile_index));
 
-  return Matrix<T, D>(std::move(distribution), layout, ptr);
-}
+    for (SizeType j = 0; j < original_tile_size.cols(); j += tile_size.cols())
+      for (SizeType i = 0; i < original_tile_size.rows(); i += tile_size.rows()) {
+        indices.emplace_back(
+            LocalTileIndex{orig_tile_index.row() * tiles_per_block.rows() + i / tile_size.rows(),
+                           orig_tile_index.col() * tiles_per_block.cols() + j / tile_size.cols()});
+        specs.emplace_back(SubTileSpec{{i, j},
+                                       tileSize(distribution().global_tile_index(indices.back()))});
+      }
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// This method assumes @p source_rank_index to be {0,0}.
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                  const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromTile<D>(size, block_size, comm, {0, 0}, ptr);
-}
+    auto sub_tiles =
+        splitTileDisjoint(mat.tile_managers_[mat.tileLinearIndex(orig_tile_index)].readwrite(), specs);
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// @param[in] ld_tile the leading dimension of the tiles,
-/// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
-/// @param[in] source_rank_index is the rank of the process which contains the top left tile of the matrix,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row())),
-/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.row()),
-/// @pre @p source_rank_index.isIn(grid_size),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                  SizeType ld_tile, SizeType tiles_per_col,
-                                  const comm::CommunicatorGrid& comm,
-                                  const comm::Index2D& source_rank_index, T* ptr) {
-  Distribution distribution(size, block_size, comm.size(), comm.rank(), source_rank_index);
-  auto layout = tileLayout(distribution.localSize(), block_size, ld_tile, tiles_per_col);
+    DLAF_ASSERT_HEAVY(specs.size() == indices.size(), specs.size(), indices.size());
+    for (SizeType j = 0; j < specs.size(); ++j) {
+      const auto i = tileLinearIndex(indices[j]);
 
-  return Matrix<T, D>(std::move(distribution), layout, ptr);
-}
+      // Move subtile to be managed by the tile manager of RetiledMatrix. We
+      // use readwrite_with_wrapper to get access to the original tile managed
+      // by the underlying async_rw_mutex.
+      auto s =
+          ex::when_all(tile_managers_[i].readwrite_with_wrapper(), std::move(sub_tiles[to_sizet(j)])) |
+          ex::then([](internal::TileAsyncRwMutexReadWriteWrapper<T, D> empty_tile_wrapper,
+                      Tile<T, D> sub_tile) { empty_tile_wrapper.get() = std::move(sub_tile); });
+      ex::start_detached(std::move(s));
+    }
 
-/// Create a distributed matrix of size @p size and block size @p block_size
-/// on the given 2D communicator grid @p comm which references elements
-/// that are already allocated in the memory with a tile layout.
-///
-/// This method assumes @p source_rank_index to be {0,0}.
-/// @param[in] ld_tile the leading dimension of the tiles,
-/// @param[in] tiles_per_col the number of tiles stored for each column of tiles,
-/// @param[in] ptr is the pointer to the first element of the local part of the matrix,
-/// @pre @p ld_tile >= max(1, min(block_size.row(), size.row()),
-/// @pre @p tiles_per_col >= ceilDiv(size.row(), block_size.col()),
-/// @pre @p ptr refers to an allocated memory region which can contain the elements of the local matrix
-/// stored in the given layout.
-template <Device D, class T>
-Matrix<T, D> createMatrixFromTile(const GlobalElementSize& size, const TileElementSize& block_size,
-                                  SizeType ld_tile, SizeType tiles_per_col,
-                                  const comm::CommunicatorGrid& comm, T* ptr) {
-  return createMatrixFromTile<D>(size, block_size, ld_tile, tiles_per_col, comm, {0, 0}, ptr);
+    specs.clear();
+    indices.clear();
+  }
 }
 
 /// Returns a container grouping all the tiles retrieved using Matrix::read
@@ -476,6 +471,3 @@ DLAF_MATRIX_ETI(extern, std::complex<double>, Device::GPU)
 using matrix::Matrix;
 #endif
 }
-
-#include <dlaf/matrix/matrix.tpp>
-#include <dlaf/matrix/matrix_const.tpp>

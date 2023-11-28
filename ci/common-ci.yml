@@ -1,0 +1,103 @@
+include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
+
+stages:
+  - build_deps
+  - build
+  - test
+
+##
+## BUILDS
+##
+
+.build_deps_common:
+  extends: .container-builder
+  stage: build_deps
+  timeout: 6 hours
+  before_script:
+    - TAG_IMAGE=`echo ${BASE_IMAGE##*/} | sed 's/[:]//g'`
+    - TAG_APTGET=`echo ${EXTRA_APTGET} | sha256sum - | head -c 6`
+    - TAG_COMPILER=`echo ${COMPILER}_CXX${CXXSTD} | sed 's/[@]//g'`
+    - TAG_DOCKERFILE=`sha256sum $DOCKERFILE | head -c 16`
+    - TAG_SPACK=`echo $SPACK_SHA | head -c 8`
+    - TAG_REPO=`find $SPACK_DLAF_REPO -type f -exec sha256sum {} \; | sha256sum - | head -c 16`
+    - TAG_ENVIRONMENT=`cat $SPACK_ENVIRONMENT $COMMON_SPACK_ENVIRONMENT | sha256sum | head -c 16`
+    - TAG=${TAG_IMAGE}-${TAG_APTGET}-${TAG_COMPILER}-MKL${USE_MKL}-${TAG_DOCKERFILE}-${TAG_SPACK}-${TAG_REPO}-${TAG_ENVIRONMENT}
+    - export PERSIST_IMAGE_NAME=$BUILD_IMAGE:$TAG
+    - echo "BUILD_IMAGE=$PERSIST_IMAGE_NAME" > build.env
+    - echo "USE_MKL=$USE_MKL" >> build.env
+    - echo "USE_ROCBLAS=$USE_ROCBLAS" >> build.env
+    - echo "USE_CODECOV=$USE_CODECOV" >> build.env
+    - 'echo "INFO: Building image $PERSIST_IMAGE_NAME"'
+    - 'echo "INFO: Using NUM_CORES_BUILD_DEPS=$NUM_CORES_BUILD_DEPS"'
+  artifacts:
+    reports:
+      dotenv: build.env
+  variables:
+    SPACK_SHA: v0.21.0
+    SPACK_DLAF_REPO: ./spack
+    DOCKER_BUILD_ARGS: '[
+        "BASE_IMAGE",
+        "BUILDKIT_INLINE_CACHE=1",
+        "SPACK_SHA",
+        "EXTRA_APTGET",
+        "COMPILER",
+        "CXXSTD",
+        "SPACK_ENVIRONMENT",
+        "COMMON_SPACK_ENVIRONMENT",
+        "SPACK_DLAF_REPO",
+        "USE_MKL",
+        "NUM_PROCS=$NUM_CORES_BUILD_DEPS"
+      ]'
+    # default configuration variables
+    # can be overwritten in the configuration as needed
+    DOCKERFILE: ci/docker/build.Dockerfile
+    BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET: ""
+    CXXSTD: 17
+    USE_MKL: "OFF"
+    USE_ROCBLAS: "OFF"
+    COMMON_SPACK_ENVIRONMENT: ci/docker/common.yaml
+    USE_CODECOV: "false"
+
+.build_common:
+  extends: .container-builder
+  stage: build
+  timeout: 2 hours
+  before_script:
+    - 'echo "INFO: Using NUM_CORES_BUILD_DLAF=$NUM_CORES_BUILD_DLAF"'
+  after_script:
+    - podman run -v $PWD/ci/ctest_to_gitlab.sh:/ctest_to_gitlab.sh $DEPLOY_IMAGE /ctest_to_gitlab.sh "$DEPLOY_IMAGE" "$USE_CODECOV" "$THREADS_PER_NODE" "$SLURM_CONSTRAINT" > pipeline.yml
+  variables:
+    PERSIST_IMAGE_NAME: $DEPLOY_IMAGE
+    DOCKER_BUILD_ARGS: '[
+        "BUILD_IMAGE",
+        "DEPLOY_BASE_IMAGE",
+        "EXTRA_APTGET_DEPLOY",
+        "USE_MKL",
+        "USE_ROCBLAS",
+        "NUM_PROCS=$NUM_CORES_BUILD_DLAF"
+      ]'
+    # default configuration variables
+    # can be overwritten in the configuration as needed
+    DOCKERFILE: ci/docker/deploy.Dockerfile
+    DEPLOY_BASE_IMAGE: docker.io/ubuntu:22.04
+    EXTRA_APTGET_DEPLOY: ""
+  artifacts:
+    paths:
+      - pipeline.yml
+
+.build_for_daint-mc:
+  variables:
+    SLURM_CONSTRAINT: mc
+    THREADS_PER_NODE: 72
+
+.build_for_daint-gpu:
+  variables:
+    SLURM_CONSTRAINT: gpu
+    THREADS_PER_NODE: 24
+
+.run_common:
+  stage: test
+  trigger:
+    strategy: depend

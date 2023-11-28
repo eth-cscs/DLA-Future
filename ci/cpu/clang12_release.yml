@@ -1,0 +1,29 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu clang12 release deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-12 libomp-12-dev"
+    COMPILER: clang@12
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang12-release/build
+
+cpu clang12 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu clang12 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang12-release/deploy:$CI_COMMIT_SHA
+
+cpu clang12 release test:
+  extends: .run_common
+  needs:
+    - cpu clang12 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu clang12 release build

@@ -46,13 +46,13 @@ bool square_size(const MatrixLike& m) noexcept {
 /// Returns true if the matrix block size is square.
 template <class MatrixLike>
 bool square_blocksize(const MatrixLike& m) noexcept {
-  return m.blockSize().rows() == m.blockSize().cols();
+  return m.block_size().rows() == m.block_size().cols();
 }
 
 /// Returns true if the matrix has a single tile per block.
 template <class MatrixLike>
 bool single_tile_per_block(const MatrixLike& m) noexcept {
-  return m.blockSize() == m.baseTileSize();
+  return m.block_size() == m.tile_size();
 }
 
 /// Returns true if matrices have equal sizes.
@@ -64,12 +64,12 @@ bool equal_size(const MatrixLikeA& lhs, const MatrixLikeB& rhs) noexcept {
 /// Returns true if matrices have equal blocksizes.
 template <class T, Device D1, Device D2>
 bool equal_blocksize(const Matrix<const T, D1>& lhs, Matrix<const T, D2>& rhs) noexcept {
-  return lhs.blockSize() == rhs.blockSize();
+  return lhs.block_size() == rhs.block_size();
 }
 
 /// Returns true if the matrix is local to a process.
-template <class T, Device D>
-bool local_matrix(const Matrix<const T, D>& m) noexcept {
+template <template <class, Device> class MatrixLike, class T, Device D>
+bool local_matrix(const MatrixLike<const T, D>& m) noexcept {
   return m.commGridSize() == comm::Size2D(1, 1);
 }
 
@@ -77,6 +77,13 @@ bool local_matrix(const Matrix<const T, D>& m) noexcept {
 template <class T, Device D>
 bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
+}
+
+/// Returns true if the matrix is distributed on the communication grid.
+template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
+          class T, Device D>
+bool same_process_grid(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D>& b) noexcept {
+  return a.commGridSize() == b.commGridSize() && a.rankIndex() == b.rankIndex();
 }
 
 /// Returns true if the matrices are distributed the same way.
@@ -98,11 +105,25 @@ bool multipliable_sizes(common::Size2D<IndexT, Tag> a, common::Size2D<IndexT, Ta
 }
 
 /// Returns true if matrices `a`, `b` and `c` have matrix multipliable sizes and block sizes.
-template <class T, Device D>
-bool multipliable(const Matrix<const T, D>& a, const Matrix<const T, D>& b, const Matrix<const T, D>& c,
-                  const blas::Op opA, const blas::Op opB) noexcept {
-  return multipliable_sizes(a.size(), b.size(), c.size(), opA, opB) &&
-         multipliable_sizes(a.blockSize(), b.blockSize(), c.blockSize(), opA, opB);
+template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
+          template <class, Device> class MatrixLikeC, class T, Device D>
+bool multipliable(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D>& b,
+                  const MatrixLikeC<const T, D>& c, const blas::Op opA, const blas::Op opB) noexcept {
+  const bool isSizeOk = multipliable_sizes(a.size(), b.size(), c.size(), opA, opB);
+
+  if (a.size().isEmpty() || c.size().isEmpty())
+    return isSizeOk;
+
+  const bool allSameGrid = same_process_grid(a, b) && same_process_grid(b, c);
+  const bool isTileSizeOk = multipliable_sizes(a.tile_size(), b.tile_size(), c.tile_size(), opA, opB);
+  const bool isOffsetOk = multipliable_sizes(a.tile_size_of({0, 0}), b.tile_size_of({0, 0}),
+                                             c.tile_size_of({0, 0}), opA, opB);
+
+  if (local_matrix(c))
+    return allSameGrid && isSizeOk && isTileSizeOk && isOffsetOk;
+
+  // TODO distributed (fix offset)
+  return allSameGrid && isSizeOk && isTileSizeOk && isOffsetOk;
 }
 
 namespace util {
@@ -149,10 +170,12 @@ template <Backend backend, class T, Device D>
 void set0(pika::execution::thread_priority priority, LocalTileIndex begin, LocalTileSize sz,
           Matrix<T, D>& matrix) {
   using dlaf::internal::Policy;
+  using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
   for (const auto& idx : iterate_range2d(begin, sz))
-    start_detached(matrix.readwrite(idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(matrix.readwrite(idx) |
+                   tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 /// \overload set0
@@ -161,17 +184,19 @@ void set0(pika::execution::thread_priority priority, LocalTileIndex begin, Local
 ///
 template <Backend backend, class T, Device D>
 void set0(pika::execution::thread_priority priority, Matrix<T, D>& matrix) {
-  set0<backend>(priority, LocalTileIndex(0, 0), matrix.distribution().localNrTiles(), matrix);
+  set0<backend>(priority, LocalTileIndex(0, 0), matrix.distribution().local_nr_tiles(), matrix);
 }
 
 /// Sets all the elements of all the tiles in the active range to zero
 template <Backend backend, class T, Coord axis, Device D, StoreTransposed storage>
 void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>& panel) {
   using dlaf::internal::Policy;
+  using pika::execution::thread_stacksize;
   using pika::execution::experimental::start_detached;
 
   for (const auto& tile_idx : panel.iteratorLocal())
-    start_detached(panel.readwrite(tile_idx) | tile::set0(Policy<backend>(priority)));
+    start_detached(panel.readwrite(tile_idx) |
+                   tile::set0(Policy<backend>(priority, thread_stacksize::nostack)));
 }
 
 /// Set the elements of the matrix.
@@ -182,10 +207,12 @@ void set0(pika::execution::thread_priority priority, Panel<axis, T, D, storage>&
 /// @pre el_f return type should be T.
 template <class T, class ElementGetter>
 void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
+  using pika::execution::thread_stacksize;
+
   const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
     auto set_f = [tl_index, el_f = el_f](const TileType& tile) {
@@ -195,8 +222,8 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f) {
       }
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(set_f), matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -229,6 +256,18 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
   set(matrix, el_op_f);
 }
 
+/// Set the elements of the matrix.
+///
+/// The diagonal elements are set to 1 and the other elements to 0.
+template <class T>
+void set_identity(Matrix<T, Device::CPU>& matrix) {
+  set(matrix, [](const GlobalElementIndex& ij) {
+    if (ij.row() == ij.col())
+      return T{1};
+    return T{0};
+  });
+}
+
 /// Set the matrix with random values whose absolute values are less than 1.
 ///
 /// Values will be random numbers in:
@@ -241,10 +280,12 @@ void set(Matrix<T, Device::CPU>& matrix, ElementGetter el_f, const blas::Op op) 
 /// will have the same set of values.
 template <class T>
 void set_random(Matrix<T, Device::CPU>& matrix) {
+  using pika::execution::thread_stacksize;
+
   const Distribution& dist = matrix.distribution();
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
     auto seed = tl_index.col() + tl_index.row() * matrix.size().cols();
 
     using TileType = typename std::decay_t<decltype(matrix)>::TileType;
@@ -255,8 +296,8 @@ void set_random(Matrix<T, Device::CPU>& matrix) {
       }
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(rnd_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(rnd_f), matrix.readwrite(tile_wrt_local));
   }
 }
 
@@ -339,6 +380,8 @@ void set_lower_and_upper_tile(const Tile<T, Device::CPU>& tile, internal::getter
 template <class T>
 void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const SizeType offset_value,
                                       std::optional<SizeType> band_size = std::nullopt) {
+  using pika::execution::thread_stacksize;
+
   // note:
   // By assuming square blocksizes, it is easier to locate elements. In fact:
   // - Elements on the diagonal are stored in the diagonal of the diagonal tiles
@@ -350,12 +393,12 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
   DLAF_ASSERT(square_size(matrix), matrix);
   DLAF_ASSERT(square_blocksize(matrix), matrix);
 
-  auto full_tile_size = matrix.blockSize();
+  auto full_tile_size = matrix.block_size();
 
-  for (auto tile_wrt_local : iterate_range2d(dist.localNrTiles())) {
-    GlobalTileIndex tile_wrt_global = dist.globalTileIndex(tile_wrt_local);
+  for (auto tile_wrt_local : iterate_range2d(dist.local_nr_tiles())) {
+    GlobalTileIndex tile_wrt_global = dist.global_tile_index(tile_wrt_local);
 
-    auto tl_index = dist.globalElementIndex(tile_wrt_global, {0, 0});
+    auto tl_index = dist.global_element_index(tile_wrt_global, {0, 0});
 
     // compute the same seed for original and "transposed" tiles, so transposed ones will know the
     // values of the original one without the need of accessing real values (nor communication in case
@@ -376,8 +419,8 @@ void set_random_hermitian_with_offset(Matrix<T, Device::CPU>& matrix, const Size
                                            band_size);
     };
 
-    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(), std::move(set_hp_f),
-                                    matrix.readwrite(tile_wrt_local));
+    dlaf::internal::transformDetach(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                    std::move(set_hp_f), matrix.readwrite(tile_wrt_local));
   }
 }
 

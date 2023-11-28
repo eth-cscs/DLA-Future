@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdlib>
 #include <filesystem>
 #include <string>
 
@@ -30,10 +31,21 @@
 using namespace dlaf;
 using dlaf::matrix::internal::FileHDF5;
 
+constexpr auto env_hdf5_output_path = "DLAF_HDF5_TEST_OUTPUT_PATH";
+const std::filesystem::path filename = "test_matrix_hdf5.h5";
+
+// Get path from environment variable if defined, otherwise return empty path
+auto path = []() {
+  if (const auto p = std::getenv(env_hdf5_output_path)) {
+    return std::filesystem::path(p);
+  }
+  return std::filesystem::path("");
+};
+
 template <typename T>
 class MatrixHDF5Test : public ::testing::Test {
 protected:
-  MatrixHDF5Test() : world(MPI_COMM_WORLD), filepath("test_matrix_hdf5.h5") {
+  MatrixHDF5Test() : world(MPI_COMM_WORLD), filepath(path() / filename) {
     if (exists(filepath) && isMasterRank())
       std::filesystem::remove(filepath);
   }

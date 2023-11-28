@@ -1,0 +1,29 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu clang15 release deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "clang-15"
+    COMPILER: clang@15
+    USE_MKL: "ON"
+    SPACK_ENVIRONMENT: ci/docker/release-cpu-serial.yaml
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/build
+
+cpu clang15 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu clang15 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-clang15-release/deploy:$CI_COMMIT_SHA
+
+cpu clang15 release test:
+  extends: .run_common
+  needs:
+    - cpu clang15 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu clang15 release build

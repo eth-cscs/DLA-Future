@@ -1,0 +1,30 @@
+include:
+  - local: 'ci/common-ci.yml'
+
+cpu gcc12 cxx20 release deps:
+  extends: .build_deps_common
+  variables:
+    EXTRA_APTGET: "g++-12 gfortran-12"
+    COMPILER: gcc@12
+    CXXSTD: 20
+    SPACK_ENVIRONMENT: ci/docker/release-cpu.yaml
+    USE_MKL: "ON"
+    BUILD_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-release/build
+
+cpu gcc12 cxx20 release build:
+  extends:
+    - .build_common
+    - .build_for_daint-mc
+  needs:
+    - cpu gcc12 cxx20 release deps
+  variables:
+    DEPLOY_IMAGE: $CSCS_REGISTRY_PATH/cpu-gcc12-cxx20-release/deploy:$CI_COMMIT_SHA
+
+cpu gcc12 cxx20 release test:
+  extends: .run_common
+  needs:
+    - cpu gcc12 cxx20 release build
+  trigger:
+    include:
+      - artifact: pipeline.yml
+        job: cpu gcc12 cxx20 release build

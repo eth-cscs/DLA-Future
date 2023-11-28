@@ -10,7 +10,7 @@
 
 spack:
   include:
-  - common.yaml
+  - /spack_environment/common.yaml
 
   view: false
   concretizer:
@@ -18,7 +18,7 @@ spack:
       true
 
   specs:
-    - dla-future@master +miniapps +ci-test +ci-check-threads ^intel-mkl threads=openmp ^mpich
+    - dla-future@master +miniapps +ci-test +ci-check-threads
 
   packages:
     all:

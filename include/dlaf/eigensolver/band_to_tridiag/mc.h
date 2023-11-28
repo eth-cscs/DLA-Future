@@ -229,13 +229,15 @@ public:
   template <Device D, class Sender>
   auto copy_diag(SizeType j, Sender source) noexcept {
     using dlaf::internal::transform;
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     constexpr auto B = dlaf::matrix::internal::CopyBackend_v<D, Device::CPU>;
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
+          dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack),
           [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -269,7 +271,7 @@ public:
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(is_accessible_from_GPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
+          dlaf::internal::Policy<B>(thread_priority::high),
           [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Lower = blas::Uplo::Lower;
@@ -306,14 +308,15 @@ public:
   template <Device D, class Sender>
   auto copy_off_diag(const SizeType j, Sender source) noexcept {
     using dlaf::internal::transform;
-
+    using pika::execution::thread_priority;
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     constexpr auto B = dlaf::matrix::internal::CopyBackend_v<D, Device::CPU>;
 
     if constexpr (D == Device::CPU) {
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
+          dlaf::internal::Policy<B>(thread_priority::high, thread_stacksize::nostack),
           [j, this](const matrix::Tile<const T, D>& source) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -346,7 +349,7 @@ public:
     else if constexpr (D == Device::GPU) {
       DLAF_ASSERT_HEAVY(is_accessible_from_GPU(), "BandBlock memory should be accessible from GPU");
       return transform(
-          dlaf::internal::Policy<B>(pika::execution::thread_priority::high),
+          dlaf::internal::Policy<B>(thread_priority::high),
           [j, this](const matrix::Tile<const T, D>& source, whip::stream_t stream) {
             constexpr auto General = blas::Uplo::General;
             constexpr auto Upper = blas::Uplo::Upper;
@@ -682,6 +685,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using common::internal::vector;
   using util::ceilDiv;
 
+  using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   using pika::resource::get_num_threads;
   using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
   using TileVector = std::vector<matrix::Tile<T, Device::CPU>>;
@@ -689,7 +694,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   namespace ex = pika::execution::experimental;
 
-  const auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
+  const auto policy_hp = dlaf::internal::Policy<Backend::MC>(thread_priority::high);
+  const auto policy_hp_nostack =
+      dlaf::internal::Policy<Backend::MC>(thread_priority::high, thread_stacksize::nostack);
 
   // note: A is square and has square blocksize
   const SizeType size = mat_a.size().cols();
@@ -825,12 +832,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     sem = std::move(sem_next);
   }
 
-  auto copy_tridiag = [policy_hp, a_ws, size, nb, &mat_trid, copy_tridiag_task](SizeType i, auto&& dep) {
+  auto copy_tridiag = [policy_hp_nostack, a_ws, size, nb, &mat_trid, copy_tridiag_task](SizeType i,
+                                                                                        auto&& dep) {
     const auto tile_index = (i - 1) / nb;
     const auto start = tile_index * nb;
     ex::when_all(ex::just(start, std::min(nb, size - start), std::min(nb, size - 1 - start)),
                  mat_trid.readwrite(GlobalTileIndex{tile_index, 0}), std::forward<decltype(dep)>(dep)) |
-        dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
+        dlaf::internal::transformDetach(policy_hp_nostack, copy_tridiag_task);
   };
 
   auto dep = ex::just(std::move(sem)) |
@@ -1011,6 +1019,8 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   using matrix::internal::CopyBackend_v;
   using util::ceilDiv;
 
+  using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   using pika::resource::get_num_threads;
   using SemaphorePtr = std::shared_ptr<pika::counting_semaphore<>>;
   using Tile = matrix::Tile<T, Device::CPU>;
@@ -1045,7 +1055,9 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   const auto prev_rank = (rank == 0 ? ranks - 1 : rank - 1);
   const auto next_rank = (rank + 1 == ranks ? 0 : rank + 1);
 
-  auto policy_hp = dlaf::internal::Policy<Backend::MC>(pika::execution::thread_priority::high);
+  auto policy_hp = dlaf::internal::Policy<Backend::MC>(thread_priority::high);
+  auto policy_hp_nostack =
+      dlaf::internal::Policy<Backend::MC>(thread_priority::high, thread_stacksize::nostack);
 
   const SizeType nb_band = get1DBlockSize(nb);
   const SizeType tiles_per_block = nb_band / nb;
@@ -1194,10 +1206,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             nr_release = ceilDiv(size - k * nb, b) + 1;
           }
 
-          prev_dep =
-              ex::when_all(ex::just(nr_release, sems[k_block_local]), std::move(prev_dep),
-                           std::move(dep)) |
-              dlaf::internal::transform(policy_hp, [](SizeType nr, auto&& sem) { sem->release(nr); });
+          prev_dep = ex::when_all(ex::just(nr_release, sems[k_block_local]), std::move(prev_dep),
+                                  std::move(dep)) |
+                     dlaf::internal::transform(policy_hp_nostack,
+                                               [](SizeType nr, auto&& sem) { sem->release(nr); });
         }
         else {
           if (rank == rank_diag) {
@@ -1469,7 +1481,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
   // Rank 0 (owner of the first band matrix block) copies the last parts of the tridiag matrix.
   if (rank == 0) {
-    auto copy_tridiag = [policy_hp, size, nb, &mat_trid, &copy_tridiag_task](
+    auto copy_tridiag = [policy_hp_nostack, size, nb, &mat_trid, &copy_tridiag_task](
                             std::shared_ptr<BandBlock<T, true>> a_block, SizeType i, auto&& dep) {
       const auto tile_index = (i - 1) / nb;
       const auto start = tile_index * nb;
@@ -1477,7 +1489,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                             std::min(nb, size - 1 - start)),
                    mat_trid.readwrite(GlobalTileIndex{tile_index, 0}),
                    std::forward<decltype(dep)>(dep)) |
-          dlaf::internal::transformDetach(policy_hp, copy_tridiag_task);
+          dlaf::internal::transformDetach(policy_hp_nostack, copy_tridiag_task);
     };
 
     auto dep = ex::just(std::move(sems[0])) |

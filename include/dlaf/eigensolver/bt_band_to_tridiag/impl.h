@@ -510,13 +510,15 @@ struct HHManager<Backend::MC, Device::CPU, T> {
   auto computeVW(const SizeType nb_apply, const LocalTileIndex ij, const TileAccessHelper& helper,
                  SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
                  matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     return dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), nb_apply,
                                        splitTile(mat_v.readwrite(ij), helper.specHH()),
                                        splitTile(mat_t.readwrite(ij), helper.specT()),
                                        splitTile(mat_w.readwrite(ij), helper.specHH())) |
-           dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), bt_tridiag::computeVW<T>) |
+           dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                     bt_tridiag::computeVW<T>) |
            ex::split_tuple();
   }
 
@@ -538,6 +540,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
   auto computeVW(const SizeType hhr_nb, const LocalTileIndex ij, const TileAccessHelper& helper,
                  SenderHH&& tile_hh, matrix::Panel<Coord::Col, T, D>& mat_v,
                  matrix::Panel<Coord::Col, T, D>& mat_t, matrix::Panel<Coord::Col, T, D>& mat_w) {
+    using pika::execution::thread_stacksize;
     namespace ex = pika::execution::experimental;
 
     auto& mat_v_h = w_panels_h.nextResource();
@@ -550,7 +553,8 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
         dlaf::internal::whenAllLift(b, std::forward<SenderHH>(tile_hh), hhr_nb,
                                     splitTile(mat_v_h.readwrite(ij), helper.specHH()),
                                     splitTile(mat_t_h.readwrite(ij_t), t_spec)) |
-        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(), computeVT<T>) |
+        dlaf::internal::transform(dlaf::internal::Policy<Backend::MC>(thread_stacksize::nostack),
+                                  computeVT<T>) |
         ex::split_tuple();
 
     auto copyVTandComputeW =
@@ -585,7 +589,7 @@ struct HHManager<Backend::GPU, Device::GPU, T> {
                         splitTile(mat_t.readwrite(ij_t), t_spec),
                         splitTile(mat_w.readwrite(ij), helper.specHH())) |
            dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-               dlaf::internal::Policy<Backend::GPU>(), copyVTandComputeW) |
+               dlaf::internal::Policy<Backend::GPU>(thread_stacksize::nostack), copyVTandComputeW) |
            ex::split_tuple();
   }
 
@@ -601,6 +605,7 @@ template <Backend B, Device D, class T>
 void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>& mat_e,
                                           Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   namespace ex = pika::execution::experimental;
 
   using common::iterate_range2d;
@@ -702,7 +707,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
               ex::when_all(ex::just(group_size), tile_v, tile_w,
                            mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e)) |
               dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                  dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToSingleTileRow<B, T>{}));
+                  dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
+                  ApplyHHToSingleTileRow<B, T>{}));
         }
         else {
           ex::start_detached(
@@ -710,7 +716,8 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
                            mat_w2.readwrite(LocalTileIndex(0, j_e)), mat_e_rt.readwrite(idx_e),
                            mat_e_rt.readwrite(helper.bottomIndexE(j_e))) |
               dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                  dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToDoubleTileRow<B, T>{}));
+                  dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
+                  ApplyHHToDoubleTileRow<B, T>{}));
         }
       }
 
@@ -726,6 +733,7 @@ template <Backend B, Device D, class T>
 void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType band_size,
                                           Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
+  using pika::execution::thread_stacksize;
   namespace ex = pika::execution::experimental;
 
   using common::iterate_range2d;
@@ -940,7 +948,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                                           splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
                                           mat_e_rt.readwrite(idx_e_top)) |
                              dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                                 dlaf::internal::Policy<B>(thread_priority::normal),
+                                 dlaf::internal::Policy<B>(thread_priority::normal,
+                                                           thread_stacksize::nostack),
                                  ApplyHHToSingleTileRow<B, T>{}));
         }
         // TWO ROWs
@@ -954,7 +963,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                              splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb)),
                              mat_e_rt.readwrite(idx_e_top), mat_e_rt.readwrite(idx_e_bottom)) |
                 dlaf::internal::transform<dlaf::internal::TransformDispatchType::Blas>(
-                    dlaf::internal::Policy<B>(thread_priority::normal), ApplyHHToDoubleTileRow<B, T>{}));
+                    dlaf::internal::Policy<B>(thread_priority::normal, thread_stacksize::nostack),
+                    ApplyHHToDoubleTileRow<B, T>{}));
           }
           // TWO ROWs TWO RANKs UPDATE (MAIN + PARTNER)
           else {
@@ -980,7 +990,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                 dlaf::internal::whenAllLift(blas::Op::ConjTrans, blas::Op::NoTrans, T(1),
                                             std::move(subtile_v), std::move(subtile_e_ro), T(0),
                                             splitTile(mat_w2tmp.readwrite(idx_w2), helper.specW2(nb))) |
-                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
+                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal,
+                                                           thread_stacksize::nostack)));
 
             // Compute final W2 by adding the contribution from the partner rank
             ex::start_detached(  //
@@ -995,7 +1006,8 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
                                             std::move(subtile_w),
                                             splitTile(mat_w2.read(idx_w2), helper.specW2(nb)), T(1),
                                             std::move(subtile_e)) |
-                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal)));
+                dlaf::tile::gemm(dlaf::internal::Policy<B>(thread_priority::normal,
+                                                           thread_stacksize::nostack)));
           }
         }
       }

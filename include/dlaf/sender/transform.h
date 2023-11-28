@@ -54,7 +54,7 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
 
-  auto scheduler = getBackendScheduler<B>(policy.priority());
+  auto scheduler = getBackendScheduler<B>(policy.priority(), policy.stacksize());
   auto transfer_sender = transfer(std::forward<Sender>(sender), std::move(scheduler));
 
   using dlaf::common::internal::ConsumeRvalues;
@@ -143,7 +143,7 @@ public:
   PartialTransform& operator=(const PartialTransform&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransform pa) {
+  friend auto operator|(Sender&& sender, PartialTransform pa) {
     return transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender));
   }
 };
@@ -168,7 +168,7 @@ public:
   PartialTransformDetach& operator=(const PartialTransformDetach&) = default;
 
   template <typename Sender>
-  friend auto operator|(Sender&& sender, const PartialTransformDetach pa) {
+  friend auto operator|(Sender&& sender, PartialTransformDetach pa) {
     return pika::execution::experimental::start_detached(
         transform<Tag, B>(pa.policy_, std::move(pa.f_), std::forward<Sender>(sender)));
   }

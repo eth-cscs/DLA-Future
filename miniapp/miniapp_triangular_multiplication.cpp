@@ -137,12 +137,9 @@ struct triangularMultiplicationMiniapp {
 
       dlaf::common::Timer<> timeit;
       if (opts.local)
-        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag,
-											                                                              alpha, a.get(),
-											                                                              b.get());
+        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha, a.get(), b.get());
       else
-        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(
-		        comm_grid, side, uplo, op, diag, alpha, a.get(), b.get());
+        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op, diag, alpha, a.get(), b.get());
 
       sync_barrier();
 

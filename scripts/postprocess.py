@@ -751,6 +751,7 @@ def gen_trsm_plots_weak(
         **proxy_args,
     )
 
+
 def gen_trmm_plots_strong(
     df,
     logx=False,

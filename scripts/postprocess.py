@@ -1,4 +1,4 @@
-
+#
 # Distributed Linear Algebra with Future (DLAF)
 #
 # Copyright (c) 2018-2023, ETH Zurich
@@ -418,8 +418,10 @@ def calc_chol_metrics(df):
 def calc_trsm_metrics(df):
     return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
 
+
 def calc_trmm_metrics(df):
     return _calc_metrics(["matrix_rows", "matrix_cols", "block_rows", "nodes", "bench_name"], df)
+
 
 def calc_gen2std_metrics(df):
     return _calc_metrics(["matrix_rows", "block_rows", "nodes", "bench_name"], df)
@@ -691,7 +693,6 @@ def gen_trsm_plots_strong(
     customize_time=add_basic_legend,
     **proxy_args,
 ):
-
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -759,7 +760,6 @@ def gen_trmm_plots_strong(
     customize_time=add_basic_legend,
     **proxy_args,
 ):
-
     """
     Args:
         customize_ppn:  function accepting the two arguments fig and ax for ppn plot customization
@@ -817,7 +817,6 @@ def gen_trmm_plots_weak(
         weak_rt_approx=weak_rt_approx,
         **proxy_args,
     )
-
 
 
 def gen_gen2std_plots_strong(

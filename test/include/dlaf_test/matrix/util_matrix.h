@@ -20,6 +20,7 @@
 #include <type_traits>
 
 #include <dlaf/common/range2d.h>
+#include <dlaf/communication/communicator.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/layout_info.h>
 #include <dlaf/matrix/matrix.h>
@@ -120,17 +121,17 @@ comm::IndexT_MPI align_sub_rank_index(const Distribution& dist_in, const GlobalE
   // if the sub-matrix has an origin outside the parent matrix, any rank is ok, since the sub-matrix
   // cannot exist.
   if (!offset_in.isIn(dist_in.size()))
-    return grid_size / 2;
+    return to_int(grid_size) / 2;
 
   const auto pos_mod = [](const auto& a, const auto& b) {
     const auto mod = a % b;
     return (mod >= 0) ? mod : (mod + b);
   };
 
-  const SizeType sub_rank = dist_in.rank_global_element<coord>(offset_in.get<coord>());
-  const SizeType offset_rank(offset_out.get<coord>() / blocksize);
+  const comm::IndexT_MPI sub_rank = dist_in.rank_global_element<coord>(offset_in.get<coord>());
+  const comm::IndexT_MPI offset_rank = to_int(offset_out.get<coord>() / blocksize);
 
-  return pos_mod(sub_rank - offset_rank, grid_size);
+  return pos_mod(sub_rank - offset_rank, to_int(grid_size));
 }
 
 /// Return source_rank_index so that sub-matrix with origin at @p offset_in in @p dist_in and the one in

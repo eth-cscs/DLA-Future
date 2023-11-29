@@ -154,28 +154,15 @@ struct SubMatrixCopyConfig {
   }
 };
 
-comm::Index2D alignSubRankIndex(const Distribution& dist_in, const GlobalElementIndex& offset_in,
-                                const GlobalElementIndex& offset_out) {
-  const auto pos_mod = [](const auto& a, const auto& b) {
-    const auto mod = a % b;
-    return (mod >= 0) ? mod : (mod + b);
-  };
-
-  const comm::Size2D grid_size = dist_in.grid_size();
-  const comm::Index2D sub_rank(dist_in.rank_global_element<Coord::Row>(offset_in.row()),
-                               dist_in.rank_global_element<Coord::Col>(offset_in.col()));
-  const GlobalTileIndex offset_rank(offset_out.row() / dist_in.block_size().rows(),
-                                    offset_out.col() / dist_in.block_size().cols());
-
-  return {pos_mod(sub_rank.row() - static_cast<comm::IndexT_MPI>(offset_rank.row()), grid_size.rows()),
-          pos_mod(sub_rank.col() - static_cast<comm::IndexT_MPI>(offset_rank.col()), grid_size.cols())};
-}
-
 bool isFullMatrix(const Distribution& dist_full, const matrix::internal::SubMatrixSpec& sub) noexcept {
   return sub.origin == GlobalElementIndex{0, 0} && sub.size == dist_full.size();
 }
 
 const std::vector<SubMatrixCopyConfig> sub_configs{
+    // empty-matrix
+    {{10, 10}, {10, 10}, {3, 3}, {3, 3}, {3, 3}, {0, 0}},
+    {{10, 10}, {10, 10}, {3, 3}, {3, 3}, {3, 3}, {2, 0}},
+    {{10, 10}, {10, 10}, {3, 3}, {3, 3}, {3, 3}, {0, 2}},
     // full-matrix
     {{10, 10}, {10, 10}, {3, 3}, {0, 0}, {0, 0}, {10, 10}},
     // sub-matrix
@@ -246,14 +233,9 @@ TYPED_TEST(MatrixCopyTest, SubMatrixCPUDistributed) {
                                  in_src_rank);
 
       const comm::Index2D out_src_rank =
-          alignSubRankIndex(dist_in, test.sub_origin_in, test.sub_origin_out);
+          align_sub_rank_index(dist_in, test.sub_origin_in, test.tile_size, test.sub_origin_out);
       const Distribution dist_out(test.full_out, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                   out_src_rank);
-
-      EXPECT_EQ(dist_in.template rank_global_element<Coord::Row>(test.sub_origin_in.row()),
-                dist_out.template rank_global_element<Coord::Row>(test.sub_origin_out.row()));
-      EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
-                dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
       testSubMatrix<TypeParam>(test, dist_in, dist_out);
     }
@@ -338,14 +320,9 @@ TYPED_TEST(MatrixCopyTest, SubMatrixGPUDistributed) {
                                  in_src_rank);
 
       const comm::Index2D out_src_rank =
-          alignSubRankIndex(dist_in, test.sub_origin_in, test.sub_origin_out);
+          align_sub_rank_index(dist_in, test.sub_origin_in, test.tile_size, test.sub_origin_out);
       const Distribution dist_out(test.full_out, test.tile_size, comm_grid.size(), comm_grid.rank(),
                                   out_src_rank);
-
-      EXPECT_EQ(dist_in.template rank_global_element<Coord::Row>(test.sub_origin_in.row()),
-                dist_out.template rank_global_element<Coord::Row>(test.sub_origin_out.row()));
-      EXPECT_EQ(dist_in.template rank_global_element<Coord::Col>(test.sub_origin_in.col()),
-                dist_out.template rank_global_element<Coord::Col>(test.sub_origin_out.col()));
 
       testSubMatrixOnGPU<TypeParam>(test, dist_in, dist_out);
     }

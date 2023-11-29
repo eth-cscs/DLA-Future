@@ -102,6 +102,48 @@ auto mix_values(const dlaf::matrix::internal::SubMatrixSpec& sub_spec,
   };
 }
 
+/// Return source_rank_index along @t coord so that sub-matrix with origin at @p offset_in in @p dist_in
+/// and the one in @p offset_out with @p blocksize_out will have the top-left tile allocated on the same rank.
+///
+/// @pre dist_in.block_size().get<coord>() == blocksize_out.get<coord>()
+template <Coord coord>
+comm::IndexT_MPI align_sub_rank_index(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                      const TileElementSize& blocksize_out,
+                                      const GlobalElementIndex& offset_out) {
+  const SizeType blocksize = blocksize_out.get<coord>();
+  DLAF_ASSERT(dist_in.block_size().get<coord>() == blocksize, dist_in.block_size().get<coord>(),
+              blocksize);
+
+  const SizeType grid_size = dist_in.grid_size().get<coord>();
+
+  // Note:
+  // if the sub-matrix has an origin outside the parent matrix, any rank is ok, since the sub-matrix
+  // cannot exist.
+  if (!offset_in.isIn(dist_in.size()))
+    return grid_size / 2;
+
+  const auto pos_mod = [](const auto& a, const auto& b) {
+    const auto mod = a % b;
+    return (mod >= 0) ? mod : (mod + b);
+  };
+
+  const SizeType sub_rank = dist_in.rank_global_element<coord>(offset_in.get<coord>());
+  const SizeType offset_rank(offset_out.get<coord>() / blocksize);
+
+  return pos_mod(sub_rank - offset_rank, grid_size);
+}
+
+/// Return source_rank_index so that sub-matrix with origin at @p offset_in in @p dist_in and the one in
+/// @p offset_out with @p blocksize_out will have the top-left tile allocated on the same rank.
+///
+/// @pre dist_in.block_size() == blocksize_out
+comm::Index2D align_sub_rank_index(const Distribution& dist_in, const GlobalElementIndex& offset_in,
+                                   const TileElementSize& blocksize_out,
+                                   const GlobalElementIndex& offset_out) {
+  return {align_sub_rank_index<Coord::Row>(dist_in, offset_in, blocksize_out, offset_out),
+          align_sub_rank_index<Coord::Col>(dist_in, offset_in, blocksize_out, offset_out)};
+}
+
 namespace internal {
 
 /// Checks the elements of the matrix.

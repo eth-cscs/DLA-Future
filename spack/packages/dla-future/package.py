@@ -78,9 +78,10 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("whip +rocm", when="+rocm")
 
     depends_on("rocblas", when="+rocm")
-    depends_on("rocprim", when="+rocm")
     depends_on("rocsolver", when="+rocm")
-    depends_on("rocthrust", when="+rocm")
+
+    depends_on("rocprim", when="@:0.3 +rocm")
+    depends_on("rocthrust", when="@:0.3 +rocm")
 
     depends_on("hdf5 +cxx+mpi+threadsafe+shared", when="+hdf5")
 
@@ -95,15 +96,18 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
             depends_on(
                 "rocblas amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
             )
+            depends_on("whip amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
+            depends_on(
+                "umpire amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
+            )
+
+    with when("@:0.3 +rocm"):
+        for val in ROCmPackage.amdgpu_targets:
             depends_on(
                 "rocprim amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
             )
             depends_on(
                 "rocthrust amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
-            depends_on("whip amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
-            depends_on(
-                "umpire amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
             )
 
     with when("+cuda"):

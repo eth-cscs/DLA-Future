@@ -19,6 +19,7 @@
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
+#include <dlaf/matrix/matrix_ref.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/sender/transform.h>
 #include <dlaf/types.h>
@@ -718,4 +719,50 @@ TYPED_TEST(PanelStoreTransposedTest, OffsetTileUnalignedCol) {
   for (auto& comm_grid : this->commGrids())
     for (const auto& [size, blocksize, _] : test_params)
       testOffsetTileUnaligned<Coord::Col, TypeParam, StoreTransposed::Yes>(size, blocksize, comm_grid);
+}
+
+struct ConfigSub {
+  const TileElementSize block_size;
+  const GlobalElementIndex sub_origin;
+  const GlobalElementSize sub_size;
+};
+
+const std::vector<ConfigSub> sub_configs{
+    {{3, 4}, {4, 2}, {12, 20}},
+    {{3, 5}, {7, 1}, {12, 11}},
+};
+
+TYPED_TEST(PanelTest, MatrixWithOffset) {
+  namespace ex = pika::execution::experimental;
+  namespace tt = pika::this_thread::experimental;
+  namespace di = dlaf::internal;
+
+  using dlaf::matrix::internal::MatrixRef;
+
+  for (const auto& [block_size, sub_origin, sub_size] : sub_configs) {
+    const LocalElementSize full_size{sub_origin.row() + sub_size.rows(),
+                                     sub_origin.col() + sub_size.cols()};
+
+    Matrix<TypeParam, Device::CPU> mat(full_size, block_size);
+    MatrixRef<TypeParam, Device::CPU> mat_sub(mat, {sub_origin, sub_size});
+
+    Panel<Coord::Col, TypeParam, Device::CPU, StoreTransposed::No> panel(mat_sub.distribution());
+
+    const LocalTileSize sub_size_lc = mat_sub.distribution().local_nr_tiles();
+    for (SizeType j_lc = 0; j_lc < sub_size_lc.cols(); ++j_lc) {
+      if (j_lc == 0 || j_lc == sub_size_lc.cols() - 1) {
+        panel.setWidth(mat_sub.distribution().template tile_size_of<Coord::Col>(j_lc));
+      }
+
+      for (SizeType i_lc = 0; i_lc < sub_size_lc.rows(); ++i_lc) {
+        const LocalTileIndex ij_lc(i_lc, j_lc);
+        tt::sync_wait(ex::when_all(panel.read(ij_lc), mat_sub.read(ij_lc)) |
+                      di::transform(di::Policy<Backend::MC>(), [](auto& tile_p, auto& tile_m) {
+                        EXPECT_EQ(tile_p.size(), tile_m.size());
+                      }));
+      }
+
+      panel.reset();
+    }
+  }
 }

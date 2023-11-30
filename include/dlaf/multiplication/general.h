@@ -72,7 +72,7 @@ void generalMatrix(const blas::Op opA, const blas::Op opB, const T alpha, Matrix
 /// @param  mat_c On entry it contains the input matrix C. On exit matrix tiles in the range will be
 ///         overwritten with the result, while others are left untouched.
 ///
-/// @pre @p mat_a, @p mat_b and @p mat_c are distributed the same way,
+/// @pre @p mat_a, @p mat_b and @p mat_c are distributed according to the same grid,
 /// @pre multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB)
 /// @pre multipliable_sizes(mat_a.tile_size(), mat_b.tile_size(), mat_c.tile_size(), opA, opB)
 /// @pre multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}),

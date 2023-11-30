@@ -34,9 +34,9 @@ using namespace testing;
 
 template <Device D, class T, class CT = const T>
 void testScal(const blas::Op op_a, const SizeType m,
-              const SizeType k, const SizeType extra_lda) {
+              const SizeType n, const SizeType extra_lda) {
   const TileElementSize size_a =
-      (op_a == blas::Op::NoTrans) ? TileElementSize(m, k) : TileElementSize(k, m);
+      (op_a == blas::Op::NoTrans) ? TileElementSize(m, n) : TileElementSize(n, m);
 
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
@@ -48,17 +48,17 @@ void testScal(const blas::Op op_a, const SizeType m,
 
   auto a = createTile<CT, D>(el_a, size_a, lda);
 
-  invokeBlas<D>(tile::internal::gemm_o, op_a, beta);
+  invokeBlas<D>(tile::internal::scal_o, beta, a);
 
   std::stringstream s;
-  s << "GEMM: " << op_a;
-  s << ", m = " << m << ", n = " << n << ", k = " << k;
+  s << "Scal: " << op_a;
+  s << ", m = " << m << ", n = " << n;
   s << ", lda = " << lda;
   SCOPED_TRACE(s.str());
 
   // Check result against analytical result.
-  CHECK_TILE_NEAR(res_c, c, 2 * (k + 1) * TypeUtilities<T>::error,
-                  2 * (k + 1) * TypeUtilities<T>::error);
+  CHECK_TILE_NEAR(res_a, a, 2 * TypeUtilities<T>::error,
+                  2 * TypeUtilities<T>::error);
 }
 
 }

@@ -52,7 +52,7 @@ auto opValFunc(ElementGetter&& val, const blas::Op op) {
 }
 
 template <class ElementIndex, class T>
-auto getMatrixMatrixMultiplication(const blas::Op opA, const T alpha, const T beta) {
+auto getMatrixScal(const blas::Op opA, const T beta) {
   using dlaf::test::TypeUtilities;
 
   auto el_op_a = [](const ElementIndex& index) {
@@ -64,7 +64,7 @@ auto getMatrixMatrixMultiplication(const blas::Op opA, const T alpha, const T be
   auto res_a = [beta, el_op_a, alpha](const ElementIndex& index) {
     const double i = index.row();
     const double j = index.col();
-    return beta * el_op_a(index) + alpha;
+    return beta * el_op_a(index);
   };
 
   using internal::opValFunc;

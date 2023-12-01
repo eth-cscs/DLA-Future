@@ -474,7 +474,6 @@ void TridiagSolver<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, Device
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_tridiag_solver_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
     file->write(evecs, "/evecs");
     file->write(evals, "/evals");
   }

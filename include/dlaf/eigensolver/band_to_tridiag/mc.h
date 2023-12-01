@@ -1538,7 +1538,6 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
 
 #ifdef DLAF_WITH_HDF5
   if (getTuneParameters().debug_dump_band_to_tridiagonal_data) {
-    file = matrix::internal::FileHDF5(grid.fullCommunicator(), fname);
     file->write(mat_trid, "/tridiaginal");
   }
 

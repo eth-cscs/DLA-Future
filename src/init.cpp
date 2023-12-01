@@ -43,8 +43,7 @@ bool& initialized() {
   return i;
 }
 
-template <Backend D>
-struct Init {
+template <Backend D>struct Init {
   // Initialization and finalization does nothing by default. Behaviour can be
   // overridden for backends.
   static void initialize(const configuration&) {}
@@ -226,7 +225,7 @@ void updateConfiguration(const pika::program_options::variables_map& vm, configu
                            "DEBUG_DUMP_REDUCTION_TO_BAND_DATA", "");
   updateConfigurationValue(vm, param.debug_dump_band_to_tridiagonal_data,
                            "DEBUG_DUMP_BAND_TO_TRIDIAGONAL_DATA", "");
-  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRDIAG_SOLVER_DATA",
+  updateConfigurationValue(vm, param.debug_dump_tridiag_solver_data, "DEBUG_DUMP_TRIDIAG_SOLVER_DATA",
                            "");
 
   updateConfigurationValue(vm, param.tridiag_rank1_nworkers, "TRIDIAG_RANK1_NWORKERS",

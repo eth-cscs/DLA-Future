@@ -43,7 +43,8 @@ bool& initialized() {
   return i;
 }
 
-template <Backend D>struct Init {
+template <Backend D>
+struct Init {
   // Initialization and finalization does nothing by default. Behaviour can be
   // overridden for backends.
   static void initialize(const configuration&) {}

@@ -13,6 +13,8 @@
 #include <dlaf/blas/enum_output.h>
 #include <dlaf/common/assert.h>
 #include <dlaf/common/index2d.h>
+#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
@@ -41,6 +43,10 @@ struct GeneralMultiplicationTestMC : public ::testing::Test {};
 TYPED_TEST_SUITE(GeneralMultiplicationTestMC, MatrixElementTypes);
 
 template <class T>
+struct GeneralMultiplicationDistTestMC : public TestWithCommGrids {};
+TYPED_TEST_SUITE(GeneralMultiplicationDistTestMC, MatrixElementTypes);
+
+template <class T>
 struct GeneralSubMultiplicationTestMC : public ::testing::Test {};
 TYPED_TEST_SUITE(GeneralSubMultiplicationTestMC, MatrixElementTypes);
 
@@ -52,6 +58,10 @@ TYPED_TEST_SUITE(GeneralSubMultiplicationDistTestMC, MatrixElementTypes);
 template <class T>
 struct GeneralMultiplicationTestGPU : public ::testing::Test {};
 TYPED_TEST_SUITE(GeneralMultiplicationTestGPU, MatrixElementTypes);
+
+template <class T>
+struct GeneralMultiplicationDistTestGPU : public TestWithCommGrids {};
+TYPED_TEST_SUITE(GeneralMultiplicationDistTestGPU, MatrixElementTypes);
 
 template <class T>
 struct GeneralSubMultiplicationTestGPU : public ::testing::Test {};
@@ -136,6 +146,78 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
+template <class T, Backend B, Device D>
+void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& config,
+                               comm::CommunicatorGrid& grid) {
+  using dlaf::matrix::internal::MatrixRef;
+
+  common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
+  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator());
+
+  const TileElementSize blocksize_a(config.mb, config.kb);
+  const TileElementSize blocksize_b(config.kb, config.nb);
+  const TileElementSize blocksize_c(config.mb, config.nb);
+
+  const comm::Index2D src_rank_c(std::max(0, grid.size().rows() - 1),
+                                 std::min(1, grid.size().cols() - 1));
+  const matrix::Distribution dist_c(config.full_c(), blocksize_c, grid.size(), grid.rank(), src_rank_c);
+
+  const comm::IndexT_MPI rank_aligned_row =
+      align_sub_rank_index<Coord::Row>(dist_c, config.sub_c().origin, blocksize_a,
+                                       config.sub_a().origin);
+  const comm::IndexT_MPI rank_aligned_col =
+      align_sub_rank_index<Coord::Col>(dist_c, config.sub_c().origin, blocksize_b,
+                                       config.sub_b().origin);
+
+  // Note:
+  // GEMM(NoTrans, NoTrans) requires:
+  // - a is rank aligned with c for what concerns rows
+  // - b is rank aligned with c for what concerns cols
+  const comm::Index2D src_rank_a{rank_aligned_row, 0};
+  const comm::Index2D src_rank_b{0, rank_aligned_col};
+
+  const matrix::Distribution dist_a(config.full_a(), blocksize_a, grid.size(), grid.rank(), src_rank_a);
+  const matrix::Distribution dist_b(config.full_b(), blocksize_b, grid.size(), grid.rank(), src_rank_b);
+
+  auto setMatrix = [&](auto&& elSetter, matrix::Distribution dist) {
+    Matrix<T, Device::CPU> matrix(std::move(dist));
+    dlaf::matrix::util::set(matrix, elSetter);
+    return matrix;
+  };
+
+  auto [subValuesA, subValuesB, subValuesC, subValuesResult] =
+      matrix::test::getMatrixMatrixMultiplication<GlobalElementIndex, T>(config.opA, config.opB,
+                                                                         config.k, alpha, beta);
+
+  const auto fullValuesA = mix_values(config.sub_a(), subValuesA, [](auto) { return T(-99); });
+  const auto fullValuesB = mix_values(config.sub_b(), subValuesB, [](auto) { return T(-99); });
+  const auto fullValuesC = mix_values(config.sub_c(), subValuesC, [](auto) { return T(-99); });
+
+  Matrix<const T, Device::CPU> mat_ah = setMatrix(fullValuesA, dist_a);
+  Matrix<const T, Device::CPU> mat_bh = setMatrix(fullValuesB, dist_b);
+  Matrix<T, Device::CPU> mat_ch = setMatrix(fullValuesC, dist_c);
+
+  {
+    MatrixMirror<const T, D, Device::CPU> mat_a(mat_ah);
+    MatrixMirror<const T, D, Device::CPU> mat_b(mat_bh);
+    MatrixMirror<T, D, Device::CPU> mat_c(mat_ch);
+
+    MatrixRef<const T, D> mat_sub_a(mat_a.get(), config.sub_a());
+    MatrixRef<const T, D> mat_sub_b(mat_b.get(), config.sub_b());
+    MatrixRef<T, D> mat_sub_c(mat_c.get(), config.sub_c());
+
+    // Note: currently it is implemented just the NoTrans/NoTrans case
+    ASSERT_EQ(config.opA, blas::Op::NoTrans);
+    ASSERT_EQ(config.opB, blas::Op::NoTrans);
+    multiplication::internal::generalMatrix<B>(mpi_row_chain, mpi_col_chain, alpha, mat_sub_a, mat_sub_b,
+                                               beta, mat_sub_c);
+  }
+
+  const auto fullValuesResult = mix_values(config.sub_c(), subValuesResult, fullValuesC);
+  CHECK_MATRIX_NEAR(fullValuesResult, mat_ch, 2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error,
+                    2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
+}
+
 std::vector<GemmConfig> gemm_configs = {
     // empty matrices
     {blas::Op::NoTrans, blas::Op::NoTrans, 0, 0, 7, 3, 6, 2},
@@ -164,6 +246,7 @@ std::vector<GemmConfig> sub_gemm_configs = {
     {blas::Op::NoTrans, blas::Op::NoTrans, 8, 8, 11, 10, 9, 13, {{2, 1}}, {{1, 1}}, {{0, 0}}},
     // multi-tile
     {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{7, 1}}, {{11, 10}}, {{4, 2}}},
+    {blas::Op::NoTrans, blas::Op::NoTrans, 12, 20, 11, 3, 4, 5, {{6, 10}}, {{5, 8}}, {{9, 12}}},
 };
 
 TYPED_TEST(GeneralMultiplicationTestMC, CorrectnessLocal) {
@@ -311,6 +394,32 @@ void testGeneralSubMultiplication(comm::CommunicatorGrid grid, const SizeType a,
                     2 * (mat_ah.size().cols() + 1) * TypeUtilities<T>::error);
 }
 
+TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributed) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (auto comm_grid : this->commGrids()) {
+    for (const GemmConfig& test_config : gemm_configs) {
+      testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config,
+                                                                     comm_grid);
+      pika::wait();
+    }
+  }
+}
+
+TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedSub) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (auto comm_grid : this->commGrids()) {
+    for (const GemmConfig& test_config : sub_gemm_configs) {
+      testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config,
+                                                                     comm_grid);
+      pika::wait();
+    }
+  }
+}
+
 TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b] : sizes) {
@@ -324,6 +433,32 @@ TYPED_TEST(GeneralSubMultiplicationDistTestMC, CorrectnessDistributed) {
 }
 
 #ifdef DLAF_WITH_GPU
+TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributed) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (auto comm_grid : this->commGrids()) {
+    for (const GemmConfig& test_config : gemm_configs) {
+      testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config,
+                                                                      comm_grid);
+      pika::wait();
+    }
+  }
+}
+
+TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedSub) {
+  constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
+  constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
+
+  for (auto comm_grid : this->commGrids()) {
+    for (const GemmConfig& test_config : sub_gemm_configs) {
+      testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config,
+                                                                      comm_grid);
+      pika::wait();
+    }
+  }
+}
+
 TYPED_TEST(GeneralSubMultiplicationDistTestGPU, CorrectnessDistributed) {
   for (auto comm_grid : this->commGrids()) {
     for (const auto& [m, mb, a, b] : sizes) {

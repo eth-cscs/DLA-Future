@@ -64,6 +64,33 @@ void generalMatrix(const blas::Op opA, const blas::Op opB, const T alpha, Matrix
     DLAF_UNIMPLEMENTED(opA, opB);
 }
 
+/// General sub-matrix distributed multiplication, computing
+/// C = alpha * A * B + beta * C
+///
+/// @param  mat_a contains the input matrix A.
+/// @param  mat_b contains the input matrix B.
+/// @param  mat_c On entry it contains the input matrix C. On exit matrix tiles in the range will be
+///         overwritten with the result, while others are left untouched.
+///
+/// @pre @p mat_a, @p mat_b and @p mat_c are distributed on the same grid,
+/// @pre multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB)
+/// @pre multipliable_sizes(mat_a.tile_size(), mat_b.tile_size(), mat_c.tile_size(), opA, opB)
+/// @pre multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}),
+///      mat_c.tile_size_of({0, 0}), opA, opB)
+template <Backend B, Device D, class T>
+void generalMatrix(common::Pipeline<comm::Communicator>& row_task_chain,
+                   common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
+                   MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
+                   MatrixRef<T, D>& mat_c) {
+  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_a), mat_c, mat_b);
+  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_b), mat_c, mat_b);
+
+  DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
+                    mat_a, mat_b, mat_c);
+
+  internal::General<B, D, T>::callNN(row_task_chain, col_task_chain, alpha, mat_a, mat_b, beta, mat_c);
+}
+
 /// General sub-matrix multiplication implementation on local memory, computing
 /// C[a:b][a:b] = alpha * opA(A[a:b][a:b]) * opB(B[a:b][a:b]) + beta * C[a:b][a:b]
 /// where [a:b] is the range of tiles starting from tile index @p a to tile index @p b (excluded)

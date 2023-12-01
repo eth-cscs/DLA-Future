@@ -89,6 +89,9 @@ Functions</h2></td></tr>
 <tr class="memitem:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a834bc28949a9b0aa7000f8f52822e7a4">dlaf::multiplication::internal::generalMatrix</a> (const blas::Op opA, const blas::Op opB, const T alpha, MatrixRef&lt; const T, D &gt; &amp;mat_a, MatrixRef&lt; const T, D &gt; &amp;mat_b, const T beta, MatrixRef&lt; T, D &gt; &amp;mat_c)</td></tr>
 <tr class="separator:a834bc28949a9b0aa7000f8f52822e7a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a32f0edb921bf827e61c5b26371352ff4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a32f0edb921bf827e61c5b26371352ff4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a32f0edb921bf827e61c5b26371352ff4">dlaf::multiplication::internal::generalMatrix</a> (common::Pipeline&lt; comm::Communicator &gt; &amp;row_task_chain, common::Pipeline&lt; comm::Communicator &gt; &amp;col_task_chain, const T alpha, MatrixRef&lt; const T, D &gt; &amp;mat_a, MatrixRef&lt; const T, D &gt; &amp;mat_b, const T beta, MatrixRef&lt; T, D &gt; &amp;mat_c)</td></tr>
+<tr class="separator:a32f0edb921bf827e61c5b26371352ff4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:a177b6617b7f042d3e9d316a6233261bb"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2general_8h.html#a177b6617b7f042d3e9d316a6233261bb">dlaf::multiplication::internal::generalSubMatrix</a> (const SizeType a, const SizeType b, const blas::Op opA, const blas::Op opB, const T alpha, Matrix&lt; const T, D &gt; &amp;mat_a, Matrix&lt; const T, D &gt; &amp;mat_b, const T beta, Matrix&lt; T, D &gt; &amp;mat_c)</td></tr>
 <tr class="separator:a177b6617b7f042d3e9d316a6233261bb"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -101,8 +104,84 @@ template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="separator:a60d09d7084585e0aebd34dd93e548f5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
+<a id="a32f0edb921bf827e61c5b26371352ff4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a32f0edb921bf827e61c5b26371352ff4">&#9670;&nbsp;</a></span>generalMatrix() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Backend B, Device D, class T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void dlaf::multiplication::internal::generalMatrix </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>row_task_chain</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramname"><em>col_task_chain</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const T&#160;</td>
+          <td class="paramname"><em>alpha</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; const T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_a</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; const T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_b</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const T&#160;</td>
+          <td class="paramname"><em>beta</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1matrix_1_1internal_1_1_matrix_ref.html">MatrixRef</a>&lt; T, D &gt; &amp;&#160;</td>
+          <td class="paramname"><em>mat_c</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>General sub-matrix distributed multiplication, computing C = alpha * A * B + beta * C</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">mat_a</td><td>contains the input matrix A. </td></tr>
+    <tr><td class="paramname">mat_b</td><td>contains the input matrix B. </td></tr>
+    <tr><td class="paramname">mat_c</td><td>On entry it contains the input matrix C. On exit matrix tiles in the range will be overwritten with the result, while others are left untouched.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section pre"><dt>Precondition</dt><dd><code>mat_a</code>, <code>mat_b</code> and <code>mat_c</code> are distributed on the same grid, </dd>
+<dd>
+multipliable_sizes(mat_a.size(), mat_b.size(), mat_c.size(), opA, opB) </dd>
+<dd>
+multipliable_sizes(mat_a.tile_size(), mat_b.tile_size(), mat_c.tile_size(), opA, opB) </dd>
+<dd>
+multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}), mat_c.tile_size_of({0, 0}), opA, opB) </dd></dl>
+
+</div>
+</div>
 <a id="a834bc28949a9b0aa7000f8f52822e7a4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a834bc28949a9b0aa7000f8f52822e7a4">&#9670;&nbsp;</a></span>generalMatrix()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a834bc28949a9b0aa7000f8f52822e7a4">&#9670;&nbsp;</a></span>generalMatrix() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">

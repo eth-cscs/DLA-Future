@@ -1648,7 +1648,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Step #1
   //
-  //    i1 (out) : initial <--- initial (identity map)
+  //    i1 (out) : initial <--- initial (or identity map)
   //    i2 (out) : initial <--- pre_sorted
   //
   // - deflate `d`, `z` and `c`
@@ -1670,7 +1670,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   //    i2 (in)  : initial <--- pre_sorted
   //    i3 (out) : initial <--- deflated
+  //    i5 (out) : initial <--- local(UDL|X)
   //
+  // - reorder eigenvectors locally so that they are well-shaped for gemm optimization (i.e. UDLX)
   // - reorder `d0 -> d1`, `z0 -> z1`, using `i3` such that deflated entries are at the bottom.
   // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
@@ -1697,14 +1699,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   //
   //    i3 (in)  : initial <--- deflated
-  //    i2 (out) : initial ---> deflated
+  //    i2 (out) : deflated <--- initial
   //
   invertIndex(i_begin, i_end, ws_h.i3, ws_hm.i2);
 
   //
-  //    i5 (in)  : initial  <--- sort by coltype
+  //    i5 (in)  : initial  <--- local(UDL|X)
   //    i2 (in)  : deflated <--- initial
-  //    i4 (out) : deflated <--- sort by col type
+  //    i4 (out) : deflated <--- local(UDL|X)
   //
   applyIndex(i_begin, i_end, ws_hm.i5, ws_hm.i2, ws_h.i4);
 

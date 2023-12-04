@@ -1706,9 +1706,6 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //    i2 (in)  : deflated <--- initial
   //    i4 (out) : deflated <--- sort by col type
   //
-  // TODO This is propedeutic to work in rank1 solver with columns sorted by type, so that they are
-  // well-shaped for an optimized gemm, but still keeping track of where the actual position sorted by
-  // eigenvalues is.
   applyIndex(i_begin, i_end, ws_hm.i5, ws_hm.i2, ws_h.i4);
 
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call

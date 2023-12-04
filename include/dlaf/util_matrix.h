@@ -86,6 +86,13 @@ bool equal_process_grid(const MatrixLike<const T, D>& m,
   return m.commGridSize() == p.size_2d() && m.rankIndex() == p.rank_2d();
 }
 
+/// Returns true if the two communicator pipelines are distributed on the same grid.
+template <comm::CommunicatorType CT1, comm::CommunicatorType CT2>
+bool equal_process_grid(const comm::CommunicatorPipeline<CT1>& p1,
+                        const comm::CommunicatorPipeline<CT2>& p2) noexcept {
+  return p1.size_2d() == p2.size_2d() && p1.rank_2d() == p2.rank_2d();
+}
+
 /// Returns true if the two matrices are distributed on the same grid
 template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
           class T, Device D1, Device D2>

@@ -82,13 +82,13 @@ void generalMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_
                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
                    const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                    const T beta, MatrixRef<T, D>& mat_c) {
-  DLAF_ASSERT(equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
 
-  DLAF_ASSERT(equal_process_grid(mat_a, col_task_chain), mat_a, col_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_b, col_task_chain), mat_b, col_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_c, col_task_chain), mat_c, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, col_task_chain), mat_a, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, col_task_chain), mat_b, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, col_task_chain), mat_c, col_task_chain);
 
   DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
                     mat_a, mat_b, mat_c);
@@ -199,13 +199,13 @@ void generalSubMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& r
                       comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
                       const SizeType a, const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
-  DLAF_ASSERT(equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
 
-  DLAF_ASSERT(equal_process_grid(mat_a, col_task_chain), mat_a, col_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_b, col_task_chain), mat_b, col_task_chain);
-  DLAF_ASSERT(equal_process_grid(mat_c, col_task_chain), mat_c, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, col_task_chain), mat_a, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, col_task_chain), mat_b, col_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, col_task_chain), mat_c, col_task_chain);
 
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);

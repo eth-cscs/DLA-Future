@@ -82,8 +82,13 @@ void generalMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_
                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
                    const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                    const T beta, MatrixRef<T, D>& mat_c) {
-  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_a), mat_c, mat_b);
-  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_b), mat_c, mat_b);
+  DLAF_ASSERT(equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
+  DLAF_ASSERT(equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
+  DLAF_ASSERT(equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
+
+  DLAF_ASSERT(equal_process_grid(mat_a, col_task_chain), mat_a, col_task_chain);
+  DLAF_ASSERT(equal_process_grid(mat_b, col_task_chain), mat_b, col_task_chain);
+  DLAF_ASSERT(equal_process_grid(mat_c, col_task_chain), mat_c, col_task_chain);
 
   DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
                     mat_a, mat_b, mat_c);

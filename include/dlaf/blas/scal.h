@@ -11,6 +11,7 @@
 #pragma once
 
 #include <complex>
+#include <cstdint>
 
 /// @file
 /// Provides overloads for mixed real complex variants of scal missing in blaspp.

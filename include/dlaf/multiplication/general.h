@@ -78,10 +78,10 @@ void generalMatrix(const blas::Op opA, const blas::Op opB, const T alpha, Matrix
 /// @pre multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}),
 ///      mat_c.tile_size_of({0, 0}), opA, opB)
 template <Backend B, Device D, class T>
-void generalMatrix(common::Pipeline<comm::Communicator>& row_task_chain,
-                   common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
-                   MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
-                   MatrixRef<T, D>& mat_c) {
+void generalMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                   const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                   const T beta, MatrixRef<T, D>& mat_c) {
   DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_a), mat_c, mat_b);
   DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_b), mat_c, mat_b);
 

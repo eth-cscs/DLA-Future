@@ -151,8 +151,8 @@ void testGeneralMultiplication(const T alpha, const T beta, const GemmConfig& co
                                comm::CommunicatorGrid& grid) {
   using dlaf::matrix::internal::MatrixRef;
 
-  common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator());
+  auto mpi_row_chain = grid.row_communicator_pipeline();
+  auto mpi_col_chain = grid.col_communicator_pipeline();
 
   const TileElementSize blocksize_a(config.mb, config.kb);
   const TileElementSize blocksize_b(config.kb, config.nb);
@@ -398,7 +398,7 @@ TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributed) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const GemmConfig& test_config : gemm_configs) {
       testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config,
                                                                      comm_grid);
@@ -411,7 +411,7 @@ TYPED_TEST(GeneralMultiplicationDistTestMC, CorrectnessDistributedSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const GemmConfig& test_config : sub_gemm_configs) {
       testGeneralMultiplication<TypeParam, Backend::MC, Device::CPU>(alpha, beta, test_config,
                                                                      comm_grid);
@@ -437,7 +437,7 @@ TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributed) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const GemmConfig& test_config : gemm_configs) {
       testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config,
                                                                       comm_grid);
@@ -450,7 +450,7 @@ TYPED_TEST(GeneralMultiplicationDistTestGPU, CorrectnessDistributedSub) {
   constexpr TypeParam alpha = TypeUtilities<TypeParam>::element(-1.3, .5);
   constexpr TypeParam beta = TypeUtilities<TypeParam>::element(-2.6, .7);
 
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const GemmConfig& test_config : sub_gemm_configs) {
       testGeneralMultiplication<TypeParam, Backend::GPU, Device::GPU>(alpha, beta, test_config,
                                                                       comm_grid);

@@ -26,10 +26,10 @@ template <Backend B, Device D, class T>
 struct General {
   static void callNN(const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
                      const T beta, MatrixRef<T, D>& mat_c);
-  static void callNN(common::Pipeline<comm::Communicator>& row_task_chain,
-                     common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
-                     MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
-                     MatrixRef<T, D>& mat_c);
+  static void callNN(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                     comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                     const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                     const T beta, MatrixRef<T, D>& mat_c);
 };
 
 template <Backend B, Device D, class T>

@@ -61,10 +61,10 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
 }
 
 template <Backend B, Device D, class T>
-void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_chain,
-                              common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
-                              MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
-                              MatrixRef<T, D>& mat_c) {
+void General<B, D, T>::callNN(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                              comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                              const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                              const T beta, MatrixRef<T, D>& mat_c) {
   namespace ex = pika::execution::experimental;
 
   if (mat_c.size().isEmpty())

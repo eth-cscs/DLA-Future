@@ -374,8 +374,8 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 }
 
 // This function returns number of global non-deflated eigenvectors, together with two permutations:
-// - @p index_sorted_coltype  (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
 // - @p index_sorted          (sort(non-deflated)|sort(deflated)) -> initial.
+// - @p index_sorted_coltype  (sort(upper)|sort(dense)|sort(lower)|sort(deflated)) -> initial
 //
 // Both permutations are represented using global indices, but:
 // - @p index_sorted          sorts "globally", i.e. considering all evecs across ranks
@@ -388,17 +388,17 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 //
 // rank                   |     0     |     1     |     0     |
 // initial                | 0U| 1L| 2X| 3U| 4U| 5X| 6L| 7L| 8X|
-// index_sorted           | 3U| 0U| 4U| 6L| 7L| 1L| 2X| 5X| 8X| -> UUULLLXXX
-// index_sorted_col_type  | 3U| 6L| 7L| 3U| 4U| 5X| 1L| 2X| 8X|
+// index_sorted           | 0U| 1L| 3U| 4U| 6L| 7L| 2X| 5X| 8X| -> sort(non-deflated) | sort(deflated)
+// index_sorted_col_type  | 0U| 1L| 6L| 3U| 4U| 5X| 7L| 2X| 8X| -> rank0(ULLLXX) - rank1(UUX)
 //
-// index_sorted_col_type on can be used "locally":
-// on rank0               | 3U| 6L| 7L| --| --| --| 1L| 2X| 8X| -> ULLLXX
+// index_sorted_col_type can be used "locally":
+// on rank0               | 0U| 1L| 6L| --| --| --| 7L| 2X| 8X| -> ULLLXX
 // on rank1               | --| --| --| 3U| 4U| 5X| --| --| --| -> UUX
 //
 // where U: Upper, D: Dense, L: Lower, X: Deflated
 //
 // The permutations will allow to keep the mapping between sorted eigenvalues and unsorted eigenvectors,
-// which is useful since eigenvectors are more expensive to permuted, so we can keep them in their
+// which is useful since eigenvectors are more expensive to permute, so we can keep them in their
 // initial order.
 //
 // @param n                     number of eigenvalues
@@ -414,15 +414,6 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
                                                 const ColType* types, const T* evals,
                                                 const SizeType* perm_sorted, SizeType* index_sorted,
                                                 SizeType* index_sorted_coltype) {
-  // Note:
-  // (in)  types
-  //    column type of the initial indexing
-  // (in)  in_ptr
-  //    initial <-- sorted by ascending eigenvalue
-  // (out) index_sorted
-  //    initial <-- sorted by ascending eigenvalue in two groups (non-deflated | deflated)
-  // (out) index_sorted_coltype
-  //    initial <-- sorted by ascending eigenvalue in four groups (upper | dense | lower | deflated)
   const SizeType k = std::count_if(types, types + n,
                                    [](const ColType coltype) { return ColType::Deflated != coltype; });
 
@@ -430,7 +421,7 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
   // Note:
   // Since during deflation, eigenvalues related to deflated eigenvectors, might not be sorted anymore,
   // this step also take care of sorting eigenvalues (actually just their related index) by their ascending value.
-  SizeType i1 = 0;  // index of non-deflated values in out
+  SizeType i1 = 0;  // index of non-deflated values
   SizeType i2 = k;  // index of deflated values
   for (SizeType i = 0; i < n; ++i) {
     const SizeType ii = perm_sorted[i];
@@ -446,7 +437,7 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
       const T a = evals[ii];
 
       SizeType j = i2;
-      // shift to right all greater values (shift just indices)
+      // shift to right all greater values (just the indices)
       for (; j > k; --j) {
         const T b = evals[index_sorted[j - 1]];
         if (a > b) {
@@ -467,6 +458,7 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
   // but it does not hurt either.
   const SizeType nperms = dist_sub.size().cols();
 
+  // Detect how many non-deflated per type (on each rank)
   using offsets_t = std::array<std::size_t, 4>;
   std::vector<offsets_t> offsets(to_sizet(dist_sub.grid_size().cols()), {0, 0, 0, 0});
 
@@ -484,6 +476,9 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
     std::partial_sum(rank_offsets.cbegin(), rank_offsets.cend(), rank_offsets.begin());
   });
 
+  // Each rank computes all rank permutations.
+  // Using previously calculated offsets (per rank), the permutation is already split in column types,
+  // so this loops over indices, checks the column type and eventually put the index in the right bin.
   for (SizeType j_el = 0; j_el < nperms; ++j_el) {
     const SizeType jj_el = index_sorted[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];

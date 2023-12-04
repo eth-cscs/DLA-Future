@@ -61,6 +61,94 @@ void General<B, D, T>::callNN(const T alpha, MatrixRef<const T, D>& mat_a, Matri
 }
 
 template <Backend B, Device D, class T>
+void General<B, D, T>::callNN(common::Pipeline<comm::Communicator>& row_task_chain,
+                              common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
+                              MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
+                              MatrixRef<T, D>& mat_c) {
+  namespace ex = pika::execution::experimental;
+
+  if (mat_c.size().isEmpty())
+    return;
+
+  const matrix::Distribution& dist_a = mat_a.distribution();
+  const matrix::Distribution& dist_b = mat_b.distribution();
+  const matrix::Distribution& dist_c = mat_c.distribution();
+  const auto rank = dist_c.rank_index();
+
+  if (mat_a.nr_tiles().cols() == 0) {
+    // Note: if beta == 1, we optimize by not even scheduling anything
+    if (beta != T(1)) {
+      for (SizeType j = 0; j < mat_c.distribution().local_nr_tiles().cols(); ++j)
+        for (SizeType i = 0; i < mat_c.distribution().local_nr_tiles().rows(); ++i)
+          ex::start_detached(dlaf::internal::whenAllLift(beta, mat_c.readwrite(LocalTileIndex(i, j))) |
+                             tile::scal(dlaf::internal::Policy<B>()));
+    }
+    return;
+  }
+
+  constexpr std::size_t n_workspaces = 2;
+  common::RoundRobin<matrix::Panel<Coord::Col, T, D>> panelsA(n_workspaces, dist_a);
+  common::RoundRobin<matrix::Panel<Coord::Row, T, D>> panelsB(n_workspaces, dist_b);
+
+  DLAF_ASSERT_HEAVY(mat_a.nr_tiles().cols() == mat_b.nr_tiles().rows(), mat_a.nr_tiles(),
+                    mat_b.nr_tiles());
+
+  // This loops over the global indices for k, because every rank has to participate in communication
+  for (SizeType k = 0; k < mat_a.nr_tiles().cols(); ++k) {
+    auto& panelA = panelsA.nextResource();
+    auto& panelB = panelsB.nextResource();
+
+    if (k == 0 || k == mat_a.nr_tiles().cols() - 1) {
+      DLAF_ASSERT_HEAVY(dist_a.tile_size_of<Coord::Col>(k) == dist_b.tile_size_of<Coord::Row>(k),
+                        dist_a.tile_size_of<Coord::Col>(k), dist_b.tile_size_of<Coord::Row>(k));
+      const SizeType kSize = dist_a.tile_size_of<Coord::Col>(k);
+      panelA.setWidth(kSize);
+      panelB.setHeight(kSize);
+    }
+
+    // Setup the column workspace for the root ranks, i.e. the ones in the current col
+    const auto rank_k_col = dist_a.rank_global_tile<Coord::Col>(k);
+    if (rank_k_col == rank.col()) {
+      const auto k_local = dist_a.local_tile_from_global_tile<Coord::Col>(k);
+      for (SizeType i = 0; i < dist_c.local_nr_tiles().rows(); ++i) {
+        const LocalTileIndex ik(i, k_local);
+        panelA.setTile(ik, mat_a.read(ik));
+      }
+    }
+    // Setup the row workspace for the root ranks, i.e. the ones in the current row
+    const auto rank_k_row = dist_b.rank_global_tile<Coord::Row>(k);
+    if (rank_k_row == rank.row()) {
+      const auto k_local = dist_b.local_tile_from_global_tile<Coord::Row>(k);
+      for (SizeType j = 0; j < dist_c.local_nr_tiles().cols(); ++j) {
+        const LocalTileIndex kj(k_local, j);
+        panelB.setTile(kj, mat_b.read(kj));
+      }
+    }
+
+    // Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)
+    broadcast(rank_k_col, panelA, row_task_chain);
+    broadcast(rank_k_row, panelB, col_task_chain);
+
+    // This is the core loop where the k step performs the update over the entire local matrix using
+    // the col and row workspaces.
+    // Everything needed for the update is available locally thanks to previous broadcasts.
+    for (SizeType i = 0; i < dist_c.local_nr_tiles().rows(); ++i) {
+      for (SizeType j = 0; j < dist_c.local_nr_tiles().cols(); ++j) {
+        const LocalTileIndex ij(i, j);
+
+        ex::start_detached(dlaf::internal::whenAllLift(blas::Op::NoTrans, blas::Op::NoTrans, alpha,
+                                                       panelA.read(ij), panelB.read(ij),
+                                                       k == 0 ? beta : T(1), mat_c.readwrite(ij)) |
+                           tile::gemm(dlaf::internal::Policy<B>()));
+      }
+    }
+
+    panelA.reset();
+    panelB.reset();
+  }
+}
+
+template <Backend B, Device D, class T>
 void GeneralSub<B, D, T>::callNN(const SizeType idx_begin, const SizeType idx_end, const blas::Op opA,
                                  const blas::Op opB, const T alpha, Matrix<const T, D>& mat_a,
                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {

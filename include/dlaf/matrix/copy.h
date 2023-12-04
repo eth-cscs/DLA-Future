@@ -88,10 +88,22 @@ void copy(MatrixRef<const T, Source>& src, MatrixRef<T, Destination>& dst) {
       return;
   }
 
+  DLAF_ASSERT(src.size() == dst.size(), src.size(), dst.size());
+  DLAF_ASSERT(src.tile_size() == dst.tile_size(), src.tile_size(), dst.tile_size());
+
+  DLAF_ASSERT(dlaf::matrix::same_process_grid(src, dst), src, dst);
+
+  if (!local_matrix(src)) {
+    DLAF_ASSERT(src.block_size() == dst.block_size(), src.block_size(), dst.block_size());
+    DLAF_ASSERT(src.source_rank_index() == dst.source_rank_index(), src.source_rank_index(),
+                dst.source_rank_index());
+  }
+
+  if (src.nr_tiles().isEmpty())
+    return;
+
   DLAF_ASSERT(src.distribution().tile_size_of({0, 0}) == dst.distribution().tile_size_of({0, 0}),
               src.distribution().tile_size_of({0, 0}), dst.distribution().tile_size_of({0, 0}));
-  DLAF_ASSERT(src.size() == dst.size(), src.size(), dst.size());
-  DLAF_ASSERT(src.block_size() == dst.block_size(), src.block_size(), dst.block_size());
 
   const dlaf::internal::Policy<matrix::internal::CopyBackend_v<Source, Destination>> policy;
   for (SizeType j = 0; j < src.distribution().local_nr_tiles().cols(); ++j) {

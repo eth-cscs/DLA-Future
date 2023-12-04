@@ -74,8 +74,8 @@ bool local_matrix(const MatrixLike<const T, D>& m) noexcept {
 }
 
 /// Returns true if the matrix is distributed on the communication grid.
-template <class T, Device D>
-bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
+template <template <class, Device> class MatrixLike, class T, Device D>
+bool equal_process_grid(const MatrixLike<const T, D>& m, const comm::CommunicatorGrid& g) noexcept {
   return m.commGridSize() == g.size() && m.rankIndex() == g.rank();
 }
 
@@ -85,10 +85,10 @@ bool equal_process_grid(const Matrix<const T, D>& m, const comm::CommunicatorPip
   return m.commGridSize() == p.size_2d() && m.rankIndex() == p.rank_2d();
 }
 
-/// Returns true if the matrix is distributed on the communication grid.
+/// Returns true if the two matrices are distributed on the same grid
 template <template <class, Device> class MatrixLikeA, template <class, Device> class MatrixLikeB,
-          class T, Device D>
-bool same_process_grid(const MatrixLikeA<const T, D>& a, const MatrixLikeB<const T, D>& b) noexcept {
+          class T, Device D1, Device D2>
+bool same_process_grid(const MatrixLikeA<const T, D1>& a, const MatrixLikeB<const T, D2>& b) noexcept {
   return a.commGridSize() == b.commGridSize() && a.rankIndex() == b.rankIndex();
 }
 

@@ -75,6 +75,11 @@ public:
     return distribution_.rank_index();
   }
 
+  /// Returns the 2D rank index of the process that stores the top-left tile of the matrix
+  const comm::Index2D& source_rank_index() const noexcept {
+    return distribution_.source_rank_index();
+  }
+
   /// Returns the size of the communicator grid associated to the matrix.
   const comm::Size2D& grid_size() const noexcept {
     return distribution_.grid_size();

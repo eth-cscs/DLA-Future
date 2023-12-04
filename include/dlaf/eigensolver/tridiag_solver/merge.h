@@ -468,13 +468,13 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
   const SizeType nperms = dist_sub.size().cols();
 
   using offsets_t = std::array<std::size_t, 4>;
-  std::vector<offsets_t> offsets(to_sizet(dist_sub.commGridSize().cols()), {0, 0, 0, 0});
+  std::vector<offsets_t> offsets(to_sizet(dist_sub.grid_size().cols()), {0, 0, 0, 0});
 
   for (SizeType j_el = 0; j_el < nperms; ++j_el) {
     const SizeType jj_el = index_sorted[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];
 
-    const comm::IndexT_MPI rank = dist_sub.rankGlobalElement<Coord::Col>(jj_el);
+    const comm::IndexT_MPI rank = dist_sub.rank_global_element<Coord::Col>(jj_el);
     offsets_t& rank_offsets = offsets[to_sizet(rank)];
 
     if (coltype != ColType::Deflated)
@@ -488,7 +488,7 @@ SizeType stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist
     const SizeType jj_el = index_sorted[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];
 
-    const comm::IndexT_MPI rank = dist_sub.rankGlobalElement<Coord::Col>(jj_el);
+    const comm::IndexT_MPI rank = dist_sub.rank_global_element<Coord::Col>(jj_el);
     offsets_t& rank_offsets = offsets[to_sizet(rank)];
 
     const SizeType jjj_el_lc = to_SizeType(rank_offsets[ev_sort_order(coltype)]++);
@@ -545,8 +545,7 @@ auto stablePartitionIndexForDeflation(const matrix::Distribution& dist_evecs, co
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
 
   const matrix::Distribution dist_evecs_sub(
-      dist_evecs,
-      matrix::SubDistributionSpec{dist_evecs.globalElementIndex({i_begin, i_begin}, {0, 0}), {n, n}});
+      dist_evecs, {dist_evecs.global_element_index({i_begin, i_begin}, {0, 0}), {n, n}});
 
   auto part_fn = [n, dist_evecs_sub](const auto& c_tiles_futs, const auto& evals_tiles_futs,
                                      const auto& in_tiles_futs, const auto& out_tiles,
@@ -1685,16 +1684,14 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
                                                       ws_hm.i2, ws_h.i3, ws_hm.i5));
 
   // Reorder Eigenvectors
+  using dlaf::permutations::internal::permuteJustLocal;
   if constexpr (Backend::MC == B) {
     copy(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);
-    dlaf::permutations::internal::permuteJustLocal<B, D, T, Coord::Col>(i_begin, i_end, ws.i5, ws.e0,
-                                                                        ws.e1);
+    permuteJustLocal<T, Coord::Col>(i_begin, i_end, ws.i5, ws.e0, ws.e1);
   }
   else {
-    // TODO remove this branch. It exists just because GPU permuteJustLocal is not implemented yet
     copy(idx_loc_begin, sz_loc_tiles, ws.e0, ws_hm.e0);
-    dlaf::permutations::internal::permuteJustLocal<Backend::MC, Device::CPU, T, Coord::Col>(
-        i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);
+    permuteJustLocal<T, Coord::Col>(i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);
     copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e1);
   }
 

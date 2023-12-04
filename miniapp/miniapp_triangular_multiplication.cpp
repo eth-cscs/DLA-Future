@@ -125,7 +125,7 @@ struct triangularMultiplicationMiniapp {
     auto add_mul = n * m * m / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-    auto [ref_op_a, ref_b, ref_x] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
+    auto [in_op_a, out_b, in_b] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -133,8 +133,8 @@ struct triangularMultiplicationMiniapp {
 
       // setup matrix A and b
       using dlaf::matrix::util::set;
-      set(ah, ref_op_a, op);
-      set(bh, ref_x);
+      set(ah, in_op_a, op);
+      set(bh, in_b);
       a.copySourceToTarget();
       b.copySourceToTarget();
 

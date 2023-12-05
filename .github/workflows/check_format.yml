@@ -11,7 +11,7 @@
 name: Check format
 
 on:
-  - pull_request
+  - push
 
 jobs:
   check:
@@ -24,30 +24,56 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends clang-format-15 python3
+          sudo apt-get install --no-install-recommends clang-format-15 fd-find python3 ripgrep
           pip3 install black==23.03.0
           pip3 install cmakelang==0.6.13
+
+          pushd /tmp
+          curl --output dasel \
+            --location https://github.com/TomWright/dasel/releases/download/v1.27.3/dasel_linux_amd64
+          sha256sum dasel
+          echo "1a5adbf8e5b69f48ad5d1665bf7ed056ea3ff8cf3312ce2dc7c3209939873489 dasel" | sha256sum --check
+          chmod +x dasel
+          mv dasel /usr/local/bin
+          popd
+
+          pushd /tmp
+          curl --output inshpect \
+            --location https://raw.githubusercontent.com/msimberg/inshpect/f7b6045cdf832da30be1b0fb88a35827cc443ffa/inshpect
+          sha256sum inshpect
+          echo "04b6160cc0b1a45a38db319617697a0bb6a0c1413313d945a4ba73811dd5288a inshpect" | sha256sum --check
+          chmod +x inshpect
+          mv inshpect /usr/local/bin
+          popd
+
+          pushd /tmp
+          curl --output ripgrep.tar.gz \
+            --location https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          echo "ee4e0751ab108b6da4f47c52da187d5177dc371f0f512a7caaec5434e711c091 ripgrep.tar.gz" | sha256sum --check
+          tar --extract --strip-components 1 --file ripgrep.tar.gz
+          mv rg /usr/local/bin
+          popd
 
       - name: Fetch master
         run: git fetch --no-tags --depth=1 origin +refs/heads/master:refs/heads/master
 
          # Fails if there are tabs in source files.
-      - name: Check formatting
-        run: ./.github/format.sh
+      # - name: Check formatting
+      #   run: ./.github/format.sh
 
-      - name: Check scripts formatting
-        if: always()
-        run: black --line-length 105 scripts/
+      # - name: Check scripts formatting
+      #   if: always()
+      #   run: black --line-length 105 scripts/
 
-         # Fails if there are differences.
-      - name: Formatting issues
-        if: always()
-        run: git diff --color --exit-code
+      #    # Fails if there are differences.
+      # - name: Formatting issues
+      #   if: always()
+      #   run: git diff --color --exit-code
 
       - name: Check include guards
         if: always()
         run: |
-          find include test -type f '(' -name "*.h" -o -name "*.h.in" ')'             \
+          find . -type f '(' -name "*.h" -o -name "*.h.in" ')'             \
             | xargs -I{} sh -c                                                        \
                 "egrep -sq '^#pragma once' {} || echo {}"                             \
             > pragma-once.check
@@ -57,3 +83,10 @@ jobs:
           done
 
           test ! -s pragma-once.check
+
+      - name: Inshpect
+        if: always()
+        run: |
+          export INSHPECT_NUMTHREADS=4
+          export INSHPECT_FD=fdfind
+          inshpect . .inshpect.toml

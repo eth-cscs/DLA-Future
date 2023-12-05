@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstdint>
+
 #include <blas/config.h>
 #include <blas/mangling.h>
 

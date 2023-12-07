@@ -87,22 +87,22 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("+cuda", when="+rocm")
 
     with when("+rocm"):
-        for val in ROCmPackage.amdgpu_targets:
-            depends_on(f"pika amdgpu_target={val}", when=f"amdgpu_target={val}")
-            depends_on(f"rocsolver amdgpu_target={val}", when=f"amdgpu_target={val}")
-            depends_on(f"rocblas amdgpu_target={val}", when=f"amdgpu_target={val}")
-            depends_on(f"whip amdgpu_target={val}", when=f"amdgpu_target={val}")
-            depends_on(f"umpire amdgpu_target={val}", when=f"amdgpu_target={val}")
+        for arch in ROCmPackage.amdgpu_targets:
+            depends_on(f"pika amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocsolver amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocblas amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"whip amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"umpire amdgpu_target={arch}", when=f"amdgpu_target={arch}")
 
     with when("@:0.3 +rocm"):
-        for val in ROCmPackage.amdgpu_targets:
-            depends_on(f"rocprim amdgpu_target={val}", when=f"amdgpu_target={val}")
-            depends_on(f"rocthrust amdgpu_target={val}", when=f"amdgpu_target={val}")
+        for arch in ROCmPackage.amdgpu_targets:
+            depends_on(f"rocprim amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocthrust amdgpu_target={arch}", when=f"amdgpu_target={arch}")
 
     with when("+cuda"):
-        for val in CudaPackage.cuda_arch_values:
-            depends_on(f"pika cuda_arch={val}", when=f"cuda_arch={val}")
-            depends_on(f"umpire cuda_arch={val}", when=f"cuda_arch={val}")
+        for arch in CudaPackage.cuda_arch_values:
+            depends_on(f"pika cuda_arch={arch}", when=f"cuda_arch={arch}")
+            depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
     ### Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")

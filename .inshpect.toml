@@ -11,7 +11,7 @@
 extensions = ["c", "cu", "h"]
 
 [includes]
-enable = false
+enable = true
 patterns = [
     { pattern = '\bstd::make_shared\b', include = 'memory' },
     { pattern = '\bstd::map\b', include = 'map' },

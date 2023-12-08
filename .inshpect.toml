@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-extensions = ["c", "cu", "h"]
+extensions = ["c", "cpp", "cu", "h", "h.in"]
 
 [includes]
 enable = true

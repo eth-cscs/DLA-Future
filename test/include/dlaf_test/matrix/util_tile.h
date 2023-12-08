@@ -15,6 +15,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <sstream>
 
 #include <dlaf/matrix/copy_tile.h>

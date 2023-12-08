@@ -9,6 +9,7 @@
 //
 
 #include <cstdlib>
+#include <memory>
 
 #include <pika/init.hpp>
 

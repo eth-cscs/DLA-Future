@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include <pika/execution.hpp>
 #include <pika/semaphore.hpp>
 

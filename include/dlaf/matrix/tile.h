@@ -13,6 +13,7 @@
 /// @file
 
 #include <exception>
+#include <memory>
 #include <ostream>
 #include <tuple>
 #include <type_traits>

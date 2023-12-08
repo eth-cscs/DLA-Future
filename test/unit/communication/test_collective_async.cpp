@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <string>
+
 #include <mpi.h>
 
 #include <dlaf/common/data.h>

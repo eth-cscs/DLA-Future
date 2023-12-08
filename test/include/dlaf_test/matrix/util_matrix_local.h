@@ -13,6 +13,7 @@
 /// @file
 
 #include <functional>
+#include <string>
 #include <type_traits>
 
 #include <dlaf/common/range2d.h>

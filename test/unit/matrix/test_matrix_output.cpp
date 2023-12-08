@@ -9,6 +9,7 @@
 //
 
 #include <sstream>
+#include <string>
 #include <tuple>
 
 #include <dlaf/communication/communicator_grid.h>

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <string>
 
 #include "gtest_mpi_listener.h"
 

@@ -8,6 +8,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <list>
 #include <sstream>
 
 #include <dlaf/common/index2d.h>

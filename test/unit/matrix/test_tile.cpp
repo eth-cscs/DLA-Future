@@ -8,6 +8,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <string>
+
 #include <pika/execution.hpp>
 
 #include <dlaf/matrix/index.h>

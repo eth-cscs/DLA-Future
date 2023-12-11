@@ -147,7 +147,7 @@ inline void invertIndex(const SizeType i_begin, const SizeType i_end,
   namespace di = dlaf::internal;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles, [[maybe_unused]] auto&&... ts) {
+  auto inv_fn = [n](const auto& in_tiles_futs, const auto& out_tiles) {
     const TileElementIndex zero(0, 0);
     const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero);
     SizeType* out_ptr = out_tiles[0].ptr(zero);

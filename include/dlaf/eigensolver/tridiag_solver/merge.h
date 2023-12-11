@@ -404,7 +404,6 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // which is useful since eigenvectors are more expensive to permute, so we can keep them in their
 // initial order.
 //
-// @param n                     number of eigenvalues
 // @param types                 array[n] column type of each eigenvector after deflation (initial order)
 // @param evals                 array[n] of eigenvalues sorted as perm_sorted
 // @param perm_sorted           array[n] current -> initial (i.e. evals[i] -> types[perm_sorted[i]])
@@ -414,10 +413,11 @@ auto stablePartitionIndexForDeflationArrays(const SizeType n, const ColType* typ
 // @return k                    number of non-deflated eigenvectors
 // @return k_local              number of local non-deflated eigenvectors
 template <class T>
-auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub, const SizeType n,
-                                            const ColType* types, const T* evals, SizeType* perm_sorted,
+auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub, const ColType* types,
+                                            const T* evals, SizeType* perm_sorted,
                                             SizeType* index_sorted, SizeType* index_sorted_coltype,
                                             SizeType* i4, SizeType* i6) {
+  const SizeType n = dist_sub.size().cols();
   const SizeType k = std::count_if(types, types + n,
                                    [](const ColType coltype) { return ColType::Deflated != coltype; });
 
@@ -425,22 +425,22 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
   // Note:
   // Since during deflation, eigenvalues related to deflated eigenvectors, might not be sorted anymore,
   // this step also take care of sorting eigenvalues (actually just their related index) by their ascending value.
-  SizeType i1 = 0;  // index of non-deflated values
-  SizeType i2 = k;  // index of deflated values
+  SizeType i_nd = 0;  // index of non-deflated values
+  SizeType i_x = k;   // index of deflated values
   for (SizeType i = 0; i < n; ++i) {
     const SizeType ii = perm_sorted[i];
 
     // non-deflated are untouched, just squeeze them at the beginning as they appear
     if (types[ii] != ColType::Deflated) {
-      index_sorted[i1] = ii;
-      ++i1;
+      index_sorted[i_nd] = ii;
+      ++i_nd;
     }
     // deflated are the ones that can have been moved "out-of-order" by deflation...
     // ... so each time insert it in the right place based on eigenvalue value
     else {
       const T a = evals[ii];
 
-      SizeType j = i2;
+      SizeType j = i_x;
       // shift to right all greater values (just the indices)
       for (; j > k; --j) {
         const T b = evals[index_sorted[j - 1]];
@@ -451,7 +451,7 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
       }
       // and insert the current index in the empty place, such that eigenvalues are sorted.
       index_sorted[j] = ii;
-      ++i2;
+      ++i_x;
     }
   }
 
@@ -460,13 +460,12 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
   // index_sorted is used as "reference" in order to deal with deflated vectors in the right sorted order.
   // In this way, also non-deflated are considered in a sorted way, which is not a requirement,
   // but it does not hurt either.
-  const SizeType nperms = dist_sub.size().cols();
 
   // Detect how many non-deflated per type (on each rank)
   using offsets_t = std::array<std::size_t, 4>;
   std::vector<offsets_t> offsets(to_sizet(dist_sub.grid_size().cols()), {0, 0, 0, 0});
 
-  for (SizeType j_el = 0; j_el < nperms; ++j_el) {
+  for (SizeType j_el = 0; j_el < n; ++j_el) {
     const SizeType jj_el = index_sorted[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];
 
@@ -486,7 +485,7 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
   // Each rank computes all rank permutations.
   // Using previously calculated offsets (per rank), the permutation is already split in column types,
   // so this loops over indices, checks the column type and eventually put the index in the right bin.
-  for (SizeType j_el = 0; j_el < nperms; ++j_el) {
+  for (SizeType j_el = 0; j_el < n; ++j_el) {
     const SizeType jj_el = index_sorted[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];
 
@@ -501,21 +500,23 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
     index_sorted_coltype[to_sizet(jjj_el)] = jj_el;
   }
 
-  // invertIndex i3->i2
-  //    i3 (in)  : initial <--- deflated
-  //    i2 (out) : initial ---> deflated
+  // invert i3 and store it in i2 (temporary)
+  //    i3 (in)  : initial  <--- deflated
+  //    i2 (out) : deflated <--- initial
+  SizeType* i2 = perm_sorted;
   for (SizeType i = 0; i < n; ++i)
-    perm_sorted[index_sorted[i]] = i;
+    i2[index_sorted[i]] = i;
 
-  // compose i5*i2 (!i3) -> i4
+  // compose i5 with i3 inverse (i2 temporarily)
   //    i5 (in)  : initial  <--- sort by coltype
   //    i2 (in)  : deflated <--- initial
   //    i4 (out) : deflated <--- sort by col type
   for (SizeType i = 0; i < n; ++i)
-    i4[i] = perm_sorted[index_sorted_coltype[i]];
+    i4[i] = i2[index_sorted_coltype[i]];
 
-  // create i6 using i5 and i4 for deflated
-  for (SizeType j_el = 0, jnd_el = 0; j_el < nperms; ++j_el) {
+  // create i6
+  //    i6 (out) : deflated <--- local(deflated)
+  for (SizeType j_el = 0, jnd_el = 0; j_el < n; ++j_el) {
     const SizeType jj_el = index_sorted_coltype[to_sizet(j_el)];
     const ColType coltype = types[to_sizet(jj_el)];
 
@@ -527,6 +528,12 @@ auto stablePartitionIndexForDeflationArrays(const matrix::Distribution& dist_sub
       i6[j_el] = i4[j_el];
     }
   }
+
+  // invert i6 -> i2
+  //    i6 (in)  : deflated        <--- local(deflated)
+  //    i2 (out) : local(deflated) <--- deflated
+  for (SizeType i = 0; i < n; ++i)
+    i2[i6[i]] = i;
 
   return std::tuple(k, k_lc);
 }
@@ -576,10 +583,10 @@ auto stablePartitionIndexForDeflation(
   const matrix::Distribution dist_evecs_sub(
       dist_evecs, {dist_evecs.global_element_index({i_begin, i_begin}, {0, 0}), {n, n}});
 
-  auto part_fn = [n, dist_evecs_sub](const auto& c_tiles_futs, const auto& evals_tiles_futs,
-                                     const auto& in_tiles_futs, const auto& out_tiles,
-                                     const auto& out_coltype_tiles, const auto& i4_tiles,
-                                     const auto& i6_tiles) {
+  auto part_fn = [dist_evecs_sub](const auto& c_tiles_futs, const auto& evals_tiles_futs,
+                                  const auto& in_tiles_futs, const auto& out_tiles,
+                                  const auto& out_coltype_tiles, const auto& i4_tiles,
+                                  const auto& i6_tiles) {
     const TileElementIndex zero_idx(0, 0);
     const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
     const T* evals_ptr = evals_tiles_futs[0].get().ptr(zero_idx);
@@ -589,7 +596,7 @@ auto stablePartitionIndexForDeflation(
     SizeType* i4_ptr = i4_tiles[0].ptr(zero_idx);
     SizeType* i6_ptr = i6_tiles[0].ptr(zero_idx);
 
-    return stablePartitionIndexForDeflationArrays(dist_evecs_sub, n, c_ptr, evals_ptr, in_ptr, out_ptr,
+    return stablePartitionIndexForDeflationArrays(dist_evecs_sub, c_ptr, evals_ptr, in_ptr, out_ptr,
                                                   out_coltype_ptr, i4_ptr, i6_ptr);
   };
 
@@ -1275,8 +1282,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
       ex::bulk(nthreads, [nthreads, n, dist_sub, bcast_evals, all_reduce_in_place](
                              const std::size_t thread_idx, auto& barrier_ptr, auto& row_comm_wrapper,
                              auto& col_comm_wrapper, const SizeType k, const SizeType k_lc,
-                             const auto& rho, const auto& d_tiles_futs, auto& z_tiles,
-                             const auto& eval_tiles, const auto& i4_tiles_arr, const auto& i6_tiles_arr,
+                             const auto& rho, const auto& d_tiles, auto& z_tiles, const auto& eval_tiles,
+                             const auto& i4_tiles_arr, const auto& i6_tiles_arr,
                              const auto& i2_tiles_arr, const auto& evec_tiles, auto& ws_cols,
                              auto& ws_row) {
         using dlaf::comm::internal::transformMPI;
@@ -1289,12 +1296,6 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
 
-        // const std::size_t batch_size =
-        //     std::max<std::size_t>(2, util::ceilDiv(to_sizet(dist_sub.localNrTiles().cols()), nthreads));
-        // const SizeType begin = to_SizeType(thread_idx * batch_size);
-        // const SizeType end =
-        //     std::min(to_SizeType((thread_idx + 1) * batch_size), dist_sub.localNrTiles().cols());
-
         const SizeType* i4 = i4_tiles_arr[0].get().ptr();
         const SizeType* i2 = i2_tiles_arr[0].get().ptr();
         const SizeType* i6 = i6_tiles_arr[0].get().ptr();
@@ -1304,7 +1305,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // to be dropped soon.
         // Note: use last threads that in principle should have less work to do
         if (k < n && thread_idx == nthreads - 1) {
-          const T* eval_initial_ptr = d_tiles_futs[0].get().ptr();
+          const T* eval_initial_ptr = d_tiles[0].get().ptr();
           T* eval_ptr = eval_tiles[0].ptr();
 
           for (SizeType jeg_el_lc = k_lc; jeg_el_lc < n_el_lc; ++jeg_el_lc) {
@@ -1354,7 +1355,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // Note: we have to wait that LAED4 workspaces are ready to be used
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
-        const T* d_ptr = d_tiles_futs[0].get().ptr();
+        const T* d_ptr = d_tiles[0].get().ptr();
         const T* z_ptr = z_tiles[0].ptr();
 
         // STEP 1: LAED4 (multi-thread)
@@ -1664,20 +1665,21 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Step #2
   //
-  //    i2 (in)  : initial <--- pre_sorted
-  //    i3 (out) : initial <--- deflated
-  //    i5 (out) : initial <--- local(UDL|X)
+  //    i2 (in)  : initial         <--- pre_sorted
+  //
+  //    i3 (out) : initial         <--- deflated
+  //    i5 (out) : initial         <--- local(UDL|X)
+  //    i4 (out) : deflated        <--- sort by col type
+  //    i6 (out) : deflated        <--- local(deflated)
+  //    i2 (out) : local(deflated) <--- deflated
   //
   // - reorder eigenvectors locally so that they are well-shaped for gemm optimization (i.e. UDLX)
   // - reorder `d0 -> d1`, `z0 -> z1`, using `i3` such that deflated entries are at the bottom.
   // - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.
   // - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)
-  //
   auto [k_unique, k_lc] =
       ex::split_tuple(stablePartitionIndexForDeflation(dist_evecs, i_begin, i_end, ws_h.c, ws_h.d0,
                                                        ws_hm.i2, ws_h.i3, ws_hm.i5, ws_h.i4, ws_hm.i6));
-  // from now on i2 is the inverse of i6
-  invertIndex(i_begin, i_end, ws_hm.i6, ws_hm.i2);
 
   auto k = ex::split(std::move(k_unique));
 
@@ -1714,11 +1716,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //
-  //    i1 (in)  : deflated <--- deflated  (identity map)
-  //    i2 (out) : deflated <--- post_sorted
-  //
-
-  // TODO merge sort
+  //    i2 (in)  : local(deflated) <--- deflated
+  //    i1 (out) : sorted          <--- local(deflated)
   sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_hm.i2, ws_h.i1);
 }
 }

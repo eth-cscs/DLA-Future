@@ -1490,10 +1490,19 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                                      ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
                         transformMPI(all_reduce_in_place));
 
-          // TODO check all weights < 0 (!= 0 otherwise q elements are set to zero and then nomr = 0 => nan)
+#ifdef DLAF_ASSERT_HEAVY_ENABLE
+          for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
+            const SizeType i_el = dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
+            const SizeType is = i4[i_el];
+            if (is < k)
+              DLAF_ASSERT_HEAVY(
+                  w[i_el_lc] < 0,
+                  "input for weights computation of non-deflated rows should be strictly less than 0",
+                  w[i_el_lc]);
+          }
+#endif
 
           T* weights = ws_cols[nthreads]();
-          // TODO this can be limited to k_lc
           for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
             const SizeType i_el = dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
             const SizeType ii_el = i4[i_el];

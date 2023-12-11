@@ -87,32 +87,22 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("+cuda", when="+rocm")
 
     with when("+rocm"):
-        for val in ROCmPackage.amdgpu_targets:
-            depends_on("pika amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
-            depends_on(
-                "rocsolver amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
-            depends_on(
-                "rocblas amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
-            depends_on("whip amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val))
-            depends_on(
-                "umpire amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
+        for arch in ROCmPackage.amdgpu_targets:
+            depends_on(f"pika amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocsolver amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocblas amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"whip amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"umpire amdgpu_target={arch}", when=f"amdgpu_target={arch}")
 
     with when("@:0.3 +rocm"):
-        for val in ROCmPackage.amdgpu_targets:
-            depends_on(
-                "rocprim amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
-            depends_on(
-                "rocthrust amdgpu_target={0}".format(val), when="amdgpu_target={0}".format(val)
-            )
+        for arch in ROCmPackage.amdgpu_targets:
+            depends_on(f"rocprim amdgpu_target={arch}", when=f"amdgpu_target={arch}")
+            depends_on(f"rocthrust amdgpu_target={arch}", when=f"amdgpu_target={arch}")
 
     with when("+cuda"):
-        for val in CudaPackage.cuda_arch_values:
-            depends_on("pika cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
-            depends_on("umpire cuda_arch={0}".format(val), when="cuda_arch={0}".format(val))
+        for arch in CudaPackage.cuda_arch_values:
+            depends_on(f"pika cuda_arch={arch}", when=f"cuda_arch={arch}")
+            depends_on(f"umpire cuda_arch={arch}", when=f"cuda_arch={arch}")
 
     ### Variants available only in the DLAF repo spack package
     cxxstds = ("17", "20")
@@ -125,8 +115,8 @@ class DlaFuture(CMakePackage, CudaPackage, ROCmPackage):
     conflicts("cxxstd=20", when="+cuda")
 
     for cxxstd in cxxstds:
-        depends_on("pika cxxstd={0}".format(cxxstd), when="cxxstd={0}".format(cxxstd))
-        depends_on("pika-algorithms cxxstd={0}".format(cxxstd), when="@:0.2 cxxstd={0}".format(cxxstd))
+        depends_on(f"pika cxxstd={cxxstd}", when=f"cxxstd={cxxstd}")
+        depends_on(f"pika-algorithms cxxstd={cxxstd}", when=f"@:0.2 cxxstd={cxxstd}")
 
     variant("ci-test", default=False, description="Build for CI (Advanced usage).")
     conflicts("~miniapps", when="+ci-test")

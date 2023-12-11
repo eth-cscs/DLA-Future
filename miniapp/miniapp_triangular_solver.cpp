@@ -115,7 +115,7 @@ struct triangularSolverMiniapp {
     };
 
     const auto side = opts.side;
-    DLAF_ASSERT(side == blas::Side::Right, side);
+    DLAF_ASSERT(side == blas::Side::Left, side);
     const auto uplo = opts.uplo;
     const auto op = opts.op;
     const auto diag = opts.diag;

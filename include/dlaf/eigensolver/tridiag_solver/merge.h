@@ -1218,11 +1218,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
   const SizeType n = problemSize(i_begin, i_end, dist);
 
-  using dlaf::matrix::internal::distribution::global_tile_element_distance;
+  namespace dist_extra = dlaf::matrix::internal::distribution;
   const matrix::Distribution dist_sub(
-      dist, {{i_begin * dist.blockSize().rows(), i_begin * dist.blockSize().cols()},
-             {global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
-              global_tile_element_distance<Coord::Col>(dist, i_begin, i_end)}});
+      dist, {{i_begin * dist.block_size().rows(), i_begin * dist.block_size().cols()},
+             {dist_extra::global_tile_element_distance<Coord::Row>(dist, i_begin, i_end),
+              dist_extra::global_tile_element_distance<Coord::Col>(dist, i_begin, i_end)}});
 
   auto bcast_evals = [i_begin, i_end,
                       dist](common::Pipeline<comm::Communicator>& row_comm_chain,
@@ -1230,13 +1230,13 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
     using dlaf::comm::internal::sendBcast_o;
     using dlaf::comm::internal::recvBcast_o;
 
-    const comm::Index2D this_rank = dist.rankIndex();
+    const comm::Index2D this_rank = dist.rank_index();
 
     std::vector<ex::unique_any_sender<>> comms;
     comms.reserve(to_sizet(i_end - i_begin));
 
     for (SizeType i = i_begin; i < i_end; ++i) {
-      const comm::IndexT_MPI evecs_tile_rank = dist.rankGlobalTile<Coord::Col>(i);
+      const comm::IndexT_MPI evecs_tile_rank = dist.rank_global_tile<Coord::Col>(i);
       auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
       if (evecs_tile_rank == this_rank.col())
@@ -1258,7 +1258,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
   };
 
   // Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]
-  const std::size_t nthreads = [nrtiles = dist_sub.localNrTiles().cols()]() {
+  const std::size_t nthreads = [nrtiles = dist_sub.local_nr_tiles().cols()]() {
     const std::size_t min_workers = 1;
     const std::size_t available_workers = getTridiagRank1NWorkers();
     const std::size_t ideal_workers = util::ceilDiv(to_sizet(nrtiles), to_sizet(2));
@@ -1289,8 +1289,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         common::Pipeline<comm::Communicator> row_comm_chain(row_comm_wrapper.get());
         const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
-        const SizeType m_el_lc = dist_sub.localSize().rows();
-        const SizeType n_el_lc = dist_sub.localSize().cols();
+        const SizeType m_el_lc = dist_sub.local_size().rows();
+        const SizeType n_el_lc = dist_sub.local_size().cols();
 
         const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();
 
@@ -1307,18 +1307,17 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           T* eval_ptr = eval_tiles[0].ptr();
 
           for (SizeType jeg_el_lc = k_lc; jeg_el_lc < n_el_lc; ++jeg_el_lc) {
-            const SizeType jeg_el = dist_sub.globalElementFromLocalElement<Coord::Col>(jeg_el_lc);
-
+            const SizeType jeg_el = dist_sub.global_element_from_local_element<Coord::Col>(jeg_el_lc);
             const SizeType ieg_el = jeg_el;
 
-            if (dist_sub.rankIndex().row() == dist_sub.rankGlobalElement<Coord::Row>(ieg_el)) {
-              const SizeType ieg_el_lc = dist_sub.localElementFromGlobalElement<Coord::Row>(ieg_el);
-              const LocalTileIndex ieg_lc{dist_sub.localTileFromLocalElement<Coord::Row>(ieg_el_lc),
-                                          dist_sub.localTileFromLocalElement<Coord::Col>(jeg_el_lc)};
-              const SizeType linear_lc = dist_sub.localTileLinearIndex(ieg_lc);
+            if (dist_sub.rank_index().row() == dist_sub.rank_global_element<Coord::Row>(ieg_el)) {
+              const SizeType ieg_el_lc = dist_sub.local_element_from_global_element<Coord::Row>(ieg_el);
+              const LocalTileIndex ieg_lc{dist_sub.local_tile_from_local_element<Coord::Row>(ieg_el_lc),
+                                          dist_sub.local_tile_from_local_element<Coord::Col>(jeg_el_lc)};
+              const SizeType linear_lc = dist_extra::local_tile_linear_index(dist_sub, ieg_lc);
               const TileElementIndex
-                  ijeg_el_tl{dist_sub.tileElementFromLocalElement<Coord::Row>(ieg_el_lc),
-                             dist_sub.tileElementFromLocalElement<Coord::Col>(jeg_el_lc)};
+                  ijeg_el_tl{dist_sub.tile_element_from_local_element<Coord::Row>(ieg_el_lc),
+                             dist_sub.tile_element_from_local_element<Coord::Col>(jeg_el_lc)};
 
               evec_tiles[to_sizet(linear_lc)](ijeg_el_tl) = T{1};
             }
@@ -1358,14 +1357,14 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         // STEP 1: LAED4 (multi-thread)
         if (thread_idx == 0) {  // TODO make it multi-threaded over multiple workers
-          common::internal::SingleThreadedBlasScope single;  // TODO needed also for laed?
+          common::internal::SingleThreadedBlasScope single;
 
           T* eval_ptr = eval_tiles[0].ptr();
           T* delta_ptr = ws_cols[thread_idx]();
 
           for (SizeType jeg_el_lc = 0; jeg_el_lc < k_lc; ++jeg_el_lc) {
-            const SizeType jeg_el = dist_sub.globalElementFromLocalElement<Coord::Col>(jeg_el_lc);
-            const SizeType jeg_lc = dist_sub.localTileFromLocalElement<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_el = dist_sub.global_element_from_local_element<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_lc = dist_sub.local_tile_from_local_element<Coord::Col>(jeg_el_lc);
 
             // Solve the deflated rank-1 problem
             // Note:
@@ -1377,18 +1376,18 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                           &eigenval);
 
             // Now laed4 result has to be copied in the right spot
-            const SizeType jeg_el_tl = dist_sub.tileElementFromGlobalElement<Coord::Col>(jeg_el);
+            const SizeType jeg_el_tl = dist_sub.tile_element_from_global_element<Coord::Col>(jeg_el);
 
             for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
-              const SizeType i_el = dist_sub.globalElementFromLocalElement<Coord::Row>(i_el_lc);
+              const SizeType i_el = dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
               const SizeType is_el = i4[i_el];
 
               // just non-deflated, because deflated have been already set to 0
               if (is_el < k) {
-                const SizeType i_lc = dist_sub.localTileFromLocalElement<Coord::Row>(i_el_lc);
-                const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, jeg_lc});
+                const SizeType i_lc = dist_sub.local_tile_from_local_element<Coord::Row>(i_el_lc);
+                const SizeType linear_lc = dist_extra::local_tile_linear_index(dist_sub, {i_lc, jeg_lc});
                 const auto& evec = evec_tiles[to_sizet(linear_lc)];
-                const SizeType i_el_tl = dist_sub.tileElementFromLocalElement<Coord::Row>(i_el_lc);
+                const SizeType i_el_tl = dist_sub.tile_element_from_local_element<Coord::Row>(i_el_lc);
                 evec({i_el_tl, jeg_el_tl}) = delta_ptr[is_el];
               }
             }
@@ -1420,7 +1419,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // during the switch from col axis to row axis we must keep the matching between eigenvectors
         if (thread_idx == 0) {
           for (SizeType ieg_el_lc = 0; ieg_el_lc < m_el_lc; ++ieg_el_lc) {
-            const SizeType ieg_el = dist_sub.globalElementFromLocalElement<Coord::Row>(ieg_el_lc);
+            const SizeType ieg_el = dist_sub.global_element_from_local_element<Coord::Row>(ieg_el_lc);
             const SizeType is_el = i4[ieg_el];
 
             if (is_el >= k) {
@@ -1433,11 +1432,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
             const GlobalElementIndex ijeg_subm_el(ieg_el, jeg_el);
 
-            if (dist_sub.rankIndex().col() == dist_sub.rankGlobalElement<Coord::Col>(jeg_el)) {
-              const SizeType linear_subm_lc = dist_sub.localTileLinearIndex(
-                  {dist_sub.localTileFromLocalElement<Coord::Row>(ieg_el_lc),
-                   dist_sub.localTileFromGlobalElement<Coord::Col>(jeg_el)});
-              const TileElementIndex ij_tl = dist_sub.tileElementIndex(ijeg_subm_el);
+            if (dist_sub.rank_index().col() == dist_sub.rank_global_element<Coord::Col>(jeg_el)) {
+              const SizeType linear_subm_lc = dist_extra::local_tile_linear_index(
+                  dist_sub, {dist_sub.local_tile_from_local_element<Coord::Row>(ieg_el_lc),
+                             dist_sub.local_tile_from_global_element<Coord::Col>(jeg_el)});
+              const TileElementIndex ij_tl = dist_sub.tile_element_index(ijeg_subm_el);
               w[ieg_el_lc] = q[to_sizet(linear_subm_lc)](ij_tl);
             }
             else {
@@ -1454,11 +1453,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         // STEP 2b: compute weights
         if (thread_idx == 0) {  // TODO make it multithreaded again
           for (SizeType jeg_el_lc = 0; jeg_el_lc < k_lc; ++jeg_el_lc) {
-            const SizeType jeg_el = dist_sub.globalElementFromLocalElement<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_el = dist_sub.global_element_from_local_element<Coord::Col>(jeg_el_lc);
             const SizeType js_el = i6[jeg_el];
 
             for (SizeType ieg_el_lc = 0; ieg_el_lc < m_el_lc; ++ieg_el_lc) {
-              const SizeType ieg_el = dist_sub.globalElementFromLocalElement<Coord::Row>(ieg_el_lc);
+              const SizeType ieg_el = dist_sub.global_element_from_local_element<Coord::Row>(ieg_el_lc);
               const SizeType is_el = i4[ieg_el];
 
               // skip if deflated
@@ -1469,10 +1468,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
               if (is_el == js_el)
                 continue;
 
-              const SizeType linear_lc = dist_sub.localTileLinearIndex(
-                  {dist_sub.localTileFromLocalElement<Coord::Row>(ieg_el_lc),
-                   dist_sub.localTileFromLocalElement<Coord::Col>(jeg_el_lc)});
-              const TileElementIndex ij_tl = dist_sub.tileElementIndex({ieg_el, jeg_el});
+              const SizeType linear_lc = dist_extra::local_tile_linear_index(
+                  dist_sub, {dist_sub.local_tile_from_local_element<Coord::Row>(ieg_el_lc),
+                             dist_sub.local_tile_from_local_element<Coord::Col>(jeg_el_lc)});
+              const TileElementIndex ij_tl = dist_sub.tile_element_index({ieg_el, jeg_el});
 
               w[ieg_el_lc] *=
                   q[to_sizet(linear_lc)](ij_tl) / (d_ptr[to_sizet(is_el)] - d_ptr[to_sizet(js_el)]);
@@ -1501,7 +1500,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           T* weights = ws_cols[nthreads]();
           // TODO this can be limited to k_lc
           for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
-            const SizeType i_el = dist_sub.globalElementFromLocalElement<Coord::Row>(i_el_lc);
+            const SizeType i_el = dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
             const SizeType ii_el = i4[i_el];
             weights[to_sizet(i_el_lc)] = std::copysign(std::sqrt(-w[i_el_lc]), z_ptr[to_sizet(ii_el)]);
           }
@@ -1519,22 +1518,22 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           T* sum_squares = ws_row();
 
           for (SizeType jeg_el_lc = 0; jeg_el_lc < k_lc; ++jeg_el_lc) {
-            const SizeType jeg_lc = dist_sub.localTileFromLocalElement<Coord::Col>(jeg_el_lc);
-            const SizeType jeg_el_tl = dist_sub.tileElementFromLocalElement<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_lc = dist_sub.local_tile_from_local_element<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_el_tl = dist_sub.tile_element_from_local_element<Coord::Col>(jeg_el_lc);
 
             for (SizeType ieg_el_lc = 0; ieg_el_lc < m_el_lc; ++ieg_el_lc) {
-              const SizeType ieg_el = dist_sub.globalElementFromLocalElement<Coord::Row>(ieg_el_lc);
+              const SizeType ieg_el = dist_sub.global_element_from_local_element<Coord::Row>(ieg_el_lc);
               const SizeType is_el = i4[ieg_el];
 
               // it is a deflated row, skip it (it should be already 0)
               if (is_el >= k)
                 continue;
 
-              const LocalTileIndex ijeg_lc(dist_sub.localTileFromLocalElement<Coord::Row>(ieg_el_lc),
+              const LocalTileIndex ijeg_lc(dist_sub.local_tile_from_local_element<Coord::Row>(ieg_el_lc),
                                            jeg_lc);
-              const SizeType ijeg_linear = dist_sub.localTileLinearIndex(ijeg_lc);
+              const SizeType ijeg_linear = dist_extra::local_tile_linear_index(dist_sub, ijeg_lc);
               const TileElementIndex ijeg_el_tl(
-                  dist_sub.tileElementFromLocalElement<Coord::Row>(ieg_el_lc), jeg_el_tl);
+                  dist_sub.tile_element_from_local_element<Coord::Row>(ieg_el_lc), jeg_el_tl);
 
               const auto& q_tile = q[to_sizet(ijeg_linear)];
 
@@ -1542,12 +1541,12 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
             }
 
             // column-major once the full column has been updated, compute the sum of squares (for norm)
-            for (SizeType i_lc = 0; i_lc < dist_sub.localNrTiles().rows(); ++i_lc) {
+            for (SizeType i_lc = 0; i_lc < dist_sub.local_nr_tiles().rows(); ++i_lc) {
               const LocalTileIndex ijeg_lc(i_lc, jeg_lc);
-              const SizeType ijeg_linear = dist_sub.localTileLinearIndex(ijeg_lc);
+              const SizeType ijeg_linear = dist_extra::local_tile_linear_index(dist_sub, ijeg_lc);
               const T* partial_evec = q[to_sizet(ijeg_linear)].ptr({0, jeg_el_tl});
-              const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-              const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
+              const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+              const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
               sum_squares[jeg_el_lc] += blas::dot(m_el_tl, partial_evec, 1, partial_evec, 1);
             }
           }
@@ -1570,19 +1569,19 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
           const T* sum_squares = ws_row();
 
           for (SizeType jeg_el_lc = 0; jeg_el_lc < k_lc; ++jeg_el_lc) {
-            const SizeType jeg_lc = dist_sub.localTileFromLocalElement<Coord::Col>(jeg_el_lc);
-            const SizeType jeg_el_tl = dist_sub.tileElementFromLocalElement<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_lc = dist_sub.local_tile_from_local_element<Coord::Col>(jeg_el_lc);
+            const SizeType jeg_el_tl = dist_sub.tile_element_from_local_element<Coord::Col>(jeg_el_lc);
 
             const T vec_norm = std::sqrt(sum_squares[jeg_el_lc]);
 
-            for (SizeType i_lc = 0; i_lc < dist_sub.localNrTiles().rows(); ++i_lc) {
+            for (SizeType i_lc = 0; i_lc < dist_sub.local_nr_tiles().rows(); ++i_lc) {
               const LocalTileIndex ijeg_lc(i_lc, jeg_lc);
-              const SizeType ijeg_linear = dist_sub.localTileLinearIndex(ijeg_lc);
+              const SizeType ijeg_linear = dist_extra::local_tile_linear_index(dist_sub, ijeg_lc);
 
               T* partial_evec = q[to_sizet(ijeg_linear)].ptr({0, jeg_el_tl});
 
-              const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-              const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
+              const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+              const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
               blas::scal(m_el_tl, 1 / vec_norm, partial_evec, 1);
             }
           }

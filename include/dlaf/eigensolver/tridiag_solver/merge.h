@@ -1368,10 +1368,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
             // Solve the deflated rank-1 problem
             // Note:
-            // it solves considering the order in the original fully sorted non-deflated (i3)
-            // but it stores it in extended global (as eigenvectors are stored in E1)
+            // Input eigenvalues are stored "deflated" with i3, but laed4 is going to store them
+            // "locally" deflated, i.e. locally it is valid sort(non-deflated)|sort(deflated)
             const SizeType js_el = i6[jeg_el];
-            T& eigenval = eval_ptr[to_sizet(jeg_el)];  // eval is in compact rank layout
+            T& eigenval = eval_ptr[to_sizet(jeg_el)];
             lapack::laed4(to_signed<int64_t>(k), to_signed<int64_t>(js_el), d_ptr, z_ptr, delta_ptr, rho,
                           &eigenval);
 
@@ -1412,11 +1412,6 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
         T* w = ws_cols[thread_idx]();
 
         // STEP 2a: copy diagonal from q -> w (or just initialize with 1)
-        // Note:
-        // Loop over compact rank (=expanded global) up to k_el_lc
-        // index on k_el_lc has to be converted to global element on k_el, so it can be used with
-        // permutations
-        // during the switch from col axis to row axis we must keep the matching between eigenvectors
         if (thread_idx == 0) {
           for (SizeType ieg_el_lc = 0; ieg_el_lc < m_el_lc; ++ieg_el_lc) {
             const SizeType ieg_el = dist_sub.global_element_from_local_element<Coord::Row>(ieg_el_lc);

@@ -118,6 +118,8 @@ struct triangularMultiplicationMiniapp {
     DLAF_ASSERT(side == blas::Side::Left, side);
 
     const auto side = opts.side;
+
+    const auto side = opts.side;
     const auto uplo = opts.uplo;
     const auto op = opts.op;
     const auto diag = opts.diag;

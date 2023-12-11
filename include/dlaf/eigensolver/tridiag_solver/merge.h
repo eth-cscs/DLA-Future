@@ -1560,8 +1560,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         // STEP 3b: Reduce to get the sum of all squares on all ranks
         if (thread_idx == 0)
-          // TODO it can be limited to k_lc
-          tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM, common::make_data(ws_row(), n_el_lc)) |
+          tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM, common::make_data(ws_row(), k_lc)) |
                         transformMPI(all_reduce_in_place));
 
         barrier_ptr->arrive_and_wait(barrier_busy_wait);

@@ -548,12 +548,12 @@ auto stablePartitionIndexForDeflation(
   using pika::execution::thread_stacksize;
 
   const SizeType n = problemSize(i_begin, i_end, in.distribution());
-  auto part_fn = [n](const auto& c_tiles_futs, const auto& evals_tiles_futs, const auto& in_tiles_futs,
+  auto part_fn = [n](const auto& c_tiles, const auto& evals_tiles, const auto& in_tiles,
                      const auto& out_tiles, const auto& out_coltype_tiles) {
     const TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-    const T* evals_ptr = evals_tiles_futs[0].get().ptr(zero_idx);
-    const SizeType* in_ptr = in_tiles_futs[0].get().ptr(zero_idx);
+    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
+    const T* evals_ptr = evals_tiles[0].get().ptr(zero_idx);
+    const SizeType* in_ptr = in_tiles[0].get().ptr(zero_idx);
     SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
     SizeType* out_coltype_ptr = out_coltype_tiles[0].ptr(zero_idx);
 
@@ -583,14 +583,13 @@ auto stablePartitionIndexForDeflation(
   const matrix::Distribution dist_evecs_sub(
       dist_evecs, {dist_evecs.global_element_index({i_begin, i_begin}, {0, 0}), {n, n}});
 
-  auto part_fn = [dist_evecs_sub](const auto& c_tiles_futs, const auto& evals_tiles_futs,
-                                  const auto& in_tiles_futs, const auto& out_tiles,
-                                  const auto& out_coltype_tiles, const auto& i4_tiles,
-                                  const auto& i6_tiles) {
+  auto part_fn = [dist_evecs_sub](const auto& c_tiles, const auto& evals_tiles, const auto& in_tiles,
+                                  const auto& out_tiles, const auto& out_coltype_tiles,
+                                  const auto& i4_tiles, const auto& i6_tiles) {
     const TileElementIndex zero_idx(0, 0);
-    const ColType* c_ptr = c_tiles_futs[0].get().ptr(zero_idx);
-    const T* evals_ptr = evals_tiles_futs[0].get().ptr(zero_idx);
-    SizeType* in_ptr = in_tiles_futs[0].ptr(zero_idx);
+    const ColType* c_ptr = c_tiles[0].get().ptr(zero_idx);
+    const T* evals_ptr = evals_tiles[0].get().ptr(zero_idx);
+    SizeType* in_ptr = in_tiles[0].ptr(zero_idx);
     SizeType* out_ptr = out_tiles[0].ptr(zero_idx);
     SizeType* out_coltype_ptr = out_coltype_tiles[0].ptr(zero_idx);
     SizeType* i4_ptr = i4_tiles[0].ptr(zero_idx);
@@ -711,10 +710,9 @@ auto applyDeflation(const SizeType i_begin, const SizeType i_end, RhoSender&& rh
 
   const SizeType n = problemSize(i_begin, i_end, index.distribution());
 
-  auto deflate_fn = [n](auto rho, auto tol, auto index_tiles_futs, auto d_tiles, auto z_tiles,
-                        auto c_tiles) {
+  auto deflate_fn = [n](auto rho, auto tol, auto index_tiles, auto d_tiles, auto z_tiles, auto c_tiles) {
     const TileElementIndex zero_idx(0, 0);
-    const SizeType* i_ptr = index_tiles_futs[0].get().ptr(zero_idx);
+    const SizeType* i_ptr = index_tiles[0].get().ptr(zero_idx);
     T* d_ptr = d_tiles[0].ptr(zero_idx);
     T* z_ptr = z_tiles[0].ptr(zero_idx);
     ColType* c_ptr = c_tiles[0].ptr(zero_idx);
@@ -767,7 +765,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
                    ex::just(std::vector<memory::MemoryView<T, Device::CPU>>())) |
       ex::transfer(di::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::bulk(nthreads, [nthreads, n, nb](std::size_t thread_idx, auto& barrier_ptr, auto& k, auto& rho,
-                                           auto& d_tiles_futs, auto& z_tiles, auto& eval_tiles,
+                                           auto& d_tiles, auto& z_tiles, auto& eval_tiles,
                                            const auto& i2_tile_arr, auto& evec_tiles, auto& ws_vecs) {
         const matrix::Distribution distr(LocalElementSize(n, n), TileElementSize(nb, nb));
 
@@ -788,7 +786,7 @@ void solveRank1Problem(const SizeType i_begin, const SizeType i_end, KSender&& k
         barrier_ptr->arrive_and_wait(barrier_busy_wait);
 
         // STEP 1: LAED4 (multi-thread)
-        const T* d_ptr = d_tiles_futs[0].get().ptr();
+        const T* d_ptr = d_tiles[0].get().ptr();
         const T* z_ptr = z_tiles[0].ptr();
 
         {

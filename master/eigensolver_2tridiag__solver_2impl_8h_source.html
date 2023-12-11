@@ -462,68 +462,69 @@ $(function() {
 <div class="line"><a name="l00391"></a><span class="lineno">  391</span>&#160;  <span class="comment">// Mirror workspace on host memory for CPU-only kernels</span></div>
 <div class="line"><a name="l00392"></a><span class="lineno">  392</span>&#160;  DistWorkSpaceHostMirror&lt;T, D&gt; ws_hm{initMirrorMatrix(ws.e0), initMirrorMatrix(ws.e2),</div>
 <div class="line"><a name="l00393"></a><span class="lineno">  393</span>&#160;                                      initMirrorMatrix(ws.d1), initMirrorMatrix(ws.z0),</div>
-<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;                                      initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2)};</div>
-<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160; </div>
-<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160;  <span class="comment">// Set `ws.e0` to `zero` (needed for Given&#39;s rotation to make sure no random values are picked up)</span></div>
-<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;  matrix::util::set0&lt;B, T, D&gt;(thread_priority::normal, ws.e0);</div>
-<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160; </div>
-<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160;  <span class="comment">// Cuppen&#39;s decomposition</span></div>
-<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;  <span class="keyword">auto</span> offdiag_vals = cuppensDecomposition(tridiag);</div>
-<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160; </div>
-<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160;  common::Pipeline&lt;comm::Communicator&gt; row_task_chain(grid.rowCommunicator().clone());</div>
-<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;  common::Pipeline&lt;comm::Communicator&gt; col_task_chain(grid.colCommunicator().clone());</div>
-<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160; </div>
-<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160;  <span class="comment">// Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of</span></div>
-<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;  <span class="comment">// `evecs` (nb x nb)</span></div>
-<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;  <span class="keywordflow">if</span> constexpr (D == Device::CPU) {</div>
-<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0);</div>
-<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;  }</div>
-<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;  <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0, ws_hm.e0);</div>
-<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;  }</div>
-<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160; </div>
-<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160;  <span class="comment">// Offload the diagonal from `tridiag` to `evals`</span></div>
-<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;  offloadDiagonal(tridiag, ws_h.d0);</div>
-<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160; </div>
-<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160;  <span class="comment">// Each triad represents two subproblems to be merged</span></div>
-<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;  SizeType nrtiles = dist_evecs.nrTiles().rows();</div>
-<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {</div>
-<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;    mergeDistSubproblems&lt;B&gt;(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,</div>
-<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;                            i_end, offdiag_vals[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(i_split - 1)], ws, ws_h, ws_hm);</div>
-<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;  }</div>
-<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160; </div>
-<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160;  <span class="keyword">const</span> SizeType n = evecs.nrTiles().rows();</div>
-<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws.e0, ws_hm.e0);</div>
-<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160; </div>
-<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160;  <span class="comment">// Note: ws_hm.d1 is the mirror of ws.d1 which is evals</span></div>
-<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;  applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);</div>
-<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws_hm.d1, evals);</div>
-<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160; </div>
-<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160;  <span class="comment">// Note: ws_hm.e2 is the mirror of ws.e2 which is evecs</span></div>
-<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;  dlaf::permutations::permute&lt;Backend::MC, Device::CPU, T, Coord::Col&gt;(grid, row_task_chain, 0, n,</div>
-<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;                                                                       ws_hm.i2, ws_hm.e0, ws_hm.e2);</div>
-<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws_hm.e2, evecs);</div>
-<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;}</div>
-<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160; </div>
-<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160;<span class="comment">// \overload TridiagSolver&lt;B, D, T&gt;::call()</span></div>
-<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;<span class="comment">//</span></div>
-<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;<span class="comment">// This overload of the distributed tridiagonal version of the algorithm provides the eigenvector matrix</span></div>
-<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;<span class="comment">// as complex values where the imaginery part is set to zero.</span></div>
-<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;<span class="comment">//</span></div>
-<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;<span class="keywordtype">void</span> TridiagSolver&lt;B, D, T&gt;::call(comm::CommunicatorGrid grid, Matrix&lt;T, Device::CPU&gt;&amp; tridiag,</div>
-<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;                                  Matrix&lt;T, D&gt;&amp; evals, Matrix&lt;std::complex&lt;T&gt;, D&gt;&amp; evecs) {</div>
-<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;  Matrix&lt;T, D&gt; real_evecs(evecs.distribution());</div>
-<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;  TridiagSolver&lt;B, D, T&gt;::call(grid, tridiag, evals, real_evecs);</div>
-<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160; </div>
-<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160;  <span class="comment">// Convert real to complex numbers</span></div>
-<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;  <span class="keyword">const</span> matrix::Distribution&amp; dist = evecs.distribution();</div>
-<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(dist.localNrTiles())) {</div>
-<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;    castToComplexAsync&lt;D&gt;(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));</div>
-<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160;  }</div>
-<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;}</div>
-<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160; </div>
-<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160;}</div>
+<div class="line"><a name="l00394"></a><span class="lineno">  394</span>&#160;                                      initMirrorMatrix(ws.z1), initMirrorMatrix(ws.i2),</div>
+<div class="line"><a name="l00395"></a><span class="lineno">  395</span>&#160;                                      initMirrorMatrix(ws.i5)};</div>
+<div class="line"><a name="l00396"></a><span class="lineno">  396</span>&#160; </div>
+<div class="line"><a name="l00397"></a><span class="lineno">  397</span>&#160;  <span class="comment">// Set `ws.e0` to `zero` (needed for Given&#39;s rotation to make sure no random values are picked up)</span></div>
+<div class="line"><a name="l00398"></a><span class="lineno">  398</span>&#160;  matrix::util::set0&lt;B, T, D&gt;(thread_priority::normal, ws.e0);</div>
+<div class="line"><a name="l00399"></a><span class="lineno">  399</span>&#160; </div>
+<div class="line"><a name="l00400"></a><span class="lineno">  400</span>&#160;  <span class="comment">// Cuppen&#39;s decomposition</span></div>
+<div class="line"><a name="l00401"></a><span class="lineno">  401</span>&#160;  <span class="keyword">auto</span> offdiag_vals = cuppensDecomposition(tridiag);</div>
+<div class="line"><a name="l00402"></a><span class="lineno">  402</span>&#160; </div>
+<div class="line"><a name="l00403"></a><span class="lineno">  403</span>&#160;  common::Pipeline&lt;comm::Communicator&gt; row_task_chain(grid.rowCommunicator().clone());</div>
+<div class="line"><a name="l00404"></a><span class="lineno">  404</span>&#160;  common::Pipeline&lt;comm::Communicator&gt; col_task_chain(grid.colCommunicator().clone());</div>
+<div class="line"><a name="l00405"></a><span class="lineno">  405</span>&#160; </div>
+<div class="line"><a name="l00406"></a><span class="lineno">  406</span>&#160;  <span class="comment">// Solve with stedc for each tile of `tridiag` (nb x 2) and save eigenvectors in diagonal tiles of</span></div>
+<div class="line"><a name="l00407"></a><span class="lineno">  407</span>&#160;  <span class="comment">// `evecs` (nb x nb)</span></div>
+<div class="line"><a name="l00408"></a><span class="lineno">  408</span>&#160;  <span class="keywordflow">if</span> constexpr (D == Device::CPU) {</div>
+<div class="line"><a name="l00409"></a><span class="lineno">  409</span>&#160;    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0);</div>
+<div class="line"><a name="l00410"></a><span class="lineno">  410</span>&#160;  }</div>
+<div class="line"><a name="l00411"></a><span class="lineno">  411</span>&#160;  <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l00412"></a><span class="lineno">  412</span>&#160;    solveDistLeaf(grid, full_task_chain, tridiag, ws.e0, ws_hm.e0);</div>
+<div class="line"><a name="l00413"></a><span class="lineno">  413</span>&#160;  }</div>
+<div class="line"><a name="l00414"></a><span class="lineno">  414</span>&#160; </div>
+<div class="line"><a name="l00415"></a><span class="lineno">  415</span>&#160;  <span class="comment">// Offload the diagonal from `tridiag` to `evals`</span></div>
+<div class="line"><a name="l00416"></a><span class="lineno">  416</span>&#160;  offloadDiagonal(tridiag, ws_h.d0);</div>
+<div class="line"><a name="l00417"></a><span class="lineno">  417</span>&#160; </div>
+<div class="line"><a name="l00418"></a><span class="lineno">  418</span>&#160;  <span class="comment">// Each triad represents two subproblems to be merged</span></div>
+<div class="line"><a name="l00419"></a><span class="lineno">  419</span>&#160;  SizeType nrtiles = dist_evecs.nrTiles().rows();</div>
+<div class="line"><a name="l00420"></a><span class="lineno">  420</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> [i_begin, i_split, i_end] : generateSubproblemIndices(nrtiles)) {</div>
+<div class="line"><a name="l00421"></a><span class="lineno">  421</span>&#160;    mergeDistSubproblems&lt;B&gt;(grid, full_task_chain, row_task_chain, col_task_chain, i_begin, i_split,</div>
+<div class="line"><a name="l00422"></a><span class="lineno">  422</span>&#160;                            i_end, offdiag_vals[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(i_split - 1)], ws, ws_h, ws_hm);</div>
+<div class="line"><a name="l00423"></a><span class="lineno">  423</span>&#160;  }</div>
+<div class="line"><a name="l00424"></a><span class="lineno">  424</span>&#160; </div>
+<div class="line"><a name="l00425"></a><span class="lineno">  425</span>&#160;  <span class="keyword">const</span> SizeType n = evecs.nrTiles().rows();</div>
+<div class="line"><a name="l00426"></a><span class="lineno">  426</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws.e0, ws_hm.e0);</div>
+<div class="line"><a name="l00427"></a><span class="lineno">  427</span>&#160; </div>
+<div class="line"><a name="l00428"></a><span class="lineno">  428</span>&#160;  <span class="comment">// Note: ws_hm.d1 is the mirror of ws.d1 which is evals</span></div>
+<div class="line"><a name="l00429"></a><span class="lineno">  429</span>&#160;  applyIndex(0, n, ws_hm.i2, ws_h.d0, ws_hm.d1);</div>
+<div class="line"><a name="l00430"></a><span class="lineno">  430</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws_hm.d1, evals);</div>
+<div class="line"><a name="l00431"></a><span class="lineno">  431</span>&#160; </div>
+<div class="line"><a name="l00432"></a><span class="lineno">  432</span>&#160;  <span class="comment">// Note: ws_hm.e2 is the mirror of ws.e2 which is evecs</span></div>
+<div class="line"><a name="l00433"></a><span class="lineno">  433</span>&#160;  dlaf::permutations::permute&lt;Backend::MC, Device::CPU, T, Coord::Col&gt;(grid, row_task_chain, 0, n,</div>
+<div class="line"><a name="l00434"></a><span class="lineno">  434</span>&#160;                                                                       ws_hm.i2, ws_hm.e0, ws_hm.e2);</div>
+<div class="line"><a name="l00435"></a><span class="lineno">  435</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(ws_hm.e2, evecs);</div>
+<div class="line"><a name="l00436"></a><span class="lineno">  436</span>&#160;}</div>
+<div class="line"><a name="l00437"></a><span class="lineno">  437</span>&#160; </div>
+<div class="line"><a name="l00438"></a><span class="lineno">  438</span>&#160;<span class="comment">// \overload TridiagSolver&lt;B, D, T&gt;::call()</span></div>
+<div class="line"><a name="l00439"></a><span class="lineno">  439</span>&#160;<span class="comment">//</span></div>
+<div class="line"><a name="l00440"></a><span class="lineno">  440</span>&#160;<span class="comment">// This overload of the distributed tridiagonal version of the algorithm provides the eigenvector matrix</span></div>
+<div class="line"><a name="l00441"></a><span class="lineno">  441</span>&#160;<span class="comment">// as complex values where the imaginery part is set to zero.</span></div>
+<div class="line"><a name="l00442"></a><span class="lineno">  442</span>&#160;<span class="comment">//</span></div>
+<div class="line"><a name="l00443"></a><span class="lineno">  443</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00444"></a><span class="lineno">  444</span>&#160;<span class="keywordtype">void</span> TridiagSolver&lt;B, D, T&gt;::call(comm::CommunicatorGrid grid, Matrix&lt;T, Device::CPU&gt;&amp; tridiag,</div>
+<div class="line"><a name="l00445"></a><span class="lineno">  445</span>&#160;                                  Matrix&lt;T, D&gt;&amp; evals, Matrix&lt;std::complex&lt;T&gt;, D&gt;&amp; evecs) {</div>
+<div class="line"><a name="l00446"></a><span class="lineno">  446</span>&#160;  Matrix&lt;T, D&gt; real_evecs(evecs.distribution());</div>
+<div class="line"><a name="l00447"></a><span class="lineno">  447</span>&#160;  TridiagSolver&lt;B, D, T&gt;::call(grid, tridiag, evals, real_evecs);</div>
+<div class="line"><a name="l00448"></a><span class="lineno">  448</span>&#160; </div>
+<div class="line"><a name="l00449"></a><span class="lineno">  449</span>&#160;  <span class="comment">// Convert real to complex numbers</span></div>
+<div class="line"><a name="l00450"></a><span class="lineno">  450</span>&#160;  <span class="keyword">const</span> matrix::Distribution&amp; dist = evecs.distribution();</div>
+<div class="line"><a name="l00451"></a><span class="lineno">  451</span>&#160;  <span class="keywordflow">for</span> (<span class="keyword">auto</span> tile_wrt_local : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(dist.localNrTiles())) {</div>
+<div class="line"><a name="l00452"></a><span class="lineno">  452</span>&#160;    castToComplexAsync&lt;D&gt;(real_evecs.read(tile_wrt_local), evecs.readwrite(tile_wrt_local));</div>
+<div class="line"><a name="l00453"></a><span class="lineno">  453</span>&#160;  }</div>
+<div class="line"><a name="l00454"></a><span class="lineno">  454</span>&#160;}</div>
+<div class="line"><a name="l00455"></a><span class="lineno">  455</span>&#160; </div>
+<div class="line"><a name="l00456"></a><span class="lineno">  456</span>&#160;}</div>
 <div class="ttc" id="acallable__object_8h_html"><div class="ttname"><a href="callable__object_8h.html">callable_object.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>

@@ -278,6 +278,41 @@ def trsm(
     return cmd, env.strip()
 
 
+def trmm(
+    system,
+    lib,
+    build_dir,
+    nodes,
+    rpn,
+    m_sz,
+    n_sz,
+    mb_sz,
+    nruns,
+    suffix="na",
+    extra_flags="",
+    env="",
+    dtype="d",
+):
+    if n_sz == None:
+        n_sz = m_sz
+
+    _check_ranks_per_node(system, lib, rpn)
+    [total_ranks, cores_per_rank, threads_per_rank] = _computeResourcesNeededList(system, nodes, rpn)
+    gr, gc = _sq_factor(total_ranks)
+
+    if lib.startswith("dlaf"):
+        _check_type(dtype)
+        env += " OMP_NUM_THREADS=1"
+        app = f"{build_dir}/miniapp/miniapp_triangular_multiplication"
+        opts = f"--type {dtype} --m {m_sz} --n {n_sz} --mb {mb_sz} --nb {mb_sz} --grid-rows {gr} --grid-cols {gc} --nruns {nruns} {extra_flags}"
+    else:
+        raise ValueError(_err_msg(lib))
+
+    _checkAppExec(app)
+    cmd = f"{app} {opts}".strip() + f" >> trmm_{lib}_{suffix}.out 2>&1"
+    return cmd, env.strip()
+
+
 # lib: allowed libraries are dlaf|slate
 # rpn: ranks per node
 #

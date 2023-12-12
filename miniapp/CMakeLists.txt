@@ -39,6 +39,8 @@ DLAF_addMiniapp(miniapp_bt_reduction_to_band SOURCES miniapp_bt_reduction_to_ban
 
 DLAF_addMiniapp(miniapp_triangular_solver SOURCES miniapp_triangular_solver.cpp)
 
+DLAF_addMiniapp(miniapp_triangular_multiplication SOURCES miniapp_triangular_multiplication.cpp)
+
 DLAF_addMiniapp(miniapp_eigensolver SOURCES miniapp_eigensolver.cpp)
 
 DLAF_addMiniapp(miniapp_gen_eigensolver SOURCES miniapp_gen_eigensolver.cpp)

@@ -1763,8 +1763,8 @@ void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Dis
           GEMM::callNN(sub_comm_row, sub_comm_col, T(1), e1_sub, e2_sub, T(0), e0_sub);
         }
 
-        if (k_lc < dist_sub.localSize().cols()) {
-          const SizeType k = dist_sub.globalElementFromLocalElement<Coord::Col>(k_lc);
+        if (k_lc < dist_sub.local_size().cols()) {
+          const SizeType k = dist_sub.global_element_from_local_element<Coord::Col>(k_lc);
           const matrix::internal::SubMatrixSpec deflated_submat{{sub_offset.row(), sub_offset.col() + k},
                                                                 {n, n - k}};
           MatrixRef<T, D> sub_e0(e0, deflated_submat);
@@ -1804,16 +1804,15 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
              }});
 
   // Calculate the size of the upper subproblem
-  const SizeType n = dist.globalTileElementDistance<Coord::Row>(i_begin, i_end);
-  const SizeType n_upper = dist.globalTileElementDistance<Coord::Row>(i_begin, i_split);
-  const SizeType n_lower = dist.globalTileElementDistance<Coord::Row>(i_split, i_end);
+  const SizeType n_upper = global_tile_element_distance<Coord::Row>(dist, i_begin, i_split);
+  const SizeType n_lower = global_tile_element_distance<Coord::Row>(dist, i_split, i_end);
 
   // The local size of the subproblem
   const GlobalTileIndex idx_gl_begin(i_begin, i_begin);
-  const LocalTileIndex idx_loc_begin{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_begin),
-                                     dist.nextLocalTileFromGlobalTile<Coord::Col>(i_begin)};
-  const LocalTileIndex idx_loc_end{dist.nextLocalTileFromGlobalTile<Coord::Row>(i_end),
-                                   dist.nextLocalTileFromGlobalTile<Coord::Col>(i_end)};
+  const LocalTileIndex idx_loc_begin{dist.next_local_tile_from_global_tile<Coord::Row>(i_begin),
+                                     dist.next_local_tile_from_global_tile<Coord::Col>(i_begin)};
+  const LocalTileIndex idx_loc_end{dist.next_local_tile_from_global_tile<Coord::Row>(i_end),
+                                   dist.next_local_tile_from_global_tile<Coord::Col>(i_end)};
   const LocalTileSize sz_loc_tiles = idx_loc_end - idx_loc_begin;
   const LocalTileIndex idx_begin_tiles_vec(i_begin, 0);
   const LocalTileSize sz_tiles_vec(i_end - i_begin, 1);

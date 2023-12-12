@@ -101,7 +101,7 @@ $(function() {
 <div class="line"><a name="l00030"></a><span class="lineno"><a class="line" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">   30</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_eigensolver.html">Eigensolver</a> {</div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat_a, Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; evals,</div>
 <div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;                   Matrix&lt;T, D&gt;&amp; mat_e);</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat_a,</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat_a,</div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;                   Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; evals, Matrix&lt;T, D&gt;&amp; mat_e);</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;};</div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
@@ -123,7 +123,7 @@ $(function() {
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;}</div>
 <div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:36</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1_eigensolver_result_html"><div class="ttname"><a href="structdlaf_1_1_eigensolver_result.html">dlaf::EigensolverResult</a></div><div class="ttdef"><b>Definition:</b> api.h:22</div></div>

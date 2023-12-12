@@ -86,9 +86,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#ac2f294844a92af6854e4ef81e41eb4fe">dlaf::eigensolver::internal::band_to_tridiagonal</a> (blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, D &gt; &amp;mat_a)</td></tr>
 <tr class="separator:ac2f294844a92af6854e4ef81e41eb4fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aec7c92ceba0e074c2634b07f12a0f059"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:aec7c92ceba0e074c2634b07f12a0f059"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#aec7c92ceba0e074c2634b07f12a0f059">dlaf::eigensolver::internal::band_to_tridiagonal</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, device &gt; &amp;mat_a)</td></tr>
-<tr class="separator:aec7c92ceba0e074c2634b07f12a0f059"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83eadc6b1fdf33eed5af8be156d70d2d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a83eadc6b1fdf33eed5af8be156d70d2d"><td class="memTemplItemLeft" align="right" valign="top">TridiagResult&lt; T, Device::CPU &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="band__to__tridiag_8h.html#a83eadc6b1fdf33eed5af8be156d70d2d">dlaf::eigensolver::internal::band_to_tridiagonal</a> (comm::CommunicatorGrid &amp;grid, blas::Uplo uplo, SizeType band_size, Matrix&lt; const T, device &gt; &amp;mat_a)</td></tr>
+<tr class="separator:a83eadc6b1fdf33eed5af8be156d70d2d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ac2f294844a92af6854e4ef81e41eb4fe"></a>
@@ -157,8 +157,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="aec7c92ceba0e074c2634b07f12a0f059"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aec7c92ceba0e074c2634b07f12a0f059">&#9670;&nbsp;</a></span>band_to_tridiagonal() <span class="overload">[2/2]</span></h2>
+<a id="a83eadc6b1fdf33eed5af8be156d70d2d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a83eadc6b1fdf33eed5af8be156d70d2d">&#9670;&nbsp;</a></span>band_to_tridiagonal() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -168,7 +168,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="memname">TridiagResult&lt;T, Device::CPU&gt; dlaf::eigensolver::internal::band_to_tridiagonal </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>

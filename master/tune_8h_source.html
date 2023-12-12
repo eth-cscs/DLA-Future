@@ -89,30 +89,45 @@ $(function() {
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="keyword">namespace </span>dlaf {</div>
-<div class="line"><a name="l00059"></a><span class="lineno"><a class="line" href="structdlaf_1_1_tune_parameters.html">   59</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a> {</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;  <span class="comment">// NOTE: Remember to update the following if you add or change parameters below:</span></div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;  <span class="comment">// - Documentation in the docstring above</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;  <span class="comment">// - The operator&lt;&lt; overload in tune.cpp</span></div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;  <span class="comment">// - updateConfiguration in init.cpp to update the value from command line options and environment</span></div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="comment">//   values</span></div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="comment">// - getOptionsDescription to add a corresponding command line option</span></div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  <span class="keywordtype">bool</span> debug_dump_trisolver_data = <span class="keyword">false</span>;</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  std::size_t red2band_panel_nworkers =</div>
-<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;      std::max&lt;std::size_t&gt;(1, pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count() / 2);</div>
-<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  std::size_t red2band_barrier_busy_wait_us = 1000;</div>
-<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  std::size_t tridiag_rank1_nworkers = pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count();</div>
-<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;</div>
-<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
-<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;  SizeType eigensolver_min_band = 100;</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;  SizeType band_to_tridiag_1d_block_size_base = 8192;</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;  SizeType bt_band_to_tridiag_hh_apply_group_size = 64;</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;};</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160; </div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, <span class="keyword">const</span> <a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; params);</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;<a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; getTuneParameters();</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;}</div>
-<div class="ttc" id="astructdlaf_1_1_tune_parameters_html"><div class="ttname"><a href="structdlaf_1_1_tune_parameters.html">dlaf::TuneParameters</a></div><div class="ttdef"><b>Definition:</b> tune.h:59</div></div>
+<div class="line"><a name="l00063"></a><span class="lineno"><a class="line" href="structdlaf_1_1_tune_parameters.html">   63</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a> {</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;  <span class="comment">// NOTE: Remember to update the following if you add or change parameters below:</span></div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;  <span class="comment">// - Documentation in the docstring above</span></div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;  <span class="comment">// - The operator&lt;&lt; overload in tune.cpp</span></div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;  <span class="comment">// - updateConfiguration in init.cpp to update the value from command line options and environment</span></div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  <span class="comment">//   values</span></div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  <span class="comment">// - getOptionsDescription to add a corresponding command line option</span></div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  <a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>() {</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    <span class="comment">// Some parameters require the pika runtime to be initialized since they depend on the number of</span></div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;    <span class="comment">// threads used by the runtime. We initialize them separately in the constructor after checking that</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    <span class="comment">// pika is initialized.</span></div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;    <span class="comment">// TODO: Check upfront whether pika has been initialized to be able to give a better error message.</span></div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    <span class="comment">// If pika has not been initialized getting the default thread pool will either trigger an assertion</span></div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    <span class="comment">// or a segfault.</span></div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    <span class="keyword">const</span> <span class="keyword">auto</span> default_pool_thread_count =</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        pika::resource::get_thread_pool(<span class="stringliteral">&quot;default&quot;</span>).get_os_thread_count();</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;    red2band_panel_nworkers = std::max&lt;std::size_t&gt;(1, default_pool_thread_count / 2);</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    tridiag_rank1_nworkers = default_pool_thread_count;</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;  }</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;  <span class="keywordtype">bool</span> debug_dump_trisolver_data = <span class="keyword">false</span>;</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;  std::size_t red2band_panel_nworkers = 1;</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;  std::size_t red2band_barrier_busy_wait_us = 1000;</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;  std::size_t tridiag_rank1_nworkers = 1;</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;  std::size_t tridiag_rank1_barrier_busy_wait_us = 0;</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160; </div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;  SizeType eigensolver_min_band = 100;</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;  SizeType band_to_tridiag_1d_block_size_base = 8192;</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;  SizeType bt_band_to_tridiag_hh_apply_group_size = 64;</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;  std::size_t communicator_grid_num_pipelines = 3;</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;};</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;std::ostream&amp; operator&lt;&lt;(std::ostream&amp; os, <span class="keyword">const</span> <a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; params);</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;<a class="code" href="structdlaf_1_1_tune_parameters.html">TuneParameters</a>&amp; getTuneParameters();</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;}</div>
+<div class="ttc" id="astructdlaf_1_1_tune_parameters_html"><div class="ttname"><a href="structdlaf_1_1_tune_parameters.html">dlaf::TuneParameters</a></div><div class="ttdef"><b>Definition:</b> tune.h:63</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

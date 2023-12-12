@@ -108,16 +108,16 @@ template&lt;typename IndexT , class Tag &gt; </td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The combination of <code>IteratorRange2D</code>, <code>IterableRange2D</code> and <code>iterate_range2d()</code> allow us to write nested loops as a simple range-based for loop. For example, instead of this:</p>
-<div class="fragment"><div class="line"><a class="code" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a> sz(5, 6);</div>
+<div class="fragment"><div class="line"><a class="code" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a> sz(5, 6);</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordflow">for</span> (SizeType idx_j = 0; idx_j &lt; sz.cols(); ++idx_j) {</div>
 <div class="line">   <span class="keywordflow">for</span> (SizeType idx_i = 0; idx_i &lt; sz.rows(); ++idx_i) {</div>
-<div class="line">     <a class="code" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> idx{idx_i, idx_j};</div>
+<div class="line">     <a class="code" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> idx{idx_i, idx_j};</div>
 <div class="line">     ....</div>
 <div class="line">   }</div>
 <div class="line">}</div>
-<div class="ttc" id="acommunicator__grid_8h_html_a1af44f2ea119a10f873e64cf048ba94a"><div class="ttname"><a href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">dlaf::comm::Size2D</a></div><div class="ttdeci">common::Size2D&lt; IndexT_MPI, TAG_MPI &gt; Size2D</div><div class="ttdoc">2D size strong-typed for MPI.</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:29</div></div>
-<div class="ttc" id="acommunicator__grid_8h_html_af5204c68f1436b89ad06c653b710432e"><div class="ttname"><a href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">dlaf::comm::Index2D</a></div><div class="ttdeci">common::Index2D&lt; IndexT_MPI, TAG_MPI &gt; Index2D</div><div class="ttdoc">2D index strong-typed for MPI.</div><div class="ttdef"><b>Definition:</b> communicator_grid.h:27</div></div>
+<div class="ttc" id="acommunication_2index_8h_html_a1af44f2ea119a10f873e64cf048ba94a"><div class="ttname"><a href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">dlaf::comm::Size2D</a></div><div class="ttdeci">common::Size2D&lt; IndexT_MPI, TAG_MPI &gt; Size2D</div><div class="ttdoc">2D size strong-typed for MPI.</div><div class="ttdef"><b>Definition:</b> index.h:28</div></div>
+<div class="ttc" id="acommunication_2index_8h_html_af5204c68f1436b89ad06c653b710432e"><div class="ttname"><a href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">dlaf::comm::Index2D</a></div><div class="ttdeci">common::Index2D&lt; IndexT_MPI, TAG_MPI &gt; Index2D</div><div class="ttdoc">2D index strong-typed for MPI.</div><div class="ttdef"><b>Definition:</b> index.h:26</div></div>
 </div><!-- fragment --><p>we can write this:</p>
 <div class="fragment"><div class="line"><span class="keywordflow">for</span> (Index2D idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(sz)) {</div>
 <div class="line">  ....</div>
@@ -163,12 +163,12 @@ template&lt;typename IndexT , class Tag &gt; </div>
 <p>The overload set returns indices in column-major order with the begin index included and the end index/size excluded.</p>
 <p>The following one-argument variants of <code>iterate_range2d()</code> iterate over the same range of indices:</p>
 <p>(0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2)</p>
-<div class="fragment"><div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(2, 3))) { ... }</div>
-<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(2, 3))) { ... }</div>
+<div class="fragment"><div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(2, 3))) { ... }</div>
+<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(2, 3))) { ... }</div>
 </div><!-- fragment --><p>The following two-argument variants of <code>iterate_range2d()</code> iterate over the same range of indices:</p>
 <p>(5, 6), (6, 6), (5, 7), (6, 7), (5, 8), (6, 8)</p>
-<div class="fragment"><div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(5, 6), <a class="code" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(7, 9))) { ... }</div>
-<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(5, 6), <a class="code" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(2, 3))) { ... }</div>
+<div class="fragment"><div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(5, 6), <a class="code" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(7, 9))) { ... }</div>
+<div class="line"><span class="keywordflow">for</span>(<span class="keyword">auto</span> idx : <a class="code" href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">iterate_range2d</a>(<a class="code" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>(5, 6), <a class="code" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(2, 3))) { ... }</div>
 </div><!-- fragment --><ul>
 <li>Note: Size2D(2, 3) is added to Index2D(5, 6) to determine the end index of the range. </li>
 </ul>

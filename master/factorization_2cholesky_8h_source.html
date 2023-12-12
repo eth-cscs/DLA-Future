@@ -105,7 +105,7 @@ $(function() {
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;}</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="factorization_2cholesky_8h.html#a7eb54a489fc89c0e4027b4017ae8bccb">   68</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="factorization_2cholesky_8h.html#adaa1f64029b23ea42e9ba15219c1d06d">cholesky_factorization</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
+<div class="line"><a name="l00068"></a><span class="lineno"><a class="line" href="factorization_2cholesky_8h.html#adda5f6fab6439a17b12a1fc368be293c">   68</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="factorization_2cholesky_8h.html#adaa1f64029b23ea42e9ba15219c1d06d">cholesky_factorization</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, blas::Uplo uplo, Matrix&lt;T, device&gt;&amp; mat_a) {</div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;  DLAF_ASSERT(matrix::single_tile_per_block(mat_a), mat_a);</div>
@@ -119,7 +119,7 @@ $(function() {
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;}</div>
 <div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160; </div>
 <div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:36</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="afactorization_2cholesky_8h_html_adaa1f64029b23ea42e9ba15219c1d06d"><div class="ttname"><a href="factorization_2cholesky_8h.html#adaa1f64029b23ea42e9ba15219c1d06d">dlaf::cholesky_factorization</a></div><div class="ttdeci">void cholesky_factorization(blas::Uplo uplo, Matrix&lt; T, device &gt; &amp;mat_a)</div><div class="ttdef"><b>Definition:</b> cholesky.h:40</div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>

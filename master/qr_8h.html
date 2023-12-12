@@ -71,8 +71,9 @@ $(function() {
 <div class="title">qr.h File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;dlaf/factorization/qr/api.h&gt;</code><br />
-<code>#include &lt;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
+<div class="textblock"><code>#include &lt;<a class="el" href="communicator__pipeline_8h_source.html">dlaf/communication/communicator_pipeline.h</a>&gt;</code><br />
+<code>#include &lt;dlaf/factorization/qr/api.h&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_2index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
 </div>
 <p><a href="qr_8h_source.html">Go to the source code of this file.</a></p>
@@ -82,10 +83,10 @@ Functions</h2></td></tr>
 <tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
 <tr class="memitem:a4654c00202b44c6c9365d1a03eff9e99"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="qr_8h.html#a4654c00202b44c6c9365d1a03eff9e99">dlaf::factorization::internal::computeTFactor</a> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
 <tr class="separator:a4654c00202b44c6c9365d1a03eff9e99"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a410cbb6a0f304714562624328a9c2168"><td class="memTemplParams" colspan="2"><a id="a410cbb6a0f304714562624328a9c2168"></a>
+<tr class="memitem:aaec3ec64a3396f38b0f12c8d200cc812"><td class="memTemplParams" colspan="2"><a id="aaec3ec64a3396f38b0f12c8d200cc812"></a>
 template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a410cbb6a0f304714562624328a9c2168"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::factorization::internal::computeTFactor</b> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, common::Pipeline&lt; comm::Communicator &gt; &amp;mpi_col_task_chain)</td></tr>
-<tr class="separator:a410cbb6a0f304714562624328a9c2168"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaec3ec64a3396f38b0f12c8d200cc812"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::factorization::internal::computeTFactor</b> (matrix::Panel&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, comm::CommunicatorPipeline&lt; comm::CommunicatorType::Col &gt; &amp;mpi_col_task_chain)</td></tr>
+<tr class="separator:aaec3ec64a3396f38b0f12c8d200cc812"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a4654c00202b44c6c9365d1a03eff9e99"></a>

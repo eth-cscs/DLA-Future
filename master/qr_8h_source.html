@@ -81,31 +81,33 @@ $(function() {
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;<span class="preprocessor">#pragma once</span></div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160; </div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;dlaf/factorization/qr/api.h&gt;</span></div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160; </div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="keyword">namespace </span>dlaf::factorization::internal {</div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00041"></a><span class="lineno"><a class="line" href="qr_8h.html#a4654c00202b44c6c9365d1a03eff9e99">   41</a></span>&#160;<span class="keywordtype">void</span> computeTFactor(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;                    matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                    matrix::ReadWriteTileSender&lt;T, device&gt; t) {</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;  <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(hh_panel, std::move(taus), std::move(t));</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;}</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
-<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="keywordtype">void</span> computeTFactor(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;                    matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
-<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                    matrix::ReadWriteTileSender&lt;T, device&gt; t,</div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;                    <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; mpi_col_task_chain) {</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;  <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;}</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160; </div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:31</div></div>
-<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;dlaf/factorization/qr/api.h&gt;</span></div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="keyword">namespace </span>dlaf::factorization::internal {</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160; </div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00042"></a><span class="lineno"><a class="line" href="qr_8h.html#a4654c00202b44c6c9365d1a03eff9e99">   42</a></span>&#160;<span class="keywordtype">void</span> computeTFactor(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;                    matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;                    matrix::ReadWriteTileSender&lt;T, device&gt; t) {</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;  <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(hh_panel, std::move(taus), std::move(t));</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;}</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="keywordtype">void</span> computeTFactor(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                    matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;                    matrix::ReadWriteTileSender&lt;T, device&gt; t,</div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;                    <a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline&lt;comm::CommunicatorType::Col&gt;</a>&amp; mpi_col_task_chain) {</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;  <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;}</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160; </div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;}</div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html">dlaf::comm::CommunicatorPipeline</a></div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:39</div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
+<div class="ttc" id="amatrix_2index_8h_html"><div class="ttname"><a href="matrix_2index_8h.html">index.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor_html_a1d9391570e947628f8c23668f944f7d4"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">dlaf::factorization::internal::QR_Tfactor::call</a></div><div class="ttdeci">static void call(matrix::Panel&lt; Coord::Col, T, device &gt; &amp;panel_view, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</div><div class="ttdef"><b>Definition:</b> t_factor_impl.h:228</div></div>
 <div class="ttc" id="astructdlaf_1_1matrix_1_1_panel_html"><div class="ttname"><a href="structdlaf_1_1matrix_1_1_panel.html">dlaf::matrix::Panel</a></div><div class="ttdef"><b>Definition:</b> panel.h:584</div></div>

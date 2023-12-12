@@ -78,7 +78,7 @@ $(function() {
 <code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="p2p_8h_source.html">dlaf/communication/kernels/p2p.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="copy__tile_8h_source.html">dlaf/matrix/copy_tile.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="matrix_2index_8h_source.html">dlaf/matrix/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix__ref_8h_source.html">dlaf/matrix/matrix_ref.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
@@ -104,9 +104,9 @@ template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 template&lt;class T , Device Source, Device Destination&gt; </td></tr>
 <tr class="memitem:affbbd583380737f78cd8fe5c5ec8697c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::matrix::internal::copy</b> (MatrixRef&lt; const T, Source &gt; &amp;src, MatrixRef&lt; T, Destination &gt; &amp;dst)</td></tr>
 <tr class="separator:affbbd583380737f78cd8fe5c5ec8697c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplParams" colspan="2">template&lt;class T , Device Source, Device Destination&gt; </td></tr>
-<tr class="memitem:a4e9f34de930792a328db5561dc67a788"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="copy_8h.html#a4e9f34de930792a328db5561dc67a788">dlaf::matrix::copy</a> (Matrix&lt; const T, Source &gt; &amp;src, Matrix&lt; T, Destination &gt; &amp;dst, comm::CommunicatorGrid grid)</td></tr>
-<tr class="separator:a4e9f34de930792a328db5561dc67a788"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77888c3ce3ec55af552ab7b26ac54663"><td class="memTemplParams" colspan="2">template&lt;class T , Device Source, Device Destination&gt; </td></tr>
+<tr class="memitem:a77888c3ce3ec55af552ab7b26ac54663"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="copy_8h.html#a77888c3ce3ec55af552ab7b26ac54663">dlaf::matrix::copy</a> (Matrix&lt; const T, Source &gt; &amp;src, Matrix&lt; T, Destination &gt; &amp;dst, comm::CommunicatorGrid &amp;grid)</td></tr>
+<tr class="separator:a77888c3ce3ec55af552ab7b26ac54663"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="abc90df94f398c001b29a9d62a5714043"></a>
@@ -159,8 +159,8 @@ template&lt;class T , Device Source, Device Destination&gt; </div>
 
 </div>
 </div>
-<a id="a4e9f34de930792a328db5561dc67a788"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4e9f34de930792a328db5561dc67a788">&#9670;&nbsp;</a></span>copy() <span class="overload">[2/2]</span></h2>
+<a id="a77888c3ce3ec55af552ab7b26ac54663"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a77888c3ce3ec55af552ab7b26ac54663">&#9670;&nbsp;</a></span>copy() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -182,7 +182,7 @@ template&lt;class T , Device Source, Device Destination&gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>&#160;</td>
         </tr>
         <tr>

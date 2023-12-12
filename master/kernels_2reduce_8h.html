@@ -77,8 +77,9 @@ $(function() {
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
 <code>#include &lt;<a class="el" href="data_8h_source.html">dlaf/common/data.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="eti_8h_source.html">dlaf/common/eti.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator__pipeline_8h_source.html">dlaf/communication/communicator_pipeline.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communication_2index_8h_source.html">dlaf/communication/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="message_8h_source.html">dlaf/communication/message.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
 </div>
@@ -93,18 +94,18 @@ Macros</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a89af8ab199d6ba8902cc962122477f00"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:a89af8ab199d6ba8902cc962122477f00"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">dlaf::comm::scheduleReduceRecvInPlace</a> (pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:a89af8ab199d6ba8902cc962122477f00"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a75a8e384669618c6b575ad13cfb9b507"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
+<tr class="memitem:a75a8e384669618c6b575ad13cfb9b507"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">dlaf::comm::scheduleReduceRecvInPlace</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:a75a8e384669618c6b575ad13cfb9b507"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ae9b8ecadbe20fc80f3b7df346000ff46"><td class="memItemLeft" align="right" valign="top"><a id="ae9b8ecadbe20fc80f3b7df346000ff46"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE</b> (DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, extern)</td></tr>
 <tr class="separator:ae9b8ecadbe20fc80f3b7df346000ff46"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a82be152159c5114a817dd37784458ac8"><td class="memItemLeft" align="right" valign="top"><a id="a82be152159c5114a817dd37784458ac8"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI</b> (extern, int, Device::CPU)</td></tr>
 <tr class="separator:a82be152159c5114a817dd37784458ac8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60899e3a349b0defe79b1561045a373a"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
-<tr class="memitem:a60899e3a349b0defe79b1561045a373a"><td class="memTemplItemLeft" align="right" valign="top">pika::execution::experimental::unique_any_sender&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">dlaf::comm::scheduleReduceSend</a> (pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</td></tr>
-<tr class="separator:a60899e3a349b0defe79b1561045a373a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af7b17c7d35b275a0a52361c3511b6dd7"><td class="memTemplParams" colspan="2">template&lt;class T , Device D&gt; </td></tr>
+<tr class="memitem:af7b17c7d35b275a0a52361c3511b6dd7"><td class="memTemplItemLeft" align="right" valign="top">pika::execution::experimental::unique_any_sender&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">dlaf::comm::scheduleReduceSend</a> (pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</td></tr>
+<tr class="separator:af7b17c7d35b275a0a52361c3511b6dd7"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a66424675080e2a537b7d7df465cea58d"><td class="memItemLeft" align="right" valign="top"><a id="a66424675080e2a537b7d7df465cea58d"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE</b> (DLAF_SCHEDULE_REDUCE_SEND_ETI, extern)</td></tr>
 <tr class="separator:a66424675080e2a537b7d7df465cea58d"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -144,10 +145,10 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">scheduleReduceRecvInPlace</a>(            \</div>
-<div class="line">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; <a class="code" href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">scheduleReduceRecvInPlace</a>(         \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</div>
 <div class="line">      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</div>
-<div class="ttc" id="akernels_2reduce_8h_html_a89af8ab199d6ba8902cc962122477f00"><div class="ttname"><a href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">dlaf::comm::scheduleReduceRecvInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2reduce_8h_html_a75a8e384669618c6b575ad13cfb9b507"><div class="ttname"><a href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">dlaf::comm::scheduleReduceRecvInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -182,17 +183,17 @@ Functions</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">scheduleReduceSend</a>(                \</div>
-<div class="line">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</div>
-<div class="line">      comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                    \</div>
+<b>Value:</b><div class="fragment"><div class="line">  kword <span class="keyword">template</span> pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">scheduleReduceSend</a>(             \</div>
+<div class="line">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</div>
+<div class="line">      comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                 \</div>
 <div class="line">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</div>
-<div class="ttc" id="akernels_2reduce_8h_html_a60899e3a349b0defe79b1561045a373a"><div class="ttname"><a href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">dlaf::comm::scheduleReduceSend</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleReduceSend(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2reduce_8h_html_af7b17c7d35b275a0a52361c3511b6dd7"><div class="ttname"><a href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">dlaf::comm::scheduleReduceSend</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleReduceSend(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
 </div><!-- fragment -->
 </div>
 </div>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a89af8ab199d6ba8902cc962122477f00"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a89af8ab199d6ba8902cc962122477f00">&#9670;&nbsp;</a></span>scheduleReduceRecvInPlace()</h2>
+<a id="a75a8e384669618c6b575ad13cfb9b507"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a75a8e384669618c6b575ad13cfb9b507">&#9670;&nbsp;</a></span>scheduleReduceRecvInPlace()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -202,7 +203,7 @@ template&lt;class T , Device D&gt; </div>
         <tr>
           <td class="memname">dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; dlaf::comm::scheduleReduceRecvInPlace </td>
           <td>(</td>
-          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; <a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &gt;::Wrapper &gt;&#160;</td>
+          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt;&#160;</td>
           <td class="paramname"><em>pcomm</em>, </td>
         </tr>
         <tr>
@@ -229,8 +230,8 @@ template&lt;class T , Device D&gt; </div>
 
 </div>
 </div>
-<a id="a60899e3a349b0defe79b1561045a373a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a60899e3a349b0defe79b1561045a373a">&#9670;&nbsp;</a></span>scheduleReduceSend()</h2>
+<a id="af7b17c7d35b275a0a52361c3511b6dd7"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af7b17c7d35b275a0a52361c3511b6dd7">&#9670;&nbsp;</a></span>scheduleReduceSend()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -240,13 +241,13 @@ template&lt;class T , Device D&gt; </div>
         <tr>
           <td class="memname">pika::execution::experimental::unique_any_sender dlaf::comm::scheduleReduceSend </td>
           <td>(</td>
-          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; <a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &gt;::Wrapper &gt;&#160;</td>
+          <td class="paramtype">pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt;&#160;</td>
           <td class="paramname"><em>pcomm</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>rank_root</em>, </td>
         </tr>
         <tr>

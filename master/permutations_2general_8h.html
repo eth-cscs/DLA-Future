@@ -74,6 +74,7 @@ $(function() {
 <div class="textblock"><code>#include &lt;blas.hh&gt;</code><br />
 <code>#include &lt;dlaf/common/assert.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="communicator__grid_8h_source.html">dlaf/communication/communicator_grid.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator__pipeline_8h_source.html">dlaf/communication/communicator_pipeline.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_8h_source.html">dlaf/matrix/matrix.h</a>&gt;</code><br />
 <code>#include &lt;dlaf/permutations/general/api.h&gt;</code><br />
 <code>#include &lt;<a class="el" href="util__matrix_8h_source.html">dlaf/util_matrix.h</a>&gt;</code><br />
@@ -85,17 +86,17 @@ Functions</h2></td></tr>
 <tr class="memitem:af301d1e323dbafdc8503756ccd42edcd"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T , Coord coord&gt; </td></tr>
 <tr class="memitem:af301d1e323dbafdc8503756ccd42edcd"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="permutations_2general_8h.html#af301d1e323dbafdc8503756ccd42edcd">dlaf::permutations::permute</a> (SizeType i_begin, SizeType i_end, Matrix&lt; const SizeType, D &gt; &amp;perms, Matrix&lt; const T, D &gt; &amp;mat_in, Matrix&lt; T, D &gt; &amp;mat_out)</td></tr>
 <tr class="separator:af301d1e323dbafdc8503756ccd42edcd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9dbcd748dd76ddf1b2dfef0d08bba03c"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T , Coord coord&gt; </td></tr>
-<tr class="memitem:a9dbcd748dd76ddf1b2dfef0d08bba03c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="permutations_2general_8h.html#a9dbcd748dd76ddf1b2dfef0d08bba03c">dlaf::permutations::permute</a> (comm::CommunicatorGrid grid, common::Pipeline&lt; comm::Communicator &gt; &amp;sub_task_chain, SizeType i_begin, SizeType i_end, Matrix&lt; const SizeType, D &gt; &amp;perms, Matrix&lt; const T, D &gt; &amp;mat_in, Matrix&lt; T, D &gt; &amp;mat_out)</td></tr>
-<tr class="separator:a9dbcd748dd76ddf1b2dfef0d08bba03c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac0e1bdb627d953bc48477e991c1effd1"><td class="memTemplParams" colspan="2"><a id="ac0e1bdb627d953bc48477e991c1effd1"></a>
+<tr class="memitem:af68be63844da4ea17b42435044e0234c"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T , Coord coord&gt; </td></tr>
+<tr class="memitem:af68be63844da4ea17b42435044e0234c"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="permutations_2general_8h.html#af68be63844da4ea17b42435044e0234c">dlaf::permutations::permute</a> (comm::CommunicatorPipeline&lt; comm::coord_to_communicator_type(orthogonal(coord))&gt; &amp;sub_task_chain, SizeType i_begin, SizeType i_end, Matrix&lt; const SizeType, D &gt; &amp;perms, Matrix&lt; const T, D &gt; &amp;mat_in, Matrix&lt; T, D &gt; &amp;mat_out)</td></tr>
+<tr class="separator:af68be63844da4ea17b42435044e0234c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a912618d4a64367c2ac6118277c1a3f95"><td class="memTemplParams" colspan="2"><a id="a912618d4a64367c2ac6118277c1a3f95"></a>
 template&lt;Backend B, Device D, class T , Coord coord&gt; </td></tr>
-<tr class="memitem:ac0e1bdb627d953bc48477e991c1effd1"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::permutations::permute</b> (comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end, Matrix&lt; const SizeType, D &gt; &amp;perms, Matrix&lt; const T, D &gt; &amp;mat_in, Matrix&lt; T, D &gt; &amp;mat_out)</td></tr>
-<tr class="separator:ac0e1bdb627d953bc48477e991c1effd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a912618d4a64367c2ac6118277c1a3f95"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::permutations::permute</b> (comm::CommunicatorGrid &amp;grid, SizeType i_begin, SizeType i_end, Matrix&lt; const SizeType, D &gt; &amp;perms, Matrix&lt; const T, D &gt; &amp;mat_in, Matrix&lt; T, D &gt; &amp;mat_out)</td></tr>
+<tr class="separator:a912618d4a64367c2ac6118277c1a3f95"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a9dbcd748dd76ddf1b2dfef0d08bba03c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9dbcd748dd76ddf1b2dfef0d08bba03c">&#9670;&nbsp;</a></span>permute() <span class="overload">[1/2]</span></h2>
+<a id="af68be63844da4ea17b42435044e0234c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af68be63844da4ea17b42435044e0234c">&#9670;&nbsp;</a></span>permute() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -105,13 +106,7 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
         <tr>
           <td class="memname">void dlaf::permutations::permute </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
-          <td class="paramname"><em>grid</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::coord_to_communicator_type(orthogonal(coord))&gt; &amp;&#160;</td>
           <td class="paramname"><em>sub_task_chain</em>, </td>
         </tr>
         <tr>
@@ -201,8 +196,7 @@ template&lt;Backend B, Device D, class T , Coord coord&gt; </div>
 <dd>
 <code>mat_out</code> has blocksize (NB x NB) </dd>
 <dd>
-<code>mat_out</code> has tilesize (NB x NB)</dd></dl>
-<p>Note: The Pipeline&lt;&gt; API allows to use permute() within other algorithms without having to clone communicators internally. </p>
+<code>mat_out</code> has tilesize (NB x NB) </dd></dl>
 
 </div>
 </div>

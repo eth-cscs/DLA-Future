@@ -87,12 +87,12 @@ Functions</h2></td></tr>
 <tr class="memitem:a1f5487240ae96219923911698f2afdd6"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:a1f5487240ae96219923911698f2afdd6"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="eigensolver_2gen__eigensolver_8h.html#a1f5487240ae96219923911698f2afdd6">dlaf::hermitian_generalized_eigensolver</a> (blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat_a, Matrix&lt; T, D &gt; &amp;mat_b)</td></tr>
 <tr class="separator:a1f5487240ae96219923911698f2afdd6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae296c5af89b97bd69bced4f42a9a9ec3"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:ae296c5af89b97bd69bced4f42a9a9ec3"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="eigensolver_2gen__eigensolver_8h.html#ae296c5af89b97bd69bced4f42a9a9ec3">dlaf::hermitian_generalized_eigensolver</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat_a, Matrix&lt; T, D &gt; &amp;mat_b, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</td></tr>
-<tr class="separator:ae296c5af89b97bd69bced4f42a9a9ec3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a49dc23319fd1539323a3c39b2d1a80e4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a49dc23319fd1539323a3c39b2d1a80e4"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="eigensolver_2gen__eigensolver_8h.html#a49dc23319fd1539323a3c39b2d1a80e4">dlaf::hermitian_generalized_eigensolver</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat_a, Matrix&lt; T, D &gt; &amp;mat_b)</td></tr>
-<tr class="separator:a49dc23319fd1539323a3c39b2d1a80e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74753795a7e7707038f96f77f9e223c2"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a74753795a7e7707038f96f77f9e223c2"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="eigensolver_2gen__eigensolver_8h.html#a74753795a7e7707038f96f77f9e223c2">dlaf::hermitian_generalized_eigensolver</a> (comm::CommunicatorGrid &amp;grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat_a, Matrix&lt; T, D &gt; &amp;mat_b, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</td></tr>
+<tr class="separator:a74753795a7e7707038f96f77f9e223c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a81d4862ad88f88ac7a80133c647b22ec"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:a81d4862ad88f88ac7a80133c647b22ec"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="eigensolver_2gen__eigensolver_8h.html#a81d4862ad88f88ac7a80133c647b22ec">dlaf::hermitian_generalized_eigensolver</a> (comm::CommunicatorGrid &amp;grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat_a, Matrix&lt; T, D &gt; &amp;mat_b)</td></tr>
+<tr class="separator:a81d4862ad88f88ac7a80133c647b22ec"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a1f5487240ae96219923911698f2afdd6"></a>
@@ -276,8 +276,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="a49dc23319fd1539323a3c39b2d1a80e4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a49dc23319fd1539323a3c39b2d1a80e4">&#9670;&nbsp;</a></span>hermitian_generalized_eigensolver() <span class="overload">[3/4]</span></h2>
+<a id="a81d4862ad88f88ac7a80133c647b22ec"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a81d4862ad88f88ac7a80133c647b22ec">&#9670;&nbsp;</a></span>hermitian_generalized_eigensolver() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -287,7 +287,7 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="memname">EigensolverResult&lt;T, D&gt; dlaf::hermitian_generalized_eigensolver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>
@@ -354,8 +354,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="ae296c5af89b97bd69bced4f42a9a9ec3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae296c5af89b97bd69bced4f42a9a9ec3">&#9670;&nbsp;</a></span>hermitian_generalized_eigensolver() <span class="overload">[4/4]</span></h2>
+<a id="a74753795a7e7707038f96f77f9e223c2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74753795a7e7707038f96f77f9e223c2">&#9670;&nbsp;</a></span>hermitian_generalized_eigensolver() <span class="overload">[4/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -365,7 +365,7 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="memname">void dlaf::hermitian_generalized_eigensolver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>

@@ -74,6 +74,8 @@ $(function() {
 <div class="textblock"><code>#include &lt;type_traits&gt;</code><br />
 <code>#include &lt;pika/execution.hpp&gt;</code><br />
 <code>#include &lt;<a class="el" href="index2d_8h_source.html">dlaf/common/index2d.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator__pipeline_8h_source.html">dlaf/communication/communicator_pipeline.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communication_2index_8h_source.html">dlaf/communication/index.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="kernels_2broadcast_8h_source.html">dlaf/communication/kernels/broadcast.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="message_8h_source.html">dlaf/communication/message.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="copy__tile_8h_source.html">dlaf/matrix/copy_tile.h</a>&gt;</code><br />
@@ -90,16 +92,20 @@ Functions</h2></td></tr>
 template&lt;Coord dst_coord&gt; </td></tr>
 <tr class="memitem:a4f592d20e90c4ca8a70342cd522fdfa9"><td class="memTemplItemLeft" align="right" valign="top">std::pair&lt; SizeType, comm::IndexT_MPI &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::internal::transposedOwner</b> (const matrix::Distribution &amp;dist, const LocalTileIndex idx)</td></tr>
 <tr class="separator:a4f592d20e90c4ca8a70342cd522fdfa9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a83a59dd8a250067f25b9b4bbd041a9cf"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
-<tr class="memitem:a83a59dd8a250067f25b9b4bbd041a9cf"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a> (comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</td></tr>
-<tr class="separator:a83a59dd8a250067f25b9b4bbd041a9cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6e56082c935ff28b0184870563b4069b"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
-<tr class="memitem:a6e56082c935ff28b0184870563b4069b"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#a6e56082c935ff28b0184870563b4069b">dlaf::comm::broadcast</a> (comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, matrix::Panel&lt; orthogonal(axis), T, D, storageT &gt; &amp;panelT, common::Pipeline&lt; comm::Communicator &gt; &amp;row_task_chain, common::Pipeline&lt; comm::Communicator &gt; &amp;col_task_chain)</td></tr>
-<tr class="separator:a6e56082c935ff28b0184870563b4069b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5e63a7fa440a442aa538d89b580eb3ed"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
+<tr class="memitem:a5e63a7fa440a442aa538d89b580eb3ed"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a> (comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</td></tr>
+<tr class="separator:a5e63a7fa440a442aa538d89b580eb3ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7cc87fc2d422e6bc555f268b864e570b"><td class="memTemplParams" colspan="2"><a id="a7cc87fc2d422e6bc555f268b864e570b"></a>
+template&lt;Coord C&gt; </td></tr>
+<tr class="memitem:a7cc87fc2d422e6bc555f268b864e570b"><td class="memTemplItemLeft" align="right" valign="top">auto &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>dlaf::comm::internal::get_taskchain</b> (comm::CommunicatorPipeline&lt; comm::CommunicatorType::Row &gt; &amp;row_task_chain, comm::CommunicatorPipeline&lt; comm::CommunicatorType::Col &gt; &amp;col_task_chain)</td></tr>
+<tr class="separator:a7cc87fc2d422e6bc555f268b864e570b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaf65e45c4589538449b807f37aeb0c96"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, matrix::StoreTransposed storageT, class  = std::enable_if_t&lt;!std::is_const_v&lt;T&gt;&gt;&gt; </td></tr>
+<tr class="memitem:aaf65e45c4589538449b807f37aeb0c96"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="broadcast__panel_8h.html#aaf65e45c4589538449b807f37aeb0c96">dlaf::comm::broadcast</a> (comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, matrix::Panel&lt; orthogonal(axis), T, D, storageT &gt; &amp;panelT, comm::CommunicatorPipeline&lt; comm::CommunicatorType::Row &gt; &amp;row_task_chain, comm::CommunicatorPipeline&lt; comm::CommunicatorType::Col &gt; &amp;col_task_chain)</td></tr>
+<tr class="separator:aaf65e45c4589538449b807f37aeb0c96"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a83a59dd8a250067f25b9b4bbd041a9cf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a83a59dd8a250067f25b9b4bbd041a9cf">&#9670;&nbsp;</a></span>broadcast() <span class="overload">[1/2]</span></h2>
+<a id="a5e63a7fa440a442aa538d89b580eb3ed"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5e63a7fa440a442aa538d89b580eb3ed">&#9670;&nbsp;</a></span>broadcast() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -109,7 +115,7 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, cla
         <tr>
           <td class="memname">void dlaf::comm::broadcast </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>rank_root</em>, </td>
         </tr>
         <tr>
@@ -121,7 +127,7 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, cla
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;&#160;</td>
           <td class="paramname"><em>serial_comm</em>&#160;</td>
         </tr>
         <tr>
@@ -146,8 +152,8 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, cla
 
 </div>
 </div>
-<a id="a6e56082c935ff28b0184870563b4069b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6e56082c935ff28b0184870563b4069b">&#9670;&nbsp;</a></span>broadcast() <span class="overload">[2/2]</span></h2>
+<a id="aaf65e45c4589538449b807f37aeb0c96"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aaf65e45c4589538449b807f37aeb0c96">&#9670;&nbsp;</a></span>broadcast() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -157,7 +163,7 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, mat
         <tr>
           <td class="memname">void dlaf::comm::broadcast </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>rank_root</em>, </td>
         </tr>
         <tr>
@@ -175,13 +181,13 @@ template&lt;class T , Device D, Coord axis, matrix::StoreTransposed storage, mat
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Row &gt; &amp;&#160;</td>
           <td class="paramname"><em>row_task_chain</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;&#160;</td>
           <td class="paramname"><em>col_task_chain</em>&#160;</td>
         </tr>
         <tr>

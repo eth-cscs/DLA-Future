@@ -88,12 +88,12 @@ Functions</h2></td></tr>
 <tr class="memitem:aa9f2f4d0cec789e49116b1260cf29a25"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
 <tr class="memitem:aa9f2f4d0cec789e49116b1260cf29a25"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="dlaf_2eigensolver_2eigensolver_8h.html#aa9f2f4d0cec789e49116b1260cf29a25">dlaf::hermitian_eigensolver</a> (blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat)</td></tr>
 <tr class="separator:aa9f2f4d0cec789e49116b1260cf29a25"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a55f46916df81905b65037034a586da4d"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a55f46916df81905b65037034a586da4d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="dlaf_2eigensolver_2eigensolver_8h.html#a55f46916df81905b65037034a586da4d">dlaf::hermitian_eigensolver</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</td></tr>
-<tr class="separator:a55f46916df81905b65037034a586da4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a94d726a6cfade3aa79a171aa1a0fe458"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
-<tr class="memitem:a94d726a6cfade3aa79a171aa1a0fe458"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="dlaf_2eigensolver_2eigensolver_8h.html#a94d726a6cfade3aa79a171aa1a0fe458">dlaf::hermitian_eigensolver</a> (comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat)</td></tr>
-<tr class="separator:a94d726a6cfade3aa79a171aa1a0fe458"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa24d5a56d5c9745592801442ca8aa74f"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:aa24d5a56d5c9745592801442ca8aa74f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="dlaf_2eigensolver_2eigensolver_8h.html#aa24d5a56d5c9745592801442ca8aa74f">dlaf::hermitian_eigensolver</a> (comm::CommunicatorGrid &amp;grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat, Matrix&lt; BaseType&lt; T &gt;, D &gt; &amp;eigenvalues, Matrix&lt; T, D &gt; &amp;eigenvectors)</td></tr>
+<tr class="separator:aa24d5a56d5c9745592801442ca8aa74f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad5845ea969261c65578efde3b6a4e3d4"><td class="memTemplParams" colspan="2">template&lt;Backend B, Device D, class T &gt; </td></tr>
+<tr class="memitem:ad5845ea969261c65578efde3b6a4e3d4"><td class="memTemplItemLeft" align="right" valign="top">EigensolverResult&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="dlaf_2eigensolver_2eigensolver_8h.html#ad5845ea969261c65578efde3b6a4e3d4">dlaf::hermitian_eigensolver</a> (comm::CommunicatorGrid &amp;grid, blas::Uplo uplo, Matrix&lt; T, D &gt; &amp;mat)</td></tr>
+<tr class="separator:ad5845ea969261c65578efde3b6a4e3d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="aa9f2f4d0cec789e49116b1260cf29a25"></a>
@@ -231,8 +231,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="a94d726a6cfade3aa79a171aa1a0fe458"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a94d726a6cfade3aa79a171aa1a0fe458">&#9670;&nbsp;</a></span>hermitian_eigensolver() <span class="overload">[3/4]</span></h2>
+<a id="ad5845ea969261c65578efde3b6a4e3d4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad5845ea969261c65578efde3b6a4e3d4">&#9670;&nbsp;</a></span>hermitian_eigensolver() <span class="overload">[3/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -242,7 +242,7 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="memname">EigensolverResult&lt;T, D&gt; dlaf::hermitian_eigensolver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>
@@ -287,8 +287,8 @@ template&lt;Backend B, Device D, class T &gt; </div>
 
 </div>
 </div>
-<a id="a55f46916df81905b65037034a586da4d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a55f46916df81905b65037034a586da4d">&#9670;&nbsp;</a></span>hermitian_eigensolver() <span class="overload">[4/4]</span></h2>
+<a id="aa24d5a56d5c9745592801442ca8aa74f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa24d5a56d5c9745592801442ca8aa74f">&#9670;&nbsp;</a></span>hermitian_eigensolver() <span class="overload">[4/4]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -298,7 +298,7 @@ template&lt;Backend B, Device D, class T &gt; </div>
         <tr>
           <td class="memname">void dlaf::hermitian_eigensolver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>

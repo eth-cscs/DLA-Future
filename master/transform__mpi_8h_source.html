@@ -85,15 +85,15 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="consume__rvalues_8h.html">dlaf/common/consume_rvalues.h</a>&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="unwrap_8h.html">dlaf/common/unwrap.h</a>&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="unwrap_8h.html">dlaf/common/unwrap.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/transform.h&gt;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;dlaf/sender/when_all_lift.h&gt;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160; </div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="keyword">namespace </span>dlaf::comm::internal {</div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">inline</span> <span class="keywordtype">void</span> consumeCommunicatorWrapper(common::Pipeline&lt;Communicator&gt;::Wrapper&amp; comm_wrapper) {</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">inline</span> <span class="keywordtype">void</span> consumeCommunicatorWrapper(CommunicatorPipelineExclusiveWrapper&amp; comm_wrapper) {</div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;  [[maybe_unused]] <span class="keyword">auto</span> comm_wrapper_local = std::move(comm_wrapper);</div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;}</div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160; </div>
@@ -117,8 +117,8 @@ $(function() {
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;    <span class="comment">// Callables passed to transformMPI have their arguments passed by reference, but doing so</span></div>
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;    <span class="comment">// with PromiseGuard would keep the guard alive until the completion of the MPI operation,</span></div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;    <span class="comment">// whereas we are only looking to guard the submission of the MPI operation. We therefore</span></div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="comment">// explicitly release Pipeline&lt;Communicator&gt;::Wrapper after submitting the MPI operation with</span></div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="comment">// consumeCommunicatorWrapper.</span></div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;    <span class="comment">// explicitly release CommunicatorPipelineExclusiveWrapper after submitting the MPI operation</span></div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    <span class="comment">// with consumeCommunicatorWrapper.</span></div>
 <div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    <span class="comment">//</span></div>
 <div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    <span class="comment">// We also use unwrap various types passed to the MPI operation, including PromiseGuards of</span></div>
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;    <span class="comment">// any type, to allow the MPI operation not to care whether a Communicator was wrapped in a</span></div>
@@ -228,8 +228,8 @@ $(function() {
 <div class="ttc" id="aclassdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_detach.html">dlaf::comm::internal::PartialTransformMPIDetach</a></div><div class="ttdef"><b>Definition:</b> transform_mpi.h:156</div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i.html">dlaf::comm::internal::PartialTransformMPI</a></div><div class="ttdef"><b>Definition:</b> transform_mpi.h:134</div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
 <div class="ttc" id="aconsume__rvalues_8h_html"><div class="ttname"><a href="consume__rvalues_8h.html">consume_rvalues.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1internal_1_1_m_p_i_call_helper.html">dlaf::comm::internal::MPICallHelper</a></div><div class="ttdef"><b>Definition:</b> transform_mpi.h:47</div></div>
 <div class="ttc" id="astructdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base_html"><div class="ttname"><a href="structdlaf_1_1comm_1_1internal_1_1_partial_transform_m_p_i_base.html">dlaf::comm::internal::PartialTransformMPIBase</a></div><div class="ttdef"><b>Definition:</b> transform_mpi.h:126</div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1_consume_rvalues_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1_consume_rvalues.html">dlaf::common::internal::ConsumeRvalues</a></div><div class="ttdef"><b>Definition:</b> consume_rvalues.h:33</div></div>

@@ -85,12 +85,12 @@ $(function() {
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="tile__extensions_8h.html">dlaf/blas/tile_extensions.h</a>&gt;</span></div>
 <div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;dlaf/common/assert.h&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&gt;</span></div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
-<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&gt;</span></div>
-<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&gt;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="round__robin_8h.html">dlaf/common/round_robin.h</a>&gt;</span></div>
+<div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="broadcast__panel_8h.html">dlaf/communication/broadcast_panel.h</a>&gt;</span></div>
+<div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__grid_8h.html">dlaf/communication/communicator_grid.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="distribution_8h.html">dlaf/matrix/distribution.h</a>&gt;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2index_8h.html">dlaf/matrix/index.h</a>&gt;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix__ref_8h.html">dlaf/matrix/matrix_ref.h</a>&gt;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&gt;</span></div>
@@ -132,10 +132,10 @@ $(function() {
 <div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;}</div>
 <div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
 <div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="keywordtype">void</span> General&lt;B, D, T&gt;::callNN(common::Pipeline&lt;comm::Communicator&gt;&amp; row_task_chain,</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;                              common::Pipeline&lt;comm::Communicator&gt;&amp; col_task_chain, <span class="keyword">const</span> T alpha,</div>
-<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;                              MatrixRef&lt;const T, D&gt;&amp; mat_a, MatrixRef&lt;const T, D&gt;&amp; mat_b, <span class="keyword">const</span> T beta,</div>
-<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;                              MatrixRef&lt;T, D&gt;&amp; mat_c) {</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;<span class="keywordtype">void</span> General&lt;B, D, T&gt;::callNN(comm::CommunicatorPipeline&lt;comm::CommunicatorType::Row&gt;&amp; row_task_chain,</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;                              comm::CommunicatorPipeline&lt;comm::CommunicatorType::Col&gt;&amp; col_task_chain,</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;                              <span class="keyword">const</span> T alpha, MatrixRef&lt;const T, D&gt;&amp; mat_a, MatrixRef&lt;const T, D&gt;&amp; mat_b,</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;                              <span class="keyword">const</span> T beta, MatrixRef&lt;T, D&gt;&amp; mat_c) {</div>
 <div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160; </div>
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;  <span class="keywordflow">if</span> (mat_c.size().isEmpty())</div>
@@ -197,8 +197,8 @@ $(function() {
 <div class="line"><a name="l00126"></a><span class="lineno">  126</span>&#160;    }</div>
 <div class="line"><a name="l00127"></a><span class="lineno">  127</span>&#160; </div>
 <div class="line"><a name="l00128"></a><span class="lineno">  128</span>&#160;    <span class="comment">// Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)</span></div>
-<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(rank_k_col, panelA, row_task_chain);</div>
-<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(rank_k_row, panelB, col_task_chain);</div>
+<div class="line"><a name="l00129"></a><span class="lineno">  129</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_col, panelA, row_task_chain);</div>
+<div class="line"><a name="l00130"></a><span class="lineno">  130</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k_row, panelB, col_task_chain);</div>
 <div class="line"><a name="l00131"></a><span class="lineno">  131</span>&#160; </div>
 <div class="line"><a name="l00132"></a><span class="lineno">  132</span>&#160;    <span class="comment">// This is the core loop where the k step performs the update over the entire local matrix using</span></div>
 <div class="line"><a name="l00133"></a><span class="lineno">  133</span>&#160;    <span class="comment">// the col and row workspaces.</span></div>
@@ -244,8 +244,8 @@ $(function() {
 <div class="line"><a name="l00173"></a><span class="lineno">  173</span>&#160;<span class="comment">// SUMMA: Scalable universal matrix multiplication algorithm.</span></div>
 <div class="line"><a name="l00174"></a><span class="lineno">  174</span>&#160;<span class="comment">// Concurrency: Practice and Experience 9.4 (1997): 255-274</span></div>
 <div class="line"><a name="l00175"></a><span class="lineno">  175</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;<span class="keywordtype">void</span> GeneralSub&lt;B, D, T&gt;::callNN(common::Pipeline&lt;comm::Communicator&gt;&amp; row_task_chain,</div>
-<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;                                 common::Pipeline&lt;comm::Communicator&gt;&amp; col_task_chain,</div>
+<div class="line"><a name="l00176"></a><span class="lineno">  176</span>&#160;<span class="keywordtype">void</span> GeneralSub&lt;B, D, T&gt;::callNN(comm::CommunicatorPipeline&lt;comm::CommunicatorType::Row&gt;&amp; row_task_chain,</div>
+<div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;                                 comm::CommunicatorPipeline&lt;comm::CommunicatorType::Col&gt;&amp; col_task_chain,</div>
 <div class="line"><a name="l00178"></a><span class="lineno">  178</span>&#160;                                 <span class="keyword">const</span> SizeType idx_begin, <span class="keyword">const</span> SizeType idx_end, <span class="keyword">const</span> T alpha,</div>
 <div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;                                 Matrix&lt;const T, D&gt;&amp; mat_a, Matrix&lt;const T, D&gt;&amp; mat_b, <span class="keyword">const</span> T beta,</div>
 <div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;                                 Matrix&lt;T, D&gt;&amp; mat_c) {</div>
@@ -330,8 +330,8 @@ $(function() {
 <div class="line"><a name="l00259"></a><span class="lineno">  259</span>&#160;    }</div>
 <div class="line"><a name="l00260"></a><span class="lineno">  260</span>&#160; </div>
 <div class="line"><a name="l00261"></a><span class="lineno">  261</span>&#160;    <span class="comment">// Broadcast both column and row panel from root to others (row-wise and col-wise, respectively)</span></div>
-<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(rank_k.col(), panelA, row_task_chain);</div>
-<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">broadcast</a>(rank_k.row(), panelB, col_task_chain);</div>
+<div class="line"><a name="l00262"></a><span class="lineno">  262</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k.col(), panelA, row_task_chain);</div>
+<div class="line"><a name="l00263"></a><span class="lineno">  263</span>&#160;    <a class="code" href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">broadcast</a>(rank_k.row(), panelB, col_task_chain);</div>
 <div class="line"><a name="l00264"></a><span class="lineno">  264</span>&#160; </div>
 <div class="line"><a name="l00265"></a><span class="lineno">  265</span>&#160;    <span class="comment">// This is the core loop where the k step performs the update over the entire local matrix using</span></div>
 <div class="line"><a name="l00266"></a><span class="lineno">  266</span>&#160;    <span class="comment">// the col and row workspaces.</span></div>
@@ -364,17 +364,17 @@ $(function() {
 <div class="line"><a name="l00293"></a><span class="lineno">  293</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="abroadcast__panel_8h_html"><div class="ttname"><a href="broadcast__panel_8h.html">broadcast_panel.h</a></div></div>
-<div class="ttc" id="abroadcast__panel_8h_html_a83a59dd8a250067f25b9b4bbd041a9cf"><div class="ttname"><a href="broadcast__panel_8h.html#a83a59dd8a250067f25b9b4bbd041a9cf">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, common::Pipeline&lt; comm::Communicator &gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:58</div></div>
+<div class="ttc" id="abroadcast__panel_8h_html_a5e63a7fa440a442aa538d89b580eb3ed"><div class="ttname"><a href="broadcast__panel_8h.html#a5e63a7fa440a442aa538d89b580eb3ed">dlaf::comm::broadcast</a></div><div class="ttdeci">void broadcast(comm::IndexT_MPI rank_root, matrix::Panel&lt; axis, T, D, storage &gt; &amp;panel, comm::CommunicatorPipeline&lt; coord_to_communicator_type(orthogonal(axis))&gt; &amp;serial_comm)</div><div class="ttdef"><b>Definition:</b> broadcast_panel.h:60</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
 <div class="ttc" id="adistribution_8h_html"><div class="ttname"><a href="distribution_8h.html">distribution.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
-<div class="ttc" id="aindex_8h_html"><div class="ttname"><a href="index_8h.html">index.h</a></div></div>
+<div class="ttc" id="amatrix_2index_8h_html"><div class="ttname"><a href="matrix_2index_8h.html">index.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html_ae46de76ccc35985387f6820b1db9fb51"><div class="ttname"><a href="matrix_2tile_8h.html#ae46de76ccc35985387f6820b1db9fb51">dlaf::matrix::splitTile</a></div><div class="ttdeci">ReadOnlyTileSender&lt; T, D &gt; splitTile(ReadOnlyTileSender&lt; T, D &gt; tile, const SubTileSpec &amp;spec)</div><div class="ttdef"><b>Definition:</b> tile.h:507</div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="amatrix__ref_8h_html"><div class="ttname"><a href="matrix__ref_8h.html">matrix_ref.h</a></div></div>
 <div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="around__robin_8h_html"><div class="ttname"><a href="round__robin_8h.html">round_robin.h</a></div></div>
 <div class="ttc" id="atile__extensions_8h_html"><div class="ttname"><a href="tile__extensions_8h.html">tile_extensions.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>

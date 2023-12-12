@@ -83,7 +83,7 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;pika/execution.hpp&gt;</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="panel_8h.html">dlaf/matrix/panel.h</a>&gt;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="views_8h.html">dlaf/matrix/views.h</a>&gt;</span></div>
@@ -103,7 +103,7 @@ $(function() {
 <div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">call</a>(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
 <div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;                   matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
 <div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;                   matrix::ReadWriteTileSender&lt;T, device&gt; t,</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;                   <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; mpi_col_task_chain);</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;                   <a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline&lt;comm::CommunicatorType::Col&gt;</a>&amp; mpi_col_task_chain);</div>
 <div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;};</div>
 <div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
 <div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;<span class="comment">// ETI</span></div>
@@ -122,10 +122,10 @@ $(function() {
 <div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;DLAF_FACTORIZATION_QR_TFACTOR_ETI(<span class="keyword">extern</span>, Backend::GPU, Device::GPU, std::complex&lt;double&gt;)</div>
 <div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:31</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html">dlaf::comm::CommunicatorPipeline</a></div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:39</div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="apanel_8h_html"><div class="ttname"><a href="panel_8h.html">panel.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor_html"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html">dlaf::factorization::internal::QR_Tfactor</a></div><div class="ttdef"><b>Definition:</b> api.h:27</div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor_html_a1d9391570e947628f8c23668f944f7d4"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">dlaf::factorization::internal::QR_Tfactor::call</a></div><div class="ttdeci">static void call(matrix::Panel&lt; Coord::Col, T, device &gt; &amp;panel_view, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</div><div class="ttdef"><b>Definition:</b> t_factor_impl.h:228</div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r_html"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r.html">dlaf::factorization::internal::QR</a></div><div class="ttdef"><b>Definition:</b> api.h:24</div></div>

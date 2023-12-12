@@ -83,7 +83,7 @@ $(function() {
 <div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160; </div>
 <div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;<span class="preprocessor">#include &lt;blas.hh&gt;</span></div>
 <div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160; </div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
 <div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_8h.html">dlaf/matrix/matrix.h</a>&gt;</span></div>
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="types_8h.html">dlaf/types.h</a>&gt;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160; </div>
@@ -93,27 +93,29 @@ $(function() {
 <div class="line"><a name="l00022"></a><span class="lineno"><a class="line" href="structdlaf_1_1permutations_1_1internal_1_1_permutations.html">   22</a></span>&#160;<span class="keyword">struct </span><a class="code" href="structdlaf_1_1permutations_1_1internal_1_1_permutations.html">Permutations</a> {</div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(SizeType i_begin, SizeType i_end, Matrix&lt;const SizeType, D&gt;&amp; perms,</div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;                   Matrix&lt;const T, D&gt;&amp; mat_in, Matrix&lt;T, D&gt;&amp; mat_out);</div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(<a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; sub_task_chain, SizeType i_begin,</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;                   SizeType i_end, Matrix&lt;const SizeType, D&gt;&amp; perms, Matrix&lt;const T, D&gt;&amp; mat_in,</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;                   Matrix&lt;T, D&gt;&amp; mat_out);</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;};</div>
-<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="comment">// ETI</span></div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="preprocessor">#define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \</span></div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">  KWORD template struct Permutations&lt;BACKEND, DEVICE, DATATYPE, Coord::Col&gt;; \</span></div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">  KWORD template struct Permutations&lt;BACKEND, DEVICE, DATATYPE, Coord::Row&gt;;</span></div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160; </div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::MC, Device::CPU, <span class="keywordtype">float</span>)</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::MC, Device::CPU, <span class="keywordtype">double</span>)</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::GPU, Device::GPU, <span class="keywordtype">float</span>)</div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::GPU, Device::GPU, <span class="keywordtype">double</span>)</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:31</div></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;  <span class="keyword">static</span> <span class="keywordtype">void</span> call(</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;      <a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt;comm::coord_to_communicator_type(<a class="code" href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">orthogonal</a>(coord))&gt;&amp; sub_task_chain,</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;      SizeType i_begin, SizeType i_end, Matrix&lt;const SizeType, D&gt;&amp; perms, Matrix&lt;const T, D&gt;&amp; mat_in,</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;      Matrix&lt;T, D&gt;&amp; mat_out);</div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;};</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160; </div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="comment">// ETI</span></div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;<span class="preprocessor">#define DLAF_PERMUTATIONS_GENERAL_ETI(KWORD, BACKEND, DEVICE, DATATYPE)      \</span></div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;<span class="preprocessor">  KWORD template struct Permutations&lt;BACKEND, DEVICE, DATATYPE, Coord::Col&gt;; \</span></div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="preprocessor">  KWORD template struct Permutations&lt;BACKEND, DEVICE, DATATYPE, Coord::Row&gt;;</span></div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::MC, Device::CPU, <span class="keywordtype">float</span>)</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::MC, Device::CPU, <span class="keywordtype">double</span>)</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#ifdef DLAF_WITH_GPU</span></div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::GPU, Device::GPU, <span class="keywordtype">float</span>)</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;DLAF_PERMUTATIONS_GENERAL_ETI(<span class="keyword">extern</span>, Backend::GPU, Device::GPU, <span class="keywordtype">double</span>)</div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;}</div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html">dlaf::comm::CommunicatorPipeline</a></div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:39</div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
+<div class="ttc" id="aindex2d_8h_html_a9b3be798b052f32def2a280a80e2295c"><div class="ttname"><a href="index2d_8h.html#a9b3be798b052f32def2a280a80e2295c">dlaf::orthogonal</a></div><div class="ttdeci">constexpr Coord orthogonal(const Coord rc)</div><div class="ttdoc">Given a Coord, returns its orthogonal.</div><div class="ttdef"><b>Definition:</b> index2d.h:30</div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1permutations_1_1internal_1_1_permutations_html"><div class="ttname"><a href="structdlaf_1_1permutations_1_1internal_1_1_permutations.html">dlaf::permutations::internal::Permutations</a></div><div class="ttdef"><b>Definition:</b> api.h:22</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->

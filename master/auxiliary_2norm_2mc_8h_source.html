@@ -100,7 +100,7 @@ $(function() {
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="comment">// - sy/he lower</span></div>
 <div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;<span class="comment">// - tr lower non-unit</span></div>
 <div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;dlaf::BaseType&lt;T&gt; Norm&lt;Backend::MC, Device::CPU, T&gt;::max_L(comm::CommunicatorGrid comm_grid,</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;dlaf::BaseType&lt;T&gt; Norm&lt;Backend::MC, Device::CPU, T&gt;::max_L(comm::CommunicatorGrid&amp; comm_grid,</div>
 <div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;                                                           comm::Index2D rank,</div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;                                                           Matrix&lt;const T, Device::CPU&gt;&amp; matrix) {</div>
 <div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;  <span class="keyword">using namespace </span>dlaf::matrix;</div>
@@ -163,7 +163,7 @@ $(function() {
 <div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;}</div>
 <div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160; </div>
 <div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;dlaf::BaseType&lt;T&gt; Norm&lt;Backend::MC, Device::CPU, T&gt;::max_G(comm::CommunicatorGrid comm_grid,</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;dlaf::BaseType&lt;T&gt; Norm&lt;Backend::MC, Device::CPU, T&gt;::max_G(comm::CommunicatorGrid&amp; comm_grid,</div>
 <div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;                                                           comm::Index2D rank,</div>
 <div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;                                                           <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">Matrix&lt;const T, Device::CPU&gt;</a>&amp; matrix) {</div>
 <div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;  <span class="keyword">using namespace </span>dlaf::matrix;</div>
@@ -227,7 +227,7 @@ $(function() {
 <div class="ttc" id="arange2d_8h_html_adcdcf40345b7f03cf52e871a2420057b"><div class="ttname"><a href="range2d_8h.html#adcdcf40345b7f03cf52e871a2420057b">dlaf::common::iterate_range2d</a></div><div class="ttdeci">IterableRange2D&lt; IndexT, Tag &gt; iterate_range2d(Index2D&lt; IndexT, Tag &gt; begin_idx, Index2D&lt; IndexT, Tag &gt; end_idx) noexcept</div><div class="ttdef"><b>Definition:</b> range2d.h:247</div></div>
 <div class="ttc" id="astructdlaf_1_1common_1_1internal_1_1vector_html"><div class="ttname"><a href="structdlaf_1_1common_1_1internal_1_1vector.html">dlaf::common::internal::vector</a></div><div class="ttdef"><b>Definition:</b> vector.h:27</div></div>
 <div class="ttc" id="async_2reduce_8h_html"><div class="ttname"><a href="sync_2reduce_8h.html">reduce.h</a></div></div>
-<div class="ttc" id="async_2reduce_8h_html_a22dfe268f1dcd2f08e2678af288063be"><div class="ttname"><a href="sync_2reduce_8h.html#a22dfe268f1dcd2f08e2678af288063be">dlaf::comm::sync::reduce</a></div><div class="ttdeci">void reduce(const IndexT_MPI rank_root, Communicator &amp;communicator, MPI_Op reduce_op, const DataIn input, const DataOut output)</div><div class="ttdef"><b>Definition:</b> reduce.h:134</div></div>
+<div class="ttc" id="async_2reduce_8h_html_a22dfe268f1dcd2f08e2678af288063be"><div class="ttname"><a href="sync_2reduce_8h.html#a22dfe268f1dcd2f08e2678af288063be">dlaf::comm::sync::reduce</a></div><div class="ttdeci">void reduce(const IndexT_MPI rank_root, Communicator &amp;communicator, MPI_Op reduce_op, const DataIn input, const DataOut output)</div><div class="ttdef"><b>Definition:</b> reduce.h:135</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html_a355682eaf279129f2aa06c8e96eaa61b"><div class="ttname"><a href="util__matrix_8h.html#a355682eaf279129f2aa06c8e96eaa61b">dlaf::matrix::square_blocksize</a></div><div class="ttdeci">bool square_blocksize(const MatrixLike &amp;m) noexcept</div><div class="ttdoc">Returns true if the matrix block size is square.</div><div class="ttdef"><b>Definition:</b> util_matrix.h:48</div></div>

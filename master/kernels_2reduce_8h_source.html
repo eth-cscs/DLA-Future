@@ -90,48 +90,50 @@ $(function() {
 <div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160; </div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&gt;</span></div>
 <div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="eti_8h.html">dlaf/common/eti.h</a>&gt;</span></div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&gt;</span></div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160; </div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00035"></a><span class="lineno"><a class="line" href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">   35</a></span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">scheduleReduceRecvInPlace</a>(</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;    pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm,</div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; tile);</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)                                    \</span></div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">  kword template dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleReduceRecvInPlace(            \</span></div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</span></div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, <span class="keyword">extern</span>);</div>
-<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(<span class="keyword">extern</span>, <span class="keywordtype">int</span>, Device::CPU);</div>
-<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
-<div class="line"><a name="l00053"></a><span class="lineno"><a class="line" href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">   53</a></span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">scheduleReduceSend</a>(</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;    pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm,</div>
-<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    <a class="code" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt;T, D&gt; tile);</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_REDUCE_SEND_ETI(kword, Type, Device)                                             \</span></div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="preprocessor">  kword template pika::execution::experimental::unique_any_sender&lt;&gt; scheduleReduceSend(                \</span></div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;common::Pipeline&lt;Communicator&gt;::Wrapper&gt; pcomm, \</span></div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="preprocessor">      comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                    \</span></div>
-<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</span></div>
-<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160; </div>
-<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_SEND_ETI, <span class="keyword">extern</span>);</div>
-<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;DLAF_SCHEDULE_REDUCE_SEND_ETI(<span class="keyword">extern</span>, <span class="keywordtype">int</span>, Device::CPU);</div>
-<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;}</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator_8h.html">dlaf/communication/communicator.h</a>&gt;</span></div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communication_2index_8h.html">dlaf/communication/index.h</a>&gt;</span></div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="message_8h.html">dlaf/communication/message.h</a>&gt;</span></div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="matrix_2tile_8h.html">dlaf/matrix/tile.h</a>&gt;</span></div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160; </div>
+<div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160;<span class="keyword">namespace </span>dlaf::comm {</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00036"></a><span class="lineno"><a class="line" href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">   36</a></span>&#160;[[nodiscard]] dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; <a class="code" href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">scheduleReduceRecvInPlace</a>(</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;    pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm,</div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;T, D&gt; tile);</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(kword, Type, Device)                                 \</span></div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="preprocessor">  kword template dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; scheduleReduceRecvInPlace(         \</span></div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">      MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt;Type, Device&gt; tile)</span></div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160; </div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI, <span class="keyword">extern</span>);</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;DLAF_SCHEDULE_REDUCE_RECV_IN_PLACE_ETI(<span class="keyword">extern</span>, <span class="keywordtype">int</span>, Device::CPU);</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160; </div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="keyword">template</span> &lt;<span class="keyword">class</span> T, Device D&gt;</div>
+<div class="line"><a name="l00054"></a><span class="lineno"><a class="line" href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">   54</a></span>&#160;[[nodiscard]] pika::execution::experimental::unique_any_sender&lt;&gt; <a class="code" href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">scheduleReduceSend</a>(</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm,</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;    <a class="code" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a> rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt;T, D&gt; tile);</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160; </div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;<span class="preprocessor">#define DLAF_SCHEDULE_REDUCE_SEND_ETI(kword, Type, Device)                                          \</span></div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;<span class="preprocessor">  kword template pika::execution::experimental::unique_any_sender&lt;&gt; scheduleReduceSend(             \</span></div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;<span class="preprocessor">      pika::execution::experimental::unique_any_sender&lt;CommunicatorPipelineExclusiveWrapper&gt; pcomm, \</span></div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;<span class="preprocessor">      comm::IndexT_MPI rank_root, MPI_Op reduce_op,                                                 \</span></div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;<span class="preprocessor">      dlaf::matrix::ReadOnlyTileSender&lt;Type, Device&gt; tile)</span></div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160; </div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;DLAF_EXPAND_ETI_SDCZ_DEVICE(DLAF_SCHEDULE_REDUCE_SEND_ETI, <span class="keyword">extern</span>);</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;DLAF_SCHEDULE_REDUCE_SEND_ETI(<span class="keyword">extern</span>, <span class="keywordtype">int</span>, Device::CPU);</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;}</div>
+<div class="ttc" id="acommunication_2index_8h_html"><div class="ttname"><a href="communication_2index_8h.html">index.h</a></div></div>
+<div class="ttc" id="acommunication_2index_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> index.h:20</div></div>
 <div class="ttc" id="acommunicator_8h_html"><div class="ttname"><a href="communicator_8h.html">communicator.h</a></div></div>
-<div class="ttc" id="acommunicator_8h_html_a2b48f62607e5e128dff19ceac22093e9"><div class="ttname"><a href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">dlaf::comm::IndexT_MPI</a></div><div class="ttdeci">int IndexT_MPI</div><div class="ttdoc">Type used for indexes in MPI API.</div><div class="ttdef"><b>Definition:</b> communicator.h:23</div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
 <div class="ttc" id="aeti_8h_html"><div class="ttname"><a href="eti_8h.html">eti.h</a></div></div>
-<div class="ttc" id="akernels_2reduce_8h_html_a60899e3a349b0defe79b1561045a373a"><div class="ttname"><a href="kernels_2reduce_8h.html#a60899e3a349b0defe79b1561045a373a">dlaf::comm::scheduleReduceSend</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleReduceSend(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
-<div class="ttc" id="akernels_2reduce_8h_html_a89af8ab199d6ba8902cc962122477f00"><div class="ttname"><a href="kernels_2reduce_8h.html#a89af8ab199d6ba8902cc962122477f00">dlaf::comm::scheduleReduceRecvInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender&lt; common::Pipeline&lt; Communicator &gt;::Wrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2reduce_8h_html_a75a8e384669618c6b575ad13cfb9b507"><div class="ttname"><a href="kernels_2reduce_8h.html#a75a8e384669618c6b575ad13cfb9b507">dlaf::comm::scheduleReduceRecvInPlace</a></div><div class="ttdeci">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; scheduleReduceRecvInPlace(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, MPI_Op reduce_op, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</div></div>
+<div class="ttc" id="akernels_2reduce_8h_html_af7b17c7d35b275a0a52361c3511b6dd7"><div class="ttname"><a href="kernels_2reduce_8h.html#af7b17c7d35b275a0a52361c3511b6dd7">dlaf::comm::scheduleReduceSend</a></div><div class="ttdeci">pika::execution::experimental::unique_any_sender scheduleReduceSend(pika::execution::experimental::unique_any_sender&lt; CommunicatorPipelineExclusiveWrapper &gt; pcomm, comm::IndexT_MPI rank_root, MPI_Op reduce_op, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amessage_8h_html"><div class="ttname"><a href="message_8h.html">message.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>

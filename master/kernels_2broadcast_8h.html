@@ -79,8 +79,8 @@ $(function() {
 <code>#include &lt;<a class="el" href="callable__object_8h_source.html">dlaf/common/callable_object.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="data_8h_source.html">dlaf/common/data.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="eti_8h_source.html">dlaf/common/eti.h</a>&gt;</code><br />
-<code>#include &lt;<a class="el" href="pipeline_8h_source.html">dlaf/common/pipeline.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="communicator_8h_source.html">dlaf/communication/communicator.h</a>&gt;</code><br />
+<code>#include &lt;<a class="el" href="communicator__pipeline_8h_source.html">dlaf/communication/communicator_pipeline.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="message_8h_source.html">dlaf/communication/message.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="matrix_2tile_8h_source.html">dlaf/matrix/tile.h</a>&gt;</code><br />
 <code>#include &lt;<a class="el" href="types_8h_source.html">dlaf/types.h</a>&gt;</code><br />
@@ -113,27 +113,27 @@ template&lt;class T , Device D&gt; </td></tr>
 <tr class="memitem:a98b583f24caaccdf37f3db1f3b46b457"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, class Comm &gt; </td></tr>
 <tr class="memitem:a98b583f24caaccdf37f3db1f3b46b457"><td class="memTemplItemLeft" align="right" valign="top">pika::execution::experimental::unique_any_sender&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2broadcast_8h.html#a98b583f24caaccdf37f3db1f3b46b457">dlaf::comm::scheduleSendBcast</a> (pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, dlaf::matrix::ReadOnlyTileSender&lt; T, D &gt; tile)</td></tr>
 <tr class="separator:a98b583f24caaccdf37f3db1f3b46b457"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a981fe8c7784605fe8e107bd6161413e6"><td class="memItemLeft" align="right" valign="top"><a id="a981fe8c7784605fe8e107bd6161413e6"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_SEND_BCAST_ETI, extern, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:a981fe8c7784605fe8e107bd6161413e6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69de63f28ff9c5f5077626b8a041fbe9"><td class="memItemLeft" align="right" valign="top"><a id="a69de63f28ff9c5f5077626b8a041fbe9"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_BCAST_ETI</b> (extern, SizeType, Device::CPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:a69de63f28ff9c5f5077626b8a041fbe9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc898dfefbadb46343ec075df181a557"><td class="memItemLeft" align="right" valign="top"><a id="afc898dfefbadb46343ec075df181a557"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_BCAST_ETI</b> (extern, SizeType, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:afc898dfefbadb46343ec075df181a557"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabf5b8f95964978b82f069505b79449e"><td class="memItemLeft" align="right" valign="top"><a id="aabf5b8f95964978b82f069505b79449e"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_SEND_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:aabf5b8f95964978b82f069505b79449e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0becf37325f55de0b3640906cb08c030"><td class="memItemLeft" align="right" valign="top"><a id="a0becf37325f55de0b3640906cb08c030"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_BCAST_ETI</b> (extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:a0becf37325f55de0b3640906cb08c030"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ea8a998abbc22cd8e5901c234e8e7d8"><td class="memItemLeft" align="right" valign="top"><a id="a8ea8a998abbc22cd8e5901c234e8e7d8"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_SEND_BCAST_ETI</b> (extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:a8ea8a998abbc22cd8e5901c234e8e7d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3645d0cfc3caad43c37c355896a7215f"><td class="memTemplParams" colspan="2">template&lt;class T , Device D, class Comm &gt; </td></tr>
 <tr class="memitem:a3645d0cfc3caad43c37c355896a7215f"><td class="memTemplItemLeft" align="right" valign="top">dlaf::matrix::ReadWriteTileSender&lt; T, D &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="kernels_2broadcast_8h.html#a3645d0cfc3caad43c37c355896a7215f">dlaf::comm::scheduleRecvBcast</a> (pika::execution::experimental::unique_any_sender&lt; Comm &gt; pcomm, comm::IndexT_MPI root_rank, dlaf::matrix::ReadWriteTileSender&lt; T, D &gt; tile)</td></tr>
 <tr class="separator:a3645d0cfc3caad43c37c355896a7215f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abc815aca46919aa8abfa92c7b48a2c84"><td class="memItemLeft" align="right" valign="top"><a id="abc815aca46919aa8abfa92c7b48a2c84"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_RECV_BCAST_ETI, extern, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:abc815aca46919aa8abfa92c7b48a2c84"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a60bd6c36b252e7127df4555533f71233"><td class="memItemLeft" align="right" valign="top"><a id="a60bd6c36b252e7127df4555533f71233"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_BCAST_ETI</b> (extern, SizeType, Device::CPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:a60bd6c36b252e7127df4555533f71233"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5f72e5a3147087b4e44e851d53d70a3b"><td class="memItemLeft" align="right" valign="top"><a id="a5f72e5a3147087b4e44e851d53d70a3b"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_BCAST_ETI</b> (extern, SizeType, Device::GPU, common::Pipeline&lt; Communicator &gt;::Wrapper)</td></tr>
-<tr class="separator:a5f72e5a3147087b4e44e851d53d70a3b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae29f712186b1358486ad2c888fc99ab4"><td class="memItemLeft" align="right" valign="top"><a id="ae29f712186b1358486ad2c888fc99ab4"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS</b> (DLAF_SCHEDULE_RECV_BCAST_ETI, extern, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:ae29f712186b1358486ad2c888fc99ab4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af71357273da8af2c69723824a3fc49ae"><td class="memItemLeft" align="right" valign="top"><a id="af71357273da8af2c69723824a3fc49ae"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_BCAST_ETI</b> (extern, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:af71357273da8af2c69723824a3fc49ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0edd89aada5b524aeeea3bc1550b8863"><td class="memItemLeft" align="right" valign="top"><a id="a0edd89aada5b524aeeea3bc1550b8863"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>dlaf::comm::DLAF_SCHEDULE_RECV_BCAST_ETI</b> (extern, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper)</td></tr>
+<tr class="separator:a0edd89aada5b524aeeea3bc1550b8863"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Macro Definition Documentation</h2>
 <a id="a824645e9d278658f2985be9b3cd6c451"></a>
@@ -242,7 +242,7 @@ template&lt;class T , Device D, class Comm &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">comm::IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>root_rank</em>, </td>
         </tr>
         <tr>

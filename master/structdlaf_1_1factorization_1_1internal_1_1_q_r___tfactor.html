@@ -77,12 +77,12 @@ $(function() {
 Static Public Member Functions</h2></td></tr>
 <tr class="memitem:a1d9391570e947628f8c23668f944f7d4"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;panel_view, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</td></tr>
 <tr class="separator:a1d9391570e947628f8c23668f944f7d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac73f315af163e45f509e230f362d1310"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#ac73f315af163e45f509e230f362d1310">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;mpi_col_task_chain)</td></tr>
-<tr class="separator:ac73f315af163e45f509e230f362d1310"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a10d3c6beed917097ab895a62cf8fdc21"><td class="memItemLeft" align="right" valign="top">static void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a10d3c6beed917097ab895a62cf8fdc21">call</a> (<a class="el" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel</a>&lt; Coord::Col, T, device &gt; &amp;hh_panel, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t, <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;mpi_col_task_chain)</td></tr>
+<tr class="separator:a10d3c6beed917097ab895a62cf8fdc21"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ac73f315af163e45f509e230f362d1310"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac73f315af163e45f509e230f362d1310">&#9670;&nbsp;</a></span>call() <span class="overload">[1/2]</span></h2>
+<a id="a10d3c6beed917097ab895a62cf8fdc21"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a10d3c6beed917097ab895a62cf8fdc21">&#9670;&nbsp;</a></span>call() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -113,7 +113,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">comm::Communicator</a> &gt; &amp;&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline</a>&lt; comm::CommunicatorType::Col &gt; &amp;&#160;</td>
           <td class="paramname"><em>mpi_col_task_chain</em>&#160;</td>
         </tr>
         <tr>

@@ -67,8 +67,8 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-types">Protected Types</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
-<a href="#pro-static-attribs">Static Protected Attributes</a> &#124;
 <a href="#friends">Friends</a> &#124;
 <a href="classdlaf_1_1comm_1_1_communicator_grid-members.html">List of all members</a>  </div>
   <div class="headertitle">
@@ -80,35 +80,64 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa17d9edca4165db00ede2fa650463aca"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#aa17d9edca4165db00ede2fa650463aca">CommunicatorGrid</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> comm, <a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> rows, <a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> cols, <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a> ordering)</td></tr>
-<tr class="separator:aa17d9edca4165db00ede2fa650463aca"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8d976dcbcf87aa12cde5433fdcbe8a7"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#ab8d976dcbcf87aa12cde5433fdcbe8a7">CommunicatorGrid</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> comm, const std::array&lt; <a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>, 2 &gt; &amp;<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a>, <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a> ordering)</td></tr>
-<tr class="separator:ab8d976dcbcf87aa12cde5433fdcbe8a7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9efa29f203caf3ff4d5cdb83386b73e3"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9efa29f203caf3ff4d5cdb83386b73e3">CommunicatorGrid</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> comm, <a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> rows, <a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a> cols, <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a> ordering, std::size_t npipelines=getTuneParameters().communicator_grid_num_pipelines)</td></tr>
+<tr class="separator:a9efa29f203caf3ff4d5cdb83386b73e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0df3ddebd78d8c5fcaa6f46b70cf3fae"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a0df3ddebd78d8c5fcaa6f46b70cf3fae">CommunicatorGrid</a> (<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> comm, const std::array&lt; <a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>, 2 &gt; &amp;<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a>, <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a> ordering, std::size_t npipelines=getTuneParameters().communicator_grid_num_pipelines)</td></tr>
+<tr class="separator:a0df3ddebd78d8c5fcaa6f46b70cf3fae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2a15c5653d0c5da6762b6ffc75468cfb"><td class="memItemLeft" align="right" valign="top"><a id="a2a15c5653d0c5da6762b6ffc75468cfb"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>CommunicatorGrid</b> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;&amp;)=default</td></tr>
+<tr class="separator:a2a15c5653d0c5da6762b6ffc75468cfb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a9115f4727781c3efb7895288b70962"><td class="memItemLeft" align="right" valign="top"><a id="a5a9115f4727781c3efb7895288b70962"></a>
+<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;&amp;)=default</td></tr>
+<tr class="separator:a5a9115f4727781c3efb7895288b70962"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af83bf24659b582f8047731e5b180d557"><td class="memItemLeft" align="right" valign="top"><a id="af83bf24659b582f8047731e5b180d557"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>CommunicatorGrid</b> (const <a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;)=delete</td></tr>
+<tr class="separator:af83bf24659b582f8047731e5b180d557"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c6d601a34cdb4f95ace500aad0eb318"><td class="memItemLeft" align="right" valign="top"><a id="a0c6d601a34cdb4f95ace500aad0eb318"></a>
+<a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> &amp;)=delete</td></tr>
+<tr class="separator:a0c6d601a34cdb4f95ace500aad0eb318"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9a0a0a05723adbe0e57171c7c1e2e93"><td class="memItemLeft" align="right" valign="top"><a id="ad9a0a0a05723adbe0e57171c7c1e2e93"></a>
-<a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#ad9a0a0a05723adbe0e57171c7c1e2e93">rankFullCommunicator</a> (const <a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> &amp;index) const noexcept</td></tr>
+<a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#ad9a0a0a05723adbe0e57171c7c1e2e93">rankFullCommunicator</a> (const <a class="el" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> &amp;index) const noexcept</td></tr>
 <tr class="memdesc:ad9a0a0a05723adbe0e57171c7c1e2e93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return rank in the grid with all ranks given the 2D index. <br /></td></tr>
 <tr class="separator:ad9a0a0a05723adbe0e57171c7c1e2e93"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a45574d05dd3cfb3d40d198cdf10b169e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a45574d05dd3cfb3d40d198cdf10b169e">rank</a> () const noexcept</td></tr>
+<tr class="memitem:aff48cd2565bead3c678df0653322e73d"><td class="memItemLeft" align="right" valign="top"><a id="aff48cd2565bead3c678df0653322e73d"></a>
+std::size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_pipelines</b> () const noexcept</td></tr>
+<tr class="separator:aff48cd2565bead3c678df0653322e73d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a45574d05dd3cfb3d40d198cdf10b169e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a45574d05dd3cfb3d40d198cdf10b169e">rank</a> () const noexcept</td></tr>
 <tr class="separator:a45574d05dd3cfb3d40d198cdf10b169e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a9307e8d79bffad58211c317c92c7dc77"><td class="memItemLeft" align="right" valign="top"><a id="a9307e8d79bffad58211c317c92c7dc77"></a>
-<a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a> () const noexcept</td></tr>
+<a class="el" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a9307e8d79bffad58211c317c92c7dc77">size</a> () const noexcept</td></tr>
 <tr class="memdesc:a9307e8d79bffad58211c317c92c7dc77"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return the number of rows in the grid. <br /></td></tr>
 <tr class="separator:a9307e8d79bffad58211c317c92c7dc77"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a1cb5842312d3e88e298819ea192d286d"><td class="memItemLeft" align="right" valign="top"><a id="a1cb5842312d3e88e298819ea192d286d"></a>
 <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a1cb5842312d3e88e298819ea192d286d">fullCommunicator</a> () noexcept</td></tr>
 <tr class="memdesc:a1cb5842312d3e88e298819ea192d286d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the grid. <br /></td></tr>
 <tr class="separator:a1cb5842312d3e88e298819ea192d286d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab13487adb2992d2cc50e06b498582391"><td class="memItemLeft" align="right" valign="top"><a id="ab13487adb2992d2cc50e06b498582391"></a>
-<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#ab13487adb2992d2cc50e06b498582391">rowCommunicator</a> () noexcept</td></tr>
-<tr class="memdesc:ab13487adb2992d2cc50e06b498582391"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the row (that includes the current process). <br /></td></tr>
+<tr class="memitem:ab13487adb2992d2cc50e06b498582391"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#ab13487adb2992d2cc50e06b498582391">rowCommunicator</a> () noexcept</td></tr>
 <tr class="separator:ab13487adb2992d2cc50e06b498582391"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6821b23aeb96284b9e217a02c5115e5"><td class="memItemLeft" align="right" valign="top"><a id="af6821b23aeb96284b9e217a02c5115e5"></a>
-<a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#af6821b23aeb96284b9e217a02c5115e5">colCommunicator</a> () noexcept</td></tr>
-<tr class="memdesc:af6821b23aeb96284b9e217a02c5115e5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the column (that includes the current process). <br /></td></tr>
+<tr class="memitem:af6821b23aeb96284b9e217a02c5115e5"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#af6821b23aeb96284b9e217a02c5115e5">colCommunicator</a> () noexcept</td></tr>
 <tr class="separator:af6821b23aeb96284b9e217a02c5115e5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a167909c6947c1b4f42495ab743156d0a"><td class="memItemLeft" align="right" valign="top"><a id="a167909c6947c1b4f42495ab743156d0a"></a>
 <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>subCommunicator</b> (Coord cr) noexcept</td></tr>
 <tr class="separator:a167909c6947c1b4f42495ab743156d0a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aff6495095473aef3f010d97c5a6786ae"><td class="memItemLeft" align="right" valign="top"><a id="aff6495095473aef3f010d97c5a6786ae"></a>
+<a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; CommunicatorType::Full &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#aff6495095473aef3f010d97c5a6786ae">full_communicator_pipeline</a> ()</td></tr>
+<tr class="memdesc:aff6495095473aef3f010d97c5a6786ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return a pipeline to a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the grid. <br /></td></tr>
+<tr class="separator:aff6495095473aef3f010d97c5a6786ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85730b16d2baeebbc34057745aa373cc"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; CommunicatorType::Row &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a85730b16d2baeebbc34057745aa373cc">row_communicator_pipeline</a> ()</td></tr>
+<tr class="separator:a85730b16d2baeebbc34057745aa373cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41f425324552bf031754d3a32fdb1a4c"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; CommunicatorType::Col &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a41f425324552bf031754d3a32fdb1a4c">col_communicator_pipeline</a> ()</td></tr>
+<tr class="separator:a41f425324552bf031754d3a32fdb1a4c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3015592993a8046491154493d21f3c77"><td class="memTemplParams" colspan="2">template&lt;Coord C&gt; </td></tr>
+<tr class="memitem:a3015592993a8046491154493d21f3c77"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; coord_to_communicator_type(C)&gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html#a3015592993a8046491154493d21f3c77">communicator_pipeline</a> ()</td></tr>
+<tr class="separator:a3015592993a8046491154493d21f3c77"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-types"></a>
+Protected Types</h2></td></tr>
+<tr class="memitem:a7ff560269742056f9e07251cbffb8b86"><td class="memTemplParams" colspan="2"><a id="a7ff560269742056f9e07251cbffb8b86"></a>
+template&lt;CommunicatorType CT&gt; </td></tr>
+<tr class="memitem:a7ff560269742056f9e07251cbffb8b86"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><b>RoundRobinPipeline</b> = <a class="el" href="classdlaf_1_1common_1_1_round_robin.html">dlaf::common::RoundRobin</a>&lt; <a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt; CT &gt; &gt;</td></tr>
+<tr class="separator:a7ff560269742056f9e07251cbffb8b86"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
@@ -121,17 +150,21 @@ Protected Attributes</h2></td></tr>
 <tr class="memitem:a0c9bb96d4a84ddbed79d86943141e9e3"><td class="memItemLeft" align="right" valign="top"><a id="a0c9bb96d4a84ddbed79d86943141e9e3"></a>
 <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&#160;</td><td class="memItemRight" valign="bottom"><b>col_</b></td></tr>
 <tr class="separator:a0c9bb96d4a84ddbed79d86943141e9e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a374b77bd3cef23168497a6eb00da6209"><td class="memItemLeft" align="right" valign="top"><a id="a374b77bd3cef23168497a6eb00da6209"></a>
+<a class="el" href="classdlaf_1_1common_1_1_round_robin.html">RoundRobinPipeline</a>&lt; CommunicatorType::Full &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>full_pipelines_</b></td></tr>
+<tr class="separator:a374b77bd3cef23168497a6eb00da6209"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5a94f14702fd71797abc0dca3192b210"><td class="memItemLeft" align="right" valign="top"><a id="a5a94f14702fd71797abc0dca3192b210"></a>
+<a class="el" href="classdlaf_1_1common_1_1_round_robin.html">RoundRobinPipeline</a>&lt; CommunicatorType::Row &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>row_pipelines_</b></td></tr>
+<tr class="separator:a5a94f14702fd71797abc0dca3192b210"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aabe807ba43c55cd9d8c8c5fab6104346"><td class="memItemLeft" align="right" valign="top"><a id="aabe807ba43c55cd9d8c8c5fab6104346"></a>
+<a class="el" href="classdlaf_1_1common_1_1_round_robin.html">RoundRobinPipeline</a>&lt; CommunicatorType::Col &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>col_pipelines_</b></td></tr>
+<tr class="separator:aabe807ba43c55cd9d8c8c5fab6104346"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3d07af5c2cd875a2eaab83bc3f0eb4bf"><td class="memItemLeft" align="right" valign="top"><a id="a3d07af5c2cd875a2eaab83bc3f0eb4bf"></a>
-<a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><b>position_</b></td></tr>
+<a class="el" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a>&#160;</td><td class="memItemRight" valign="bottom"><b>position_</b></td></tr>
 <tr class="separator:a3d07af5c2cd875a2eaab83bc3f0eb4bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a6127d122d62312b59842799d2dc5f3de"><td class="memItemLeft" align="right" valign="top"><a id="a6127d122d62312b59842799d2dc5f3de"></a>
-<a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>&#160;</td><td class="memItemRight" valign="bottom"><b>grid_size_</b> = <a class="el" href="communicator__grid_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(0, 0)</td></tr>
+<a class="el" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>&#160;</td><td class="memItemRight" valign="bottom"><b>grid_size_</b> = <a class="el" href="communication_2index_8h.html#a1af44f2ea119a10f873e64cf048ba94a">Size2D</a>(0, 0)</td></tr>
 <tr class="separator:a6127d122d62312b59842799d2dc5f3de"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-static-attribs"></a>
-Static Protected Attributes</h2></td></tr>
-<tr class="memitem:a286fa3c24bee241088ffb23119d05dcf"><td class="memItemLeft" align="right" valign="top">static constexpr const <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">dlaf::common::Ordering</a>&#160;</td><td class="memItemRight" valign="bottom"><b>FULL_COMMUNICATOR_ORDER</b></td></tr>
-<tr class="separator:a286fa3c24bee241088ffb23119d05dcf"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="friends"></a>
 Friends</h2></td></tr>
@@ -146,8 +179,8 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 <p>If the grid size does not cover the entire set of ranks available in the original <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>, there will be ranks that will be not part of the row and column communicators. On the opposite, if a grid size bigger that overfit the available number of ranks is specified, it will raise an exception.</p>
 <p><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">CommunicatorGrid</a> must be destroyed before calling MPI_Finalize, to allow it releasing resources. </p>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="aa17d9edca4165db00ede2fa650463aca"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa17d9edca4165db00ede2fa650463aca">&#9670;&nbsp;</a></span>CommunicatorGrid() <span class="overload">[1/2]</span></h2>
+<a id="a9efa29f203caf3ff4d5cdb83386b73e3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9efa29f203caf3ff4d5cdb83386b73e3">&#9670;&nbsp;</a></span>CommunicatorGrid() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -161,20 +194,26 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>rows</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype"><a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>&#160;</td>
           <td class="paramname"><em>cols</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype"><a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a>&#160;</td>
-          <td class="paramname"><em>ordering</em>&#160;</td>
+          <td class="paramname"><em>ordering</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t&#160;</td>
+          <td class="paramname"><em>npipelines</em> = <code>getTuneParameters().communicator_grid_num_pipelines</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -192,8 +231,8 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 
 </div>
 </div>
-<a id="ab8d976dcbcf87aa12cde5433fdcbe8a7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab8d976dcbcf87aa12cde5433fdcbe8a7">&#9670;&nbsp;</a></span>CommunicatorGrid() <span class="overload">[2/2]</span></h2>
+<a id="a0df3ddebd78d8c5fcaa6f46b70cf3fae"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0df3ddebd78d8c5fcaa6f46b70cf3fae">&#9670;&nbsp;</a></span>CommunicatorGrid() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -210,14 +249,20 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const std::array&lt; <a class="el" href="communicator_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>, 2 &gt; &amp;&#160;</td>
+          <td class="paramtype">const std::array&lt; <a class="el" href="communication_2index_8h.html#a2b48f62607e5e128dff19ceac22093e9">IndexT_MPI</a>, 2 &gt; &amp;&#160;</td>
           <td class="paramname"><em>size</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype"><a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">common::Ordering</a>&#160;</td>
-          <td class="paramname"><em>ordering</em>&#160;</td>
+          <td class="paramname"><em>ordering</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">std::size_t&#160;</td>
+          <td class="paramname"><em>npipelines</em> = <code>getTuneParameters().communicator_grid_num_pipelines</code>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -242,6 +287,91 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
+<a id="a41f425324552bf031754d3a32fdb1a4c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a41f425324552bf031754d3a32fdb1a4c">&#9670;&nbsp;</a></span>col_communicator_pipeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt;CommunicatorType::Col&gt; dlaf::comm::CommunicatorGrid::col_communicator_pipeline </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Return a pipeline to a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the col (that includes the current process). </p>
+
+</div>
+</div>
+<a id="af6821b23aeb96284b9e217a02c5115e5"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af6821b23aeb96284b9e217a02c5115e5">&#9670;&nbsp;</a></span>colCommunicator()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; dlaf::comm::CommunicatorGrid::colCommunicator </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the column (that includes the current process). </p>
+
+</div>
+</div>
+<a id="a3015592993a8046491154493d21f3c77"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3015592993a8046491154493d21f3c77">&#9670;&nbsp;</a></span>communicator_pipeline()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;Coord C&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt;coord_to_communicator_type(C)&gt; dlaf::comm::CommunicatorGrid::communicator_pipeline </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Return a pipeline to a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the row or column (that includes the current process), depending on </p><dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">C.</td><td></td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
 <a id="a45574d05dd3cfb3d40d198cdf10b169e"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a45574d05dd3cfb3d40d198cdf10b169e">&#9670;&nbsp;</a></span>rank()</h2>
 
@@ -252,7 +382,7 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="communicator__grid_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> dlaf::comm::CommunicatorGrid::rank </td>
+          <td class="memname"><a class="el" href="communication_2index_8h.html#af5204c68f1436b89ad06c653b710432e">Index2D</a> dlaf::comm::CommunicatorGrid::rank </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -269,9 +399,8 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
 
 </div>
 </div>
-<h2 class="groupheader">Member Data Documentation</h2>
-<a id="a286fa3c24bee241088ffb23119d05dcf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a286fa3c24bee241088ffb23119d05dcf">&#9670;&nbsp;</a></span>FULL_COMMUNICATOR_ORDER</h2>
+<a id="a85730b16d2baeebbc34057745aa373cc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85730b16d2baeebbc34057745aa373cc">&#9670;&nbsp;</a></span>row_communicator_pipeline()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -280,18 +409,46 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">constexpr const <a class="el" href="index2d_8h.html#a02419996f0ffc187079c310f0175ce76">dlaf::common::Ordering</a> dlaf::comm::CommunicatorGrid::FULL_COMMUNICATOR_ORDER</td>
+          <td class="memname"><a class="el" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">CommunicatorPipeline</a>&lt;CommunicatorType::Row&gt; dlaf::comm::CommunicatorGrid::row_communicator_pipeline </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
         </tr>
       </table>
   </td>
   <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">static</span><span class="mlabel">constexpr</span><span class="mlabel">protected</span></span>  </td>
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
   </tr>
 </table>
 </div><div class="memdoc">
-<b>Initial value:</b><div class="fragment"><div class="line">{</div>
-<div class="line">      dlaf::common::Ordering::RowMajor}</div>
-</div><!-- fragment -->
+<p>Return a pipeline to a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the row (that includes the current process). </p>
+
+</div>
+</div>
+<a id="ab13487adb2992d2cc50e06b498582391"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab13487adb2992d2cc50e06b498582391">&#9670;&nbsp;</a></span>rowCommunicator()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a>&amp; dlaf::comm::CommunicatorGrid::rowCommunicator </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">noexcept</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Return a <a class="el" href="classdlaf_1_1comm_1_1_communicator.html">Communicator</a> grouping all ranks in the row (that includes the current process). </p>
+
 </div>
 </div>
 <hr/>The documentation for this class was generated from the following file:<ul>

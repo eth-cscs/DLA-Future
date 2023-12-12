@@ -94,7 +94,7 @@ $(function() {
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="keyword">namespace </span>dlaf::auxiliary {</div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160; </div>
 <div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00035"></a><span class="lineno"><a class="line" href="norm_8h.html#abf429e381ebd046e1d217d233dcdc81e">   35</a></span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="norm_8h.html#abf429e381ebd046e1d217d233dcdc81e">max_norm</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">comm::Index2D</a> rank, blas::Uplo uplo,</div>
+<div class="line"><a name="l00035"></a><span class="lineno"><a class="line" href="norm_8h.html#ad948c961a0dae59bb2c8ec2f849f3992">   35</a></span>&#160;dlaf::BaseType&lt;T&gt; <a class="code" href="norm_8h.html#ad948c961a0dae59bb2c8ec2f849f3992">max_norm</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, <a class="code" href="classdlaf_1_1common_1_1_index2_d.html">comm::Index2D</a> rank, blas::Uplo uplo,</div>
 <div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;                           Matrix&lt;const T, device&gt;&amp; A) {</div>
 <div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;  <span class="keyword">using</span> dlaf::matrix::equal_process_grid;</div>
 <div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;  <span class="keyword">using</span> dlaf::matrix::single_tile_per_block;</div>
@@ -121,12 +121,12 @@ $(function() {
 <div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160; </div>
 <div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;}</div>
 <div class="ttc" id="ablas_2enum__output_8h_html"><div class="ttname"><a href="blas_2enum__output_8h.html">enum_output.h</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:36</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; IndexT_MPI, TAG_MPI &gt;</a></div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
-<div class="ttc" id="anorm_8h_html_abf429e381ebd046e1d217d233dcdc81e"><div class="ttname"><a href="norm_8h.html#abf429e381ebd046e1d217d233dcdc81e">dlaf::auxiliary::max_norm</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; max_norm(comm::CommunicatorGrid grid, comm::Index2D rank, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</div><div class="ttdef"><b>Definition:</b> norm.h:35</div></div>
+<div class="ttc" id="anorm_8h_html_ad948c961a0dae59bb2c8ec2f849f3992"><div class="ttname"><a href="norm_8h.html#ad948c961a0dae59bb2c8ec2f849f3992">dlaf::auxiliary::max_norm</a></div><div class="ttdeci">dlaf::BaseType&lt; T &gt; max_norm(comm::CommunicatorGrid &amp;grid, comm::Index2D rank, blas::Uplo uplo, Matrix&lt; const T, device &gt; &amp;A)</div><div class="ttdef"><b>Definition:</b> norm.h:35</div></div>
 <div class="ttc" id="astructdlaf_1_1auxiliary_1_1internal_1_1_norm_html"><div class="ttname"><a href="structdlaf_1_1auxiliary_1_1internal_1_1_norm.html">dlaf::auxiliary::internal::Norm</a></div><div class="ttdef"><b>Definition:</b> api.h:19</div></div>
 <div class="ttc" id="atypes_8h_html"><div class="ttname"><a href="types_8h.html">types.h</a></div></div>
 <div class="ttc" id="autil__matrix_8h_html"><div class="ttname"><a href="util__matrix_8h.html">util_matrix.h</a></div></div>

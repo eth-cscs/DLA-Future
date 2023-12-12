@@ -88,9 +88,9 @@ $(function() {
 <div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;<span class="preprocessor">#include &lt;dlaf/common/assert.h&gt;</span></div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="data_8h.html">dlaf/common/data.h</a>&gt;</span></div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="index2d_8h.html">dlaf/common/index2d.h</a>&gt;</span></div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="pipeline_8h.html">dlaf/common/pipeline.h</a>&gt;</span></div>
-<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&gt;</span></div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="range2d_8h.html">dlaf/common/range2d.h</a>&gt;</span></div>
+<div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="single__threaded__blas_8h.html">dlaf/common/single_threaded_blas.h</a>&gt;</span></div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="communicator__pipeline_8h.html">dlaf/communication/communicator_pipeline.h</a>&gt;</span></div>
 <div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="kernels_2all__reduce_8h.html">dlaf/communication/kernels/all_reduce.h</a>&gt;</span></div>
 <div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;<span class="preprocessor">#include &lt;dlaf/factorization/qr/api.h&gt;</span></div>
 <div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="preprocessor">#include &lt;<a class="code" href="lapack_2tile_8h.html">dlaf/lapack/tile.h</a>&gt;</span></div>
@@ -346,10 +346,10 @@ $(function() {
 <div class="line"><a name="l00275"></a><span class="lineno">  275</span>&#160;}</div>
 <div class="line"><a name="l00276"></a><span class="lineno">  276</span>&#160; </div>
 <div class="line"><a name="l00277"></a><span class="lineno">  277</span>&#160;<span class="keyword">template</span> &lt;Backend backend, Device device, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00278"></a><span class="lineno"><a class="line" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#ac73f315af163e45f509e230f362d1310">  278</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(<a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel,</div>
-<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;                                          matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
-<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;                                          matrix::ReadWriteTileSender&lt;T, device&gt; t,</div>
-<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;                                          <a class="code" href="classdlaf_1_1common_1_1_pipeline.html">common::Pipeline&lt;comm::Communicator&gt;</a>&amp; mpi_col_task_chain) {</div>
+<div class="line"><a name="l00278"></a><span class="lineno"><a class="line" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a10d3c6beed917097ab895a62cf8fdc21">  278</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">QR_Tfactor&lt;backend, device, T&gt;::call</a>(</div>
+<div class="line"><a name="l00279"></a><span class="lineno">  279</span>&#160;    <a class="code" href="structdlaf_1_1matrix_1_1_panel.html">matrix::Panel&lt;Coord::Col, T, device&gt;</a>&amp; hh_panel, matrix::ReadOnlyTileSender&lt;T, Device::CPU&gt; taus,</div>
+<div class="line"><a name="l00280"></a><span class="lineno">  280</span>&#160;    matrix::ReadWriteTileSender&lt;T, device&gt; t,</div>
+<div class="line"><a name="l00281"></a><span class="lineno">  281</span>&#160;    <a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html">comm::CommunicatorPipeline&lt;comm::CommunicatorType::Col&gt;</a>&amp; mpi_col_task_chain) {</div>
 <div class="line"><a name="l00282"></a><span class="lineno">  282</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
 <div class="line"><a name="l00283"></a><span class="lineno">  283</span>&#160; </div>
 <div class="line"><a name="l00284"></a><span class="lineno">  284</span>&#160;  <span class="keyword">using</span> Helpers = <a class="code" href="structdlaf_1_1factorization_1_1internal_1_1tfactor__l_1_1_helpers.html">tfactor_l::Helpers&lt;backend, device, T&gt;</a>;</div>
@@ -395,30 +395,33 @@ $(function() {
 <div class="line"><a name="l00324"></a><span class="lineno">  324</span>&#160; </div>
 <div class="line"><a name="l00325"></a><span class="lineno">  325</span>&#160;  <span class="comment">// at this point each rank has its partial result for each column</span></div>
 <div class="line"><a name="l00326"></a><span class="lineno">  326</span>&#160;  <span class="comment">// so, let&#39;s reduce the results (on all ranks, so that everyone can independently compute T factor)</span></div>
-<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;  <span class="keywordflow">if</span> (<span class="keyword">true</span>)  <span class="comment">// TODO if the column communicator has more than 1 tile...but I just have the pipeline</span></div>
-<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t_local));</div>
-<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160; </div>
-<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160;  <span class="comment">// 2nd step: compute the T factor, by performing the last step on each column</span></div>
-<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;  <span class="comment">// each column depends on the previous part (all reflectors that comes before)</span></div>
-<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;  <span class="comment">// so it is performed sequentially</span></div>
-<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));</div>
-<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;}</div>
-<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160; </div>
-<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160;}</div>
+<div class="line"><a name="l00327"></a><span class="lineno">  327</span>&#160;  <span class="keywordflow">if</span> (mpi_col_task_chain.<a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html#aecb96e63047711c9f2029f361844b78c">size_2d</a>().rows() &gt; 0)</div>
+<div class="line"><a name="l00328"></a><span class="lineno">  328</span>&#160;    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.<a class="code" href="classdlaf_1_1comm_1_1_communicator_pipeline.html#abb18e80e82791ce564b7257988f0245c">exclusive</a>(), MPI_SUM,</div>
+<div class="line"><a name="l00329"></a><span class="lineno">  329</span>&#160;                                                   std::move(t_local));</div>
+<div class="line"><a name="l00330"></a><span class="lineno">  330</span>&#160; </div>
+<div class="line"><a name="l00331"></a><span class="lineno">  331</span>&#160;  <span class="comment">// 2nd step: compute the T factor, by performing the last step on each column</span></div>
+<div class="line"><a name="l00332"></a><span class="lineno">  332</span>&#160;  <span class="comment">// each column depends on the previous part (all reflectors that comes before)</span></div>
+<div class="line"><a name="l00333"></a><span class="lineno">  333</span>&#160;  <span class="comment">// so it is performed sequentially</span></div>
+<div class="line"><a name="l00334"></a><span class="lineno">  334</span>&#160;  ex::start_detached(Helpers::trmvUpdateColumn(std::move(t_local)));</div>
+<div class="line"><a name="l00335"></a><span class="lineno">  335</span>&#160;}</div>
+<div class="line"><a name="l00336"></a><span class="lineno">  336</span>&#160; </div>
+<div class="line"><a name="l00337"></a><span class="lineno">  337</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html">dlaf::comm::CommunicatorPipeline</a></div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:39</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html_abb18e80e82791ce564b7257988f0245c"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html#abb18e80e82791ce564b7257988f0245c">dlaf::comm::CommunicatorPipeline::exclusive</a></div><div class="ttdeci">ExclusiveSender exclusive()</div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:93</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_pipeline_html_aecb96e63047711c9f2029f361844b78c"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_pipeline.html#aecb96e63047711c9f2029f361844b78c">dlaf::comm::CommunicatorPipeline::size_2d</a></div><div class="ttdeci">Size2D size_2d() const noexcept</div><div class="ttdef"><b>Definition:</b> communicator_pipeline.h:78</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
-<div class="ttc" id="aclassdlaf_1_1common_1_1_pipeline_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_pipeline.html">dlaf::common::Pipeline</a></div><div class="ttdef"><b>Definition:</b> pipeline.h:31</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::TileElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope_html"><div class="ttname"><a href="classdlaf_1_1common_1_1internal_1_1_single_threaded_blas_scope.html">dlaf::common::internal::SingleThreadedBlasScope</a></div><div class="ttdef"><b>Definition:</b> single_threaded_blas.h:20</div></div>
 <div class="ttc" id="aclassdlaf_1_1internal_1_1_policy_html"><div class="ttname"><a href="classdlaf_1_1internal_1_1_policy.html">dlaf::internal::Policy</a></div><div class="ttdef"><b>Definition:</b> policy.h:24</div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_tile_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_tile.html">dlaf::matrix::Tile</a></div><div class="ttdef"><b>Definition:</b> tile.h:329</div></div>
+<div class="ttc" id="acommunicator__pipeline_8h_html"><div class="ttname"><a href="communicator__pipeline_8h.html">communicator_pipeline.h</a></div></div>
 <div class="ttc" id="adata_8h_html"><div class="ttname"><a href="data_8h.html">data.h</a></div></div>
 <div class="ttc" id="aindex2d_8h_html"><div class="ttname"><a href="index2d_8h.html">index2d.h</a></div></div>
 <div class="ttc" id="akernels_2all__reduce_8h_html"><div class="ttname"><a href="kernels_2all__reduce_8h.html">all_reduce.h</a></div></div>
 <div class="ttc" id="alapack_2tile_8h_html"><div class="ttname"><a href="lapack_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amatrix_2tile_8h_html"><div class="ttname"><a href="matrix_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
-<div class="ttc" id="apipeline_8h_html"><div class="ttname"><a href="pipeline_8h.html">pipeline.h</a></div></div>
 <div class="ttc" id="arange2d_8h_html"><div class="ttname"><a href="range2d_8h.html">range2d.h</a></div></div>
 <div class="ttc" id="asingle__threaded__blas_8h_html"><div class="ttname"><a href="single__threaded__blas_8h.html">single_threaded_blas.h</a></div></div>
 <div class="ttc" id="astructdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor_html_a1d9391570e947628f8c23668f944f7d4"><div class="ttname"><a href="structdlaf_1_1factorization_1_1internal_1_1_q_r___tfactor.html#a1d9391570e947628f8c23668f944f7d4">dlaf::factorization::internal::QR_Tfactor::call</a></div><div class="ttdeci">static void call(matrix::Panel&lt; Coord::Col, T, device &gt; &amp;panel_view, matrix::ReadOnlyTileSender&lt; T, Device::CPU &gt; taus, matrix::ReadWriteTileSender&lt; T, device &gt; t)</div><div class="ttdef"><b>Definition:</b> t_factor_impl.h:228</div></div>

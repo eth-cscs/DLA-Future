@@ -85,9 +85,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ad0178e1f84caaeb244febc305705060d"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
 <tr class="memitem:ad0178e1f84caaeb244febc305705060d"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="solver_2triangular_8h.html#ad0178e1f84caaeb244febc305705060d">dlaf::triangular_solver</a> (blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
 <tr class="separator:ad0178e1f84caaeb244febc305705060d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a171abbb15a7cfff61c9ba4f7f7dbed9f"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:a171abbb15a7cfff61c9ba4f7f7dbed9f"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="solver_2triangular_8h.html#a171abbb15a7cfff61c9ba4f7f7dbed9f">dlaf::triangular_solver</a> (comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
-<tr class="separator:a171abbb15a7cfff61c9ba4f7f7dbed9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7dd7b96f8993e27b99bb559330d049c9"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:a7dd7b96f8993e27b99bb559330d049c9"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="solver_2triangular_8h.html#a7dd7b96f8993e27b99bb559330d049c9">dlaf::triangular_solver</a> (comm::CommunicatorGrid &amp;grid, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:a7dd7b96f8993e27b99bb559330d049c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="ad0178e1f84caaeb244febc305705060d"></a>
@@ -181,8 +181,8 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 
 </div>
 </div>
-<a id="a171abbb15a7cfff61c9ba4f7f7dbed9f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a171abbb15a7cfff61c9ba4f7f7dbed9f">&#9670;&nbsp;</a></span>triangular_solver() <span class="overload">[2/2]</span></h2>
+<a id="a7dd7b96f8993e27b99bb559330d049c9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7dd7b96f8993e27b99bb559330d049c9">&#9670;&nbsp;</a></span>triangular_solver() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -192,7 +192,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="memname">void dlaf::triangular_solver </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>

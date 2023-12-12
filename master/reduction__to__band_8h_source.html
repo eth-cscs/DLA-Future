@@ -108,7 +108,7 @@ $(function() {
 <div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160; </div>
 <div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
 <div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00110"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#a5a3228ff1f7fa77896db5c9df2e95184">  110</a></span>&#160;Matrix&lt;T, Device::CPU&gt; <a class="code" href="reduction__to__band_8h.html#a9b25dc548d7158468c9428f7155b6aa0">reduction_to_band</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, Matrix&lt;T, D&gt;&amp; mat_a,</div>
+<div class="line"><a name="l00110"></a><span class="lineno"><a class="line" href="reduction__to__band_8h.html#aa19d0c260f8137b17d5f63f68b388f29">  110</a></span>&#160;Matrix&lt;T, Device::CPU&gt; <a class="code" href="reduction__to__band_8h.html#a9b25dc548d7158468c9428f7155b6aa0">reduction_to_band</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, Matrix&lt;T, D&gt;&amp; mat_a,</div>
 <div class="line"><a name="l00111"></a><span class="lineno">  111</span>&#160;                                         <span class="keyword">const</span> SizeType band_size) {</div>
 <div class="line"><a name="l00112"></a><span class="lineno">  112</span>&#160;  DLAF_ASSERT(matrix::square_size(mat_a), mat_a);</div>
 <div class="line"><a name="l00113"></a><span class="lineno">  113</span>&#160;  DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);</div>
@@ -121,7 +121,7 @@ $(function() {
 <div class="line"><a name="l00120"></a><span class="lineno">  120</span>&#160;  <span class="keywordflow">return</span> <a class="code" href="structdlaf_1_1eigensolver_1_1internal_1_1_reduction_to_band.html">ReductionToBand&lt;B, D, T&gt;::call</a>(grid, mat_a, band_size);</div>
 <div class="line"><a name="l00121"></a><span class="lineno">  121</span>&#160;}</div>
 <div class="line"><a name="l00122"></a><span class="lineno">  122</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:36</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>
 <div class="ttc" id="amatrix_8h_html"><div class="ttname"><a href="matrix_8h.html">matrix.h</a></div></div>
 <div class="ttc" id="areduction__to__band_8h_html_a9b25dc548d7158468c9428f7155b6aa0"><div class="ttname"><a href="reduction__to__band_8h.html#a9b25dc548d7158468c9428f7155b6aa0">dlaf::eigensolver::internal::reduction_to_band</a></div><div class="ttdeci">Matrix&lt; T, Device::CPU &gt; reduction_to_band(Matrix&lt; T, D &gt; &amp;mat_a, const SizeType band_size)</div><div class="ttdef"><b>Definition:</b> reduction_to_band.h:41</div></div>

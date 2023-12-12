@@ -85,9 +85,9 @@ Functions</h2></td></tr>
 <tr class="memitem:af467c3e497156c9595e7b04d7ca60da4"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
 <tr class="memitem:af467c3e497156c9595e7b04d7ca60da4"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2triangular_8h.html#af467c3e497156c9595e7b04d7ca60da4">dlaf::triangular_multiplication</a> (blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
 <tr class="separator:af467c3e497156c9595e7b04d7ca60da4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6c1fdcbc36640b652d33af8e8a94534"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
-<tr class="memitem:af6c1fdcbc36640b652d33af8e8a94534"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2triangular_8h.html#af6c1fdcbc36640b652d33af8e8a94534">dlaf::triangular_multiplication</a> (comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
-<tr class="separator:af6c1fdcbc36640b652d33af8e8a94534"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab7982dfbb5171e70580f656d6ac37531"><td class="memTemplParams" colspan="2">template&lt;Backend backend, Device device, class T &gt; </td></tr>
+<tr class="memitem:ab7982dfbb5171e70580f656d6ac37531"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="multiplication_2triangular_8h.html#ab7982dfbb5171e70580f656d6ac37531">dlaf::triangular_multiplication</a> (comm::CommunicatorGrid &amp;grid, blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, Matrix&lt; const T, device &gt; &amp;mat_a, Matrix&lt; T, device &gt; &amp;mat_b)</td></tr>
+<tr class="separator:ab7982dfbb5171e70580f656d6ac37531"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="af467c3e497156c9595e7b04d7ca60da4"></a>
@@ -181,8 +181,8 @@ template&lt;Backend backend, Device device, class T &gt; </div>
 
 </div>
 </div>
-<a id="af6c1fdcbc36640b652d33af8e8a94534"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af6c1fdcbc36640b652d33af8e8a94534">&#9670;&nbsp;</a></span>triangular_multiplication() <span class="overload">[2/2]</span></h2>
+<a id="ab7982dfbb5171e70580f656d6ac37531"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab7982dfbb5171e70580f656d6ac37531">&#9670;&nbsp;</a></span>triangular_multiplication() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -192,7 +192,7 @@ template&lt;Backend backend, Device device, class T &gt; </div>
         <tr>
           <td class="memname">void dlaf::triangular_multiplication </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&#160;</td>
+          <td class="paramtype"><a class="el" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> &amp;&#160;</td>
           <td class="paramname"><em>grid</em>, </td>
         </tr>
         <tr>

@@ -125,7 +125,7 @@ $(function() {
 <div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160;}</div>
 <div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160; </div>
 <div class="line"><a name="l00135"></a><span class="lineno">  135</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00136"></a><span class="lineno"><a class="line" href="dlaf_2eigensolver_2eigensolver_8h.html#a55f46916df81905b65037034a586da4d">  136</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="dlaf_2eigensolver_2eigensolver_8h.html#a490040bc7cc4e69ef5f9267341e5fca9">hermitian_eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat,</div>
+<div class="line"><a name="l00136"></a><span class="lineno"><a class="line" href="dlaf_2eigensolver_2eigensolver_8h.html#aa24d5a56d5c9745592801442ca8aa74f">  136</a></span>&#160;<span class="keywordtype">void</span> <a class="code" href="dlaf_2eigensolver_2eigensolver_8h.html#a490040bc7cc4e69ef5f9267341e5fca9">hermitian_eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, blas::Uplo uplo, Matrix&lt;T, D&gt;&amp; mat,</div>
 <div class="line"><a name="l00137"></a><span class="lineno">  137</span>&#160;                           Matrix&lt;BaseType&lt;T&gt;, D&gt;&amp; eigenvalues, Matrix&lt;T, D&gt;&amp; eigenvectors) {</div>
 <div class="line"><a name="l00138"></a><span class="lineno">  138</span>&#160;  DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);</div>
 <div class="line"><a name="l00139"></a><span class="lineno">  139</span>&#160;  DLAF_ASSERT(square_size(mat), mat);</div>
@@ -147,7 +147,7 @@ $(function() {
 <div class="line"><a name="l00155"></a><span class="lineno">  155</span>&#160;}</div>
 <div class="line"><a name="l00156"></a><span class="lineno">  156</span>&#160; </div>
 <div class="line"><a name="l00177"></a><span class="lineno">  177</span>&#160;<span class="keyword">template</span> &lt;Backend B, Device D, <span class="keyword">class</span> T&gt;</div>
-<div class="line"><a name="l00178"></a><span class="lineno"><a class="line" href="dlaf_2eigensolver_2eigensolver_8h.html#a94d726a6cfade3aa79a171aa1a0fe458">  178</a></span>&#160;<a class="code" href="structdlaf_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="dlaf_2eigensolver_2eigensolver_8h.html#a490040bc7cc4e69ef5f9267341e5fca9">hermitian_eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a> grid, blas::Uplo uplo,</div>
+<div class="line"><a name="l00178"></a><span class="lineno"><a class="line" href="dlaf_2eigensolver_2eigensolver_8h.html#ad5845ea969261c65578efde3b6a4e3d4">  178</a></span>&#160;<a class="code" href="structdlaf_1_1_eigensolver_result.html">EigensolverResult&lt;T, D&gt;</a> <a class="code" href="dlaf_2eigensolver_2eigensolver_8h.html#a490040bc7cc4e69ef5f9267341e5fca9">hermitian_eigensolver</a>(<a class="code" href="classdlaf_1_1comm_1_1_communicator_grid.html">comm::CommunicatorGrid</a>&amp; grid, blas::Uplo uplo,</div>
 <div class="line"><a name="l00179"></a><span class="lineno">  179</span>&#160;                                              Matrix&lt;T, D&gt;&amp; mat) {</div>
 <div class="line"><a name="l00180"></a><span class="lineno">  180</span>&#160;  <span class="keyword">const</span> SizeType size = mat.size().rows();</div>
 <div class="line"><a name="l00181"></a><span class="lineno">  181</span>&#160;  <a class="code" href="classdlaf_1_1matrix_1_1_matrix.html">matrix::Matrix&lt;BaseType&lt;T&gt;</a>, D&gt; eigenvalues(<a class="code" href="classdlaf_1_1common_1_1_size2_d.html">LocalElementSize</a>(size, 1),</div>
@@ -158,7 +158,7 @@ $(function() {
 <div class="line"><a name="l00186"></a><span class="lineno">  186</span>&#160;  <span class="keywordflow">return</span> {std::move(eigenvalues), std::move(eigenvectors)};</div>
 <div class="line"><a name="l00187"></a><span class="lineno">  187</span>&#160;}</div>
 <div class="line"><a name="l00188"></a><span class="lineno">  188</span>&#160;}</div>
-<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:42</div></div>
+<div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_grid_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator_grid.html">dlaf::comm::CommunicatorGrid</a></div><div class="ttdef"><b>Definition:</b> communicator_grid.h:36</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_size2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_size2_d.html">dlaf::common::Size2D&lt; SizeType, matrix::LocalElement_TAG &gt;</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1matrix_1_1_matrix_html"><div class="ttname"><a href="classdlaf_1_1matrix_1_1_matrix.html">dlaf::matrix::Matrix</a></div><div class="ttdef"><b>Definition:</b> matrix.h:56</div></div>
 <div class="ttc" id="acommunicator__grid_8h_html"><div class="ttname"><a href="communicator__grid_8h.html">communicator_grid.h</a></div></div>

@@ -1656,10 +1656,9 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 }
 
 template <Backend B, class T, Device D, class KLcSender, class UDLSenders>
-void multiplyEigenvectors(const matrix::Distribution& dist_sub,
+void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Distribution& dist_sub,
                           common::Pipeline<comm::Communicator>& row_task_chain,
-                          common::Pipeline<comm::Communicator>& col_task_chain,
-                          const GlobalElementIndex sub_offset, const SizeType n, const SizeType n_upper,
+                          common::Pipeline<comm::Communicator>& col_task_chain, const SizeType n_upper,
                           const SizeType n_lower, Matrix<T, D>& e0, Matrix<T, D>& e1, Matrix<T, D>& e2,
                           KLcSender&& k_lc, UDLSenders&& n_udl) {
   // Note:
@@ -1728,12 +1727,13 @@ void multiplyEigenvectors(const matrix::Distribution& dist_sub,
   // └───┴────────┴────┘  └────────────┴────┘
 
   namespace ex = pika::execution::experimental;
+  using pika::execution::thread_priority;
 
   ex::start_detached(
       ex::when_all(std::forward<KLcSender>(k_lc), std::forward<UDLSenders>(n_udl), row_task_chain(),
                    col_task_chain()) |
-      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>()) |
-      ex::then([dist_sub, sub_offset, n, n_upper, n_lower, e0 = e0.subPipeline(),
+      ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
+      ex::then([dist_sub, sub_offset, n_upper, n_lower, e0 = e0.subPipeline(),
                 e1 = e1.subPipelineConst(),
                 e2 = e2.subPipelineConst()](const SizeType k_lc, const std::array<SizeType, 3>& n_udl,
                                             auto&& row_comm_wrapper, auto&& col_comm_wrapper) mutable {
@@ -1742,6 +1742,7 @@ void multiplyEigenvectors(const matrix::Distribution& dist_sub,
         common::Pipeline<comm::Communicator> sub_comm_row(row_comm_wrapper.get());
         common::Pipeline<comm::Communicator> sub_comm_col(col_comm_wrapper.get());
 
+        const SizeType n = dist_sub.size().cols();
         const auto [a, b, c] = n_udl;
 
         using GEMM = dlaf::multiplication::internal::General<B, D, T>;
@@ -1793,8 +1794,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
 
   const matrix::Distribution& dist = ws.e0.distribution();
 
-  const GlobalElementIndex sub_offset{i_begin * dist.blockSize().rows(),
-                                      i_begin * dist.blockSize().cols()};
+  const GlobalElementIndex sub_offset{i_begin * dist.tile_size().rows(),
+                                      i_begin * dist.tile_size().cols()};
   const matrix::Distribution dist_sub(
       dist, {sub_offset,
              {
@@ -1898,7 +1899,9 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);
   applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);
 
-  // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
+  // Note:
+  // set0 is required because deflated eigenvectors rows won't be touched in rank1 and so they will be
+  // neutral when used in GEMM (copy will take care of them later)
   matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
   solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, k, k_lc,
                         std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6, ws_hm.i2,
@@ -1909,8 +1912,8 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   // The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as
   // prepared for the deflated system.
-  multiplyEigenvectors<B>(dist_sub, row_task_chain, col_task_chain, sub_offset, n, n_upper, n_lower,
-                          ws.e0, ws.e1, ws.e2, std::move(k_lc), std::move(n_udl));
+  multiplyEigenvectors<B>(sub_offset, dist_sub, row_task_chain, col_task_chain, n_upper, n_lower, ws.e0,
+                          ws.e1, ws.e2, std::move(k_lc), std::move(n_udl));
 
   // Step #4: Final permutation to sort eigenvalues and eigenvectors
   //

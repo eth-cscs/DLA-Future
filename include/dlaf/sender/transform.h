@@ -51,6 +51,7 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
           typename F = void, typename Sender = void,
           typename = std::enable_if_t<pika::execution::experimental::is_sender_v<Sender>>>
 [[nodiscard]] decltype(auto) transform(const Policy<B> policy, F&& f, Sender&& sender) {
+  using pika::execution::experimental::drop_operation_state;
   using pika::execution::experimental::then;
   using pika::execution::experimental::transfer;
 
@@ -61,7 +62,8 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
   using dlaf::common::internal::Unwrapping;
 
   if constexpr (B == Backend::MC) {
-    return then(std::move(transfer_sender), ConsumeRvalues{Unwrapping{std::forward<F>(f)}});
+    return then(std::move(transfer_sender), ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |
+           drop_operation_state();
   }
   else if constexpr (B == Backend::GPU) {
 #if defined(DLAF_WITH_GPU)
@@ -71,15 +73,18 @@ template <TransformDispatchType Tag = TransformDispatchType::Plain, Backend B = 
 
     if constexpr (Tag == TransformDispatchType::Plain) {
       return then_with_stream(std::move(transfer_sender),
-                              ConsumeRvalues{Unwrapping{std::forward<F>(f)}});
+                              ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |
+             drop_operation_state();
     }
     else if constexpr (Tag == TransformDispatchType::Blas) {
       return then_with_cublas(std::move(transfer_sender), ConsumeRvalues{Unwrapping{std::forward<F>(f)}},
-                              CUBLAS_POINTER_MODE_HOST);
+                              CUBLAS_POINTER_MODE_HOST) |
+             drop_operation_state();
     }
     else if constexpr (Tag == TransformDispatchType::Lapack) {
       return then_with_cusolver(std::move(transfer_sender),
-                                ConsumeRvalues{Unwrapping{std::forward<F>(f)}});
+                                ConsumeRvalues{Unwrapping{std::forward<F>(f)}}) |
+             drop_operation_state();
     }
     else {
       DLAF_STATIC_FAIL(

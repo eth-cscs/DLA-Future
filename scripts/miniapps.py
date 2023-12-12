@@ -10,7 +10,7 @@
 
 from itertools import product
 from math import ceil, sqrt
-from os import makedirs
+from os import makedirs, environ
 from os.path import expanduser, isfile
 from time import sleep
 from pathlib import Path
@@ -138,10 +138,14 @@ class JobText:
         launch_cmd = self.system["Launch command"]
         # fstring substitution of vars in launch_cmd
         launch_cmd = launch_cmd.format(job_path=job_path, job_file=job_file)
-        print(f"Submitting : {launch_cmd}")
+        # get default SHELL if not specified
+        shell = environ["SHELL"]
+        if shell==None:
+            raise ValueError(f"no $SHELL environemt variable found")
+        print(f"Submitting : {launch_cmd} using shell {shell}")
 
-        process = Popen(f"{launch_cmd}", shell=True, executable="/bin/bash", universal_newlines=True,
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE ) 
+        process = Popen(f"{launch_cmd}", shell=True, executable=shell, universal_newlines=True,
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE )
         # sleep to not overload the scheduler
         sleep(1)
 

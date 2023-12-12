@@ -32,7 +32,7 @@
 #include <dlaf/matrix/matrix_mirror.h>
 #include <dlaf/miniapp/dispatch.h>
 #include <dlaf/miniapp/options.h>
-#include <dlaf/solver.h>
+#include <dlaf/multiplication/triangular.h>
 #include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
@@ -93,7 +93,7 @@ template <typename T>
 linear_system_t<T> sampleLeftTr(blas::Uplo uplo, blas::Op op, blas::Diag diag, T alpha, SizeType m);
 }
 
-struct triangularSolverMiniapp {
+struct triangularMultiplicationMiniapp {
   template <dlaf::Backend backend, typename T>
   static void run(const Options& opts) {
     Communicator world(MPI_COMM_WORLD);
@@ -116,6 +116,7 @@ struct triangularSolverMiniapp {
 
     const auto side = opts.side;
     DLAF_ASSERT(side == blas::Side::Left, side);
+
     const auto uplo = opts.uplo;
     const auto op = opts.op;
     const auto diag = opts.diag;
@@ -126,7 +127,7 @@ struct triangularSolverMiniapp {
     auto add_mul = n * m * m / 2;
     const double total_ops = dlaf::total_ops<T>(add_mul, add_mul);
 
-    auto [ref_op_a, ref_b, ref_x] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
+    auto [in_op_a, out_b, in_b] = ::sampleLeftTr(uplo, op, diag, alpha, ah.size().rows());
 
     for (int64_t run_index = -opts.nwarmups; run_index < opts.nruns; ++run_index) {
       if (0 == world.rank() && run_index >= 0)
@@ -134,8 +135,8 @@ struct triangularSolverMiniapp {
 
       // setup matrix A and b
       using dlaf::matrix::util::set;
-      set(ah, ref_op_a, op);
-      set(bh, ref_b);
+      set(ah, in_op_a, op);
+      set(bh, in_b);
       a.copySourceToTarget();
       b.copySourceToTarget();
 
@@ -143,12 +144,12 @@ struct triangularSolverMiniapp {
 
       dlaf::common::Timer<> timeit;
       if (opts.local)
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag, alpha,
-                                                                            a.get(), b.get());
+        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(side, uplo, op, diag,
+                                                                                    alpha, a.get(),
+                                                                                    b.get());
       else
-        dlaf::triangular_solver<backend, dlaf::DefaultDevice_v<backend>, T>(comm_grid, side, uplo, op,
-                                                                            diag, alpha, a.get(),
-                                                                            b.get());
+        dlaf::triangular_multiplication<backend, dlaf::DefaultDevice_v<backend>, T>(
+            comm_grid, side, uplo, op, diag, alpha, a.get(), b.get());
 
       sync_barrier();
 
@@ -183,7 +184,7 @@ int pika_main(pika::program_options::variables_map& vm) {
   dlaf::ScopedInitializer init(vm);
 
   const Options opts(vm);
-  dlaf::miniapp::dispatchMiniapp<triangularSolverMiniapp>(opts);
+  dlaf::miniapp::dispatchMiniapp<triangularMultiplicationMiniapp>(opts);
 
   return EXIT_SUCCESS;
 }
@@ -194,10 +195,10 @@ int main(int argc, char** argv) {
   // options
   using namespace pika::program_options;
   options_description desc_commandline(
-      "Benchmark computation of solution for A . X = 2 . B, "
+      "Benchmark computation of A . B, "
       "where A is a non-unit lower triangular matrix, and B is an m by n matrix\n\n"
       "options\n"
-      "Usage: miniapp_triangular_solver [options]");
+      "Usage: miniapp_triangular_multiplication [options]");
   desc_commandline.add(dlaf::miniapp::getMiniappOptionsDescription());
   desc_commandline.add(dlaf::getOptionsDescription());
 

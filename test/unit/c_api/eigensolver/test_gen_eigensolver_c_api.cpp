@@ -63,7 +63,7 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 
 template <class T, Backend B, Device D, API api>
 void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
-                        CommunicatorGrid grid) {
+                        CommunicatorGrid& grid) {
   auto dlaf_context = c_api_test_inititialize<api>(grid);
 
   // In normal use the runtime is resumed by the C API call
@@ -202,7 +202,7 @@ void testGenEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType 
 }
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
@@ -213,7 +213,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
@@ -226,7 +226,7 @@ TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedDLAF) {
 #ifdef DLAF_WITH_SCALAPACK
 
 TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testGenEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
@@ -237,7 +237,7 @@ TYPED_TEST(GenEigensolverTestMC, CorrectnessDistributedScaLAPACK) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(GenEigensolverTestGPU, CorrectnessDistributedScaLAPACK) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testGenEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);

@@ -21,7 +21,6 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/index2d.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/common/single_threaded_blas.h>
@@ -29,7 +28,9 @@
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/functions_sync.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/communication/kernels/reduce.h>
 #include <dlaf/communication/rdma.h>
@@ -688,8 +689,8 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
                   const matrix::SubMatrixView& view, matrix::Matrix<const T, D>& a,
                   matrix::Panel<Coord::Col, const T, D>& w,
                   matrix::Panel<Coord::Row, const T, D, matrix::StoreTransposed::Yes>& wt,
-                  common::Pipeline<comm::Communicator>& mpi_row_chain,
-                  common::Pipeline<comm::Communicator>& mpi_col_chain) {
+                  comm::CommunicatorPipeline<comm::CommunicatorType::Row>& mpi_row_chain,
+                  comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_chain) {
   namespace ex = pika::execution::experimental;
 
   using pika::execution::thread_priority;
@@ -773,10 +774,11 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
       // Moreover, it reduces in place because the owner of the diagonal stores the partial result
       // directly in x (without using xt)
       const auto i = dist.template localTileFromGlobalTile<Coord::Row>(index_k);
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain(), MPI_SUM, x.readwrite({i, 0})));
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_chain.exclusive(), MPI_SUM,
+                                                         x.readwrite({i, 0})));
     }
     else {
-      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain(), rank_owner_row, MPI_SUM,
+      ex::start_detached(comm::scheduleReduceSend(mpi_col_chain.exclusive(), rank_owner_row, MPI_SUM,
                                                   xt.read(index_xt)));
     }
   }
@@ -787,10 +789,10 @@ void hemmComputeX(comm::IndexT_MPI reducer_col, matrix::Panel<Coord::Col, T, D>&
   // The result is needed just on the column with reflectors.
   for (const auto& index_x : x.iteratorLocal()) {
     if (reducer_col == rank.col())
-      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain(), MPI_SUM,
+      ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_chain.exclusive(), MPI_SUM,
                                                          x.readwrite(index_x)));
     else
-      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain(), reducer_col, MPI_SUM,
+      ex::start_detached(comm::scheduleReduceSend(mpi_row_chain.exclusive(), reducer_col, MPI_SUM,
                                                   x.read(index_x)));
   }
 }
@@ -1099,7 +1101,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(Matrix<T, D>& mat_a, const
 
 // Distributed implementation of reduction to band
 template <Backend B, Device D, class T>
-Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, Matrix<T, D>& mat_a,
+Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, Matrix<T, D>& mat_a,
                                                       const SizeType band_size) {
   using namespace red2band::distributed;
 
@@ -1113,9 +1115,15 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   // See issue https://github.com/eth-cscs/DLA-Future/issues/729
   pika::wait();
 
-  common::Pipeline<comm::Communicator> mpi_col_chain_panel(grid.colCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_row_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_chain(grid.colCommunicator().clone());
+  // This algorithm requires the grid to have at least 2 independent column communicators in the round
+  // robin array. If there is only one communicator mpi_col_chain and mpi_col_chain_panel will be
+  // separate pipelines to the same communicator, but since communication is interleaved between the
+  // pipelines this algorithm will deadlock (separate subpipelines means that all work on the previous
+  // subpipeline has to complete before the next subpipeline can even start scheduling work).
+  DLAF_ASSERT(grid.num_pipelines() >= 2, grid.num_pipelines());
+  auto mpi_row_chain = grid.row_communicator_pipeline();
+  auto mpi_col_chain = grid.col_communicator_pipeline();
+  auto mpi_col_chain_panel = grid.col_communicator_pipeline();
 
   const auto& dist = mat_a.distribution();
   const comm::Index2D rank = dist.rankIndex();
@@ -1195,8 +1203,8 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     const matrix::SubPanelView panel_view(dist, ij_offset, band_size);
 
     if (is_panel_rank_col) {
-      compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(), mpi_col_chain_panel(), mat_a,
-                                mat_taus_retiled, j_sub, panel_view);
+      compute_panel_helper.call(std::move(trigger_panel), rank_v0.row(), mpi_col_chain_panel.exclusive(),
+                                mat_a, mat_taus_retiled, j_sub, panel_view);
 
       // Note:
       // - has_reflector_head tells if this rank owns the first tile of the panel
@@ -1267,7 +1275,7 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
       matrix::Matrix<T, D> w2 = std::move(t);
 
       red2band::local::gemmComputeW2<B, D>(w2, w, x);
-      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain(), MPI_SUM,
+      ex::start_detached(comm::scheduleAllReduceInPlace(mpi_col_chain.exclusive(), MPI_SUM,
                                                         w2.readwrite(LocalTileIndex(0, 0))));
 
       red2band::local::gemmUpdateX<B, D>(x, w2, v);
@@ -1351,11 +1359,12 @@ Matrix<T, Device::CPU> ReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
           xt.setTile(at, x.read(at));
 
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain(), xt.read(at)));
+            ex::start_detached(comm::scheduleSendBcast(mpi_col_chain.exclusive(), xt.read(at)));
         }
         else {
           if (dist.commGridSize().rows() > 1)
-            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain(), owner, xt.readwrite(at)));
+            ex::start_detached(comm::scheduleRecvBcast(mpi_col_chain.exclusive(), owner,
+                                                       xt.readwrite(at)));
         }
       }
 

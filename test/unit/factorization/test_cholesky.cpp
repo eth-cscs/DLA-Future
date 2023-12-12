@@ -76,7 +76,7 @@ void testCholesky(const blas::Uplo uplo, const SizeType m, const SizeType mb) {
 }
 
 template <class T, Backend B, Device D>
-void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+void testCholesky(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -107,7 +107,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
@@ -127,7 +127,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);

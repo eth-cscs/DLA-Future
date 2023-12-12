@@ -15,8 +15,9 @@
 
 #include <dlaf/common/callable_object.h>
 #include <dlaf/common/eti.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/rdma.h>
@@ -79,20 +80,22 @@ auto recv(const Communicator& comm, IndexT_MPI source, IndexT_MPI tag, const mat
 DLAF_MAKE_CALLABLE_OBJECT(recv);
 }
 
-template <class T, Device D, class Comm>
+template <class T, Device D, class CommSender>
 [[nodiscard]] pika::execution::experimental::unique_any_sender<> scheduleSend(
-    pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI dest, IndexT_MPI tag,
-    dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
+    CommSender pcomm, IndexT_MPI dest, IndexT_MPI tag, dlaf::matrix::ReadOnlyTileSender<T, D> tile) {
   return internal::scheduleSend(std::move(pcomm), dest, tag, std::move(tile));
 }
 
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , Communicator);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , common::Pipeline<Communicator>::Wrapper);
+// clang-format off
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , pika::execution::experimental::any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , CommunicatorPipelineSharedSender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_ETI, , CommunicatorPipelineExclusiveSender);
+// clang-format on
 
-template <class T, Device D, class Comm>
+template <class T, Device D, class CommSender>
 [[nodiscard]] dlaf::matrix::ReadWriteTileSender<T, D> scheduleRecv(
-    pika::execution::experimental::unique_any_sender<Comm> pcomm, IndexT_MPI source, IndexT_MPI tag,
-    dlaf::matrix::ReadWriteTileSender<T, D> tile) {
+    CommSender pcomm, IndexT_MPI source, IndexT_MPI tag, dlaf::matrix::ReadWriteTileSender<T, D> tile) {
   using dlaf::comm::internal::recv_o;
   using dlaf::comm::internal::transformMPI;
   using dlaf::internal::CopyFromDestination;
@@ -113,6 +116,10 @@ template <class T, Device D, class Comm>
                            RequireContiguous::No>(std::move(tile), std::move(recv));
 }
 
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , Communicator);
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , common::Pipeline<Communicator>::Wrapper);
+// clang-format off
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , pika::execution::experimental::unique_any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , pika::execution::experimental::any_sender<Communicator>);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , CommunicatorPipelineSharedSender);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_ETI, , CommunicatorPipelineExclusiveSender);
+// clang-format on
 }

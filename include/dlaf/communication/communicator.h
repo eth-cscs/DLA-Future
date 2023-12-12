@@ -15,12 +15,10 @@
 #include <memory>
 
 #include <dlaf/communication/error.h>
+#include <dlaf/communication/index.h>
 
 namespace dlaf {
 namespace comm {
-
-/// Type used for indexes in MPI API.
-using IndexT_MPI = int;
 
 class CommunicatorImpl;
 

@@ -100,7 +100,7 @@ const std::vector<testcase_t> params = {
 };
 
 template <class T, Device D, Coord C>
-void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, SizeType i_begin,
+void testDistPermutations(comm::CommunicatorGrid& grid, SizeType n, SizeType nb, SizeType i_begin,
                           SizeType i_end, std::vector<SizeType> perms) {
   const GlobalElementSize size(n, n);
   const TileElementSize block_size(nb, nb);
@@ -160,7 +160,7 @@ void testDistPermutations(comm::CommunicatorGrid grid, SizeType n, SizeType nb, 
 }
 
 TYPED_TEST(PermutationsDistTestMC, Columns) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end, perms] : params) {
       testDistPermutations<TypeParam, Device::CPU, Coord::Col>(comm_grid, n, nb, i_begin, i_end, perms);
       pika::wait();
@@ -169,7 +169,7 @@ TYPED_TEST(PermutationsDistTestMC, Columns) {
 }
 
 TYPED_TEST(PermutationsDistTestMC, Rows) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [n, nb, i_begin, i_end, perms] : params) {
       testDistPermutations<TypeParam, Device::CPU, Coord::Row>(comm_grid, n, nb, i_begin, i_end, perms);
       pika::wait();

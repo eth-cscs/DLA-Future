@@ -33,21 +33,21 @@ struct Triangular {
                        Matrix<T, device>& mat_b);
   static void call_RUT(blas::Op op, blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                        Matrix<T, device>& mat_b);
-  static void call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+  static void call_LLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+  static void call_LLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+  static void call_LUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_LUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+  static void call_LUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+  static void call_RLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_RLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+  static void call_RLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+  static void call_RUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
-  static void call_RUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag, T alpha,
+  static void call_RUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag, T alpha,
                        Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b);
 };
 

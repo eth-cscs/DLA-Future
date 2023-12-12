@@ -12,6 +12,8 @@
 
 /// @file
 
+#include <utility>
+
 #include <pika/async_rw_mutex.hpp>
 #include <pika/execution.hpp>
 
@@ -32,23 +34,76 @@ class Pipeline {
   using AsyncRwMutex = pika::execution::experimental::async_rw_mutex<T>;
 
 public:
-  using Wrapper = typename AsyncRwMutex::readwrite_access_type;
-  using Sender = pika::execution::experimental::unique_any_sender<Wrapper>;
+  using ReadOnlyWrapper = typename AsyncRwMutex::read_access_type;
+  using ReadWriteWrapper = typename AsyncRwMutex::readwrite_access_type;
+  using ReadOnlySender = pika::execution::experimental::any_sender<ReadOnlyWrapper>;
+  using ReadWriteSender = pika::execution::experimental::unique_any_sender<ReadWriteWrapper>;
+
+  /// Create an invalid Pipeline.
+  Pipeline() = default;
 
   /// Create a Pipeline by moving in the resource (it takes the ownership).
   explicit Pipeline(T object) : pipeline(std::move(object)) {}
-  Pipeline(Pipeline&&) = default;
-  Pipeline& operator=(Pipeline&&) = default;
+
+  Pipeline(Pipeline&& other) noexcept
+      : pipeline(std::exchange(other.pipeline, std::nullopt)),
+        nested_sender(std::exchange(other.nested_sender, std::nullopt)) {}
+
+  Pipeline& operator=(Pipeline&& other) noexcept {
+    if (this != &other) {
+      pipeline = std::exchange(other.pipeline, std::nullopt);
+      nested_sender = std::exchange(other.nested_sender, std::nullopt);
+    }
+
+    return *this;
+  };
+
   Pipeline(const Pipeline&) = delete;
   Pipeline& operator=(const Pipeline&) = delete;
 
-  /// Enqueue for the resource.
+  ~Pipeline() {
+    release_parent_pipeline();
+  }
+
+  /// Enqueue for exclusive read-write access to the resource.
   ///
   /// @return a sender that will become ready as soon as the previous user releases the resource.
   /// @pre valid()
-  Sender operator()() {
+  ReadWriteSender readwrite() {
     DLAF_ASSERT(valid(), "");
     return pipeline->readwrite();
+  }
+
+  /// Enqueue for shared read-only access to the resource.
+  ///
+  /// @return a sender that will become ready as soon as the previous user releases the resource.
+  /// @pre valid()
+  ReadOnlySender read() {
+    DLAF_ASSERT(valid(), "");
+    return pipeline->read();
+  }
+
+  /// Create a sub pipeline to the value contained in the current Pipeline
+  ///
+  /// All accesses to the sub pipeline are sequenced after previous accesses and before later accesses to
+  /// the original pipeline, independently of when values are accessed in the sub pipeline.
+  Pipeline sub_pipeline() {
+    namespace ex = pika::execution::experimental;
+
+    // Move value from pipeline into sub pipeline, then store a sender of the wrapper of the pipeline in
+    // a sender which we will release when the sub pipeline is released. This ensures that all accesses
+    // to the sub pipeline happen after previous accesses and before later accesses to the pipeline.
+    Pipeline sub_pipeline(T{});
+    sub_pipeline.nested_sender =
+        ex::when_all(sub_pipeline.pipeline->readwrite(), this->pipeline->readwrite()) |
+        ex::then([](auto sub_wrapper, auto wrapper) {
+          sub_wrapper.get() = std::move(wrapper.get());
+
+          return wrapper;
+        }) |
+        ex::ensure_started();
+
+    return sub_pipeline;
   }
 
   /// Check if the pipeline is valid.
@@ -62,10 +117,27 @@ public:
   ///
   /// @post !valid()
   void reset() noexcept {
+    release_parent_pipeline();
     pipeline.reset();
   }
 
 private:
+  void release_parent_pipeline() {
+    namespace ex = pika::execution::experimental;
+
+    if (nested_sender) {
+      DLAF_ASSERT(valid(), "");
+
+      auto s =
+          ex::when_all(pipeline->readwrite(), std::move(nested_sender.value())) |
+          ex::then([](auto sub_wrapper, auto wrapper) { wrapper.get() = std::move(sub_wrapper.get()); });
+      ex::start_detached(std::move(s));
+      nested_sender.reset();
+    }
+  }
+
   std::optional<AsyncRwMutex> pipeline = std::nullopt;
+  std::optional<pika::execution::experimental::unique_any_sender<ReadWriteWrapper>> nested_sender =
+      std::nullopt;
 };
 }

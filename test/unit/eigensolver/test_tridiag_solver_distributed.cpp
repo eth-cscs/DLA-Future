@@ -10,6 +10,7 @@
 
 #include <pika/init.hpp>
 
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/tridiag_solver.h>
 #include <dlaf/matrix/matrix_mirror.h>
@@ -69,7 +70,7 @@ const std::vector<std::tuple<SizeType, SizeType>> tested_problems = {
 // evals, evecs = eigh(trd)
 //
 template <Backend B, Device D, class T>
-void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
+void solveDistributedLaplace1D(comm::CommunicatorGrid& grid, SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
   constexpr RealParam complex_error = TypeUtilities<T>::error;
   constexpr RealParam real_error = TypeUtilities<RealParam>::error;
@@ -124,7 +125,8 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 
   // Clone communicator to make sure non-blocking broadcasts used below don't interleave with collective
   // communication inside the tridiagonal solver.
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator());
+  comm::CommunicatorPipeline<comm::CommunicatorType::Col> col_task_chain(
+      grid.col_communicator_pipeline());
   Matrix<SizeType, Device::CPU> sign_mat(dist_evals);
   comm::Index2D this_rank = dist_evecs.rankIndex();
 
@@ -149,11 +151,12 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
         sign_tile(transposed(idx_el)) = (dlaf::util::sameSign(act_val, exp_val)) ? 1 : -1;
       }
 
-      ex::start_detached(comm::scheduleSendBcast(col_task_chain(), sign_mat.read(idx_sign_tile)));
+      ex::start_detached(comm::scheduleSendBcast(col_task_chain.exclusive(),
+                                                 sign_mat.read(idx_sign_tile)));
     }
     else if (rank_evecs_0row.col() == this_rank.col()) {
       // Receive signs from top column rank
-      ex::start_detached(comm::scheduleRecvBcast(col_task_chain(), rank_evecs_0row.row(),
+      ex::start_detached(comm::scheduleRecvBcast(col_task_chain.exclusive(), rank_evecs_0row.row(),
                                                  sign_mat.readwrite(idx_sign_tile)));
     }
   }
@@ -176,7 +179,7 @@ void solveDistributedLaplace1D(comm::CommunicatorGrid grid, SizeType n, SizeType
 }
 
 template <Backend B, Device D, class T>
-void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType nb) {
+void solveRandomTridiagMatrix(comm::CommunicatorGrid& grid, SizeType n, SizeType nb) {
   using RealParam = BaseType<T>;
 
   Index2D src_rank_index(std::max(0, grid.size().rows() - 1), std::min(1, grid.size().cols() - 1));
@@ -248,7 +251,7 @@ void solveRandomTridiagMatrix(comm::CommunicatorGrid grid, SizeType n, SizeType 
 }
 
 TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -257,7 +260,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Laplace1D) {
 }
 
 TYPED_TEST(TridiagSolverDistTestMC, Random) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::MC, Device::CPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -267,7 +270,7 @@ TYPED_TEST(TridiagSolverDistTestMC, Random) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveDistributedLaplace1D<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
       pika::wait();
@@ -276,7 +279,7 @@ TYPED_TEST(TridiagSolverDistTestGPU, Laplace1D) {
 }
 
 TYPED_TEST(TridiagSolverDistTestGPU, Random) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (auto [n, nb] : tested_problems) {
       solveRandomTridiagMatrix<Backend::GPU, Device::GPU, TypeParam>(comm_grid, n, nb);
       pika::wait();

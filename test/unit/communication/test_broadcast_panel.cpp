@@ -12,6 +12,7 @@
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/panel.h>
 
@@ -52,7 +53,7 @@ std::vector<config_t> test_params{
 };
 
 template <class TypeParam, Coord panel_axis, StoreTransposed Storage>
-void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
+void testBroadcast(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
 
   const matrix::Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -75,7 +76,7 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
 
   // test it!
   constexpr Coord comm_dir = orthogonal(panel_axis);
-  common::Pipeline<comm::Communicator> mpi_task_chain(comm_grid.subCommunicator(comm_dir));
+  auto mpi_task_chain(comm_grid.communicator_pipeline<comm_dir>());
 
   broadcast(root, panel, mpi_task_chain);
 
@@ -85,25 +86,25 @@ void testBroadcast(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Col, StoreTransposed::No>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Row, StoreTransposed::No>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastColStoreTransposed) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRowStoreTransposed) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params)
       testBroadcast<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }
@@ -116,7 +117,7 @@ std::vector<config_t> test_params_bcast_transpose{
 };
 
 template <class TypeParam, Coord AxisSrc, StoreTransposed storageT>
-void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_grid) {
+void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid& comm_grid) {
   using TypeUtil = TypeUtilities<TypeParam>;
 
   const Distribution dist(cfg.sz, cfg.blocksz, comm_grid.size(), comm_grid.rank(), {0, 0});
@@ -133,8 +134,8 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_gri
   }
 
   // test it!
-  common::Pipeline<comm::Communicator> row_task_chain(comm_grid.rowCommunicator());
-  common::Pipeline<comm::Communicator> col_task_chain(comm_grid.colCommunicator());
+  auto row_task_chain(comm_grid.row_communicator_pipeline());
+  auto col_task_chain(comm_grid.col_communicator_pipeline());
 
   // select a "random" source rank which will be the source for the data
   const comm::IndexT_MPI owner = comm_grid.size().get(AxisSrc) / 2;
@@ -158,25 +159,25 @@ void testBroadcastTranspose(const config_t& cfg, comm::CommunicatorGrid comm_gri
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2Row) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
       testBroadcastTranspose<TypeParam, Coord::Col, StoreTransposed::No>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow2Col) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
       testBroadcastTranspose<TypeParam, Coord::Row, StoreTransposed::No>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastCol2RowStoreTransposed) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
       testBroadcastTranspose<TypeParam, Coord::Col, StoreTransposed::Yes>(cfg, comm_grid);
 }
 
 TYPED_TEST(PanelBcastTest, BroadcastRow2ColStoreTransposed) {
-  for (auto comm_grid : this->commGrids())
+  for (auto& comm_grid : this->commGrids())
     for (const auto& cfg : test_params_bcast_transpose)
       testBroadcastTranspose<TypeParam, Coord::Row, StoreTransposed::Yes>(cfg, comm_grid);
 }

@@ -23,6 +23,7 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/broadcast_panel.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/bt_reduction_to_band/api.h>
 #include <dlaf/factorization/qr.h>
@@ -232,7 +233,7 @@ void BackTransformationReductionToBand<backend, device, T>::call(
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType b,
+void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType b,
                                                       Matrix<T, D>& mat_c, Matrix<const T, D>& mat_v,
                                                       Matrix<const T, Device::CPU>& mat_taus) {
   namespace ex = pika::execution::experimental;
@@ -242,8 +243,8 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
   auto np = pika::execution::thread_priority::normal;
 
   // Set up MPI
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
 
   auto dist_v = mat_v.distribution();
   auto dist_c = mat_c.distribution();
@@ -344,7 +345,7 @@ void BackTransformationReductionToBand<B, D, T>::call(comm::CommunicatorGrid gri
     }
 
     for (const auto& kj_panel : panelW2.iteratorLocal())
-      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM,
+      ex::start_detached(dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
                                                               panelW2.readwrite(kj_panel)));
 
     broadcast(k_rank_col, panelV, mpi_row_task_chain);

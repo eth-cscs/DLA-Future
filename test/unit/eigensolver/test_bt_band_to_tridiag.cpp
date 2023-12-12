@@ -168,7 +168,7 @@ void testBacktransformation(SizeType m, SizeType n, SizeType mb, SizeType nb, co
 }
 
 template <Backend B, Device D, class T>
-void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n, SizeType mb,
+void testBacktransformation(comm::CommunicatorGrid& grid, SizeType m, SizeType n, SizeType mb,
                             SizeType nb, const SizeType b) {
   const Distribution dist({m, n}, {mb, nb}, grid.size(), grid.rank(), {0, 0});
 
@@ -176,7 +176,7 @@ void testBacktransformation(comm::CommunicatorGrid grid, SizeType m, SizeType n,
   set_random(mat_e_h);
   auto mat_e_local = allGather(blas::Uplo::General, mat_e_h, grid);
 
-  Matrix<const T, Device::CPU> mat_hh = [grid, m, mb, b]() {
+  Matrix<const T, Device::CPU> mat_hh = [&grid, m, mb, b]() {
     const Distribution dist({m, m}, {mb, mb}, grid.size(), grid.rank(), {0, 0});
 
     Matrix<T, Device::CPU> mat_hh(dist);
@@ -265,7 +265,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
@@ -283,7 +283,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);
@@ -306,7 +306,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessLocalSubBand) {
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestMC, CorrectnessDistributedSubBand) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::MC, Device::CPU, TypeParam>(comm_grid, m, n, mb, nb, b);
@@ -324,7 +324,7 @@ TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessLocalSubBand) {
 }
 
 TYPED_TEST(BacktransformationBandToTridiagTestGPU, CorrectnessDistributedSubBand) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, group_size, b] : configs_subband) {
       getTuneParameters().bt_band_to_tridiag_hh_apply_group_size = group_size;
       testBacktransformation<Backend::GPU, Device::GPU, TypeParam>(comm_grid, m, n, mb, nb, b);

@@ -21,6 +21,7 @@
 #include <dlaf/common/vector.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/band_to_tridiag/api.h>
 #include <dlaf/eigensolver/internal/get_1d_block_size.h>
@@ -804,14 +805,16 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     auto sem_next = std::make_shared<pika::counting_semaphore<>>(0);
     ex::unique_any_sender<SemaphorePtr> sem_sender;
     if ((sweep + 1) % nb != 0) {
-      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline()) |
-                                      dlaf::internal::transform(policy_hp, init_sweep));
+      sem_sender =
+          ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline.readwrite()) |
+                             dlaf::internal::transform(policy_hp, init_sweep));
     }
     else {
       const auto tile_index = sweep / nb;
-      sem_sender = ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline(),
-                                                   mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
-                                      dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
+      sem_sender =
+          ex::ensure_started(ex::when_all(ex::just(std::move(sem), sweep), w_pipeline.readwrite(),
+                                          mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
+                             dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
     }
     if (sweep % nb == 0) {
       // The run_sweep tasks writes a single column of elements of mat_v.
@@ -827,7 +830,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           ex::drop_operation_state() | ex::split();
     }
 
-    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline(), tiles_v) |
+    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline.readwrite(), tiles_v) |
         dlaf::internal::transformDetach(policy_hp, run_sweep);
     sem = std::move(sem_next);
   }
@@ -977,7 +980,7 @@ private:
 
 template <Device D, class T>
 TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
-    comm::CommunicatorGrid grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
+    comm::CommunicatorGrid& grid, const SizeType b, Matrix<const T, D>& mat_a) noexcept {
   // Note on the algorithm and dependency tracking:
   // The algorithm is composed by n-2 (real) or n-1 (complex) sweeps:
   // The i-th sweep is initialized by init_sweep/init_sweep_copy_tridiag
@@ -1046,9 +1049,15 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
     return {std::move(mat_trid), std::move(mat_v)};
   }
 
-  auto comm = ex::just(grid.fullCommunicator().clone());
+  // The algorithm would still work if we only defined one pipeline below and used that for both p2p
+  // communication and broadcasts (since mpi_chain is used fully before mpi_chain_bcast, i.e. not
+  // interleaved). However, using two pipelines is beneficial since it allows the two different types of
+  // communications to be submitted concurrently. This is true in case there are actually two resources
+  // (pipelines.size() = 2), otherwise it will fallback to the "single" pipeline case anyway (ending up
+  // serialising the calls).
+  auto mpi_chain = grid.full_communicator_pipeline();
   // Need a pipeline of comm for broadcasts.
-  common::Pipeline<comm::Communicator> comm_bcast(grid.fullCommunicator().clone());
+  auto mpi_chain_bcast = grid.full_communicator_pipeline();
 
   const auto rank = grid.rankFullCommunicator(grid.rank());
   const auto ranks = static_cast<comm::IndexT_MPI>(grid.size().linear_size());
@@ -1180,7 +1189,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
           else {
             auto& temp = temps.nextResource();
-            auto diag_tile = comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_diag, tag_diag,
+            auto diag_tile = comm::scheduleRecv(mpi_chain.shared(), rank_diag, tag_diag,
                                                 splitTile(temp.readwrite(LocalTileIndex{0, 0}),
                                                           {{0, 0}, dist_a.tileSize(index_diag)}));
             dep = ex::ensure_started(copy_diag(a_ws[k_block_local], k * nb, std::move(diag_tile)));
@@ -1194,7 +1203,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
             else {
               auto& temp = temps.nextResource();
               auto offdiag_tile =
-                  comm::scheduleRecv(ex::make_unique_any_sender(comm), rank_offdiag, tag_offdiag,
+                  comm::scheduleRecv(mpi_chain.shared(), rank_offdiag, tag_offdiag,
                                      splitTile(temp.readwrite(LocalTileIndex{0, 0}),
                                                {{0, 0}, dist_a.tileSize(index_offdiag)}));
               dep = ex::ensure_started(copy_offdiag(
@@ -1213,13 +1222,13 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         }
         else {
           if (rank == rank_diag) {
-            ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_block, tag_diag,
+            ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_diag,
                                                   mat_a.read(index_diag)));
           }
           if (k < n - 1) {
             if (rank == rank_offdiag) {
-              ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_block,
-                                                    tag_offdiag, mat_a.read(index_offdiag)));
+              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_block, tag_offdiag,
+                                                    mat_a.read(index_offdiag)));
             }
           }
         }
@@ -1323,7 +1332,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
               ex::just(sem) |
               dlaf::internal::transform(policy_hp, [](SemaphorePtr&& sem) { sem->acquire(); }) |
               ex::split();
-          ex::start_detached(schedule_send_col(comm, prev_rank,
+          ex::start_detached(schedule_send_col(mpi_chain.shared(), prev_rank,
                                                compute_col_tag(id_block.col(), next_j == size - 1), b,
                                                a_block, next_j, send_col_dep));
         }
@@ -1357,7 +1366,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           // Therefore sem can be released without other dependencies
           ex::start_detached(
               ex::when_all(ex::just(sem),
-                           schedule_recv_col(comm, next_rank,
+                           schedule_recv_col(mpi_chain.shared(), next_rank,
                                              compute_col_tag(id_block.col(), next_j == size - 1), b,
                                              a_block, next_j, std::move(dep_block))) |
               ex::then([](SemaphorePtr&& sem) { sem->release(1); }));
@@ -1366,22 +1375,23 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         // Sweep initialization
         if (init_step == 0) {
           if ((sweep + 1) % nb != 0) {
-            sem_sender =
-                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep), w_pipeline()) |
-                                   dlaf::internal::transform(policy_hp, init_sweep));
+            sem_sender = ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep),
+                                                         w_pipeline.readwrite()) |
+                                            dlaf::internal::transform(policy_hp, init_sweep));
           }
           else {
             const auto tile_index = sweep / nb;
             sem_sender =
-                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep), w_pipeline(),
+                ex::ensure_started(ex::when_all(ex::just(a_block, std::move(sem), sweep),
+                                                w_pipeline.readwrite(),
                                                 mat_trid.readwrite(GlobalTileIndex{tile_index, 0})) |
                                    dlaf::internal::transform(policy_hp, init_sweep_copy_tridiag));
           }
         }
         else {
-          ex::start_detached(schedule_recv_worker(sweep, init_step, comm, prev_rank,
+          ex::start_detached(schedule_recv_worker(sweep, init_step, mpi_chain.shared(), prev_rank,
                                                   compute_worker_tag(sweep, id_block.col()),
-                                                  w_pipeline()));
+                                                  w_pipeline.readwrite()));
 
           // SendCol already acquired once the semaphore, so no need to acquire it here.
           sem_sender = ex::when_all(ex::just(std::move(sem)), std::move(send_col_dep));
@@ -1394,15 +1404,17 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         bool last_step = steps - init_step <= steps_per_block && next_j != size - 2;
         const SizeType block_steps = std::min(steps_per_block, steps - init_step);
 
-        dep_block = ex::ensure_started(ex::when_all(ex::just(a_block), std::move(sem_sender),
-                                                    ex::just(sem_next, block_steps, last_step),
-                                                    w_pipeline(), tile_v, ex::just(sweep % b)) |
-                                       dlaf::internal::transform(policy_hp, run_steps));
+        dep_block =
+            ex::ensure_started(ex::when_all(ex::just(a_block), std::move(sem_sender),
+                                            ex::just(sem_next, block_steps, last_step),
+                                            w_pipeline.readwrite(), tile_v, ex::just(sweep % b)) |
+                               dlaf::internal::transform(policy_hp, run_steps));
         sem = std::move(sem_next);
 
         if (init_step + block_steps < steps) {
-          ex::start_detached(schedule_send_worker(
-              comm, next_rank, compute_worker_tag(sweep, id_block.col() + 1), w_pipeline()));
+          ex::start_detached(schedule_send_worker(mpi_chain.shared(), next_rank,
+                                                  compute_worker_tag(sweep, id_block.col() + 1),
+                                                  w_pipeline.readwrite()));
         }
       }
     }
@@ -1421,7 +1433,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           const auto id_panel_local = dist_panel.localTileIndex(id_panel);
           tiles_v[id_panel_local.row()] = ex::any_sender<TilePtr>{};
 
-          auto copy_or_send = [&comm, rank, &panel_v, &mat_v,
+          auto copy_or_send = [&mpi_chain, rank, &panel_v, &mat_v,
                                &compute_v_tag](const LocalTileIndex index_panel,
                                                const TileElementIndex spec_panel_origin,
                                                const TileElementSize spec_size,
@@ -1435,7 +1447,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                                  copy(Policy<CopyBackend_v<Device::CPU, Device::CPU>>{}));
             }
             else {
-              ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_v,
+              ex::start_detached(comm::scheduleSend(mpi_chain.shared(), rank_v,
                                                     compute_v_tag(index_v, spec_v_origin.col(), bottom),
                                                     std::move(tile_v_panel)));
             }
@@ -1447,7 +1459,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           }
         }
         else {
-          auto recv = [&comm, rank, &dist_v, &mat_v,
+          auto recv = [&mpi_chain, rank, &dist_v, &mat_v,
                        &compute_v_tag](const comm::IndexT_MPI rank_panel, const comm::IndexT_MPI rank_v,
                                        const GlobalTileIndex index_v,
                                        const TileElementIndex spec_v_origin,
@@ -1463,8 +1475,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
                 dep = ex::drop_value(mat_v.read(local_index_v - LocalTileSize{0, 1}));
 
               ex::start_detached(comm::scheduleRecv(
-                  ex::make_unique_any_sender(comm), rank_panel,
-                  compute_v_tag(index_v, spec_v_origin.col(), bottom),
+                  mpi_chain.shared(), rank_panel, compute_v_tag(index_v, spec_v_origin.col(), bottom),
                   matrix::ReadWriteTileSender<T, Device::CPU>(ex::when_all(std::move(tile_v),
                                                                            std::move(dep)))));
             }
@@ -1507,9 +1518,10 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
   // only Rank 0 has mat_trid -> bcast to everyone.
   for (const auto& index : iterate_range2d(mat_trid.nrTiles())) {
     if (rank == 0)
-      ex::start_detached(comm::scheduleSendBcast(comm_bcast(), mat_trid.read(index)));
+      ex::start_detached(comm::scheduleSendBcast(mpi_chain_bcast.exclusive(), mat_trid.read(index)));
     else
-      ex::start_detached(comm::scheduleRecvBcast(comm_bcast(), 0, mat_trid.readwrite(index)));
+      ex::start_detached(comm::scheduleRecvBcast(mpi_chain_bcast.exclusive(), 0,
+                                                 mat_trid.readwrite(index)));
   }
 
   return {std::move(mat_trid), std::move(mat_v)};

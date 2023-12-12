@@ -212,7 +212,7 @@ auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_local_taus) {
 
 template <class T>
 auto allGatherTaus(const SizeType k, Matrix<T, Device::CPU>& mat_taus,
-                   comm::CommunicatorGrid comm_grid) {
+                   comm::CommunicatorGrid& comm_grid) {
   const auto local_num_tiles = mat_taus.distribution().localNrTiles().rows();
   const auto num_tiles = mat_taus.distribution().nrTiles().rows();
   const auto local_num_tiles_expected =
@@ -399,7 +399,7 @@ TYPED_TEST(ReductionToBandTestGPU, CorrectnessLocalSubBand) {
 #endif
 
 template <class T, Device D, Backend B>
-void testReductionToBand(comm::CommunicatorGrid grid, const LocalElementSize size,
+void testReductionToBand(comm::CommunicatorGrid& grid, const LocalElementSize size,
                          const TileElementSize block_size, const SizeType band_size,
                          const InputMatrixStructure input_matrix_structure) {
   const SizeType k_reflectors = std::max(SizeType(0), size.rows() - band_size - 1);

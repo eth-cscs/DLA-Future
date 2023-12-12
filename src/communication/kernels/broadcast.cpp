@@ -20,6 +20,7 @@
 #include <dlaf/common/data.h>
 #include <dlaf/common/eti.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/communication/rdma.h>
@@ -62,11 +63,11 @@ template <class T, Device D, class Comm>
 }
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, , common::Pipeline<Communicator>::Wrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_SEND_BCAST_ETI, , CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_SEND_BCAST_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 
@@ -105,11 +106,11 @@ template <class T, Device D, class Comm>
 }
 
 // clang-format off
-DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, , common::Pipeline<Communicator>::Wrapper);
+DLAF_EXPAND_ETI_SDCZ_DEVICE_VA_ARGS(DLAF_SCHEDULE_RECV_BCAST_ETI, , CommunicatorPipelineExclusiveWrapper);
 
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::CPU, CommunicatorPipelineExclusiveWrapper);
 #ifdef DLAF_WITH_GPU
-DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, common::Pipeline<Communicator>::Wrapper);
+DLAF_SCHEDULE_RECV_BCAST_ETI(, SizeType, Device::GPU, CommunicatorPipelineExclusiveWrapper);
 #endif
 // clang-format on
 }

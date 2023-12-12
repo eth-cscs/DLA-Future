@@ -133,7 +133,7 @@ EigensolverResult<T, D> hermitian_eigensolver(blas::Uplo uplo, Matrix<T, D>& mat
 /// @pre @p eigenvectors has blocksize (NB x NB)
 /// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat,
+void hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat,
                            Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat, grid), mat);
   DLAF_ASSERT(square_size(mat), mat);
@@ -175,7 +175,7 @@ void hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<
 /// @pre @p mat has blocksize (NB x NB)
 /// @pre @p mat has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
+EigensolverResult<T, D> hermitian_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                               Matrix<T, D>& mat) {
   const SizeType size = mat.size().rows();
   matrix::Matrix<BaseType<T>, D> eigenvalues(LocalElementSize(size, 1),

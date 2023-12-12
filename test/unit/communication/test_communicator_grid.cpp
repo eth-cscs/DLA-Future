@@ -10,6 +10,8 @@
 
 #include <mpi.h>
 
+#include <pika/execution.hpp>
+
 #include <dlaf/communication/communicator_grid.h>
 #include <dlaf/communication/error.h>
 
@@ -17,6 +19,7 @@
 
 using namespace dlaf::comm;
 using dlaf::common::Ordering;
+namespace tt = pika::this_thread::experimental;
 
 const auto valid_orderings = ::testing::Values(Ordering::RowMajor, Ordering::ColumnMajor);
 
@@ -95,53 +98,6 @@ void check_rank_full_communicator(const CommunicatorGrid& grid) {
 }
 
 class CommunicatorGridTest : public ::testing::TestWithParam<Ordering> {};
-
-TEST_P(CommunicatorGridTest, Copy) {
-  Communicator world(MPI_COMM_WORLD);
-
-  auto grid_dims = computeGridDims(NUM_MPI_RANKS);
-  int nrows = grid_dims[0];
-  int ncols = grid_dims[1];
-
-  CommunicatorGrid grid(world, nrows, ncols, GetParam());
-
-  EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
-  EXPECT_EQ(nrows, grid.size().rows());
-  EXPECT_EQ(ncols, grid.size().cols());
-
-  {
-    CommunicatorGrid copy = grid;
-
-    EXPECT_EQ(NUM_MPI_RANKS, copy.size().rows() * copy.size().cols());
-    EXPECT_EQ(nrows, copy.size().rows());
-    EXPECT_EQ(ncols, copy.size().cols());
-
-    int result;
-    DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.fullCommunicator(), grid.fullCommunicator(), &result));
-    EXPECT_EQ(MPI_IDENT, result);
-    EXPECT_NE(MPI_COMM_NULL, copy.fullCommunicator());
-
-    DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.rowCommunicator(), grid.rowCommunicator(), &result));
-    EXPECT_EQ(MPI_IDENT, result);
-    EXPECT_NE(MPI_COMM_NULL, copy.rowCommunicator());
-
-    DLAF_MPI_CHECK_ERROR(MPI_Comm_compare(copy.colCommunicator(), grid.colCommunicator(), &result));
-    EXPECT_EQ(MPI_IDENT, result);
-    EXPECT_NE(MPI_COMM_NULL, copy.colCommunicator());
-
-    test_grid_communication(copy);
-  }
-
-  EXPECT_EQ(NUM_MPI_RANKS, grid.size().rows() * grid.size().cols());
-  EXPECT_EQ(nrows, grid.size().rows());
-  EXPECT_EQ(ncols, grid.size().cols());
-
-  EXPECT_NE(MPI_COMM_NULL, grid.fullCommunicator());
-  EXPECT_NE(MPI_COMM_NULL, grid.rowCommunicator());
-  EXPECT_NE(MPI_COMM_NULL, grid.colCommunicator());
-
-  test_grid_communication(grid);
-}
 
 TEST_P(CommunicatorGridTest, ConstructorWithParams) {
   Communicator world(MPI_COMM_WORLD);
@@ -249,3 +205,52 @@ TEST_P(CommunicatorGridTest, Rank) {
 }
 
 INSTANTIATE_TEST_SUITE_P(Rank, CommunicatorGridTest, valid_orderings);
+
+TEST_P(CommunicatorGridTest, RoundRobin) {
+  Communicator world(MPI_COMM_WORLD);
+  auto grid_dims = computeGridDims(NUM_MPI_RANKS);
+  const std::vector<std::size_t> test_npipelines{1, 3, 10};
+  for (const std::size_t npipelines : test_npipelines) {
+    CommunicatorGrid complete_grid(world, grid_dims, GetParam(), npipelines);
+
+    std::vector<Communicator> full_communicators;
+    std::vector<Communicator> row_communicators;
+    std::vector<Communicator> col_communicators;
+
+    full_communicators.reserve(npipelines);
+    row_communicators.reserve(npipelines);
+    col_communicators.reserve(npipelines);
+
+    // Access the pipelines once for each communicator in the pipelines
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      full_communicators.push_back(
+          tt::sync_wait(complete_grid.full_communicator_pipeline().exclusive()).get());
+      row_communicators.push_back(
+          tt::sync_wait(complete_grid.row_communicator_pipeline().exclusive()).get());
+      col_communicators.push_back(
+          tt::sync_wait(complete_grid.col_communicator_pipeline().exclusive()).get());
+    }
+
+    // Since we made one full npipelines round in the previous round, we should now get the same
+    // communicators
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      EXPECT_EQ(&(full_communicators[i]),
+                &tt::sync_wait(complete_grid.full_communicator_pipeline().exclusive()).get());
+      EXPECT_EQ(&(row_communicators[i]),
+                &tt::sync_wait(complete_grid.row_communicator_pipeline().exclusive()).get());
+      EXPECT_EQ(&(col_communicators[i]),
+                &tt::sync_wait(complete_grid.col_communicator_pipeline().exclusive()).get());
+    }
+
+    // We also expect all npipelines communicators to be distinct
+    for (std::size_t i = 0; i < npipelines; ++i) {
+      for (std::size_t j = i + 1; j < npipelines; ++j) {
+        EXPECT_NE(&(full_communicators[i]), &(full_communicators[j]));
+        EXPECT_NE(&(row_communicators[i]), &(row_communicators[j]));
+        EXPECT_NE(&(col_communicators[i]), &(col_communicators[j]));
+      }
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(RoundRobin, CommunicatorGridTest, valid_orderings);

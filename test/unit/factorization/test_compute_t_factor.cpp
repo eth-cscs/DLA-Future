@@ -15,6 +15,7 @@
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr.h>
 #include <dlaf/lapack/tile.h>  // workaround for importing lapack.hh
 #include <dlaf/matrix/copy.h>
@@ -324,7 +325,7 @@ void testComputeTFactor(const SizeType m, const SizeType k, const SizeType mb, c
 }
 
 template <class T, Backend B, Device D>
-void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const SizeType k,
+void testComputeTFactor(comm::CommunicatorGrid& grid, const SizeType m, const SizeType k,
                         const SizeType mb, const SizeType nb, const GlobalElementIndex v_start) {
   ASSERT_LE(v_start.row() + k, m);
   ASSERT_LE(v_start.col() + k, nb);
@@ -363,7 +364,7 @@ void testComputeTFactor(comm::CommunicatorGrid grid, const SizeType m, const Siz
 
   is_orthogonal(h_expected);
 
-  common::Pipeline<comm::Communicator> serial_comm(grid.colCommunicator());
+  auto serial_comm(grid.col_communicator_pipeline());
 
   Matrix<T, Device::CPU> t_output_h({k, k}, {k, k});
   const LocalTileIndex t_idx(0, 0);
@@ -416,7 +417,7 @@ TYPED_TEST(ComputeTFactorTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestMC, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, k, mb, nb, v_start);
     }
@@ -431,7 +432,7 @@ TYPED_TEST(ComputeTFactorTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(ComputeTFactorTestGPU, CorrectnessDistributed) {
-  for (auto comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, k, mb, nb, v_start] : configs) {
       testComputeTFactor<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, k, mb, nb, v_start);
     }

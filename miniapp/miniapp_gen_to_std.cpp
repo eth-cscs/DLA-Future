@@ -88,7 +88,7 @@ struct GenToStdMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);
@@ -97,7 +97,7 @@ struct GenToStdMiniapp {
       return hermitian;
     }();
 
-    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, &comm_grid]() {
       // As the result of the Cholesky decomposition is a triangular matrix with
       // strictly poitive real elements on the diagonal, and as only the upper/lower
       // part of the tridiagonal is referenced, it is fine to use

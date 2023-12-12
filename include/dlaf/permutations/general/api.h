@@ -12,7 +12,7 @@
 
 #include <blas.hh>
 
-#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/types.h>
 
@@ -22,9 +22,10 @@ template <Backend B, Device D, class T, Coord coord>
 struct Permutations {
   static void call(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
                    Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out);
-  static void call(common::Pipeline<comm::Communicator>& sub_task_chain, SizeType i_begin,
-                   SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
-                   Matrix<T, D>& mat_out);
+  static void call(
+      comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,
+      SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
+      Matrix<T, D>& mat_out);
 };
 
 // ETI

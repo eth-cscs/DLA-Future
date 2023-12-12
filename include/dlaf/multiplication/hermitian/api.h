@@ -18,7 +18,7 @@ struct Hermitian {
   static void call_LL(const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c);
 
-  static void call_LL(comm::CommunicatorGrid grid, const T alpha, Matrix<const T, D>& mat_a,
+  static void call_LL(comm::CommunicatorGrid& grid, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c);
 };
 

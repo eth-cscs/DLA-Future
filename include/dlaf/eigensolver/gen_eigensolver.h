@@ -174,9 +174,9 @@ EigensolverResult<T, D> hermitian_generalized_eigensolver(blas::Uplo uplo, Matri
 /// @pre @p eigenvectors has blocksize (NB x NB)
 /// @pre @p eigenvectors has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-void hermitian_generalized_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
-                                       Matrix<T, D>& mat_b, Matrix<BaseType<T>, D>& eigenvalues,
-                                       Matrix<T, D>& eigenvectors) {
+void hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
+                                       Matrix<T, D>& mat_a, Matrix<T, D>& mat_b,
+                                       Matrix<BaseType<T>, D>& eigenvalues, Matrix<T, D>& eigenvectors) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);
   DLAF_ASSERT(matrix::local_matrix(eigenvalues), eigenvalues);
@@ -230,7 +230,7 @@ void hermitian_generalized_eigensolver(comm::CommunicatorGrid grid, blas::Uplo u
 /// @pre @p mat_b has blocksize (NB x NB)
 /// @pre @p mat_b has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid grid, blas::Uplo uplo,
+EigensolverResult<T, D> hermitian_generalized_eigensolver(comm::CommunicatorGrid& grid, blas::Uplo uplo,
                                                           Matrix<T, D>& mat_a, Matrix<T, D>& mat_b) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_a, grid), mat_a, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_b, grid), mat_b, grid);

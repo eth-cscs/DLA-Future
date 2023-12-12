@@ -81,7 +81,7 @@ void testGenToStdEigensolver(const blas::Uplo uplo, const SizeType m, const Size
 }
 
 template <class T, Backend B, Device D>
-void testGenToStdEigensolver(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+void testGenToStdEigensolver(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const SizeType m,
                              const SizeType mb) {
   const GlobalElementSize size(m, m);
   const TileElementSize block_size(mb, mb);
@@ -120,7 +120,7 @@ TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(EigensolverGenToStdTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testGenToStdEigensolver<TypeParam, Backend::MC, Device::CPU>(comm_grid, uplo, m, mb);
@@ -140,7 +140,7 @@ TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(EigensolverGenToStdTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testGenToStdEigensolver<TypeParam, Backend::GPU, Device::GPU>(comm_grid, uplo, m, mb);

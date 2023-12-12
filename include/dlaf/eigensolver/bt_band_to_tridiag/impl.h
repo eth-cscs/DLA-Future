@@ -29,6 +29,7 @@
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/communication/kernels/p2p_allsum.h>
@@ -730,7 +731,7 @@ void BackTransformationT2B<B, D, T>::call(const SizeType band_size, Matrix<T, D>
 }
 
 template <Backend B, Device D, class T>
-void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const SizeType band_size,
+void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid& grid, const SizeType band_size,
                                           Matrix<T, D>& mat_e, Matrix<const T, Device::CPU>& mat_hh) {
   using pika::execution::thread_priority;
   using pika::execution::thread_stacksize;
@@ -802,9 +803,10 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
   // For this reason, communications of the phase 1 will be ordered with a pipeline. Instead, for the
   // second part, with the aim to not over constrain execution of the update, no order will be
   // enforced by relying solely on tags.
-  common::Pipeline<comm::Communicator> mpi_chain_row(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_chain_col(grid.colCommunicator().clone());
-  const auto mpi_col_comm = ex::just(grid.colCommunicator().clone());
+  DLAF_ASSERT(grid.num_pipelines() >= 2, grid.num_pipelines());
+  auto mpi_chain_row = grid.row_communicator_pipeline();
+  auto mpi_chain_col = grid.col_communicator_pipeline();
+  auto mpi_chain_col_p2p = grid.col_communicator_pipeline();
 
   const SizeType idx_last_sweep_b = (nrSweeps<T>(mat_hh.size().cols()) - 1) / b;
   const SizeType maxsteps_b = nrStepsForSweep(0, mat_hh.size().rows(), b);
@@ -889,10 +891,10 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
       if (grid.size().cols() > 1 && rank.row() == rankHH.row()) {
         if (rank.col() == rankHH.col()) {
           ex::start_detached(comm::scheduleSendBcast(
-              mpi_chain_row(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
+              mpi_chain_row.exclusive(), splitTile(mat_hh.read(ij_g), helper.specHHCompact())));
         }
         else {
-          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row(), rankHH.col(),
+          ex::start_detached(comm::scheduleRecvBcast(mpi_chain_row.exclusive(), rankHH.col(),
                                                      splitTile(panel_hh.readwrite(ij_hh_panel),
                                                                helper.specHHCompact(true))));
         }
@@ -912,10 +914,11 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
           auto tile_hh = rank.col() == rankHH.col()
                              ? splitTile(mat_hh.read(ij_g), helper.specHHCompact())
                              : splitTile(panel_hh.read(ij_hh_panel), helper.specHHCompact(true));
-          ex::start_detached(comm::scheduleSend(mpi_chain_col(), rank_dst, 0, std::move(tile_hh)));
+          ex::start_detached(comm::scheduleSend(mpi_chain_col.exclusive(), rank_dst, 0,
+                                                std::move(tile_hh)));
         }
         else if (rank.row() == rank_dst) {
-          ex::start_detached(comm::scheduleRecv(mpi_chain_col(), rank_src, 0,
+          ex::start_detached(comm::scheduleRecv(mpi_chain_col.exclusive(), rank_src, 0,
                                                 panel_hh.readwrite(ij_hh_panel)));
         }
       }
@@ -995,7 +998,7 @@ void BackTransformationT2B<B, D, T>::call(comm::CommunicatorGrid grid, const Siz
 
             // Compute final W2 by adding the contribution from the partner rank
             ex::start_detached(  //
-                comm::scheduleAllSumP2P<B>(mpi_col_comm, rank_partner, tag,
+                comm::scheduleAllSumP2P<B>(mpi_chain_col_p2p.shared(), rank_partner, tag,
                                            splitTile(mat_w2tmp.read(idx_w2), helper.specW2(nb)),
                                            splitTile(mat_w2.readwrite(idx_w2), helper.specW2(nb))));
 

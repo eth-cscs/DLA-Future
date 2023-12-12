@@ -113,7 +113,7 @@ void bt_band_to_tridiagonal(const SizeType band_size, matrix::Matrix<T, D>& mat_
 /// @param band_size size of the reflectors (normal one, not constrained by any matrix size limit)
 /// @pre @p band_size is a divisor of `mat_hh.blockSize().cols()`
 template <Backend B, Device D, class T>
-void bt_band_to_tridiagonal(comm::CommunicatorGrid grid, const SizeType band_size,
+void bt_band_to_tridiagonal(comm::CommunicatorGrid& grid, const SizeType band_size,
                             matrix::Matrix<T, D>& mat_e, matrix::Matrix<const T, Device::CPU>& mat_hh) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_e, grid), mat_e, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_hh, grid), mat_hh, grid);

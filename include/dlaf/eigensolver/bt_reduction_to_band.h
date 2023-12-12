@@ -82,7 +82,7 @@ void bt_reduction_to_band(const SizeType b, Matrix<T, device>& mat_c, Matrix<con
 /// @param mat_taus is the tau vector as returned by reductionToBand. The j-th element is the scaling
 /// factor for the j-th HH tranformation.
 template <Backend backend, Device device, class T>
-void bt_reduction_to_band(comm::CommunicatorGrid grid, const SizeType b, Matrix<T, device>& mat_c,
+void bt_reduction_to_band(comm::CommunicatorGrid& grid, const SizeType b, Matrix<T, device>& mat_c,
                           Matrix<const T, device>& mat_v, Matrix<const T, Device::CPU>& mat_taus) {
   DLAF_ASSERT(matrix::equal_process_grid(mat_c, grid), mat_c, grid);
   DLAF_ASSERT(matrix::equal_process_grid(mat_v, grid), mat_v, grid);

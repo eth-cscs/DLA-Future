@@ -197,7 +197,7 @@ void testBackTransformationReductionToBand(SizeType m, SizeType n, SizeType mb, 
 }
 
 template <class T, Backend B, Device D>
-void testBackTransformationReductionToBand(comm::CommunicatorGrid grid, SizeType m, SizeType n,
+void testBackTransformationReductionToBand(comm::CommunicatorGrid& grid, SizeType m, SizeType n,
                                            SizeType mb, SizeType nb, SizeType b) {
   const GlobalElementSize size_c(m, n);
   const GlobalElementSize size_v(m, m);
@@ -249,7 +249,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessLocal
 #endif
 
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : sizes) {
       testBackTransformationReductionToBand<TypeParam, Backend::MC, Device::CPU>(comm_grid, m, n, mb, nb,
                                                                                  b);
@@ -260,7 +260,7 @@ TYPED_TEST(BackTransformationReductionToBandEigenSolverTestMC, CorrectnessDistri
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(BackTransformationReductionToBandEigenSolverTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& [m, n, mb, nb, b] : sizes) {
       testBackTransformationReductionToBand<TypeParam, Backend::GPU, Device::GPU>(comm_grid, m, n, mb,
                                                                                   nb, b);

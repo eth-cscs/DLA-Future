@@ -179,13 +179,13 @@ void Cholesky<backend, device, T>::call_L(Matrix<T, device>& mat_a) {
 }
 
 template <Backend backend, Device device, class T>
-void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+void Cholesky<backend, device, T>::call_L(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_l;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -317,13 +317,13 @@ void Cholesky<backend, device, T>::call_U(Matrix<T, device>& mat_a) {
 }
 
 template <Backend backend, Device device, class T>
-void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid grid, Matrix<T, device>& mat_a) {
+void Cholesky<backend, device, T>::call_U(comm::CommunicatorGrid& grid, Matrix<T, device>& mat_a) {
   using namespace cholesky_u;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 

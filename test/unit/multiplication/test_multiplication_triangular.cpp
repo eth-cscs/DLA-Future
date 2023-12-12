@@ -102,7 +102,7 @@ void testTriangularMultiplication(blas::Side side, blas::Uplo uplo, blas::Op op,
 }
 
 template <class T, Backend B, Device D>
-void testTriangularMultiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
+void testTriangularMultiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
                                   blas::Op op, blas::Diag diag, T alpha, SizeType m, SizeType n,
                                   SizeType mb, SizeType nb) {
   LocalElementSize size_a(m, m);
@@ -159,7 +159,7 @@ TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularMultiplicationTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {
@@ -200,7 +200,7 @@ TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularMultiplicationTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {

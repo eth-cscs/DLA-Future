@@ -20,10 +20,10 @@ struct Norm {};
 
 template <class T>
 struct Norm<Backend::MC, Device::CPU, T> {
-  static dlaf::BaseType<T> max_L(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
+  static dlaf::BaseType<T> max_L(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
                                  Matrix<const T, Device::CPU>& matrix);
 
-  static dlaf::BaseType<T> max_G(comm::CommunicatorGrid comm_grid, comm::Index2D rank,
+  static dlaf::BaseType<T> max_G(comm::CommunicatorGrid& comm_grid, comm::Index2D rank,
                                  Matrix<const T, Device::CPU>& matrix);
 };
 

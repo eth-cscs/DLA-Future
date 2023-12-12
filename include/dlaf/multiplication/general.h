@@ -15,8 +15,8 @@
 #include <blas.hh>
 
 #include <dlaf/common/assert.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/distribution.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/matrix.h>
@@ -78,12 +78,16 @@ void generalMatrix(const blas::Op opA, const blas::Op opB, const T alpha, Matrix
 /// @pre multipliable_sizes(mat_a.tile_size_of({0, 0}), mat_b.tile_size_of({0, 0}),
 ///      mat_c.tile_size_of({0, 0}), opA, opB)
 template <Backend B, Device D, class T>
-void generalMatrix(common::Pipeline<comm::Communicator>& row_task_chain,
-                   common::Pipeline<comm::Communicator>& col_task_chain, const T alpha,
-                   MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b, const T beta,
-                   MatrixRef<T, D>& mat_c) {
-  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_a), mat_c, mat_b);
-  DLAF_ASSERT(matrix::same_process_grid(mat_c, mat_b), mat_c, mat_b);
+void generalMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                   const T alpha, MatrixRef<const T, D>& mat_a, MatrixRef<const T, D>& mat_b,
+                   const T beta, MatrixRef<T, D>& mat_c) {
+  DLAF_ASSERT(matrix::equal_process_grid(row_task_chain, col_task_chain), row_task_chain,
+              col_task_chain);
+
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
 
   DLAF_ASSERT_HEAVY(matrix::multipliable(mat_a, mat_b, mat_c, blas::Op::NoTrans, blas::Op::NoTrans),
                     mat_a, mat_b, mat_c);
@@ -190,14 +194,16 @@ void generalSubMatrix(const SizeType a, const SizeType b, const blas::Op opA, co
 ///
 /// @pre `a <= b <= mat_a.nrTiles().rows()`
 template <Backend B, Device D, class T>
-void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
-                      common::Pipeline<comm::Communicator>& row_task_chain,
-                      common::Pipeline<comm::Communicator>& col_task_chain, const SizeType a,
-                      const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
+void generalSubMatrix(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                      comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                      const SizeType a, const SizeType b, const T alpha, Matrix<const T, D>& mat_a,
                       Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
-  DLAF_ASSERT(equal_process_grid(mat_a, grid), mat_a, grid);
-  DLAF_ASSERT(equal_process_grid(mat_b, grid), mat_a, grid);
-  DLAF_ASSERT(equal_process_grid(mat_c, grid), mat_a, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(row_task_chain, col_task_chain), row_task_chain,
+              col_task_chain);
+
+  DLAF_ASSERT(matrix::equal_process_grid(mat_a, row_task_chain), mat_a, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_b, row_task_chain), mat_b, row_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_c, row_task_chain), mat_c, row_task_chain);
 
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_a), mat_a);
   DLAF_ASSERT(dlaf::matrix::square_blocksize(mat_b), mat_b);
@@ -228,13 +234,12 @@ void generalSubMatrix([[maybe_unused]] comm::CommunicatorGrid grid,
 }
 
 template <Backend B, Device D, class T>
-void generalSubMatrix(comm::CommunicatorGrid grid, const SizeType a, const SizeType b, const T alpha,
+void generalSubMatrix(comm::CommunicatorGrid& grid, const SizeType a, const SizeType b, const T alpha,
                       Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b, const T beta,
                       Matrix<T, D>& mat_c) {
-  common::Pipeline<comm::Communicator> row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> col_task_chain(grid.colCommunicator().clone());
-  generalSubMatrix<B, D, T>(grid, row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta,
-                            mat_c);
+  auto row_task_chain = grid.row_communicator_pipeline();
+  auto col_task_chain = grid.col_communicator_pipeline();
+  generalSubMatrix<B, D, T>(row_task_chain, col_task_chain, a, b, alpha, mat_a, mat_b, beta, mat_c);
 }
 
 }

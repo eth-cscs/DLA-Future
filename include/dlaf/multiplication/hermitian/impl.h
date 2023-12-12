@@ -91,7 +91,7 @@ void Hermitian<B, D, T>::call_LL(const T alpha, Matrix<const T, D>& mat_a, Matri
 }
 
 template <Backend B, Device D, class T>
-void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Matrix<const T, D>& mat_a,
+void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid& grid, const T alpha, Matrix<const T, D>& mat_a,
                                  Matrix<const T, D>& mat_b, const T beta, Matrix<T, D>& mat_c) {
   using namespace hermitian_ll;
   namespace ex = pika::execution::experimental;
@@ -106,8 +106,8 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
   if (mat_b.size().isEmpty())
     return;
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
@@ -180,12 +180,12 @@ void Hermitian<B, D, T>::call_LL(comm::CommunicatorGrid grid, const T alpha, Mat
       if (grid.colCommunicator().size() != 1) {
         for (const auto& idx : c_panel.iteratorLocal()) {
           if (this_rank.row() == rank_ll.row()) {
-            ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+            ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
                                                                c_panel.readwrite(idx)));
           }
           else {
-            ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_ll.row(), MPI_SUM,
-                                                        c_panel.read(idx)));
+            ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_ll.row(),
+                                                        MPI_SUM, c_panel.read(idx)));
           }
         }
       }

@@ -122,7 +122,7 @@ void triangular_solver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::Diag
 /// @pre @p mat_b has blocksize (MB x NB)
 /// @pre @p mat_b has tilesize (MB x NB)
 template <Backend backend, Device device, class T>
-void triangular_solver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+void triangular_solver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                        blas::Diag diag, T alpha, Matrix<const T, device>& mat_a,
                        Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);

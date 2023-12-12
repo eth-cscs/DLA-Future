@@ -54,7 +54,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
 
     namespace ex = pika::execution::experimental;
 
-    common::Pipeline<Communicator> chain(world);
+    CommunicatorPipeline<CommunicatorType::Full> chain(world);
 
     // Note:
     // `sent_guard` represents the status of completion of IRecv. It will be set true by a `then`
@@ -63,7 +63,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
     std::atomic_bool sent_guard = false;
 
     int message;
-    whenAllLift(&message, 1, MPI_INT, 1, 0, chain()) | transformMPI(MPI_Irecv) |
+    whenAllLift(&message, 1, MPI_INT, 1, 0, chain.exclusive()) | transformMPI(MPI_Irecv) |
         ex::then([&sent_guard](auto mpi_err_code) {
           EXPECT_EQ(MPI_SUCCESS, mpi_err_code);
           sent_guard = true;
@@ -82,7 +82,7 @@ TEST_F(TransformMPITest, PromiseGuardManagement) {
     // up creating a deadlock. The assumption is that try_waiting_guard timeout is enough for
     // transformMPI to post the IRecv.
     std::atomic_bool pg_guard = false;
-    auto after_pg = chain() | ex::then([&pg_guard](auto&& pg) {
+    auto after_pg = chain.exclusive() | ex::then([&pg_guard](auto&& pg) {
                       pg_guard = true;
                       return std::move(pg);
                     }) |

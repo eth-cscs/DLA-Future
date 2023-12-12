@@ -29,7 +29,7 @@ DLAF_addTest(
   SOURCES test_communicator_grid.cpp
   LIBRARIES dlaf.core
   MPIRANKS 6
-  USE_MAIN MPI
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(
@@ -45,7 +45,7 @@ DLAF_addTest(
   SOURCES test_reduce.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
-  USE_MAIN MPI
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(
@@ -53,7 +53,7 @@ DLAF_addTest(
   SOURCES test_all_reduce.cpp
   LIBRARIES dlaf.core
   MPIRANKS 4
-  USE_MAIN MPI
+  USE_MAIN MPIPIKA
 )
 
 DLAF_addTest(

@@ -469,7 +469,7 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
   using pika::execution::thread_priority;
@@ -486,8 +486,8 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
     return;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
@@ -563,7 +563,7 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device D, class T>
-void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   using namespace triangular_llt;
   namespace ex = pika::execution::experimental;
@@ -577,8 +577,8 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
   if (mat_b.size().isEmpty())
     return;
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
@@ -621,12 +621,12 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_kk.row(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -651,7 +651,7 @@ void Triangular<backend, D, T>::call_LLT(comm::CommunicatorGrid grid, blas::Op o
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::execution::thread_priority;
@@ -666,8 +666,8 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
     return;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, device>> a_panels(n_workspaces, distr_a);
@@ -742,7 +742,7 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device D, class T>
-void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_lut;
@@ -756,8 +756,8 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
   if (mat_b.size().isEmpty())
     return;
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Col, T, D>> a_panels(n_workspaces, distr_a);
@@ -799,12 +799,12 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.colCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.row() == rank_kk.row()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain(), rank_kk.row(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_col_task_chain.exclusive(), rank_kk.row(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -831,7 +831,7 @@ void Triangular<backend, D, T>::call_LUT(comm::CommunicatorGrid grid, blas::Op o
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::execution::thread_priority;
@@ -846,8 +846,8 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
     return;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
@@ -922,7 +922,7 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device D, class T>
-void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_rlt;
@@ -936,8 +936,8 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
   if (mat_b.size().isEmpty())
     return;
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> a_panels(n_workspaces, distr_a);
@@ -979,12 +979,12 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.exclusive(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.exclusive(), rank_kk.col(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }
@@ -1011,7 +1011,7 @@ void Triangular<backend, D, T>::call_RLT(comm::CommunicatorGrid grid, blas::Op o
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::execution::thread_priority;
@@ -1026,8 +1026,8 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
     return;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Row, T, device>> a_panels(n_workspaces, distr_a);
@@ -1103,7 +1103,7 @@ void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device D, class T>
-void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op op, blas::Diag diag,
+void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid& grid, blas::Op op, blas::Diag diag,
                                          T alpha, Matrix<const T, D>& mat_a, Matrix<T, D>& mat_b) {
   namespace ex = pika::execution::experimental;
   using namespace triangular_rut;
@@ -1117,8 +1117,8 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
   if (mat_b.size().isEmpty())
     return;
 
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   constexpr std::size_t n_workspaces = 2;
   common::RoundRobin<matrix::Panel<Coord::Row, T, D>> a_panels(n_workspaces, distr_a);
@@ -1160,12 +1160,12 @@ void Triangular<backend, D, T>::call_RUT(comm::CommunicatorGrid grid, blas::Op o
     if (grid.rowCommunicator().size() != 1) {
       for (const auto& idx : b_panel.iteratorLocal()) {
         if (this_rank.col() == rank_kk.col()) {
-          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain(), MPI_SUM,
+          ex::start_detached(comm::scheduleReduceRecvInPlace(mpi_row_task_chain.exclusive(), MPI_SUM,
                                                              b_panel.readwrite(idx)));
         }
         else {
-          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain(), rank_kk.col(), MPI_SUM,
-                                                      b_panel.read(idx)));
+          ex::start_detached(comm::scheduleReduceSend(mpi_row_task_chain.exclusive(), rank_kk.col(),
+                                                      MPI_SUM, b_panel.read(idx)));
         }
       }
     }

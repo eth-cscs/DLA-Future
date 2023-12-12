@@ -23,6 +23,7 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/callable_object.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/sender/traits.h>
@@ -51,11 +52,14 @@ template <Backend B, class CommSender, class SenderIn, class SenderOut>
   // Each rank in order to locally complete the operation just need to receive the other rank
   // data and then do the reduce operation. For this reason, the send operation is scheduled
   // independently from the rest of the allreduce operation.
-  ex::start_detached(comm::scheduleSend(ex::make_unique_any_sender(comm), rank_mate, tag, in));
 
-  auto tile_out =
-      comm::scheduleRecv(ex::make_unique_any_sender(std::forward<CommSender>(comm)), rank_mate, tag,
-                         ex::make_unique_any_sender(std::forward<SenderOut>(out)));
+  // comm must be a copyable sender or already an any_sender (also copyable) since we use it in two
+  // algorithms. In the latter case the original any_sender is returned unchanged.
+  auto any_comm = ex::make_any_sender(std::forward<CommSender>(comm));
+  ex::start_detached(comm::scheduleSend(any_comm, rank_mate, tag, in));
+
+  auto tile_out = comm::scheduleRecv(std::move(any_comm), rank_mate, tag,
+                                     ex::make_unique_any_sender(std::forward<SenderOut>(out)));
   return dlaf::internal::whenAllLift(T(1), std::forward<SenderIn>(in), std::move(tile_out)) |
          tile::add(dlaf::internal::Policy<B>());
 }

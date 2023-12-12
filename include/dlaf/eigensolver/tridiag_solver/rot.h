@@ -14,13 +14,15 @@
 #endif
 
 #include <dlaf/common/assert.h>
-#include <dlaf/common/pipeline.h>
+#include <dlaf/common/index2d.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/round_robin.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/datatypes.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/p2p.h>
 #include <dlaf/eigensolver/tridiag_solver/index_manipulation.h>
 #include <dlaf/eigensolver/tridiag_solver/kernels.h>
@@ -41,8 +43,8 @@ namespace dlaf::eigensolver::internal {
 namespace wrapper {
 
 template <Device D, class T>
-void sendCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag,
-             const T* col_data, const SizeType n, MPI_Request* req) {
+void sendCol(const comm::Communicator& comm, const comm::IndexT_MPI rank_dest,
+             const comm::IndexT_MPI tag, const T* col_data, const SizeType n, MPI_Request* req) {
   static_assert(D == Device::CPU, "This function works just with CPU memory.");
 
   DLAF_MPI_CHECK_ERROR(MPI_Isend(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
@@ -50,8 +52,8 @@ void sendCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const c
 }
 
 template <Device D, class T>
-void recvCol(comm::Communicator& comm, const comm::IndexT_MPI rank_dest, const comm::IndexT_MPI tag,
-             T* col_data, const SizeType n, MPI_Request* req) {
+void recvCol(const comm::Communicator& comm, const comm::IndexT_MPI rank_dest,
+             const comm::IndexT_MPI tag, T* col_data, const SizeType n, MPI_Request* req) {
   static_assert(D == Device::CPU, "This function works just with CPU memory.");
 
   DLAF_MPI_CHECK_ERROR(MPI_Irecv(col_data, static_cast<int>(n), dlaf::comm::mpi_datatype<T>::type,
@@ -198,7 +200,7 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// Apply GivenRotations to tiles of the distributed square sub-matrix identified by tile in range
 /// [i_begin, i_end).
 ///
-/// @param comm_row row communicator
+/// @param comm_row_chain row communicator pipeline
 /// @param tag is used for all communications happening over @p comm_row
 /// @param i_begin global tile index for both row and column identifying the start of the sub-matrix
 /// @param i_end global tile index for both row and column identifying the end of the sub-matrix
@@ -209,9 +211,9 @@ void applyGivensRotationsToMatrixColumns(const SizeType i_begin, const SizeType 
 /// @pre mat is distributed along rows the same way as comm_row
 /// @pre memory layout of @p mat is column major.
 template <class T, Device D, class GRSender>
-void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm::IndexT_MPI tag,
-                                         const SizeType i_begin, const SizeType i_end,
-                                         GRSender&& rots_fut, Matrix<T, D>& mat) {
+void applyGivensRotationsToMatrixColumns(
+    comm::CommunicatorPipeline<comm::CommunicatorType::Row>& comm_row_chain, const comm::IndexT_MPI tag,
+    const SizeType i_begin, const SizeType i_end, GRSender&& rots_fut, Matrix<T, D>& mat) {
   // Note:
   // a column index may be paired to more than one other index, this may lead to a race
   // condition if parallelized trivially. Current implementation is serial.
@@ -221,9 +223,10 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
   namespace di = dlaf::internal;
   using pika::execution::thread_stacksize;
 
-  DLAF_ASSERT_HEAVY(comm_row.size() == mat.commGridSize().cols(), comm_row.size(),
-                    mat.commGridSize().cols());
-  DLAF_ASSERT_HEAVY(comm_row.rank() == mat.rankIndex().col(), comm_row.rank(), mat.rankIndex().col());
+  DLAF_ASSERT_HEAVY(comm_row_chain.size_2d().cols() == mat.commGridSize().cols(),
+                    comm_row_chain.size_2d().cols(), mat.commGridSize().cols());
+  DLAF_ASSERT_HEAVY(comm_row_chain.rank_2d().col() == mat.rankIndex().col(),
+                    comm_row_chain.rank_2d().col(), mat.rankIndex().col());
 
   const matrix::Distribution& dist = mat.distribution();
 
@@ -257,9 +260,9 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
   const matrix::Distribution dist_sub({range_size, range_size}, dist.blockSize(), dist.commGridSize(),
                                       dist.rankIndex(), dist.rankGlobalTile({i_begin, i_begin}));
 
-  auto givens_rots_fn = [comm_row, tag, dist_sub, mb](std::vector<GivensRotation<T>> rots,
-                                                      std::vector<matrix::Tile<T, D>> tiles,
-                                                      std::vector<matrix::Tile<T, D>> all_ws) {
+  auto givens_rots_fn = [comm_row_chain = comm_row_chain.sub_pipeline(), tag, dist_sub,
+                         mb](std::vector<GivensRotation<T>> rots, std::vector<matrix::Tile<T, D>> tiles,
+                             std::vector<matrix::Tile<T, D>> all_ws) mutable {
     // Note:
     // It would have been enough to just get the first tile from the beginning, and it would have
     // worked anyway (thanks to the fact that panel has its own memorychunk and the first tile would
@@ -318,10 +321,10 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
         // Note:
         // These communications use raw pointers, so correct lifetime management of related tiles
         // is up to the caller.
-        comm_checkpoints.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row, rank_partner, tag,
-                                                                     col_send, m));
-        comm_checkpoints.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row, rank_partner, tag,
-                                                                     col_recv, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleSendCol<D, T>(comm_row_chain.shared(),
+                                                                     rank_partner, tag, col_send, m));
+        comm_checkpoints.emplace_back(wrapper::scheduleRecvCol<D, T>(comm_row_chain.shared(),
+                                                                     rank_partner, tag, col_recv, m));
       }
 
       // Note:
@@ -369,6 +372,8 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
                                     }
                                   }));
     }
+
+    comm_row_chain.reset();
   };
 
   // Note:
@@ -382,6 +387,6 @@ void applyGivensRotationsToMatrixColumns(comm::Communicator comm_row, const comm
 
   ex::when_all(std::forward<GRSender>(rots_fut), ex::when_all_vector(tc.readwrite(mat)),
                ex::when_all_vector(select(workspace, workspace.iteratorLocal()))) |
-      di::transformDetach(di::Policy<Backend::MC>(), givens_rots_fn);
+      di::transformDetach(di::Policy<Backend::MC>(), std::move(givens_rots_fn));
 }
 }

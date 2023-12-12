@@ -73,14 +73,19 @@ public:
     if (comm_grids.empty()) {
       comm::Communicator world(MPI_COMM_WORLD);
 
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor);
-      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor);
+      // The C API tests initialize pika and DLA-Future after getting the communicator grid. We can't use
+      // the default parameter of CommunicatorGrid for ncommunicator_pipelines without initializing pika
+      // and DLA-Future, so we specify an explicit value for ncommunicator_pipelines to avoid
+      // initializing TuneParameters.
+      const std::size_t ncommunicator_pipelines = 3;
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::RowMajor, ncommunicator_pipelines);
+      comm_grids.emplace_back(world, 3, 2, common::Ordering::ColumnMajor, ncommunicator_pipelines);
     }
   }
 };
 
 struct TestWithCommGrids : public ::testing::Test {
-  const std::vector<comm::CommunicatorGrid>& commGrids() {
+  std::vector<comm::CommunicatorGrid>& commGrids() {
     EXPECT_FALSE(comm_grids.empty());
     return comm_grids;
   }

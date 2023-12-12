@@ -101,7 +101,7 @@ void testTriangularSolver(blas::Side side, blas::Uplo uplo, blas::Op op, blas::D
 }
 
 template <class T, Backend B, Device D>
-void testTriangularSolver(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo, blas::Op op,
+void testTriangularSolver(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo, blas::Op op,
                           blas::Diag diag, T alpha, SizeType m, SizeType n, SizeType mb, SizeType nb) {
   LocalElementSize size_a(m, m);
   TileElementSize block_size_a(mb, mb);
@@ -156,7 +156,7 @@ TYPED_TEST(TriangularSolverTestMC, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularSolverTestMC, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {
@@ -193,7 +193,7 @@ TYPED_TEST(TriangularSolverTestGPU, CorrectnessLocal) {
 }
 
 TYPED_TEST(TriangularSolverTestGPU, CorrectnessDistributed) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto side : blas_sides) {
       for (const auto uplo : blas_uplos) {
         for (const auto op : blas_ops) {

@@ -19,10 +19,11 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/blas/tile.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
 #include <dlaf/communication/communicator.h>
+#include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_barrier_busy_wait.h>
 #include <dlaf/eigensolver/internal/get_tridiag_rank1_nworkers.h>
@@ -1186,7 +1187,7 @@ void mergeSubproblems(const SizeType i_begin, const SizeType i_split, const Size
 // Note that the norm of `z` is sqrt(2) because it is a concatination of two normalized vectors. Hence
 // to normalize `z` we have to divide by sqrt(2).
 template <class T, Device D, class RhoSender>
-void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& full_task_chain,
+void assembleDistZVec(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& full_task_chain,
                       const SizeType i_begin, const SizeType i_split, const SizeType i_end,
                       RhoSender&& rho, Matrix<const T, D>& evecs, Matrix<T, D>& z) {
   namespace ex = pika::execution::experimental;
@@ -1208,11 +1209,12 @@ void assembleDistZVec(comm::CommunicatorGrid grid, common::Pipeline<comm::Commun
     if (evecs_tile_rank == this_rank) {
       // Copy the row into the column vector `z`
       assembleRank1UpdateVectorTileAsync<T, D>(top_tile, rho, evecs.read(idx_evecs), z.readwrite(z_idx));
-      ex::start_detached(comm::scheduleSendBcast(full_task_chain(), z.read(z_idx)));
+      ex::start_detached(comm::scheduleSendBcast(full_task_chain.exclusive(), z.read(z_idx)));
     }
     else {
-      const comm::IndexT_MPI root_rank = grid.rankFullCommunicator(evecs_tile_rank);
-      ex::start_detached(comm::scheduleRecvBcast(full_task_chain(), root_rank, z.readwrite(z_idx)));
+      const comm::IndexT_MPI root_rank = full_task_chain.rank_full_communicator(evecs_tile_rank);
+      ex::start_detached(comm::scheduleRecvBcast(full_task_chain.exclusive(), root_rank,
+                                                 z.readwrite(z_idx)));
     }
   }
 }
@@ -1259,7 +1261,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
               dist_extra::global_tile_element_distance<Coord::Col>(dist, i_begin, i_end)}});
 
   auto bcast_evals = [i_begin, i_end,
-                      dist](common::Pipeline<comm::Communicator>& row_comm_chain,
+                      dist](comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_comm_chain,
                             const std::vector<matrix::Tile<T, Device::CPU>>& eval_tiles) {
     using dlaf::comm::internal::sendBcast_o;
     using dlaf::comm::internal::recvBcast_o;
@@ -1274,10 +1276,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
       auto& tile = eval_tiles[to_sizet(i - i_begin)];
 
       if (evecs_tile_rank == this_rank.col())
-        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(std::cref(tile))) |
+        comms.emplace_back(ex::when_all(row_comm_chain.exclusive(), ex::just(std::cref(tile))) |
                            transformMPI(sendBcast_o));
       else
-        comms.emplace_back(ex::when_all(row_comm_chain(), ex::just(evecs_tile_rank, std::cref(tile))) |
+        comms.emplace_back(ex::when_all(row_comm_chain.exclusive(),
+                                        ex::just(evecs_tile_rank, std::cref(tile))) |
                            transformMPI(recvBcast_o));
     }
 
@@ -1329,7 +1332,8 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                                                         auto& barrier_ptr) {
                  using dlaf::comm::internal::transformMPI;
 
-                 common::Pipeline<comm::Communicator> row_comm_chain(row_comm_wrapper.get());
+                 comm::CommunicatorPipeline<comm::CommunicatorType::Row> row_comm_chain(
+                     row_comm_wrapper.get());
                  const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
                  const SizeType m_lc = dist_sub.local_nr_tiles().rows();
@@ -1542,7 +1546,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                      }
                    }
 
-                   tt::sync_wait(ex::when_all(row_comm_chain(),
+                   tt::sync_wait(ex::when_all(row_comm_chain.exclusive(),
                                               ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |
                                  transformMPI(all_reduce_in_place));
 
@@ -1657,10 +1661,10 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
 template <Backend B, class T, Device D, class KLcSender, class UDLSenders>
 void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Distribution& dist_sub,
-                          common::Pipeline<comm::Communicator>& row_task_chain,
-                          common::Pipeline<comm::Communicator>& col_task_chain, const SizeType n_upper,
-                          const SizeType n_lower, Matrix<T, D>& e0, Matrix<T, D>& e1, Matrix<T, D>& e2,
-                          KLcSender&& k_lc, UDLSenders&& n_udl) {
+                          comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                          const SizeType n_upper, const SizeType n_lower, Matrix<T, D>& e0,
+                          Matrix<T, D>& e1, Matrix<T, D>& e2, KLcSender&& k_lc, UDLSenders&& n_udl) {
   // Note:
   // This function computes E0 = E1 . E2
   //
@@ -1730,17 +1734,14 @@ void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Dis
   using pika::execution::thread_priority;
 
   ex::start_detached(
-      ex::when_all(std::forward<KLcSender>(k_lc), std::forward<UDLSenders>(n_udl), row_task_chain(),
-                   col_task_chain()) |
+      ex::when_all(std::forward<KLcSender>(k_lc), std::forward<UDLSenders>(n_udl)) |
       ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>(thread_priority::high)) |
       ex::then([dist_sub, sub_offset, n_upper, n_lower, e0 = e0.subPipeline(),
-                e1 = e1.subPipelineConst(),
-                e2 = e2.subPipelineConst()](const SizeType k_lc, const std::array<SizeType, 3>& n_udl,
-                                            auto&& row_comm_wrapper, auto&& col_comm_wrapper) mutable {
+                e1 = e1.subPipelineConst(), e2 = e2.subPipelineConst(),
+                sub_comm_row = row_task_chain.sub_pipeline(),
+                sub_comm_col = col_task_chain.sub_pipeline()](
+                   const SizeType k_lc, const std::array<SizeType, 3>& n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
-
-        common::Pipeline<comm::Communicator> sub_comm_row(row_comm_wrapper.get());
-        common::Pipeline<comm::Communicator> sub_comm_col(col_comm_wrapper.get());
 
         const SizeType n = dist_sub.size().cols();
         const auto [a, b, c] = n_udl;
@@ -1772,21 +1773,16 @@ void multiplyEigenvectors(const GlobalElementIndex sub_offset, const matrix::Dis
 
           copy(sub_e1, sub_e0);
         }
-
-        namespace tt = pika::this_thread::experimental;
-        tt::sync_wait(sub_comm_row());
-        tt::sync_wait(sub_comm_col());
       }));
 }
 
 // Distributed version of the tridiagonal solver on CPUs
 template <Backend B, class T, Device D, class RhoSender>
-void mergeDistSubproblems(comm::CommunicatorGrid grid,
-                          common::Pipeline<comm::Communicator>& full_task_chain,
-                          common::Pipeline<comm::Communicator>& row_task_chain,
-                          common::Pipeline<comm::Communicator>& col_task_chain, const SizeType i_begin,
-                          const SizeType i_split, const SizeType i_end, RhoSender&& rho,
-                          WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
+void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Full>& full_task_chain,
+                          comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                          comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain,
+                          const SizeType i_begin, const SizeType i_split, const SizeType i_end,
+                          RhoSender&& rho, WorkSpace<T, D>& ws, WorkSpaceHost<T>& ws_h,
                           DistWorkSpaceHostMirror<T, D>& ws_hm) {
   namespace ex = pika::execution::experimental;
   using matrix::internal::distribution::global_tile_element_distance;
@@ -1818,7 +1814,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   const LocalTileSize sz_tiles_vec(i_end - i_begin, 1);
 
   // Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2
-  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);
+  assembleDistZVec(full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);
   copy(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);
 
   // Double `rho` to account for the normalization of `z` and make sure `rho > 0` for the root solver laed4
@@ -1858,8 +1854,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   //
   // Note: i_split is unique
   const comm::IndexT_MPI tag = to_int(i_split);
-  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),
-                                      ws.e0);
+  applyGivensRotationsToMatrixColumns(row_task_chain, tag, i_begin, i_end, std::move(rots), ws.e0);
 
   // Step #2
   //
@@ -1902,7 +1897,7 @@ void mergeDistSubproblems(comm::CommunicatorGrid grid,
   // set0 is required because deflated eigenvectors rows won't be touched in rank1 and so they will be
   // neutral when used in GEMM (copy will take care of them later)
   matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
-  solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, k, k_lc,
+  solveRank1ProblemDist(row_task_chain.exclusive(), col_task_chain.exclusive(), i_begin, i_end, k, k_lc,
                         std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6, ws_hm.i2,
                         ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);

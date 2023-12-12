@@ -12,7 +12,7 @@
 
 #include <pika/execution.hpp>
 
-#include <dlaf/common/pipeline.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/panel.h>
 #include <dlaf/matrix/tile.h>
 #include <dlaf/matrix/views.h>
@@ -81,7 +81,7 @@ struct QR_Tfactor {
   static void call(matrix::Panel<Coord::Col, T, device>& hh_panel,
                    matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                    matrix::ReadWriteTileSender<T, device> t,
-                   common::Pipeline<comm::Communicator>& mpi_col_task_chain);
+                   comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain);
 };
 
 // ETI

@@ -29,7 +29,7 @@ namespace dlaf::auxiliary::internal {
 // - sy/he lower
 // - tr lower non-unit
 template <class T>
-dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid comm_grid,
+dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGrid& comm_grid,
                                                            comm::Index2D rank,
                                                            Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;
@@ -92,7 +92,7 @@ dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_L(comm::CommunicatorGri
 }
 
 template <class T>
-dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGrid comm_grid,
+dlaf::BaseType<T> Norm<Backend::MC, Device::CPU, T>::max_G(comm::CommunicatorGrid& comm_grid,
                                                            comm::Index2D rank,
                                                            Matrix<const T, Device::CPU>& matrix) {
   using namespace dlaf::matrix;

@@ -107,7 +107,7 @@ struct reductionToBandMiniapp {
     Communicator world(MPI_COMM_WORLD);
     CommunicatorGrid comm_grid(world, opts.grid_rows, opts.grid_cols, common::Ordering::ColumnMajor);
 
-    ConstMatrixType matrix_ref = [comm_grid, &opts]() {
+    ConstMatrixType matrix_ref = [&comm_grid, &opts]() {
 #ifdef DLAF_WITH_HDF5
       if (!opts.input_file.empty()) {
         auto infile = FileHDF5(opts.input_file, FileHDF5::FileMode::readonly);

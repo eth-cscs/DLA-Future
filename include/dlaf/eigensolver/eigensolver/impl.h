@@ -52,7 +52,7 @@ void Eigensolver<B, D, T>::call(blas::Uplo uplo, Matrix<T, D>& mat_a, Matrix<Bas
 }
 
 template <Backend B, Device D, class T>
-void Eigensolver<B, D, T>::call(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
+void Eigensolver<B, D, T>::call(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, D>& mat_a,
                                 Matrix<BaseType<T>, D>& evals, Matrix<T, D>& mat_e) {
   const SizeType band_size = getBandSize(mat_a.blockSize().rows());
 

@@ -17,6 +17,8 @@
 #include <pika/execution.hpp>
 
 #include <dlaf/common/index2d.h>
+#include <dlaf/communication/communicator_pipeline.h>
+#include <dlaf/communication/index.h>
 #include <dlaf/communication/kernels/broadcast.h>
 #include <dlaf/communication/message.h>
 #include <dlaf/matrix/copy_tile.h>
@@ -56,7 +58,7 @@ std::pair<SizeType, comm::IndexT_MPI> transposedOwner(const matrix::Distribution
 template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
-               common::Pipeline<comm::Communicator>& serial_comm) {
+               comm::CommunicatorPipeline<coord_to_communicator_type(orthogonal(axis))>& serial_comm) {
   constexpr auto comm_coord = axis;
 
   // do not schedule communication tasks if there is no reason to do so...
@@ -68,11 +70,24 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   namespace ex = pika::execution::experimental;
   for (const auto& index : panel.iteratorLocal()) {
     if (rank == rank_root)
-      ex::start_detached(scheduleSendBcast(serial_comm(), panel.read(index)));
+      ex::start_detached(scheduleSendBcast(serial_comm.exclusive(), panel.read(index)));
     else
-      ex::start_detached(scheduleRecvBcast(serial_comm(), rank_root, panel.readwrite(index)));
+      ex::start_detached(scheduleRecvBcast(serial_comm.exclusive(), rank_root, panel.readwrite(index)));
   }
 }
+
+namespace internal {
+template <Coord C>
+auto& get_taskchain(comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain) {
+  if constexpr (C == Coord::Row) {
+    return row_task_chain;
+  }
+  else {
+    return col_task_chain;
+  }
+}
+}  // namespace internal
 
 /// Broadcast
 ///
@@ -107,16 +122,12 @@ template <class T, Device D, Coord axis, matrix::StoreTransposed storage,
           matrix::StoreTransposed storageT, class = std::enable_if_t<!std::is_const_v<T>>>
 void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& panel,
                matrix::Panel<orthogonal(axis), T, D, storageT>& panelT,
-               common::Pipeline<comm::Communicator>& row_task_chain,
-               common::Pipeline<comm::Communicator>& col_task_chain) {
+               comm::CommunicatorPipeline<comm::CommunicatorType::Row>& row_task_chain,
+               comm::CommunicatorPipeline<comm::CommunicatorType::Col>& col_task_chain) {
   constexpr Coord axisT = orthogonal(axis);
 
   constexpr Coord coord = std::decay_t<decltype(panel)>::coord;
   constexpr Coord coordT = std::decay_t<decltype(panelT)>::coord;
-
-  auto get_taskchain = [&](Coord comm_dir) -> auto& {
-    return comm_dir == Coord::Row ? row_task_chain : col_task_chain;
-  };
 
   // Note:
   // Given a source panel, this communication pattern makes every rank access tiles of both the
@@ -160,7 +171,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
 
   // STEP 1
   constexpr auto comm_dir_step1 = orthogonal(axis);
-  auto& chain_step1 = get_taskchain(comm_dir_step1);
+  auto& chain_step1 = internal::get_taskchain<comm_dir_step1>(row_task_chain, col_task_chain);
 
   broadcast(rank_root, panel, chain_step1);
 
@@ -168,7 +179,7 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
   constexpr auto comm_dir_step2 = orthogonal(axisT);
   constexpr auto comm_coord_step2 = axisT;
 
-  auto& chain_step2 = get_taskchain(comm_dir_step2);
+  auto& chain_step2 = internal::get_taskchain<comm_dir_step2>(row_task_chain, col_task_chain);
 
   const SizeType last_tile = std::max(panelT.rangeStart(), panelT.rangeEnd() - 1);
   const auto owner = dist.template rankGlobalTile<coordT>(last_tile);
@@ -186,11 +197,12 @@ void broadcast(comm::IndexT_MPI rank_root, matrix::Panel<axis, T, D, storage>& p
       panelT.setTile(indexT, panel.read({coord, index_diag_local}));
 
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        ex::start_detached(scheduleSendBcast(chain_step2(), panelT.read(indexT)));
+        ex::start_detached(scheduleSendBcast(chain_step2.exclusive(), panelT.read(indexT)));
     }
     else {
       if (dist.commGridSize().get(comm_coord_step2) > 1)
-        ex::start_detached(scheduleRecvBcast(chain_step2(), owner_diag, panelT.readwrite(indexT)));
+        ex::start_detached(scheduleRecvBcast(chain_step2.exclusive(), owner_diag,
+                                             panelT.readwrite(indexT)));
     }
   }
 }

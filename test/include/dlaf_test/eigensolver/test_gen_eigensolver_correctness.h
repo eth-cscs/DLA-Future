@@ -37,7 +37,7 @@ namespace dlaf::test {
 template <class T, Device D, class... GridIfDistributed>
 void testGenEigensolverCorrectness(const blas::Uplo uplo, Matrix<const T, Device::CPU>& reference_a,
                                    Matrix<const T, Device::CPU>& reference_b,
-                                   dlaf::EigensolverResult<T, D>& ret, GridIfDistributed... grid) {
+                                   dlaf::EigensolverResult<T, D>& ret, GridIfDistributed&... grid) {
   using dlaf::matrix::MatrixMirror;
   using dlaf::matrix::test::allGather;
   using dlaf::matrix::test::MatrixLocal;

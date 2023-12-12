@@ -11,6 +11,7 @@
 
 /// @file
 
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/matrix/index.h>
 #include <dlaf/matrix/tile.h>
@@ -48,7 +49,7 @@ template <Backend backend, Device device, class T>
 void computeTFactor(matrix::Panel<Coord::Col, T, device>& hh_panel,
                     matrix::ReadOnlyTileSender<T, Device::CPU> taus,
                     matrix::ReadWriteTileSender<T, device> t,
-                    common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+                    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   QR_Tfactor<backend, device, T>::call(hh_panel, std::move(taus), std::move(t), mpi_col_task_chain);
 }
 

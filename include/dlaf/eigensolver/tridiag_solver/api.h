@@ -19,9 +19,9 @@ struct TridiagSolver {
   static void call(Matrix<T, Device::CPU>& tridiag, Matrix<T, device>& evals, Matrix<T, device>& evecs);
   static void call(Matrix<T, Device::CPU>& tridiag, Matrix<T, device>& evals,
                    Matrix<std::complex<T>, device>& evecs);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
+  static void call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
                    Matrix<T, device>& evals, Matrix<T, device>& evecs);
-  static void call(comm::CommunicatorGrid grid, Matrix<T, Device::CPU>& tridiag,
+  static void call(comm::CommunicatorGrid& grid, Matrix<T, Device::CPU>& tridiag,
                    Matrix<T, device>& evals, Matrix<std::complex<T>, device>& evecs);
 };
 

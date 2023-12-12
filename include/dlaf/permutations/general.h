@@ -16,6 +16,7 @@
 
 #include <dlaf/common/assert.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/matrix/matrix.h>
 #include <dlaf/permutations/general/api.h>
 #include <dlaf/util_matrix.h>
@@ -108,16 +109,14 @@ void permute(SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
 /// @pre @p mat_out has size (N x N)
 /// @pre @p mat_out has blocksize (NB x NB)
 /// @pre @p mat_out has tilesize (NB x NB)
-///
-/// Note: The Pipeline<> API allows to use permute() within other algorithms without having to clone communicators
-///       internally.
 template <Backend B, Device D, class T, Coord coord>
-void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& sub_task_chain,
-             SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms,
-             Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
+void permute(
+    comm::CommunicatorPipeline<comm::coord_to_communicator_type(orthogonal(coord))>& sub_task_chain,
+    SizeType i_begin, SizeType i_end, Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in,
+    Matrix<T, D>& mat_out) {
   DLAF_ASSERT(matrix::local_matrix(perms), perms);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_in, grid), mat_in, grid);
-  DLAF_ASSERT(matrix::equal_process_grid(mat_out, grid), mat_out, grid);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_in, sub_task_chain), mat_in, sub_task_chain);
+  DLAF_ASSERT(matrix::equal_process_grid(mat_out, sub_task_chain), mat_out, sub_task_chain);
 
   // Note:
   // These are not implementation constraints, but more logic constraints. Indeed, these ensure that
@@ -148,9 +147,9 @@ void permute(comm::CommunicatorGrid grid, common::Pipeline<comm::Communicator>& 
 /// This overload clones the row communicator (if Coord::Col) or column communicator (if Coord::Row) of
 /// @p grid internally.
 template <Backend B, Device D, class T, Coord coord>
-void permute(comm::CommunicatorGrid grid, SizeType i_begin, SizeType i_end,
+void permute(comm::CommunicatorGrid& grid, SizeType i_begin, SizeType i_end,
              Matrix<const SizeType, D>& perms, Matrix<const T, D>& mat_in, Matrix<T, D>& mat_out) {
-  common::Pipeline<comm::Communicator> sub_task_chain(grid.subCommunicator(orthogonal(coord)).clone());
-  permute<B, D, T, coord>(grid, sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
+  auto sub_task_chain(grid.communicator_pipeline<orthogonal(coord)>());
+  permute<B, D, T, coord>(sub_task_chain, i_begin, i_end, perms, mat_in, mat_out);
 }
 }

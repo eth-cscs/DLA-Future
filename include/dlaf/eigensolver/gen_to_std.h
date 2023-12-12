@@ -97,7 +97,7 @@ void generalized_to_standard(blas::Uplo uplo, Matrix<T, device>& mat_a, Matrix<T
 /// @pre @p mat_b has blocksize (NB x NB)
 /// @pre @p mat_b has tilesize (NB x NB)
 template <Backend backend, Device device, class T>
-void generalized_to_standard(comm::CommunicatorGrid grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
+void generalized_to_standard(comm::CommunicatorGrid& grid, blas::Uplo uplo, Matrix<T, device>& mat_a,
                              Matrix<T, device>& mat_b) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);
   DLAF_ASSERT(matrix::square_blocksize(mat_a), mat_a);

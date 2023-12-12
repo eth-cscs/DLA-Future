@@ -148,7 +148,7 @@ TYPED_TEST(MatrixTest, Constructor) {
     return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
@@ -194,7 +194,7 @@ TYPED_TEST(MatrixTest, ConstructorFromDistribution) {
     return TypeUtilities<Type>::element(i + j / 1024. + c, j - i / 128.);
   };
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       comm::Index2D src_rank_index(std::max(0, comm_grid.size().rows() - 1),
@@ -365,7 +365,7 @@ void checkLayoutLocal(T* p, const LayoutInfo& layout, Mat& matrix) {
 TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -413,7 +413,7 @@ TYPED_TEST(MatrixTest, ConstructorFromDistributionLayout) {
 }
 
 TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -461,7 +461,7 @@ TYPED_TEST(MatrixTest, LocalGlobalAccessOperatorCall) {
 }
 
 TYPED_TEST(MatrixTest, LocalGlobalAccessRead) {
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -598,7 +598,7 @@ TYPED_TEST(MatrixLocalTest, ConstructorExistingConst) {
 TYPED_TEST(MatrixTest, ConstructorExisting) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
@@ -629,7 +629,7 @@ TYPED_TEST(MatrixTest, ConstructorExisting) {
 TYPED_TEST(MatrixTest, ConstructorExistingConst) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Distribution distribution(size, test.block_size, test.tile_size, comm_grid.size(),
@@ -657,7 +657,7 @@ TYPED_TEST(MatrixTest, ConstructorExistingConst) {
 TYPED_TEST(MatrixTest, Dependencies) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
@@ -709,7 +709,7 @@ TYPED_TEST(MatrixTest, Dependencies) {
 TYPED_TEST(MatrixTest, DependenciesSubPipeline) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
@@ -770,7 +770,7 @@ TYPED_TEST(MatrixTest, DependenciesSubPipeline) {
 TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a ------- rw3 - ro4a ------- rw5
@@ -848,7 +848,7 @@ TYPED_TEST(MatrixTest, DependenciesSubSubPipeline) {
 TYPED_TEST(MatrixTest, DependenciesSubPipelineConst) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
@@ -909,7 +909,7 @@ TYPED_TEST(MatrixTest, DependenciesSubPipelineConst) {
 TYPED_TEST(MatrixTest, DependenciesConst) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -930,7 +930,7 @@ TYPED_TEST(MatrixTest, DependenciesConst) {
 TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -963,7 +963,7 @@ TYPED_TEST(MatrixTest, DependenciesConstSubPipelineConst) {
 TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
@@ -1023,7 +1023,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMix) {
 TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a ------- rw3 - ro4a ------- rw5
@@ -1091,7 +1091,7 @@ TYPED_TEST(MatrixTest, DependenciesReferenceMixSubPipeline) {
 TYPED_TEST(MatrixTest, DependenciesPointerMix) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       // Dependencies graph:
       // rw0 - rw1 - ro2a - rw3 - ro4a - rw5
@@ -1151,7 +1151,7 @@ TYPED_TEST(MatrixTest, DependenciesPointerMix) {
 TYPED_TEST(MatrixTest, TileSize) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
       Matrix<Type, Device::CPU> mat(size, test.block_size, comm_grid);
@@ -1244,7 +1244,7 @@ TYPED_TEST(MatrixLocalTest, FromColMajorConst) {
 TYPED_TEST(MatrixTest, FromColMajor) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1306,7 +1306,7 @@ TYPED_TEST(MatrixTest, FromColMajor) {
 TYPED_TEST(MatrixTest, FromColMajorConst) {
   using Type = TypeParam;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1450,7 +1450,7 @@ TYPED_TEST(MatrixTest, FromTile) {
 
   using dlaf::util::ceilDiv;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1568,7 +1568,7 @@ TYPED_TEST(MatrixTest, FromTileConst) {
 
   using dlaf::util::ceilDiv;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1677,7 +1677,7 @@ std::vector<TestReshuffling> sizes_reshuffling_tests{
 };
 
 template <class T, Device Source, Device Destination>
-void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
+void testReshuffling(const TestReshuffling& config, CommunicatorGrid& grid) {
   const auto& [size, src_tilesize, dst_tilesize] = config;
   const comm::Index2D origin_rank_src(std::max(0, grid.size().rows() - 1),
                                       std::max(0, grid.size().cols() - 1));
@@ -1710,7 +1710,7 @@ void testReshuffling(const TestReshuffling& config, CommunicatorGrid grid) {
 }
 
 TYPED_TEST(MatrixTest, CopyReshuffling) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (const auto& config : sizes_reshuffling_tests) {
       testReshuffling<TypeParam, Device::CPU, Device::CPU>(config, grid);
     }
@@ -1719,7 +1719,7 @@ TYPED_TEST(MatrixTest, CopyReshuffling) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(MatrixTest, GPUCopyReshuffling) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (const auto& config : sizes_reshuffling_tests) {
       testReshuffling<TypeParam, Device::GPU, Device::GPU>(config, grid);
       testReshuffling<TypeParam, Device::CPU, Device::GPU>(config, grid);
@@ -1736,7 +1736,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonly) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1785,7 +1785,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadonlySubPipeline) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1835,7 +1835,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwrite) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -1884,7 +1884,7 @@ TEST_F(MatrixGenericTest, SelectTilesReadwriteSubPipeline) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 
@@ -2231,7 +2231,7 @@ TEST_F(MatrixGenericTest, SyncBarrier) {
   using MemoryViewT = dlaf::memory::MemoryView<TypeParam, Device::CPU>;
   using MatrixT = dlaf::Matrix<TypeParam, Device::CPU>;
 
-  for (const auto& comm_grid : this->commGrids()) {
+  for (auto& comm_grid : this->commGrids()) {
     for (const auto& test : sizes_tests) {
       GlobalElementSize size = globalTestSize(test.size, comm_grid.size());
 

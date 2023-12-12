@@ -111,7 +111,7 @@ void hermitian_multiplication(blas::Side side, blas::Uplo uplo, const T alpha, M
 /// @pre @p mat_b has blocksize (NB x NB)
 /// @pre @p mat_b has tilesize (NB x NB)
 template <Backend B, Device D, class T>
-void hermitian_multiplication(comm::CommunicatorGrid grid, blas::Side side, blas::Uplo uplo,
+void hermitian_multiplication(comm::CommunicatorGrid& grid, blas::Side side, blas::Uplo uplo,
                               const T alpha, Matrix<const T, D>& mat_a, Matrix<const T, D>& mat_b,
                               const T beta, Matrix<T, D>& mat_c) {
   DLAF_ASSERT(matrix::square_size(mat_a), mat_a);

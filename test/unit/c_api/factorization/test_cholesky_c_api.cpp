@@ -56,7 +56,7 @@ const std::vector<std::tuple<SizeType, SizeType>> sizes = {
 };
 
 template <class T, Backend B, Device D, API api>
-void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const SizeType m,
+void testCholesky(comm::CommunicatorGrid& grid, const blas::Uplo uplo, const SizeType m,
                   const SizeType mb) {
   auto dlaf_context = c_api_test_inititialize<api>(grid);
 
@@ -151,7 +151,7 @@ void testCholesky(comm::CommunicatorGrid grid, const blas::Uplo uplo, const Size
 }
 
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU, API::dlaf>(grid, uplo, m, mb);
@@ -162,7 +162,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::MC, Device::CPU, API::scalapack>(grid, uplo, m, mb);
@@ -174,7 +174,7 @@ TYPED_TEST(CholeskyTestMC, CorrectnessDistributedScaLAPACK) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(grid, uplo, m, mb);
@@ -185,7 +185,7 @@ TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(CholeskyTestGPU, CorrectnessDistributedScaLapack) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (const auto& [m, mb] : sizes) {
         testCholesky<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(grid, uplo, m, mb);

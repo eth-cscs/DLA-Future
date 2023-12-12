@@ -17,9 +17,9 @@
 #include <dlaf/common/assert.h>
 #include <dlaf/common/data.h>
 #include <dlaf/common/index2d.h>
-#include <dlaf/common/pipeline.h>
 #include <dlaf/common/range2d.h>
 #include <dlaf/common/single_threaded_blas.h>
+#include <dlaf/communication/communicator_pipeline.h>
 #include <dlaf/communication/kernels/all_reduce.h>
 #include <dlaf/factorization/qr/api.h>
 #include <dlaf/lapack/tile.h>
@@ -275,10 +275,10 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 }
 
 template <Backend backend, Device device, class T>
-void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& hh_panel,
-                                          matrix::ReadOnlyTileSender<T, Device::CPU> taus,
-                                          matrix::ReadWriteTileSender<T, device> t,
-                                          common::Pipeline<comm::Communicator>& mpi_col_task_chain) {
+void QR_Tfactor<backend, device, T>::call(
+    matrix::Panel<Coord::Col, T, device>& hh_panel, matrix::ReadOnlyTileSender<T, Device::CPU> taus,
+    matrix::ReadWriteTileSender<T, device> t,
+    comm::CommunicatorPipeline<comm::CommunicatorType::Col>& mpi_col_task_chain) {
   namespace ex = pika::execution::experimental;
 
   using Helpers = tfactor_l::Helpers<backend, device, T>;
@@ -324,8 +324,9 @@ void QR_Tfactor<backend, device, T>::call(matrix::Panel<Coord::Col, T, device>& 
 
   // at this point each rank has its partial result for each column
   // so, let's reduce the results (on all ranks, so that everyone can independently compute T factor)
-  if (true)  // TODO if the column communicator has more than 1 tile...but I just have the pipeline
-    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain(), MPI_SUM, std::move(t_local));
+  if (mpi_col_task_chain.size_2d().rows() > 0)
+    t_local = dlaf::comm::scheduleAllReduceInPlace(mpi_col_task_chain.exclusive(), MPI_SUM,
+                                                   std::move(t_local));
 
   // 2nd step: compute the T factor, by performing the last step on each column
   // each column depends on the previous part (all reflectors that comes before)

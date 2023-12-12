@@ -394,14 +394,14 @@ void Triangular<backend, device, T>::call_RUT(blas::Op op, blas::Diag diag, T al
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lln;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -476,14 +476,14 @@ void Triangular<backend, device, T>::call_LLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_lun;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -557,14 +557,14 @@ void Triangular<backend, device, T>::call_LUN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_rln;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 
@@ -639,14 +639,14 @@ void Triangular<backend, device, T>::call_RLN(comm::CommunicatorGrid grid, blas:
 }
 
 template <Backend backend, Device device, class T>
-void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid grid, blas::Diag diag, T alpha,
+void Triangular<backend, device, T>::call_RUN(comm::CommunicatorGrid& grid, blas::Diag diag, T alpha,
                                               Matrix<const T, device>& mat_a, Matrix<T, device>& mat_b) {
   using namespace triangular_run;
   using pika::execution::thread_priority;
 
   // Set up MPI executor pipelines
-  common::Pipeline<comm::Communicator> mpi_row_task_chain(grid.rowCommunicator().clone());
-  common::Pipeline<comm::Communicator> mpi_col_task_chain(grid.colCommunicator().clone());
+  auto mpi_row_task_chain = grid.row_communicator_pipeline();
+  auto mpi_col_task_chain = grid.col_communicator_pipeline();
 
   const comm::Index2D this_rank = grid.rank();
 

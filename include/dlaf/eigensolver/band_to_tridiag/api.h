@@ -39,7 +39,7 @@ struct BandToTridiag;
 template <Device D, class T>
 struct BandToTridiag<Backend::MC, D, T> {
   static TridiagResult<T, Device::CPU> call_L(const SizeType b, Matrix<const T, D>& mat_a) noexcept;
-  static TridiagResult<T, Device::CPU> call_L(comm::CommunicatorGrid grid, const SizeType b,
+  static TridiagResult<T, Device::CPU> call_L(comm::CommunicatorGrid& grid, const SizeType b,
                                               Matrix<const T, D>& mat_a) noexcept;
 };
 

@@ -64,7 +64,8 @@ const std::vector<std::tuple<SizeType, SizeType, SizeType>> sizes = {
 };
 
 template <class T, Backend B, Device D, API api>
-void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb, CommunicatorGrid grid) {
+void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
+                     CommunicatorGrid& grid) {
   auto dlaf_context = c_api_test_inititialize<api>(grid);
 
   // In normal use the runtime is resumed by the C API call
@@ -184,7 +185,7 @@ void testEigensolver(const blas::Uplo uplo, const SizeType m, const SizeType mb,
 }
 
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, API::dlaf>(uplo, m, mb, grid);
@@ -195,7 +196,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testEigensolver<TypeParam, Backend::MC, Device::CPU, API::scalapack>(uplo, m, mb, grid);
@@ -207,7 +208,7 @@ TYPED_TEST(EigensolverTestMC, CorrectnessDistributedScalapack) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::dlaf>(uplo, m, mb, grid);
@@ -218,7 +219,7 @@ TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedDLAF) {
 
 #ifdef DLAF_WITH_SCALAPACK
 TYPED_TEST(EigensolverTestGPU, CorrectnessDistributedScalapack) {
-  for (const comm::CommunicatorGrid& grid : this->commGrids()) {
+  for (comm::CommunicatorGrid& grid : this->commGrids()) {
     for (auto uplo : blas_uplos) {
       for (auto [m, mb, b_min] : sizes) {
         testEigensolver<TypeParam, Backend::GPU, Device::GPU, API::scalapack>(uplo, m, mb, grid);

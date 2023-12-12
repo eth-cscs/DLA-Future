@@ -52,7 +52,7 @@ using pika::this_thread::experimental::sync_wait;
 
 /// Check results of the eigensolver
 template <typename T>
-void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
                          Matrix<const T, Device::CPU>& E);
@@ -93,7 +93,7 @@ struct GenEigensolverMiniapp {
     GlobalElementSize matrix_size(opts.m, opts.m);
     TileElementSize block_size(opts.mb, opts.mb);
 
-    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_a_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian;
 
       HostMatrixType hermitian(matrix_size, block_size, comm_grid);
@@ -102,7 +102,7 @@ struct GenEigensolverMiniapp {
       return hermitian;
     }();
 
-    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, comm_grid]() {
+    ConstHostMatrixType matrix_b_ref = [matrix_size, block_size, &comm_grid]() {
       using dlaf::matrix::util::set_random_hermitian_positive_definite;
 
       HostMatrixType triangular(matrix_size, block_size, comm_grid);
@@ -221,7 +221,7 @@ using dlaf::matrix::Tile;
 /// "ERROR":   error is high, there is an error in the results
 /// "WARNING": error is slightly high, there can be an error in the result
 template <typename T>
-void checkGenEigensolver(CommunicatorGrid comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
+void checkGenEigensolver(CommunicatorGrid& comm_grid, blas::Uplo uplo, Matrix<const T, Device::CPU>& A,
                          Matrix<const T, Device::CPU>& B,
                          Matrix<const BaseType<T>, Device::CPU>& evalues,
                          Matrix<const T, Device::CPU>& E) {

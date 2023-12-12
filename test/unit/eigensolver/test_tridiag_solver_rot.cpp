@@ -84,7 +84,7 @@ TYPED_TEST_SUITE(TridiagEigensolverRotGPUTest, RealMatrixElementTypes);
 #endif
 
 template <class T, Device D>
-void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, const SizeType mb,
+void testApplyGivenRotations(comm::CommunicatorGrid& grid, const SizeType m, const SizeType mb,
                              const SizeType idx_begin, const SizeType idx_end,
                              std::vector<di::GivensRotation<T>> rots) {
   using dlaf::eigensolver::internal::applyGivensRotationsToMatrixColumns;
@@ -99,7 +99,8 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 
   {
     matrix::MatrixMirror<T, D, Device::CPU> mat(mat_h);
-    applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, idx_begin, idx_end, ex::just(rots),
+    auto comm_row_chain = grid.row_communicator_pipeline();
+    applyGivensRotationsToMatrixColumns(comm_row_chain, tag, idx_begin, idx_end, ex::just(rots),
                                         mat.get());
   }
 
@@ -127,7 +128,7 @@ void testApplyGivenRotations(comm::CommunicatorGrid grid, const SizeType m, cons
 }
 
 TYPED_TEST(TridiagEigensolverRotMCTest, ApplyGivenRotations) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (const auto& [m, mb, idx_begin, idx_end, rots] : this->configs) {
       testApplyGivenRotations<TypeParam, Device::CPU>(grid, m, mb, idx_begin, idx_end, rots);
     }
@@ -136,7 +137,7 @@ TYPED_TEST(TridiagEigensolverRotMCTest, ApplyGivenRotations) {
 
 #ifdef DLAF_WITH_GPU
 TYPED_TEST(TridiagEigensolverRotGPUTest, ApplyGivenRotations) {
-  for (const auto& grid : this->commGrids()) {
+  for (auto& grid : this->commGrids()) {
     for (const auto& [m, mb, idx_begin, idx_end, rots] : this->configs) {
       testApplyGivenRotations<TypeParam, Device::GPU>(grid, m, mb, idx_begin, idx_end, rots);
     }

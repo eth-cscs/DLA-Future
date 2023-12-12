@@ -8,13 +8,15 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <dlaf/common/with_result_of.h>
 #include <dlaf/communication/communicator_grid.h>
+#include <dlaf/communication/index.h>
 
 namespace dlaf {
 namespace comm {
 
 CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_MPI ncols,
-                                   common::Ordering ordering) {
+                                   common::Ordering ordering, std::size_t npipelines) {
   DLAF_ASSERT((nrows * ncols) <= comm.size(), nrows, ncols, comm.size());
 
   bool is_in_grid = comm.rank() < nrows * ncols;
@@ -27,7 +29,8 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   comm::Size2D grid_size{nrows, ncols};
   if (is_in_grid) {
     position_ = common::computeCoords(ordering, comm.rank(), grid_size);
-    key_full = common::computeLinearIndex<IndexT_MPI>(FULL_COMMUNICATOR_ORDER, position_, grid_size);
+    key_full =
+        common::computeLinearIndex<IndexT_MPI>(internal::FULL_COMMUNICATOR_ORDER, position_, grid_size);
     index_row = position_.row();
     index_col = position_.col();
   }
@@ -45,6 +48,21 @@ CommunicatorGrid::CommunicatorGrid(Communicator comm, IndexT_MPI nrows, IndexT_M
   full_ = make_communicator_managed(mpi_full);
   row_ = make_communicator_managed(mpi_row);
   col_ = make_communicator_managed(mpi_col);
+
+  using dlaf::internal::WithResultOf;
+
+  full_pipelines_ = RoundRobinPipeline<CommunicatorType::Full>(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline<CommunicatorType::Full>{full_.clone(), position_, grid_size_};
+      }));
+  row_pipelines_ = RoundRobinPipeline<CommunicatorType::Row>(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline<CommunicatorType::Row>{row_.clone(), position_, grid_size_};
+      }));
+  col_pipelines_ = RoundRobinPipeline<CommunicatorType::Col>(
+      npipelines, WithResultOf([&]() {
+        return CommunicatorPipeline<CommunicatorType::Col>{col_.clone(), position_, grid_size_};
+      }));
 }
-}
-}
+}  // namespace comm
+}  // namespace dlaf

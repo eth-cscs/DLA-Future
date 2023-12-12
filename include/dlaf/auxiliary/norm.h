@@ -32,7 +32,7 @@ namespace dlaf::auxiliary {
 /// @pre @p A has tilesize (NB x NB)
 /// @return the max norm of the Matrix @p A or 0 if `A.size().isEmpty()`
 template <Backend backend, Device device, class T>
-dlaf::BaseType<T> max_norm(comm::CommunicatorGrid grid, comm::Index2D rank, blas::Uplo uplo,
+dlaf::BaseType<T> max_norm(comm::CommunicatorGrid& grid, comm::Index2D rank, blas::Uplo uplo,
                            Matrix<const T, device>& A) {
   using dlaf::matrix::equal_process_grid;
   using dlaf::matrix::single_tile_per_block;

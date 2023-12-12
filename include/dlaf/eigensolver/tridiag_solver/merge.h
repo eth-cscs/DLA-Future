@@ -1298,7 +1298,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                  common::Pipeline<comm::Communicator> row_comm_chain(row_comm_wrapper.get());
                  const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
-                 const SizeType m_lc = dist_sub.localNrTiles().rows();
+                 const SizeType m_lc = dist_sub.local_nr_tiles().rows();
                  const SizeType m_el_lc = dist_sub.local_size().rows();
                  const SizeType n_el_lc = dist_sub.local_size().cols();
 
@@ -1398,14 +1398,15 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                          dist_sub.tile_element_from_global_element<Coord::Col>(j_el);
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& evec = evec_tiles[to_sizet(linear_lc)];
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromLocalTileAndTileElement<Coord::Row>(i_lc,
-                                                                                           i_el_tl);
+                             dist_sub.global_element_from_local_tile_and_tile_element<Coord::Row>(
+                                 i_lc, i_el_tl);
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];
 
@@ -1474,21 +1475,24 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    for (SizeType j_el_lc = begin; j_el_lc < end; ++j_el_lc) {
                      const SizeType j_el =
                          dist_sub.global_element_from_local_element<Coord::Col>(j_el_lc);
-                     const SizeType j_lc = dist_sub.localTileFromGlobalElement<Coord::Col>(j_el);
+                     const SizeType j_lc = dist_sub.local_tile_from_global_element<Coord::Col>(j_el);
                      const SizeType js_el = i6[j_el];
                      const T delta_j = d_ptr[to_sizet(js_el)];
 
-                     const SizeType j_el_tl = dist_sub.tileElementFromLocalElement<Coord::Col>(j_el_lc);
+                     const SizeType j_el_tl =
+                         dist_sub.tile_element_from_local_element<Coord::Col>(j_el_lc);
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
 
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromGlobalTileAndTileElement<Coord::Row>(i, i_el_tl);
+                             dist_sub.global_element_from_global_tile_and_tile_element<Coord::Row>(
+                                 i, i_el_tl);
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];
 
@@ -1564,15 +1568,17 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                      const SizeType j_el_tl =
                          dist_sub.tile_element_from_local_element<Coord::Col>(j_el_lc);
 
-                     for (SizeType i_lc = 0; i_lc < dist_sub.localNrTiles().rows(); ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                     for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
 
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromGlobalTileAndTileElement<Coord::Row>(i, i_el_tl);
+                             dist_sub.global_element_from_global_tile_and_tile_element<Coord::Row>(
+                                 i, i_el_tl);
 
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];

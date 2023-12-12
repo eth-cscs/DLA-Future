@@ -1328,468 +1328,518 @@ $(function() {
 <div class="line"><a name="l01257"></a><span class="lineno"> 1257</span>&#160;                                        comm, req));</div>
 <div class="line"><a name="l01258"></a><span class="lineno"> 1258</span>&#160;  };</div>
 <div class="line"><a name="l01259"></a><span class="lineno"> 1259</span>&#160; </div>
-<div class="line"><a name="l01260"></a><span class="lineno"> 1260</span>&#160;  <span class="comment">// Note: at least two column of tiles per-worker, in the range [1, getTridiagRank1NWorkers()]</span></div>
-<div class="line"><a name="l01261"></a><span class="lineno"> 1261</span>&#160;  <span class="keyword">const</span> std::size_t nthreads = [nrtiles = dist_sub.local_nr_tiles().cols()]() {</div>
-<div class="line"><a name="l01262"></a><span class="lineno"> 1262</span>&#160;    <span class="keyword">const</span> std::size_t min_workers = 1;</div>
-<div class="line"><a name="l01263"></a><span class="lineno"> 1263</span>&#160;    <span class="keyword">const</span> std::size_t available_workers = getTridiagRank1NWorkers();</div>
-<div class="line"><a name="l01264"></a><span class="lineno"> 1264</span>&#160;    <span class="keyword">const</span> std::size_t ideal_workers = util::ceilDiv(<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(nrtiles), <a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(2));</div>
-<div class="line"><a name="l01265"></a><span class="lineno"> 1265</span>&#160;    <span class="keywordflow">return</span> std::clamp(ideal_workers, min_workers, available_workers);</div>
-<div class="line"><a name="l01266"></a><span class="lineno"> 1266</span>&#160;  }();</div>
-<div class="line"><a name="l01267"></a><span class="lineno"> 1267</span>&#160; </div>
-<div class="line"><a name="l01268"></a><span class="lineno"> 1268</span>&#160;  ex::start_detached(</div>
-<div class="line"><a name="l01269"></a><span class="lineno"> 1269</span>&#160;      ex::when_all(ex::just(std::make_unique&lt;pika::barrier&lt;&gt;&gt;(nthreads)),</div>
-<div class="line"><a name="l01270"></a><span class="lineno"> 1270</span>&#160;                   std::forward&lt;CommSender&gt;(row_comm), std::forward&lt;CommSender&gt;(col_comm),</div>
-<div class="line"><a name="l01271"></a><span class="lineno"> 1271</span>&#160;                   std::forward&lt;KSender&gt;(k), std::forward&lt;KLcSender&gt;(k_lc), std::forward&lt;RhoSender&gt;(rho),</div>
-<div class="line"><a name="l01272"></a><span class="lineno"> 1272</span>&#160;                   ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.readwrite(z)),</div>
-<div class="line"><a name="l01273"></a><span class="lineno"> 1273</span>&#160;                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.read(i4)),</div>
-<div class="line"><a name="l01274"></a><span class="lineno"> 1274</span>&#160;                   ex::when_all_vector(tc.read(i6)), ex::when_all_vector(tc.read(i2)),</div>
-<div class="line"><a name="l01275"></a><span class="lineno"> 1275</span>&#160;                   ex::when_all_vector(tc.readwrite(evecs)),</div>
-<div class="line"><a name="l01276"></a><span class="lineno"> 1276</span>&#160;                   <span class="comment">// additional workspaces</span></div>
-<div class="line"><a name="l01277"></a><span class="lineno"> 1277</span>&#160;                   ex::just(std::vector&lt;memory::MemoryView&lt;T, Device::CPU&gt;&gt;()),</div>
-<div class="line"><a name="l01278"></a><span class="lineno"> 1278</span>&#160;                   ex::just(memory::MemoryView&lt;T, Device::CPU&gt;())) |</div>
-<div class="line"><a name="l01279"></a><span class="lineno"> 1279</span>&#160;      ex::transfer(di::getBackendScheduler&lt;Backend::MC&gt;(thread_priority::high)) |</div>
-<div class="line"><a name="l01280"></a><span class="lineno"> 1280</span>&#160;      ex::bulk(nthreads, [nthreads, n, dist_sub, bcast_evals, all_reduce_in_place](</div>
-<div class="line"><a name="l01281"></a><span class="lineno"> 1281</span>&#160;                             <span class="keyword">const</span> std::size_t thread_idx, <span class="keyword">auto</span>&amp; barrier_ptr, <span class="keyword">auto</span>&amp; row_comm_wrapper,</div>
-<div class="line"><a name="l01282"></a><span class="lineno"> 1282</span>&#160;                             <span class="keyword">auto</span>&amp; col_comm_wrapper, <span class="keyword">const</span> SizeType k, <span class="keyword">const</span> SizeType k_lc,</div>
-<div class="line"><a name="l01283"></a><span class="lineno"> 1283</span>&#160;                             <span class="keyword">const</span> <span class="keyword">auto</span>&amp; rho, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; d_tiles, <span class="keyword">auto</span>&amp; z_tiles, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; eval_tiles,</div>
-<div class="line"><a name="l01284"></a><span class="lineno"> 1284</span>&#160;                             <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i4_tiles_arr, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i6_tiles_arr,</div>
-<div class="line"><a name="l01285"></a><span class="lineno"> 1285</span>&#160;                             <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i2_tiles_arr, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; evec_tiles, <span class="keyword">auto</span>&amp; ws_cols,</div>
-<div class="line"><a name="l01286"></a><span class="lineno"> 1286</span>&#160;                             <span class="keyword">auto</span>&amp; ws_row) {</div>
-<div class="line"><a name="l01287"></a><span class="lineno"> 1287</span>&#160;        using dlaf::comm::internal::transformMPI;</div>
-<div class="line"><a name="l01288"></a><span class="lineno"> 1288</span>&#160; </div>
-<div class="line"><a name="l01289"></a><span class="lineno"> 1289</span>&#160;        common::Pipeline&lt;comm::Communicator&gt; row_comm_chain(row_comm_wrapper.get());</div>
-<div class="line"><a name="l01290"></a><span class="lineno"> 1290</span>&#160;        const dlaf::comm::Communicator&amp; col_comm = col_comm_wrapper.get();</div>
-<div class="line"><a name="l01291"></a><span class="lineno"> 1291</span>&#160; </div>
-<div class="line"><a name="l01292"></a><span class="lineno"> 1292</span>&#160;        const SizeType m_el_lc = dist_sub.local_size().rows();</div>
-<div class="line"><a name="l01293"></a><span class="lineno"> 1293</span>&#160;        const SizeType n_el_lc = dist_sub.local_size().cols();</div>
-<div class="line"><a name="l01294"></a><span class="lineno"> 1294</span>&#160; </div>
-<div class="line"><a name="l01295"></a><span class="lineno"> 1295</span>&#160;        const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();</div>
-<div class="line"><a name="l01296"></a><span class="lineno"> 1296</span>&#160; </div>
-<div class="line"><a name="l01297"></a><span class="lineno"> 1297</span>&#160;        const SizeType* i4 = i4_tiles_arr[0].get().ptr();</div>
-<div class="line"><a name="l01298"></a><span class="lineno"> 1298</span>&#160;        const SizeType* i2 = i2_tiles_arr[0].get().ptr();</div>
-<div class="line"><a name="l01299"></a><span class="lineno"> 1299</span>&#160;        const SizeType* i6 = i6_tiles_arr[0].get().ptr();</div>
+<div class="line"><a name="l01260"></a><span class="lineno"> 1260</span>&#160;  <span class="keyword">const</span> <span class="keyword">auto</span> hp_scheduler = di::getBackendScheduler&lt;Backend::MC&gt;(thread_priority::high);</div>
+<div class="line"><a name="l01261"></a><span class="lineno"> 1261</span>&#160;  ex::start_detached(</div>
+<div class="line"><a name="l01262"></a><span class="lineno"> 1262</span>&#160;      ex::when_all(std::forward&lt;CommSender&gt;(row_comm), std::forward&lt;CommSender&gt;(col_comm),</div>
+<div class="line"><a name="l01263"></a><span class="lineno"> 1263</span>&#160;                   std::forward&lt;KSender&gt;(k), std::forward&lt;KLcSender&gt;(k_lc), std::forward&lt;RhoSender&gt;(rho),</div>
+<div class="line"><a name="l01264"></a><span class="lineno"> 1264</span>&#160;                   ex::when_all_vector(tc.read(d)), ex::when_all_vector(tc.readwrite(z)),</div>
+<div class="line"><a name="l01265"></a><span class="lineno"> 1265</span>&#160;                   ex::when_all_vector(tc.readwrite(evals)), ex::when_all_vector(tc.read(i4)),</div>
+<div class="line"><a name="l01266"></a><span class="lineno"> 1266</span>&#160;                   ex::when_all_vector(tc.read(i6)), ex::when_all_vector(tc.read(i2)),</div>
+<div class="line"><a name="l01267"></a><span class="lineno"> 1267</span>&#160;                   ex::when_all_vector(tc.readwrite(evecs)),</div>
+<div class="line"><a name="l01268"></a><span class="lineno"> 1268</span>&#160;                   <span class="comment">// additional workspaces</span></div>
+<div class="line"><a name="l01269"></a><span class="lineno"> 1269</span>&#160;                   ex::just(std::vector&lt;memory::MemoryView&lt;T, Device::CPU&gt;&gt;()),</div>
+<div class="line"><a name="l01270"></a><span class="lineno"> 1270</span>&#160;                   ex::just(memory::MemoryView&lt;T, Device::CPU&gt;())) |</div>
+<div class="line"><a name="l01271"></a><span class="lineno"> 1271</span>&#160;      ex::transfer(hp_scheduler) |</div>
+<div class="line"><a name="l01272"></a><span class="lineno"> 1272</span>&#160;      ex::let_value([n, dist_sub, bcast_evals, all_reduce_in_place, hp_scheduler](</div>
+<div class="line"><a name="l01273"></a><span class="lineno"> 1273</span>&#160;                        <span class="keyword">auto</span>&amp; row_comm_wrapper, <span class="keyword">auto</span>&amp; col_comm_wrapper, <span class="keyword">const</span> SizeType k,</div>
+<div class="line"><a name="l01274"></a><span class="lineno"> 1274</span>&#160;                        <span class="keyword">const</span> SizeType k_lc, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; rho, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; d_tiles, <span class="keyword">auto</span>&amp; z_tiles,</div>
+<div class="line"><a name="l01275"></a><span class="lineno"> 1275</span>&#160;                        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; eval_tiles, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i4_tiles_arr, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i6_tiles_arr,</div>
+<div class="line"><a name="l01276"></a><span class="lineno"> 1276</span>&#160;                        <span class="keyword">const</span> <span class="keyword">auto</span>&amp; i2_tiles_arr, <span class="keyword">const</span> <span class="keyword">auto</span>&amp; evec_tiles, <span class="keyword">auto</span>&amp; ws_cols, <span class="keyword">auto</span>&amp; ws_row) {</div>
+<div class="line"><a name="l01277"></a><span class="lineno"> 1277</span>&#160;        using pika::execution::thread_priority;</div>
+<div class="line"><a name="l01278"></a><span class="lineno"> 1278</span>&#160; </div>
+<div class="line"><a name="l01279"></a><span class="lineno"> 1279</span>&#160;        const std::size_t nthreads = [dist_sub, k_lc] {</div>
+<div class="line"><a name="l01280"></a><span class="lineno"> 1280</span>&#160;          const std::size_t workload = to_sizet(dist_sub.localSize().rows() * k_lc);</div>
+<div class="line"><a name="l01281"></a><span class="lineno"> 1281</span>&#160;          const std::size_t workload_unit = 2 * to_sizet(dist_sub.tile_size().linear_size());</div>
+<div class="line"><a name="l01282"></a><span class="lineno"> 1282</span>&#160; </div>
+<div class="line"><a name="l01283"></a><span class="lineno"> 1283</span>&#160;          const std::size_t min_workers = 1;</div>
+<div class="line"><a name="l01284"></a><span class="lineno"> 1284</span>&#160;          const std::size_t available_workers = getTridiagRank1NWorkers();</div>
+<div class="line"><a name="l01285"></a><span class="lineno"> 1285</span>&#160; </div>
+<div class="line"><a name="l01286"></a><span class="lineno"> 1286</span>&#160;          const std::size_t ideal_workers = util::ceilDiv(to_sizet(workload), workload_unit);</div>
+<div class="line"><a name="l01287"></a><span class="lineno"> 1287</span>&#160;          return std::clamp(ideal_workers, min_workers, available_workers);</div>
+<div class="line"><a name="l01288"></a><span class="lineno"> 1288</span>&#160;        }();</div>
+<div class="line"><a name="l01289"></a><span class="lineno"> 1289</span>&#160; </div>
+<div class="line"><a name="l01290"></a><span class="lineno"> 1290</span>&#160;        <span class="keywordflow">return</span> ex::just(std::make_unique&lt;pika::barrier&lt;&gt;&gt;(nthreads)) | ex::transfer(hp_scheduler) |</div>
+<div class="line"><a name="l01291"></a><span class="lineno"> 1291</span>&#160;               ex::bulk(nthreads, [&amp;row_comm_wrapper, &amp;col_comm_wrapper, k, k_lc, &amp;rho, &amp;d_tiles,</div>
+<div class="line"><a name="l01292"></a><span class="lineno"> 1292</span>&#160;                                   &amp;z_tiles, &amp;eval_tiles, &amp;i4_tiles_arr, &amp;i6_tiles_arr, &amp;i2_tiles_arr,</div>
+<div class="line"><a name="l01293"></a><span class="lineno"> 1293</span>&#160;                                   &amp;evec_tiles, &amp;ws_cols, &amp;ws_row, nthreads, n, dist_sub, bcast_evals,</div>
+<div class="line"><a name="l01294"></a><span class="lineno"> 1294</span>&#160;                                   all_reduce_in_place](<span class="keyword">const</span> std::size_t thread_idx,</div>
+<div class="line"><a name="l01295"></a><span class="lineno"> 1295</span>&#160;                                                        <span class="keyword">auto</span>&amp; barrier_ptr) {</div>
+<div class="line"><a name="l01296"></a><span class="lineno"> 1296</span>&#160;                 using dlaf::comm::internal::transformMPI;</div>
+<div class="line"><a name="l01297"></a><span class="lineno"> 1297</span>&#160; </div>
+<div class="line"><a name="l01298"></a><span class="lineno"> 1298</span>&#160;                 common::Pipeline&lt;comm::Communicator&gt; row_comm_chain(row_comm_wrapper.get());</div>
+<div class="line"><a name="l01299"></a><span class="lineno"> 1299</span>&#160;                 const dlaf::comm::Communicator&amp; col_comm = col_comm_wrapper.get();</div>
 <div class="line"><a name="l01300"></a><span class="lineno"> 1300</span>&#160; </div>
-<div class="line"><a name="l01301"></a><span class="lineno"> 1301</span>&#160;        <span class="comment">// STEP 0a: Fill ones for deflated Eigenvectors and copy related Eigenvalues (single-thread)</span></div>
-<div class="line"><a name="l01302"></a><span class="lineno"> 1302</span>&#160;        <span class="comment">// Note: this step is completely independent from the rest, but it is small and it is going</span></div>
-<div class="line"><a name="l01303"></a><span class="lineno"> 1303</span>&#160;        <span class="comment">// to be dropped soon.</span></div>
-<div class="line"><a name="l01304"></a><span class="lineno"> 1304</span>&#160;        <span class="comment">// Note: use last threads that in principle should have less work to do</span></div>
-<div class="line"><a name="l01305"></a><span class="lineno"> 1305</span>&#160;        if (k &lt; n &amp;&amp; thread_idx == nthreads - 1) {</div>
-<div class="line"><a name="l01306"></a><span class="lineno"> 1306</span>&#160;          const T* eval_initial_ptr = d_tiles[0].get().ptr();</div>
-<div class="line"><a name="l01307"></a><span class="lineno"> 1307</span>&#160;          T* eval_ptr = eval_tiles[0].ptr();</div>
-<div class="line"><a name="l01308"></a><span class="lineno"> 1308</span>&#160; </div>
-<div class="line"><a name="l01309"></a><span class="lineno"> 1309</span>&#160;          for (SizeType j_el_lc = k_lc; j_el_lc &lt; n_el_lc; ++j_el_lc) {</div>
-<div class="line"><a name="l01310"></a><span class="lineno"> 1310</span>&#160;            const SizeType j_el = dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01311"></a><span class="lineno"> 1311</span>&#160;            const SizeType i_el = j_el;</div>
-<div class="line"><a name="l01312"></a><span class="lineno"> 1312</span>&#160; </div>
-<div class="line"><a name="l01313"></a><span class="lineno"> 1313</span>&#160;            if (dist_sub.rank_index().row() == dist_sub.rank_global_element&lt;Coord::Row&gt;(i_el)) {</div>
-<div class="line"><a name="l01314"></a><span class="lineno"> 1314</span>&#160;              const SizeType i_el_lc = dist_sub.local_element_from_global_element&lt;Coord::Row&gt;(i_el);</div>
-<div class="line"><a name="l01315"></a><span class="lineno"> 1315</span>&#160;              const LocalTileIndex i_lc{dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
-<div class="line"><a name="l01316"></a><span class="lineno"> 1316</span>&#160;                                        dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc)};</div>
-<div class="line"><a name="l01317"></a><span class="lineno"> 1317</span>&#160;              const SizeType linear_lc = dist_extra::local_tile_linear_index(dist_sub, i_lc);</div>
-<div class="line"><a name="l01318"></a><span class="lineno"> 1318</span>&#160;              const TileElementIndex</div>
-<div class="line"><a name="l01319"></a><span class="lineno"> 1319</span>&#160;                  ij_el_tl{dist_sub.tile_element_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
-<div class="line"><a name="l01320"></a><span class="lineno"> 1320</span>&#160;                           dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc)};</div>
-<div class="line"><a name="l01321"></a><span class="lineno"> 1321</span>&#160; </div>
-<div class="line"><a name="l01322"></a><span class="lineno"> 1322</span>&#160;              evec_tiles[to_sizet(linear_lc)](ij_el_tl) = T{1};</div>
-<div class="line"><a name="l01323"></a><span class="lineno"> 1323</span>&#160;            }</div>
-<div class="line"><a name="l01324"></a><span class="lineno"> 1324</span>&#160; </div>
-<div class="line"><a name="l01325"></a><span class="lineno"> 1325</span>&#160;            eval_ptr[j_el] = eval_initial_ptr[i6[j_el]];</div>
-<div class="line"><a name="l01326"></a><span class="lineno"> 1326</span>&#160;          }</div>
-<div class="line"><a name="l01327"></a><span class="lineno"> 1327</span>&#160;        }</div>
-<div class="line"><a name="l01328"></a><span class="lineno"> 1328</span>&#160; </div>
-<div class="line"><a name="l01329"></a><span class="lineno"> 1329</span>&#160;        <span class="comment">// STEP 0b: Initialize workspaces (single-thread)</span></div>
-<div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;        if (thread_idx == 0) {</div>
-<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;          <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;          <span class="comment">// - nthreads are used for both LAED4 and weight calculation (one per worker thread)</span></div>
-<div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;          <span class="comment">// - last one is used for reducing weights from all workers</span></div>
-<div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160;          ws_cols.reserve(nthreads + 1);</div>
-<div class="line"><a name="l01335"></a><span class="lineno"> 1335</span>&#160; </div>
-<div class="line"><a name="l01336"></a><span class="lineno"> 1336</span>&#160;          <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160;          <span class="comment">// Considering that</span></div>
-<div class="line"><a name="l01338"></a><span class="lineno"> 1338</span>&#160;          <span class="comment">// - LAED4 requires working on k elements</span></div>
-<div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;          <span class="comment">// - Weight computation requires working on m_el_lc</span></div>
-<div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160;          <span class="comment">//</span></div>
-<div class="line"><a name="l01341"></a><span class="lineno"> 1341</span>&#160;          <span class="comment">// and they are needed at two steps that cannot happen in parallel, we opted for allocating</span></div>
-<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;          <span class="comment">// the workspace with the highest requirement of memory, and reuse them for both steps.</span></div>
-<div class="line"><a name="l01343"></a><span class="lineno"> 1343</span>&#160;          <span class="keyword">const</span> SizeType max_size = std::max(k, m_el_lc);</div>
-<div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160;          <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; nthreads; ++i)</div>
-<div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160;            ws_cols.emplace_back(max_size);</div>
-<div class="line"><a name="l01346"></a><span class="lineno"> 1346</span>&#160;          ws_cols.emplace_back(m_el_lc);</div>
-<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160; </div>
-<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;          ws_row = memory::MemoryView&lt;T, Device::CPU&gt;(n_el_lc);</div>
-<div class="line"><a name="l01349"></a><span class="lineno"> 1349</span>&#160;          std::fill_n(ws_row(), n_el_lc, 0);</div>
-<div class="line"><a name="l01350"></a><span class="lineno"> 1350</span>&#160;        }</div>
-<div class="line"><a name="l01351"></a><span class="lineno"> 1351</span>&#160; </div>
-<div class="line"><a name="l01352"></a><span class="lineno"> 1352</span>&#160;        <span class="comment">// Note: we have to wait that LAED4 workspaces are ready to be used</span></div>
-<div class="line"><a name="l01353"></a><span class="lineno"> 1353</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
-<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160; </div>
-<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;        <span class="keyword">const</span> T* d_ptr = d_tiles[0].get().ptr();</div>
-<div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160;        <span class="keyword">const</span> T* z_ptr = z_tiles[0].ptr();</div>
-<div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160; </div>
-<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;        <span class="comment">// STEP 1: LAED4 (multi-thread)</span></div>
-<div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {  <span class="comment">// TODO make it multi-threaded over multiple workers</span></div>
-<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;          common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160; </div>
-<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;          T* eval_ptr = eval_tiles[0].ptr();</div>
-<div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160;          T* delta_ptr = ws_cols[thread_idx]();</div>
+<div class="line"><a name="l01301"></a><span class="lineno"> 1301</span>&#160;                 const SizeType m_lc = dist_sub.local_nr_tiles().rows();</div>
+<div class="line"><a name="l01302"></a><span class="lineno"> 1302</span>&#160;                 const SizeType m_el_lc = dist_sub.local_size().rows();</div>
+<div class="line"><a name="l01303"></a><span class="lineno"> 1303</span>&#160;                 const SizeType n_el_lc = dist_sub.local_size().cols();</div>
+<div class="line"><a name="l01304"></a><span class="lineno"> 1304</span>&#160; </div>
+<div class="line"><a name="l01305"></a><span class="lineno"> 1305</span>&#160;                 const auto barrier_busy_wait = getTridiagRank1BarrierBusyWait();</div>
+<div class="line"><a name="l01306"></a><span class="lineno"> 1306</span>&#160; </div>
+<div class="line"><a name="l01307"></a><span class="lineno"> 1307</span>&#160;                 const SizeType* i4 = i4_tiles_arr[0].get().ptr();</div>
+<div class="line"><a name="l01308"></a><span class="lineno"> 1308</span>&#160;                 const SizeType* i2 = i2_tiles_arr[0].get().ptr();</div>
+<div class="line"><a name="l01309"></a><span class="lineno"> 1309</span>&#160;                 const SizeType* i6 = i6_tiles_arr[0].get().ptr();</div>
+<div class="line"><a name="l01310"></a><span class="lineno"> 1310</span>&#160; </div>
+<div class="line"><a name="l01311"></a><span class="lineno"> 1311</span>&#160;                 <span class="comment">// STEP 0a: Fill ones for deflated Eigenvectors and copy related Eigenvalues (single-thread)</span></div>
+<div class="line"><a name="l01312"></a><span class="lineno"> 1312</span>&#160;                 <span class="comment">// Note: this step is completely independent from the rest, but it is small and it is going</span></div>
+<div class="line"><a name="l01313"></a><span class="lineno"> 1313</span>&#160;                 <span class="comment">// to be dropped soon.</span></div>
+<div class="line"><a name="l01314"></a><span class="lineno"> 1314</span>&#160;                 <span class="comment">// Note: use last threads that in principle should have less work to do</span></div>
+<div class="line"><a name="l01315"></a><span class="lineno"> 1315</span>&#160;                 if (k &lt; n &amp;&amp; thread_idx == nthreads - 1) {</div>
+<div class="line"><a name="l01316"></a><span class="lineno"> 1316</span>&#160;                   const T* eval_initial_ptr = d_tiles[0].get().ptr();</div>
+<div class="line"><a name="l01317"></a><span class="lineno"> 1317</span>&#160;                   T* eval_ptr = eval_tiles[0].ptr();</div>
+<div class="line"><a name="l01318"></a><span class="lineno"> 1318</span>&#160; </div>
+<div class="line"><a name="l01319"></a><span class="lineno"> 1319</span>&#160;                   for (SizeType j_el_lc = k_lc; j_el_lc &lt; n_el_lc; ++j_el_lc) {</div>
+<div class="line"><a name="l01320"></a><span class="lineno"> 1320</span>&#160;                     const SizeType j_el =</div>
+<div class="line"><a name="l01321"></a><span class="lineno"> 1321</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01322"></a><span class="lineno"> 1322</span>&#160;                     const SizeType i_el = j_el;</div>
+<div class="line"><a name="l01323"></a><span class="lineno"> 1323</span>&#160; </div>
+<div class="line"><a name="l01324"></a><span class="lineno"> 1324</span>&#160;                     if (dist_sub.rank_index().row() == dist_sub.rank_global_element&lt;Coord::Row&gt;(i_el)) {</div>
+<div class="line"><a name="l01325"></a><span class="lineno"> 1325</span>&#160;                       const SizeType i_el_lc =</div>
+<div class="line"><a name="l01326"></a><span class="lineno"> 1326</span>&#160;                           dist_sub.local_element_from_global_element&lt;Coord::Row&gt;(i_el);</div>
+<div class="line"><a name="l01327"></a><span class="lineno"> 1327</span>&#160;                       const LocalTileIndex</div>
+<div class="line"><a name="l01328"></a><span class="lineno"> 1328</span>&#160;                           i_lc{dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
+<div class="line"><a name="l01329"></a><span class="lineno"> 1329</span>&#160;                                dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc)};</div>
+<div class="line"><a name="l01330"></a><span class="lineno"> 1330</span>&#160;                       const SizeType linear_lc = dist_extra::local_tile_linear_index(dist_sub, i_lc);</div>
+<div class="line"><a name="l01331"></a><span class="lineno"> 1331</span>&#160;                       const TileElementIndex</div>
+<div class="line"><a name="l01332"></a><span class="lineno"> 1332</span>&#160;                           ij_el_tl{dist_sub.tile_element_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
+<div class="line"><a name="l01333"></a><span class="lineno"> 1333</span>&#160;                                    dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc)};</div>
+<div class="line"><a name="l01334"></a><span class="lineno"> 1334</span>&#160; </div>
+<div class="line"><a name="l01335"></a><span class="lineno"> 1335</span>&#160;                       evec_tiles[to_sizet(linear_lc)](ij_el_tl) = T{1};</div>
+<div class="line"><a name="l01336"></a><span class="lineno"> 1336</span>&#160;                     }</div>
+<div class="line"><a name="l01337"></a><span class="lineno"> 1337</span>&#160; </div>
+<div class="line"><a name="l01338"></a><span class="lineno"> 1338</span>&#160;                     eval_ptr[j_el] = eval_initial_ptr[i6[j_el]];</div>
+<div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;                   }</div>
+<div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160;                 }</div>
+<div class="line"><a name="l01341"></a><span class="lineno"> 1341</span>&#160; </div>
+<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;                 <span class="keyword">const</span> std::size_t batch_size = util::ceilDiv(<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(k_lc), nthreads);</div>
+<div class="line"><a name="l01343"></a><span class="lineno"> 1343</span>&#160;                 <span class="keyword">const</span> SizeType begin = <a class="code" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(thread_idx * batch_size);</div>
+<div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160;                 <span class="keyword">const</span> SizeType end = std::min(<a class="code" href="types_8h.html#ab1f0edc8e1281293c9c1325cb9d4bec9">to_SizeType</a>(thread_idx * batch_size + batch_size), k_lc);</div>
+<div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160; </div>
+<div class="line"><a name="l01346"></a><span class="lineno"> 1346</span>&#160;                 <span class="comment">// STEP 0b: Initialize workspaces (single-thread)</span></div>
+<div class="line"><a name="l01347"></a><span class="lineno"> 1347</span>&#160;                 <span class="keywordflow">if</span> (thread_idx == 0) {</div>
+<div class="line"><a name="l01348"></a><span class="lineno"> 1348</span>&#160;                   <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01349"></a><span class="lineno"> 1349</span>&#160;                   <span class="comment">// - nthreads are used for both LAED4 and weight calculation (one per worker thread)</span></div>
+<div class="line"><a name="l01350"></a><span class="lineno"> 1350</span>&#160;                   <span class="comment">// - last one is used for reducing weights from all workers</span></div>
+<div class="line"><a name="l01351"></a><span class="lineno"> 1351</span>&#160;                   ws_cols.reserve(nthreads + 1);</div>
+<div class="line"><a name="l01352"></a><span class="lineno"> 1352</span>&#160; </div>
+<div class="line"><a name="l01353"></a><span class="lineno"> 1353</span>&#160;                   <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01354"></a><span class="lineno"> 1354</span>&#160;                   <span class="comment">// Considering that</span></div>
+<div class="line"><a name="l01355"></a><span class="lineno"> 1355</span>&#160;                   <span class="comment">// - LAED4 requires working on k elements</span></div>
+<div class="line"><a name="l01356"></a><span class="lineno"> 1356</span>&#160;                   <span class="comment">// - Weight computation requires working on m_el_lc</span></div>
+<div class="line"><a name="l01357"></a><span class="lineno"> 1357</span>&#160;                   <span class="comment">//</span></div>
+<div class="line"><a name="l01358"></a><span class="lineno"> 1358</span>&#160;                   <span class="comment">// and they are needed at two steps that cannot happen in parallel, we opted for allocating</span></div>
+<div class="line"><a name="l01359"></a><span class="lineno"> 1359</span>&#160;                   <span class="comment">// the workspace with the highest requirement of memory, and reuse them for both steps.</span></div>
+<div class="line"><a name="l01360"></a><span class="lineno"> 1360</span>&#160;                   <span class="keyword">const</span> SizeType max_size = std::max(k, m_el_lc);</div>
+<div class="line"><a name="l01361"></a><span class="lineno"> 1361</span>&#160;                   <span class="keywordflow">for</span> (std::size_t i = 0; i &lt; nthreads; ++i)</div>
+<div class="line"><a name="l01362"></a><span class="lineno"> 1362</span>&#160;                     ws_cols.emplace_back(max_size);</div>
+<div class="line"><a name="l01363"></a><span class="lineno"> 1363</span>&#160;                   ws_cols.emplace_back(m_el_lc);</div>
 <div class="line"><a name="l01364"></a><span class="lineno"> 1364</span>&#160; </div>
-<div class="line"><a name="l01365"></a><span class="lineno"> 1365</span>&#160;          <span class="keywordflow">for</span> (SizeType j_el_lc = 0; j_el_lc &lt; k_lc; ++j_el_lc) {</div>
-<div class="line"><a name="l01366"></a><span class="lineno"> 1366</span>&#160;            <span class="keyword">const</span> SizeType j_el = dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01367"></a><span class="lineno"> 1367</span>&#160;            <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01365"></a><span class="lineno"> 1365</span>&#160;                   ws_row = memory::MemoryView&lt;T, Device::CPU&gt;(n_el_lc);</div>
+<div class="line"><a name="l01366"></a><span class="lineno"> 1366</span>&#160;                   std::fill_n(ws_row(), n_el_lc, 0);</div>
+<div class="line"><a name="l01367"></a><span class="lineno"> 1367</span>&#160;                 }</div>
 <div class="line"><a name="l01368"></a><span class="lineno"> 1368</span>&#160; </div>
-<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;            <span class="comment">// Solve the deflated rank-1 problem</span></div>
-<div class="line"><a name="l01370"></a><span class="lineno"> 1370</span>&#160;            <span class="comment">// Note:</span></div>
-<div class="line"><a name="l01371"></a><span class="lineno"> 1371</span>&#160;            <span class="comment">// Input eigenvalues are stored &quot;deflated&quot; with i3, but laed4 is going to store them</span></div>
-<div class="line"><a name="l01372"></a><span class="lineno"> 1372</span>&#160;            <span class="comment">// &quot;locally&quot; deflated, i.e. locally it is valid sort(non-deflated)|sort(deflated)</span></div>
-<div class="line"><a name="l01373"></a><span class="lineno"> 1373</span>&#160;            <span class="keyword">const</span> SizeType js_el = i6[j_el];</div>
-<div class="line"><a name="l01374"></a><span class="lineno"> 1374</span>&#160;            T&amp; eigenval = eval_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j_el)];</div>
-<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;            lapack::laed4(to_signed&lt;int64_t&gt;(k), to_signed&lt;int64_t&gt;(js_el), d_ptr, z_ptr, delta_ptr, rho,</div>
-<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;                          &amp;eigenval);</div>
-<div class="line"><a name="l01377"></a><span class="lineno"> 1377</span>&#160; </div>
-<div class="line"><a name="l01378"></a><span class="lineno"> 1378</span>&#160;            <span class="comment">// Now laed4 result has to be copied in the right spot</span></div>
-<div class="line"><a name="l01379"></a><span class="lineno"> 1379</span>&#160;            <span class="keyword">const</span> SizeType j_el_tl = dist_sub.tile_element_from_global_element&lt;Coord::Col&gt;(j_el);</div>
-<div class="line"><a name="l01380"></a><span class="lineno"> 1380</span>&#160; </div>
-<div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160;            <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;              <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;              <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
-<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160; </div>
-<div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;              <span class="comment">// just non-deflated, because deflated have been already set to 0</span></div>
-<div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160;              <span class="keywordflow">if</span> (is_el &lt; k) {</div>
-<div class="line"><a name="l01387"></a><span class="lineno"> 1387</span>&#160;                <span class="keyword">const</span> SizeType i_lc = dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01388"></a><span class="lineno"> 1388</span>&#160;                <span class="keyword">const</span> SizeType linear_lc = dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});</div>
-<div class="line"><a name="l01389"></a><span class="lineno"> 1389</span>&#160;                <span class="keyword">const</span> <span class="keyword">auto</span>&amp; evec = evec_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_lc)];</div>
-<div class="line"><a name="l01390"></a><span class="lineno"> 1390</span>&#160;                <span class="keyword">const</span> SizeType i_el_tl = dist_sub.tile_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01391"></a><span class="lineno"> 1391</span>&#160;                evec({i_el_tl, j_el_tl}) = delta_ptr[is_el];</div>
-<div class="line"><a name="l01392"></a><span class="lineno"> 1392</span>&#160;              }</div>
-<div class="line"><a name="l01393"></a><span class="lineno"> 1393</span>&#160;            }</div>
-<div class="line"><a name="l01394"></a><span class="lineno"> 1394</span>&#160;          }</div>
-<div class="line"><a name="l01395"></a><span class="lineno"> 1395</span>&#160;        }</div>
-<div class="line"><a name="l01396"></a><span class="lineno"> 1396</span>&#160;        <span class="comment">// Note: This barrier ensures that LAED4 finished, so from now on values are available</span></div>
-<div class="line"><a name="l01397"></a><span class="lineno"> 1397</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
-<div class="line"><a name="l01398"></a><span class="lineno"> 1398</span>&#160; </div>
-<div class="line"><a name="l01399"></a><span class="lineno"> 1399</span>&#160;        <span class="comment">// STEP 2: Broadcast evals</span></div>
-<div class="line"><a name="l01400"></a><span class="lineno"> 1400</span>&#160; </div>
-<div class="line"><a name="l01401"></a><span class="lineno"> 1401</span>&#160;        <span class="comment">// Note: this ensures that evals broadcasting finishes before bulk releases resources</span></div>
-<div class="line"><a name="l01402"></a><span class="lineno"> 1402</span>&#160;        ScopedSenderWait bcast_barrier;</div>
-<div class="line"><a name="l01403"></a><span class="lineno"> 1403</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0)</div>
-<div class="line"><a name="l01404"></a><span class="lineno"> 1404</span>&#160;          bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);</div>
-<div class="line"><a name="l01405"></a><span class="lineno"> 1405</span>&#160; </div>
-<div class="line"><a name="l01406"></a><span class="lineno"> 1406</span>&#160;        <span class="comment">// Note: laed4 handles k &lt;= 2 cases differently</span></div>
-<div class="line"><a name="l01407"></a><span class="lineno"> 1407</span>&#160;        <span class="keywordflow">if</span> (k &lt;= 2)</div>
-<div class="line"><a name="l01408"></a><span class="lineno"> 1408</span>&#160;          <span class="keywordflow">return</span>;</div>
-<div class="line"><a name="l01409"></a><span class="lineno"> 1409</span>&#160; </div>
-<div class="line"><a name="l01410"></a><span class="lineno"> 1410</span>&#160;        <span class="comment">// STEP 2 Compute weights (multi-thread)</span></div>
-<div class="line"><a name="l01411"></a><span class="lineno"> 1411</span>&#160;        <span class="keyword">auto</span>&amp; q = evec_tiles;</div>
-<div class="line"><a name="l01412"></a><span class="lineno"> 1412</span>&#160;        T* w = ws_cols[thread_idx]();</div>
-<div class="line"><a name="l01413"></a><span class="lineno"> 1413</span>&#160; </div>
-<div class="line"><a name="l01414"></a><span class="lineno"> 1414</span>&#160;        <span class="comment">// STEP 2a: copy diagonal from q -&gt; w (or just initialize with 1)</span></div>
-<div class="line"><a name="l01415"></a><span class="lineno"> 1415</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {</div>
-<div class="line"><a name="l01416"></a><span class="lineno"> 1416</span>&#160;          <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01417"></a><span class="lineno"> 1417</span>&#160;            <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01418"></a><span class="lineno"> 1418</span>&#160;            <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
-<div class="line"><a name="l01419"></a><span class="lineno"> 1419</span>&#160; </div>
-<div class="line"><a name="l01420"></a><span class="lineno"> 1420</span>&#160;            <span class="keywordflow">if</span> (is_el &gt;= k) {</div>
-<div class="line"><a name="l01421"></a><span class="lineno"> 1421</span>&#160;              w[i_el_lc] = T{0};</div>
-<div class="line"><a name="l01422"></a><span class="lineno"> 1422</span>&#160;              <span class="keywordflow">continue</span>;</div>
-<div class="line"><a name="l01423"></a><span class="lineno"> 1423</span>&#160;            }</div>
+<div class="line"><a name="l01369"></a><span class="lineno"> 1369</span>&#160;                 <span class="comment">// Note: we have to wait that LAED4 workspaces are ready to be used</span></div>
+<div class="line"><a name="l01370"></a><span class="lineno"> 1370</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01371"></a><span class="lineno"> 1371</span>&#160; </div>
+<div class="line"><a name="l01372"></a><span class="lineno"> 1372</span>&#160;                 <span class="keyword">const</span> T* d_ptr = d_tiles[0].get().ptr();</div>
+<div class="line"><a name="l01373"></a><span class="lineno"> 1373</span>&#160;                 <span class="keyword">const</span> T* z_ptr = z_tiles[0].ptr();</div>
+<div class="line"><a name="l01374"></a><span class="lineno"> 1374</span>&#160; </div>
+<div class="line"><a name="l01375"></a><span class="lineno"> 1375</span>&#160;                 <span class="comment">// STEP 1: LAED4 (multi-thread)</span></div>
+<div class="line"><a name="l01376"></a><span class="lineno"> 1376</span>&#160;                 {</div>
+<div class="line"><a name="l01377"></a><span class="lineno"> 1377</span>&#160;                   common::internal::SingleThreadedBlasScope single;</div>
+<div class="line"><a name="l01378"></a><span class="lineno"> 1378</span>&#160; </div>
+<div class="line"><a name="l01379"></a><span class="lineno"> 1379</span>&#160;                   T* eval_ptr = eval_tiles[0].ptr();</div>
+<div class="line"><a name="l01380"></a><span class="lineno"> 1380</span>&#160;                   T* delta_ptr = ws_cols[thread_idx]();</div>
+<div class="line"><a name="l01381"></a><span class="lineno"> 1381</span>&#160; </div>
+<div class="line"><a name="l01382"></a><span class="lineno"> 1382</span>&#160;                   <span class="keywordflow">for</span> (SizeType j_el_lc = begin; j_el_lc &lt; end; ++j_el_lc) {</div>
+<div class="line"><a name="l01383"></a><span class="lineno"> 1383</span>&#160;                     <span class="keyword">const</span> SizeType j_el =</div>
+<div class="line"><a name="l01384"></a><span class="lineno"> 1384</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01385"></a><span class="lineno"> 1385</span>&#160;                     <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01386"></a><span class="lineno"> 1386</span>&#160; </div>
+<div class="line"><a name="l01387"></a><span class="lineno"> 1387</span>&#160;                     <span class="comment">// Solve the deflated rank-1 problem</span></div>
+<div class="line"><a name="l01388"></a><span class="lineno"> 1388</span>&#160;                     <span class="comment">// Note:</span></div>
+<div class="line"><a name="l01389"></a><span class="lineno"> 1389</span>&#160;                     <span class="comment">// Input eigenvalues are stored &quot;deflated&quot; with i3, but laed4 is going to store them</span></div>
+<div class="line"><a name="l01390"></a><span class="lineno"> 1390</span>&#160;                     <span class="comment">// &quot;locally&quot; deflated, i.e. locally it is valid sort(non-deflated)|sort(deflated)</span></div>
+<div class="line"><a name="l01391"></a><span class="lineno"> 1391</span>&#160;                     <span class="keyword">const</span> SizeType js_el = i6[j_el];</div>
+<div class="line"><a name="l01392"></a><span class="lineno"> 1392</span>&#160;                     T&amp; eigenval = eval_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(j_el)];</div>
+<div class="line"><a name="l01393"></a><span class="lineno"> 1393</span>&#160;                     lapack::laed4(to_signed&lt;int64_t&gt;(k), to_signed&lt;int64_t&gt;(js_el), d_ptr, z_ptr,</div>
+<div class="line"><a name="l01394"></a><span class="lineno"> 1394</span>&#160;                                   delta_ptr, rho, &amp;eigenval);</div>
+<div class="line"><a name="l01395"></a><span class="lineno"> 1395</span>&#160; </div>
+<div class="line"><a name="l01396"></a><span class="lineno"> 1396</span>&#160;                     <span class="comment">// Now laed4 result has to be copied in the right spot</span></div>
+<div class="line"><a name="l01397"></a><span class="lineno"> 1397</span>&#160;                     <span class="keyword">const</span> SizeType j_el_tl =</div>
+<div class="line"><a name="l01398"></a><span class="lineno"> 1398</span>&#160;                         dist_sub.tile_element_from_global_element&lt;Coord::Col&gt;(j_el);</div>
+<div class="line"><a name="l01399"></a><span class="lineno"> 1399</span>&#160; </div>
+<div class="line"><a name="l01400"></a><span class="lineno"> 1400</span>&#160;                     <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; m_lc; ++i_lc) {</div>
+<div class="line"><a name="l01401"></a><span class="lineno"> 1401</span>&#160;                       <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
+<div class="line"><a name="l01402"></a><span class="lineno"> 1402</span>&#160;                       <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
+<div class="line"><a name="l01403"></a><span class="lineno"> 1403</span>&#160;                       <span class="keyword">const</span> SizeType linear_lc =</div>
+<div class="line"><a name="l01404"></a><span class="lineno"> 1404</span>&#160;                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});</div>
+<div class="line"><a name="l01405"></a><span class="lineno"> 1405</span>&#160;                       <span class="keyword">const</span> <span class="keyword">auto</span>&amp; evec = evec_tiles[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_lc)];</div>
+<div class="line"><a name="l01406"></a><span class="lineno"> 1406</span>&#160;                       <span class="keywordflow">for</span> (SizeType i_el_tl = 0; i_el_tl &lt; m_el_tl; ++i_el_tl) {</div>
+<div class="line"><a name="l01407"></a><span class="lineno"> 1407</span>&#160;                         <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01408"></a><span class="lineno"> 1408</span>&#160;                             dist_sub.global_element_from_local_tile_and_tile_element&lt;Coord::Row&gt;(</div>
+<div class="line"><a name="l01409"></a><span class="lineno"> 1409</span>&#160;                                 i_lc, i_el_tl);</div>
+<div class="line"><a name="l01410"></a><span class="lineno"> 1410</span>&#160;                         DLAF_ASSERT_HEAVY(i_el &lt; n, i_el, n);</div>
+<div class="line"><a name="l01411"></a><span class="lineno"> 1411</span>&#160;                         <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01412"></a><span class="lineno"> 1412</span>&#160; </div>
+<div class="line"><a name="l01413"></a><span class="lineno"> 1413</span>&#160;                         <span class="comment">// just non-deflated, because deflated have been already set to 0</span></div>
+<div class="line"><a name="l01414"></a><span class="lineno"> 1414</span>&#160;                         <span class="keywordflow">if</span> (is_el &lt; k)</div>
+<div class="line"><a name="l01415"></a><span class="lineno"> 1415</span>&#160;                           evec({i_el_tl, j_el_tl}) = delta_ptr[is_el];</div>
+<div class="line"><a name="l01416"></a><span class="lineno"> 1416</span>&#160;                       }</div>
+<div class="line"><a name="l01417"></a><span class="lineno"> 1417</span>&#160;                     }</div>
+<div class="line"><a name="l01418"></a><span class="lineno"> 1418</span>&#160;                   }</div>
+<div class="line"><a name="l01419"></a><span class="lineno"> 1419</span>&#160;                 }</div>
+<div class="line"><a name="l01420"></a><span class="lineno"> 1420</span>&#160;                 <span class="comment">// Note: This barrier ensures that LAED4 finished, so from now on values are available</span></div>
+<div class="line"><a name="l01421"></a><span class="lineno"> 1421</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01422"></a><span class="lineno"> 1422</span>&#160; </div>
+<div class="line"><a name="l01423"></a><span class="lineno"> 1423</span>&#160;                 <span class="comment">// STEP 2: Broadcast evals</span></div>
 <div class="line"><a name="l01424"></a><span class="lineno"> 1424</span>&#160; </div>
-<div class="line"><a name="l01425"></a><span class="lineno"> 1425</span>&#160;            <span class="keyword">const</span> SizeType js_el = is_el;</div>
-<div class="line"><a name="l01426"></a><span class="lineno"> 1426</span>&#160;            <span class="keyword">const</span> SizeType j_el = i2[js_el];</div>
-<div class="line"><a name="l01427"></a><span class="lineno"> 1427</span>&#160; </div>
-<div class="line"><a name="l01428"></a><span class="lineno"> 1428</span>&#160;            <span class="keyword">const</span> GlobalElementIndex ij_subm_el(i_el, j_el);</div>
+<div class="line"><a name="l01425"></a><span class="lineno"> 1425</span>&#160;                 <span class="comment">// Note: this ensures that evals broadcasting finishes before bulk releases resources</span></div>
+<div class="line"><a name="l01426"></a><span class="lineno"> 1426</span>&#160;                 ScopedSenderWait bcast_barrier;</div>
+<div class="line"><a name="l01427"></a><span class="lineno"> 1427</span>&#160;                 <span class="keywordflow">if</span> (thread_idx == 0)</div>
+<div class="line"><a name="l01428"></a><span class="lineno"> 1428</span>&#160;                   bcast_barrier.sender_ = bcast_evals(row_comm_chain, eval_tiles);</div>
 <div class="line"><a name="l01429"></a><span class="lineno"> 1429</span>&#160; </div>
-<div class="line"><a name="l01430"></a><span class="lineno"> 1430</span>&#160;            <span class="keywordflow">if</span> (dist_sub.rank_index().col() == dist_sub.rank_global_element&lt;Coord::Col&gt;(j_el)) {</div>
-<div class="line"><a name="l01431"></a><span class="lineno"> 1431</span>&#160;              <span class="keyword">const</span> SizeType linear_subm_lc = dist_extra::local_tile_linear_index(</div>
-<div class="line"><a name="l01432"></a><span class="lineno"> 1432</span>&#160;                  dist_sub, {dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
-<div class="line"><a name="l01433"></a><span class="lineno"> 1433</span>&#160;                             dist_sub.local_tile_from_global_element&lt;Coord::Col&gt;(j_el)});</div>
-<div class="line"><a name="l01434"></a><span class="lineno"> 1434</span>&#160;              <span class="keyword">const</span> TileElementIndex ij_tl = dist_sub.tile_element_index(ij_subm_el);</div>
-<div class="line"><a name="l01435"></a><span class="lineno"> 1435</span>&#160;              w[i_el_lc] = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_subm_lc)](ij_tl);</div>
-<div class="line"><a name="l01436"></a><span class="lineno"> 1436</span>&#160;            }</div>
-<div class="line"><a name="l01437"></a><span class="lineno"> 1437</span>&#160;            <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01438"></a><span class="lineno"> 1438</span>&#160;              w[i_el_lc] = T{1};</div>
-<div class="line"><a name="l01439"></a><span class="lineno"> 1439</span>&#160;            }</div>
-<div class="line"><a name="l01440"></a><span class="lineno"> 1440</span>&#160;          }</div>
-<div class="line"><a name="l01441"></a><span class="lineno"> 1441</span>&#160;        }</div>
-<div class="line"><a name="l01442"></a><span class="lineno"> 1442</span>&#160;        <span class="keywordflow">else</span> {  <span class="comment">// other workers</span></div>
-<div class="line"><a name="l01443"></a><span class="lineno"> 1443</span>&#160;          std::fill_n(w, m_el_lc, T(1));</div>
-<div class="line"><a name="l01444"></a><span class="lineno"> 1444</span>&#160;        }</div>
-<div class="line"><a name="l01445"></a><span class="lineno"> 1445</span>&#160; </div>
-<div class="line"><a name="l01446"></a><span class="lineno"> 1446</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
-<div class="line"><a name="l01447"></a><span class="lineno"> 1447</span>&#160; </div>
-<div class="line"><a name="l01448"></a><span class="lineno"> 1448</span>&#160;        <span class="comment">// STEP 2b: compute weights</span></div>
-<div class="line"><a name="l01449"></a><span class="lineno"> 1449</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {  <span class="comment">// TODO make it multithreaded again</span></div>
-<div class="line"><a name="l01450"></a><span class="lineno"> 1450</span>&#160;          <span class="keywordflow">for</span> (SizeType j_el_lc = 0; j_el_lc &lt; k_lc; ++j_el_lc) {</div>
-<div class="line"><a name="l01451"></a><span class="lineno"> 1451</span>&#160;            <span class="keyword">const</span> SizeType j_el = dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01452"></a><span class="lineno"> 1452</span>&#160;            <span class="keyword">const</span> SizeType js_el = i6[j_el];</div>
-<div class="line"><a name="l01453"></a><span class="lineno"> 1453</span>&#160; </div>
-<div class="line"><a name="l01454"></a><span class="lineno"> 1454</span>&#160;            <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01455"></a><span class="lineno"> 1455</span>&#160;              <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01456"></a><span class="lineno"> 1456</span>&#160;              <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
-<div class="line"><a name="l01457"></a><span class="lineno"> 1457</span>&#160; </div>
-<div class="line"><a name="l01458"></a><span class="lineno"> 1458</span>&#160;              <span class="comment">// skip if deflated</span></div>
-<div class="line"><a name="l01459"></a><span class="lineno"> 1459</span>&#160;              <span class="keywordflow">if</span> (is_el &gt;= k)</div>
-<div class="line"><a name="l01460"></a><span class="lineno"> 1460</span>&#160;                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a name="l01461"></a><span class="lineno"> 1461</span>&#160; </div>
-<div class="line"><a name="l01462"></a><span class="lineno"> 1462</span>&#160;              <span class="comment">// skip if originally it was on the diagonal</span></div>
-<div class="line"><a name="l01463"></a><span class="lineno"> 1463</span>&#160;              <span class="keywordflow">if</span> (is_el == js_el)</div>
-<div class="line"><a name="l01464"></a><span class="lineno"> 1464</span>&#160;                <span class="keywordflow">continue</span>;</div>
-<div class="line"><a name="l01465"></a><span class="lineno"> 1465</span>&#160; </div>
-<div class="line"><a name="l01466"></a><span class="lineno"> 1466</span>&#160;              <span class="keyword">const</span> SizeType linear_lc = dist_extra::local_tile_linear_index(</div>
-<div class="line"><a name="l01467"></a><span class="lineno"> 1467</span>&#160;                  dist_sub, {dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
-<div class="line"><a name="l01468"></a><span class="lineno"> 1468</span>&#160;                             dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc)});</div>
-<div class="line"><a name="l01469"></a><span class="lineno"> 1469</span>&#160;              <span class="keyword">const</span> TileElementIndex ij_tl = dist_sub.tile_element_index({i_el, j_el});</div>
+<div class="line"><a name="l01430"></a><span class="lineno"> 1430</span>&#160;                 <span class="comment">// Note: laed4 handles k &lt;= 2 cases differently</span></div>
+<div class="line"><a name="l01431"></a><span class="lineno"> 1431</span>&#160;                 <span class="keywordflow">if</span> (k &lt;= 2)</div>
+<div class="line"><a name="l01432"></a><span class="lineno"> 1432</span>&#160;                   <span class="keywordflow">return</span>;</div>
+<div class="line"><a name="l01433"></a><span class="lineno"> 1433</span>&#160; </div>
+<div class="line"><a name="l01434"></a><span class="lineno"> 1434</span>&#160;                 <span class="comment">// STEP 2 Compute weights (multi-thread)</span></div>
+<div class="line"><a name="l01435"></a><span class="lineno"> 1435</span>&#160;                 <span class="keyword">auto</span>&amp; q = evec_tiles;</div>
+<div class="line"><a name="l01436"></a><span class="lineno"> 1436</span>&#160;                 T* w = ws_cols[thread_idx]();</div>
+<div class="line"><a name="l01437"></a><span class="lineno"> 1437</span>&#160; </div>
+<div class="line"><a name="l01438"></a><span class="lineno"> 1438</span>&#160;                 <span class="comment">// STEP 2a: copy diagonal from q -&gt; w (or just initialize with 1)</span></div>
+<div class="line"><a name="l01439"></a><span class="lineno"> 1439</span>&#160;                 <span class="keywordflow">if</span> (thread_idx == 0) {</div>
+<div class="line"><a name="l01440"></a><span class="lineno"> 1440</span>&#160;                   <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
+<div class="line"><a name="l01441"></a><span class="lineno"> 1441</span>&#160;                     <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01442"></a><span class="lineno"> 1442</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
+<div class="line"><a name="l01443"></a><span class="lineno"> 1443</span>&#160;                     <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01444"></a><span class="lineno"> 1444</span>&#160; </div>
+<div class="line"><a name="l01445"></a><span class="lineno"> 1445</span>&#160;                     <span class="keywordflow">if</span> (is_el &gt;= k) {</div>
+<div class="line"><a name="l01446"></a><span class="lineno"> 1446</span>&#160;                       w[i_el_lc] = T{0};</div>
+<div class="line"><a name="l01447"></a><span class="lineno"> 1447</span>&#160;                       <span class="keywordflow">continue</span>;</div>
+<div class="line"><a name="l01448"></a><span class="lineno"> 1448</span>&#160;                     }</div>
+<div class="line"><a name="l01449"></a><span class="lineno"> 1449</span>&#160; </div>
+<div class="line"><a name="l01450"></a><span class="lineno"> 1450</span>&#160;                     <span class="keyword">const</span> SizeType js_el = is_el;</div>
+<div class="line"><a name="l01451"></a><span class="lineno"> 1451</span>&#160;                     <span class="keyword">const</span> SizeType j_el = i2[js_el];</div>
+<div class="line"><a name="l01452"></a><span class="lineno"> 1452</span>&#160; </div>
+<div class="line"><a name="l01453"></a><span class="lineno"> 1453</span>&#160;                     <span class="keyword">const</span> GlobalElementIndex ij_subm_el(i_el, j_el);</div>
+<div class="line"><a name="l01454"></a><span class="lineno"> 1454</span>&#160; </div>
+<div class="line"><a name="l01455"></a><span class="lineno"> 1455</span>&#160;                     <span class="keywordflow">if</span> (dist_sub.rank_index().col() == dist_sub.rank_global_element&lt;Coord::Col&gt;(j_el)) {</div>
+<div class="line"><a name="l01456"></a><span class="lineno"> 1456</span>&#160;                       <span class="keyword">const</span> SizeType linear_subm_lc = dist_extra::local_tile_linear_index(</div>
+<div class="line"><a name="l01457"></a><span class="lineno"> 1457</span>&#160;                           dist_sub, {dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
+<div class="line"><a name="l01458"></a><span class="lineno"> 1458</span>&#160;                                      dist_sub.local_tile_from_global_element&lt;Coord::Col&gt;(j_el)});</div>
+<div class="line"><a name="l01459"></a><span class="lineno"> 1459</span>&#160;                       <span class="keyword">const</span> TileElementIndex ij_tl = dist_sub.tile_element_index(ij_subm_el);</div>
+<div class="line"><a name="l01460"></a><span class="lineno"> 1460</span>&#160;                       w[i_el_lc] = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_subm_lc)](ij_tl);</div>
+<div class="line"><a name="l01461"></a><span class="lineno"> 1461</span>&#160;                     }</div>
+<div class="line"><a name="l01462"></a><span class="lineno"> 1462</span>&#160;                     <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01463"></a><span class="lineno"> 1463</span>&#160;                       w[i_el_lc] = T{1};</div>
+<div class="line"><a name="l01464"></a><span class="lineno"> 1464</span>&#160;                     }</div>
+<div class="line"><a name="l01465"></a><span class="lineno"> 1465</span>&#160;                   }</div>
+<div class="line"><a name="l01466"></a><span class="lineno"> 1466</span>&#160;                 }</div>
+<div class="line"><a name="l01467"></a><span class="lineno"> 1467</span>&#160;                 <span class="keywordflow">else</span> {  <span class="comment">// other workers</span></div>
+<div class="line"><a name="l01468"></a><span class="lineno"> 1468</span>&#160;                   std::fill_n(w, m_el_lc, T(1));</div>
+<div class="line"><a name="l01469"></a><span class="lineno"> 1469</span>&#160;                 }</div>
 <div class="line"><a name="l01470"></a><span class="lineno"> 1470</span>&#160; </div>
-<div class="line"><a name="l01471"></a><span class="lineno"> 1471</span>&#160;              w[i_el_lc] *=</div>
-<div class="line"><a name="l01472"></a><span class="lineno"> 1472</span>&#160;                  q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_lc)](ij_tl) / (d_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(is_el)] - d_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(js_el)]);</div>
-<div class="line"><a name="l01473"></a><span class="lineno"> 1473</span>&#160;            }</div>
-<div class="line"><a name="l01474"></a><span class="lineno"> 1474</span>&#160;          }</div>
-<div class="line"><a name="l01475"></a><span class="lineno"> 1475</span>&#160;        }</div>
-<div class="line"><a name="l01476"></a><span class="lineno"> 1476</span>&#160; </div>
-<div class="line"><a name="l01477"></a><span class="lineno"> 1477</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
-<div class="line"><a name="l01478"></a><span class="lineno"> 1478</span>&#160; </div>
-<div class="line"><a name="l01479"></a><span class="lineno"> 1479</span>&#160;        <span class="comment">// STEP 2c: reduce, then finalize computation with sign and square root (single-thread)</span></div>
-<div class="line"><a name="l01480"></a><span class="lineno"> 1480</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {</div>
-<div class="line"><a name="l01481"></a><span class="lineno"> 1481</span>&#160;          <span class="comment">// local reduction from all bulk workers</span></div>
-<div class="line"><a name="l01482"></a><span class="lineno"> 1482</span>&#160;          <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01483"></a><span class="lineno"> 1483</span>&#160;            <span class="keywordflow">for</span> (std::size_t tidx = 1; tidx &lt; nthreads; ++tidx) {</div>
-<div class="line"><a name="l01484"></a><span class="lineno"> 1484</span>&#160;              <span class="keyword">const</span> T* w_partial = ws_cols[tidx]();</div>
-<div class="line"><a name="l01485"></a><span class="lineno"> 1485</span>&#160;              w[i_el_lc] *= w_partial[i_el_lc];</div>
-<div class="line"><a name="l01486"></a><span class="lineno"> 1486</span>&#160;            }</div>
-<div class="line"><a name="l01487"></a><span class="lineno"> 1487</span>&#160;          }</div>
-<div class="line"><a name="l01488"></a><span class="lineno"> 1488</span>&#160; </div>
-<div class="line"><a name="l01489"></a><span class="lineno"> 1489</span>&#160;          tt::sync_wait(ex::when_all(row_comm_chain(),</div>
-<div class="line"><a name="l01490"></a><span class="lineno"> 1490</span>&#160;                                     ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |</div>
-<div class="line"><a name="l01491"></a><span class="lineno"> 1491</span>&#160;                        transformMPI(all_reduce_in_place));</div>
-<div class="line"><a name="l01492"></a><span class="lineno"> 1492</span>&#160; </div>
-<div class="line"><a name="l01493"></a><span class="lineno"> 1493</span>&#160;<span class="preprocessor">#ifdef DLAF_ASSERT_HEAVY_ENABLE</span></div>
-<div class="line"><a name="l01494"></a><span class="lineno"> 1494</span>&#160;          <span class="comment">// Note: all input for weights computation of non-deflated rows should be strictly less than 0</span></div>
-<div class="line"><a name="l01495"></a><span class="lineno"> 1495</span>&#160;          <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01496"></a><span class="lineno"> 1496</span>&#160;            <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01497"></a><span class="lineno"> 1497</span>&#160;            <span class="keyword">const</span> SizeType is = i4[i_el];</div>
-<div class="line"><a name="l01498"></a><span class="lineno"> 1498</span>&#160;            <span class="keywordflow">if</span> (is &lt; k)</div>
-<div class="line"><a name="l01499"></a><span class="lineno"> 1499</span>&#160;              DLAF_ASSERT_HEAVY(w[i_el_lc] &lt; 0, w[i_el_lc]);</div>
-<div class="line"><a name="l01500"></a><span class="lineno"> 1500</span>&#160;          }</div>
-<div class="line"><a name="l01501"></a><span class="lineno"> 1501</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l01471"></a><span class="lineno"> 1471</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01472"></a><span class="lineno"> 1472</span>&#160; </div>
+<div class="line"><a name="l01473"></a><span class="lineno"> 1473</span>&#160;                 <span class="comment">// STEP 2b: compute weights</span></div>
+<div class="line"><a name="l01474"></a><span class="lineno"> 1474</span>&#160;                 {</div>
+<div class="line"><a name="l01475"></a><span class="lineno"> 1475</span>&#160;                   <span class="keywordflow">for</span> (SizeType j_el_lc = begin; j_el_lc &lt; end; ++j_el_lc) {</div>
+<div class="line"><a name="l01476"></a><span class="lineno"> 1476</span>&#160;                     <span class="keyword">const</span> SizeType j_el =</div>
+<div class="line"><a name="l01477"></a><span class="lineno"> 1477</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01478"></a><span class="lineno"> 1478</span>&#160;                     <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_global_element&lt;Coord::Col&gt;(j_el);</div>
+<div class="line"><a name="l01479"></a><span class="lineno"> 1479</span>&#160;                     <span class="keyword">const</span> SizeType js_el = i6[j_el];</div>
+<div class="line"><a name="l01480"></a><span class="lineno"> 1480</span>&#160;                     <span class="keyword">const</span> T delta_j = d_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(js_el)];</div>
+<div class="line"><a name="l01481"></a><span class="lineno"> 1481</span>&#160; </div>
+<div class="line"><a name="l01482"></a><span class="lineno"> 1482</span>&#160;                     <span class="keyword">const</span> SizeType j_el_tl =</div>
+<div class="line"><a name="l01483"></a><span class="lineno"> 1483</span>&#160;                         dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01484"></a><span class="lineno"> 1484</span>&#160; </div>
+<div class="line"><a name="l01485"></a><span class="lineno"> 1485</span>&#160;                     <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; m_lc; ++i_lc) {</div>
+<div class="line"><a name="l01486"></a><span class="lineno"> 1486</span>&#160;                       <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
+<div class="line"><a name="l01487"></a><span class="lineno"> 1487</span>&#160;                       <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
+<div class="line"><a name="l01488"></a><span class="lineno"> 1488</span>&#160;                       <span class="keyword">const</span> SizeType linear_lc =</div>
+<div class="line"><a name="l01489"></a><span class="lineno"> 1489</span>&#160;                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});</div>
+<div class="line"><a name="l01490"></a><span class="lineno"> 1490</span>&#160;                       <span class="keyword">const</span> <span class="keyword">auto</span>&amp; q_tile = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_lc)];</div>
+<div class="line"><a name="l01491"></a><span class="lineno"> 1491</span>&#160; </div>
+<div class="line"><a name="l01492"></a><span class="lineno"> 1492</span>&#160;                       <span class="keywordflow">for</span> (SizeType i_el_tl = 0; i_el_tl &lt; m_el_tl; ++i_el_tl) {</div>
+<div class="line"><a name="l01493"></a><span class="lineno"> 1493</span>&#160;                         <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01494"></a><span class="lineno"> 1494</span>&#160;                             dist_sub.global_element_from_global_tile_and_tile_element&lt;Coord::Row&gt;(</div>
+<div class="line"><a name="l01495"></a><span class="lineno"> 1495</span>&#160;                                 i, i_el_tl);</div>
+<div class="line"><a name="l01496"></a><span class="lineno"> 1496</span>&#160;                         DLAF_ASSERT_HEAVY(i_el &lt; n, i_el, n);</div>
+<div class="line"><a name="l01497"></a><span class="lineno"> 1497</span>&#160;                         <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01498"></a><span class="lineno"> 1498</span>&#160; </div>
+<div class="line"><a name="l01499"></a><span class="lineno"> 1499</span>&#160;                         <span class="comment">// skip if deflated</span></div>
+<div class="line"><a name="l01500"></a><span class="lineno"> 1500</span>&#160;                         <span class="keywordflow">if</span> (is_el &gt;= k)</div>
+<div class="line"><a name="l01501"></a><span class="lineno"> 1501</span>&#160;                           <span class="keywordflow">continue</span>;</div>
 <div class="line"><a name="l01502"></a><span class="lineno"> 1502</span>&#160; </div>
-<div class="line"><a name="l01503"></a><span class="lineno"> 1503</span>&#160;          T* weights = ws_cols[nthreads]();</div>
-<div class="line"><a name="l01504"></a><span class="lineno"> 1504</span>&#160;          <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01505"></a><span class="lineno"> 1505</span>&#160;            <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01506"></a><span class="lineno"> 1506</span>&#160;            <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
-<div class="line"><a name="l01507"></a><span class="lineno"> 1507</span>&#160;            weights[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(i_el_lc)] = std::copysign(std::sqrt(-w[i_el_lc]), z_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(is_el)]);</div>
-<div class="line"><a name="l01508"></a><span class="lineno"> 1508</span>&#160;          }</div>
-<div class="line"><a name="l01509"></a><span class="lineno"> 1509</span>&#160;        }</div>
-<div class="line"><a name="l01510"></a><span class="lineno"> 1510</span>&#160; </div>
-<div class="line"><a name="l01511"></a><span class="lineno"> 1511</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
-<div class="line"><a name="l01512"></a><span class="lineno"> 1512</span>&#160; </div>
-<div class="line"><a name="l01513"></a><span class="lineno"> 1513</span>&#160;        <span class="comment">// STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)</span></div>
-<div class="line"><a name="l01514"></a><span class="lineno"> 1514</span>&#160; </div>
-<div class="line"><a name="l01515"></a><span class="lineno"> 1515</span>&#160;        <span class="comment">// STEP 3a: Form evecs using weights vector and compute (local) sum of squares</span></div>
-<div class="line"><a name="l01516"></a><span class="lineno"> 1516</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {  <span class="comment">// TODO make it multithreaded again</span></div>
-<div class="line"><a name="l01517"></a><span class="lineno"> 1517</span>&#160;          common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l01518"></a><span class="lineno"> 1518</span>&#160; </div>
-<div class="line"><a name="l01519"></a><span class="lineno"> 1519</span>&#160;          <span class="keyword">const</span> T* w = ws_cols[nthreads]();</div>
-<div class="line"><a name="l01520"></a><span class="lineno"> 1520</span>&#160;          T* sum_squares = ws_row();</div>
-<div class="line"><a name="l01521"></a><span class="lineno"> 1521</span>&#160; </div>
-<div class="line"><a name="l01522"></a><span class="lineno"> 1522</span>&#160;          <span class="keywordflow">for</span> (SizeType j_el_lc = 0; j_el_lc &lt; k_lc; ++j_el_lc) {</div>
-<div class="line"><a name="l01523"></a><span class="lineno"> 1523</span>&#160;            <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01524"></a><span class="lineno"> 1524</span>&#160;            <span class="keyword">const</span> SizeType j_el_tl = dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01525"></a><span class="lineno"> 1525</span>&#160; </div>
-<div class="line"><a name="l01526"></a><span class="lineno"> 1526</span>&#160;            <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
-<div class="line"><a name="l01527"></a><span class="lineno"> 1527</span>&#160;              <span class="keyword">const</span> SizeType i_el = dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
-<div class="line"><a name="l01528"></a><span class="lineno"> 1528</span>&#160;              <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01503"></a><span class="lineno"> 1503</span>&#160;                         <span class="comment">// skip if originally it was on the diagonal</span></div>
+<div class="line"><a name="l01504"></a><span class="lineno"> 1504</span>&#160;                         <span class="keywordflow">if</span> (is_el == js_el)</div>
+<div class="line"><a name="l01505"></a><span class="lineno"> 1505</span>&#160;                           <span class="keywordflow">continue</span>;</div>
+<div class="line"><a name="l01506"></a><span class="lineno"> 1506</span>&#160; </div>
+<div class="line"><a name="l01507"></a><span class="lineno"> 1507</span>&#160;                         <span class="keyword">const</span> SizeType i_el_lc =</div>
+<div class="line"><a name="l01508"></a><span class="lineno"> 1508</span>&#160;                             dist_sub.local_element_from_local_tile_and_tile_element&lt;Coord::Row&gt;(</div>
+<div class="line"><a name="l01509"></a><span class="lineno"> 1509</span>&#160;                                 i_lc, i_el_tl);</div>
+<div class="line"><a name="l01510"></a><span class="lineno"> 1510</span>&#160;                         <span class="keyword">const</span> TileElementIndex ij_tl(i_el_tl, j_el_tl);</div>
+<div class="line"><a name="l01511"></a><span class="lineno"> 1511</span>&#160; </div>
+<div class="line"><a name="l01512"></a><span class="lineno"> 1512</span>&#160;                         w[i_el_lc] *= q_tile(ij_tl) / (d_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(is_el)] - delta_j);</div>
+<div class="line"><a name="l01513"></a><span class="lineno"> 1513</span>&#160;                       }</div>
+<div class="line"><a name="l01514"></a><span class="lineno"> 1514</span>&#160;                     }</div>
+<div class="line"><a name="l01515"></a><span class="lineno"> 1515</span>&#160;                   }</div>
+<div class="line"><a name="l01516"></a><span class="lineno"> 1516</span>&#160;                 }</div>
+<div class="line"><a name="l01517"></a><span class="lineno"> 1517</span>&#160; </div>
+<div class="line"><a name="l01518"></a><span class="lineno"> 1518</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01519"></a><span class="lineno"> 1519</span>&#160; </div>
+<div class="line"><a name="l01520"></a><span class="lineno"> 1520</span>&#160;                 <span class="comment">// STEP 2c: reduce, then finalize computation with sign and square root (single-thread)</span></div>
+<div class="line"><a name="l01521"></a><span class="lineno"> 1521</span>&#160;                 <span class="keywordflow">if</span> (thread_idx == 0) {</div>
+<div class="line"><a name="l01522"></a><span class="lineno"> 1522</span>&#160;                   <span class="comment">// local reduction from all bulk workers</span></div>
+<div class="line"><a name="l01523"></a><span class="lineno"> 1523</span>&#160;                   <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
+<div class="line"><a name="l01524"></a><span class="lineno"> 1524</span>&#160;                     <span class="keywordflow">for</span> (std::size_t tidx = 1; tidx &lt; nthreads; ++tidx) {</div>
+<div class="line"><a name="l01525"></a><span class="lineno"> 1525</span>&#160;                       <span class="keyword">const</span> T* w_partial = ws_cols[tidx]();</div>
+<div class="line"><a name="l01526"></a><span class="lineno"> 1526</span>&#160;                       w[i_el_lc] *= w_partial[i_el_lc];</div>
+<div class="line"><a name="l01527"></a><span class="lineno"> 1527</span>&#160;                     }</div>
+<div class="line"><a name="l01528"></a><span class="lineno"> 1528</span>&#160;                   }</div>
 <div class="line"><a name="l01529"></a><span class="lineno"> 1529</span>&#160; </div>
-<div class="line"><a name="l01530"></a><span class="lineno"> 1530</span>&#160;              <span class="comment">// it is a deflated row, skip it (it should be already 0)</span></div>
-<div class="line"><a name="l01531"></a><span class="lineno"> 1531</span>&#160;              <span class="keywordflow">if</span> (is_el &gt;= k)</div>
-<div class="line"><a name="l01532"></a><span class="lineno"> 1532</span>&#160;                <span class="keywordflow">continue</span>;</div>
+<div class="line"><a name="l01530"></a><span class="lineno"> 1530</span>&#160;                   tt::sync_wait(ex::when_all(row_comm_chain(),</div>
+<div class="line"><a name="l01531"></a><span class="lineno"> 1531</span>&#160;                                              ex::just(MPI_PROD, common::make_data(w, m_el_lc))) |</div>
+<div class="line"><a name="l01532"></a><span class="lineno"> 1532</span>&#160;                                 transformMPI(all_reduce_in_place));</div>
 <div class="line"><a name="l01533"></a><span class="lineno"> 1533</span>&#160; </div>
-<div class="line"><a name="l01534"></a><span class="lineno"> 1534</span>&#160;              <span class="keyword">const</span> LocalTileIndex ij_lc(dist_sub.local_tile_from_local_element&lt;Coord::Row&gt;(i_el_lc),</div>
-<div class="line"><a name="l01535"></a><span class="lineno"> 1535</span>&#160;                                         j_lc);</div>
-<div class="line"><a name="l01536"></a><span class="lineno"> 1536</span>&#160;              <span class="keyword">const</span> SizeType ij_linear = dist_extra::local_tile_linear_index(dist_sub, ij_lc);</div>
-<div class="line"><a name="l01537"></a><span class="lineno"> 1537</span>&#160;              <span class="keyword">const</span> TileElementIndex ij_el_tl(</div>
-<div class="line"><a name="l01538"></a><span class="lineno"> 1538</span>&#160;                  dist_sub.tile_element_from_local_element&lt;Coord::Row&gt;(i_el_lc), j_el_tl);</div>
-<div class="line"><a name="l01539"></a><span class="lineno"> 1539</span>&#160; </div>
-<div class="line"><a name="l01540"></a><span class="lineno"> 1540</span>&#160;              <span class="keyword">const</span> <span class="keyword">auto</span>&amp; q_tile = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(ij_linear)];</div>
-<div class="line"><a name="l01541"></a><span class="lineno"> 1541</span>&#160; </div>
-<div class="line"><a name="l01542"></a><span class="lineno"> 1542</span>&#160;              q_tile(ij_el_tl) = w[i_el_lc] / q_tile(ij_el_tl);</div>
-<div class="line"><a name="l01543"></a><span class="lineno"> 1543</span>&#160;            }</div>
+<div class="line"><a name="l01534"></a><span class="lineno"> 1534</span>&#160;<span class="preprocessor">#ifdef DLAF_ASSERT_HEAVY_ENABLE</span></div>
+<div class="line"><a name="l01535"></a><span class="lineno"> 1535</span>&#160;                   <span class="comment">// Note: all input for weights computation of non-deflated rows should be strictly less than 0</span></div>
+<div class="line"><a name="l01536"></a><span class="lineno"> 1536</span>&#160;                   <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
+<div class="line"><a name="l01537"></a><span class="lineno"> 1537</span>&#160;                     <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01538"></a><span class="lineno"> 1538</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
+<div class="line"><a name="l01539"></a><span class="lineno"> 1539</span>&#160;                     <span class="keyword">const</span> SizeType is = i4[i_el];</div>
+<div class="line"><a name="l01540"></a><span class="lineno"> 1540</span>&#160;                     <span class="keywordflow">if</span> (is &lt; k)</div>
+<div class="line"><a name="l01541"></a><span class="lineno"> 1541</span>&#160;                       DLAF_ASSERT_HEAVY(w[i_el_lc] &lt; 0, w[i_el_lc]);</div>
+<div class="line"><a name="l01542"></a><span class="lineno"> 1542</span>&#160;                   }</div>
+<div class="line"><a name="l01543"></a><span class="lineno"> 1543</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l01544"></a><span class="lineno"> 1544</span>&#160; </div>
-<div class="line"><a name="l01545"></a><span class="lineno"> 1545</span>&#160;            <span class="comment">// column-major once the full column has been updated, compute the sum of squares (for norm)</span></div>
-<div class="line"><a name="l01546"></a><span class="lineno"> 1546</span>&#160;            <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; dist_sub.local_nr_tiles().rows(); ++i_lc) {</div>
-<div class="line"><a name="l01547"></a><span class="lineno"> 1547</span>&#160;              <span class="keyword">const</span> LocalTileIndex ij_lc(i_lc, j_lc);</div>
-<div class="line"><a name="l01548"></a><span class="lineno"> 1548</span>&#160;              <span class="keyword">const</span> SizeType ij_linear = dist_extra::local_tile_linear_index(dist_sub, ij_lc);</div>
-<div class="line"><a name="l01549"></a><span class="lineno"> 1549</span>&#160;              <span class="keyword">const</span> T* partial_evec = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(ij_linear)].ptr({0, j_el_tl});</div>
-<div class="line"><a name="l01550"></a><span class="lineno"> 1550</span>&#160;              <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
-<div class="line"><a name="l01551"></a><span class="lineno"> 1551</span>&#160;              <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
-<div class="line"><a name="l01552"></a><span class="lineno"> 1552</span>&#160;              sum_squares[j_el_lc] += blas::dot(m_el_tl, partial_evec, 1, partial_evec, 1);</div>
-<div class="line"><a name="l01553"></a><span class="lineno"> 1553</span>&#160;            }</div>
-<div class="line"><a name="l01554"></a><span class="lineno"> 1554</span>&#160;          }</div>
-<div class="line"><a name="l01555"></a><span class="lineno"> 1555</span>&#160;        }</div>
+<div class="line"><a name="l01545"></a><span class="lineno"> 1545</span>&#160;                   T* weights = ws_cols[nthreads]();</div>
+<div class="line"><a name="l01546"></a><span class="lineno"> 1546</span>&#160;                   <span class="keywordflow">for</span> (SizeType i_el_lc = 0; i_el_lc &lt; m_el_lc; ++i_el_lc) {</div>
+<div class="line"><a name="l01547"></a><span class="lineno"> 1547</span>&#160;                     <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01548"></a><span class="lineno"> 1548</span>&#160;                         dist_sub.global_element_from_local_element&lt;Coord::Row&gt;(i_el_lc);</div>
+<div class="line"><a name="l01549"></a><span class="lineno"> 1549</span>&#160;                     <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01550"></a><span class="lineno"> 1550</span>&#160;                     weights[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(i_el_lc)] =</div>
+<div class="line"><a name="l01551"></a><span class="lineno"> 1551</span>&#160;                         std::copysign(std::sqrt(-w[i_el_lc]), z_ptr[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(is_el)]);</div>
+<div class="line"><a name="l01552"></a><span class="lineno"> 1552</span>&#160;                   }</div>
+<div class="line"><a name="l01553"></a><span class="lineno"> 1553</span>&#160;                 }</div>
+<div class="line"><a name="l01554"></a><span class="lineno"> 1554</span>&#160; </div>
+<div class="line"><a name="l01555"></a><span class="lineno"> 1555</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
 <div class="line"><a name="l01556"></a><span class="lineno"> 1556</span>&#160; </div>
-<div class="line"><a name="l01557"></a><span class="lineno"> 1557</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01557"></a><span class="lineno"> 1557</span>&#160;                 <span class="comment">// STEP 3: Compute eigenvectors of the modified rank-1 modification (normalize) (multi-thread)</span></div>
 <div class="line"><a name="l01558"></a><span class="lineno"> 1558</span>&#160; </div>
-<div class="line"><a name="l01559"></a><span class="lineno"> 1559</span>&#160;        <span class="comment">// STEP 3b: Reduce to get the sum of all squares on all ranks</span></div>
-<div class="line"><a name="l01560"></a><span class="lineno"> 1560</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0)</div>
-<div class="line"><a name="l01561"></a><span class="lineno"> 1561</span>&#160;          tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM, common::make_data(ws_row(), k_lc)) |</div>
-<div class="line"><a name="l01562"></a><span class="lineno"> 1562</span>&#160;                        transformMPI(all_reduce_in_place));</div>
-<div class="line"><a name="l01563"></a><span class="lineno"> 1563</span>&#160; </div>
-<div class="line"><a name="l01564"></a><span class="lineno"> 1564</span>&#160;        barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01559"></a><span class="lineno"> 1559</span>&#160;                 <span class="comment">// STEP 3a: Form evecs using weights vector and compute (local) sum of squares</span></div>
+<div class="line"><a name="l01560"></a><span class="lineno"> 1560</span>&#160;                 {</div>
+<div class="line"><a name="l01561"></a><span class="lineno"> 1561</span>&#160;                   common::internal::SingleThreadedBlasScope single;</div>
+<div class="line"><a name="l01562"></a><span class="lineno"> 1562</span>&#160; </div>
+<div class="line"><a name="l01563"></a><span class="lineno"> 1563</span>&#160;                   <span class="keyword">const</span> T* w = ws_cols[nthreads]();</div>
+<div class="line"><a name="l01564"></a><span class="lineno"> 1564</span>&#160;                   T* sum_squares = ws_row();</div>
 <div class="line"><a name="l01565"></a><span class="lineno"> 1565</span>&#160; </div>
-<div class="line"><a name="l01566"></a><span class="lineno"> 1566</span>&#160;        <span class="comment">// STEP 3c: Normalize (compute norm of each column and scale column vector)</span></div>
-<div class="line"><a name="l01567"></a><span class="lineno"> 1567</span>&#160;        <span class="keywordflow">if</span> (thread_idx == 0) {  <span class="comment">// TODO make it multithreaded again</span></div>
-<div class="line"><a name="l01568"></a><span class="lineno"> 1568</span>&#160;          common::internal::SingleThreadedBlasScope single;</div>
-<div class="line"><a name="l01569"></a><span class="lineno"> 1569</span>&#160; </div>
-<div class="line"><a name="l01570"></a><span class="lineno"> 1570</span>&#160;          <span class="keyword">const</span> T* sum_squares = ws_row();</div>
-<div class="line"><a name="l01571"></a><span class="lineno"> 1571</span>&#160; </div>
-<div class="line"><a name="l01572"></a><span class="lineno"> 1572</span>&#160;          <span class="keywordflow">for</span> (SizeType j_el_lc = 0; j_el_lc &lt; k_lc; ++j_el_lc) {</div>
-<div class="line"><a name="l01573"></a><span class="lineno"> 1573</span>&#160;            <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01574"></a><span class="lineno"> 1574</span>&#160;            <span class="keyword">const</span> SizeType j_el_tl = dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
-<div class="line"><a name="l01575"></a><span class="lineno"> 1575</span>&#160; </div>
-<div class="line"><a name="l01576"></a><span class="lineno"> 1576</span>&#160;            <span class="keyword">const</span> T vec_norm = std::sqrt(sum_squares[j_el_lc]);</div>
+<div class="line"><a name="l01566"></a><span class="lineno"> 1566</span>&#160;                   <span class="keywordflow">for</span> (SizeType j_el_lc = begin; j_el_lc &lt; end; ++j_el_lc) {</div>
+<div class="line"><a name="l01567"></a><span class="lineno"> 1567</span>&#160;                     <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01568"></a><span class="lineno"> 1568</span>&#160;                     <span class="keyword">const</span> SizeType j_el_tl =</div>
+<div class="line"><a name="l01569"></a><span class="lineno"> 1569</span>&#160;                         dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01570"></a><span class="lineno"> 1570</span>&#160; </div>
+<div class="line"><a name="l01571"></a><span class="lineno"> 1571</span>&#160;                     <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; m_lc; ++i_lc) {</div>
+<div class="line"><a name="l01572"></a><span class="lineno"> 1572</span>&#160;                       <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
+<div class="line"><a name="l01573"></a><span class="lineno"> 1573</span>&#160;                       <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
+<div class="line"><a name="l01574"></a><span class="lineno"> 1574</span>&#160;                       <span class="keyword">const</span> SizeType linear_lc =</div>
+<div class="line"><a name="l01575"></a><span class="lineno"> 1575</span>&#160;                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});</div>
+<div class="line"><a name="l01576"></a><span class="lineno"> 1576</span>&#160;                       <span class="keyword">const</span> <span class="keyword">auto</span>&amp; q_tile = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(linear_lc)];</div>
 <div class="line"><a name="l01577"></a><span class="lineno"> 1577</span>&#160; </div>
-<div class="line"><a name="l01578"></a><span class="lineno"> 1578</span>&#160;            <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; dist_sub.local_nr_tiles().rows(); ++i_lc) {</div>
-<div class="line"><a name="l01579"></a><span class="lineno"> 1579</span>&#160;              <span class="keyword">const</span> LocalTileIndex ij_lc(i_lc, j_lc);</div>
-<div class="line"><a name="l01580"></a><span class="lineno"> 1580</span>&#160;              <span class="keyword">const</span> SizeType ij_linear = dist_extra::local_tile_linear_index(dist_sub, ij_lc);</div>
-<div class="line"><a name="l01581"></a><span class="lineno"> 1581</span>&#160; </div>
-<div class="line"><a name="l01582"></a><span class="lineno"> 1582</span>&#160;              T* partial_evec = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(ij_linear)].ptr({0, j_el_tl});</div>
-<div class="line"><a name="l01583"></a><span class="lineno"> 1583</span>&#160; </div>
-<div class="line"><a name="l01584"></a><span class="lineno"> 1584</span>&#160;              <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
-<div class="line"><a name="l01585"></a><span class="lineno"> 1585</span>&#160;              <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
-<div class="line"><a name="l01586"></a><span class="lineno"> 1586</span>&#160;              blas::scal(m_el_tl, 1 / vec_norm, partial_evec, 1);</div>
-<div class="line"><a name="l01587"></a><span class="lineno"> 1587</span>&#160;            }</div>
-<div class="line"><a name="l01588"></a><span class="lineno"> 1588</span>&#160;          }</div>
-<div class="line"><a name="l01589"></a><span class="lineno"> 1589</span>&#160;        }</div>
-<div class="line"><a name="l01590"></a><span class="lineno"> 1590</span>&#160;      }));</div>
-<div class="line"><a name="l01591"></a><span class="lineno"> 1591</span>&#160;}</div>
-<div class="line"><a name="l01592"></a><span class="lineno"> 1592</span>&#160; </div>
-<div class="line"><a name="l01593"></a><span class="lineno"> 1593</span>&#160;<span class="comment">// Distributed version of the tridiagonal solver on CPUs</span></div>
-<div class="line"><a name="l01594"></a><span class="lineno"> 1594</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">class</span> T, Device D, <span class="keyword">class</span> RhoSender&gt;</div>
-<div class="line"><a name="l01595"></a><span class="lineno"> 1595</span>&#160;<span class="keywordtype">void</span> mergeDistSubproblems(comm::CommunicatorGrid grid,</div>
-<div class="line"><a name="l01596"></a><span class="lineno"> 1596</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; full_task_chain,</div>
-<div class="line"><a name="l01597"></a><span class="lineno"> 1597</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; row_task_chain,</div>
-<div class="line"><a name="l01598"></a><span class="lineno"> 1598</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; col_task_chain, <span class="keyword">const</span> SizeType i_begin,</div>
-<div class="line"><a name="l01599"></a><span class="lineno"> 1599</span>&#160;                          <span class="keyword">const</span> SizeType i_split, <span class="keyword">const</span> SizeType i_end, RhoSender&amp;&amp; rho,</div>
-<div class="line"><a name="l01600"></a><span class="lineno"> 1600</span>&#160;                          WorkSpace&lt;T, D&gt;&amp; ws, WorkSpaceHost&lt;T&gt;&amp; ws_h,</div>
-<div class="line"><a name="l01601"></a><span class="lineno"> 1601</span>&#160;                          DistWorkSpaceHostMirror&lt;T, D&gt;&amp; ws_hm) {</div>
-<div class="line"><a name="l01602"></a><span class="lineno"> 1602</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
-<div class="line"><a name="l01603"></a><span class="lineno"> 1603</span>&#160;  <span class="keyword">using</span> pika::execution::thread_priority;</div>
-<div class="line"><a name="l01604"></a><span class="lineno"> 1604</span>&#160; </div>
-<div class="line"><a name="l01605"></a><span class="lineno"> 1605</span>&#160;  <span class="keyword">const</span> matrix::Distribution&amp; dist_evecs = ws.e0.distribution();</div>
-<div class="line"><a name="l01606"></a><span class="lineno"> 1606</span>&#160; </div>
-<div class="line"><a name="l01607"></a><span class="lineno"> 1607</span>&#160;  <span class="comment">// Calculate the size of the upper subproblem</span></div>
-<div class="line"><a name="l01608"></a><span class="lineno"> 1608</span>&#160;  <span class="keyword">const</span> SizeType n1 = dist_evecs.globalTileElementDistance&lt;Coord::Row&gt;(i_begin, i_split);</div>
-<div class="line"><a name="l01609"></a><span class="lineno"> 1609</span>&#160; </div>
-<div class="line"><a name="l01610"></a><span class="lineno"> 1610</span>&#160;  <span class="comment">// The local size of the subproblem</span></div>
-<div class="line"><a name="l01611"></a><span class="lineno"> 1611</span>&#160;  <span class="keyword">const</span> GlobalTileIndex idx_gl_begin(i_begin, i_begin);</div>
-<div class="line"><a name="l01612"></a><span class="lineno"> 1612</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(i_begin),</div>
-<div class="line"><a name="l01613"></a><span class="lineno"> 1613</span>&#160;                                     dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(i_begin)};</div>
-<div class="line"><a name="l01614"></a><span class="lineno"> 1614</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(i_end),</div>
-<div class="line"><a name="l01615"></a><span class="lineno"> 1615</span>&#160;                                   dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(i_end)};</div>
-<div class="line"><a name="l01616"></a><span class="lineno"> 1616</span>&#160;  <span class="keyword">const</span> LocalTileSize sz_loc_tiles = idx_loc_end - idx_loc_begin;</div>
-<div class="line"><a name="l01617"></a><span class="lineno"> 1617</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_begin_tiles_vec(i_begin, 0);</div>
-<div class="line"><a name="l01618"></a><span class="lineno"> 1618</span>&#160;  <span class="keyword">const</span> LocalTileSize sz_tiles_vec(i_end - i_begin, 1);</div>
+<div class="line"><a name="l01578"></a><span class="lineno"> 1578</span>&#160;                       <span class="keywordflow">for</span> (SizeType i_el_tl = 0; i_el_tl &lt; m_el_tl; ++i_el_tl) {</div>
+<div class="line"><a name="l01579"></a><span class="lineno"> 1579</span>&#160;                         <span class="keyword">const</span> SizeType i_el =</div>
+<div class="line"><a name="l01580"></a><span class="lineno"> 1580</span>&#160;                             dist_sub.global_element_from_global_tile_and_tile_element&lt;Coord::Row&gt;(</div>
+<div class="line"><a name="l01581"></a><span class="lineno"> 1581</span>&#160;                                 i, i_el_tl);</div>
+<div class="line"><a name="l01582"></a><span class="lineno"> 1582</span>&#160; </div>
+<div class="line"><a name="l01583"></a><span class="lineno"> 1583</span>&#160;                         DLAF_ASSERT_HEAVY(i_el &lt; n, i_el, n);</div>
+<div class="line"><a name="l01584"></a><span class="lineno"> 1584</span>&#160;                         <span class="keyword">const</span> SizeType is_el = i4[i_el];</div>
+<div class="line"><a name="l01585"></a><span class="lineno"> 1585</span>&#160; </div>
+<div class="line"><a name="l01586"></a><span class="lineno"> 1586</span>&#160;                         <span class="comment">// it is a deflated row, skip it (it should be already 0)</span></div>
+<div class="line"><a name="l01587"></a><span class="lineno"> 1587</span>&#160;                         <span class="keywordflow">if</span> (is_el &gt;= k)</div>
+<div class="line"><a name="l01588"></a><span class="lineno"> 1588</span>&#160;                           <span class="keywordflow">continue</span>;</div>
+<div class="line"><a name="l01589"></a><span class="lineno"> 1589</span>&#160; </div>
+<div class="line"><a name="l01590"></a><span class="lineno"> 1590</span>&#160;                         <span class="keyword">const</span> SizeType i_el_lc =</div>
+<div class="line"><a name="l01591"></a><span class="lineno"> 1591</span>&#160;                             dist_sub.local_element_from_local_tile_and_tile_element&lt;Coord::Row&gt;(</div>
+<div class="line"><a name="l01592"></a><span class="lineno"> 1592</span>&#160;                                 i_lc, i_el_tl);</div>
+<div class="line"><a name="l01593"></a><span class="lineno"> 1593</span>&#160;                         <span class="keyword">const</span> TileElementIndex ij_el_tl(i_el_tl, j_el_tl);</div>
+<div class="line"><a name="l01594"></a><span class="lineno"> 1594</span>&#160; </div>
+<div class="line"><a name="l01595"></a><span class="lineno"> 1595</span>&#160;                         q_tile(ij_el_tl) = w[i_el_lc] / q_tile(ij_el_tl);</div>
+<div class="line"><a name="l01596"></a><span class="lineno"> 1596</span>&#160;                       }</div>
+<div class="line"><a name="l01597"></a><span class="lineno"> 1597</span>&#160; </div>
+<div class="line"><a name="l01598"></a><span class="lineno"> 1598</span>&#160;                       <span class="keyword">const</span> T* partial_evec = q_tile.ptr({0, j_el_tl});</div>
+<div class="line"><a name="l01599"></a><span class="lineno"> 1599</span>&#160;                       sum_squares[j_el_lc] += blas::dot(m_el_tl, partial_evec, 1, partial_evec, 1);</div>
+<div class="line"><a name="l01600"></a><span class="lineno"> 1600</span>&#160;                     }</div>
+<div class="line"><a name="l01601"></a><span class="lineno"> 1601</span>&#160;                   }</div>
+<div class="line"><a name="l01602"></a><span class="lineno"> 1602</span>&#160;                 }</div>
+<div class="line"><a name="l01603"></a><span class="lineno"> 1603</span>&#160; </div>
+<div class="line"><a name="l01604"></a><span class="lineno"> 1604</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01605"></a><span class="lineno"> 1605</span>&#160; </div>
+<div class="line"><a name="l01606"></a><span class="lineno"> 1606</span>&#160;                 <span class="comment">// STEP 3b: Reduce to get the sum of all squares on all ranks</span></div>
+<div class="line"><a name="l01607"></a><span class="lineno"> 1607</span>&#160;                 <span class="keywordflow">if</span> (thread_idx == 0)</div>
+<div class="line"><a name="l01608"></a><span class="lineno"> 1608</span>&#160;                   tt::sync_wait(ex::just(std::cref(col_comm), MPI_SUM,</div>
+<div class="line"><a name="l01609"></a><span class="lineno"> 1609</span>&#160;                                          common::make_data(ws_row(), k_lc)) |</div>
+<div class="line"><a name="l01610"></a><span class="lineno"> 1610</span>&#160;                                 transformMPI(all_reduce_in_place));</div>
+<div class="line"><a name="l01611"></a><span class="lineno"> 1611</span>&#160; </div>
+<div class="line"><a name="l01612"></a><span class="lineno"> 1612</span>&#160;                 barrier_ptr-&gt;arrive_and_wait(barrier_busy_wait);</div>
+<div class="line"><a name="l01613"></a><span class="lineno"> 1613</span>&#160; </div>
+<div class="line"><a name="l01614"></a><span class="lineno"> 1614</span>&#160;                 <span class="comment">// STEP 3c: Normalize (compute norm of each column and scale column vector)</span></div>
+<div class="line"><a name="l01615"></a><span class="lineno"> 1615</span>&#160;                 {</div>
+<div class="line"><a name="l01616"></a><span class="lineno"> 1616</span>&#160;                   common::internal::SingleThreadedBlasScope single;</div>
+<div class="line"><a name="l01617"></a><span class="lineno"> 1617</span>&#160; </div>
+<div class="line"><a name="l01618"></a><span class="lineno"> 1618</span>&#160;                   <span class="keyword">const</span> T* sum_squares = ws_row();</div>
 <div class="line"><a name="l01619"></a><span class="lineno"> 1619</span>&#160; </div>
-<div class="line"><a name="l01620"></a><span class="lineno"> 1620</span>&#160;  <span class="comment">// Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2</span></div>
-<div class="line"><a name="l01621"></a><span class="lineno"> 1621</span>&#160;  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);</div>
-<div class="line"><a name="l01622"></a><span class="lineno"> 1622</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);</div>
-<div class="line"><a name="l01623"></a><span class="lineno"> 1623</span>&#160; </div>
-<div class="line"><a name="l01624"></a><span class="lineno"> 1624</span>&#160;  <span class="comment">// Double `rho` to account for the normalization of `z` and make sure `rho &gt; 0` for the root solver laed4</span></div>
-<div class="line"><a name="l01625"></a><span class="lineno"> 1625</span>&#160;  <span class="keyword">auto</span> scaled_rho = scaleRho(std::move(rho)) | ex::split();</div>
+<div class="line"><a name="l01620"></a><span class="lineno"> 1620</span>&#160;                   <span class="keywordflow">for</span> (SizeType j_el_lc = begin; j_el_lc &lt; end; ++j_el_lc) {</div>
+<div class="line"><a name="l01621"></a><span class="lineno"> 1621</span>&#160;                     <span class="keyword">const</span> SizeType j_lc = dist_sub.local_tile_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01622"></a><span class="lineno"> 1622</span>&#160;                     <span class="keyword">const</span> SizeType j_el_tl =</div>
+<div class="line"><a name="l01623"></a><span class="lineno"> 1623</span>&#160;                         dist_sub.tile_element_from_local_element&lt;Coord::Col&gt;(j_el_lc);</div>
+<div class="line"><a name="l01624"></a><span class="lineno"> 1624</span>&#160; </div>
+<div class="line"><a name="l01625"></a><span class="lineno"> 1625</span>&#160;                     <span class="keyword">const</span> T vec_norm = std::sqrt(sum_squares[j_el_lc]);</div>
 <div class="line"><a name="l01626"></a><span class="lineno"> 1626</span>&#160; </div>
-<div class="line"><a name="l01627"></a><span class="lineno"> 1627</span>&#160;  <span class="comment">// Calculate the tolerance used for deflation</span></div>
-<div class="line"><a name="l01628"></a><span class="lineno"> 1628</span>&#160;  <span class="keyword">auto</span> tol = calcTolerance(i_begin, i_end, ws_h.d0, ws_hm.z0);</div>
-<div class="line"><a name="l01629"></a><span class="lineno"> 1629</span>&#160; </div>
-<div class="line"><a name="l01630"></a><span class="lineno"> 1630</span>&#160;  <span class="comment">// Initialize the column types vector `c`</span></div>
-<div class="line"><a name="l01631"></a><span class="lineno"> 1631</span>&#160;  initColTypes(i_begin, i_split, i_end, ws_h.c);</div>
+<div class="line"><a name="l01627"></a><span class="lineno"> 1627</span>&#160;                     <span class="keywordflow">for</span> (SizeType i_lc = 0; i_lc &lt; m_lc; ++i_lc) {</div>
+<div class="line"><a name="l01628"></a><span class="lineno"> 1628</span>&#160;                       <span class="keyword">const</span> LocalTileIndex ij_lc(i_lc, j_lc);</div>
+<div class="line"><a name="l01629"></a><span class="lineno"> 1629</span>&#160;                       <span class="keyword">const</span> SizeType ij_linear = dist_extra::local_tile_linear_index(dist_sub, ij_lc);</div>
+<div class="line"><a name="l01630"></a><span class="lineno"> 1630</span>&#160; </div>
+<div class="line"><a name="l01631"></a><span class="lineno"> 1631</span>&#160;                       T* partial_evec = q[<a class="code" href="types_8h.html#a25d16ff6621f011d9a98be3d9ebf29f1">to_sizet</a>(ij_linear)].ptr({0, j_el_tl});</div>
 <div class="line"><a name="l01632"></a><span class="lineno"> 1632</span>&#160; </div>
-<div class="line"><a name="l01633"></a><span class="lineno"> 1633</span>&#160;  <span class="comment">// Initialize i1 as identity just for single tile sub-problems</span></div>
-<div class="line"><a name="l01634"></a><span class="lineno"> 1634</span>&#160;  <span class="keywordflow">if</span> (i_split == i_begin + 1) {</div>
-<div class="line"><a name="l01635"></a><span class="lineno"> 1635</span>&#160;    initIndex(i_begin, i_split, ws_h.i1);</div>
-<div class="line"><a name="l01636"></a><span class="lineno"> 1636</span>&#160;  }</div>
-<div class="line"><a name="l01637"></a><span class="lineno"> 1637</span>&#160;  <span class="keywordflow">if</span> (i_split + 1 == i_end) {</div>
-<div class="line"><a name="l01638"></a><span class="lineno"> 1638</span>&#160;    initIndex(i_split, i_end, ws_h.i1);</div>
-<div class="line"><a name="l01639"></a><span class="lineno"> 1639</span>&#160;  }</div>
-<div class="line"><a name="l01640"></a><span class="lineno"> 1640</span>&#160; </div>
-<div class="line"><a name="l01641"></a><span class="lineno"> 1641</span>&#160;  <span class="comment">// Update indices of second sub-problem</span></div>
-<div class="line"><a name="l01642"></a><span class="lineno"> 1642</span>&#160;  addIndex(i_split, i_end, n1, ws_h.i1);</div>
-<div class="line"><a name="l01643"></a><span class="lineno"> 1643</span>&#160; </div>
-<div class="line"><a name="l01644"></a><span class="lineno"> 1644</span>&#160;  <span class="comment">// Step #1</span></div>
-<div class="line"><a name="l01645"></a><span class="lineno"> 1645</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01646"></a><span class="lineno"> 1646</span>&#160;  <span class="comment">//    i1 (out) : initial &lt;--- initial (or identity map)</span></div>
-<div class="line"><a name="l01647"></a><span class="lineno"> 1647</span>&#160;  <span class="comment">//    i2 (out) : initial &lt;--- pre_sorted</span></div>
-<div class="line"><a name="l01648"></a><span class="lineno"> 1648</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01649"></a><span class="lineno"> 1649</span>&#160;  <span class="comment">// - deflate `d`, `z` and `c`</span></div>
-<div class="line"><a name="l01650"></a><span class="lineno"> 1650</span>&#160;  <span class="comment">// - apply Givens rotations to `Q` - `evecs`</span></div>
-<div class="line"><a name="l01651"></a><span class="lineno"> 1651</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01652"></a><span class="lineno"> 1652</span>&#160;  sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);</div>
-<div class="line"><a name="l01653"></a><span class="lineno"> 1653</span>&#160; </div>
-<div class="line"><a name="l01654"></a><span class="lineno"> 1654</span>&#160;  <span class="keyword">auto</span> rots =</div>
-<div class="line"><a name="l01655"></a><span class="lineno"> 1655</span>&#160;      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);</div>
+<div class="line"><a name="l01633"></a><span class="lineno"> 1633</span>&#160;                       <span class="keyword">const</span> SizeType i = dist_sub.global_tile_from_local_tile&lt;Coord::Row&gt;(i_lc);</div>
+<div class="line"><a name="l01634"></a><span class="lineno"> 1634</span>&#160;                       <span class="keyword">const</span> SizeType m_el_tl = dist_sub.tile_size_of&lt;Coord::Row&gt;(i);</div>
+<div class="line"><a name="l01635"></a><span class="lineno"> 1635</span>&#160;                       blas::scal(m_el_tl, 1 / vec_norm, partial_evec, 1);</div>
+<div class="line"><a name="l01636"></a><span class="lineno"> 1636</span>&#160;                     }</div>
+<div class="line"><a name="l01637"></a><span class="lineno"> 1637</span>&#160;                   }</div>
+<div class="line"><a name="l01638"></a><span class="lineno"> 1638</span>&#160;                 }</div>
+<div class="line"><a name="l01639"></a><span class="lineno"> 1639</span>&#160;               });</div>
+<div class="line"><a name="l01640"></a><span class="lineno"> 1640</span>&#160;      }));</div>
+<div class="line"><a name="l01641"></a><span class="lineno"> 1641</span>&#160;}</div>
+<div class="line"><a name="l01642"></a><span class="lineno"> 1642</span>&#160; </div>
+<div class="line"><a name="l01643"></a><span class="lineno"> 1643</span>&#160;<span class="comment">// Distributed version of the tridiagonal solver on CPUs</span></div>
+<div class="line"><a name="l01644"></a><span class="lineno"> 1644</span>&#160;<span class="keyword">template</span> &lt;Backend B, <span class="keyword">class</span> T, Device D, <span class="keyword">class</span> RhoSender&gt;</div>
+<div class="line"><a name="l01645"></a><span class="lineno"> 1645</span>&#160;<span class="keywordtype">void</span> mergeDistSubproblems(comm::CommunicatorGrid grid,</div>
+<div class="line"><a name="l01646"></a><span class="lineno"> 1646</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; full_task_chain,</div>
+<div class="line"><a name="l01647"></a><span class="lineno"> 1647</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; row_task_chain,</div>
+<div class="line"><a name="l01648"></a><span class="lineno"> 1648</span>&#160;                          common::Pipeline&lt;comm::Communicator&gt;&amp; col_task_chain, <span class="keyword">const</span> SizeType i_begin,</div>
+<div class="line"><a name="l01649"></a><span class="lineno"> 1649</span>&#160;                          <span class="keyword">const</span> SizeType i_split, <span class="keyword">const</span> SizeType i_end, RhoSender&amp;&amp; rho,</div>
+<div class="line"><a name="l01650"></a><span class="lineno"> 1650</span>&#160;                          WorkSpace&lt;T, D&gt;&amp; ws, WorkSpaceHost&lt;T&gt;&amp; ws_h,</div>
+<div class="line"><a name="l01651"></a><span class="lineno"> 1651</span>&#160;                          DistWorkSpaceHostMirror&lt;T, D&gt;&amp; ws_hm) {</div>
+<div class="line"><a name="l01652"></a><span class="lineno"> 1652</span>&#160;  <span class="keyword">namespace </span>ex = pika::execution::experimental;</div>
+<div class="line"><a name="l01653"></a><span class="lineno"> 1653</span>&#160;  <span class="keyword">using</span> pika::execution::thread_priority;</div>
+<div class="line"><a name="l01654"></a><span class="lineno"> 1654</span>&#160; </div>
+<div class="line"><a name="l01655"></a><span class="lineno"> 1655</span>&#160;  <span class="keyword">const</span> matrix::Distribution&amp; dist_evecs = ws.e0.distribution();</div>
 <div class="line"><a name="l01656"></a><span class="lineno"> 1656</span>&#160; </div>
-<div class="line"><a name="l01657"></a><span class="lineno"> 1657</span>&#160;  <span class="comment">// Make sure Isend/Irecv messages don&#39;t match between calls by providing a unique `tag`</span></div>
-<div class="line"><a name="l01658"></a><span class="lineno"> 1658</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01659"></a><span class="lineno"> 1659</span>&#160;  <span class="comment">// Note: i_split is unique</span></div>
-<div class="line"><a name="l01660"></a><span class="lineno"> 1660</span>&#160;  <span class="keyword">const</span> comm::IndexT_MPI tag = <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(i_split);</div>
-<div class="line"><a name="l01661"></a><span class="lineno"> 1661</span>&#160;  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),</div>
-<div class="line"><a name="l01662"></a><span class="lineno"> 1662</span>&#160;                                      ws.e0);</div>
-<div class="line"><a name="l01663"></a><span class="lineno"> 1663</span>&#160; </div>
-<div class="line"><a name="l01664"></a><span class="lineno"> 1664</span>&#160;  <span class="comment">// Step #2</span></div>
-<div class="line"><a name="l01665"></a><span class="lineno"> 1665</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01666"></a><span class="lineno"> 1666</span>&#160;  <span class="comment">//    i2 (in)  : initial         &lt;--- pre_sorted</span></div>
-<div class="line"><a name="l01667"></a><span class="lineno"> 1667</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01668"></a><span class="lineno"> 1668</span>&#160;  <span class="comment">//    i3 (out) : initial         &lt;--- deflated</span></div>
-<div class="line"><a name="l01669"></a><span class="lineno"> 1669</span>&#160;  <span class="comment">//    i5 (out) : initial         &lt;--- local(UDL|X)</span></div>
-<div class="line"><a name="l01670"></a><span class="lineno"> 1670</span>&#160;  <span class="comment">//    i4 (out) : deflated        &lt;--- sort by col type</span></div>
-<div class="line"><a name="l01671"></a><span class="lineno"> 1671</span>&#160;  <span class="comment">//    i6 (out) : deflated        &lt;--- local(deflated)</span></div>
-<div class="line"><a name="l01672"></a><span class="lineno"> 1672</span>&#160;  <span class="comment">//    i2 (out) : local(deflated) &lt;--- deflated</span></div>
-<div class="line"><a name="l01673"></a><span class="lineno"> 1673</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01674"></a><span class="lineno"> 1674</span>&#160;  <span class="comment">// - reorder eigenvectors locally so that they are well-shaped for gemm optimization (i.e. UDLX)</span></div>
-<div class="line"><a name="l01675"></a><span class="lineno"> 1675</span>&#160;  <span class="comment">// - reorder `d0 -&gt; d1`, `z0 -&gt; z1`, using `i3` such that deflated entries are at the bottom.</span></div>
-<div class="line"><a name="l01676"></a><span class="lineno"> 1676</span>&#160;  <span class="comment">// - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.</span></div>
-<div class="line"><a name="l01677"></a><span class="lineno"> 1677</span>&#160;  <span class="comment">// - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)</span></div>
-<div class="line"><a name="l01678"></a><span class="lineno"> 1678</span>&#160;  <span class="keyword">auto</span> [k_unique, k_lc] =</div>
-<div class="line"><a name="l01679"></a><span class="lineno"> 1679</span>&#160;      ex::split_tuple(stablePartitionIndexForDeflation(dist_evecs, i_begin, i_end, ws_h.c, ws_h.d0,</div>
-<div class="line"><a name="l01680"></a><span class="lineno"> 1680</span>&#160;                                                       ws_hm.i2, ws_h.i3, ws_hm.i5, ws_h.i4, ws_hm.i6));</div>
-<div class="line"><a name="l01681"></a><span class="lineno"> 1681</span>&#160; </div>
-<div class="line"><a name="l01682"></a><span class="lineno"> 1682</span>&#160;  <span class="keyword">auto</span> k = ex::split(std::move(k_unique));</div>
-<div class="line"><a name="l01683"></a><span class="lineno"> 1683</span>&#160; </div>
-<div class="line"><a name="l01684"></a><span class="lineno"> 1684</span>&#160;  <span class="comment">// Reorder Eigenvectors</span></div>
-<div class="line"><a name="l01685"></a><span class="lineno"> 1685</span>&#160;  <span class="keyword">using</span> dlaf::permutations::internal::permuteJustLocal;</div>
-<div class="line"><a name="l01686"></a><span class="lineno"> 1686</span>&#160;  <span class="keywordflow">if</span> constexpr (Backend::MC == B) {</div>
-<div class="line"><a name="l01687"></a><span class="lineno"> 1687</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);</div>
-<div class="line"><a name="l01688"></a><span class="lineno"> 1688</span>&#160;    permuteJustLocal&lt;T, Coord::Col&gt;(i_begin, i_end, ws.i5, ws.e0, ws.e1);</div>
+<div class="line"><a name="l01657"></a><span class="lineno"> 1657</span>&#160;  <span class="comment">// Calculate the size of the upper subproblem</span></div>
+<div class="line"><a name="l01658"></a><span class="lineno"> 1658</span>&#160;  <span class="keyword">const</span> SizeType n1 = dist_evecs.globalTileElementDistance&lt;Coord::Row&gt;(i_begin, i_split);</div>
+<div class="line"><a name="l01659"></a><span class="lineno"> 1659</span>&#160; </div>
+<div class="line"><a name="l01660"></a><span class="lineno"> 1660</span>&#160;  <span class="comment">// The local size of the subproblem</span></div>
+<div class="line"><a name="l01661"></a><span class="lineno"> 1661</span>&#160;  <span class="keyword">const</span> GlobalTileIndex idx_gl_begin(i_begin, i_begin);</div>
+<div class="line"><a name="l01662"></a><span class="lineno"> 1662</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_loc_begin{dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(i_begin),</div>
+<div class="line"><a name="l01663"></a><span class="lineno"> 1663</span>&#160;                                     dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(i_begin)};</div>
+<div class="line"><a name="l01664"></a><span class="lineno"> 1664</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_loc_end{dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Row&gt;(i_end),</div>
+<div class="line"><a name="l01665"></a><span class="lineno"> 1665</span>&#160;                                   dist_evecs.nextLocalTileFromGlobalTile&lt;Coord::Col&gt;(i_end)};</div>
+<div class="line"><a name="l01666"></a><span class="lineno"> 1666</span>&#160;  <span class="keyword">const</span> LocalTileSize sz_loc_tiles = idx_loc_end - idx_loc_begin;</div>
+<div class="line"><a name="l01667"></a><span class="lineno"> 1667</span>&#160;  <span class="keyword">const</span> LocalTileIndex idx_begin_tiles_vec(i_begin, 0);</div>
+<div class="line"><a name="l01668"></a><span class="lineno"> 1668</span>&#160;  <span class="keyword">const</span> LocalTileSize sz_tiles_vec(i_end - i_begin, 1);</div>
+<div class="line"><a name="l01669"></a><span class="lineno"> 1669</span>&#160; </div>
+<div class="line"><a name="l01670"></a><span class="lineno"> 1670</span>&#160;  <span class="comment">// Assemble the rank-1 update vector `z` from the last row of Q1 and the first row of Q2</span></div>
+<div class="line"><a name="l01671"></a><span class="lineno"> 1671</span>&#160;  assembleDistZVec(grid, full_task_chain, i_begin, i_split, i_end, rho, ws.e0, ws.z0);</div>
+<div class="line"><a name="l01672"></a><span class="lineno"> 1672</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_begin_tiles_vec, sz_tiles_vec, ws.z0, ws_hm.z0);</div>
+<div class="line"><a name="l01673"></a><span class="lineno"> 1673</span>&#160; </div>
+<div class="line"><a name="l01674"></a><span class="lineno"> 1674</span>&#160;  <span class="comment">// Double `rho` to account for the normalization of `z` and make sure `rho &gt; 0` for the root solver laed4</span></div>
+<div class="line"><a name="l01675"></a><span class="lineno"> 1675</span>&#160;  <span class="keyword">auto</span> scaled_rho = scaleRho(std::move(rho)) | ex::split();</div>
+<div class="line"><a name="l01676"></a><span class="lineno"> 1676</span>&#160; </div>
+<div class="line"><a name="l01677"></a><span class="lineno"> 1677</span>&#160;  <span class="comment">// Calculate the tolerance used for deflation</span></div>
+<div class="line"><a name="l01678"></a><span class="lineno"> 1678</span>&#160;  <span class="keyword">auto</span> tol = calcTolerance(i_begin, i_end, ws_h.d0, ws_hm.z0);</div>
+<div class="line"><a name="l01679"></a><span class="lineno"> 1679</span>&#160; </div>
+<div class="line"><a name="l01680"></a><span class="lineno"> 1680</span>&#160;  <span class="comment">// Initialize the column types vector `c`</span></div>
+<div class="line"><a name="l01681"></a><span class="lineno"> 1681</span>&#160;  initColTypes(i_begin, i_split, i_end, ws_h.c);</div>
+<div class="line"><a name="l01682"></a><span class="lineno"> 1682</span>&#160; </div>
+<div class="line"><a name="l01683"></a><span class="lineno"> 1683</span>&#160;  <span class="comment">// Initialize i1 as identity just for single tile sub-problems</span></div>
+<div class="line"><a name="l01684"></a><span class="lineno"> 1684</span>&#160;  <span class="keywordflow">if</span> (i_split == i_begin + 1) {</div>
+<div class="line"><a name="l01685"></a><span class="lineno"> 1685</span>&#160;    initIndex(i_begin, i_split, ws_h.i1);</div>
+<div class="line"><a name="l01686"></a><span class="lineno"> 1686</span>&#160;  }</div>
+<div class="line"><a name="l01687"></a><span class="lineno"> 1687</span>&#160;  <span class="keywordflow">if</span> (i_split + 1 == i_end) {</div>
+<div class="line"><a name="l01688"></a><span class="lineno"> 1688</span>&#160;    initIndex(i_split, i_end, ws_h.i1);</div>
 <div class="line"><a name="l01689"></a><span class="lineno"> 1689</span>&#160;  }</div>
-<div class="line"><a name="l01690"></a><span class="lineno"> 1690</span>&#160;  <span class="keywordflow">else</span> {</div>
-<div class="line"><a name="l01691"></a><span class="lineno"> 1691</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws.e0, ws_hm.e0);</div>
-<div class="line"><a name="l01692"></a><span class="lineno"> 1692</span>&#160;    permuteJustLocal&lt;T, Coord::Col&gt;(i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);</div>
-<div class="line"><a name="l01693"></a><span class="lineno"> 1693</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e1);</div>
-<div class="line"><a name="l01694"></a><span class="lineno"> 1694</span>&#160;  }</div>
-<div class="line"><a name="l01695"></a><span class="lineno"> 1695</span>&#160; </div>
-<div class="line"><a name="l01696"></a><span class="lineno"> 1696</span>&#160;  <span class="comment">// Reorder Eigenvalues</span></div>
-<div class="line"><a name="l01697"></a><span class="lineno"> 1697</span>&#160;  applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);</div>
-<div class="line"><a name="l01698"></a><span class="lineno"> 1698</span>&#160;  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);</div>
-<div class="line"><a name="l01699"></a><span class="lineno"> 1699</span>&#160; </div>
-<div class="line"><a name="l01700"></a><span class="lineno"> 1700</span>&#160;  <span class="comment">// Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call</span></div>
-<div class="line"><a name="l01701"></a><span class="lineno"> 1701</span>&#160;  matrix::util::set0&lt;Backend::MC&gt;(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);</div>
-<div class="line"><a name="l01702"></a><span class="lineno"> 1702</span>&#160;  solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, k, std::move(k_lc),</div>
-<div class="line"><a name="l01703"></a><span class="lineno"> 1703</span>&#160;                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6, ws_hm.i2,</div>
-<div class="line"><a name="l01704"></a><span class="lineno"> 1704</span>&#160;                        ws_hm.e2);</div>
-<div class="line"><a name="l01705"></a><span class="lineno"> 1705</span>&#160; </div>
-<div class="line"><a name="l01706"></a><span class="lineno"> 1706</span>&#160;  <span class="comment">// Step #3: Eigenvectors of the tridiagonal system: Q * U</span></div>
-<div class="line"><a name="l01707"></a><span class="lineno"> 1707</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01708"></a><span class="lineno"> 1708</span>&#160;  <span class="comment">// The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as</span></div>
-<div class="line"><a name="l01709"></a><span class="lineno"> 1709</span>&#160;  <span class="comment">// prepared for the deflated system.</span></div>
-<div class="line"><a name="l01710"></a><span class="lineno"> 1710</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);</div>
-<div class="line"><a name="l01711"></a><span class="lineno"> 1711</span>&#160;  dlaf::multiplication::internal::generalSubMatrix&lt;B, D, T&gt;(grid, row_task_chain, col_task_chain,</div>
-<div class="line"><a name="l01712"></a><span class="lineno"> 1712</span>&#160;                                                            i_begin, i_end, T(1), ws.e1, ws.e2, T(0),</div>
-<div class="line"><a name="l01713"></a><span class="lineno"> 1713</span>&#160;                                                            ws.e0);</div>
-<div class="line"><a name="l01714"></a><span class="lineno"> 1714</span>&#160; </div>
-<div class="line"><a name="l01715"></a><span class="lineno"> 1715</span>&#160;  <span class="comment">// Step #4: Final permutation to sort eigenvalues and eigenvectors</span></div>
-<div class="line"><a name="l01716"></a><span class="lineno"> 1716</span>&#160;  <span class="comment">//</span></div>
-<div class="line"><a name="l01717"></a><span class="lineno"> 1717</span>&#160;  <span class="comment">//    i2 (in)  : local(deflated) &lt;--- deflated</span></div>
-<div class="line"><a name="l01718"></a><span class="lineno"> 1718</span>&#160;  <span class="comment">//    i1 (out) : sorted          &lt;--- local(deflated)</span></div>
-<div class="line"><a name="l01719"></a><span class="lineno"> 1719</span>&#160;  sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_hm.i2, ws_h.i1);</div>
-<div class="line"><a name="l01720"></a><span class="lineno"> 1720</span>&#160;}</div>
-<div class="line"><a name="l01721"></a><span class="lineno"> 1721</span>&#160;}</div>
+<div class="line"><a name="l01690"></a><span class="lineno"> 1690</span>&#160; </div>
+<div class="line"><a name="l01691"></a><span class="lineno"> 1691</span>&#160;  <span class="comment">// Update indices of second sub-problem</span></div>
+<div class="line"><a name="l01692"></a><span class="lineno"> 1692</span>&#160;  addIndex(i_split, i_end, n1, ws_h.i1);</div>
+<div class="line"><a name="l01693"></a><span class="lineno"> 1693</span>&#160; </div>
+<div class="line"><a name="l01694"></a><span class="lineno"> 1694</span>&#160;  <span class="comment">// Step #1</span></div>
+<div class="line"><a name="l01695"></a><span class="lineno"> 1695</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01696"></a><span class="lineno"> 1696</span>&#160;  <span class="comment">//    i1 (out) : initial &lt;--- initial (or identity map)</span></div>
+<div class="line"><a name="l01697"></a><span class="lineno"> 1697</span>&#160;  <span class="comment">//    i2 (out) : initial &lt;--- pre_sorted</span></div>
+<div class="line"><a name="l01698"></a><span class="lineno"> 1698</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01699"></a><span class="lineno"> 1699</span>&#160;  <span class="comment">// - deflate `d`, `z` and `c`</span></div>
+<div class="line"><a name="l01700"></a><span class="lineno"> 1700</span>&#160;  <span class="comment">// - apply Givens rotations to `Q` - `evecs`</span></div>
+<div class="line"><a name="l01701"></a><span class="lineno"> 1701</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01702"></a><span class="lineno"> 1702</span>&#160;  sortIndex(i_begin, i_end, ex::just(n1), ws_h.d0, ws_h.i1, ws_hm.i2);</div>
+<div class="line"><a name="l01703"></a><span class="lineno"> 1703</span>&#160; </div>
+<div class="line"><a name="l01704"></a><span class="lineno"> 1704</span>&#160;  <span class="keyword">auto</span> rots =</div>
+<div class="line"><a name="l01705"></a><span class="lineno"> 1705</span>&#160;      applyDeflation(i_begin, i_end, scaled_rho, std::move(tol), ws_hm.i2, ws_h.d0, ws_hm.z0, ws_h.c);</div>
+<div class="line"><a name="l01706"></a><span class="lineno"> 1706</span>&#160; </div>
+<div class="line"><a name="l01707"></a><span class="lineno"> 1707</span>&#160;  <span class="comment">// Make sure Isend/Irecv messages don&#39;t match between calls by providing a unique `tag`</span></div>
+<div class="line"><a name="l01708"></a><span class="lineno"> 1708</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01709"></a><span class="lineno"> 1709</span>&#160;  <span class="comment">// Note: i_split is unique</span></div>
+<div class="line"><a name="l01710"></a><span class="lineno"> 1710</span>&#160;  <span class="keyword">const</span> comm::IndexT_MPI tag = <a class="code" href="types_8h.html#af90e7fd5acadf5987b7199b0bd44deea">to_int</a>(i_split);</div>
+<div class="line"><a name="l01711"></a><span class="lineno"> 1711</span>&#160;  applyGivensRotationsToMatrixColumns(grid.rowCommunicator(), tag, i_begin, i_end, std::move(rots),</div>
+<div class="line"><a name="l01712"></a><span class="lineno"> 1712</span>&#160;                                      ws.e0);</div>
+<div class="line"><a name="l01713"></a><span class="lineno"> 1713</span>&#160; </div>
+<div class="line"><a name="l01714"></a><span class="lineno"> 1714</span>&#160;  <span class="comment">// Step #2</span></div>
+<div class="line"><a name="l01715"></a><span class="lineno"> 1715</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01716"></a><span class="lineno"> 1716</span>&#160;  <span class="comment">//    i2 (in)  : initial         &lt;--- pre_sorted</span></div>
+<div class="line"><a name="l01717"></a><span class="lineno"> 1717</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01718"></a><span class="lineno"> 1718</span>&#160;  <span class="comment">//    i3 (out) : initial         &lt;--- deflated</span></div>
+<div class="line"><a name="l01719"></a><span class="lineno"> 1719</span>&#160;  <span class="comment">//    i5 (out) : initial         &lt;--- local(UDL|X)</span></div>
+<div class="line"><a name="l01720"></a><span class="lineno"> 1720</span>&#160;  <span class="comment">//    i4 (out) : deflated        &lt;--- sort by col type</span></div>
+<div class="line"><a name="l01721"></a><span class="lineno"> 1721</span>&#160;  <span class="comment">//    i6 (out) : deflated        &lt;--- local(deflated)</span></div>
+<div class="line"><a name="l01722"></a><span class="lineno"> 1722</span>&#160;  <span class="comment">//    i2 (out) : local(deflated) &lt;--- deflated</span></div>
+<div class="line"><a name="l01723"></a><span class="lineno"> 1723</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01724"></a><span class="lineno"> 1724</span>&#160;  <span class="comment">// - reorder eigenvectors locally so that they are well-shaped for gemm optimization (i.e. UDLX)</span></div>
+<div class="line"><a name="l01725"></a><span class="lineno"> 1725</span>&#160;  <span class="comment">// - reorder `d0 -&gt; d1`, `z0 -&gt; z1`, using `i3` such that deflated entries are at the bottom.</span></div>
+<div class="line"><a name="l01726"></a><span class="lineno"> 1726</span>&#160;  <span class="comment">// - solve the rank-1 problem and save eigenvalues in `d0` and `d1` (copy) and eigenvectors in `e2`.</span></div>
+<div class="line"><a name="l01727"></a><span class="lineno"> 1727</span>&#160;  <span class="comment">// - set deflated diagonal entries of `U` to 1 (temporary solution until optimized GEMM is implemented)</span></div>
+<div class="line"><a name="l01728"></a><span class="lineno"> 1728</span>&#160;  <span class="keyword">auto</span> [k_unique, k_lc] =</div>
+<div class="line"><a name="l01729"></a><span class="lineno"> 1729</span>&#160;      ex::split_tuple(stablePartitionIndexForDeflation(dist_evecs, i_begin, i_end, ws_h.c, ws_h.d0,</div>
+<div class="line"><a name="l01730"></a><span class="lineno"> 1730</span>&#160;                                                       ws_hm.i2, ws_h.i3, ws_hm.i5, ws_h.i4, ws_hm.i6));</div>
+<div class="line"><a name="l01731"></a><span class="lineno"> 1731</span>&#160; </div>
+<div class="line"><a name="l01732"></a><span class="lineno"> 1732</span>&#160;  <span class="keyword">auto</span> k = ex::split(std::move(k_unique));</div>
+<div class="line"><a name="l01733"></a><span class="lineno"> 1733</span>&#160; </div>
+<div class="line"><a name="l01734"></a><span class="lineno"> 1734</span>&#160;  <span class="comment">// Reorder Eigenvectors</span></div>
+<div class="line"><a name="l01735"></a><span class="lineno"> 1735</span>&#160;  <span class="keyword">using</span> dlaf::permutations::internal::permuteJustLocal;</div>
+<div class="line"><a name="l01736"></a><span class="lineno"> 1736</span>&#160;  <span class="keywordflow">if</span> constexpr (Backend::MC == B) {</div>
+<div class="line"><a name="l01737"></a><span class="lineno"> 1737</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_begin_tiles_vec, sz_tiles_vec, ws_hm.i5, ws.i5);</div>
+<div class="line"><a name="l01738"></a><span class="lineno"> 1738</span>&#160;    permuteJustLocal&lt;T, Coord::Col&gt;(i_begin, i_end, ws.i5, ws.e0, ws.e1);</div>
+<div class="line"><a name="l01739"></a><span class="lineno"> 1739</span>&#160;  }</div>
+<div class="line"><a name="l01740"></a><span class="lineno"> 1740</span>&#160;  <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l01741"></a><span class="lineno"> 1741</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws.e0, ws_hm.e0);</div>
+<div class="line"><a name="l01742"></a><span class="lineno"> 1742</span>&#160;    permuteJustLocal&lt;T, Coord::Col&gt;(i_begin, i_end, ws_hm.i5, ws_hm.e0, ws_hm.e2);</div>
+<div class="line"><a name="l01743"></a><span class="lineno"> 1743</span>&#160;    <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e1);</div>
+<div class="line"><a name="l01744"></a><span class="lineno"> 1744</span>&#160;  }</div>
+<div class="line"><a name="l01745"></a><span class="lineno"> 1745</span>&#160; </div>
+<div class="line"><a name="l01746"></a><span class="lineno"> 1746</span>&#160;  <span class="comment">// Reorder Eigenvalues</span></div>
+<div class="line"><a name="l01747"></a><span class="lineno"> 1747</span>&#160;  applyIndex(i_begin, i_end, ws_h.i3, ws_h.d0, ws_hm.d1);</div>
+<div class="line"><a name="l01748"></a><span class="lineno"> 1748</span>&#160;  applyIndex(i_begin, i_end, ws_h.i3, ws_hm.z0, ws_hm.z1);</div>
+<div class="line"><a name="l01749"></a><span class="lineno"> 1749</span>&#160; </div>
+<div class="line"><a name="l01750"></a><span class="lineno"> 1750</span>&#160;  <span class="comment">// Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call</span></div>
+<div class="line"><a name="l01751"></a><span class="lineno"> 1751</span>&#160;  matrix::util::set0&lt;Backend::MC&gt;(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);</div>
+<div class="line"><a name="l01752"></a><span class="lineno"> 1752</span>&#160;  solveRank1ProblemDist(row_task_chain(), col_task_chain(), i_begin, i_end, k, std::move(k_lc),</div>
+<div class="line"><a name="l01753"></a><span class="lineno"> 1753</span>&#160;                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6, ws_hm.i2,</div>
+<div class="line"><a name="l01754"></a><span class="lineno"> 1754</span>&#160;                        ws_hm.e2);</div>
+<div class="line"><a name="l01755"></a><span class="lineno"> 1755</span>&#160; </div>
+<div class="line"><a name="l01756"></a><span class="lineno"> 1756</span>&#160;  <span class="comment">// Step #3: Eigenvectors of the tridiagonal system: Q * U</span></div>
+<div class="line"><a name="l01757"></a><span class="lineno"> 1757</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01758"></a><span class="lineno"> 1758</span>&#160;  <span class="comment">// The eigenvectors resulting from the multiplication are already in the order of the eigenvalues as</span></div>
+<div class="line"><a name="l01759"></a><span class="lineno"> 1759</span>&#160;  <span class="comment">// prepared for the deflated system.</span></div>
+<div class="line"><a name="l01760"></a><span class="lineno"> 1760</span>&#160;  <a class="code" href="data_8h.html#a7f6919f56260399a905af9e869afba10">copy</a>(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);</div>
+<div class="line"><a name="l01761"></a><span class="lineno"> 1761</span>&#160;  dlaf::multiplication::internal::generalSubMatrix&lt;B, D, T&gt;(grid, row_task_chain, col_task_chain,</div>
+<div class="line"><a name="l01762"></a><span class="lineno"> 1762</span>&#160;                                                            i_begin, i_end, T(1), ws.e1, ws.e2, T(0),</div>
+<div class="line"><a name="l01763"></a><span class="lineno"> 1763</span>&#160;                                                            ws.e0);</div>
+<div class="line"><a name="l01764"></a><span class="lineno"> 1764</span>&#160; </div>
+<div class="line"><a name="l01765"></a><span class="lineno"> 1765</span>&#160;  <span class="comment">// Step #4: Final permutation to sort eigenvalues and eigenvectors</span></div>
+<div class="line"><a name="l01766"></a><span class="lineno"> 1766</span>&#160;  <span class="comment">//</span></div>
+<div class="line"><a name="l01767"></a><span class="lineno"> 1767</span>&#160;  <span class="comment">//    i2 (in)  : local(deflated) &lt;--- deflated</span></div>
+<div class="line"><a name="l01768"></a><span class="lineno"> 1768</span>&#160;  <span class="comment">//    i1 (out) : sorted          &lt;--- local(deflated)</span></div>
+<div class="line"><a name="l01769"></a><span class="lineno"> 1769</span>&#160;  sortIndex(i_begin, i_end, std::move(k), ws_h.d0, ws_hm.i2, ws_h.i1);</div>
+<div class="line"><a name="l01770"></a><span class="lineno"> 1770</span>&#160;}</div>
+<div class="line"><a name="l01771"></a><span class="lineno"> 1771</span>&#160;}</div>
 <div class="ttc" id="ablas_2tile_8h_html"><div class="ttname"><a href="blas_2tile_8h.html">tile.h</a></div></div>
 <div class="ttc" id="aclassdlaf_1_1comm_1_1_communicator_html"><div class="ttname"><a href="classdlaf_1_1comm_1_1_communicator.html">dlaf::comm::Communicator</a></div><div class="ttdef"><b>Definition:</b> communicator.h:40</div></div>
 <div class="ttc" id="aclassdlaf_1_1common_1_1_index2_d_html"><div class="ttname"><a href="classdlaf_1_1common_1_1_index2_d.html">dlaf::common::Index2D&lt; SizeType, matrix::GlobalTile_TAG &gt;</a></div></div>

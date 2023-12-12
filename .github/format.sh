@@ -11,9 +11,10 @@
 #
 
 # ----------------------------------------------------------------
-# To use this script as a hook, symlink it to your git hooks as follows
+# To use this script as a hook, symlink it to your git hooks as follows:
 # (note that the extra ../../ in the path is because git runs the hook
-# from the .git/hooks directory, so the symlink has to be redirected)
+# from the .git/hooks directory, so the symlink has to be redirected).
+#
 # cd <project root (primary worktree if using git worktree dir)>
 # ln -s -f ../../.github/format.sh .git/hooks/pre-commit
 # ----------------------------------------------------------------

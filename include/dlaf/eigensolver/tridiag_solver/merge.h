@@ -1491,14 +1491,12 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                         transformMPI(all_reduce_in_place));
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
+          // Note: all input for weights computation of non-deflated rows should be strictly less than 0
           for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
             const SizeType i_el = dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
             const SizeType is = i4[i_el];
             if (is < k)
-              DLAF_ASSERT_HEAVY(
-                  w[i_el_lc] < 0,
-                  "input for weights computation of non-deflated rows should be strictly less than 0",
-                  w[i_el_lc]);
+              DLAF_ASSERT_HEAVY(w[i_el_lc] < 0, w[i_el_lc]);
           }
 #endif
 

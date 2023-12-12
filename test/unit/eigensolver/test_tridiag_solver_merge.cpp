@@ -8,7 +8,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //
 
+#include <cstddef>
+#include <numeric>
+
+#include <dlaf/eigensolver/tridiag_solver/coltype.h>
 #include <dlaf/eigensolver/tridiag_solver/merge.h>
+#include <dlaf/types.h>
 #include <dlaf/util_matrix.h>
 
 #include <gtest/gtest.h>
@@ -83,7 +88,7 @@ TYPED_TEST(TridiagEigensolverMergeTest, SortIndex) {
 
 TEST(StablePartitionIndexOnDeflated, FullRange) {
   constexpr SizeType n = 10;
-  const SizeType nb = 3;
+  constexpr SizeType nb = 3;
 
   const LocalElementSize sz(n, 1);
   const TileElementSize bk(nb, 1);
@@ -92,6 +97,7 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   Matrix<double, Device::CPU> vals(sz, bk);
   Matrix<SizeType, Device::CPU> in(sz, bk);
   Matrix<SizeType, Device::CPU> out(sz, bk);
+  Matrix<SizeType, Device::CPU> out_by_type(sz, bk);
 
   // Note:
   // UpperHalf  -> u
@@ -101,16 +107,18 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
 
   // | 0| 1| 2| 3| 4| 5| 6| 7| 8| 9| initial
   // | l| f|d1|d2| u| u| l| f|d3| l| c_arr
-  std::vector<ColType> c_arr{ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
-                             ColType::Deflated,  ColType::UpperHalf, ColType::UpperHalf,
-                             ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
-                             ColType::LowerHalf};
+
+  const std::vector<ColType> c_arr{ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
+                                   ColType::Deflated,  ColType::UpperHalf, ColType::UpperHalf,
+                                   ColType::LowerHalf, ColType::Dense,     ColType::Deflated,
+                                   ColType::LowerHalf};
   DLAF_ASSERT(c_arr.size() == to_sizet(n), n);
   dlaf::matrix::util::set(c, [&c_arr](GlobalElementIndex i) { return c_arr[to_sizet(i.row())]; });
 
   // | 1| 4| 2| 3| 0| 5| 6| 7| 8| 9| in_arr
   // | f| u|d1|d2| l| u| l| f|d3| l| c_arr permuted by in_arr
-  std::array<SizeType, n> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
+
+  constexpr std::array<SizeType, n> in_arr{1, 4, 2, 3, 0, 5, 6, 7, 8, 9};
   dlaf::matrix::util::set(in, [&in_arr](GlobalElementIndex i) { return in_arr[to_sizet(i.row())]; });
 
   // | 0| 1| 2| 3| 4| 5| 6| 7| 8| 9| initial
@@ -119,36 +127,88 @@ TEST(StablePartitionIndexOnDeflated, FullRange) {
   // | 1| 4| 2| 3| 0| 5| 6| 7| 8| 9| in_arr
   // | f| u|d1|d2| l| u| l| f|d3| l| c_arr permuted by in_arr
   // |10|20| 2| 3|30|40|50|60| 1|70| vals_arr permuted by in_arr
-  std::array<double, n> vals_arr{30, 10, 2, 3, 20, 40, 50, 60, 1, 70};
+
+  constexpr std::array<double, n> vals_arr{30, 10, 2, 3, 20, 40, 50, 60, 1, 70};
   dlaf::matrix::util::set(vals,
                           [&vals_arr](GlobalElementIndex i) { return vals_arr[to_sizet(i.row())]; });
 
   const SizeType i_begin = 0;
   const SizeType i_end = 4;
-  auto k = stablePartitionIndexForDeflation(i_begin, i_end, c, vals, in, out);
+  auto [k_sender, n_udl_sender] =
+      stablePartitionIndexForDeflation(i_begin, i_end, c, vals, in, out, out_by_type) |
+      ex::split_tuple();
 
   // | 0| 1| 2| 3| 4| 5| 6| 7| 8| 9| initial
   // | l| f|d1|d2| u| u| l| f|d3| l| c_arr
   // |30|10| 2| 3|20|40|50|60| 1|70| vals_arr
-  //
+
+  const SizeType k = tt::sync_wait(std::move(k_sender));
+  ASSERT_EQ(k, 7);
+
+  const auto n_udl = tt::sync_wait(std::move(n_udl_sender));
+  EXPECT_EQ(n_udl[0], 2);
+  EXPECT_EQ(n_udl[1], 2);
+  EXPECT_EQ(n_udl[2], 3);
+
   // | 1| 4| 0| 5| 6| 7| 9| 8| 2| 3| out_arr
-  // | f| u| l| u| l| f| l|d3|d1|d2| c_arr permuted by out_arr
   // |10|20|30|40|50|60|70| 1| 2| 3| vals_arr permuted by out_arr
 
-  const SizeType k_value = tt::sync_wait(std::move(k));
-  ASSERT_TRUE(k_value == 7);
-
-  std::array<SizeType, n> expected_out_arr{1, 4, 0, 5, 6, 7, 9, 8, 2, 3};
-  auto expected_out = [&expected_out_arr](GlobalElementIndex i) {
+  constexpr std::array<SizeType, n> expected_out_arr{1, 4, 0, 5, 6, 7, 9, 8, 2, 3};
+  auto expected_out = [&expected_out_arr](const GlobalElementIndex i) {
     return expected_out_arr[to_sizet(i.row())];
   };
+
+  auto out_sender = tt::sync_wait(out.read(LocalTileIndex(0, 0)));
+  const SizeType* out_ptr = out_sender.get().ptr();
+
   CHECK_MATRIX_EQ(expected_out, out);
 
-  const SizeType* out_ptr = tt::sync_wait(out.read(LocalTileIndex(0, 0))).get().ptr();
-  EXPECT_TRUE(std::is_sorted(out_ptr + k_value, out_ptr + n,
+  EXPECT_TRUE(std::is_sorted(out_ptr, out_ptr + k, [&vals_arr](const SizeType i, const SizeType j) {
+    return vals_arr[to_sizet(i)] < vals_arr[to_sizet(j)];
+  })) << "non-deflated part of 'out' permutation should be sorted by eigenvalues";
+
+  EXPECT_TRUE(std::is_sorted(out_ptr + k, out_ptr + n, [&vals_arr](const SizeType i, const SizeType j) {
+    return vals_arr[to_sizet(i)] < vals_arr[to_sizet(j)];
+  })) << "deflated part of 'out' permutation should be sorted by eigenvalues";
+
+  // | 4| 5| 1| 7| 0| 6| 9| 8| 2| 3| out_by_type_arr
+  // | u| u| f| f| l| l| l|d3|d1|d2| c_arr permuted by out_by_type_arr
+  // |20|40|10|60|30|50|70| 1| 2| 3| vals_arr permuted by out_arr_by_type_arr
+
+  constexpr std::array<ColType, 4> expected_ordered{ColType::UpperHalf, ColType::Dense,
+                                                    ColType::LowerHalf, ColType::Deflated};
+  constexpr std::array<SizeType, n> expected_out_by_type_arr{4, 5, 1, 7, 0, 6, 9, 8, 2, 3};
+  auto expected_out_by_type = [&expected_out_by_type_arr](const GlobalElementIndex i) {
+    return expected_out_by_type_arr[to_sizet(i.row())];
+  };
+
+  auto out_by_type_sender = tt::sync_wait(out_by_type.read(LocalTileIndex(0, 0)));
+  const SizeType* out_by_type_ptr = out_by_type_sender.get().ptr();
+
+  CHECK_MATRIX_EQ(expected_out_by_type, out_by_type);
+
+  const std::array<std::size_t, 5> partitions = [&]() {
+    std::array<std::size_t, 5> offsets;
+    offsets[0] = 0;
+    offsets[4] = n;
+    std::partial_sum(n_udl.cbegin(), n_udl.cend(), offsets.begin() + 1);
+    return offsets;
+  }();
+
+  for (std::size_t coltype_index = 0; coltype_index < expected_ordered.size(); ++coltype_index) {
+    const auto begin = partitions[coltype_index];
+    const auto end = partitions[coltype_index + 1];
+    for (std::size_t i = begin; i < end; ++i) {
+      const ColType coltype = c_arr[to_sizet(out_by_type_ptr[to_sizet(i)])];
+      EXPECT_EQ(expected_ordered[coltype_index], coltype) << " at index " << i;
+    }
+  }
+
+  EXPECT_TRUE(std::is_sorted(out_by_type_ptr + k, out_by_type_ptr + n,
                              [&vals_arr](const SizeType i, const SizeType j) {
                                return vals_arr[to_sizet(i)] < vals_arr[to_sizet(j)];
-                             }));
+                             }))
+      << "deflated should be sorted in out_by_type";
 }
 
 TYPED_TEST(TridiagEigensolverMergeTest, Deflation) {

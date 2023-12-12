@@ -1310,7 +1310,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         const std::size_t nthreads = [dist_sub, k_lc] {
           const std::size_t workload = to_sizet(dist_sub.localSize().rows() * k_lc);
-          const std::size_t workload_unit = 2 * to_sizet(dist_sub.blockSize().linear_size());
+          const std::size_t workload_unit = 2 * to_sizet(dist_sub.tile_size().linear_size());
 
           const std::size_t min_workers = 1;
           const std::size_t available_workers = getTridiagRank1NWorkers();
@@ -1327,10 +1327,11 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                                                         auto& barrier_ptr) {
                  using dlaf::comm::internal::transformMPI;
 
-                 comm::CommunicatorPipeline<comm::CommunicatorType::Row> row_comm_chain(row_comm_wrapper.get());
+                 comm::CommunicatorPipeline<comm::CommunicatorType::Row> row_comm_chain(
+                     row_comm_wrapper.get());
                  const dlaf::comm::Communicator& col_comm = col_comm_wrapper.get();
 
-                 const SizeType m_lc = dist_sub.localNrTiles().rows();
+                 const SizeType m_lc = dist_sub.local_nr_tiles().rows();
                  const SizeType m_el_lc = dist_sub.local_size().rows();
                  const SizeType n_el_lc = dist_sub.local_size().cols();
 
@@ -1411,14 +1412,15 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                          dist_sub.tile_element_from_global_element<Coord::Col>(j_el);
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& evec = evec_tiles[to_sizet(linear_lc)];
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromLocalTileAndTileElement<Coord::Row>(i_lc,
-                                                                                           i_el_tl);
+                             dist_sub.global_element_from_local_tile_and_tile_element<Coord::Row>(
+                                 i_lc, i_el_tl);
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];
 
@@ -1487,21 +1489,24 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                    for (SizeType j_el_lc = begin; j_el_lc < end; ++j_el_lc) {
                      const SizeType j_el =
                          dist_sub.global_element_from_local_element<Coord::Col>(j_el_lc);
-                     const SizeType j_lc = dist_sub.localTileFromGlobalElement<Coord::Col>(j_el);
+                     const SizeType j_lc = dist_sub.local_tile_from_global_element<Coord::Col>(j_el);
                      const SizeType js_el = i6[j_el];
                      const T delta_j = d_ptr[to_sizet(js_el)];
 
-                     const SizeType j_el_tl = dist_sub.tileElementFromLocalElement<Coord::Col>(j_el_lc);
+                     const SizeType j_el_tl =
+                         dist_sub.tile_element_from_local_element<Coord::Col>(j_el_lc);
 
                      for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
 
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromGlobalTileAndTileElement<Coord::Row>(i, i_el_tl);
+                             dist_sub.global_element_from_global_tile_and_tile_element<Coord::Row>(
+                                 i, i_el_tl);
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];
 
@@ -1541,15 +1546,13 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                                  transformMPI(all_reduce_in_place));
 
 #ifdef DLAF_ASSERT_HEAVY_ENABLE
+                   // Note: all input for weights computation of non-deflated rows should be strictly less than 0
                    for (SizeType i_el_lc = 0; i_el_lc < m_el_lc; ++i_el_lc) {
                      const SizeType i_el =
                          dist_sub.global_element_from_local_element<Coord::Row>(i_el_lc);
                      const SizeType is = i4[i_el];
                      if (is < k)
-                       DLAF_ASSERT_HEAVY(
-                           w[i_el_lc] < 0,
-                           "input for weights computation of non-deflated rows should be strictly less than 0",
-                           w[i_el_lc]);
+                       DLAF_ASSERT_HEAVY(w[i_el_lc] < 0, w[i_el_lc]);
                    }
 #endif
 
@@ -1579,15 +1582,17 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
                      const SizeType j_el_tl =
                          dist_sub.tile_element_from_local_element<Coord::Col>(j_el_lc);
 
-                     for (SizeType i_lc = 0; i_lc < dist_sub.localNrTiles().rows(); ++i_lc) {
-                       const SizeType i = dist_sub.globalTileFromLocalTile<Coord::Row>(i_lc);
-                       const SizeType m_el_tl = dist_sub.tileSize<Coord::Row>(i);
-                       const SizeType linear_lc = dist_sub.localTileLinearIndex({i_lc, j_lc});
+                     for (SizeType i_lc = 0; i_lc < m_lc; ++i_lc) {
+                       const SizeType i = dist_sub.global_tile_from_local_tile<Coord::Row>(i_lc);
+                       const SizeType m_el_tl = dist_sub.tile_size_of<Coord::Row>(i);
+                       const SizeType linear_lc =
+                           dist_extra::local_tile_linear_index(dist_sub, {i_lc, j_lc});
                        const auto& q_tile = q[to_sizet(linear_lc)];
 
                        for (SizeType i_el_tl = 0; i_el_tl < m_el_tl; ++i_el_tl) {
                          const SizeType i_el =
-                             dist_sub.globalElementFromGlobalTileAndTileElement<Coord::Row>(i, i_el_tl);
+                             dist_sub.global_element_from_global_tile_and_tile_element<Coord::Row>(
+                                 i, i_el_tl);
 
                          DLAF_ASSERT_HEAVY(i_el < n, i_el, n);
                          const SizeType is_el = i4[i_el];
@@ -1769,10 +1774,9 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
 
   // Note: here ws_hm.z0 is used as a contiguous buffer for the laed4 call
   matrix::util::set0<Backend::MC>(thread_priority::normal, idx_loc_begin, sz_loc_tiles, ws_hm.e2);
-  solveRank1ProblemDist(row_task_chain.exclusive(), col_task_chain.exclusive(),
-                        i_begin, i_end, k, k_lc, std::move(scaled_rho),
-                        ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6,
-                        ws_hm.i2, ws_hm.e2);
+  solveRank1ProblemDist(row_task_chain.exclusive(), col_task_chain.exclusive(), i_begin, i_end, k, k_lc,
+                        std::move(scaled_rho), ws_hm.d1, ws_hm.z1, ws_h.d0, ws_h.i4, ws_hm.i6, ws_hm.i2,
+                        ws_hm.e2);
   copy(idx_loc_begin, sz_loc_tiles, ws_hm.e2, ws.e2);
 
   // Step #3: Eigenvectors of the tridiagonal system: Q * U
@@ -1783,7 +1787,9 @@ void mergeDistSubproblems(comm::CommunicatorPipeline<comm::CommunicatorType::Ful
       ex::when_all(std::move(k_lc), std::move(n_udl)) |
       ex::transfer(dlaf::internal::getBackendScheduler<Backend::MC>()) |
       ex::then([dist_sub, sub_offset, n, n_upper, n_lower, e0 = ws.e0.subPipeline(),
-                e1 = ws.e1.subPipelineConst(), e2 = ws.e2.subPipelineConst(), sub_comm_row = row_task_chain.sub_pipeline(), sub_comm_col = col_task_chain.sub_pipeline()](
+                e1 = ws.e1.subPipelineConst(), e2 = ws.e2.subPipelineConst(),
+                sub_comm_row = row_task_chain.sub_pipeline(),
+                sub_comm_col = col_task_chain.sub_pipeline()](
                    const SizeType k_lc, const std::array<SizeType, 3>& n_udl) mutable {
         using dlaf::matrix::internal::MatrixRef;
 

@@ -895,7 +895,7 @@ $(function() {
 <div class="line"><a name="l00824"></a><span class="lineno">  824</span>&#160;          ex::when_all_vector(matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i},</div>
 <div class="line"><a name="l00825"></a><span class="lineno">  825</span>&#160;                                                                            LocalTileSize{n - i, 1}))) |</div>
 <div class="line"><a name="l00826"></a><span class="lineno">  826</span>&#160;          ex::then([](TileVector&amp;&amp; vector) { <span class="keywordflow">return</span> std::make_shared&lt;TileVector&gt;(std::move(vector)); }) |</div>
-<div class="line"><a name="l00827"></a><span class="lineno">  827</span>&#160;          ex::split();</div>
+<div class="line"><a name="l00827"></a><span class="lineno">  827</span>&#160;          ex::drop_operation_state() | ex::split();</div>
 <div class="line"><a name="l00828"></a><span class="lineno">  828</span>&#160;    }</div>
 <div class="line"><a name="l00829"></a><span class="lineno">  829</span>&#160; </div>
 <div class="line"><a name="l00830"></a><span class="lineno">  830</span>&#160;    ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline(), tiles_v) |</div>
@@ -1410,7 +1410,7 @@ $(function() {
 <div class="line"><a name="l01339"></a><span class="lineno"> 1339</span>&#160;        <span class="keywordflow">if</span> (sweep % b == 0) {</div>
 <div class="line"><a name="l01340"></a><span class="lineno"> 1340</span>&#160;          tile_v = panel_v.readwrite(LocalTileIndex{id_block_local, 0}) |</div>
 <div class="line"><a name="l01341"></a><span class="lineno"> 1341</span>&#160;                   ex::then([](Tile&amp;&amp; tile) { <span class="keywordflow">return</span> std::make_shared&lt;Tile&gt;(std::move(tile)); }) |</div>
-<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;                   ex::split();</div>
+<div class="line"><a name="l01342"></a><span class="lineno"> 1342</span>&#160;                   ex::drop_operation_state() | ex::split();</div>
 <div class="line"><a name="l01343"></a><span class="lineno"> 1343</span>&#160;        }</div>
 <div class="line"><a name="l01344"></a><span class="lineno"> 1344</span>&#160; </div>
 <div class="line"><a name="l01345"></a><span class="lineno"> 1345</span>&#160;        ex::unique_any_sender&lt;SemaphorePtr&gt; sem_sender;</div>

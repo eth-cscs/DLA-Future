@@ -1278,7 +1278,7 @@ void solveRank1ProblemDist(CommSender&& row_comm, CommSender&& col_comm, const S
 
         const std::size_t nthreads = [dist_sub, k_lc] {
           const std::size_t workload = to_sizet(dist_sub.localSize().rows() * k_lc);
-          const std::size_t workload_unit = 2 * to_sizet(dist_sub.blockSize().linear_size());
+          const std::size_t workload_unit = 2 * to_sizet(dist_sub.tile_size().linear_size());
 
           const std::size_t min_workers = 1;
           const std::size_t available_workers = getTridiagRank1NWorkers();

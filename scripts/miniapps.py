@@ -57,7 +57,11 @@ def _computeResourcesNeeded(system, nodes, rpn):
 # return the list containing the values of total_ranks, cores_per_rank, threads_per_rank.
 def _computeResourcesNeededList(system, nodes, rpn):
     resources = _computeResourcesNeeded(system, nodes, rpn)
-    return [resources["total_ranks"], resources["cores_per_rank"], resources["threads_per_rank"]]
+    return [
+        resources["total_ranks"],
+        resources["cores_per_rank"],
+        resources["threads_per_rank"],
+    ]
 
 
 def _err_msg(lib):
@@ -140,12 +144,19 @@ class JobText:
         launch_cmd = launch_cmd.format(job_path=job_path, job_file=job_file)
         # get default SHELL if not specified
         shell = environ["SHELL"]
-        if shell==None:
+        if shell == None:
             raise ValueError(f"no $SHELL environemt variable found")
         print(f"Submitting : {launch_cmd} using shell {shell}")
 
-        process = Popen(f"{launch_cmd}", shell=True, executable=shell, universal_newlines=True,
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE )
+        process = Popen(
+            f"{launch_cmd}",
+            shell=True,
+            executable=shell,
+            universal_newlines=True,
+            stdin=PIPE,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
         # sleep to not overload the scheduler
         sleep(1)
 
@@ -739,7 +750,12 @@ class StrongScaling:
 
         job = self.job
         job_text = JobText(
-            job["system"], job["run_name"], nodes, job["time"], job["bs_name"], self.rpn_preamble
+            job["system"],
+            job["run_name"],
+            nodes,
+            job["time"],
+            job["bs_name"],
+            self.rpn_preamble,
         )
         for run in self.runs:
             product_params = _dictProduct(run["params"])
@@ -873,7 +889,12 @@ class WeakScaling:
 
         job = self.job
         job_text = JobText(
-            job["system"], job["run_name"], nodes, self.getTime(nodes), job["bs_name"], self.rpn_preamble
+            job["system"],
+            job["run_name"],
+            nodes,
+            self.getTime(nodes),
+            job["bs_name"],
+            self.rpn_preamble,
         )
 
         for run in self.runs:

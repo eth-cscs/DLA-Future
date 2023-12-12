@@ -11,6 +11,8 @@
 
 #include <type_traits>
 
+#include <pika/execution.hpp>
+
 #include <dlaf/common/consume_rvalues.h>
 #include <dlaf/common/unwrap.h>
 #include <dlaf/communication/communicator.h>
@@ -91,7 +93,8 @@ template <typename F, typename Sender,
   return ex::transfer(std::forward<Sender>(sender),
                       ex::with_priority(dlaf::internal::getMPIScheduler(),
                                         pika::execution::thread_priority::boost)) |
-         ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}});
+         ex::then(dlaf::common::internal::ConsumeRvalues{MPICallHelper{std::forward<F>(f)}}) |
+         ex::drop_operation_state();
 }
 
 /// Fire-and-forget transformMPI. This submits the work and returns void.

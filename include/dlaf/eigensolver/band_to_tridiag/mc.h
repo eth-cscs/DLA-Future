@@ -827,7 +827,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
           ex::when_all_vector(matrix::select(mat_v, common::iterate_range2d(LocalTileIndex{i, i},
                                                                             LocalTileSize{n - i, 1}))) |
           ex::then([](TileVector&& vector) { return std::make_shared<TileVector>(std::move(vector)); }) |
-          ex::split();
+          ex::drop_operation_state() | ex::split();
     }
 
     ex::when_all(std::move(sem_sender), ex::just(sem_next, sweep), w_pipeline.readwrite(), tiles_v) |
@@ -1348,7 +1348,7 @@ TridiagResult<T, Device::CPU> BandToTridiag<Backend::MC, D, T>::call_L(
         if (sweep % b == 0) {
           tile_v = panel_v.readwrite(LocalTileIndex{id_block_local, 0}) |
                    ex::then([](Tile&& tile) { return std::make_shared<Tile>(std::move(tile)); }) |
-                   ex::split();
+                   ex::drop_operation_state() | ex::split();
         }
 
         ex::unique_any_sender<SemaphorePtr> sem_sender;

@@ -39,6 +39,13 @@ DLAF_addTest(
 )
 
 DLAF_addTest(
+  test_blas_tile_extensions
+  SOURCES test_blas_tile_extensions.cpp
+  LIBRARIES dlaf.core
+  USE_MAIN PIKA
+)
+
+DLAF_addTest(
   test_lapack_tile
   SOURCES test_lapack_tile.cpp
   LIBRARIES dlaf.core

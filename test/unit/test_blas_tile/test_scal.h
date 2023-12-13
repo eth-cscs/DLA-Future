@@ -33,25 +33,23 @@ using namespace dlaf::matrix::test;
 using namespace testing;
 
 template <Device D, class T, class CT = const T>
-void testScal(const blas::Op op_a, const SizeType m,
+void testScal(const SizeType m,
               const SizeType n, const SizeType extra_lda) {
-  const TileElementSize size_a =
-      (op_a == blas::Op::NoTrans) ? TileElementSize(m, n) : TileElementSize(n, m);
-
+  const TileElementSize size_a(m, n);
 
   const SizeType lda = std::max<SizeType>(1, size_a.rows()) + extra_lda;
 
   const T beta = TypeUtilities<T>::element(1.1, .4);
 
   auto [el_a, res_a] =
-      getMatrixScal<TileElementIndex, T>(op_a, beta);
+      getMatrixScal<TileElementIndex, T>(beta);
 
   auto a = createTile<CT, D>(el_a, size_a, lda);
 
-  invokeBlas<D>(tile::internal::scal_o, beta, a);
+  invokeBlas<D>(tile::internal::scal, beta, a);
 
   std::stringstream s;
-  s << "Scal: " << op_a;
+  s << "Scal: ";
   s << ", m = " << m << ", n = " << n;
   s << ", lda = " << lda;
   SCOPED_TRACE(s.str());

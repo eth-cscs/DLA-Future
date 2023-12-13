@@ -52,23 +52,22 @@ auto opValFunc(ElementGetter&& val, const blas::Op op) {
 }
 
 template <class ElementIndex, class T>
-auto getMatrixScal(const blas::Op opA, const T beta) {
+auto getMatrixScal(const T beta) {
   using dlaf::test::TypeUtilities;
 
-  auto el_op_a = [](const ElementIndex& index) {
+  auto el_a = [](const ElementIndex& index) {
     const double i = index.row();
     const double k = index.col();
     return TypeUtilities<T>::polar(.9 * (i + 1) / (k + .5), 2 * i - k);
   };
 
-  auto res_a = [beta, el_op_a, alpha](const ElementIndex& index) {
+  auto res_a = [beta, el_a](const ElementIndex& index) {
     const double i = index.row();
     const double j = index.col();
     return beta * el_op_a(index);
   };
 
   using internal::opValFunc;
-  return std::make_tuple(opValFunc(el_op_a, opA), el_op_a, res_a);
-
+  return std::make_tuple(el_a, res_a);
 }
 }

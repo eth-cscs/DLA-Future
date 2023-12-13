@@ -10,33 +10,27 @@
 
 #include <dlaf/blas/tile.h>
 
-#include "test_scal/test_scal.h"
-#include "test_add/test_scal.h"
+#include "test_blas_tile/test_scal.h"
+//#include "test_blas_tile/test_add.h"
 
 #include <gtest/gtest.h>
 
 using namespace dlaf;
 using namespace dlaf::test;
 using namespace testing;
-
-const std::vector<blas::Diag> blas_diags({blas::Diag::Unit, blas::Diag::NonUnit});
-const std::vector<blas::Op> blas_ops({blas::Op::NoTrans, blas::Op::Trans, blas::Op::ConjTrans});
-const std::vector<blas::Side> blas_sides({blas::Side::Left, blas::Side::Right});
-const std::vector<blas::Uplo> blas_uplos({blas::Uplo::Lower, blas::Uplo::Upper});
-
 template <class T, Device D>
 class TileOperationsTest : public ::testing::Test {};
 
 template <class T>
-using TileOperationsTestMC = TileOperationsTest<T, Device::CPU>;
+using TileOperationsExtensionsTestMC = TileOperationsTest<T, Device::CPU>;
 
-TYPED_TEST_SUITE(TileOperationsTestMC, MatrixElementTypes);
+TYPED_TEST_SUITE(TileOperationsExtensionsTestMC, MatrixElementTypes);
 
 #ifdef DLAF_WITH_GPU
 template <class T>
-using TileOperationsTestGPU = TileOperationsTest<T, Device::GPU>;
+using TileOperationsExtensionsTestGPU = TileOperationsTest<T, Device::GPU>;
 
-TYPED_TEST_SUITE(TileOperationsTestGPU, MatrixElementTypes);
+TYPED_TEST_SUITE(TileOperationsExtensionsTestGPU, MatrixElementTypes);
 #endif
 
 // Tuple elements:  m, n, k, extra_lda, extra_ldb, extra_ldc
@@ -47,37 +41,28 @@ std::vector<std::tuple<SizeType, SizeType, SizeType, SizeType, SizeType, SizeTyp
     {1, 1, 1, 0, 3, 0},  {1, 12, 1, 1, 0, 7},   {17, 12, 16, 1, 3, 0}, {11, 23, 8, 0, 3, 4},
     {6, 9, 12, 1, 1, 1}, {32, 32, 32, 0, 0, 0}, {32, 32, 32, 4, 5, 7}, {128, 128, 128, 0, 0, 0},
 };
-//Cosa metto al posto di Gemm riga 51
-TYPED_TEST(TileOperationsTestMC, Gemm) {
-  using Type = TypeParam;
-//i cicli for non penso siano corretti, es. riga 56
-  for (const auto op_a : blas_ops) {
-    for (const auto op_b : blas_ops) {
-      for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
-        // Test a and b const Tiles.
-        dlaf::test::testScal<Device::CPU, Type>(op_a, m, n, extra_lda);
 
-        // Test a and b non const Tiles.
-        dlaf::test::testScal<Device::CPU, Type>(op_a, m, n, extra_lda);
-      }
-    }
+TYPED_TEST(TileOperationsExtensionsTestMC, Scal) {
+  using Type = TypeParam;
+  for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
+    // Test a and b const Tiles.
+    dlaf::test::testScal<Device::CPU, Type>(m, n, extra_lda);
+    // Test a and b non const Tiles.
+    dlaf::test::testScal<Device::CPU, Type>(m, n, extra_lda);
   }
+
 }
 
 #ifdef DLAF_WITH_GPU
-TYPED_TEST(TileOperationsTestGPU, Gemm) {
+TYPED_TEST(TileOperationsExtensionsTestGPU, Scal) {
   using Type = TypeParam;
 
-  for (const auto op_a : blas_ops) {
-    for (const auto op_b : blas_ops) {
       for (const auto& [m, n, k, extra_lda, extra_ldb, extra_ldc] : gemm_sizes) {
         // Test a and b const Tiles.
-        dlaf::test::testScal<Device::GPU, Type>(op_a, m, n, extra_lda);
+        dlaf::test::testScal<Device::GPU, Type>(m, n, extra_lda);
 
         // Test a and b non const Tiles.
-       dlaf::test::testScal<Device::CPU, Type, Type>(op_a, m, n, extra_lda);
+       dlaf::test::testScal<Device::CPU, Type, Type>(m, n, extra_lda);
       }
-    }
-  }
 }
 #endif
